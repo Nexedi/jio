@@ -1,0 +1,6 @@
+#vi
+*.swp
+*~
+
+#dolphin
+.directory
