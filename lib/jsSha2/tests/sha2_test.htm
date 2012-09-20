@@ -1,0 +1,27 @@
+<html>
+	<head>
+		<title>anmar.eu.org - CTNjsSha2: sha2 test page</title>
+		<script language="JavaScript" src="../sha2.js"></script>
+	</head>
+	<body onload="testSHA2()">
+		<form name="testform256">
+			<input type="text" name="orig256" size="75" value="abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" onchange="testSHA256()"><br>
+			<input type="text" name="calc256" size="75" value="" disabled="true"><br>
+			<input type="text" name="control256" size="75" value="248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1" onchange="testSHA256()"><br>
+			<input type="text" name="result256" size="15" value="Testing...">
+		</form>
+		<script language="JavaScript">
+			function testSHA2 () {
+				testSHA256();
+			}
+			function testSHA256 () {
+				document.testform256.calc256.value = hex_sha256 (document.testform256.orig256.value);
+				if (document.testform256.calc256.value == document.testform256.control256.value) {
+					document.testform256.result256.value="OK";
+				} else {
+					document.testform256.result256.value="Error";
+				}
+			}
+		</script>
+	</body>
+</html>

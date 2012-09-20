@@ -1,0 +1,24 @@
+{
+    "name": "jio",
+    "title": "JIO",
+    "description": "Javascript Input Output",
+    "version": "0.1.0",
+    "homepage": "",
+    "author": {
+        "name": "Tristan Cavelier",
+        "email": "tristan.cavelier@tiolive.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "http://git.erp5.org/repos/ung.git"
+    },
+    "bugs": {
+        "url": ""
+    },
+    "licenses": [
+    ],
+    "dependencies": {
+        "jquery": "~1.7"
+    },
+    "keywords": []
+}

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/">
+    <D:href>/davsave/jiotests/file</D:href>
+    <D:propstat>
+      <D:prop>
+        <lp1:resourcetype/>
+        <lp1:creationdate>Thu, 01 Jan 1970 00:00:05 GMT</lp1:creationdate>
+        <lp1:getcontentlength>7</lp1:getcontentlength>
+        <lp1:getlastmodified>Thu, 01 Jan 1970 00:00:07 GMT</lp1:getlastmodified>
+        <lp1:getetag>"c9-4bf0ad7e45226"</lp1:getetag>
+        <lp2:executable>F</lp2:executable>
+        <D:supportedlock>
+          <D:lockentry>
+            <D:lockscope><D:exclusive/></D:lockscope>
+            <D:locktype><D:write/></D:locktype>
+          </D:lockentry>
+          <D:lockentry>
+            <D:lockscope><D:shared/></D:lockscope>
+            <D:locktype><D:write/></D:locktype>
+          </D:lockentry>
+        </D:supportedlock>
+        <D:lockdiscovery/>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>

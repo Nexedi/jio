@@ -1,0 +1,4 @@
+auto: grunt
+
+grunt:
+	grunt

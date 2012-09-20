@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>jIO Example</title>
+</head>
+<body>
+  <script type="text/javascript">
+    <!--
+var log = function (o) {
+    var node = document.createElement ('div');
+    node.textContent = o;
+    document.getElementById('log').appendChild(node);
+};
+        //-->
+  </script>
+  <div id="log">
+  </div>
+  <script type="text/javascript" src="../localorcookiestorage.js"></script>
+  <script type="text/javascript" src="../jio.js"></script>
+  <script type="text/javascript" src="../lib/jquery/jquery.min.js"></script>
+  <script type="text/javascript" src="../lib/base64/base64.js"></script>
+  <script type="text/javascript" src="../lib/sjcl/sjcl.min.js"></script>
+  <script type="text/javascript" src="../lib/jsSha2/sha2.js"></script>
+  <script type="text/javascript" src="../jio.storage.js"></script>
+  <script type="text/javascript">
+    <!--
+var my_jio = null;
+
+log ('Welcome to the jIO example.html!')
+log ('--> Create jIO instance');
+
+my_jio = jIO.newJio({
+    type: 'local', username: 'jIOtest', applicationname: 'example'
+});
+
+log ('--> put "hello" document to localStorage');
+// careful ! asynchronous method
+my_jio.put({_id:'hello',content:'world'},function (val) {
+    log ('done');
+}, function (err) {
+    log ('error!');
+});
+
+setTimeout ( function () {
+    log ('--> get "hello" document from localStorage');
+
+    my_jio.get('hello',function (val) {
+        log ('done, content: ' + val.content);
+    }, function (err) {
+        log ('error!');
+    });
+}, 500);
+        //-->
+  </script>
+</body>
+</html>
