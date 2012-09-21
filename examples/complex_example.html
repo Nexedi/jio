@@ -174,7 +174,7 @@ var newConflictJio = function () {
     my_jio = jIO.newJio(spec);
 };
 var newCustomJio = function () {
-    var spec = JSON.parse ($('#customstorage').text());
+    var spec = JSON.parse ($('#customstorage').attr('value'));
     if (my_jio) { log('closing older jio'); my_jio.close(); }
     log ('custom storage description object: '+JSON.stringify (spec));
     my_jio = jIO.newJio(spec);
