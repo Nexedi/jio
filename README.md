@@ -105,6 +105,8 @@ my_jio_instance.close(); // close this instance
 Examples:
 ```
 var jio = jIO.newJio({"type":"local","username":"myname","applicationname":"myappname"});
+
+// jio.get (docid, options, callback)
 jio.get ('myfile',{max_retry:3},function (err,val) {
     if (err) {
         console.error (err);
@@ -112,11 +114,22 @@ jio.get ('myfile',{max_retry:3},function (err,val) {
         console.log (val.content);
     }
 });
+
+// jio.put (doc, success, error)
 jio.put ({_id:'myotherfile',content:'and his content'},function (val) {
     console.log ('success');
 },function (err) {
     console.error (err);
 });
+
+// jio.allDocs (options, success, error)
+jio.allDocs ({metadata_only:false},function (val) {
+    var i;
+    for (i=0; i < val.total_rows; i++) {
+        console.log ('Filename: ' + val.rows[i].id);
+        console.log ('Content: ' + val.rows[i].value.content);
+    }
+}, function (err) {});
 ```
 
 
