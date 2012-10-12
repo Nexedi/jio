@@ -81,8 +81,8 @@ var jobRules = (function(spec) {
     /**
      * Returns an action string to show what to do if we want to add a job.
      * @method validateJobAccordingToJob
-     * @param job1 {object} The current job.
-     * @param job2 {object} The new job.
+     * @param  {object} job1 The current job.
+     * @param  {object} job2 The new job.
      * @return {string} The action string.
      */
     Object.defineProperty(that,"validateJobAccordingToJob",{
@@ -98,10 +98,10 @@ var jobRules = (function(spec) {
     /**
      * Adds a rule the action rules.
      * @method addActionRule
-     * @param method1 {string} The action label from the current job.
-     * @param ongoing {boolean} Is this action is on going or not?
-     * @param method2 {string} The action label from the new job.
-     * @param rule {function} The rule that return an action string.
+     * @param {string} method1 The action label from the current job.
+     * @param {boolean} ongoing Is this action is on going or not?
+     * @param {string} method2 The action label from the new job.
+     * @param {function} rule The rule that return an action string.
      */
     Object.defineProperty(that,"addActionRule",{
         configurable:false,enumerable:false,writable:false,value:
@@ -117,9 +117,9 @@ var jobRules = (function(spec) {
     /**
      * Adds a rule the compare rules.
      * @method addCompareRule
-     * @param method1 {string} The action label from the current job.
-     * @param method2 {string} The action label from the new job.
-     * @param rule {function} The rule that return a boolean
+     * @param {string} method1 The action label from the current job.
+     * @param {string} method2 The action label from the new job.
+     * @param {function} rule The rule that return a boolean
      * - true if job1 and job2 can be compared, else false.
      */
     Object.defineProperty(that,"addCompareRule",{
