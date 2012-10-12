@@ -1,5 +1,35 @@
 Javascript Input/Output
 =======================
+Powerful, Intelligent, and Intuitive back-end to write over the internet
+========================================================================
+
+How easy is it to get, save or remove a document?
+-------------------------------------------------
+
+```
+// get 'document.txt'
+jio.get('document.txt',function (err, val) {
+    console.log (err || val.content);
+});
+
+// update 'document.txt'
+jio.put({_id:'document.txt',content:'newcontent'}, function (err, val) {
+    console.log (err || val);
+});
+
+// get a list of documents
+jio.allDocs(function (err, val) {
+    console.log (err || val.total_rows);
+});
+
+// remove 'document.txt'
+jio.remove ({_id:'document.txt'}, function (err, val) {
+    console.log (err || val);
+});
+```
+
+Documentation Index
+===================
 
 + [What is jIO?](#what-is-jio)
 + [How does it work?](#how-does-it-work)
