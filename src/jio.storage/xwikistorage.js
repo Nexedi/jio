@@ -1,3 +1,5 @@
+(function ($,Base64) {
+
 /**
  * JIO XWiki based storage. Type = 'xwiki'.
  * Edits XWiki documents as html using html editor.
@@ -326,4 +328,6 @@ var newXWikiStorage = function(spec, my)
 
     return that;
 };
-jio.addStorageType('xwiki', newXWikiStorage);
+jIO.addStorageType('xwiki', newXWikiStorage);
+
+}(jQuery,Base64));
