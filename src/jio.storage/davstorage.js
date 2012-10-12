@@ -171,7 +171,6 @@ var newDAVStorage = function ( spec, my ) {
             headers: {'Authorization':'Basic '+Base64.encode(
                 priv.username + ':' + priv.password )},
             success: function (xmlData) {
-                // doc.last_modified =
                 $(xmlData).find(
                     'lp1\\:getlastmodified, getlastmodified'
                 ).each( function () {
