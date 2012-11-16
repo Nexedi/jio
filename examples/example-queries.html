@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Complex Queries Example</title>
+  <style type="text/css" media="screen">
+    table, textarea, input {
+        width: 100%;
+    }
+    textarea {
+        height: 10em;
+    }
+  </style>
+</head>
+<body>
+  <table>
+    <tr>
+      <td>Query (String):<br /><textarea id="str">1:abc AND 2:def</textarea></td>
+      <td>Query (Object):<br /><textarea id="obj">{&quot;type&quot;:&quot;complex&quot;,&quot;operator&quot;:&quot;AND&quot;,&quot;query_list&quot;:[{&quot;type&quot;:&quot;simple&quot;,&quot;operator&quot;:&quot;=&quot;,&quot;id&quot;:&quot;1&quot;,&quot;value&quot;:&quot;abc&quot;},{&quot;type&quot;:&quot;simple&quot;,&quot;operator&quot;:&quot;=&quot;,&quot;id&quot;:&quot;2&quot;,&quot;value&quot;:&quot;def&quot;}]}</textarea></td>
+    </tr>
+    <tr>
+      <td>Object List:<br /><textarea id="list">[{&quot;1&quot;:&quot;abc&quot;,&quot;2&quot;:&quot;def&quot;},{&quot;1&quot;:&quot;def&quot;,&quot;2&quot;:&quot;abc&quot;}]</textarea></td>
+      <td>Result (Query String):<br /><textarea id="result">[{&quot;1&quot;:&quot;abc&quot;,&quot;2&quot;:&quot;def&quot;}]</textarea></td>
+    </tr>
+    <tr>
+      <td><label for="wildcard">Wildcard char: </label></td>
+      <td><input type="text" id="wildcard" name="wildcard" value="%" /></td>
+    </tr>
+    <tr>
+      <td><label for="sort_on">Sort on: </label></td>
+      <td><input type="text" id="sort_on" name="sort_on" value="[[&quot;1&quot;,&quot;ascending&quot;],[&quot;2&quot;,&quot;descending&quot;]]" /></td>
+    </tr>
+    <tr>
+      <td><label for="select_list">Select_list: </label></td>
+      <td><input type="text" id="select_list" name="select_list" value="[&quot;1&quot;,&quot;2&quot;]" /></td>
+    </tr>
+    <tr>
+      <td><label for="limit">Limit: </label></td>
+      <td><input type="text" id="limit" name="limit" value="[0,100]" /></td>
+    </tr>
+  </table>
+  <button onclick="parse()">Parse</button>
+  <button onclick="serialize()">Serialize</button>
+  <button onclick="query()">Query</button>
+  <script type="text/javascript" src="../jio.min.js"></script>
+  <script type="text/javascript" src="../complex-queries.min.js"></script>
+  <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
+  <script type="text/javascript">
+    <!--
+var parse = function () {
+    $('#obj').attr('value',JSON.stringify(jIO.ComplexQueries.parse($('#str').attr('value'))));
+};
+var serialize = function () {
+    $('#str').attr('value',jIO.ComplexQueries.serialize(JSON.parse($('#obj').attr('value'))));
+};
+var query = function () {
+    $('#result').attr('value',JSON.stringify(
+        jIO.ComplexQueries.query(
+            {
+                query:$('#str').attr('value'),
+                filter:{
+                    sort_on:JSON.parse($('#sort_on').attr('value')),
+                    limit:JSON.parse($('#limit').attr('value')),
+                    select_list:JSON.parse($('#select_list').attr('value'))
+                },
+                wildcard_character:$('#wildcard').attr('value')
+            }, JSON.parse($('#list').attr('value'))
+        )
+    ));
+};
+        // -->
+  </script>
+</body>
+</html>
