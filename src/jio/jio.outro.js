@@ -122,33 +122,48 @@
         }
     });
 
-    priv.parametersToObject = function (list,nodoc) {
-        var param = {}, i = 0;
-        if (!nodoc) {
-            param.doc = list[i];
-            i ++;
-        }
-        if (typeof list[i] === 'object') {
-            param.options = list[i];
-            i ++;
-        } else {
-            param.options = {};
-        }
-        param.callback = function (err,val){};
+    priv.makeCallbacks = function (param, callback1, callback2) {
+        param.callback = function (err, val) {
+            if (err) {
+                param.error(err);
+            } else {
+                param.success(val);
+            }
+        };
         param.success = function (val) {
             param.callback(undefined,val);
         };
         param.error = function (err) {
             param.callback(err,undefined);
         };
-        if (typeof list[i] === 'function') {
-            if (typeof list[i+1] === 'function') {
-                param.success = list[i];
-                param.error = list[i+1];
+        if (typeof callback1 === 'function') {
+            if (typeof callback2 === 'function') {
+                param.success = callback1;
+                param.error = callback2;
             } else {
-                param.callback = list[i];
+                param.callback = callback1;
             }
         }
+    };
+
+    priv.parametersToObject = function (list, default_options) {
+        var k, i = 0, callbacks = [], param = {options:{}};
+        for (i = 0; i < list.length; i += 1) {
+            if (typeof list[i] === 'object') {
+                // this is the option
+                param.options = list[i];
+                for (k in default_options) {
+                    if ((typeof default_options[k]) !== (typeof list[i][k])) {
+                        param.options[k] = default_options[k];
+                    }
+                }
+            }
+            if (typeof list[i] === 'function') {
+                // this is a callback
+                callbacks.push(list[i]);
+            }
+        }
+        priv.makeCallbacks(param,callbacks[0],callbacks[1]);
         return param;
     };
 
@@ -174,11 +189,13 @@
      */
     Object.defineProperty(that,"post",{
         configurable:false,enumerable:false,writable:false,value:
-        function() {
-            var param = priv.parametersToObject(arguments);
-            param.options.max_retry = param.options.max_retry || 0;
+        function(doc, options, success, error) {
+            var param = priv.parametersToObject(
+                [options, success, error],
+                {max_retry:0}
+            );
             priv.addJob(postCommand,{
-                doc:param.doc,
+                doc:doc,
                 options:param.options,
                 callbacks:{success:param.success,error:param.error}
             });
@@ -201,11 +218,13 @@
      */
     Object.defineProperty(that,"put",{
         configurable:false,enumerable:false,writable:false,value:
-        function() {
-            var param = priv.parametersToObject(arguments);
-            param.options.max_retry = param.options.max_retry || 0;
+        function(doc, options, success, error) {
+            var param = priv.parametersToObject(
+                [options, success, error],
+                {max_retry:0}
+            );
             priv.addJob(putCommand,{
-                doc:param.doc,
+                doc:doc,
                 options:param.options,
                 callbacks:{success:param.success,error:param.error}
             });
@@ -229,11 +248,13 @@
      */
     Object.defineProperty(that,"get",{
         configurable:false,enumerable:false,writable:false,value:
-        function() {
-            var param = priv.parametersToObject(arguments);
-            param.options.max_retry = param.options.max_retry || 3;
+        function(id, options, success, error) {
+            var param = priv.parametersToObject(
+                [options,success,error],
+                {max_retry:3}
+            );
             priv.addJob(getCommand,{
-                docid:param.doc,
+                docid:id,
                 options:param.options,
                 callbacks:{success:param.success,error:param.error}
             });
@@ -256,11 +277,13 @@
      */
     Object.defineProperty(that,"remove",{
         configurable:false,enumerable:false,writable:false,value:
-        function() {
-            var param = priv.parametersToObject(arguments);
-            param.options.max_retry = param.options.max_retry || 0;
+        function(doc, options, success, callback) {
+            var param = priv.parametersToObject(
+                [options,success,callback],
+                {max_retry:0}
+            );
             priv.addJob(removeCommand,{
-                doc:param.doc,
+                doc:doc,
                 options:param.options,
                 callbacks:{success:param.success,error:param.error}
             });
@@ -283,9 +306,11 @@
      */
     Object.defineProperty(that,"allDocs",{
         configurable:false,enumerable:false,writable:false,value:
-        function() {
-            var param = priv.parametersToObject(arguments,'no doc');
-            param.options.max_retry = param.options.max_retry || 3;
+        function(options, success, error) {
+            var param = priv.parametersToObject(
+                [options,success.error],
+                {max_retry: 3}
+            );
             priv.addJob(allDocsCommand,{
                 options:param.options,
                 callbacks:{success:param.success,error:param.error}
