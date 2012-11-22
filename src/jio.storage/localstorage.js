@@ -54,8 +54,7 @@ var newLocalStorage = function ( spec, my ) {
      * @return {array} The list of users.
      */
     priv.getUserArray = function () {
-        return LocalOrCookieStorage.getItem(
-            storage_user_array_name) || [];
+        return localStorage.getItem(storage_user_array_name) || [];
     };
 
     /**
@@ -66,8 +65,7 @@ var newLocalStorage = function ( spec, my ) {
     priv.addUser = function (user_name) {
         var user_array = priv.getUserArray();
         user_array.push(user_name);
-        LocalOrCookieStorage.setItem(storage_user_array_name,
-                                     user_array);
+        localStorage.setItem(storage_user_array_name,user_array);
     };
 
     /**
@@ -92,8 +90,7 @@ var newLocalStorage = function ( spec, my ) {
      * @return {array} All the existing file paths.
      */
     priv.getFileNameArray = function () {
-        return LocalOrCookieStorage.getItem(
-            storage_file_array_name) || [];
+        return localStorage.getItem(storage_file_array_name) || [];
     };
 
     /**
@@ -104,8 +101,7 @@ var newLocalStorage = function ( spec, my ) {
     priv.addFileName = function (file_name) {
         var file_name_array = priv.getFileNameArray();
         file_name_array.push(file_name);
-        LocalOrCookieStorage.setItem(storage_file_array_name,
-                                     file_name_array);
+        localStorage.setItem(storage_file_array_name,file_name_array);
     };
 
     /**
@@ -120,8 +116,7 @@ var newLocalStorage = function ( spec, my ) {
                 new_array.push(array[i]);
             }
         }
-        LocalOrCookieStorage.setItem(storage_file_array_name,
-                                     new_array);
+        localStorage.setItem(storage_file_array_name,new_array);
     };
 
     priv.checkSecuredDocId = function (secured_docid,docid,method) {
@@ -178,7 +173,7 @@ var newLocalStorage = function ( spec, my ) {
                 doc.content = command.getDocContent();
                 doc._last_modified = Date.now();
             }
-            LocalOrCookieStorage.setItem(path, doc);
+            localStorage.setItem(path, doc);
             that.success ({ok:true,id:command.getDocId()});
         });
     }; // end put
@@ -199,7 +194,7 @@ var newLocalStorage = function ( spec, my ) {
 
             if (!priv.checkSecuredDocId(
                 secured_docid,command.getDocId(),'get')) {return;}
-            doc = LocalOrCookieStorage.getItem(
+            doc = localStorage.getItem(
                 'jio/local/'+priv.secured_username+'/'+
                     priv.secured_applicationname+'/'+secured_docid);
             if (!doc) {
@@ -233,7 +228,7 @@ var newLocalStorage = function ( spec, my ) {
             array = priv.getFileNameArray();
             for (i = 0, l = array.length; i < l; i += 1) {
                 file_object =
-                    LocalOrCookieStorage.getItem(path+'/'+array[i]);
+                    localStorage.getItem(path+'/'+array[i]);
                 if (file_object) {
                     if (command.getOption('metadata_only')) {
                         new_array.push ({
@@ -268,7 +263,7 @@ var newLocalStorage = function ( spec, my ) {
             if (!priv.checkSecuredDocId(
                 secured_docid,command.getDocId(),'remove')) {return;}
             // deleting
-            LocalOrCookieStorage.deleteItem(path);
+            delete localStorage[path];
             priv.removeFileName(secured_docid);
             that.success ({ok:true,id:command.getDocId()});
         });
