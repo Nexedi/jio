@@ -122,7 +122,7 @@
         }
     });
 
-    priv.getParam = function (list,nodoc) {
+    priv.parametersToObject = function (list,nodoc) {
         var param = {}, i = 0;
         if (!nodoc) {
             param.doc = list[i];
@@ -175,7 +175,7 @@
     Object.defineProperty(that,"post",{
         configurable:false,enumerable:false,writable:false,value:
         function() {
-            var param = priv.getParam(arguments);
+            var param = priv.parametersToObject(arguments);
             param.options.max_retry = param.options.max_retry || 0;
             priv.addJob(postCommand,{
                 doc:param.doc,
@@ -202,7 +202,7 @@
     Object.defineProperty(that,"put",{
         configurable:false,enumerable:false,writable:false,value:
         function() {
-            var param = priv.getParam(arguments);
+            var param = priv.parametersToObject(arguments);
             param.options.max_retry = param.options.max_retry || 0;
             priv.addJob(putCommand,{
                 doc:param.doc,
@@ -231,7 +231,7 @@
     Object.defineProperty(that,"get",{
         configurable:false,enumerable:false,writable:false,value:
         function() {
-            var param = priv.getParam(arguments);
+            var param = priv.parametersToObject(arguments);
             param.options.max_retry = param.options.max_retry || 3;
             param.options.metadata_only = (
                 param.options.metadata_only !== undefined?
@@ -261,7 +261,7 @@
     Object.defineProperty(that,"remove",{
         configurable:false,enumerable:false,writable:false,value:
         function() {
-            var param = priv.getParam(arguments);
+            var param = priv.parametersToObject(arguments);
             param.options.max_retry = param.options.max_retry || 0;
             priv.addJob(removeCommand,{
                 doc:param.doc,
@@ -289,7 +289,7 @@
     Object.defineProperty(that,"allDocs",{
         configurable:false,enumerable:false,writable:false,value:
         function() {
-            var param = priv.getParam(arguments,'no doc');
+            var param = priv.parametersToObject(arguments,'no doc');
             param.options.max_retry = param.options.max_retry || 3;
             param.options.metadata_only = (
                 param.options.metadata_only !== undefined?
