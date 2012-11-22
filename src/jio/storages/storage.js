@@ -60,20 +60,6 @@ var storage = function(spec, my) {
         return {type:that.getType()};
     };
 
-    that.saveDocument    = function(command) {
-        that.error({status:0,statusText:'Unknown storage',
-                    error:'unknown_storage',message:'Unknown Storage'});
-    };
-    that.loadDocument    = function(command) {
-        that.saveDocument();
-    };
-    that.removeDocument  = function(command) {
-        that.saveDocument();
-    };
-    that.getDocumentList = function(command) {
-        that.saveDocument();
-    };
-
     /**
      * Validate the storage state. It returns a empty string all is ok.
      * @method validateState
