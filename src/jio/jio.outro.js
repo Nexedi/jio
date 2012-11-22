@@ -218,7 +218,6 @@
      * @param  {string} docid The document id (the path).
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
-     * - {boolean} metadata_only Load only document metadata.
      * - {string} rev The revision we want to get.
      * - {boolean} revs Include revision history of the document.
      * - {boolean} revs_info Include list of revisions, and their availability.
@@ -233,9 +232,6 @@
         function() {
             var param = priv.parametersToObject(arguments);
             param.options.max_retry = param.options.max_retry || 3;
-            param.options.metadata_only = (
-                param.options.metadata_only !== undefined?
-                    param.options.metadata_only:false);
             priv.addJob(getCommand,{
                 docid:param.doc,
                 options:param.options,
@@ -276,7 +272,6 @@
      * @method allDocs
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
-     * - {boolean} metadata_only Load only document metadata
      * - {boolean} descending Reverse the order of the output table.
      * - {boolean} revs Include revision history of the document.
      * - {boolean} revs_info Include revisions.
@@ -291,9 +286,6 @@
         function() {
             var param = priv.parametersToObject(arguments,'no doc');
             param.options.max_retry = param.options.max_retry || 3;
-            param.options.metadata_only = (
-                param.options.metadata_only !== undefined?
-                    param.options.metadata_only:true);
             priv.addJob(allDocsCommand,{
                 options:param.options,
                 callbacks:{success:param.success,error:param.error}
