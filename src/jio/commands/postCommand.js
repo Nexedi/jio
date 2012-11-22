@@ -27,7 +27,7 @@ var postCommand = function(spec, my) {
     };
 
     that.executeOn = function(storage) {
-        storage.put (that);
+        storage.post (that);
     };
 
     return that;
