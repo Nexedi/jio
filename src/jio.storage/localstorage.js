@@ -211,6 +211,30 @@ var newLocalStorage = function ( spec, my ) {
     };
 
     /**
+     * Update [doc] the document object and remove [doc] keys
+     * which are not in [new_doc]. It only changes [doc] keys not starting
+     * with an underscore.
+     * ex: doc:     {key:value1,_key:value2} with
+     *     new_doc: {key:value3,_key:value4} updates
+     *     doc:     {key:value3,_key:value2}.
+     * @param  {object} doc The original document object.
+     * @param  {object} new_doc The new document object
+     */
+    priv.documentObjectUpdate = function (doc, new_doc) {
+        var k;
+        for (k in doc) {
+            if (k[0] !== '_') {
+                delete doc[k];
+            }
+        }
+        for (k in new_doc) {
+            if (k[0] !== '_') {
+                doc[k] = new_doc[k];
+            }
+        }
+    };
+
+    /**
      * Create a document in the local storage.
      * It will store the file in 'jio/local/USR/APP/FILE_NAME'.
      * The command may have some options:
@@ -285,37 +309,66 @@ var newLocalStorage = function ( spec, my ) {
      * @method put
      */
     that.put = function (command) {
+        var now = Date.now();
         // wait a little in order to simulate asynchronous saving
         setTimeout (function () {
-            var secured_docid = priv.secureDocId(command.getDocId()),
-            doc = null, path =
-                'jio/local/'+priv.secured_username+'/'+
-                priv.secured_applicationname+'/'+
-                secured_docid;
+            var docid, doc, docpath, attmtid, attmt, attmtpath, prev_rev;
+            docid = command.getDocId();
+            prev_rev = command.getDocInfo('_rev');
+            docpath ='jio/local/'+priv.secured_username+'/'+
+                priv.secured_applicationname+'/'+docid;
 
-            if (!priv.checkSecuredDocId(
-                secured_docid,command.getDocId(),'put')) {return;}
             // reading
-            doc = LocalOrCookieStorage.getItem(path);
+            doc = localstorage.getItem(docpath);
             if (!doc) {
-                // create document
-                doc = {
-                    _id: command.getDocId(),
-                    content: command.getDocContent(),
-                    _creation_date: Date.now(),
-                    _last_modified: Date.now()
-                };
-                if (!priv.userExists(priv.secured_username)) {
-                    priv.addUser (priv.secured_username);
-                }
-                priv.addFileName(secured_docid);
-            } else {
-                // overwriting
-                doc.content = command.getDocContent();
-                doc._last_modified = Date.now();
+                that.error({
+                    status:404,statusText:'Not found',error:'not_found',
+                    message:'Document not found.',
+                    reason:'document not found'
+                });
+                return;
             }
-            localStorage.setItem(path, doc);
-            that.success ({ok:true,id:command.getDocId()});
+            if (doc._rev !== prev_rev) {
+                // want to update an older document
+                that.error({
+                    status:409,statusText:'Conflict',error:'conflict',
+                    message:'Document update conflict.',
+                    reason:'document update conflict.'
+                });
+                return;
+            }
+            // it is the good document
+            attmtid = command.getAttachmentId();
+            if (attmtid) {
+                attmtpath = docpath+'/'+attmtid;
+                // this is an attachment
+                attmt = localstorage.getItem(attmtpath);
+                if (!attmt) {
+                    // there is no attachment to update
+                    that.error({
+                        status:404,statusText:'Not found',error:'not_found',
+                        message:'Document is missing attachment.',
+                        reason:'document is missing attachment'
+                    });
+                    return;
+                }
+                // updating attachment
+                doc._attachments[attmtid].revpos =
+                    parseInt(doc._rev.split('-')[0],10);
+                localstorage.setItem(attmtpath,command.getContent());
+            } else {
+                // update document metadata
+                priv.documentObjectUpdate(doc,command.cloneDoc());
+            }
+            doc._rev = priv.generateNextRev(prev_rev, ''+doc+' '+now+'');
+            localstorage.setItem(docpath, doc);
+            that.success (
+                priv.manageOptions(
+                    {ok:true,id:docid,rev:doc._rev},
+                    command,
+                    doc
+                )
+            );
         });
     }; // end put
 
