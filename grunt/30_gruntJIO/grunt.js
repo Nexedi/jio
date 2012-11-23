@@ -24,6 +24,7 @@ module.exports = function(grunt) {
                       '<file_strip_banner:../../src/<%= pkg.name %>/commands/allDocsCommand.js>',
                       '<file_strip_banner:../../src/<%= pkg.name %>/commands/getCommand.js>',
                       '<file_strip_banner:../../src/<%= pkg.name %>/commands/removeCommand.js>',
+                      '<file_strip_banner:../../src/<%= pkg.name %>/commands/putAttachmentCommand.js>',
                       '<file_strip_banner:../../src/<%= pkg.name %>/commands/putCommand.js>',
                       '<file_strip_banner:../../src/<%= pkg.name %>/commands/postCommand.js>',
                       '<file_strip_banner:../../src/<%= pkg.name %>/jobs/status/jobStatus.js>',

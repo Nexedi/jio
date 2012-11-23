@@ -318,5 +318,37 @@
         }
     });
 
+    /**
+     * Put an attachment to a document.
+     * @method putAttachment
+     * @param  {string} id The attachment id ("document/attachment").
+     * @param  {string} rev The document revision.
+     * @param  {string} doc Base64 attachment content.
+     * @param  {string} mimetype The attachment mimetype
+     * @param  {object} options (optional) Contains some options:
+     * - {number} max_retry The number max of retries, 0 = infinity.
+     * - {boolean} revs Include revision history of the document.
+     * - {boolean} revs_info Include revisions.
+     * - {boolean} conflicts Include conflicts.
+     * @param  {function} callback (optional) The callback(err,respons)
+     * @param  {function} error (optional) The callback on error, if this
+     *     callback is given in parameter, "callback" is changed as "success",
+     *     called on success.
+     */
+    Object.defineProperty(that,"putAttachment",{
+        configurable:false,enumerable:false,writable:false,value:
+        function(id, rev, doc, mimetype, options, success, error) {
+            var param = priv.parametersToObject(
+                [options, success, error],
+                {max_retry: 0}
+            );
+            priv.addJob(putAttachmentCommand,{
+                doc:{_id:id,content:doc},
+                options:param.options,
+                callbacks:{success:param.success,error:param.error}
+            });
+        }
+    });
+
     return that;
 };                              // End Class jio

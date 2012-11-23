@@ -4,11 +4,14 @@ var command = function(spec, my) {
     my = my || {};
     // Attributes //
     var priv = {};
-    priv.commandlist = {'post':postCommand,
-                        'put':putCommand,
-                        'get':getCommand,
-                        'remove':removeCommand,
-                        'allDocs':allDocsCommand};
+    priv.commandlist = {
+        'post':postCommand,
+        'put':putCommand,
+        'get':getCommand,
+        'remove':removeCommand,
+        'allDocs':allDocsCommand,
+        'putAttachment':putAttachmentCommand
+    };
     // creates the good command thanks to his label
     if (spec.label && priv.commandlist[spec.label]) {
         priv.label = spec.label;
@@ -20,6 +23,9 @@ var command = function(spec, my) {
     priv.doc       = spec.doc || {};
     priv.docid     = spec.docid || '';
     priv.option    = spec.options || {};
+    priv.content   = typeof spec.content === 'string'?
+        spec.content:
+        undefined;
     priv.callbacks = spec.callbacks || {};
     priv.success   = priv.callbacks.success || function (){};
     priv.error     = priv.callbacks.error || function (){};
@@ -56,10 +62,13 @@ var command = function(spec, my) {
     };
 
     that.getDocId = function () {
-        return priv.docid || priv.doc._id;
+        return (priv.docid || priv.doc._id).split('/')[0];
     };
-    that.getDocContent = function () {
-        return priv.doc.content;
+    that.getAttachmentId = function () {
+        return (priv.docid || priv.doc._id).split('/')[1];
+    };
+    that.getContent = function () {
+        return priv.content;
     };
 
     /**
@@ -87,6 +96,15 @@ var command = function(spec, my) {
      * @param  {object} storage The storage.
      */
     that.validate = function (storage) {
+        if (!(priv.docid || priv.doc._id).match(/^[^\/]+([\/][^\/]+)?$/)) {
+            that.error({
+                status:21,statusText:'Invalid Document Id',
+                error:'invalid_document_id',
+                message:'The document id must be like "abc" or "abc/def".',
+                reason:'The document id is no like "abc" or "abc/def"'
+            });
+            return false;
+        }
         if (!that.validateState()) {
             return false;
         }
@@ -97,16 +115,6 @@ var command = function(spec, my) {
      * Extend this function
      */
     that.validateState = function() {
-        if (typeof priv.doc !== 'object') {
-            that.error({
-                status:20,
-                statusText:'Document_Id Required',
-                error:'document_id_required',
-                message:'No document id.',
-                reason:'no document id'
-            });
-            return false;
-        }
         return true;
     };
 
