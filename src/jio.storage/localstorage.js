@@ -189,23 +189,94 @@ var newLocalStorage = function ( spec, my ) {
         localstorage.setItem(storage_file_array_name,new_array);
     };
 
-    priv.checkSecuredDocId = function (secured_docid,docid,method) {
-        if (!secured_docid) {
-            that.error({
-                status:403,statusText:'Method Not Allowed',
-                error:'method_not_allowed',
-                message:'Cannot '+method+' "'+docid+
-                    '", file name is incorrect.',
-                reason:'Cannot '+method+' "'+docid+
-                    '", file name is incorrect'
-            });
-            return false;
+    /**
+     * Extends [obj] adding 0 to 3 values according to [command] options.
+     * @method manageOptions
+     * @param  {object} obj The obj to extend
+     * @param  {object} command The JIO command
+     * @param  {object} doc The document object
+     */
+    priv.manageOptions = function (obj, command, doc) {
+        obj = obj || {};
+        if (command.getOption('revs')) {
+            obj.revisions = doc._revisions;
         }
-        return true;
+        if (command.getOption('revs_info')) {
+            obj.revs_info = doc._revs_info;
+        }
+        if (command.getOption('conflicts')) {
+            obj.conflicts = {total_rows:0,rows:[]};
+        }
+        return obj;
     };
 
+    /**
+     * Create a document in the local storage.
+     * It will store the file in 'jio/local/USR/APP/FILE_NAME'.
+     * The command may have some options:
+     * - {boolean} conflicts Add a conflicts object to the response
+     * - {boolean} revs Add the revisions history of the document
+     * - {boolean} revs_info Add revisions informations
+     * @method post
+     */
     that.post = function (command) {
-        that.put(command);
+        var now = Date.now();
+        // wait a little in order to simulate asynchronous saving
+        setTimeout (function () {
+            var docid, hash, doc, ret, path;
+
+            if (command.getAttachmentId()) {
+                that.error({
+                    status:403,statusText:'Forbidden',error:'forbidden',
+                    message:'Cannot add an attachment with post request.',
+                    reason:'attachment cannot be added with a post request'
+                });
+                return;
+            }
+
+            docid = command.getDocId();
+            path = 'jio/local/'+priv.secured_username+'/'+
+                priv.secured_applicationname+'/'+docid;
+
+            // reading
+            doc = localstorage.getItem(path);
+            if (!doc) {
+                hash = priv.hashCode('' + doc + ' ' + now + '');
+                // create document
+                doc = {};
+                doc._id = docid;
+                doc._rev = '1-'+hash;
+                doc._revisions = {
+                    start: 1,
+                    ids: [hash]
+                };
+                doc._revs_info = [{
+                    rev: '1-'+hash,
+                    // status can be 'available', 'deleted' or 'missing'
+                    status: 'available'
+                }];
+                if (!priv.doesUserExist (priv.secured_username)) {
+                    priv.addUser (priv.secured_username);
+                }
+                priv.addFileName(docid);
+            } else {
+                // cannot overwrite
+                that.error ({
+                    status:409,statusText:'Conflict',error:'conflict',
+                    message:'Document already exists.',
+                    reason:'the document already exists'
+                });
+                return;
+            }
+            localstorage.setItem(path, doc);
+            that.success (
+                priv.manageOptions(
+                    {ok:true,id:docid,rev:doc._rev},
+                    command,
+                    doc
+                )
+            );
+        });
     };
 
     /**
