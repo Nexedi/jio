@@ -21,11 +21,12 @@ var command = function(spec, my) {
 
     priv.tried     = 0;
     priv.doc       = spec.doc || {};
+    priv.doc._id   = priv.doc._id || generateUuid();
     priv.docid     = spec.docid || '';
-    priv.option    = spec.options || {};
     priv.content   = typeof spec.content === 'string'?
         spec.content:
         undefined;
+    priv.option    = spec.options || {};
     priv.callbacks = spec.callbacks || {};
     priv.success   = priv.callbacks.success || function (){};
     priv.error     = priv.callbacks.error || function (){};
