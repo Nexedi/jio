@@ -42,76 +42,97 @@ var clearlog = function () {
 };
         //-->
   </script>
-  <div id="main">
-    <table>
-      <tr style="font-style:italic;">
-        <th>simple storage</th><th>multi storage</th><th>distant storage</th>
-        <th>conflict managing</th><th>custom storage description</th>
-      </tr>
-      <tr>
-        <th>local</th><th>crypt & local</th><th>dav</th>
-        <th>conflictmanager & local</th><th>custom</th>
-      </tr>
-      <tr>
-        <th>
-          <input type="text" id="localuser" value="localuser" placeholder="username" /><br />
-          <input type="text" id="localapp" value="localapp" placeholder="applicationname" /><br />
-        </th>
-        <th>
-          <input type="text" id="cryptuser" value="cryptuser" placeholder="username" /><br />
-          <input type="text" id="cryptapp" value="cryptapp" placeholder="applicationname" /><br />
-          <input type="password" id="cryptpassword" value="pwd" placeholder="password" /><br />
-        </th>
-        <th>
-          <input type="text" id="davuser" value="" placeholder="username" /><br />
-          <input type="text" id="davapp" value="" placeholder="applicationname" /><br />
-          <input type="password" id="davpassword" value="" placeholder="password" /><br />
-          <input type="text" id="davurl" value="" placeholder="url" /><br />
-        </th>
-        <th>
-          <input type="text" id="conflictuser" value="localuser" placeholder="username" /><br />
-          <input type="text" id="conflictapp" value="localapp" placeholder="applicationname" /><br />
-        </th>
-        <th style="width:100%;">
-          <textarea id="customstorage" style="width:100%;">{&quot;type&quot;:&quot;local&quot;,&quot;username&quot;:&quot;customuser&quot;,&quot;applicationname&quot;:&quot;customapp&quot;,&quot;customkey&quot;:&quot;customvalue&quot;}</textarea>
-        </th>
-      </tr>
-      <tr>
-        <th><button onclick="newLocalJio()">Create New jIO</button></th>
-        <th><button onclick="newCryptJio()">Create New jIO</button></th>
-        <th><button onclick="newDavJio()">Create New jIO</button></th>
-        <th><button onclick="newConflictJio()">Create New jIO</button></th>
-        <th><button onclick="newCustomJio()">Create New jIO</button></th>
-      </tr>
-    </table>
-  </div>
-  <hr />
-  <input type="text" id="filepath" value="" placeholder="filepath" />
-  <input type="text" id="content" value="" placeholder="content" />
-  <input type="text" id="prev_rev" value="" placeholder="previous revision" />
+  <table border="1" style="width: 100%;">
+    <tr style="font-style:italic;">
+      <th>simple storage</th><th>multi storage</th><th>distant storage</th>
+      <th>conflict managing</th><th>custom storage description</th>
+    </tr>
+    <tr>
+      <th>local</th><th>crypt & local</th><th>dav</th>
+      <th>conflictmanager & local</th><th>custom</th>
+    </tr>
+    <tr>
+      <th>
+        <input type="text" id="localuser" value="localuser" placeholder="username" /><br />
+        <input type="text" id="localapp" value="localapp" placeholder="applicationname" /><br />
+      </th>
+      <th>
+        <input type="text" id="cryptuser" value="cryptuser" placeholder="username" /><br />
+        <input type="text" id="cryptapp" value="cryptapp" placeholder="applicationname" /><br />
+        <input type="password" id="cryptpassword" value="pwd" placeholder="password" /><br />
+      </th>
+      <th>
+        <input type="text" id="davuser" value="" placeholder="username" /><br />
+        <input type="text" id="davapp" value="" placeholder="applicationname" /><br />
+        <input type="password" id="davpassword" value="" placeholder="password" /><br />
+        <input type="text" id="davurl" value="" placeholder="url" /><br />
+      </th>
+      <th>
+        <input type="text" id="conflictuser" value="localuser" placeholder="username" /><br />
+        <input type="text" id="conflictapp" value="localapp" placeholder="applicationname" /><br />
+      </th>
+      <th style="width:100%;">
+        <textarea id="customstorage" style="width:98%;">{&quot;type&quot;:&quot;local&quot;,&quot;username&quot;:&quot;customuser&quot;,&quot;applicationname&quot;:&quot;customapp&quot;,&quot;customkey&quot;:&quot;customvalue&quot;}</textarea>
+      </th>
+    </tr>
+    <tr>
+      <th><button onclick="newLocalJio()">Create New jIO</button></th>
+      <th><button onclick="newCryptJio()">Create New jIO</button></th>
+      <th><button onclick="newDavJio()">Create New jIO</button></th>
+      <th><button onclick="newConflictJio()">Create New jIO</button></th>
+      <th><button onclick="newCustomJio()">Create New jIO</button></th>
+    </tr>
+  </table>
   <br />
-  <label for="show_conflicts">Show Conflicts</label>
-  <input type="checkbox" id="show_conflicts" />,
-  <label for="show_revision_history">Show Revision History</label>
-  <input type="checkbox" id="show_revision_history" />,
-  <label for="show_revision_info">Show Revision Info</label>
-  <input type="checkbox" id="show_revision_info" />,
-  <label for="last_revision">Remove Last Revision</label>
-  <input type="checkbox" id="last_revision" />,<br />
-  <label for="max_retry">Max Retry</label>
-  <input type="number" id="max_retry" value="0" style="width:30px;"/>
-  (0 = infinite),
-  <label for="metadata_only">Metadata Only</label>
-  <input type="checkbox" id="metadata_only" />
-  <hr />
-  <button onclick="post()">post</button>
-  <button onclick="put()">put</button>
-  <button onclick="get()">get</button>
-  <button onclick="remove()">remove</button>
-  <button onclick="allDocs()">allDocs</button><br />
-  <button onclick="printLocalStorage()">print localStorage</button>
-  <button onclick="localStorage.clear()">clear localStorage</button><br />
-  <button onclick="clearlog()">Clear Log</button>
+  <table border="1" style="width: 100%;">
+    <tr>
+      <td style="width: 50%;">
+        <label for="metadata">Metadata or document id:</label>
+        <textarea id="metadata" rows="3" style="width: 98%;">{}</textarea>
+      </td>
+      <td style="width: 50%;">
+        <label for="document_id">Document Id:</label>
+        <input type="text" id="document_id" value="" />
+        <label for="mimetype">Mime Type:</label>
+        <input type="text" id="mimetype" value="" /><br />
+        <label for="content">Content:</label>
+        <textarea id="content" rows="3" style="width: 98%;"></textarea><br />
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="text-align: center;">
+        <label for="prev_rev">Previous revision:</label>
+        <input type="text" id="prev_rev" value="" style="width: 40em;"/><br />
+        <label for="show_conflicts">Show Conflicts</label>
+        <input type="checkbox" id="show_conflicts" />,
+        <label for="show_revision_history">Show Revision History</label>
+        <input type="checkbox" id="show_revision_history" />,
+        <label for="show_revision_info">Show Revision Info</label>
+        <input type="checkbox" id="show_revision_info" />,<br />
+        <label for="max_retry">Max Retry</label>
+        <input type="number" id="max_retry" value="0" style="width:30px;"/>
+        (0 = infinite)
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: center;">
+        <button onclick="post()">post</button>
+        <button onclick="put()">put</button>
+        <button onclick="get()">get</button>
+        <button onclick="remove()">remove</button>
+        <button onclick="allDocs()">allDocs</button>
+      </td>
+      <td style="text-align: center;">
+        <button onclick="putAttachment()">putAttachment</button>
+      </td>
+    </tr>
+  </table>
+  <br />
+  <div style="text-align: center;">
+    <button onclick="printLocalStorage()">print localStorage</button>
+    <button onclick="localStorage.clear()">clear localStorage</button><br />
+    <button onclick="clearlog()">Clear Log</button>
+  </div>
   <hr />
   <div id="log">
   </div>
@@ -195,7 +216,7 @@ var callback = function (err,val,begin_date) {
     log ('return : ' + JSON.stringify (val));
 };
 var command = function (method) {
-    var begin_date = Date.now(), doc = {}, opts = {};
+    var begin_date = Date.now(), doc = {}, opts = {}, other = {};
     log (method);
     if (!my_jio) {
         return error ('no jio set');
@@ -205,27 +226,35 @@ var command = function (method) {
     opts.revs = $('#show_revision_history').attr('checked')?true:false;
     opts.revs_info = $('#show_revision_info').attr('checked')?true:false;
     opts.max_retry = parseInt($('#max_retry').attr('value') || '0');
-    opts.metadata_only = $('#metadata_only').attr('checked')?true:false;
 
     switch (method) {
+    case 'putAttachment':
+        other.docid = $('#document_id').attr('value');
+        other.revision = $('#prev_rev').attr('value');
+        other.content = $('#content').attr('value');
+        other.mimetype = $('#mimetype').attr('value');
+        log ('docid: '+ other.docid);
+        log ('revision: '+ other.revision);
+        log ('content: '+ other.content);
+        log ('mimetype: '+ other.mimetype);
     case 'post':
     case 'put':
-        doc.content = $('#content').attr('value');
-        doc._id = $('#filepath').attr('value');
-        doc._rev = $('#prev_rev').attr('value') || undefined;
+        doc = JSON.parse ($('#metadata').attr('value'));
+        log ('doc: ' + JSON.stringify (doc));
         break;
     case 'remove':
-        doc._id = $('#filepath').attr('value');
+        doc = JSON.parse ($('#metadata').attr('value'));
         opts.rev = ($('#last_revision').attr('checked')?'last':undefined) ||
             $('#prev_rev').attr('value') || undefined;
+        log ('doc: ' + JSON.stringify (doc));
         break;
     case 'get':
-        doc = $('#filepath').attr('value');
+        doc = $('#metadata').attr('value');
+        log ('docid: '+ doc)
     case 'allDocs':
         break;
     }
 
-    log ('doc: ' + JSON.stringify (doc));
     log ('opts: ' + JSON.stringify (opts));
 
     switch (method) {
@@ -241,6 +270,14 @@ var command = function (method) {
         my_jio[method](opts,function (err,val) {
             callback(err,val,begin_date);
         });
+        break;
+    case 'putAttachment':
+        my_jio[method](
+            other.docid, other.revision, other.content,
+            other.mimetype, opts, function (err, val) {
+                callback(err,val,begin_date);
+            }
+        );
         break;
     }
 };
@@ -258,7 +295,10 @@ var remove = function () {
 };
 var allDocs = function () {
     command('allDocs');
-}
+};
+var putAttachment = function () {
+    command('putAttachment');
+};
         //-->
   </script>
 </body>
