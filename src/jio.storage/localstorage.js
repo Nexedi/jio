@@ -6,6 +6,22 @@ var newLocalStorage = function ( spec, my ) {
     spec = spec || {};
     var that = my.basicStorage( spec, my ), priv = {};
 
+    /*
+     * Wrapper for the localStorage used to simplify instion of any kind of
+     * values
+     */
+    var localstorage = {
+        getItem: function (item) {
+            return JSON.parse (localStorage.getItem(item));
+        },
+        setItem: function (item,value) {
+            return localStorage.setItem(item,JSON.stringify (value));
+        },
+        deleteItem: function (item) {
+            delete localStorage[item];
+        }
+    };
+
     priv.secureDocId = function (string) {
         var split = string.split('/'), i;
         if (split[0] === '') {
@@ -54,7 +70,7 @@ var newLocalStorage = function ( spec, my ) {
      * @return {array} The list of users.
      */
     priv.getUserArray = function () {
-        return localStorage.getItem(storage_user_array_name) || [];
+        return localstorage.getItem(storage_user_array_name) || [];
     };
 
     /**
@@ -65,7 +81,7 @@ var newLocalStorage = function ( spec, my ) {
     priv.addUser = function (user_name) {
         var user_array = priv.getUserArray();
         user_array.push(user_name);
-        localStorage.setItem(storage_user_array_name,user_array);
+        localstorage.setItem(storage_user_array_name,user_array);
     };
 
     /**
@@ -90,7 +106,7 @@ var newLocalStorage = function ( spec, my ) {
      * @return {array} All the existing file paths.
      */
     priv.getFileNameArray = function () {
-        return localStorage.getItem(storage_file_array_name) || [];
+        return localstorage.getItem(storage_file_array_name) || [];
     };
 
     /**
@@ -101,7 +117,7 @@ var newLocalStorage = function ( spec, my ) {
     priv.addFileName = function (file_name) {
         var file_name_array = priv.getFileNameArray();
         file_name_array.push(file_name);
-        localStorage.setItem(storage_file_array_name,file_name_array);
+        localstorage.setItem(storage_file_array_name,file_name_array);
     };
 
     /**
@@ -116,7 +132,7 @@ var newLocalStorage = function ( spec, my ) {
                 new_array.push(array[i]);
             }
         }
-        localStorage.setItem(storage_file_array_name,new_array);
+        localstorage.setItem(storage_file_array_name,new_array);
     };
 
     priv.checkSecuredDocId = function (secured_docid,docid,method) {
@@ -228,7 +244,7 @@ var newLocalStorage = function ( spec, my ) {
             array = priv.getFileNameArray();
             for (i = 0, l = array.length; i < l; i += 1) {
                 file_object =
-                    localStorage.getItem(path+'/'+array[i]);
+                    localstorage.getItem(path+'/'+array[i]);
                 if (file_object) {
                     if (command.getOption('metadata_only')) {
                         new_array.push ({
@@ -263,7 +279,7 @@ var newLocalStorage = function ( spec, my ) {
             if (!priv.checkSecuredDocId(
                 secured_docid,command.getDocId(),'remove')) {return;}
             // deleting
-            delete localStorage[path];
+            localstorage.deleteItem(path);
             priv.removeFileName(secured_docid);
             that.success ({ok:true,id:command.getDocId()});
         });
