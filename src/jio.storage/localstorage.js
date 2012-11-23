@@ -384,33 +384,53 @@ var newLocalStorage = function ( spec, my ) {
     /**
      * Loads a document from the local storage.
      * It will load file in 'jio/local/USR/APP/FILE_NAME'.
-     * You can add an 'options' object to the job, it can contain:
-     * - metadata_only {boolean} default false, retrieve the file metadata
-     *   only if true.
      * @method get
      */
     that.get = function (command) {
 
         setTimeout(function () {
-            var secured_docid = priv.secureDocId(command.getDocId()),
-            doc = null;
-
-            if (!priv.checkSecuredDocId(
-                secured_docid,command.getDocId(),'get')) {return;}
-            doc = localStorage.getItem(
-                'jio/local/'+priv.secured_username+'/'+
-                    priv.secured_applicationname+'/'+secured_docid);
-            if (!doc) {
-                that.error ({status:404,statusText:'Not Found.',
-                             error:'not_found',
-                             message:'Document "'+ command.getDocId() +
-                             '" not found.',
-                             reason:'missing'});
-            } else {
-                if (command.getOption('metadata_only')) {
-                    delete doc.content;
+            var docid, doc, docpath, attmtid, attmt;
+            docid = command.getDocId();
+            docpath = 'jio/local/'+priv.secured_username+'/'+
+                priv.secured_applicationname+'/'+docid;
+            attmtid = command.getAttachmentId();
+            if (attmtid) {
+                // this is an attachment
+                attmt = localstorage.getItem(docpath+'/'+attmtid);
+                if (!attmt) {
+                    // there is no attachment to get
+                    that.error({
+                        status:404,statusText:'Not found',error:'not_found',
+                        message:'Document is missing attachment.',
+                        reason:'document is missing attachment'
+                    });
+                    return;
                 }
-                that.success (doc);
+                // send the attachment content
+                that.success(attmt);
+            } else {
+                // this is a document
+                doc = localstorage.getItem(docpath);
+                if (!doc) {
+                    // the document does not exist
+                    that.error ({
+                        status:404,statusText:'Not Found.',
+                        error:'not_found',
+                        message:'Document "'+ docid + '" not found.',
+                        reason:'missing'
+                    });
+                } else {
+                    if (!command.getDocInfo('revs')) {
+                        delete doc._revisions;
+                    }
+                    if (!command.getDocInfo('revs_info')) {
+                        delete doc._revs_info;
+                    }
+                    if (command.getDocInfo('conflicts')) {
+                        doc._conflicts = {total_rows:0,rows:[]};
+                    }
+                    that.success (doc);
+                }
             }
         });
     }; // end get
