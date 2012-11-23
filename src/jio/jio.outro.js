@@ -295,7 +295,7 @@
      * @method allDocs
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
-     * - {boolean} descending Reverse the order of the output table.
+     * - {boolean} include_docs Include document metadata
      * - {boolean} revs Include revision history of the document.
      * - {boolean} revs_info Include revisions.
      * - {boolean} conflicts Include conflicts.
