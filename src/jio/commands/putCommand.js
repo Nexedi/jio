@@ -15,14 +15,6 @@ var putCommand = function(spec, my) {
      * @param  {object} handler The storage handler
      */
     that.validate = function () {
-        if (typeof that.getDocInfo('content') !== 'string') {
-            that.error({
-                status:21,statusText:'Content Required',
-                error:'content_required',
-                message:'No data to put.',reason:'no data to put'
-            });
-            return false;
-        }
         return that.validateState();
     };
 
