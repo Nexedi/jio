@@ -22,28 +22,57 @@ var newLocalStorage = function ( spec, my ) {
         }
     };
 
-    priv.secureDocId = function (string) {
-        var split = string.split('/'), i;
-        if (split[0] === '') {
-            split = split.slice(1);
+    /**
+     * Replace substrings to others substring following a [list_of_replacement].
+     * It will be executed recusively to replace substrings which are not
+     * replaced substrings.
+     * It starts from the last element of the list of replacement.
+     * @method replaceSubString
+     * @param  {string} string The string to replace
+     * @param  {array} list_of_replacement A list containing arrays with 2
+     * values:
+     * - {string} The substring to replace
+     * - {string} The new substring
+     * ex: [['b', 'abc'], ['abc', 'cba']]
+     * @return {string} The new string
+     */
+    priv.replaceSubString = function (string, list_of_replacement) {
+        var i, split_string = string.split(list_of_replacement[0][0]);
+        if (list_of_replacement[1]) {
+            for (i = 0; i < split_string.length; i += 1) {
+                split_string[i] = priv.replaceSubString (
+                    split_string[i],
+                    list_of_replacement.slice(1)
+                );
+            }
         }
-        for (i = 0; i < split.length; i+= 1) {
-            if (split[i] === '') { return ''; }
-        }
-        return split.join('%2F');
-    };
-    priv.convertSlashes = function (string) {
-        return string.split('/').join('%2F');
+        return split_string.join(list_of_replacement[0][1]);
     };
 
-    priv.restoreSlashes = function (string) {
-        return string.split('%2F').join('/');
+    /**
+     * It secures the [string] replacing all '%' by '%%' and '/' by '%2F'.
+     * @method secureString
+     * @param  {string} string The string to secure
+     * @return {string} The secured string
+     */
+    priv.secureString = function (string) {
+        return priv.replaceSubString (string, [['/','%2F'],['%','%%']]);
+    };
+
+    /**
+     * It replaces all '%2F' by '/' and '%%' by '%'.
+     * @method unsecureString
+     * @param  {string} string The string to convert
+     * @return {string} The converted string
+     */
+    priv.unsecureString = function (string) {
+        return priv.replaceSubString (string, [['%%','%'],['%2F','/']]);
     };
 
     priv.username = spec.username || '';
-    priv.secured_username = priv.convertSlashes(priv.username);
+    priv.secured_username = priv.secureString(priv.username);
     priv.applicationname = spec.applicationname || 'untitled';
-    priv.secured_applicationname = priv.convertSlashes(priv.applicationname);
+    priv.secured_applicationname = priv.secureString(priv.applicationname);
 
     var storage_user_array_name = 'jio/local_user_array';
     var storage_file_array_name = 'jio/local_file_name_array/' +
