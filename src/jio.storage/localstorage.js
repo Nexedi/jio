@@ -38,11 +38,11 @@ var newLocalStorage = function ( spec, my ) {
      * @methode generateNextRev
      * @param  {string} previous_revision The previous revision
      * @param  {string} string String to help generate hash code
-     * @return {string} The next revision
+     * @return {array} 0:The next revision number and 1:the hash code
      */
     priv.generateNextRev = function (previous_revision, string) {
-         return (parseInt(previous_revision.split('-')[0],10)+1) + '-' +
-            priv.hashCode(previous_revision + string);
+        return [parseInt(previous_revision.split('-')[0],10)+1,
+                priv.hashCode(previous_revision + string)];
     };
 
     /**
@@ -312,7 +312,7 @@ var newLocalStorage = function ( spec, my ) {
         var now = Date.now();
         // wait a little in order to simulate asynchronous saving
         setTimeout (function () {
-            var docid, doc, docpath, attmtid, attmt, attmtpath, prev_rev;
+            var docid, doc, docpath, attmtid, attmt, attmtpath, prev_rev, rev;
             docid = command.getDocId();
             prev_rev = command.getDocInfo('_rev');
             docpath ='jio/local/'+priv.secured_username+'/'+
@@ -360,11 +360,20 @@ var newLocalStorage = function ( spec, my ) {
                 // update document metadata
                 priv.documentObjectUpdate(doc,command.cloneDoc());
             }
-            doc._rev = priv.generateNextRev(prev_rev, ''+doc+' '+now+'');
+            // rev = [number, hash]
+            rev = priv.generateNextRev(prev_rev, ''+doc+' '+now+'');
+            doc._rev = rev.join('-');
+            doc._revisions.ids.unshift(rev[1]);
+            doc._revisions.start = rev[0];
+            doc._revs_info[0].status = 'deleted';
+            doc._revs_info.unshift({
+                "rev": rev.join('-'),
+                "status": "available"
+            });
             localstorage.setItem(docpath, doc);
             that.success (
                 priv.manageOptions(
-                    {ok:true,id:docid,rev:doc._rev},
+                    {"ok":true,"id":docid,"rev":doc._rev},
                     command,
                     doc
                 )
