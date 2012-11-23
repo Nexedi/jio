@@ -78,6 +78,7 @@ var newLocalStorage = function ( spec, my ) {
     var storage_file_array_name = 'jio/local_file_name_array/' +
         priv.secured_username + '/' + priv.secured_applicationname;
 
+    // Overriding serialized()
     var super_serialized = that.serialized;
     that.serialized = function() {
         var o = super_serialized();
@@ -86,6 +87,7 @@ var newLocalStorage = function ( spec, my ) {
         return o;
     };
 
+    // Overrinding validateState()
     that.validateState = function() {
         if (priv.secured_username) {
             return '';
@@ -115,11 +117,11 @@ var newLocalStorage = function ( spec, my ) {
 
     /**
      * checks if a user exists in the user array.
-     * @method userExists
+     * @method doesUserExist
      * @param  {string} user_name The user name
      * @return {boolean} true if exist, else false
      */
-    priv.userExists = function (user_name) {
+    priv.doesUserExist = function (user_name) {
         var user_array = priv.getUserArray(), i, l;
         for (i = 0, l = user_array.length; i < l; i += 1) {
             if (user_array[i] === user_name) {
