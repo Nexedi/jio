@@ -23,6 +23,29 @@ var newLocalStorage = function ( spec, my ) {
     };
 
     /**
+     * Generates a hash code of a string
+     * @method hashCode
+     * @param  {string} string The string to hash
+     * @return {string} The string hash code
+     */
+    priv.hashCode = function (string) {
+        return hex_sha256(string);
+    };
+
+    /**
+     * Generates the next revision of [previous_revision]. [string] helps us
+     * to generate a hash code.
+     * @methode generateNextRev
+     * @param  {string} previous_revision The previous revision
+     * @param  {string} string String to help generate hash code
+     * @return {string} The next revision
+     */
+    priv.generateNextRev = function (previous_revision, string) {
+         return (parseInt(previous_revision.split('-')[0],10)+1) + '-' +
+            priv.hashCode(previous_revision + string);
+    };
+
+    /**
      * Replace substrings to others substring following a [list_of_replacement].
      * It will be executed recusively to replace substrings which are not
      * replaced substrings.
