@@ -238,6 +238,7 @@ var command = function (method) {
         log ('revision: '+ other.revision);
         log ('content: '+ other.content);
         log ('mimetype: '+ other.mimetype);
+        break;
     case 'post':
     case 'put':
         doc = JSON.parse ($('#metadata').attr('value'));

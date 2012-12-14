@@ -18,12 +18,47 @@
             return o;
         };
 
+        // Fake revisions
+        var fakeCount = 0;
+        var generateRevision = function(command, action, reset){
+
+            var that = {},
+                priv = {},
+                fakeRevision = "",
+                fakeCount = reset === true ? 0 : fakeCount,
+                now = Date.now();
+
+            that.makeHash = function(){
+                return that.hashCode('' + command.getDocId() + ' ' + now + '');
+            };
+
+            that.hashCode = function (string) {
+                return hex_sha256(string);
+            };
+
+            that.generateNextRev = function (previous_revision, string) {
+                return (parseInt(previous_revision.split('-')[0],10)+1) + '-' +
+                    priv.hashCode(previous_revision + string);
+            };
+
+            if ( fakeRevision === "" && fakeCount === 0 ){
+                fakeRevision = '1-'+that.makeHash();
+            } else {
+                if( action !== "post"){
+                    fakeRevision = that.generateNextRev( fakeRev, that.makeHash );
+                }
+            }
+
+            return fakeRevision;
+        };
+        
 
         that.post = function (command) {
             setTimeout (function () {
-                that.success ({
+                that.success({
                     ok:true,
-                    id:command.getDocId()
+                    id:command.getDocId(),
+                    rev:generateRevision(command, "post", true)
                 });
             }, 100);
         }; // end post
@@ -32,7 +67,8 @@
             setTimeout (function () {
                 that.success ({
                     ok:true,
-                    id:command.getDocId()
+                    id:command.getDocId(),
+                    rev:generateRevision(command, "put", true)
                 });
             }, 100);            // 100 ms, for jiotests simple job waiting
         }; // end put

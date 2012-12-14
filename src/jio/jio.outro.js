@@ -194,6 +194,7 @@
                 [options, success, error],
                 {max_retry:0}
             );
+
             priv.addJob(postCommand,{
                 doc:doc,
                 options:param.options,
@@ -223,6 +224,7 @@
                 [options, success, error],
                 {max_retry:0}
             );
+
             priv.addJob(putCommand,{
                 doc:doc,
                 options:param.options,
@@ -253,6 +255,7 @@
                 [options,success,error],
                 {max_retry:3}
             );
+
             priv.addJob(getCommand,{
                 docid:id,
                 options:param.options,
@@ -282,6 +285,7 @@
                 [options,success,callback],
                 {max_retry:0}
             );
+
             priv.addJob(removeCommand,{
                 doc:doc,
                 options:param.options,
@@ -311,6 +315,7 @@
                 [options,success.error],
                 {max_retry: 3}
             );
+
             priv.addJob(allDocsCommand,{
                 options:param.options,
                 callbacks:{success:param.success,error:param.error}
@@ -342,8 +347,9 @@
                 [options, success, error],
                 {max_retry: 0}
             );
-            priv.addJob(putAttachmentCommand,{
-                doc:{_id:id,content:doc},
+
+            priv.addJob(putAttachmentCommand,{ 
+                doc:{_id:id,content:doc,_rev:rev,mimetype:mimetype},
                 options:param.options,
                 callbacks:{success:param.success,error:param.error}
             });

@@ -11,7 +11,7 @@ var putAttachmentCommand = function(spec, my) {
     that.executeOn = function (storage) {
         storage.putAttachment (that);
     };
-
+    
     that.validateState = function () {
         if (typeof that.getContent() !== 'string') {
             that.error({

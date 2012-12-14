@@ -23,9 +23,13 @@ var command = function(spec, my) {
     priv.doc       = spec.doc || {};
     priv.doc._id   = priv.doc._id || generateUuid();
     priv.docid     = spec.docid || '';
-    priv.content   = typeof spec.content === 'string'?
-        spec.content:
-        undefined;
+
+    // xxx fixed spec.content to spec.doc.content for PUTATTACHMENT
+    // xxx need extra check for GET, otherwise spec.doc is undefined
+    priv.content   = spec.doc === undefined ? undefined :
+        typeof spec.doc.content === 'string'?
+                spec.doc.content:
+                undefined;
     priv.option    = spec.options || {};
     priv.callbacks = spec.callbacks || {};
     priv.success   = priv.callbacks.success || function (){};
