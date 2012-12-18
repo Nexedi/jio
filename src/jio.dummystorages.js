@@ -51,7 +51,7 @@
 
             return fakeRevision;
         };
-        
+
 
         that.post = function (command) {
             setTimeout (function () {

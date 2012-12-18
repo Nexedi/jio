@@ -201,11 +201,11 @@ isUUID = function( _id ){
 },
 isEmptyObject = function( obj) {
     var key;
-    
+
     if (obj.length && obj.length > 0){
         return false;
     }
-    if (obj.length && obj.length === 0){  
+    if (obj.length && obj.length === 0){
         return true;
     }
     for (key in obj) {
@@ -214,8 +214,46 @@ isEmptyObject = function( obj) {
         }
     }
     return true;
-};
+},
 //// end tools
+
+//// test methods ////
+checkReply = function(o,tick,fun){
+    basic_tick_function(o,tick,fun);
+},
+checkFile = function (response, o, tick, value, fun) {
+    o.tmp = localstorage.getItem('jio/local/'+o.username+'/jiotests/'+
+        response.id+'/'+response.rev );
+
+    // remove everything not needed for basic response
+    o.tmp.ok = true;
+    delete o.tmp._revisions;
+    delete o.tmp._revs_info;
+    delete o.tmp.content;
+
+    if (o.tmp) {
+        deepEqual (o.tmp,{
+            "ok":response.ok,
+            "_id":response.id,
+            "_rev":response.rev,
+            },'document was created or updated');
+    } else {
+        ok (false, 'document was not created or updated');
+    }
+},
+
+checkTreeNode = function (response,o,tick,value,fun) {
+    o.tmp = localstorage.getItem('jio/local/'+o.username+'/jiotests/'+
+        response.id+'/revision_tree' );
+
+    if (o.tmp) {
+        deepEqual (o.tmp,o.buildTestTree,'tree node was created');
+    } else {
+        ok (false, 'tree node was not created');
+    }
+};
+
+
 
 //// QUnit Tests ////
 
@@ -286,11 +324,12 @@ test ('All tests', function () {
 
     // All Ok Dummy Storage
     o.jio = JIO.newJio({'type':'dummyallok'});
-    
+
     // post empty
     o.jio.post({},
         function(err, response) {
-            o.spy(o,'value',{"ok":true, "id":response.id, "rev":response.rev},'dummyallok post/create empty object');
+            o.spy(o,'value',{"ok":true, "id":response.id, "rev":response.rev},
+                  'dummyallok post/create empty object');
             o.f(response);
         });
     o.tick(o);
@@ -298,7 +337,8 @@ test ('All tests', function () {
     // post
     o.jio.post({"content":"basic_content"},
         function(err, response) {
-            o.spy(o,'value',{"ok":true, "id":response.id, "rev":response.rev},'dummyallok post/create object');
+            o.spy(o,'value',{"ok":true, "id":response.id, "rev":response.rev},
+                  'dummyallok post/create object');
             o.f(response);
         });
     o.tick(o);
@@ -306,7 +346,8 @@ test ('All tests', function () {
     // put
     o.jio.put({"_id":"file","content":"basic_content"},
         function(err, response) {
-            o.spy(o,'value',{"ok":true, "id":"file", "rev":response.rev},'dummyallok put create object');
+            o.spy(o,'value',{"ok":true, "id":"file", "rev":response.rev},
+                  'dummyallok put create object');
             o.f(response);
         });
     o.tick(o);
@@ -399,7 +440,7 @@ test ('All tests', function () {
     o.jio.allDocs (o.f);
     o.tick(o);
     o.jio.stop();
-    
+
     */
 });
 /*
@@ -592,125 +633,118 @@ module ( 'Jio LocalStorage' );
 
 // ============================== POST ==========================
 test ('Post', function(){
-    
+
     // runs following assertions
-    // a) POST with id - should be an error
-    // b) POST with attachment - should be an error
-    // c) POST with content
-    // d) check that document is created with UUID.revision
-    // e) check that document revision tree is created
-    
-    var o = {}; 
-        o.t = this; 
+    // 1) POST with id - should be an error
+    // 2) POST with attachment - should be an error
+    // 3) POST CREATE with content
+    // 4) check that document is created with UUID.revision
+    // 5) check that document revision tree is created
+    // 6) POST UPDATE
+
+    var o = {};
+        o.t = this;
         o.clock = o.t.sandbox.useFakeTimers(),
         localstorage = {
             getItem: function (item) {
                 return JSON.parse (localStorage.getItem(item));
             },
             setItem: function (item,value) {
-                return localStorage.setItem(item,JSON.stringify (value));
+                return localStorage.setItem(item,JSON.stringify(value));
             },
             deleteItem: function (item) {
                 delete localStorage[item];
             }
-        };    
-        
+        };
+
     o.clock.tick(base_tick);
     o.spy = basic_spy_function;
     o.clean = clean_up_local_storage_function();
-    
-    // test functions
-    o.checkReply = function(o,tick,fun){
-            basic_tick_function(o,tick,fun);
-    };
-    o.checkFile = function (response, o, tick, value, fun) {
-        o.tmp = localstorage.getItem('jio/local/MrPost/jiotests/'+ response.id+'/'+response.rev );
-        
-        // fake it
-        o.tmp.ok = true;
-        delete o.tmp._revisions;
-        delete o.tmp._revs_info;
-        
-        if (o.tmp) {
-            deepEqual (o.tmp,{
-                "ok":response.ok,
-                "_id":response.id,
-                "_rev":response.rev,
-                },'document was created');
-        } else {
-            ok (false, 'document was not created');
-        }
-    };
-    o.checkTree = function ( response, o, tick, value, fun) {
-        o.tmp = localstorage.getItem('jio/local/MrPost/jiotests/'+ response.id+'/revision_tree' );
-        
-        if (o.tmp) {
-            deepEqual (o.tmp,{
-                "type":'leaf',
-                "status":'available',
-                "rev":response.rev,
-                "kids":{}
-                },'document tree was created');
-        } else {
-            ok (false, 'document tree was not created');
-        }
-    };
+    o.username = 'MrPost';
+    o.testBuildTree = [];
+    o.testRevisionStorage = [];
 
     // let's go
-    o.jio = JIO.newJio({ type:'local', username:'MrPost',
+    o.jio = JIO.newJio({ type:'local', username:o.username,
                          applicationname:'jiotests' });
-    o.spy (o,'value',{  
+    o.spy (o,'value',{
         "error": 'forbidden',
         "message": 'Forbidden',
         "reason": 'ID cannot be supplied with a POST request. Please use PUT',
         "status": 403,
         "statusText": 'Forbidden'
         },'POST with id = 403 forbidden');
+
     o.jio.post({"_id":'file',"content":'content'},o.f);
-    // TEST a) POST with id
-    o.checkReply(o,null,true);
-    
-    o.spy (o,'value',{  
+
+    // TEST 1) POST with id
+    checkReply(o,null,true);
+
+    o.spy (o,'value',{
         "error": 'forbidden',
         "message": 'Forbidden',
         "reason": 'Attachment cannot be added with a POST request',
         "status": 403,
         "statusText": 'Forbidden'
         },'POST attachment = 403 forbidden');
+
     o.jio.post({
         "_id":'file/ABC',
         "mimetype":'text/html',
         "content":'<b>hello</b>'},o.f);
-    // TEST b) POST attachment
-    o.checkReply(o,null,true);
+
+    // TEST 2) POST attachment
+    checkReply(o,null,true);
 
     o.jio.post({"content":'content'},
         function(err, response) {
             o.spy(o,'value',{"ok":true,"id":response.id,"rev":response.rev},
                     'POST content = ok');
             o.f(response);
-            
-            // TEST d) check if document is created and correct
-            o.checkFile(response, o, null, true);
-            // TEST e) check if document tree is created and correct
-            o.checkTree(response, o, null, true);
+
+            // store falseRevision
+            o.falseRevision = response.rev;
+
+            // build tree manually
+            o.testRevisionStorage.push(response.rev);
+            o.buildTestTree = {"kids":[],"rev":o.testRevisionStorage[0],
+                "status":'available',"type":'leaf'};
+
+            // TEST 4) check if document is created and correct
+            checkFile(response, o, null, true);
+            // TEST 5) check if document tree is created and correct
+            checkTreeNode(response, o, null, true);
         });
-    // c) TEST POST content
-    o.checkReply(o,null,true);
+    // 3) TEST POST content
+    checkReply(o,null,true);
     o.jio.stop();
     o.clean;
 });
 
 // ============================== PUT ==========================
- /*
+
 test ('Put', function(){
-    
+
     // runs following assertions
-    // a) 
-    
+    // 1) PUT without ID = 409
+    // 2) PUT with wrong ID/rev = 404
+    // 3) PUT CREATE
+    // 4)   check file was created
+    // 5)   check tree was created
+    // 6)      PUT UPDATE
+    // 7)         check file was replaced
+    // 8)         check tree was updated
+    // 9)               PUT UPDATE 2
+    // 10)                   check file was replaced
+    // 11)                   check tree was updated
+    // 12)                       PUT UPDATE false revision = 409
+    // 13)                       SYNC-PUT no revs_info = 409
+    // 14)                       SYNC-PUT revs_info
+
     var o = {}; 
-        o.t = this; 
+        o.t = this;
         o.clock = o.t.sandbox.useFakeTimers(),
+        o.falseRevision,
         localstorage = {
             getItem: function (item) {
                 return JSON.parse (localStorage.getItem(item));
@@ -721,83 +755,224 @@ test ('Put', function(){
             deleteItem: function (item) {
                 delete localStorage[item];
             }
-        };    
-        
+        };
+
     o.clock.tick(base_tick);
     o.spy = basic_spy_function;
     o.clean = clean_up_local_storage_function();
-    
-    // test functions
-    o.checkReply = function(o,tick,fun){
-            basic_tick_function(o,tick,fun);
-    };
-    o.checkFile = function (response, o, tick, value, fun) {
-       
-        o.tmp = 
-            localstorage.getItem('jio/local/MrSaveName/jiotests/'+ response.id+'/'+response.rev );
-        
-        // fake it
-        o.tmp.ok = true;
-        delete o.tmp._revisions;
-        delete o.tmp._revs_info;
- 
-        if (o.tmp) {
-            deepEqual (o.tmp,{
-                "ok":response.ok,
-                "_id":response.id,
-                "_rev":response.rev,
-                },'document was created');
-        } else {
-            ok (false, 'document was not created');
-        }
-        
-        
-    };
-    o.checkTree = function ( response, o, tick, value, fun) {
-        
-        o.tmp = 
-            localstorage.getItem('jio/local/MrPut/jiotests/'+ response.id+'/revision_tree' );
-        if (o.tmp) {
-            deepEqual (o.tmp,{
-                "type":'leaf',
-                "status":'available',
-                "rev":response.rev,
-                "kids":{}
-                },'document tree was created');
-        } else {
-            ok (false, 'document tree was not created');
-        }
-        
-    };
-    
-    
+    o.username = 'MrPutt';
+    o.testBuildTree = [];
+    o.testRevisionStorage = [];
+
     // let's go
-    o.jio = JIO.newJio({ type:'local', username:'MrPut',
+    o.jio = JIO.newJio({ type:'local', username:o.username,
                          applicationname:'jiotests' });
-    o.spy (o,'value',{ },'');
-    o.jio.post({"_id":'file',"content":'content'},o.f);
-    // a) TEST 
-    o.checkReply(o,null,true);
-    
-   
-    o.jio.post({"content":'content'},
+
+    // TEST 1) PUT without ID
+    o.spy (o,'value',{
+        "error": 'conflict',
+        "message": 'Document update conflict.',
+        "reason": 'Missing Document ID and or Revision',
+        "status": 409,
+        "statusText": 'Conflict'
+        },'PUT without id = 409 Conflict');
+    o.jio.put({"content":'content'},o.f);
+    checkReply(o,null,true);
+
+    // TEST 2) PUT wrong id/rev
+    o.spy (o,'value',{
+        "error": 'not found',
+        "message": 'Document not found.',
+        "reason": 'Document not found, please check revision and/or ID',
+        "status": 404,
+        "statusText": 'Not found'
+        },'PUT with wrong id/revision = 404 Not found');
+    o.jio.put({"content":'content',"_id":'myDoc',
+                "_rev":'1-ABCDEFG'},o.f);
+    checkReply(o,null,true);
+
+    // start adding content
+    o.jio.put({"content":'content',"_id":'myDoc'},
         function(err, response) {
             o.spy(o,'value',{"ok":true,"id":response.id,"rev":response.rev},
-                    'POST content = ok');
+                    'PUT content = ok');
             o.f(response);
-            // d) check document is created and correct
-            o.checkFile(response, o, null, true);
-            // e) check document tree is created and correct
-            o.checkTree(response, o, null, true);
+
+            // store falseRevision
+            o.falseRevision = response.rev;
+
+            // build tree manually
+            o.testRevisionStorage.unshift(response.rev);
+            o.buildTestTree = {"kids":[],"rev":o.testRevisionStorage[0],
+                "status":'available',"type":'leaf'};
+
+            // TEST 4) check file was created
+            checkFile(response, o, null, true);
+            // TEST 5) check tree was created
+            checkTreeNode(response, o, null, true);
+
         });
-    // c) POST content - o.spy must be in callback to access response
-    o.checkReply(o,null,true);
-    
-    o.jio.stop();
-    o.clean;
-    
+    // 3) TEST PUT content
+    // no idea why this is working for 3/6/9/12, but it does...
+    checkReply(o,null,true);
+
+    // update document
+    o.jio.put({"content":'content_modified',"_id":'myDoc',
+                    "_rev":o.testRevisionStorage[0]},
+        function(err, response) {
+
+            o.spy(o,'value',{"ok":true,"id":response.id,"rev":response.rev},
+                'PUT content = ok');
+            o.f(response);
+
+            o.testRevisionStorage.unshift(response.rev);
+            o.buildTestTree = {"kids":[{"kids":[],"rev":
+                o.testRevisionStorage[0],"status":'available',
+                "type":'leaf'}],"rev":o.testRevisionStorage[1],
+                "status":'deleted',"type":'branch'};
+
+            // TEST 7) check document was replaced
+            checkFile(response, o, null, true);
+            // TEST 8) check tree was updated
+            checkTreeNode(response, o, null, true);
+        });
+    // 6) TEST PUT UPDATE
+    checkReply(o,null,true);
+
+    // update document 2nd time
+    o.jio.put({"content":'content_modified_again',
+                "_id":'myDoc',
+                "_rev":o.testRevisionStorage[0]},
+        function(err, response) {
+            var fake_rev_0,fake_rev_1,fake_id_0,fake_id_1;
+
+            o.spy(o,'value',{"ok":true,"id":response.id,
+                    "rev":response.rev}, 'PUT content = ok');
+            o.f(response);
+
+            o.testRevisionStorage.unshift(response.rev);
+            o.buildTestTree = {"kids":[{"kids":[{"kids":[],
+                "rev":o.testRevisionStorage[0],"status":'available',
+                "type":'leaf'}],"rev":o.testRevisionStorage[1],
+                "status":'deleted',"type":'branch'}],
+                "rev":o.testRevisionStorage[2],"status":'deleted',
+                "type":'branch'};
+
+            // TEST 10) check document was replaced
+            checkFile(response, o, null, true);
+            // TEST 11) check tree was updated
+            checkTreeNode(response, o, null, true);
+
+        });
+    // 9) TEST PUT UPDATE
+    checkReply(o,null,true);
+
+    // continue to work with this instance
+    //o.jio.stop();
+    //o.clean;
+
+    // try updating with false revision
+    o.spy (o,'value',{
+        "error": 'conflict',
+        "message": 'Document update conflict.',
+        "reason":
+            'Revision supplied is not the latest revision',
+        "status": 409,
+        "statusText": 'Conflict'
+        },'PUT false revision = 409 Conflict');
+
+    o.jio.put({"content":'content_modified_false',
+                "_id":'myDoc',
+                "_rev":o.falseRevision},o.f);
+    // TEST 12) PUT false revision
+    checkReply(o,null,true);
+
+
+    // try updating without revs_info
+    o.spy (o,'value',{
+        "error": 'conflict',
+        "message": 'Document update conflict.',
+        "reason":
+            'Missing revs_info required for sync-put',
+        "status": 409,
+        "statusText": 'Conflict'
+        },'PUT no sync info = 409 Conflict');
+
+    o.jio.put({"content":'content_modified_false',
+                "_id":'myDoc',
+                "_rev":'1-abcdefg'},o.f);
+    // TEST 13) SYNC-PUT no revs_info
+    checkReply(o,null,true);
+
+    // add a new document version with fake revs_info
+    // the new document has the same origin and first edit,
+    // then it was changed to a new version (3-a9d...),
+    // which was changed to a fourth version (4-b5bb...),
+    // the tree must merge on o.testRevisionStorage[1]
+    // and add the two new dummy revisions into the final
+    // tree. Also the new document should be stored
+    // in local storage.
+    fake_rev_1 = o.testRevisionStorage[1];
+    fake_rev_0 = o.testRevisionStorage[0];
+    fake_id_0 = o.testRevisionStorage[0].split('-')[1];
+    fake_id_1 = o.testRevisionStorage[1].split('-')[1];
+
+    // put a new document version
+    o.jio.put({
+        "content":'a_new_version',
+        "_id":'myDoc',
+        "_rev":"4-b5bb2f1657ac5ac270c14b2335e51ef1ffccc0a7259e14bce46380d6c446eb89",
+        "_revs_info":[
+            {"rev":"4-b5bb2f1657ac5ac270c14b2335e51ef1ffccc0a7259e14bce46380d6c446eb89","status":"available"},
+            {"rev":"3-a9dac9ff5c8e1b2fce58e5397e9b6a8de729d5c6eff8f26a7b71df6348986123","status":"deleted"},
+            {"rev":fake_rev_1,"status":"deleted"},
+            {"rev":fake_rev_0,"status":"deleted"}
+        ],
+        "_revisions":{
+            "start":4,
+            "ids":[
+                "b5bb2f1657ac5ac270c14b2335e51ef1ffccc0a7259e14bce46380d6c446eb89",
+                "a9dac9ff5c8e1b2fce58e5397e9b6a8de729d5c6eff8f26a7b71df6348986123",
+                fake_id_1,
+                fake_id_0
+                ]}
+        },
+        function(err, response) {
+
+            //o.testRevisionStorage.unshift(response.rev);
+            o.buildTestTree = {
+                "kids":[
+                    {
+                    "kids":[
+                        {"kids":[],"rev":o.testRevisionStorage[0],"status":'available',"type":'leaf'},
+                        {"kids":[{
+                            "kids":[],
+                            "rev":"4-b5bb2f1657ac5ac270c14b2335e51ef1ffccc0a7259e14bce46380d6c446eb89",
+                            "status":'available', "type":'leaf'
+                            }],
+                            "rev":"3-a9dac9ff5c8e1b2fce58e5397e9b6a8de729d5c6eff8f26a7b71df6348986123",
+                            "status":'deleted',"type":'branch'
+                            }],
+                    "rev":o.testRevisionStorage[1],"status":'deleted',"type":'branch'}],
+                "rev":o.testRevisionStorage[2],"status":'deleted',"type":'branch'
+            };
+
+            o.spy(o,'value',{"ok":true,"id":response.id,
+                    "rev":response.rev}, 'PUT SYNC = ok');
+            o.f(response);
+
+            // TEST 15) check document was stored
+            checkFile(response, o, null, true);
+            // TEST 16) check tree was updated
+            checkTreeNode(response, o, null, true);
+
+        });
+    // 14) TEST PUT UPDATE
+    checkReply(o,null,true);
+
+
 });
-*/
+
 
 
 /*

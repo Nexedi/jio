@@ -22,80 +22,10 @@ var newLocalStorage = function ( spec, my ) {
         }
     };
 
-    /**
-     * Generates a hash code of a string
-     * @method hashCode
-     * @param  {string} string The string to hash
-     * @return {string} The string hash code
-     */
-    priv.hashCode = function (string) {
-        return hex_sha256(string);
-    };
-
-    /**
-     * Generates the next revision of [previous_revision]. [string] helps us
-     * to generate a hash code.
-     * @methode generateNextRev
-     * @param  {string} previous_revision The previous revision
-     * @param  {string} string String to help generate hash code
-     * @return {array} 0:The next revision number and 1:the hash code
-     */
-    priv.generateNextRev = function (previous_revision, string) {
-        return [parseInt(previous_revision.split('-')[0],10)+1,
-                priv.hashCode(previous_revision + string)];
-    };
-
-    /**
-     * Replace substrings to others substring following a [list_of_replacement].
-     * It will be executed recusively to replace substrings which are not
-     * replaced substrings.
-     * It starts from the last element of the list of replacement.
-     * @method replaceSubString
-     * @param  {string} string The string to replace
-     * @param  {array} list_of_replacement A list containing arrays with 2
-     * values:
-     * - {string} The substring to replace
-     * - {string} The new substring
-     * ex: [['b', 'abc'], ['abc', 'cba']]
-     * @return {string} The new string
-     */
-    priv.replaceSubString = function (string, list_of_replacement) {
-        var i, split_string = string.split(list_of_replacement[0][0]);
-        if (list_of_replacement[1]) {
-            for (i = 0; i < split_string.length; i += 1) {
-                split_string[i] = priv.replaceSubString (
-                    split_string[i],
-                    list_of_replacement.slice(1)
-                );
-            }
-        }
-        return split_string.join(list_of_replacement[0][1]);
-    };
-
-    /**
-     * It secures the [string] replacing all '%' by '%%' and '/' by '%2F'.
-     * @method secureString
-     * @param  {string} string The string to secure
-     * @return {string} The secured string
-     */
-    priv.secureString = function (string) {
-        return priv.replaceSubString (string, [['/','%2F'],['%','%%']]);
-    };
-
-    /**
-     * It replaces all '%2F' by '/' and '%%' by '%'.
-     * @method unsecureString
-     * @param  {string} string The string to convert
-     * @return {string} The converted string
-     */
-    priv.unsecureString = function (string) {
-        return priv.replaceSubString (string, [['%%','%'],['%2F','/']]);
-    };
-
     priv.username = spec.username || '';
-    priv.secured_username = priv.secureString(priv.username);
+    priv.secured_username = utilities.secureString(priv.username);
     priv.applicationname = spec.applicationname || 'untitled';
-    priv.secured_applicationname = priv.secureString(priv.applicationname);
+    priv.secured_applicationname = utilities.secureString(priv.applicationname);
 
     var storage_user_array_name = 'jio/local_user_array';
     var storage_file_array_name = 'jio/local_file_name_array/' +
@@ -235,177 +165,6 @@ var newLocalStorage = function ( spec, my ) {
     };
 
     /**
-     * @method throwError       - Creates the error object for all errors
-     * 
-     * @param  {code} string    - the error code.
-     * @param  {reason} string  - the error reason
-     */
-    priv.throwError = function ( code, reason ) {
-        var statusText, error, message, e;
-
-        switch( code ){
-
-            case 409:
-                statusText = 'Conflict';
-                error = 'conflict';
-                message = 'Document update conflict.';
-                break;
-
-            case 403:
-                statusText = 'Forbidden';
-                error = 'forbidden';
-                message = 'Forbidden';
-                break;
-
-            case 404:
-                statusText = 'Not found';
-                error = 'not_found';
-                message = 'Document not found.';
-                break;
-        }
-
-        // create object
-        e = ({
-                status:code,
-                statusText:statusText,
-                error:error,
-                message:message,
-                reason:reason
-            });
-        return e;
-    };
-
-    /**
-     * @method createDocument   - Creates a new document
-     *
-     * docid will be "" for POST and a string for PUT
-     *
-     * @param  {docid} string   - id for the new document
-     * @param  {docpath} string - the path where to store the document
-     *
-     * @stored 'jio/local/USR/APP/FILE_NAME'
-     */
-    priv.createDocument = function ( docId, docPath ) {
-        var now = Date.now(),
-            doc = {},
-            hash = priv.hashCode('' + doc + ' ' + now + ''),
-            docPathRev;
-
-        doc._id = docId;
-        doc._rev = '1-'+hash;
-        doc._revisions = {
-            start: 1,
-            ids: [hash]
-        };
-        doc._revs_info = [{
-            rev: '1-'+hash,
-            status: 'available'
-        }];
-
-        // allow to store multiple versions of a document by including rev
-        docPathRev = docPath + '/' + doc._rev;
-
-        // store
-        localstorage.setItem(docPathRev, doc);
-
-        return doc;
-    };
-
-    /**
-     * @method updateDocument   - updates a document
-     *
-     * called from PUT or PUTATTACHMENT (or REMOVE?)
-     *
-     * @param  {docid} string   - id for the new document
-     * @param  {docpath} string - the path where to store the document
-     * @param  {prev_rev} string- the previous revision
-     *
-     */
-    priv.updateDocument = function ( doc, docPath, prev_rev ) {
-        var now = Date.now(),
-            rev = priv.generateNextRev(prev_rev, ''+doc+' '+now+'');
-
-        // update document
-        doc._rev = rev.join('-');
-        doc._revisions.ids.unshift(rev[1]);
-        doc._revisions.start = rev[0];
-        doc._revs_info[0].status = 'deleted';
-        doc._revs_info.unshift({
-            "rev": rev.join('-'),
-            "status": "available"
-        });
-
-        // store
-        localstorage.setItem(docPath, doc);
- 
-        return doc; 
-    };
-
-    /**
-     * @method createDocumentTree - Creates a new document.tree
-     *
-     * @param  {docId} string   - id for the new document
-     * @param  {doc } object    - the document object
-     * @param  {docPath} string - the path where to store the document
-     *
-     * the tree will include 
-     * @key  {type} string      - branch or leaf
-     * @key  {status} string    - available or deleted
-     * @key  {rev} string       - revision string of this node
-     * @key  {spawns} object    - child branches/leaves
-     *
-     * @stored 'jio/local/USR/APP/FILE_NAME/TREE_revision'.
-     *
-     * the tree is maintained as long as more than one leaf exists(!)
-     * a leaf set to status "deleted" implies a deleted document version
-     * When all leaves have been set to "deleted", the tree is also deleted.
-     * 
-     */
-    priv.createDocumentTree = function ( doc, docId, docPath ){
-        var tree = {
-                type:'leaf',
-                status:'available',
-                rev:doc._rev,
-                kids:{}
-            },
-            treePath = docPath+'/revision_tree';
-
-        // store
-        localstorage.setItem(treePath, tree);
-    };
-
-    /**
-     * @method updateDocumentTree - update a document tree
-     *
-     * @param  {docId} string   - id for the new document
-     * @param  {doc } object    - the document object
-     * @param  {docPath} string - the path where to store the document
-     *
-     * a tree can be grown (update a document) or split (when creating
-     * a new version). Growing the tree means changing a leaf into
-     * a branch and creating a new leaf. This is done here.
-     *
-     */
-    priv.updateDocumentTree = function ( ){
-
-    };
-
-    /**
-     * @method getLastTreeRevision - find a leaf
-     *
-     * @param  {docTree} string - the tree for this document
-     *
-     * this method should get the last leaf on the tree.
-     * If there are multiple leaves that come into question
-     * we select same as COUCHDB, highest rev counter, than
-     * compare ASCII. We will return only a single document
-     *
-     */
-    priv.getLastTreeRevision = function ( docTree ){
-
-    };
-
-    /**
      * @method post
      *
      * Create a document in local storage.
@@ -420,39 +179,43 @@ var newLocalStorage = function ( spec, my ) {
 
         setTimeout (function () {
 
-            var docId = command.getDocId(),
+            var doc,
+                docId = command.getDocId(),
                 docPath = 'jio/local/'+priv.secured_username+'/'+
                     priv.secured_applicationname+'/'+docId,
+                tree,
                 treePath = docPath+'/revision_tree',
                 docTree = localstorage.getItem(treePath),
-                doc = localstorage.getItem(docPath),
-                reg;
+                reg = utilities.isUUID(docId);
 
             // no attachments allowed
             if (command.getAttachmentId()) {
-                that.error( priv.throwError( 403,
+                that.error( utilities.throwError( 403,
                     'Attachment cannot be added with a POST request')
                 );
                 return;
             }
 
-            // check for UUID
-            reg = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test( docId );
-
             if ( reg !== true ) {
 
                 // id was supplied, use PUT
-                that.error( priv.throwError( 403,
+                that.error( utilities.throwError( 403,
                     'ID cannot be supplied with a POST request. Please use PUT')
                 );
                 return;
 
             } else {
-                // create and store new document
-                doc = priv.createDocument( docId, docPath );
+                // create new document
+                doc = utilities.createDocument( docId, docPath );
+
+                // store
+                localstorage.setItem(docPath + '/' + doc._rev, doc);
 
                 // create and store new document.tree
-                priv.createDocumentTree( doc, docId, docPath );
+                tree = utilities.createDocumentTree( doc );
+
+                // store
+                localstorage.setItem(treePath, tree);
 
                 // add user
                 if (!priv.doesUserExist (priv.secured_username)) {
@@ -491,29 +254,16 @@ var newLocalStorage = function ( spec, my ) {
                 prev_rev = command.getDocInfo('_rev'),
                 docPath ='jio/local/'+priv.secured_username+'/'+
                     priv.secured_applicationname+'/'+docId,
-                docPathRev = docPath +'/'+prev_rev,
-                treePath = docPath+'/revision_tree',
+                treePath = docPath+'/revision_tree',tree,
                 docTree = localstorage.getItem(treePath),
-                doc,
-                reg;
+                doc, docPathRev, activeLeaves, reg = utilities.isUUID(docId), newDocTree;
 
             // no tree = create document or error
             if (!docTree) {
 
-                // check UUID
-                reg = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test( docId );
-
                 // id/revision provided = update, revision must be incorrect
                 if ( prev_rev !== undefined && reg === false ){
-                    that.error( priv.throwError( 409,
-                        'Incorrect Revision or ID')
-                    );
-                    return;
-                }
-
-                // revision provided = update, wrong revision or missing id
-                if ( prev_rev !== undefined ){
-                    that.error( priv.throwError( 404,
+                    that.error( utilities.throwError( 404,
                         'Document not found, please check revision and/or ID')
                     );
                     return;
@@ -521,7 +271,7 @@ var newLocalStorage = function ( spec, my ) {
 
                 // no revision and UUID = create, no id provided
                 if ( prev_rev === undefined && reg === true){
-                    that.error( priv.throwError( 409,
+                    that.error( utilities.throwError( 409,
                         'Missing Document ID and or Revision')
                     );
                     return;
@@ -534,10 +284,16 @@ var newLocalStorage = function ( spec, my ) {
                 // be the case.
 
                 // create and store new document
-                doc = priv.createDocument( docId, docPath );
+                doc = utilities.createDocument( docId, docPath );
+
+                // store
+                localstorage.setItem(docPath + '/' + doc._rev, doc);
 
                 // create and store new document.tree
-                priv.createDocumentTree( doc, docId, docPath );
+                tree = utilities.createDocumentTree( doc );
+
+                // store
+                localstorage.setItem(treePath, tree);
 
                 // add user
                 if (!priv.doesUserExist (priv.secured_username)) {
@@ -556,71 +312,114 @@ var newLocalStorage = function ( spec, my ) {
                 );
 
             } else {
-                // we found a tree
+                // found a tree - get active leaves
+                activeLeaves = utilities.getLeavesOnTree( docTree );
 
-/*
-                console.log( docTree );
+                // this should return an array of all active leaves
+                // or a single leaf, which needs to be put into an array
+                activeLeaves = typeof activeLeaves === "string" ?
+                    [activeLeaves] : activeLeaves;
 
-                console.log( prev_rev );
-                console.log( docId );
-                console.log( docPath );
-                console.log( docPathRev );
-*/
-                doc = localstorage.getItem(docPathRev);
+                // check if revision is on doc-tree and is an active leaf
+                if ( !utilities.isInObject( prev_rev, activeLeaves ) ) {
+                        // check if it's a branch/dead leaf (deleted/updated version)
+                        if ( utilities.isDeadLeaf( prev_rev, docTree ) ){
+                            that.error( utilities.throwError( 409,
+                                'Revision supplied is not the latest revision')
+                            );
+                            return;
+                        }
 
-                console.log( doc );
+                        // maybe a sync-PUT from another storage, we must
+                        // have revs_info option, otherwise we cannot know
+                        // where to put the file and update the storage tree
+                        if ( !utilities.isDeadLeaf( prev_rev, docTree ) &&
+                                command.getDocInfo('_revs_info') === undefined ){
+                            that.error( utilities.throwError( 409,
+                                'Missing revs_info required for sync-put')
+                            );
+                            return;
+                        } else {
+                            // SYNC PUT
 
-                // check if rev_supplied is on the tree
-                // check if last node
-                // check if multiple leaves or one (do I need to???)
-                // if on tree and only leaf = expand
-                // if on tree and multiple leaves = ???
-                // if on tree, but not a leaf = error
-                // if not on tree, can be error or new version
-                // get revs_info from new document
-                // not available = error on PUT 
-                // available = compare revs_info current and supplied
-                // start @root
-                // if nodes are the same and BRANCH, make sure they are branch and deleted if not the last nodes
-                // if nodes are not the same STOP
-                // add new kid to last branch
-                // continue with supplied revs_info to last version and add all the nodes on supplied revs_info
-                // this should "copy" the tree from supplied revs_info into the current document tree
+                            // revs_info is provided, this is a new version
+                            // store this document and merge
 
-                // we have a tree, we know the last revision
-                //priv.getLastTreeRevision( docTree );
+                            // get the new document
+                            doc = command.getDoc();
 
-                if (!doc) {
+                            // we are not updating, this is a copy&paste sync
+                            // therefore the path should have the revision of
+                            // the current document. No new revision hash
+                            // needs to be created
+                            docPathRev = docPath +'/'+doc._revs_info[0].rev;
 
-                } 
+                            // update ...???
+                            priv.documentObjectUpdate(doc,command.cloneDoc());
 
+                            // store the new item.
+                            localstorage.setItem( docPathRev, doc );
 
-                if (doc._rev !== prev_rev) {
+                            // update tree and store
+                            localstorage.setItem(treePath,
+                                utilities.updateDocumentTree( docTree, prev_rev, null,
+                                    doc._revs_info )
+                                );
 
-                    that.error( priv.throwError( 409, 
-                        'Revision supplied is not the latest revision')
-                    );
-                    return;
-                }
+                            that.success (
+                                priv.manageOptions(
+                                    {ok:true,id:docId,rev:prev_rev},
+                                    command,
+                                    doc
+                                )
+                            );
+                        }
+                    } else {
 
-                // update ...?
-                priv.documentObjectUpdate(doc,command.cloneDoc());
+                        // revision matches a currently active leaf
+                        // update of an existing document version
 
-                // update document (and get it back)
-                doc = priv.updateDocument( doc, docPath, prev_rev );
+                        // get doc
+                        docPathRev = docPath +'/'+prev_rev;
+                        doc = localstorage.getItem(docPathRev);
 
-                // update document tree
-                priv.updateDocumentTree();
+                        if (!doc ){
+                            // documen not available, should not happen!
+                            that.error( utilities.throwError( 404,
+                                'Referenced document not found')
+                            );
+                            return;
 
-                that.success (
-                    priv.manageOptions(
-                        {ok:true,id:docId,rev:doc._rev},
-                        command,
-                        doc
-                    )
-                );
-            }
-        });
+                        } else {
+                            // update ...?
+                            priv.documentObjectUpdate(doc,command.cloneDoc());
+
+                            // update document
+                            doc = utilities.updateDocument( doc, docPath, prev_rev );
+
+                            // store new doc (.../DOCID/new_REVISION)
+                            localstorage.setItem(docPath+'/'+doc._rev, doc);
+
+                            // delete old doc (.../DOCID/old_REVISION)
+                            localstorage.deleteItem(docPath+'/'+prev_rev);
+
+                            // update tree and store
+                            localstorage.setItem(treePath,
+                                utilities.updateDocumentTree(
+                                    docTree, prev_rev, doc._rev, undefined )
+                                );
+
+                            that.success (
+                                priv.manageOptions(
+                                    {ok:true,id:docId,rev:doc._rev},
+                                    command,
+                                    doc
+                                )
+                            );
+                        } // found a doc to update
+                    } // updating existing document
+                } // found a tree
+            }); // set timeout
     }; // end put
 
      /**
@@ -694,7 +493,7 @@ var newLocalStorage = function ( spec, my ) {
             }
 
             // rev = [number, hash]
-            rev = priv.generateNextRev(prev_rev, ''+doc+' '+now+'');
+            rev = utilities.generateNextRevision(prev_rev, ''+doc+' '+now+'');
             doc._rev = rev.join('-');
             doc._revisions.ids.unshift(rev[1]);
             doc._revisions.start = rev[0];

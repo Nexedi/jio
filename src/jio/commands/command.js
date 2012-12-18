@@ -75,6 +75,13 @@ var command = function(spec, my) {
     that.getContent = function () {
         return priv.content;
     };
+    /**
+     * @method getDoc           returns the label of the command.
+     * @return {object}         the document.
+     */
+    that.getDoc = function() {
+        return priv.doc;
+    };
 
     /**
      * Returns an information about the document.
