@@ -345,88 +345,69 @@ var utilities = {
     },
 
     /**
-     * @method mergeRemoteTree   - merge revs_info into current tree
-     * @param {docTreeNode} object - document tree
-     * @param {old_rev} string   - revision of the tree node to set to "branch"
-     * @param {new_rev } string  - revison of the tree node to add as leaf
-     * @param {revs_info} object - these revisions need to be checked and added
-     * @param {addNodes} object  - array for nodes to add to the tree
-     * @info:                    - old_rev = null here and it's not needed
-     *                             because new_rev will be used as the revision
-     *                             for the new tree node (we are copy&pasting
-     *                             from another storage)
+     * Merges document object trees
+     * @method mergeDocumentTree
+     * @param {object} document_tree_list The document tree array
      */
-    mergeRemoteTree : function (initialTree, docTreeNode, old_rev, new_rev,
-                                newDocumentRevisions, addNodes, onTree, deletedLeaf){
+    mergeDocumentTree: function (document_tree_list) {
+        var arrayConcat, each, synchronizeFrom, tree_list;
 
-        var sync_rev = newDocumentRevisions[0].rev,
-            current_tree_rev = docTreeNode['rev'],
-            kids = docTreeNode['kids'],
-            nodeStatus = 'available',
-            addNodesLen,
-            numberOfKids,
-            key,
-            i,
-            j;
-
-        for (key in docTreeNode) {
-            if (key === "rev") {
-
-                // common ancestor? = does the revision on the current
-                // tree node match the currently checked remote tree
-                // revision
-                // match = common ancestor
-                if (sync_rev === current_tree_rev){
-                    onTree = true;
-
-                    // in order to loop we also add the revision of
-                    // the common ancestor node to the array
-                    // using push!
-                    addNodes.unshift( current_tree_rev );
-                    // get length, now that we need it
-                    addNodesLen = utilities.isObjectSize( addNodes )-1;
-
-                    // the addNodes array will now look like this
-                    // [current_node, all_missing_nodes]
-                    for (j = 0; j < addNodesLen; j+=1){
-                        // last node being added is deleted
-                        if (deletedLeaf === true && j === addNodesLen-1){
-                            nodeStatus = 'deleted';
-                        }
-                        utilities.setTreeNode(initialTree, addNodes[j],
-                                          addNodes[j+1], nodeStatus);
-                    }
-                // no match = continue down the tree
-                } else if ( utilities.isObjectEmpty( kids ) === false ){
-                    numberOfKids = utilities.isObjectSize( kids );
-                    for ( i = 0; i < numberOfKids; i+=1 ){
-                        utilities.mergeRemoteTree( initialTree, kids[i], old_rev, new_rev,
-                                    newDocumentRevisions, addNodes, onTree, deletedLeaf );
-                    }
-
-                // end of tree = start over checking the next remote revision
-                } else if ( onTree === false ){
-
-                    // revision from _revs_info was not found in tree.
-                    // add it to addNodes, remove it from newDocumentRevisions
-                    // call mergeRemoteTree again with new modified arrays
-                    // until a common ancestor is found
-
-                    // remember to add this revision once an ancestor is found
-                    // we use push here, because we later loop this from 0 to x
-                    addNodes.unshift(sync_rev);
-
-                    // pop it off the revs_info
-                    newDocumentRevisions.shift();
-
-                    // this should start over with the full document tree
-                    // otherwise it will only continue on the current (last) node
-                    utilities.mergeRemoteTree( initialTree, initialTree, old_rev, new_rev,
-                                    newDocumentRevisions, addNodes, onTree, deletedLeaf );
+        // arrayConcat([1,2], [3,4]) = [1,2,3,4]
+        arrayConcat = function () {
+            var i,newlist=[];
+            for (j=0; j<arguments.length; ++j) {
+                for (i=0; i<arguments[j].length; ++i) {
+                    newlist.push(arguments[j][i]);
                 }
             }
-        }
-        return docTreeNode;
+            return newlist;
+        };
+
+        // "each" executes "fun" on each values of "array"
+        // if return false, then stop browsing
+        each = function (array, fun, start) {
+            var i;
+            for (i = start || 0; i < array.length; i += 1) {
+                if (fun(array[i], i) === false) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        // merges all trees
+        synchronize = function (tree_list) {
+            var new_children;
+            new_children = [];
+            each(tree_list, function (tree, tree_index) {
+                var res;
+                if (new_children.length === 0) {
+                    new_children.push(tree);
+                    return;
+                }
+                res = each(new_children, function (child, child_index) {
+                    if (tree.rev === child.rev) {
+                        new_children[child_index].children = synchronize(
+                            arrayConcat(
+                                tree.children,
+                                child.children
+                            )
+                        )
+                        return false;
+                    }
+                });
+                if (res === true) {
+                    new_children.push(tree);
+                }
+            });
+            return new_children;
+        };
+
+        tree_list = [];
+        each(document_tree_list, function (tree) {
+            tree_list = arrayConcat(tree_list, tree.children);
+        });
+        return {"children":synchronize(tree_list)};
     },
 
     getActiveLeaves : function (docTreeNode) {
@@ -437,7 +418,7 @@ var utilities = {
 
         return activeLeaves;
     },
- 
+
     /**
      * @method getLeavesOnTree      - finds all leaves on a tree
      * @param  {docTree} string     - the tree for this document
