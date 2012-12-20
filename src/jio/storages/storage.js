@@ -15,6 +15,123 @@ var storage = function(spec, my) {
     });
 
     /**
+     * Creates the error object for all errors
+     * @method createErrorObject
+     * @param  {string} error_code The error code
+     * @param  {string} message The error message
+     * @return {object} Error object
+     */
+    that.createErrorObject = function (error_code, message) {
+        var error_object, assignErrorValues;
+
+        error_object = {
+            "status":error_code,
+            "message":message,
+            "reason":message
+        };
+
+        assignErrorValues = function (statusText) {
+            var tmp = '';
+            error_object.statusText = statusText;
+            error_object.error = statusText.toLowerCase().split(' ').join('_');
+        };
+
+        switch(code) {
+        case 409:
+            assignErrorValues('Conflict');
+            break;
+        case 403:
+            assignErrorValues('Forbidden');
+            break;
+        case 404:
+            assignErrorValues('Not found');
+            break;
+        }
+
+        return error_object;
+    };
+
+    /**
+     * Creates an empty document tree
+     * @method createDocumentTree
+     * @param  {array} children An array of children (optional)
+     * @return {object} The new document tree
+     */
+    that.createDocumentTree = function(children) {
+        return {"children":children || []};
+    };
+
+    /**
+     * Creates a new document tree node
+     * @method createDocumentTreeNode
+     * @param  {string} revision The node revision
+     * @param  {string} status The node status
+     * @param  {array} children An array of children (optional)
+     * @return {object} The new document tree node
+     */
+    that.createDocumentTreeNode = function(revision,status,children) {
+        return {"rev":revision,"status":status,"children":children || []};
+    };
+
+    /**
+     * Gets the winner revision from a document tree.
+     * The winner is the deeper revision on the left.
+     * @method getWinnerRevisionFromDocumentTree
+     * @param  {object} document_tree The document tree
+     * @return {string} The winner revision
+     */
+    that.getWinnerRevisionFromDocumentTree = function (document_tree) {
+        var i, result, search;
+        result = {"deep":-1,"revision":''};
+        // search method fills "result" with the winner revision
+        search = function (document_tree, deep) {
+            var i;
+            if (document_tree.children.length === 0) {
+                // This node is a leaf
+                if (result.deep < deep) {
+                    // The leaf is deeper than result
+                    result = {"deep":deep,"revision":document_tree.rev};
+                }
+                return;
+            }
+            // This node has children
+            for (i = 0; i < document_tree.children.length; i += 1) {
+                // searching deeper to find the deeper leaf
+                search(document_tree.children[i], deep+1);
+            }
+        };
+        search(document_tree, 0);
+        return result.rev;
+    };
+
+    /**
+     * Gets an array of leaves revisions from document tree
+     * @method getLeavesFromDocumentTree
+     * @param  {object} document_tree The document tree
+     * @return {array} The array of leaves revisions
+     */
+    that.getLeavesFromDocumentTree = function (document_tree) {
+        var i, result, search;
+        result = [];
+        // search method fills [result] with the winner revision
+        search = function (document_tree) {
+            var i;
+            if (document_tree.children.length === 0) {
+                // This node is a leaf
+                result.push(document_tree.rev);
+                return;
+            }
+            // This node has children
+            for (i = 0; i < document_tree.children.length; i += 1) {
+                // searching deeper to find the deeper leaf
+                search(document_tree.children[i]);
+            }
+        };
+        search(document_tree);
+        return result;
+    };
+
+    /**
      * Execute the command on this storage.
      * @method execute
      * @param  {object} command The command
@@ -56,9 +173,21 @@ var storage = function(spec, my) {
      * @method serialized
      * @return {object} The serialized storage.
      */
-    that.serialized = function() {
-        return {type:that.getType()};
+    that.super_serialized = function() {
+        var o = that.serialized() || {};
+        o["type"] = that.getType();
+        return o;
     };
+
+    /**
+     * Returns a serialized version of this storage.
+     * Override this method!
+     * @method serialized
+     * @return {object} The serialized version of this storage
+     */
+    that.serialized = function () {
+        return {};
+    }
 
     /**
      * Validate the storage state. It returns a empty string all is ok.
