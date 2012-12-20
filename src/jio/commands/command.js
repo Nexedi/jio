@@ -80,6 +80,8 @@ var command = function(spec, my) {
      * @return {object}         the document.
      */
     that.getDoc = function() {
+        console.log("where is my doc");
+        console.log( priv.doc );
         return priv.doc;
     };
 

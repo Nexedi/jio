@@ -19,14 +19,14 @@ var utilities = {
     isObjectEmpty : function(obj) {
         var key;
 
-        if (obj.length && obj.length > 0){
+        if (obj.length && obj.length > 0) {
             return false;
         }
-        if (obj.length && obj.length === 0){
+        if (obj.length && obj.length === 0) {
             return true;
         }
         for (key in obj) {
-            if ({}.hasOwnProperty.call(obj, key)){
+            if ({}.hasOwnProperty.call(obj, key)) {
                 return false;
             }
         }
@@ -41,7 +41,7 @@ var utilities = {
     isObjectSize : function(obj) {
         var size = 0, key;
         for (key in obj) {
-            if (obj.hasOwnProperty(key)){
+            if (obj.hasOwnProperty(key)) {
                 size++;
             }
         }
@@ -54,11 +54,11 @@ var utilities = {
      * @param  {haystack} array - active leaves (versions of a document)
      * @returns {boolean} string- true/false
      */
-    isInObject : function (needle, haystack){
+    isInObject : function (needle, haystack) {
         var length = haystack.length;
 
         for(var i = 0; i < length; i++) {
-            if(haystack[i] === needle){
+            if(haystack[i] === needle) {
                 return true;
             }
         }
@@ -70,7 +70,7 @@ var utilities = {
      * @param  {needle} string  - docId
      * @returns {boolean} string- true/false
      */
-    isUUID : function (documentId){
+    isUUID : function (documentId) {
         var reg = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test( documentId );
         return reg;
     },
@@ -81,10 +81,10 @@ var utilities = {
      * @param  {reason} string  - the error reason
      * @returns {e} object      - error object
      */
-    throwError : function ( code, reason ) {
+    throwError : function (code, reason) {
         var statusText, error, message, errorObject;
 
-        switch( code ){
+        switch(code) {
 
             case 409:
                 statusText = 'Conflict';
@@ -195,7 +195,7 @@ var utilities = {
      * @stored                  - 'jio/local/USR/APP/FILE_NAME'
      * @returns {doc} object    - document object
      */
-    createDocument : function (docId, docPath){
+    createDocument : function (docId, docPath) {
         var now = Date.now(),
             doc = {},
             hash = utilities.hashCode('' + doc + ' ' + now + '');
@@ -221,12 +221,30 @@ var utilities = {
      * @param  {docid} string   - id for the new document
      * @param  {docpath} string - the path where to store the document
      * @param  {previousRevision} string - the previous revision
+     * @param  {attachmentId}   - string - in case attachments are handled
      * @returns {doc} object    - new document
      */
-    updateDocument : function (doc, docPath, previousRevision){
+    updateDocument : function (doc, docPath, previousRevision, attachmentId) {
         var now = Date.now(),
             rev = utilities.generateNextRevision(previousRevision, ''+
                     doc+' '+now+'');
+
+        // in case the update is made because of an attachment
+        if (attachmentId !== undefined) {
+            // create _attachments
+            if (doc._attachments === undefined){
+                doc._attachments = {};
+            }
+
+            // create _attachments object for this attachment
+            if (doc._attachments[attachmentId] === undefined){
+                doc._attachments[attachmentId] = {};
+            }
+
+            // set revpos
+            doc._attachments[attachmentId].revpos =
+                parseInt(doc._rev.split('-')[0],10);
+        }
 
         // update document
         doc._rev = rev.join('-');
@@ -237,7 +255,6 @@ var utilities = {
             "rev": rev.join('-'),
             "status": "available"
         });
-
         return doc;
     },
 
@@ -255,14 +272,13 @@ var utilities = {
      * @info                    - deleted versions/branches = "status deleted"
      * @info                    - no active leaves will delete tree, too
      */
-    createDocumentTree : function (doc){
+    createDocumentTree : function(doc) {
         var tree = {
                 type:'leaf',
                 status:'available',
                 rev:doc._rev,
                 kids:[]
             };
-
         return tree;
     },
 
@@ -273,50 +289,57 @@ var utilities = {
      * @param  {new_rev } string - revison of the tree node to add as leaf
      * @param  {revs_info} object- history of new_rev to merge with remote tree
      */
-    updateDocumentTree : function ( docTreeNode, old_rev, new_rev, revs_info ){
-        if (  typeof revs_info === "object" ){
+    updateDocumentTree : function (docTreeNode, old_rev, new_rev,
+                                        revs_info, deletedLeaf ) {
+
+        if (typeof revs_info === "object") {
             // a new document version is being stored from another storage
-            utilities.mergeRemoteTree( docTreeNode, docTreeNode, old_rev, new_rev,
-                                    revs_info, [], false );
+            utilities.mergeRemoteTree(docTreeNode, docTreeNode, old_rev, new_rev,
+                                            revs_info, [], false, deletedLeaf);
         } else {
             // update an existing version of document = add a node to the tree
-            utilities.setTreeNode( docTreeNode, old_rev, new_rev );
+            utilities.setTreeNode(docTreeNode, old_rev, new_rev, 'available');
         }
+
         return docTreeNode;
     },
 
 // ==================== SET/MERGE/CHECK TREE NODES ==================
     /**
-     * @method setTreeNode       - adds a new tree node/changes leaf to branch
+     * @method setTreeNode      - adds a new tree node/changes leaf to branch
      * @param {docTreeNode} object - document tree
-     * @param {old_rev} string   - revision of the tree node to set to "branch"
-     * @param {new_rev } string  - revison of the tree node to add as leaf
+     * @param {old_rev} string  - revision of the tree node to set to "branch"
+     * @param {new_rev } string - revison of the tree node to add as leaf
+     * @param {new_status}string- status the new node should have
+     * @info                    - status is necessary, because we may also
+     *                            add deleted nodes to the tree from a
+     *                            remote storage
      */
-    setTreeNode : function (docTreeNode, old_rev, new_rev){
+    setTreeNode : function (docTreeNode, old_rev, new_rev, new_status){
         var kids = docTreeNode['kids'],
             rev = docTreeNode['rev'],
             numberOfKids,
             i,
             key;
 
-        for( key in docTreeNode ){
-            if ( key === "rev" ){
+        for(key in docTreeNode){
+            if (key === "rev"){
                 // grow the tree
-                if ( old_rev === rev && new_rev !== rev ){
+                if (old_rev === rev && new_rev !== rev) {
                     docTreeNode.type = 'branch';
                     docTreeNode.status = 'deleted';
                     docTreeNode.kids.push({
                                     type:'leaf',
-                                    status: 'available',
+                                    status:new_status,
                                     rev:new_rev,
                                     kids:[]
                                     });
                 } else {
                     // traverse until correct node is found!
-                    if ( utilities.isObjectEmpty( kids ) === false ){
+                    if ( utilities.isObjectEmpty( kids ) === false ) {
                         numberOfKids = utilities.isObjectSize(kids);
                         for ( i = 0; i < numberOfKids; i+=1 ){
-                            utilities.setTreeNode(kids[i], old_rev, new_rev);
+                            utilities.setTreeNode(kids[i], old_rev, new_rev, new_status);
                         }
                     }
                 }
@@ -337,29 +360,28 @@ var utilities = {
      *                             for the new tree node (we are copy&pasting
      *                             from another storage)
      */
-    mergeRemoteTree : function ( initialTree, docTreeNode, old_rev, new_rev,
-                                        newDocumentRevisions, addNodes, onTree ){
+    mergeRemoteTree : function (initialTree, docTreeNode, old_rev, new_rev,
+                                newDocumentRevisions, addNodes, onTree, deletedLeaf){
 
         var sync_rev = newDocumentRevisions[0].rev,
             current_tree_rev = docTreeNode['rev'],
             kids = docTreeNode['kids'],
+            nodeStatus = 'available',
             addNodesLen,
             numberOfKids,
             key,
             i,
             j;
 
-        for ( key in docTreeNode ){
-            if ( key === "rev" ){
+        for (key in docTreeNode) {
+            if (key === "rev") {
 
-                // commeon ancestor? = does the revision on the current
+                // common ancestor? = does the revision on the current
                 // tree node match the currently checked remote tree
                 // revision
-
                 // match = common ancestor
-                if ( sync_rev === current_tree_rev ){
+                if (sync_rev === current_tree_rev){
                     onTree = true;
-
 
                     // in order to loop we also add the revision of
                     // the common ancestor node to the array
@@ -370,19 +392,20 @@ var utilities = {
 
                     // the addNodes array will now look like this
                     // [current_node, all_missing_nodes]
-                    for ( j = 0; j < addNodesLen; j+=1 ){
-                        utilities.setTreeNode( initialTree, addNodes[j],
-                                          addNodes[j+1]
-                                           );
+                    for (j = 0; j < addNodesLen; j+=1){
+                        // last node being added is deleted
+                        if (deletedLeaf === true && j === addNodesLen-1){
+                            nodeStatus = 'deleted';
+                        }
+                        utilities.setTreeNode(initialTree, addNodes[j],
+                                          addNodes[j+1], nodeStatus);
                     }
-
                 // no match = continue down the tree
                 } else if ( utilities.isObjectEmpty( kids ) === false ){
-
                     numberOfKids = utilities.isObjectSize( kids );
                     for ( i = 0; i < numberOfKids; i+=1 ){
                         utilities.mergeRemoteTree( initialTree, kids[i], old_rev, new_rev,
-                                              newDocumentRevisions, addNodes, onTree );
+                                    newDocumentRevisions, addNodes, onTree, deletedLeaf );
                     }
 
                 // end of tree = start over checking the next remote revision
@@ -403,13 +426,22 @@ var utilities = {
                     // this should start over with the full document tree
                     // otherwise it will only continue on the current (last) node
                     utilities.mergeRemoteTree( initialTree, initialTree, old_rev, new_rev,
-                                            newDocumentRevisions, addNodes, onTree );
+                                    newDocumentRevisions, addNodes, onTree, deletedLeaf );
                 }
             }
         }
         return docTreeNode;
     },
 
+    getActiveLeaves : function (docTreeNode) {
+        var activeLeaves = utilities.getLeavesOnTree( docTreeNode );
+
+        activeLeaves = typeof activeLeaves === "string" ?
+                    [activeLeaves] : activeLeaves;
+
+        return activeLeaves;
+    },
+ 
     /**
      * @method getLeavesOnTree      - finds all leaves on a tree
      * @param  {docTree} string     - the tree for this document
@@ -461,7 +493,10 @@ var utilities = {
             status = docTreeNode['status'],
             kids = docTreeNode['kids'],
             rev = docTreeNode['rev'],
-            result = false, numberOfKids,i,key;
+            result = false,
+            numberOfKids,
+            i,
+            key;
 
         for ( key in docTreeNode ){
             if ( key === "rev" ){
@@ -470,8 +505,7 @@ var utilities = {
                         ( type === 'branch' || status === 'deleted' ) ){
                     result = true;
                 }
-                if ( typeof kids === "object" &&
-                        utilities.isObjectEmpty( kids ) === false ){
+                if ( utilities.isObjectEmpty( kids ) === false ){
 
                     numberOfKids = utilities.isObjectSize( kids );
                     for ( i = 0; i < numberOfKids; i+=1 ){

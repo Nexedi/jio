@@ -165,9 +165,102 @@ var newLocalStorage = function ( spec, my ) {
     };
 
     /**
-     * @method post
-     *
-     * Create a document in local storage.
+     * runDocumentUpdate        - run the whole update process for localstorage
+     * @param  {object} doc     - the original document object.
+     * @param  {object} docTree - the document tree
+     * @param  {object} command - command object
+     * @param  {string} docId   - document id
+     * @param  {string} attachmentId - attachmentId
+     * @param  {string} docPath - document paths
+     * @param  {string} prev_rev- previous revision
+     * @param  {string} treePath- document tree paths
+     * @param  {boolean} sync   - whether this is an update or sync operation!
+     * @returns {object} success- success object
+     */
+    priv.runDocumentUpdate = function ( doc, docTree, command, docId, attachmentId,
+                                        docPath, prev_rev, treePath, sync ){
+
+        var docPathRev,
+            newRevision,
+            revs_info,
+            deletedLeaf;
+
+        // update ...I don't know what this is doing?
+        priv.documentObjectUpdate(doc,command.cloneDoc());
+
+        // update document - not when put sync-ing
+        if ( sync === false ){
+            // create a new revision
+            doc = utilities.updateDocument(doc, docPath, prev_rev, attachmentId);
+
+            docPathRev = docPath+'/'+doc._rev;
+            newRevision = doc._rev;
+            revs_info  = undefined;
+
+            // delete old doc (.../DOCID/old_REVISION)
+            localstorage.deleteItem(docPath+'/'+prev_rev);
+
+        } else {
+            docPathRev = docPath +'/'+doc._revs_info[0].rev;
+            newRevision = null;
+            revs_info = doc._revs_info;
+            if ( revs_info[0].status === 'deleted' ){
+                deletedLeaf = true;
+            }
+        }
+        if ( deletedLeaf === undefined ){
+            // store new doc (.../DOCID/new_REVISION)
+            localstorage.setItem(docPathRev, doc);
+        }
+
+        // update tree and store
+        localstorage.setItem(treePath, utilities.updateDocumentTree(
+                            docTree, prev_rev, newRevision,
+                            revs_info, deletedLeaf)
+                            );
+
+        // return SUCCESS
+        return priv.manageOptions({ok:true,id:docId,rev:doc._rev}, command, doc);
+    };
+
+    /**
+     * runDocumentCreate        - run the whole create process for localstorage
+     * @param  {string} docId   - document id
+     * @param  {object} command - command object
+     * @returns {object} success- success object
+     */
+    priv.runDocumenCreate = function (docId, command){
+
+        // create new document and tree
+        var docPath = 'jio/local/'+priv.secured_username+'/'+
+                    priv.secured_applicationname+'/'+docId,
+            doc = utilities.createDocument( docId, docPath ),
+            tree = utilities.createDocumentTree( doc ),
+            treePath = docPath+'/revision_tree';
+
+        // store document
+        localstorage.setItem(docPath + '/' + doc._rev, doc);
+
+        // store tree
+        localstorage.setItem(treePath, tree);
+
+        // add user
+        if (!priv.doesUserExist(priv.secured_username)) {
+            priv.addUser(priv.secured_username);
+        }
+
+        // add fileName
+        priv.addFileName(docId);
+
+        // return SUCCESS
+        return priv.manageOptions({ok:true,id:docId,rev:doc._rev}, command, doc);
+    };
+
+// =============================== METHODS ======================
+
+    /**
+     * @method post             - Create a document in local storage.
+     * @stored                  - 'jio/local/USR/APP/FILE_NAME/REVISION'.
      *
      * Available options:
      * - {boolean} conflicts    - Add a conflicts object to the response
@@ -178,17 +271,10 @@ var newLocalStorage = function ( spec, my ) {
     that.post = function (command) {
 
         setTimeout (function () {
-
-            var doc,
-                docId = command.getDocId(),
-                docPath = 'jio/local/'+priv.secured_username+'/'+
-                    priv.secured_applicationname+'/'+docId,
-                tree,
-                treePath = docPath+'/revision_tree',
-                docTree = localstorage.getItem(treePath),
+            var docId = command.getDocId(),
                 reg = utilities.isUUID(docId);
 
-            // no attachments allowed
+            // 403 - no attachments allowed
             if (command.getAttachmentId()) {
                 that.error( utilities.throwError( 403,
                     'Attachment cannot be added with a POST request')
@@ -196,50 +282,25 @@ var newLocalStorage = function ( spec, my ) {
                 return;
             }
 
-            if ( reg !== true ) {
-
-                // id was supplied, use PUT
+            // 403 id was supplied, use PUT
+            if (reg !== true) {
                 that.error( utilities.throwError( 403,
                     'ID cannot be supplied with a POST request. Please use PUT')
                 );
                 return;
 
+            // ok
             } else {
-                // create new document
-                doc = utilities.createDocument( docId, docPath );
-
-                // store
-                localstorage.setItem(docPath + '/' + doc._rev, doc);
-
-                // create and store new document.tree
-                tree = utilities.createDocumentTree( doc );
-
-                // store
-                localstorage.setItem(treePath, tree);
-
-                // add user
-                if (!priv.doesUserExist (priv.secured_username)) {
-                    priv.addUser (priv.secured_username);
-                }
-
-                // add fileName
-                priv.addFileName(docId);
-
-                that.success (
-                    priv.manageOptions(
-                        {ok:true,id:docId,rev:doc._rev},
-                        command,
-                        doc
-                    )
+                that.success(
+                    priv.runDocumenCreate(docId, command)
                 );
             }
         });
-    }; // end post
+    };
 
     /**
-     * @method put
-     *
-     * Create or Update a document in local storage.
+     * @method put              - Create or Update a document in local storage.
+     * @stored                  - 'jio/local/USR/APP/FILE_NAME/REVISION'.
      *
      * Available options:
      * - {boolean} conflicts    - Add a conflicts object to the response
@@ -254,14 +315,17 @@ var newLocalStorage = function ( spec, my ) {
                 prev_rev = command.getDocInfo('_rev'),
                 docPath ='jio/local/'+priv.secured_username+'/'+
                     priv.secured_applicationname+'/'+docId,
-                treePath = docPath+'/revision_tree',tree,
+                treePath = docPath+'/revision_tree',
                 docTree = localstorage.getItem(treePath),
-                doc, docPathRev, activeLeaves, reg = utilities.isUUID(docId), newDocTree;
+                doc,
+                docPathRev,
+                activeLeaves,
+                reg = utilities.isUUID(docId);
 
             // no tree = create document or error
             if (!docTree) {
 
-                // id/revision provided = update, revision must be incorrect
+                // 404 id/revision provided = update, incorrect revision
                 if ( prev_rev !== undefined && reg === false ){
                     that.error( utilities.throwError( 404,
                         'Document not found, please check revision and/or ID')
@@ -269,7 +333,7 @@ var newLocalStorage = function ( spec, my ) {
                     return;
                 }
 
-                // no revision and UUID = create, no id provided
+                // 409 no revision and UUID = create, no id provided
                 if ( prev_rev === undefined && reg === true){
                     that.error( utilities.throwError( 409,
                         'Missing Document ID and or Revision')
@@ -278,238 +342,179 @@ var newLocalStorage = function ( spec, my ) {
                 }
 
                 // if passed here, we create.
-                // it could be create (id+content) or update (without revision)
-                // but since no tree was found and the tree includes id only
-                // we only end here with a NEW id, so update sans revision cannot
-                // be the case.
-
-                // create and store new document
-                doc = utilities.createDocument( docId, docPath );
-
-                // store
-                localstorage.setItem(docPath + '/' + doc._rev, doc);
-
-                // create and store new document.tree
-                tree = utilities.createDocumentTree( doc );
-
-                // store
-                localstorage.setItem(treePath, tree);
-
-                // add user
-                if (!priv.doesUserExist (priv.secured_username)) {
-                    priv.addUser (priv.secured_username);
-                }
-
-                // add fileName
-                priv.addFileName(docId);
-
-                that.success (
-                    priv.manageOptions(
-                        {ok:true,id:docId,rev:doc._rev},
-                        command,
-                        doc
-                    )
+                // it could be create (id+content) or update (sans revision)
+                // but since no tree was found we end here with a NEW id only
+                // (otherwise tree would be have been found).
+                that.success(
+                    priv.runDocumenCreate(docId, command)
                 );
 
             } else {
-                // found a tree - get active leaves
-                activeLeaves = utilities.getLeavesOnTree( docTree );
+                // found a tree
+                activeLeaves = utilities.getActiveLeaves( docTree );
 
-                // this should return an array of all active leaves
-                // or a single leaf, which needs to be put into an array
-                activeLeaves = typeof activeLeaves === "string" ?
-                    [activeLeaves] : activeLeaves;
-
-                // check if revision is on doc-tree and is an active leaf
+                // check if revision is on doc-tree and if it is an active leaf
                 if ( !utilities.isInObject( prev_rev, activeLeaves ) ) {
-                        // check if it's a branch/dead leaf (deleted/updated version)
-                        if ( utilities.isDeadLeaf( prev_rev, docTree ) ){
-                            that.error( utilities.throwError( 409,
-                                'Revision supplied is not the latest revision')
-                            );
-                            return;
-                        }
 
-                        // maybe a sync-PUT from another storage, we must
-                        // have revs_info option, otherwise we cannot know
-                        // where to put the file and update the storage tree
-                        if ( !utilities.isDeadLeaf( prev_rev, docTree ) &&
-                                command.getDocInfo('_revs_info') === undefined ){
-                            that.error( utilities.throwError( 409,
-                                'Missing revs_info required for sync-put')
-                            );
-                            return;
-                        } else {
-                            // SYNC PUT
+                    // check if it's a dead leaf (wrong revision)
+                    if ( utilities.isDeadLeaf( prev_rev, docTree ) ){
+                        // 409 deleted leaf/branch = wrong revision
+                        that.error( utilities.throwError( 409,
+                            'Revision supplied is not the latest revision')
+                        );
+                        return;
+                    }
 
-                            // revs_info is provided, this is a new version
-                            // store this document and merge
+                    // maybe a sync-PUT from another storage, we must
+                    // have revs_info option, otherwise we cannot know
+                    // where to put the file and update the storage tree
+                    if ( !utilities.isDeadLeaf( prev_rev, docTree ) &&
+                            command.getDocInfo('_revs_info') === undefined ){
 
-                            // get the new document
-                            doc = command.getDoc();
+                        // 409 no revs_info provided
+                        that.error( utilities.throwError( 409,
+                            'Missing revs_info required for sync-put')
+                        );
+                        return;
 
-                            // we are not updating, this is a copy&paste sync
-                            // therefore the path should have the revision of
-                            // the current document. No new revision hash
-                            // needs to be created
-                            docPathRev = docPath +'/'+doc._revs_info[0].rev;
-
-                            // update ...???
-                            priv.documentObjectUpdate(doc,command.cloneDoc());
-
-                            // store the new item.
-                            localstorage.setItem( docPathRev, doc );
-
-                            // update tree and store
-                            localstorage.setItem(treePath,
-                                utilities.updateDocumentTree( docTree, prev_rev, null,
-                                    doc._revs_info )
-                                );
-
-                            that.success (
-                                priv.manageOptions(
-                                    {ok:true,id:docId,rev:prev_rev},
-                                    command,
-                                    doc
-                                )
-                            );
-                        }
                     } else {
+                        // SYNC PUT
 
-                        // revision matches a currently active leaf
-                        // update of an existing document version
+                        // revs_info is provided, this is a new version
+                        // store this document and merge
+                        // NOTE: we also have to SYNC PUT deleted versions
+                        // otherwise the tree will not be the same AND
+                        // other storages will not know which versions of a
+                        // document have been deleted!!!!
 
-                        // get doc
-                        docPathRev = docPath +'/'+prev_rev;
-                        doc = localstorage.getItem(docPathRev);
+                        // get the new document
+                        doc = command.getDoc();
 
-                        if (!doc ){
-                            // documen not available, should not happen!
-                            that.error( utilities.throwError( 404,
-                                'Referenced document not found')
-                            );
-                            return;
+                        // ok
+                        that.success(
+                           priv.runDocumentUpdate(doc, docTree, command,
+                                    docId, undefined, docPath, prev_rev,
+                                    treePath, true)
+                        );
 
-                        } else {
-                            // update ...?
-                            priv.documentObjectUpdate(doc,command.cloneDoc());
+                    }
+                } else {
+                    // revision matches a currently active leaf
+                    // = update of an existing document version
 
-                            // update document
-                            doc = utilities.updateDocument( doc, docPath, prev_rev );
+                    // get doc
+                    docPathRev = docPath +'/'+prev_rev;
+                    doc = localstorage.getItem(docPathRev);
 
-                            // store new doc (.../DOCID/new_REVISION)
-                            localstorage.setItem(docPath+'/'+doc._rev, doc);
+                    if (!doc ){
+                        // 404 document not available, should not happen!
+                        that.error( utilities.throwError( 404,
+                            'Referenced document not found')
+                        );
+                        return;
+                    } else {
+                        // ok
+                        that.success(
+                            priv.runDocumentUpdate(doc, docTree, command,
+                                    docId, undefined, docPath, prev_rev,
+                                    treePath, false)
+                        );
+                    }
+                }
+            }
+        });
+    };
 
-                            // delete old doc (.../DOCID/old_REVISION)
-                            localstorage.deleteItem(docPath+'/'+prev_rev);
-
-                            // update tree and store
-                            localstorage.setItem(treePath,
-                                utilities.updateDocumentTree(
-                                    docTree, prev_rev, doc._rev, undefined )
-                                );
-
-                            that.success (
-                                priv.manageOptions(
-                                    {ok:true,id:docId,rev:doc._rev},
-                                    command,
-                                    doc
-                                )
-                            );
-                        } // found a doc to update
-                    } // updating existing document
-                } // found a tree
-            }); // set timeout
-    }; // end put
-
-     /**
-     * Saves/updates an attachment of a specified document.
-     * attachment will be stored @ 'jio/local/USR/APP/FILE_NAME/ATTACHMENTID'.
-     * @method putAttachment
+    /**
+     * @method putAttachment    - Saves/updates an attachment of a document
+    * @stored at      - 'jio/local/USR/APP/FILE_NAME/REVISION/ATTACHMENTID'.
+     *
+     * Available options:
+     * - {boolean} conflicts    - Add a conflicts object to the response
+     * - {boolean} revs         - Add the revisions history of the document
+     * - {boolean} revs_info    - Add revisions informations
      */
     that.putAttachment = function (command) {
-        var now = Date.now();
-        // wait a little in order to simulate asynchronous saving
-        setTimeout (function () {
 
-            var docid, doc, docpath, attmtid, attmt, attmtpath, prev_rev, rev;
-            docid = command.getDocId();
-            prev_rev = command.getDocInfo('_rev');
-            docpath ='jio/local/'+priv.secured_username+'/'+
-                priv.secured_applicationname+'/'+docid;
+        setTimeout( function () {
 
-             // 404
-            doc = localstorage.getItem(docpath);
-            if (!doc) {
-                that.error({
-                    status:404,statusText:'Not found',error:'not_found',
-                    message:'Document not found.',
-                    reason:'Document with specified id does not exist'
-                });
+            var docId = command.getDocId(),
+                docPath ='jio/local/'+priv.secured_username+'/'+
+                priv.secured_applicationname+'/'+docId,
+                prev_rev = command.getDocInfo('_rev'),
+                treePath = docPath+'/revision_tree',
+                docTree = localstorage.getItem(treePath),
+                doc,
+                docPathRev,
+                activeLeaves,
+                attachmentId,
+                attachment,
+                attachmentPath;
+
+            if (!docTree) {
+
+                // 404 document wasn't found = wrong id or revision
+                that.error( utilities.throwError( 404,
+                    'Document not found, please check document ID')
+                );
                 return;
-            }
 
-            // 409
-            if (doc._rev !== prev_rev) {
-                // want to update an older document
-                that.error({
-                    status:409,statusText:'Conflict',error:'conflict',
-                    message:'Document update conflict.',
-                    reason:'Trying to update a previous document version'
-                });
-                return;
-            }
+            } else {
+                // found a tree
+                activeLeaves = utilities.getActiveLeaves( docTree );
 
-            // check attachment id
-            attmtid = command.getAttachmentId();
-            if (attmtid) {
-                attmtpath = docpath+'/'+attmtid;
-                attmt = localstorage.getItem(attmtpath);
+                // check if revision is on tree
+                if ( utilities.isInObject( prev_rev, activeLeaves ) ) {
 
-                // create _attachments
-                if ( doc._attachments === undefined ){
-                    doc._attachments = {};
+                    // check if dead leaf
+                    if ( utilities.isDeadLeaf( prev_rev, docTree ) ){
+
+                        // 409 deleted leaf/branch = wrong revision
+                        that.error( utilities.throwError( 409,
+                            'Trying to update on a previous document version')
+                        );
+                        return;
+
+                    } else {
+                        // revision is ok
+                        attachmentId = command.getAttachmentId();
+
+                        // 409 missing attachment id
+                        if ( !attachmentId ){
+                            that.error( utilities.throwError( 409,
+                                'No attachment id specified')
+                            );
+                            return;
+
+                        } else {
+                            // set attachment
+                            attachmentPath = docPath+'/'+prev_rev+'/'+attachmentId;
+                            attachment = localstorage.getItem(attachmentPath);
+
+                            // store/update attachment
+                            localstorage.setItem(attachmentPath,command.getContent());
+
+                            // get doc
+                            docPathRev = docPath +'/'+prev_rev;
+                            doc = localstorage.getItem(docPathRev);
+
+                            // ok
+                            that.success(
+                                priv.runDocumentUpdate(doc, docTree, command,
+                                    docId, attachmentId, docPath, prev_rev,
+                                    treePath, false)
+                            );
+                        }
+                    }
+
+                } else {
+                    // 404 revision supplied is not on tree
+                    that.error( utilities.throwError( 404,
+                        'Document not found, please check revision')
+                    );
+                    return;
                 }
-
-                // create _attachments object for this attachment
-                if ( doc._attachments[attmtid] === undefined ){
-                    doc._attachments[attmtid] = {};
-                }
-
-                // set revpos
-                doc._attachments[attmtid].revpos =
-                    parseInt(doc._rev.split('-')[0],10);
-
-                    // store/update attachment
-                localstorage.setItem(attmtpath,command.getContent());
-            } else  {
-                // no attachment id specified
-                that.error({
-                    status:409,statusText:'Conflict',error:'conflict',
-                    message:'Document update conflict.',
-                    reason:'No attachment id specified'
-                });
-                return; 
             }
-
-            // rev = [number, hash]
-            rev = utilities.generateNextRevision(prev_rev, ''+doc+' '+now+'');
-            doc._rev = rev.join('-');
-            doc._revisions.ids.unshift(rev[1]);
-            doc._revisions.start = rev[0];
-            doc._revs_info[0].status = 'deleted';
-            doc._revs_info.unshift({
-                "rev": rev.join('-'),
-                "status": "available"
-            });
-            localstorage.setItem(docpath, doc);
-            that.success (
-                priv.manageOptions(
-                    {"ok":true,"id":docid,"rev":doc._rev},
-                    command,
-                    doc
-                )
-            );
         });
     }; // end putAttachment
 
@@ -573,13 +578,14 @@ var newLocalStorage = function ( spec, my ) {
      * the user.
      * @method allDocs
      */
+
 // ============== NOT MODIFIED YET ===============
     that.allDocs = function (command) {
 
         setTimeout(function () {
             var new_array = [], array = [], i, l, k = 'key',
-            path = 'jio/local/'+priv.secured_username+'/'+
-                priv.secured_applicationname, file_object = {};
+                path = 'jio/local/'+priv.secured_username+'/'+
+                    priv.secured_applicationname, file_object = {};
 
             array = priv.getFileNameArray();
             for (i = 0, l = array.length; i < l; i += 1) {
@@ -614,7 +620,7 @@ var newLocalStorage = function ( spec, my ) {
         // wait a little in order to simulate asynchronous saving
         setTimeout (function () {
             var docid, doc, docpath, prev_rev, attmtid, attmt, attpath;
-                docid = command.getDocId();
+                docid = command.getDocId(),
                 docpath = 'jio/local/'+priv.secured_username+'/'+
                     priv.secured_applicationname+'/'+docid;
                 prev_rev = command.getDocInfo('_rev');

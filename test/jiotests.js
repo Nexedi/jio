@@ -359,10 +359,12 @@ test ('All tests', function () {
                      _creation_date:10000},'dummyallok loading');
     o.jio.get('file',o.f);
     o.tick(o);
+
     // remove
     o.spy(o,'value',{ok:true,id:"file"},'dummyallok removing');
     o.jio.remove({_id:'file'},o.f);
     o.tick(o);
+
     // get list
     o.spy (o,'value',{
         total_rows:2,
@@ -726,25 +728,37 @@ test ('Post', function(){
 test ('Put', function(){
 
     // runs following assertions
-    // 1) PUT without ID = 409
-    // 2) PUT with wrong ID/rev = 404
-    // 3) PUT CREATE
-    // 4)   check file was created
-    // 5)   check tree was created
-    // 6)      PUT UPDATE
-    // 7)         check file was replaced
-    // 8)         check tree was updated
-    // 9)               PUT UPDATE 2
-    // 10)                   check file was replaced
-    // 11)                   check tree was updated
-    // 12)                       PUT UPDATE false revision = 409
-    // 13)                       SYNC-PUT no revs_info = 409
-    // 14)                       SYNC-PUT revs_info
+    // 1)  PUT without ID = 409
+    // 2)  PUT with wrong ID/rev = 404
+    // 3)  PUT CREATE response
+    // 4)  check file was created
+    // 5)  check tree was created
+    // 6)  PUT UPDATE response
+    // 7)  check file was replaced
+    // 8)  check tree was updated
+    // 9)  PUT UPDATE 2 response
+    // 10) check file was replaced
+    // 11) check tree was updated
+    // 12) PUT UPDATE false revision = 409
+    // 13) SYNC-PUT no revs_info = 409
+    // 14) SYNC-PUT revs_info response
+    // 15) check if file created
+    // 16) check if tree was merged
+    // 17) SYNC-PUT revs_info dead leaf response
+    // 18) check that file was NOT created
+    // 19) check that tree was updated
 
-    var o = {}; 
+    var fake_rev_0,
+        fake_rev_1,
+        fake_rev_2,
+        fake_id_0,
+        fake_id_1,
+        fake_id_2,
+
+        o = {};
         o.t = this;
-        o.clock = o.t.sandbox.useFakeTimers(),
-        o.falseRevision,
+        o.clock = o.t.sandbox.useFakeTimers();
+        o.falseRevision;
         localstorage = {
             getItem: function (item) {
                 return JSON.parse (localStorage.getItem(item));
@@ -791,6 +805,8 @@ test ('Put', function(){
                 "_rev":'1-ABCDEFG'},o.f);
     checkReply(o,null,true);
 
+    o.clock.tick(base_tick);
+
     // start adding content
     o.jio.put({"content":'content',"_id":'myDoc'},
         function(err, response) {
@@ -813,8 +829,9 @@ test ('Put', function(){
 
         });
     // 3) TEST PUT content
-    // no idea why this is working for 3/6/9/12, but it does...
     checkReply(o,null,true);
+
+    o.clock.tick(base_tick);
 
     // update document
     o.jio.put({"content":'content_modified',"_id":'myDoc',
@@ -839,12 +856,13 @@ test ('Put', function(){
     // 6) TEST PUT UPDATE
     checkReply(o,null,true);
 
+    o.clock.tick(base_tick);
+
     // update document 2nd time
     o.jio.put({"content":'content_modified_again',
                 "_id":'myDoc',
                 "_rev":o.testRevisionStorage[0]},
         function(err, response) {
-            var fake_rev_0,fake_rev_1,fake_id_0,fake_id_1;
 
             o.spy(o,'value',{"ok":true,"id":response.id,
                     "rev":response.rev}, 'PUT content = ok');
@@ -867,11 +885,9 @@ test ('Put', function(){
     // 9) TEST PUT UPDATE
     checkReply(o,null,true);
 
-    // continue to work with this instance
-    //o.jio.stop();
-    //o.clean;
+    o.clock.tick(base_tick);
 
-    // try updating with false revision
+    // TEST 12) PUT false revision
     o.spy (o,'value',{
         "error": 'conflict',
         "message": 'Document update conflict.',
@@ -884,11 +900,11 @@ test ('Put', function(){
     o.jio.put({"content":'content_modified_false',
                 "_id":'myDoc',
                 "_rev":o.falseRevision},o.f);
-    // TEST 12) PUT false revision
     checkReply(o,null,true);
 
+    o.clock.tick(base_tick);
 
-    // try updating without revs_info
+    // TEST 13) SYNC-PUT no revs_info
     o.spy (o,'value',{
         "error": 'conflict',
         "message": 'Document update conflict.',
@@ -901,8 +917,9 @@ test ('Put', function(){
     o.jio.put({"content":'content_modified_false',
                 "_id":'myDoc',
                 "_rev":'1-abcdefg'},o.f);
-    // TEST 13) SYNC-PUT no revs_info
     checkReply(o,null,true);
+
+    o.clock.tick(base_tick);
 
     // add a new document version with fake revs_info
     // the new document has the same origin and first edit,
@@ -912,10 +929,12 @@ test ('Put', function(){
     // and add the two new dummy revisions into the final
     // tree. Also the new document should be stored
     // in local storage.
+    fake_rev_2 = o.testRevisionStorage[2];
     fake_rev_1 = o.testRevisionStorage[1];
     fake_rev_0 = o.testRevisionStorage[0];
-    fake_id_0 = o.testRevisionStorage[0].split('-')[1];
+    fake_id_2 = o.testRevisionStorage[2].split('-')[1];
     fake_id_1 = o.testRevisionStorage[1].split('-')[1];
+    fake_id_0 = o.testRevisionStorage[0].split('-')[1];
 
     // put a new document version
     o.jio.put({
@@ -927,7 +946,7 @@ test ('Put', function(){
             {"rev":"3-a9dac9ff5c8e1b2fce58e5397e9b6a8de729d5c6eff8f26a7b71df6348986123","status":"deleted"},
             {"rev":fake_rev_1,"status":"deleted"},
             {"rev":fake_rev_0,"status":"deleted"}
-        ],
+            ],
         "_revisions":{
             "start":4,
             "ids":[
@@ -970,7 +989,80 @@ test ('Put', function(){
     // 14) TEST PUT UPDATE
     checkReply(o,null,true);
 
+    o.clock.tick(base_tick);
+/*
+    // put a new deleted version
+    o.jio.put({
+        "content":'a_deleted_version',
+        "_id":'myDoc',
+        "_rev":"3-05210795b6aa8cb5e1e7f021960d233cf963f1052b1a41777ca1a2aff8fd4b61",
+        "_revs_info":[
+                {"rev":"3-05210795b6aa8cb5e1e7f021960d233cf963f1052b1a41777ca1a2aff8fd4b61","status":"deleted"},
+                {"rev":"2-67ac10df5b7e2582f2ea2344b01c68d461f44b98fef2c5cba5073cc3bdb5a844","status":"deleted"},
+                {"rev":fake_rev_2,"status":"deleted"}
+                ],
+        "_revisions":{
+            "start":3,
+            "ids":[
+                "05210795b6aa8cb5e1e7f021960d233cf963f1052b1a41777ca1a2aff8fd4b61",
+                "67ac10df5b7e2582f2ea2344b01c68d461f44b98fef2c5cba5073cc3bdb5a844",
+                fake_id_2
+                ]}
 
+        },
+        function(err, response) {
+
+            //o.testRevisionStorage.unshift(response.rev);
+            o.buildTestTree = {
+                "kids":[{
+                    "kids":[
+                        {"kids":[],
+                         "rev":o.testRevisionStorage[0],
+                         "status":'available',
+                         "type":'leaf'
+                        },
+                        {"kids":[{
+                            "kids":[],
+                            "rev":"4-b5bb2f1657ac5ac270c14b2335e51ef1ffccc0a7259e14bce46380d6c446eb89",
+                            "status":'available', "type":'leaf'
+                         }],
+                        "rev":"3-a9dac9ff5c8e1b2fce58e5397e9b6a8de729d5c6eff8f26a7b71df6348986123",
+                        "status":'deleted',
+                        "type":'branch'
+                        }],
+                    "rev":o.testRevisionStorage[1],
+                    "status":'deleted',
+                    "type":'branch'
+                    },{
+                     "kids":[
+                        {
+                        "kids":[],
+                        "rev":"3-05210795b6aa8cb5e1e7f021960d233cf963f1052b1a41777ca1a2aff8fd4b61",
+                        "status":'deleted',
+                        "type":'leaf'
+                        }],
+                     "rev":"2-67ac10df5b7e2582f2ea2344b01c68d461f44b98fef2c5cba5073cc3bdb5a844",
+                     "status":'deleted',
+                     "typ":'branch'
+                    }],
+                "rev":o.testRevisionStorage[2],
+                "status":'deleted',
+                "type":'branch'
+            };
+
+            o.spy(o,'value',{"ok":true,"id":response.id,
+                    "rev":response.rev}, 'PUT SYNC dead leaf = ok');
+            o.f(response);
+
+            // TEST 18) check document was stored
+            //checkFile(response, o, null, true);
+            // TEST 19) check tree was updated
+            //checkTreeNode(response, o, null, true);
+
+        });
+    // 17) TEST PUT UPDATE
+    //checkReply(o,null,true);
+    */
 });
 
 
