@@ -440,53 +440,31 @@ var utilities = {
         return result.rev;
     },
 
-    getActiveLeaves : function (docTreeNode) {
-        var activeLeaves = utilities.getLeavesOnTree( docTreeNode );
-
-        activeLeaves = typeof activeLeaves === "string" ?
-                    [activeLeaves] : activeLeaves;
-
-        return activeLeaves;
-    },
-
     /**
-     * @method getLeavesOnTree      - finds all leaves on a tree
-     * @param  {docTree} string     - the tree for this document
-     * @returns {leaves} object     - array with all leaves
-     * @info                        - find active (status = available ) leaves
+     * Gets an array of leaves revisions from document tree
+     * @method getLeavesFromDocumentTree
+     * @param  {object} document_tree The document tree
+     * @return {array} The array of leaves revisions
      */
-    getLeavesOnTree : function ( docTreeNode ){
-        var revisions = [],
-            type = docTreeNode['type'],
-            status = docTreeNode['status'],
-            kids = docTreeNode['kids'],
-            rev = docTreeNode['rev'],
-            addLeaf, addLeaves, numberOfKids, i, key;
-
-        for ( key in docTreeNode ){
-            if ( key === "type" ){
-                // node is a leaf, then it will have no kids!
-                if ( type === 'leaf' && status !== 'deleted' ){
-                    addLeaf = docTreeNode['rev'];
-                }
-                // node has kid(s), must be a branch
-                if ( utilities.isObjectEmpty( kids ) === false ){
-                    numberOfKids = utilities.isObjectSize( kids );
-                    for ( i = 0; i < numberOfKids; i+=1 ){
-                        // recurse
-                        addLeaves = utilities.getLeavesOnTree( kids[i] );
-                        // single kid returns string 1-1234... = unshift
-                        // multiple kids array [1-1234...,3-3412...] = concat
-                        revisions = addLeaves === 'string' ?
-                            revisions.unshift[ addLeaves ] :
-                                revisions.concat( addLeaves );
-                    }
-                }
+    getLeavesFromDocumentTree : function (document_tree) {
+        var i, result, search;
+        result = [];
+        // search method fills [result] with the winner revision
+        search = function (document_tree) {
+            var i;
+            if (document_tree.children.length === 0) {
+                // This node is a leaf
+                result.push(document_tree.rev);
+                return;
             }
-        }
-        // for recursiveness:
-        // no kids = passback string, multiple kids, pass back array
-        return ( addLeaf === undefined ? revisions : addLeaf );
+            // This node has children
+            for (i = 0; i < document_tree.children.length; i += 1) {
+                // searching deeper to find the deeper leaf
+                search(document_tree.children[i]);
+            }
+        };
+        search(document_tree);
+        return result;
     },
 
     /**
