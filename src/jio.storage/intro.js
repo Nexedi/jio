@@ -410,6 +410,36 @@ var utilities = {
         return {"children":synchronize(tree_list)};
     },
 
+    /**
+     * Gets the winner revision from a document tree
+     * @method getWinnerRevisionFromDocumentTree
+     * @param  {object} document_tree The document tree
+     * @return {string} The winner revision
+     */
+    getWinnerRevisionFromDocumentTree: function (document_tree) {
+        var i, result, search;
+        result = {"deep":-1,"revision":''};
+        // search method fills "result" with the winner revision
+        search = function (document_tree, deep) {
+            var i;
+            if (document_tree.children.length === 0) {
+                // This node is a leaf
+                if (result.deep < deep) {
+                    // The leaf is deeper than result
+                    result = {"deep":deep,"revision":document_tree.rev};
+                }
+                return;
+            }
+            // This node has children
+            for (i = 0; i < document_tree.children.length; i += 1) {
+                // searching deeper to find the deeper leaf
+                search(document_tree.children[i], deep+1);
+            }
+        };
+        search(document_tree, 0);
+        return result.rev;
+    },
+
     getActiveLeaves : function (docTreeNode) {
         var activeLeaves = utilities.getLeavesOnTree( docTreeNode );
 
