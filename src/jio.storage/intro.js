@@ -76,44 +76,40 @@ var utilities = {
     },
 
     /**
-     * @method throwError       - Creates the error object for all errors
-     * @param  {code} string    - the error code.
-     * @param  {reason} string  - the error reason
-     * @returns {e} object      - error object
+     * Creates the error object for all errors
+     * @method createErrorObject
+     * @param  {string} error_code The error code
+     * @param  {string} message The error message
+     * @return {object} Error object
      */
-    throwError : function (code, reason) {
-        var statusText, error, message, errorObject;
+    createErrorObject: function (error_code, message) {
+        var error_object, assignErrorValues;
+
+        error_object = {
+            "status":error_code,
+            "message":message,
+            "reason":message
+        };
+
+        assignErrorValues = function (statusText) {
+            var tmp = '';
+            error_object.statusText = statusText;
+            error_object.error = statusText.toLowerCase().split(' ').join('_');
+        };
 
         switch(code) {
-
-            case 409:
-                statusText = 'Conflict';
-                error = 'conflict';
-                message = 'Document update conflict.';
-                break;
-
-            case 403:
-                statusText = 'Forbidden';
-                error = 'forbidden';
-                message = 'Forbidden';
-                break;
-
-            case 404:
-                statusText = 'Not found';
-                error = 'not found';
-                message = 'Document not found.';
-                break;
+        case 409:
+            assignErrorValues('Conflict');
+            break;
+        case 403:
+            assignErrorValues('Forbidden');
+            break;
+        case 404:
+            assignErrorValues('Not found');
+            break;
         }
 
-        // create object
-        errorObject = ({
-                status:code,
-                statusText:statusText,
-                error:error,
-                message:message,
-                reason:reason
-            });
-        return errorObject;
+        return error_object;
     },
 
     /**
