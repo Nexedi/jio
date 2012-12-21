@@ -290,16 +290,78 @@ var storage = function(spec, my) {
     };
 
     that.post = function (command) {
-        var docid, option;
-        docid = command.getDocId();
-        option = command.cloneOption();
-        // check if the tree already exists
-        that._get (
-            docid + '.tree.json',
-            option,
-
-        // if the tree does not exists yet
-        // if the tree exists
+        setTimeout(function () {
+            var f, options, document_tree, doc, prev_rev;
+            f = {};
+            options = command.cloneOption();
+            options["max_retry"] = options["max_retry"] || 3;
+            f.begin = function () {
+                prev_rev = command.getDocInfo("_rev");
+                if (typeof prev_rev === "string" &&
+                    !that.checkRevisionFormat(prev_rev)) {
+                    // if the previous revision given is bad
+                    that.error(that.createErrorObject(
+                        400, "Bad Request", "Invalid rev format"
+                    ));
+                    return;
+                }
+                doc = that.createDocument(
+                    command.getDoc() || {},
+                    command.getDocId() || that.generateUuid(),
+                    prev_rev
+                );
+                // the previous revision is correct
+                prev_rev = that.revisionToArray(prev_rev);
+                f.getDocumentTree();
+            };
+            // check if the tree already exists
+            f.getDocumentTree = function () {
+                that.addJob(
+                    '_get',
+                    that.serialized(),
+                    doc._id+'.tree.json',
+                    options,
+                    function (response) {
+                        // if the tree exists
+                        document_tree = response;
+                        f.postDocument();
+                    },function (error) {
+                        if (error.status === 404) {
+                            // if the tree does not exists yet
+                            document_tree = that.createDocumentTree();
+                            f.postDocument();
+                        } else {
+                            that.error(that.createErrorObject(
+                                error.status, error.statusText,
+                                "Unable to get the revision tree"
+                            ));
+                        }
+                    }
+                );
+            };
+            f.postDocument = function () {
+                that.addJob(
+                    '_post',
+                    that.serialized(),
+                    doc._id+'.'+doc._rev,
+                    options,
+                    function (response) {
+                        f.putDocumentTree()
+                    },function (error) {
+                        that.error(that.createErrorObject(
+                            error.status, error.statusText, error
+                        ));
+                    }
+                );
+            };
+            f.putDocumentTree = function () {
+                if (!that.addDocumentToDocumentTree(doc)) {
+                    // conflict!
+                }
+                // xxx
+            };
+            f.begin();
+        });
     };
 
     that._post = function () {
