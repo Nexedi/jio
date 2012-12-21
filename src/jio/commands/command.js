@@ -26,6 +26,10 @@ var command = function(spec, my) {
 
     // xxx fixed spec.content to spec.doc.content for PUTATTACHMENT
     // xxx need extra check for GET, otherwise spec.doc is undefined
+    console.log("COMMAND");
+    console.log( spec );
+    console.log( spec.doc );
+    console.log( spec.doc.content );
     priv.content   = spec.doc === undefined ? undefined :
         typeof spec.doc.content === 'string'?
                 spec.doc.content:
@@ -80,8 +84,6 @@ var command = function(spec, my) {
      * @return {object}         the document.
      */
     that.getDoc = function() {
-        console.log("where is my doc");
-        console.log( priv.doc );
         return priv.doc;
     };
 

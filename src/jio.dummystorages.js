@@ -73,6 +73,16 @@
             }, 100);            // 100 ms, for jiotests simple job waiting
         }; // end put
 
+        that.putAttachment = function (command) {
+            setTimeout (function () {
+                that.success ({
+                    ok:true,
+                    id:command.getDocId(),
+                    rev:generateRevision(command, "putAttachment", true)
+                });
+            }, 100);            // 100 ms, for jiotests simple job waiting
+        }; // end put
+
         that.get = function (command) {
             setTimeout(function () {
                 that.success ({

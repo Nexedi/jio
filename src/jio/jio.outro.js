@@ -147,6 +147,11 @@
     };
 
     priv.parametersToObject = function (list, default_options) {
+        
+        console.log("aloha");
+        console.log("what do we have");
+        console.log( list );
+        console.log( default_options );
         var k, i = 0, callbacks = [], param = {options:{}};
         for (i = 0; i < list.length; i += 1) {
             if (typeof list[i] === 'object') {

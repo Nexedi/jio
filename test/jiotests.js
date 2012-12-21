@@ -57,6 +57,7 @@ basic_test_function_generator = function(o,res,value,message) {
     };
 },
 basic_spy_function = function(o,res,value,message,fun) {
+
     fun = fun || 'f';
     o[fun] = basic_test_function_generator(o,res,value,message);
     o.t.spy(o,fun);
@@ -65,6 +66,7 @@ basic_tick_function = function (o) {
     var tick, fun, i = 1;
     tick = 1000;
     fun = fun || 'f';
+
     if (typeof arguments[i] === 'number') {
         tick = arguments[i]; i++;
     }
@@ -663,41 +665,42 @@ test ('Post', function(){
     o.spy = basic_spy_function;
     o.clean = clean_up_local_storage_function();
     o.username = 'MrPost';
-    o.testBuildTree = [];
     o.testRevisionStorage = [];
 
     // let's go
     o.jio = JIO.newJio({ type:'local', username:o.username,
                          applicationname:'jiotests' });
-    o.spy (o,'value',{
-        "error": 'forbidden',
-        "message": 'Forbidden',
-        "reason": 'ID cannot be supplied with a POST request. Please use PUT',
-        "status": 403,
-        "statusText": 'Forbidden'
+    // ========================================
+    // 1) POST with id
+    o.jio.post({"_id":'file',"content":'content'},function(err, response){
+        o.spy (o,'value',{
+            "error": 'forbidden',
+            "message": 'Forbidden',
+            "reason": 'ID cannot be supplied with a POST request. Please use PUT',
+            "status": 403,
+            "statusText": 'Forbidden'
         },'POST with id = 403 forbidden');
-
-    o.jio.post({"_id":'file',"content":'content'},o.f);
-
-    // TEST 1) POST with id
+        o.f(err);
+    });
     checkReply(o,null,true);
-
-    o.spy (o,'value',{
-        "error": 'forbidden',
-        "message": 'Forbidden',
-        "reason": 'Attachment cannot be added with a POST request',
-        "status": 403,
-        "statusText": 'Forbidden'
-        },'POST attachment = 403 forbidden');
-
-    o.jio.post({
-        "_id":'file/ABC',
-        "mimetype":'text/html',
-        "content":'<b>hello</b>'},o.f);
-
-    // TEST 2) POST attachment
+    o.clock.tick(base_tick);
+    // ========================================
+    // 2) POST attachment
+    o.jio.post({"_id":'file/ABC', "mimetype":'text/html', 
+               "content":'<b>hello</b>'},function(err, response){
+        o.spy (o,'value',{
+            "error": 'forbidden',
+            "message": 'Forbidden',
+            "reason": 'Attachment cannot be added with a POST request',
+            "status": 403,
+            "statusText": 'Forbidden'
+            },'POST attachment = 403 forbidden'); 
+        o.f(err);
+    });
     checkReply(o,null,true);
-
+    o.clock.tick(base_tick);
+    // ========================================
+    // 3) POST content
     o.jio.post({"content":'content'},
         function(err, response) {
             o.spy(o,'value',{"ok":true,"id":response.id,"rev":response.rev},
@@ -712,13 +715,14 @@ test ('Post', function(){
             o.buildTestTree = {"kids":[],"rev":o.testRevisionStorage[0],
                 "status":'available',"type":'leaf'};
 
-            // TEST 4) check if document is created and correct
+            // 4) check if document is created and correct
             checkFile(response, o, null, true);
-            // TEST 5) check if document tree is created and correct
+            // 5) check if document tree is created and correct
             checkTreeNode(response, o, null, true);
         });
-    // 3) TEST POST content
     checkReply(o,null,true);
+    o.clock.tick(base_tick);
+    // END POST
     o.jio.stop();
     o.clean;
 });
@@ -755,7 +759,7 @@ test ('Put', function(){
         fake_id_1,
         fake_id_2,
 
-        o = {};
+        o = {}; 
         o.t = this;
         o.clock = o.t.sandbox.useFakeTimers();
         o.falseRevision;
@@ -775,69 +779,68 @@ test ('Put', function(){
     o.spy = basic_spy_function;
     o.clean = clean_up_local_storage_function();
     o.username = 'MrPutt';
-    o.testBuildTree = [];
     o.testRevisionStorage = [];
 
     // let's go
     o.jio = JIO.newJio({ type:'local', username:o.username,
                          applicationname:'jiotests' });
+    // ========================================
+    // 1) PUT without ID
+    o.jio.put({"content":'content'},function(err, response){
 
-    // TEST 1) PUT without ID
-    o.spy (o,'value',{
-        "error": 'conflict',
-        "message": 'Document update conflict.',
-        "reason": 'Missing Document ID and or Revision',
-        "status": 409,
-        "statusText": 'Conflict'
-        },'PUT without id = 409 Conflict');
-    o.jio.put({"content":'content'},o.f);
+        o.spy (o,'value',{
+            "error": 'conflict',
+            "message": 'Document update conflict.',
+            "reason": 'Missing Document ID and or Revision',
+            "status": 409,
+            "statusText": 'Conflict'
+            },'PUT without id = 409 Conflict');
+        o.f(err);
+    });
     checkReply(o,null,true);
-
-    // TEST 2) PUT wrong id/rev
-    o.spy (o,'value',{
-        "error": 'not found',
-        "message": 'Document not found.',
-        "reason": 'Document not found, please check revision and/or ID',
-        "status": 404,
-        "statusText": 'Not found'
-        },'PUT with wrong id/revision = 404 Not found');
-    o.jio.put({"content":'content',"_id":'myDoc',
-                "_rev":'1-ABCDEFG'},o.f);
-    checkReply(o,null,true);
-
     o.clock.tick(base_tick);
-
-    // start adding content
+    // ========================================
+    //  2) PUT wrong id/rev
+    o.jio.put({"content":'content', "_id":'myDoc',
+               "_rev":'1-ABCDEFG'}, function(err, response){
+        o.spy (o,'value',{
+            "error": 'not found',
+            "message": 'Document not found.',
+            "reason": 'Document not found, please check revision and/or ID',
+            "status": 404,
+            "statusText": 'Not found'
+        },'PUT with wrong id/revision = 404 Not found');
+        o.f(err);
+    });
+    checkReply(o,null,true);
+    o.clock.tick(base_tick);
+    // ========================================
+    // 3) PUT content
     o.jio.put({"content":'content',"_id":'myDoc'},
         function(err, response) {
+
             o.spy(o,'value',{"ok":true,"id":response.id,"rev":response.rev},
                     'PUT content = ok');
             o.f(response);
 
-            // store falseRevision
             o.falseRevision = response.rev;
-
-            // build tree manually
             o.testRevisionStorage.unshift(response.rev);
             o.buildTestTree = {"kids":[],"rev":o.testRevisionStorage[0],
                 "status":'available',"type":'leaf'};
-
-            // TEST 4) check file was created
+            // ========================================
+            // 4) check file was created
             checkFile(response, o, null, true);
-            // TEST 5) check tree was created
+            // ========================================
+            // 5) check tree was created
             checkTreeNode(response, o, null, true);
-
         });
-    // 3) TEST PUT content
     checkReply(o,null,true);
-
     o.clock.tick(base_tick);
-
-    // update document
+    // ========================================
+    // 6) PUT UPDATE (modify content)
     o.jio.put({"content":'content_modified',"_id":'myDoc',
                     "_rev":o.testRevisionStorage[0]},
         function(err, response) {
-
             o.spy(o,'value',{"ok":true,"id":response.id,"rev":response.rev},
                 'PUT content = ok');
             o.f(response);
@@ -847,23 +850,20 @@ test ('Put', function(){
                 o.testRevisionStorage[0],"status":'available',
                 "type":'leaf'}],"rev":o.testRevisionStorage[1],
                 "status":'deleted',"type":'branch'};
-
-            // TEST 7) check document was replaced
+            // ========================================
+            // 7) check document was replaced
             checkFile(response, o, null, true);
-            // TEST 8) check tree was updated
+            // ========================================
+            // 8) check tree was updated
             checkTreeNode(response, o, null, true);
         });
-    // 6) TEST PUT UPDATE
     checkReply(o,null,true);
-
     o.clock.tick(base_tick);
-
-    // update document 2nd time
+    // ========================================
+    // 9. update document (modify again)
     o.jio.put({"content":'content_modified_again',
-                "_id":'myDoc',
-                "_rev":o.testRevisionStorage[0]},
+                "_id":'myDoc', "_rev":o.testRevisionStorage[0]},
         function(err, response) {
-
             o.spy(o,'value',{"ok":true,"id":response.id,
                     "rev":response.rev}, 'PUT content = ok');
             o.f(response);
@@ -876,49 +876,47 @@ test ('Put', function(){
                 "rev":o.testRevisionStorage[2],"status":'deleted',
                 "type":'branch'};
 
-            // TEST 10) check document was replaced
+            // 10) check document was replaced
             checkFile(response, o, null, true);
-            // TEST 11) check tree was updated
+            // 11) check tree was updated
             checkTreeNode(response, o, null, true);
 
         });
-    // 9) TEST PUT UPDATE
     checkReply(o,null,true);
-
     o.clock.tick(base_tick);
-
-    // TEST 12) PUT false revision
-    o.spy (o,'value',{
-        "error": 'conflict',
-        "message": 'Document update conflict.',
-        "reason":
-            'Revision supplied is not the latest revision',
-        "status": 409,
-        "statusText": 'Conflict'
+    // ========================================
+    // 12) PUT false revision
+    o.jio.put({"content":'content_modified_false',
+                "_id":'myDoc',
+                "_rev":o.falseRevision},function(err, response){
+        o.spy (o,'value',{
+            "error": 'conflict',
+            "message": 'Document update conflict.',
+            "reason":
+                'Revision supplied is not the latest revision',
+            "status": 409,
+            "statusText": 'Conflict'
         },'PUT false revision = 409 Conflict');
-
-    o.jio.put({"content":'content_modified_false',
-                "_id":'myDoc',
-                "_rev":o.falseRevision},o.f);
+        o.f(err);
+    });
     checkReply(o,null,true);
-
     o.clock.tick(base_tick);
-
-    // TEST 13) SYNC-PUT no revs_info
-    o.spy (o,'value',{
-        "error": 'conflict',
-        "message": 'Document update conflict.',
-        "reason":
-            'Missing revs_info required for sync-put',
-        "status": 409,
-        "statusText": 'Conflict'
-        },'PUT no sync info = 409 Conflict');
-
+    // ========================================
+    // 13) SYNC-PUT no revs_info
     o.jio.put({"content":'content_modified_false',
                 "_id":'myDoc',
-                "_rev":'1-abcdefg'},o.f);
+                "_rev":'1-abcdefg'},function(err, response){
+        o.spy (o,'value',{
+            "error": 'conflict',
+            "message": 'Document update conflict.',
+            "reason":
+                'Missing revs_info required for sync-put',
+            "status": 409,
+            "statusText": 'Conflict'
+        },'PUT no sync info = 409 Conflict');
+        o.f(err);
+    });
     checkReply(o,null,true);
-
     o.clock.tick(base_tick);
 
     // add a new document version with fake revs_info
@@ -935,8 +933,8 @@ test ('Put', function(){
     fake_id_2 = o.testRevisionStorage[2].split('-')[1];
     fake_id_1 = o.testRevisionStorage[1].split('-')[1];
     fake_id_0 = o.testRevisionStorage[0].split('-')[1];
-
-    // put a new document version
+    // ========================================
+    // 14) PUT UPDATE A TREE using revs_info
     o.jio.put({
         "content":'a_new_version',
         "_id":'myDoc',
@@ -946,7 +944,7 @@ test ('Put', function(){
             {"rev":"3-a9dac9ff5c8e1b2fce58e5397e9b6a8de729d5c6eff8f26a7b71df6348986123","status":"deleted"},
             {"rev":fake_rev_1,"status":"deleted"},
             {"rev":fake_rev_0,"status":"deleted"}
-            ],
+        ],
         "_revisions":{
             "start":4,
             "ids":[
@@ -957,8 +955,6 @@ test ('Put', function(){
                 ]}
         },
         function(err, response) {
-
-            //o.testRevisionStorage.unshift(response.rev);
             o.buildTestTree = {
                 "kids":[
                     {
@@ -975,23 +971,18 @@ test ('Put', function(){
                     "rev":o.testRevisionStorage[1],"status":'deleted',"type":'branch'}],
                 "rev":o.testRevisionStorage[2],"status":'deleted',"type":'branch'
             };
-
             o.spy(o,'value',{"ok":true,"id":response.id,
                     "rev":response.rev}, 'PUT SYNC = ok');
             o.f(response);
-
-            // TEST 15) check document was stored
+            // 15) check document was stored
             checkFile(response, o, null, true);
-            // TEST 16) check tree was updated
+            // 16) check tree was updated
             checkTreeNode(response, o, null, true);
-
         });
-    // 14) TEST PUT UPDATE
     checkReply(o,null,true);
-
     o.clock.tick(base_tick);
-/*
-    // put a new deleted version
+    // ========================================
+    // 17) PUT UPDATE (deleted tree)
     o.jio.put({
         "content":'a_deleted_version',
         "_id":'myDoc',
@@ -1000,19 +991,17 @@ test ('Put', function(){
                 {"rev":"3-05210795b6aa8cb5e1e7f021960d233cf963f1052b1a41777ca1a2aff8fd4b61","status":"deleted"},
                 {"rev":"2-67ac10df5b7e2582f2ea2344b01c68d461f44b98fef2c5cba5073cc3bdb5a844","status":"deleted"},
                 {"rev":fake_rev_2,"status":"deleted"}
-                ],
+        ],
         "_revisions":{
             "start":3,
             "ids":[
                 "05210795b6aa8cb5e1e7f021960d233cf963f1052b1a41777ca1a2aff8fd4b61",
                 "67ac10df5b7e2582f2ea2344b01c68d461f44b98fef2c5cba5073cc3bdb5a844",
                 fake_id_2
-                ]}
-
+            ]}
         },
         function(err, response) {
 
-            //o.testRevisionStorage.unshift(response.rev);
             o.buildTestTree = {
                 "kids":[{
                     "kids":[
@@ -1049,23 +1038,83 @@ test ('Put', function(){
                 "status":'deleted',
                 "type":'branch'
             };
-
             o.spy(o,'value',{"ok":true,"id":response.id,
                     "rev":response.rev}, 'PUT SYNC dead leaf = ok');
             o.f(response);
-
-            // TEST 18) check document was stored
-            //checkFile(response, o, null, true);
-            // TEST 19) check tree was updated
-            //checkTreeNode(response, o, null, true);
-
+            // 18) check document was stored
+            checkFile(response, o, null, true);
+            // 19) check tree was updated
+            checkTreeNode(response, o, null, true);
         });
-    // 17) TEST PUT UPDATE
-    //checkReply(o,null,true);
-    */
+    checkReply(o,null,true);
+    o.clock.tick(base_tick);
+    // END PUT
+    o.jio.stop();
+    o.clean;
 });
 
 
+// ====================== PUTATTACHMENT ==========================
+test ('PutAttachment', function(){
+
+    // runs following assertions
+    // 1) PUTATTACHMENT with wrong id/rev1
+    // 2) PUTATTACHMENT without id/rev1
+
+    var o = {}; 
+        o.t = this;
+        o.clock = o.t.sandbox.useFakeTimers();
+        o.falseRevision;
+        localstorage = {
+            getItem: function (item) {
+                return JSON.parse (localStorage.getItem(item));
+            },
+            setItem: function (item,value) {
+                return localStorage.setItem(item,JSON.stringify (value));
+            },
+            deleteItem: function (item) {
+                delete localStorage[item];
+            }
+        };
+
+    o.clock.tick(base_tick);
+    o.spy = basic_spy_function;
+    o.clean = clean_up_local_storage_function();
+    o.username = 'MrPuttAttachment';
+    o.testRevisionStorage = [];
+
+    // let's go
+    o.jio = JIO.newJio({ type:'local', username:o.username,
+                         applicationname:'jiotests' });
+    // ========================================
+    // 1) PUTATTACHMENT with wrong id/rev
+    o.jio.putAttachment("ABC/DEF","A-1aaa","<b>hello</b>","text/html",function(err, response){
+        o.spy (o,'value',{
+            "error": 'not found',
+            "message": 'Document not found.',
+            "reason": 'Document not found, please check document ID',
+            "status": 404,
+            "statusText": 'Not found'
+            },'PUTATTACHMENT without id = 404 NOT FOUND');
+        o.f(err);
+    });
+    checkReply(o,null,true);
+    // ========================================
+    // 2) PUTATTACHMENT with wrong id/rev
+    /*
+    o.jio.putAttachment("ABC/DEF","text/html","<b>hello</b>",function(err, response){
+        o.spy (o,'value',{
+            "error": 'not found',
+            "message": 'Document not found.',
+            "reason": 'Document not found, please check document ID',
+            "status": 404,
+            "statusText": 'Not found'
+            },'PUTATTACHMENT without id = 404 NOT FOUND');
+        o.f(err);
+    });
+    checkReply(o,null,true);
+    */
+});
 
 /*
 test ('Document load', function () {
