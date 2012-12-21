@@ -21,15 +21,7 @@ var command = function(spec, my) {
 
     priv.tried     = 0;
     priv.doc       = spec.doc || {};
-    priv.doc._id   = priv.doc._id;
-    priv.docid     = spec.docid || '';
-
-    // xxx fixed spec.content to spec.doc.content for PUTATTACHMENT
-    // xxx need extra check for GET, otherwise spec.doc is undefined
-    priv.content   = spec.doc === undefined ? undefined :
-        typeof spec.doc.content === 'string'?
-                spec.doc.content:
-                undefined;
+    priv.docid     = spec.docid || spec.doc._id || '';
     priv.option    = spec.options || {};
     priv.callbacks = spec.callbacks || {};
     priv.success   = priv.callbacks.success || function (){};
@@ -67,13 +59,10 @@ var command = function(spec, my) {
     };
 
     that.getDocId = function () {
-        return (priv.docid || priv.doc._id).split('/')[0];
+        return priv.docid.split('/')[0];
     };
     that.getAttachmentId = function () {
-        return (priv.docid || priv.doc._id).split('/')[1];
-    };
-    that.getContent = function () {
-        return priv.content;
+        return priv.docid.split('/')[1];
     };
     /**
      * @method getDoc           returns the label of the command.
