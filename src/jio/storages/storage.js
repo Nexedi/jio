@@ -47,6 +47,20 @@ var storage = function(spec, my) {
     };
 
     /**
+     * Returns an array version of a revision string
+     * @method revisionToArray
+     * @param  {string} revision The revision string
+     * @return {array} Array containing a revision number and a hash
+     */
+    that.revisionToArray = function (revision) {
+        if (typeof revision === "string") {
+            return [parseInt(revision.split('-')[0],10),
+                    revision.split('-')[1]]
+        }
+        return revision;
+    };
+
+    /**
      * Generates the next revision of [previous_revision]. [string] helps us
      * to generate a hash code.
      * @methode generateNextRev
@@ -55,8 +69,21 @@ var storage = function(spec, my) {
      * @return {array} 0:The next revision number and 1:the hash code
      */
     that.generateNextRevision = function (previous_revision, string) {
-        return [parseInt(previous_revision.split('-')[0],10)+1,
-                utilities.hashCode(previous_revision + string)];
+        if (typeof previous_revision === "number") {
+            return [previous_revision + 1, that.hashCode(string)];
+        }
+        previous_revision = that.revisionToArray(previous_revision);
+        return [previous_revision[0]+1, that.hashCode(string)];
+    };
+
+    /**
+     * Checks a revision format
+     * @method checkRevisionFormat
+     * @param  {string} revision The revision string
+     * @return {boolean} True if ok, else false
+     */
+    that.checkRevisionFormat = function (revision) {
+        return /^[0-9]+-[0-9a-zA-Z]+$/.test(revision);
     };
 
     /**
@@ -156,6 +183,43 @@ var storage = function(spec, my) {
         };
         search(document_tree);
         return result;
+    };
+
+    that.createDocument = function (doc, id, prev_rev) {
+        var hash, rev;
+        if (typeof prev_rev === "undefined") {
+            hash = that.hashCode(doc);
+            doc._rev = "1-"+hash;
+            doc._id = id;
+            doc._revisions = {
+                "start": 1,
+                "ids": [hash]
+            };
+            doc._revs_info = [{
+                "rev": "1-"+hash,
+                "status": "available"
+            }];
+
+            return doc;
+        } else {
+            // xxx do not hash _key of doc!
+            prev_rev = that.revisionToArray(prev_rev);
+            rev = that.generateNextRevision(prev_rev,doc);
+            doc._rev = rev.join('-');
+            doc._id = id;
+            doc._revisions = {
+                "start": rev[0],
+                "ids": [rev[1],prev_rev[1]]
+            };
+            doc._revs_info = [{
+                "rev": rev.join('-'),
+                "status": "available"
+            },{
+                "rev": prev_rev.join('-'),
+                "status": "missing"
+            }];
+            return doc;
+        }
     };
 
     /**
