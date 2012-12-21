@@ -12,107 +12,6 @@
 var utilities = {
 
     /**
-     * @method isObjectEmpty    - Check whether an object is empty
-     * @param  {obj} object     - object to test
-     * @returns {boolean} string- true/false
-     */
-    isObjectEmpty : function(obj) {
-        var key;
-
-        if (obj.length && obj.length > 0) {
-            return false;
-        }
-        if (obj.length && obj.length === 0) {
-            return true;
-        }
-        for (key in obj) {
-            if ({}.hasOwnProperty.call(obj, key)) {
-                return false;
-            }
-        }
-        return true;
-    },
-
-    /**
-     * @method isObjectSize     - Check number of elements in object
-     * @param  {obj} object     - object to test
-     * @returns {size} integer  - size
-     */
-    isObjectSize : function(obj) {
-        var size = 0, key;
-        for (key in obj) {
-            if (obj.hasOwnProperty(key)) {
-                size++;
-            }
-        }
-        return size;
-    },
-
-    /**
-     * @method isInObject       - Check if revision is on tree
-     * @param  {needle} string  - revision
-     * @param  {haystack} array - active leaves (versions of a document)
-     * @returns {boolean} string- true/false
-     */
-    isInObject : function (needle, haystack) {
-        var length = haystack.length;
-
-        for(var i = 0; i < length; i++) {
-            if(haystack[i] === needle) {
-                return true;
-            }
-        }
-        return false;
-    },
-
-    /**
-     * @method isUUID           - Check if docid is UUID
-     * @param  {needle} string  - docId
-     * @returns {boolean} string- true/false
-     */
-    isUUID : function (documentId) {
-        var reg = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test( documentId );
-        return reg;
-    },
-
-    /**
-     * Creates the error object for all errors
-     * @method createErrorObject
-     * @param  {string} error_code The error code
-     * @param  {string} message The error message
-     * @return {object} Error object
-     */
-    createErrorObject: function (error_code, message) {
-        var error_object, assignErrorValues;
-
-        error_object = {
-            "status":error_code,
-            "message":message,
-            "reason":message
-        };
-
-        assignErrorValues = function (statusText) {
-            var tmp = '';
-            error_object.statusText = statusText;
-            error_object.error = statusText.toLowerCase().split(' ').join('_');
-        };
-
-        switch(code) {
-        case 409:
-            assignErrorValues('Conflict');
-            break;
-        case 403:
-            assignErrorValues('Forbidden');
-            break;
-        case 404:
-            assignErrorValues('Not found');
-            break;
-        }
-
-        return error_object;
-    },
-
-    /**
      * Generates a hash code of a string
      * @method hashCode
      * @param  {string} string The string to hash
@@ -187,11 +86,10 @@ var utilities = {
      * @method createDocument   - Creates a new document
      * @info                    - docid POST = "" for POST, PUT = string
      * @param  {docid} string   - id for the new document
-     * @param  {docpath} string - the path where to store the document
      * @stored                  - 'jio/local/USR/APP/FILE_NAME'
      * @returns {doc} object    - document object
      */
-    createDocument : function (docId, docPath) {
+    createDocument : function (docId) {
         var now = Date.now(),
             doc = {},
             hash = utilities.hashCode('' + doc + ' ' + now + '');
@@ -252,30 +150,6 @@ var utilities = {
             "status": "available"
         });
         return doc;
-    },
-
-// ==================== CREATE/UPDATE DOCUMENT TREE ==================
-    /**
-     * @method createDocumentTree- Creates a new document.tree
-     * @param  {doc } object    - the document object
-     * @info:                   - the tree will include
-     * @key  {type} string      - "branch" or "leaf"
-     * @key  {status} string    - "available" or "deleted"
-     * @key  {rev} string       - revision string of this node
-     * @key  {spawns} object    - child branches/leaves
-     * @stored                  - 'jio/local/USR/APP/FILE_NAME/tree_revision'
-     * @info                    - one active leaf is needed to keep tree alive
-     * @info                    - deleted versions/branches = "status deleted"
-     * @info                    - no active leaves will delete tree, too
-     */
-    createDocumentTree : function(doc) {
-        var tree = {
-                type:'leaf',
-                status:'available',
-                rev:doc._rev,
-                kids:[]
-            };
-        return tree;
     },
 
     /**
@@ -411,7 +285,8 @@ var utilities = {
     },
 
     /**
-     * Gets the winner revision from a document tree
+     * Gets the winner revision from a document tree.
+     * The winner is the deeper revision on the left.
      * @method getWinnerRevisionFromDocumentTree
      * @param  {object} document_tree The document tree
      * @return {string} The winner revision
@@ -473,7 +348,7 @@ var utilities = {
      * @param  {tree} object    - active leaves (versions of a document)
      * @returns                 - true/false
      */
-    isDeadLeaf : function( prev_rev, docTreeNode ){
+    isDeadLeaf : function (prev_rev, docTreeNode ){
         var type = docTreeNode['type'],
             status = docTreeNode['status'],
             kids = docTreeNode['kids'],

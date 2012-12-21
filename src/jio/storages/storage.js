@@ -203,6 +203,19 @@ var storage = function(spec, my) {
         return '';
     };
 
+    that.post = function (command) {
+        var docid, option;
+        docid = command.getDocId();
+        option = command.cloneOption();
+        // check if the tree already exists
+        that._get (
+            docid + '.tree.json',
+            option,
+
+        // if the tree does not exists yet
+        // if the tree exists
+    };
+
     that._post = function () {
         setTimeout(function () {
             that.error(that.createErrorObject(

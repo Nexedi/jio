@@ -179,13 +179,11 @@ var newLocalStorage = function (spec, my) {
 
     // ================== storage overrides =====================
 
-    // Overriding serialized()
-    var super_serialized = that.serialized;
-    that.serialized = function() {
-        var o = super_serialized();
-        o.applicationname = priv.applicationname;
-        o.username = priv.username;
-        return o;
+    that.serialized = function () {
+        return {
+            "applicationname": priv.applicationname,
+            "username": priv.username
+        };
     };
 
     // Overrinding validateState()
