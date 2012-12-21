@@ -58,15 +58,28 @@ var command = function(spec, my) {
         return 'command';
     };
 
+    /**
+     * Gets the document id
+     * @method getDocId
+     * @return {string} The document id
+     */
     that.getDocId = function () {
         return priv.docid.split('/')[0];
     };
+
+    /**
+     * Gets the attachment id
+     * @method getAttachmentId
+     * @return {string} The attachment id
+     */
     that.getAttachmentId = function () {
         return priv.docid.split('/')[1];
     };
+
     /**
-     * @method getDoc           returns the label of the command.
-     * @return {object}         the document.
+     * Returns the label of the command.
+     * @method getDoc
+     * @return {object} The document.
      */
     that.getDoc = function() {
         return priv.doc;
@@ -119,11 +132,22 @@ var command = function(spec, my) {
         return true;
     };
 
+    /**
+     * Check if the command can be retried.
+     * @method canBeRetried
+     * @return {boolean} The result
+     */
     that.canBeRetried = function () {
         return (typeof priv.option.max_retry === 'undefined' ||
                 priv.option.max_retry === 0 ||
                 priv.tried < priv.option.max_retry);
     };
+
+    /**
+     * Gets the number time the command has been tried.
+     * @method getTried
+     * @return {number} The number of time the command has been tried
+     */
     that.getTried = function() {
         return priv.tried;
     };
