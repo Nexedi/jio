@@ -81,18 +81,17 @@
                     rev:generateRevision(command, "putAttachment", true)
                 });
             }, 100);            // 100 ms, for jiotests simple job waiting
-        }; // end put
+        }; // end putAttachment
 
         that.get = function (command) {
             setTimeout(function () {
                 that.success ({
                     _id:command.getDocId(),
-                    content:'content',
-                    _creation_date: 10000,
-                    _last_modified: 15000
+                    _rev:generateRevision(command, "get", true),
+                    content:'content'
                 });
             }, 100);
-        }; // end get
+        }; // end get           // 100 ms, for jiotests simple job waiting
 
         that.allDocs = function (command) {
             setTimeout(function () {
@@ -101,32 +100,24 @@
                     rows: [{
                         id:'file',
                         key:'file',
-                        value: {
-                            content:'filecontent',
-                            _creation_date:10000,
-                            _last_modified:15000
-                        }
-                    },{
+                        value: {"rev":generateRevision(command, "allDocs", true)}
+                        },{
                         id:'memo',
                         key:'memo',
-                        value: {
-                            content:'memocontent',
-                            _creation_date:20000,
-                            _last_modified:25000
-                        }
-                    }]
-                };
-                if (command.getOption('metadata_only')) {
-                    delete o.rows[0].value.content;
-                    delete o.rows[1].value.content;
-                }
-                that.success (o);
+                        value: {"rev":generateRevision(command, "allDocs", true)}
+                        }]
+                    };
+                that.success(o);
             }, 100);
         }; // end allDocs
 
         that.remove = function (command) {
             setTimeout (function () {
-                that.success ({ok:true,id:command.getDocId()});
+                that.success({
+                    ok:true,
+                    id:command.getDocId(),
+                    rev:generateRevision(command, "get", true)
+                });
             }, 100);
         }; // end remove
 

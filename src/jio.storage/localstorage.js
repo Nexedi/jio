@@ -218,8 +218,8 @@ var newLocalStorage = function (spec, my) {
         return priv.manageOptions(
             {ok:true,id:document_id,rev:document_rev}, command, doc);
     }
-    // ================== storage overrides =====================
 
+    // ===================== overrides ======================
     that.serialized = function () {
         return {
             "applicationname": priv.applicationname,
@@ -227,7 +227,6 @@ var newLocalStorage = function (spec, my) {
         };
     };
 
-    // Overrinding validateState()
     that.validateState = function() {
         if (priv.username) {
             return '';
