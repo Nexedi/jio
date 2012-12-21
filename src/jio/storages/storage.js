@@ -232,6 +232,15 @@ var storage = function(spec, my) {
         });
     };
 
+    that._putAttachment = function () {
+        setTimeout(function () {
+            that.error(that.createErrorObject(
+                0,"Not Implemented Yet",
+                "\"PutAttachment\" command is not implemented"
+            ));
+        });
+    };
+
     that._get = function () {
         setTimeout(function () {
             that.error(that.createErrorObject(
