@@ -154,27 +154,41 @@ var newLocalStorage = function (spec, my) {
      * Create a new document
      * @param  {object} command Command object
      */
-    priv.runDocumenCreate = function (docid, command){
+    priv.runDocumenCreate = function (command) {
 
-        var docId = command.getDocId(),
-            docPath = 'jio/local/'+priv.username+'/'+
-                    priv.applicationname+'/'+docId,
-            doc = priv.createDocument( docId, docPath );
+        var document_id = command.getDocId(),
+            document_path = 'jio/local/'+priv.username+'/'+
+                    priv.applicationname+'/'+document_id,
+            doc = that.createDocument( document_id, document_path );
 
-        // store document
-        localstorage.setItem(docPath + '/' + doc._rev, doc);
+        localstorage.setItem(document_path, doc);
 
-        // add user
         if (!priv.doesUserExist(priv.username)) {
             priv.addUser(priv.username);
         }
 
-        // add fileName
-        priv.addFileName(docId);
+        priv.addFileName(document_id);
 
-        // return SUCCESS
         return priv.manageOptions(
-            {ok:true,id:docId,rev:doc._rev}, command, doc);
+            {ok:true,id:document_id,rev:doc._rev}, command, doc);
+    };
+
+    /**
+     * Update a document
+     * @param  {object} command Command object
+     */
+    priv.runDocumentUpdate = function (command, doc) {
+
+        var document_id = command.getDocId(),
+            document_path = 'jio/local/'+priv.username+'/'+
+                    priv.applicationname+'/'+document_id;
+
+        priv.documentObjectUpdate(doc, command.cloneDoc());
+
+        localstorage.setItem(document_id, command.getContent());
+
+        return priv.manageOptions(
+            {ok:true,id:document_id,rev:doc._rev}, command, doc);
     };
 
     // ================== storage overrides =====================
@@ -194,7 +208,6 @@ var newLocalStorage = function (spec, my) {
         return 'Need at least one parameter: "username".';
     };
 
-    // Overriding storage post
     /**
      * @method _post             - Create a document in local storage.
      * @stored                  - 'jio/local/USR/APP/FILE_NAME/REVISION'.
@@ -206,27 +219,13 @@ var newLocalStorage = function (spec, my) {
      *
      */
     that._post = function (command) {
-
         setTimeout (function () {
-
-            // 403 - no attachments allowed
-            if (command.getAttachmentId()) {
-                that.error( that.createErrorObject( 403, 'Forbidden',
-                    'Attachment cannot be added with a POST request')
-                );
-                return;
-            } else {
-                that.success(
-                    priv.runDocumenCreate(command)
-                );
-            }
+            that.success(priv.runDocumenCreate(command));
         });
-
     };
 
-    // Overriding storage put
     /**
-     * @method put              - Create or Update a document in local storage.
+     * @method _put              - Create or Update a document in local storage.
      * @stored                  - 'jio/local/USR/APP/FILE_NAME/REVISION'.
      *
      * Available options:
@@ -235,14 +234,20 @@ var newLocalStorage = function (spec, my) {
      * - {boolean} revs_info    - Add revisions informations
      */
     that._put = function (command) {
-
         setTimeout (function () {
+            var docid = command.getDocId(),
+                path = 'jio/local/'+priv.username+'/'+
+                        priv.applicationname+'/'+docid
+                doc = localstorage.getItem(path);
 
+            if (!doc) {
+                that.success(priv.runDocumenCreate(command));
+            } else {
+                that.success(priv.runDocumentUpdate(command, doc));
+            }
         });
-
     };
 
-    // Overriding storage putAttachment
     /**
      * @method putAttachment    - Saves/updates an attachment of a document
      * @stored at      - 'jio/local/USR/APP/FILE_NAME/REVISION/ATTACHMENTID'.
