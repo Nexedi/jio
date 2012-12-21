@@ -21,7 +21,7 @@ var command = function(spec, my) {
 
     priv.tried     = 0;
     priv.doc       = spec.doc || {};
-    priv.doc._id   = priv.doc._id || generateUuid();
+    priv.doc._id   = priv.doc._id;
     priv.docid     = spec.docid || '';
 
     // xxx fixed spec.content to spec.doc.content for PUTATTACHMENT
