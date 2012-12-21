@@ -240,7 +240,7 @@ var storage = function(spec, my) {
         });
     };
 
-    that._alldocs = function () {
+    that._allDocs = function () {
         setTimeout(function () {
             that.error(that.createErrorObject(
                 0,"Not Implemented Yet",
