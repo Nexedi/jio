@@ -15,6 +15,28 @@ var storage = function(spec, my) {
     });
 
     /**
+     * Generate a new uuid
+     * @method generateUuid
+     * @return {string} The new uuid
+     */
+    that.generateUuid = function () {
+        var S4 = function () {
+            var i, string = Math.floor(
+                Math.random() * 0x10000 /* 65536 */
+            ).toString(16);
+            for (i = string.length; i < 4; i += 1) {
+                string = '0'+string;
+            }
+            return string;
+        };
+        return S4() + S4() + "-" +
+            S4() + "-" +
+            S4() + "-" +
+            S4() + "-" +
+            S4() + S4() + S4();
+    };
+
+    /**
      * Generates a hash code of a string
      * @method hashCode
      * @param  {string} string The string to hash
