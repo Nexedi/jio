@@ -116,7 +116,7 @@
                 that.success({
                     ok:true,
                     id:command.getDocId(),
-                    rev:generateRevision(command, "get", true)
+                    rev:generateRevision(command, "remove", true)
                 });
             }, 100);
         }; // end remove

@@ -217,7 +217,7 @@ var newLocalStorage = function (spec, my) {
 
         return priv.manageOptions(
             {ok:true,id:document_id,rev:document_rev}, command, doc);
-    }
+    };
 
     // ===================== overrides ======================
     that.serialized = function () {
@@ -266,7 +266,7 @@ var newLocalStorage = function (spec, my) {
         setTimeout(function () {
             var docid = command.getDocId(),
                 path = 'jio/local/'+priv.username+'/'+
-                        priv.applicationname+'/'+docid
+                        priv.applicationname+'/'+docid,
                 doc = localstorage.getItem(path);
 
             if (!doc) {
@@ -289,7 +289,7 @@ var newLocalStorage = function (spec, my) {
      */
     that._putAttachment = function (command) {
         setTimeout(function () {
-            that.success(priv.setDocument(command), 'put');
+            that.success(priv.setDocument(command, 'put');
         });
     };
 
@@ -322,7 +322,7 @@ var newLocalStorage = function (spec, my) {
      */
     that._remove = function (command) {
         setTimeout (function () {
-            localStorage.deleteItem( command.docId ) );
+            that.success( priv.deleteDocument(command) );
         });
     };
 
