@@ -17,37 +17,19 @@ var storage = function(spec, my) {
     /**
      * Creates the error object for all errors
      * @method createErrorObject
-     * @param  {string} error_code The error code
+     * @param  {number} error_code The error code
+     * @param  {string} error_name The error name
      * @param  {string} message The error message
+     * @param  {object} error_object The error object (optional)
      * @return {object} Error object
      */
-    that.createErrorObject = function (error_code, message) {
-        var error_object, assignErrorValues;
-
-        error_object = {
-            "status":error_code,
-            "message":message,
-            "reason":message
-        };
-
-        assignErrorValues = function (statusText) {
-            var tmp = '';
-            error_object.statusText = statusText;
-            error_object.error = statusText.toLowerCase().split(' ').join('_');
-        };
-
-        switch(code) {
-        case 409:
-            assignErrorValues('Conflict');
-            break;
-        case 403:
-            assignErrorValues('Forbidden');
-            break;
-        case 404:
-            assignErrorValues('Not found');
-            break;
-        }
-
+    that.createErrorObject = function (error_code, error_name,
+                                       message, error_object) {
+        error_object = error_object || {};
+        error_okject["status"] = error_code || 0;
+        error_object["statusText"] = error_name;
+        error_object["error"] = error_name.toLowerCase().split(' ').join('_');
+        error_object["message"] = error_object["error"] = message;
         return error_object;
     };
 
