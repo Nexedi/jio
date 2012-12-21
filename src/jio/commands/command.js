@@ -11,6 +11,12 @@ var command = function(spec, my) {
         'remove':removeCommand,
         'allDocs':allDocsCommand,
         'putAttachment':putAttachmentCommand
+        '_post':_postCommand,
+        '_put':_putCommand,
+        '_get':_getCommand,
+        '_remove':_removeCommand,
+        '_allDocs':_allDocsCommand,
+        '_putAttachment':_putAttachmentCommand
     };
     // creates the good command thanks to his label
     if (spec.label && priv.commandlist[spec.label]) {
