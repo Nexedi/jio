@@ -203,6 +203,48 @@ var storage = function(spec, my) {
         return '';
     };
 
+    that._post = function () {
+        setTimeout(function () {
+            that.error(that.createErrorObject(
+                0,"Not Implemented Yet","\"Post\" command is not implemented"
+            ));
+        });
+    };
+
+    that._put = function () {
+        setTimeout(function () {
+            that.error(that.createErrorObject(
+                0,"Not Implemented Yet","\"Put\" command is not implemented"
+            ));
+        });
+    };
+
+    that._get = function () {
+        setTimeout(function () {
+            that.error(that.createErrorObject(
+                0,"Not Implemented Yet","\"Get\" command is not implemented"
+            ));
+        });
+    };
+
+    that._alldocs = function () {
+        setTimeout(function () {
+            that.error(that.createErrorObject(
+                0,"Not Implemented Yet",
+                "\"AllDocs\" command is not implemented"
+            ));
+        });
+    };
+
+    that._remove = function () {
+        setTimeout(function () {
+            that.error(that.createErrorObject(
+                0,"Not Implemented Yet",
+                "\"Remove\" command is not implemented"
+            ));
+        });
+    };
+
     that.success = function() {};
     that.retry   = function() {};
     that.error   = function() {};
