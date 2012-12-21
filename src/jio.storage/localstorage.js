@@ -154,12 +154,25 @@ var newLocalStorage = function (spec, my) {
      * Create a new document
      * @param  {object} command Command object
      */
-    priv.runDocumenCreate = function (command) {
+    priv.documentCreate = function (command) {
 
-        var document_id = command.getDocId(),
+        var now = Date.now(),
+            doc = {},
+            hash = that.hashCode('' + doc + ' ' + now + ''),
+            document_id = command.getDocId(),
             document_path = 'jio/local/'+priv.username+'/'+
-                    priv.applicationname+'/'+document_id,
-            doc = that.createDocument( document_id, document_path );
+                    priv.applicationname+'/'+document_id;
+
+        doc._id = document_id;
+        doc._rev = '1-'+hash;
+        doc._revisions = {
+            start: 1,
+            ids: [hash]
+        };
+        doc._revs_info = [{
+            rev: '1-'+hash,
+            status: 'available'
+        }];
 
         localstorage.setItem(document_path, doc);
 
@@ -177,15 +190,28 @@ var newLocalStorage = function (spec, my) {
      * Update a document
      * @param  {object} command Command object
      */
-    priv.runDocumentUpdate = function (command, doc) {
+    priv.documentUpdate = function (command, doc) {
 
-        var document_id = command.getDocId(),
+        var now = Date.now(),
+            rev = that.generateNextRevision(previousRevision, ''+
+                    doc+' '+now+''),
+            document_id = command.getDocId(),
             document_path = 'jio/local/'+priv.username+'/'+
-                    priv.applicationname+'/'+document_id;
+                    priv.applicationname+'/'+document_id,
+            doc =  command.getDoc();
+
+        doc._rev = rev.join('-');
+        doc._revisions.ids.unshift(rev[1]);
+        doc._revisions.start = rev[0];
+        doc._revs_info[0].status = 'deleted';
+        doc._revs_info.unshift({
+            "rev": rev.join('-'),
+            "status": "available"
+        });
 
         priv.documentObjectUpdate(doc, command.cloneDoc());
 
-        localstorage.setItem(document_id, command.getContent());
+        localstorage.setItem(document_path, doc);
 
         return priv.manageOptions(
             {ok:true,id:document_id,rev:doc._rev}, command, doc);
@@ -209,8 +235,10 @@ var newLocalStorage = function (spec, my) {
     };
 
     /**
-     * @method _post             - Create a document in local storage.
-     * @stored                  - 'jio/local/USR/APP/FILE_NAME/REVISION'.
+     * Create a document in local storage.
+     * Saved at 'jio/local/USR/APP/FILE_NAME/REVISION'.
+     * @method  _post
+     * @param  {object} command The JIO command
      *
      * Available options:
      * - {boolean} conflicts    - Add a conflicts object to the response
@@ -220,49 +248,53 @@ var newLocalStorage = function (spec, my) {
      */
     that._post = function (command) {
         setTimeout (function () {
-            that.success(priv.runDocumenCreate(command));
+            that.success(priv.documentCreate(command));
         });
     };
 
     /**
-     * @method _put              - Create or Update a document in local storage.
-     * @stored                  - 'jio/local/USR/APP/FILE_NAME/REVISION'.
+     * Create or update a document in local storage.
+     * Saved at 'jio/local/USR/APP/FILE_NAME/REVISION'.
+     * @method  _put
+     * @param  {object} command The JIO command
      *
      * Available options:
      * - {boolean} conflicts    - Add a conflicts object to the response
      * - {boolean} revs         - Add the revisions history of the document
      * - {boolean} revs_info    - Add revisions informations
+     *
      */
     that._put = function (command) {
-        setTimeout (function () {
+        setTimeout(function () {
             var docid = command.getDocId(),
                 path = 'jio/local/'+priv.username+'/'+
                         priv.applicationname+'/'+docid
                 doc = localstorage.getItem(path);
 
             if (!doc) {
-                that.success(priv.runDocumenCreate(command));
+                that.success(priv.documentCreate(command));
             } else {
-                that.success(priv.runDocumentUpdate(command, doc));
+                that.success(priv.documentUpdate(command, doc));
             }
         });
     };
 
     /**
-     * @method putAttachment    - Saves/updates an attachment of a document
-     * @stored at      - 'jio/local/USR/APP/FILE_NAME/REVISION/ATTACHMENTID'.
+     * Add an attachment to a document.
+     * Saved at 'jio/local/USR/APP/FILE_NAME/REVISION/ATTACHMENTID'.
+     * @method  _putAttachment
+     * @param  {object} command The JIO command
      *
      * Available options:
      * - {boolean} conflicts    - Add a conflicts object to the response
      * - {boolean} revs         - Add the revisions history of the document
      * - {boolean} revs_info    - Add revisions informations
+     *
      */
     that._putAttachment = function (command) {
-
-        setTimeout (function () {
-
+        setTimeout(function () {
+            that.success(priv.runDocumenUpdate(command));
         });
-
     };
 
     // Overriding storage get
