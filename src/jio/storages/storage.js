@@ -15,6 +15,29 @@ var storage = function(spec, my) {
     });
 
     /**
+     * Generates a hash code of a string
+     * @method hashCode
+     * @param  {string} string The string to hash
+     * @return {string} The string hash code
+     */
+    that.hashCode = function (string) {
+        return hex_sha256(string);
+    };
+
+    /**
+     * Generates the next revision of [previous_revision]. [string] helps us
+     * to generate a hash code.
+     * @methode generateNextRev
+     * @param  {string} previous_revision The previous revision
+     * @param  {string} string String to help generate hash code
+     * @return {array} 0:The next revision number and 1:the hash code
+     */
+    that.generateNextRevision = function (previous_revision, string) {
+        return [parseInt(previous_revision.split('-')[0],10)+1,
+                utilities.hashCode(previous_revision + string)];
+    };
+
+    /**
      * Creates the error object for all errors
      * @method createErrorObject
      * @param  {number} error_code The error code
