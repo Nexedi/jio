@@ -12,7 +12,7 @@
         // Initialize the jio id and add the new id to the list
         if (priv.id === null) {
             var i, jio_id_a =
-                LocalOrCookieStorage.getItem (jio_id_array_name) || [];
+                localstorage.getItem (jio_id_array_name) || [];
             priv.id = 1;
             for (i = 0; i < jio_id_a.length; i+= 1) {
                 if (jio_id_a[i] >= priv.id) {
@@ -20,7 +20,7 @@
                 }
             }
             jio_id_a.push(priv.id);
-            LocalOrCookieStorage.setItem (jio_id_array_name,jio_id_a);
+            localstorage.setItem (jio_id_array_name,jio_id_a);
             activityUpdater.setId(priv.id);
             jobManager.setId(priv.id);
         }

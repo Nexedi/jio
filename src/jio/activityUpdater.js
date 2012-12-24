@@ -14,7 +14,7 @@ var activityUpdater = (function(spec, my) {
      * @method touch
      */
     priv.touch = function() {
-        LocalOrCookieStorage.setItem ('jio/id/'+priv.id, Date.now());
+        localstorage.setItem ('jio/id/'+priv.id, Date.now());
     };
 
     /**
@@ -72,4 +72,3 @@ var activityUpdater = (function(spec, my) {
 
     return that;
 }());
-
