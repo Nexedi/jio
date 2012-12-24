@@ -176,19 +176,45 @@ var newLocalStorage = function (spec, my) {
 
     /**
      * Get a document or attachment
-     * @method  get
+     * @method get
      * @param  {object} command The JIO command
-     *
-     * Available options:
-     * - {boolean} conflicts Add a conflicts object to the response
-     * - {boolean} revs Add the revisions history of the document
-     * - {boolean} revs_info Add revisions informations
      */
-    that._get = function (command) {
+    that.get = function (command) {
         setTimeout (function () {
-            that.success( priv.getDocument(command) );
+            var doc;
+            if (typeof command.getAttachmentId() === "string") {
+                // seeking for an attachment
+                doc = localstorage.getItem(
+                    priv.localpath + "/" + command.getDocId() + "/" +
+                        command.getAttachmentId());
+                if (typeof doc !== "undefined") {
+                    that.success(doc);
+                } else {
+                    that.error({
+                        "status": 404,
+                        "statusText": "Not Found",
+                        "error": "not_found",
+                        "message": "Cannot find the attachment ",
+                        "reason": "attachment does not exists"
+                    });
+                }
+            } else {
+                // seeking for a document
+                doc = localstorage.getItem(
+                    priv.localpath + "/" + command.getDocId());
+                if (typeof doc !== "undefined") {
+                    that.success(doc);
+                } else {
+                    that.error({
+                        "status": 404,
+                        "statusText": "Not Found",
+                        "error": "not_found",
+                        "message": "Cannot find the document",
+                        "reason": "Document does not exists"
+                    });
+                }
+            }
         });
-
     };
 
     /**
