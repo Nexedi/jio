@@ -217,7 +217,7 @@ var callback = function (err,val,begin_date) {
     log ('return : ' + JSON.stringify (val));
 };
 var command = function (method) {
-    var begin_date = Date.now(), doc = {}, opts = {}, other = {};
+    var begin_date = Date.now(), doc = {}, opts = {};
     log (method);
     if (!my_jio) {
         return error ('no jio set');
@@ -230,10 +230,10 @@ var command = function (method) {
 
     switch (method) {
     case 'putAttachment':
-        other.docid = $('#document_id').attr('value');
-        other.revision = $('#prev_rev').attr('value');
-        other.content = $('#content').attr('value');
-        other.mimetype = $('#mimetype').attr('value');
+        doc._id = $('#document_id').attr('value');
+        doc._rev = $('#prev_rev').attr('value');
+        doc._data = $('#content').attr('value');
+        doc._mimetype = $('#mimetype').attr('value');
         log ('docid: '+ other.docid);
         log ('revision: '+ other.revision);
         log ('content: '+ other.content);
@@ -260,6 +260,7 @@ var command = function (method) {
     log ('opts: ' + JSON.stringify (opts));
 
     switch (method) {
+    case "putAttachment":
     case 'remove':
     case 'post':
     case 'put':
@@ -272,14 +273,6 @@ var command = function (method) {
         my_jio[method](opts,function (err,val) {
             callback(err,val,begin_date);
         });
-        break;
-    case 'putAttachment':
-        my_jio[method](
-            other.docid, other.revision, other.content,
-            other.mimetype, opts, function (err, val) {
-                callback(err,val,begin_date);
-            }
-        );
         break;
     }
 };
