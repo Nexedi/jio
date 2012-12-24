@@ -138,6 +138,7 @@ var clearlog = function () {
   <div id="log">
   </div>
   <script type="text/javascript" src="../localorcookiestorage.js"></script>
+  <script type="text/javascript" src="../lib/md5/md5.js"></script>
   <script type="text/javascript" src="../jio.js"></script>
   <script type="text/javascript" src="../lib/jquery/jquery.min.js"></script>
   <script type="text/javascript" src="../lib/base64/base64.js"></script>
@@ -234,10 +235,7 @@ var command = function (method) {
         doc._rev = $('#prev_rev').attr('value');
         doc._data = $('#content').attr('value');
         doc._mimetype = $('#mimetype').attr('value');
-        log ('docid: '+ other.docid);
-        log ('revision: '+ other.revision);
-        log ('content: '+ other.content);
-        log ('mimetype: '+ other.mimetype);
+        log ('attachment: '+ JSON.stringify (doc));
         break;
     case 'post':
     case 'put':
