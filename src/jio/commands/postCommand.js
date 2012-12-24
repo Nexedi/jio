@@ -10,6 +10,21 @@ var postCommand = function(spec, my) {
         return 'post';
     };
 
+    that.validateState = function () {
+        if (typeof that.getAttachmentId() !== "undefined") {
+            that.error({
+                "status": 21,
+                "statusText": "Invalid Document Id",
+                "error": "Invalid Document Id",
+                "message": "The document id contains '/' characters "+
+                    "which are forbidden",
+                "reason": "Document id contains '/' character(s)"
+            });
+            return false;
+        }
+        return true;
+    };
+
     that.executeOn = function(storage) {
         storage.post (that);
     };

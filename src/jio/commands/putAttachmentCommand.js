@@ -11,14 +11,26 @@ var putAttachmentCommand = function(spec, my) {
     that.executeOn = function (storage) {
         storage.putAttachment (that);
     };
+
     that.validateState = function () {
-        if (typeof that.getContent() !== 'string') {
+        if (typeof that.getAttachmentId() === "undefined") {
             that.error({
-                status:22,statusText:'Content Required',
-                error:'content_required',
-                message:'No data to put.',reason:'no data to put'
+                "status": 22,
+                "statusText": "Attachment Id Required",
+                "error": "attachment_id_required",
+                "message": "The attachment id must be set",
+                "reason": "Attachment id not set"
             });
             return false;
+        }
+        if (that.getAttachmentId() === "") {
+            that.error({
+                "status": 23,
+                "statusText": "Invalid Attachment Id",
+                "error": "invalid_attachment_id",
+                "message": "The attachment id must not be an empty string",
+                "reason": "Attachment id is empty"
+            });
         }
         return true;
     };
