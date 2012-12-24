@@ -258,11 +258,7 @@ var command = function(spec, my) {
      * @return {object} The clone of the command options.
      */
     that.cloneOption = function () {
-        var k, o = {};
-        for (k in priv.option) {
-            o[k] = priv.option[k];
-        }
-        return o;
+        return JSON.parse(JSON.stringify(priv.option));
     };
 
     /**
@@ -271,14 +267,7 @@ var command = function(spec, my) {
      * @return {object} The clone of the document.
      */
     that.cloneDoc = function () {
-        if (priv.docid) {
-            return priv.docid;
-        }
-        var k, o = {};
-        for (k in priv.doc) {
-            o[k] = priv.doc[k];
-        }
-        return o;
+        return JSON.parse(JSON.stringify(priv.doc));
     };
 
     return that;
