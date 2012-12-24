@@ -44,9 +44,9 @@ var command = function(spec, my) {
     that.super_serialized = function () {
         var o = that.serialized() || {};
         o["label"] = that.getLabel();
-        o["tried"] = priv.tried,
-        o["doc"] = that.cloneDoc(),
-        o["option"] = that.cloneOption()
+        o["tried"] = priv.tried;
+        o["doc"] = that.cloneDoc();
+        o["option"] = that.cloneOption();
         return o;
     };
 

@@ -70,7 +70,7 @@ var storage = function(spec, my) {
      */
     that.serialized = function () {
         return {};
-    }
+    };
 
     /**
      * Validate the storage state. It returns a empty string all is ok.
