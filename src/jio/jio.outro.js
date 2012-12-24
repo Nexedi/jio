@@ -176,7 +176,8 @@
     /**
      * Post a document.
      * @method post
-     * @param  {object} doc The document {"content":}.
+     * @param  {object} doc The document object. Contains at least:
+     * - {string} _id The document id (optional), "/" are forbidden
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
      * - {boolean} revs Include revision history of the document.
@@ -206,7 +207,8 @@
     /**
      * Put a document.
      * @method put
-     * @param  {object} doc The document {"_id":,"_rev":,"content":}.
+     * @param  {object} doc The document object. Contains at least:
+     * - {string} _id The document id, "/" are forbidden
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
      * - {boolean} revs Include revision history of the document.
@@ -236,7 +238,7 @@
     /**
      * Get a document.
      * @method get
-     * @param  {string} docid The document id (the path).
+     * @param  {string} docid The document id: "doc_id" or "doc_id/attachmt_id".
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
      * - {string} rev The revision we want to get.
@@ -267,7 +269,8 @@
     /**
      * Remove a document.
      * @method remove
-     * @param  {object} doc The document {"_id":,"_rev":}.
+     * @param  {object} doc The document object. Contains at least:
+     * - {string} _id The document id: "doc_id" or "doc_id/attachment_id"
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
      * - {boolean} revs Include revision history of the document.
@@ -326,10 +329,10 @@
     /**
      * Put an attachment to a document.
      * @method putAttachment
-     * @param  {string} id The attachment id ("document/attachment").
-     * @param  {string} rev The document revision.
-     * @param  {string} doc Base64 attachment content.
-     * @param  {string} mimetype The attachment mimetype
+     * @param  {object} doc The document object. Contains at least:
+     * - {string} _id The document id: "doc_id/attchment_id"
+     * - {string} _data Base64 attachment data
+     * - {string} _mimetype The attachment mimetye
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
      * - {boolean} revs Include revision history of the document.
