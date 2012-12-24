@@ -88,6 +88,7 @@ module.exports = function(grunt) {
             },
             globals: {
                 LocalOrCookieStorage: true,
+                hex_md5: true,
                 console: true,
                 unescape: true,
                 // Needed to avoid "not defined error" with requireJs
