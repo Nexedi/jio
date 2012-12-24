@@ -84,7 +84,7 @@ var newLocalStorage = function (spec, my) {
             var doc;
             doc = localstorage.getItem(
                 priv.localpath + "/" + command.getDocId());
-            if (typeof doc === "undefined") {
+            if (doc === null) {
                 // the document does not exists
                 localstorage.setItem(
                     priv.localpath + "/" + command.getDocId(),
@@ -113,12 +113,12 @@ var newLocalStorage = function (spec, my) {
             var doc;
             doc = localstorage.getItem(
                 priv.localpath + "/" + command.getDocId());
-            if (typeof doc === "undefined") {
+            if (doc === null) {
                 //  the document does not exists
                 doc = command.cloneDoc();
             } else {
                 // the document already exists
-                priv.documentObjectUpdate(doc, command.getDocId());
+                priv.documentObjectUpdate(doc, command.cloneDoc());
             }
             // write
             localstorage.setItem(
@@ -138,7 +138,7 @@ var newLocalStorage = function (spec, my) {
             var doc;
             doc = localstorage.getItem(
                 priv.localpath + "/" + command.getDocId());
-            if (typeof doc === "undefined") {
+            if (doc === null) {
                 //  the document does not exists
                 that.error({
                     "status": 404,
@@ -187,7 +187,7 @@ var newLocalStorage = function (spec, my) {
                 doc = localstorage.getItem(
                     priv.localpath + "/" + command.getDocId() + "/" +
                         command.getAttachmentId());
-                if (typeof doc !== "undefined") {
+                if (doc !== null) {
                     that.success(doc);
                 } else {
                     that.error({
@@ -202,7 +202,7 @@ var newLocalStorage = function (spec, my) {
                 // seeking for a document
                 doc = localstorage.getItem(
                     priv.localpath + "/" + command.getDocId());
-                if (typeof doc !== "undefined") {
+                if (doc !== null) {
                     that.success(doc);
                 } else {
                     that.error({
