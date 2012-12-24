@@ -219,17 +219,39 @@ var newLocalStorage = function (spec, my) {
 
     /**
      * Remove a document or attachment
-     * @method  remove
+     * @method remove
      * @param  {object} command The JIO command
-     *
-     * Available options:
-     * - {boolean} conflicts Add a conflicts object to the response
-     * - {boolean} revs Add the revisions history of the document
-     * - {boolean} revs_info Add revisions informations
      */
-    that._remove = function (command) {
+    that.remove = function (command) {
         setTimeout (function () {
-            that.success( priv.deleteDocument(command) );
+            var doc;
+            if (typeof command.getAttachmentId() === "string") {
+                // seeking for an attachment
+                doc = localstorage.getItem(
+                    priv.localpath + "/" + command.getDocId());
+                localstorage.deleteItem(
+                    priv.localpath + "/" + command.getDocId() + "/" +
+                        command.getAttachmentId());
+                // remove attachment from document
+                if (typeof doc["_attachments"] !== "undefined") {
+                    delete doc["_attachments"][command.getAttachmentId()];
+                    localstorage.setItem(
+                        priv.localpath + "/" + command.getDocId(),
+                        doc);
+                }
+                that.success({
+                    "ok": true,
+                    "id": command.getDocId()+"/"+command.getAttachmentId()
+                });
+            } else {
+                // seeking for a document
+                localstorage.deleteItem(
+                    priv.localpath + "/" + command.getDocId());
+                that.success({
+                    "ok": true,
+                    "id": command.getDocId()
+                });
+            }
         });
     };
 
