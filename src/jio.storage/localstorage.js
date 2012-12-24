@@ -206,45 +206,19 @@ var newLocalStorage = function (spec, my) {
     };
 
     /**
-     * get all filenames belonging to a user from the document index
-     * @method  allDocs
+     * Get all filenames belonging to a user from the document index
+     * @method allDocs
      * @param  {object} command The JIO command
-     *
-     * Available options:
-     * - {boolean} conflicts Add a conflicts object to the response
-     * - {boolean} revs Add the revisions history of the document
-     * - {boolean} revs_info Add revisions informations
-     * - {boolean} include_docs Include documents with index
      */
-    that._allDocs = function (command) {
+    that.allDocs = function (command) {
         setTimeout(function () {
-            var new_array = [],
-                array = priv.getFileNameArray(),
-                i,l,
-                path = 'jio/local/'+priv.username+'/'+priv.applicationname,
-                include_docs = command.getOption('include_docs'),
-                doc, item;
-
-            for (i = 0, l = array.length; i < l; i += 1) {
-                item = array[i];
-
-                if (include_docs === true){
-                    doc = that._get(path+'/'+item.id+'/'+item.value.key );
-                    new_array.push({
-                        "id":item.id,
-                        "key":item.key,
-                        "value":item.value,
-                        "doc":doc
-                    });
-                } else {
-                    new_array.push({
-                        "id":item.id,
-                        "key":item.key,
-                        "value":item.value
-                    });
-                }
-            }
-            that.success ({total_rows:new_array.length,rows:new_array});
+            that.error({
+                "status": 405,
+                "statusText": "Method Not Allowed",
+                "error": "method_not_allowed",
+                "message": "Your are not allowed to use this command",
+                "reason": "LocalStorage forbids AllDocs command executions"
+            });
         });
     };
 
