@@ -97,6 +97,42 @@ var command = function(spec, my) {
     };
 
     /**
+     * Returns the data of the attachment
+     * @method getAttachmentData
+     * @return {string} The data
+     */
+    that.getAttachmentData = function () {
+        return priv.doc._data;
+    };
+
+    /**
+     * Returns the data length of the attachment
+     * @method getAttachmentLength
+     * @return {number} The length
+     */
+    that.getAttachmentLength = function () {
+        return priv.doc._data.length;
+    };
+
+    /**
+     * Returns the mimetype of the attachment
+     * @method getAttachmentMimeType
+     * @return {string} The mimetype
+     */
+    that.getAttachmentMimeType = function () {
+        return priv.doc._mimetype;
+    };
+
+    /**
+     * Generate the md5sum of the attachment data
+     * @method md5SumAttachmentData
+     * @return {string} The md5sum
+     */
+    that.md5SumAttachmentData = function () {
+        return hex_md5(priv.doc._data);
+    };
+
+    /**
      * Returns an information about the document.
      * @method getDocInfo
      * @param  {string} infoname The info name.
