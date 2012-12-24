@@ -73,20 +73,33 @@ var newLocalStorage = function (spec, my) {
         return 'Need at least one parameter: "username".';
     };
 
+    // ==================== commands ====================
     /**
      * Create a document in local storage.
-     * @method  _post
+     * @method post
      * @param  {object} command The JIO command
-     *
-     * Available options:
-     * - {boolean} conflicts Add a conflicts object to the response
-     * - {boolean} revs Add the revisions history of the document
-     * - {boolean} revs_info Add revisions informations
-     *
      */
-    that._post = function (command) {
+    that.post = function (command) {
         setTimeout (function () {
-            that.success(priv.setDocument(command,'post'));
+            var doc;
+            doc = localstorage.getItem(
+                priv.localpath + "/" + command.getDocId());
+            if (typeof doc === "undefined") {
+                // the document does not exists
+                localstorage.setItem(
+                    priv.localpath + "/" + command.getDocId(),
+                    command.cloneDoc());
+                that.success({"ok":true,"id":command.getDocId()});
+            } else {
+                // the document already exists
+                that.error({
+                    "status": 409,
+                    "statusText": "Conflicts",
+                    "error": "conflicts",
+                    "message": "Cannot create a new document",
+                    "reason": "Document already exists"
+                });
+            }
         });
     };
 
