@@ -57,6 +57,20 @@ var newLocalStorage = function (spec, my) {
         }
     };
 
+    /**
+     * Checks if an object has no enumerable keys
+     * @method objectIsEmpty
+     * @param  {object} obj The object
+     * @return {boolean} true if empty, else false
+     */
+    priv.objectIsEmpty = function (obj) {
+        var k;
+        for (k in obj) {
+            return false;
+        }
+        return true;
+    };
+
     // ===================== overrides ======================
     that.serialized = function () {
         return {
@@ -225,16 +239,19 @@ var newLocalStorage = function (spec, my) {
     that.remove = function (command) {
         setTimeout (function () {
             var doc;
+            doc = localstorage.getItem(
+                priv.localpath + "/" + command.getDocId());
             if (typeof command.getAttachmentId() === "string") {
                 // seeking for an attachment
-                doc = localstorage.getItem(
-                    priv.localpath + "/" + command.getDocId());
                 localstorage.deleteItem(
                     priv.localpath + "/" + command.getDocId() + "/" +
                         command.getAttachmentId());
                 // remove attachment from document
-                if (typeof doc["_attachments"] !== "undefined") {
+                if (typeof doc["_attachments"] === "object") {
                     delete doc["_attachments"][command.getAttachmentId()];
+                    if (priv.objectIsEmpty(doc["_attachments"])) {
+                        delete doc["_attachments"];
+                    }
                     localstorage.setItem(
                         priv.localpath + "/" + command.getDocId(),
                         doc);
@@ -245,8 +262,21 @@ var newLocalStorage = function (spec, my) {
                 });
             } else {
                 // seeking for a document
+                var attachment_list = [], i;
+                if (typeof doc["_attachments"] === "object") {
+                    // prepare list of attachments
+                    for (i in doc["_attachments"]) {
+                        attachment_list.push(i);
+                    }
+                }
                 localstorage.deleteItem(
                     priv.localpath + "/" + command.getDocId());
+                // delete all attachments
+                for (i = 0; i < attachment_list.length; i += 1) {
+                    localstorage.deleteItem(
+                        priv.localpath+"/"+command.getDocId()+"/"+
+                            attachment_list[i]);
+                }
                 that.success({
                     "ok": true,
                     "id": command.getDocId()
