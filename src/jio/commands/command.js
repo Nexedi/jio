@@ -157,7 +157,7 @@ var command = function(spec, my) {
      * @param  {object} storage The storage.
      */
     that.validate = function (storage) {
-        if (!(priv.docid || priv.doc._id).match(/^[^\/]+([\/][^\/]+)?$/)) {
+        if (!priv.docid.match(/^[^\/]+([\/][^\/]+)?$/)) {
             that.error({
                 status:21,statusText:'Invalid Document Id',
                 error:'invalid_document_id',
