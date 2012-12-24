@@ -159,8 +159,10 @@ var newLocalStorage = function (spec, my) {
             }
             // upload data
             localstorage.setItem(
-                priv.localpath + "/" + command.getAttachmentId(),
-                command.getAttachmentData());
+                priv.localpath + "/" + command.getDocId() + "/" +
+                    command.getAttachmentId(),
+                command.getAttachmentData()
+            );
             // write document
             localstorage.setItem(
                 priv.localpath + "/" + command.getDocId(),
