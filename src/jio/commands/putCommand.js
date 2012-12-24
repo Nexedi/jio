@@ -10,14 +10,6 @@ var putCommand = function(spec, my) {
         return 'put';
     };
 
-    /**
-     * Validates the storage handler.
-     * @param  {object} handler The storage handler
-     */
-    that.validate = function () {
-        return that.validateState();
-    };
-
     that.executeOn = function(storage) {
         storage.put (that);
     };

@@ -26,7 +26,7 @@ var newLocalStorage = function (spec, my) {
         storage_user_array_name,
         storage_file_array_name;
 
-    // attributes 
+    // attributes
     priv.username = spec.username || '';
     priv.applicationname = spec.applicationname || 'untitled';
 
