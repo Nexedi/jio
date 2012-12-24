@@ -345,14 +345,14 @@
      */
     Object.defineProperty(that,"putAttachment",{
         configurable:false,enumerable:false,writable:false,value:
-        function(id, rev, doc, mimetype, options, success, error) {
+        function(doc, options, success, error) {
             var param = priv.parametersToObject(
                 [options, success, error],
                 {max_retry: 0}
             );
 
             priv.addJob(putAttachmentCommand,{
-                doc:{_id:id,content:doc,_rev:rev,mimetype:mimetype},
+                doc:doc,
                 options:param.options,
                 callbacks:{success:param.success,error:param.error}
             });
