@@ -105,27 +105,26 @@ var newLocalStorage = function (spec, my) {
 
     /**
      * Create or update a document in local storage.
-     * @method  _put
+     * @method put
      * @param  {object} command The JIO command
-     *
-     * Available options:
-     * - {boolean} conflicts Add a conflicts object to the response
-     * - {boolean} revs Add the revisions history of the document
-     * - {boolean} revs_info Add revisions informations
-     *
      */
-    that._put = function (command) {
+    that.put = function (command) {
         setTimeout(function () {
-            var docid = command.getDocId(),
-                path = 'jio/local/'+priv.username+'/'+
-                        priv.applicationname+'/'+docid,
-                doc = localstorage.getItem(path);
-
-            if (!doc) {
-                that.success(priv.setDocument(command, 'post'));
+            var doc;
+            doc = localstorage.getItem(
+                priv.localpath + "/" + command.getDocId());
+            if (typeof doc === "undefined") {
+                //  the document does not exists
+                doc = command.cloneDoc();
             } else {
-                that.success(priv.documentUpdate(command, 'put'));
+                // the document already exists
+                priv.documentObjectUpdate(doc, command.getDocId());
             }
+            // write
+            localstorage.setItem(
+                priv.localpath + "/" + command.getDocId(),
+                doc);
+            that.success({"ok":true,"id":command.getDocId()});
         });
     };
 
