@@ -130,17 +130,45 @@ var newLocalStorage = function (spec, my) {
 
     /**
      * Add an attachment to a document
-     * @method  _putAttachment
+     * @method  putAttachment
      * @param  {object} command The JIO command
-     *
-     * Available options:
-     * - {boolean} conflicts Add a conflicts object to the response
-     * - {boolean} revs Add the revisions history of the document
-     * - {boolean} revs_info Add revisions informations
      */
-    that._putAttachment = function (command) {
+    that.putAttachment = function (command) {
         setTimeout(function () {
-            that.success(priv.setDocument(command, 'put');
+            var doc;
+            doc = localstorage.getItem(
+                priv.localpath + "/" + command.getDocId());
+            if (typeof doc === "undefined") {
+                //  the document does not exists
+                that.error({
+                    "status": 404,
+                    "statusText": "Not Found",
+                    "error": "not_found",
+                    "message": "Impossible to add attachment",
+                    "reason": "Document not found"
+                });
+                return;
+            } else {
+                // the document already exists
+                doc["_attachments"] = doc["_attachments"] || {};
+                doc["_attachments"][command.getAttachmentId()] = {
+                    "content_type": command.getAttachmentMimeType(),
+                    "digest": "md5-"+command.md5SumAttachmentData(),
+                    "length": command.getAttachmentLength()
+                };
+            }
+            // upload data
+            localstorage.setItem(
+                priv.localpath + "/" + command.getAttachmentId(),
+                command.getAttachmentData());
+            // write document
+            localstorage.setItem(
+                priv.localpath + "/" + command.getDocId(),
+                doc);
+            that.success({
+                "ok":true,
+                "_id":command.getDocId()+"/"+command.getAttachmentId()
+            });
         });
     };
 
