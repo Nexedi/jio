@@ -353,5 +353,17 @@ jIO.addStorageType('revision', function (spec, my) {
         f.getDocumentTree();
     };
 
+    /**
+     * Update the document metadata and update a document tree.
+     * Options:
+     * - {boolean} keep_revision_history To keep the previous revisions
+     *                                   (false by default) (NYI).
+     * @method put
+     * @param  {object} command The JIO command
+     */
+    that.put = function (command) {
+        that.post(command);
+    };
+
     return that;
 });
