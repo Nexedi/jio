@@ -260,12 +260,13 @@ jIO.addStorageType('revision', function (spec, my) {
      * @param  {object} command The JIO command
      */
     that.post = function (command) {
-        var f = {}, doctree, revs_info, doc;
+        var f = {}, doctree, revs_info, doc, docid;
         doc = command.cloneDoc();
+        docid = command.getDocId();
         if (typeof doc._rev === "string" &&
             priv.checkRevisionFormat(doc._rev)) {
             that.error({
-                "status": 30,
+                "status": 31,
                 "statusText": "Wrong Revision Format",
                 "error": "wrong_revision_format",
                 "message": "The document previous revision does not match "+
@@ -273,6 +274,10 @@ jIO.addStorageType('revision', function (spec, my) {
                 "reason": "Previous revision is wrong"
             });
             return;
+        }
+        if (typeof docid !== "string") {
+            doc._id = priv.generateUuid();
+            docid = doc._id;
         }
         f.getDocumentTree = function () {
             var option = command.cloneOption();
@@ -282,7 +287,7 @@ jIO.addStorageType('revision', function (spec, my) {
             that.addJob(
                 "get",
                 priv.substorage,
-                command.getDocId()+priv.doctree_suffix,
+                docid+priv.doctree_suffix,
                 option,
                 function (response) {
                     doctree = response;
@@ -303,7 +308,7 @@ jIO.addStorageType('revision', function (spec, my) {
         };
         f.postDocument = function (doctree_update_method) {
             revs_info = priv.postToDocumentTree(doctree, doc);
-            doc._id = command.getDocId()+"."+revs_info[0].rev;
+            doc._id = docid+"."+revs_info[0].rev;
             that.addJob(
                 "post",
                 priv.substorage,
@@ -326,7 +331,7 @@ jIO.addStorageType('revision', function (spec, my) {
             );
         };
         f.sendDocumentTree = function (method) {
-            doctree._id = command.getDocId()+priv.doctree_suffix;
+            doctree._id = docid+priv.doctree_suffix;
             that.addJob(
                 method,
                 priv.substorage,
@@ -335,7 +340,7 @@ jIO.addStorageType('revision', function (spec, my) {
                 function (response) {
                     that.success({
                         "ok":true,
-                        "id":command.getDocId(),
+                        "id":docid,
                         "rev":revs_info[0].rev
                     })
                 }, function (err) {
