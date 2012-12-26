@@ -1,8 +1,13 @@
 /**
- * JIO Revision Storage. Type = 'revision'.
+ * JIO Revision Storage.
  * It manages document version and can generate conflicts.
+ * Description:
+ * {
+ *     "type": "revision",
+ *     "secondstorage": <sub storage description>
+ * }
  */
-var newRevisionStorage = (function (spec, my) {
+jIO.addStorageType('revision', function (spec, my) {
     var that, priv = {};
     spec = spec || {};
     that = my.basicStorage(spec, my);
@@ -216,5 +221,4 @@ var newRevisionStorage = (function (spec, my) {
     };
 
     return that;
-}());
-jIO.addStorageType('revision', newRevisionStorage);
+});
