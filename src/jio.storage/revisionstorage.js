@@ -250,5 +250,103 @@ jIO.addStorageType('revision', function (spec, my) {
         return result;
     };
 
+
+    /**
+     * Post the document metadata and create or update a document tree.
+     * Options:
+     * - {boolean} keep_revision_history To keep the previous revisions
+     *                                   (false by default) (NYI).
+     * @method post
+     * @param  {object} command The JIO command
+     */
+    that.post = function (command) {
+        var f = {}, doctree, revs_info, doc;
+        doc = command.cloneDoc();
+        if (typeof doc._rev === "string" &&
+            priv.checkRevisionFormat(doc._rev)) {
+            that.error({
+                "status": 30,
+                "statusText": "Wrong Revision Format",
+                "error": "wrong_revision_format",
+                "message": "The document previous revision does not match "+
+                    "[0-9]+-[0-9a-zA-Z]+",
+                "reason": "Previous revision is wrong"
+            });
+            return;
+        }
+        f.getDocumentTree = function () {
+            var option = command.cloneOption();
+            if (option["max_retry"] === 0) {
+                option["max_retry"] = 3;
+            }
+            that.addJob(
+                "get",
+                priv.substorage,
+                command.getDocId()+priv.doctree_suffix,
+                option,
+                function (response) {
+                    doctree = response;
+                    f.postDocument("put");
+                }, function (err) {
+                    switch(err.status) {
+                    case 404:
+                        doctree = priv.createDocumentTree();
+                        f.postDocument("post");
+                        break;
+                    default:
+                        err.message = "Cannot get document revision tree";
+                        that.error(err);
+                        break;
+                    }
+                }
+            );
+        };
+        f.postDocument = function (doctree_update_method) {
+            revs_info = priv.postToDocumentTree(doctree, doc);
+            doc._id = command.getDocId()+"."+revs_info[0].rev;
+            that.addJob(
+                "post",
+                priv.substorage,
+                doc,
+                command.cloneOption(),
+                function (response) {
+                    f.sendDocumentTree (doctree_update_method);
+                }, function (err) {
+                    switch(err.status) {
+                    case 409:
+                        // file already exists
+                        f.sendDocumentTree (doctree_update_method);
+                        break;
+                    default:
+                        err.message = "Cannot upload document".
+                        that.error(err);
+                        break;
+                    }
+                }
+            );
+        };
+        f.sendDocumentTree = function (method) {
+            doctree._id = command.getDocId()+priv.doctree_suffix;
+            that.addJob(
+                method,
+                priv.substorage,
+                doctree,
+                command.cloneOption(),
+                function (response) {
+                    that.success({
+                        "ok":true,
+                        "id":command.getDocId(),
+                        "rev":revs_info[0].rev
+                    })
+                }, function (err) {
+                    // xxx do we try to delete the posted document ?
+                    err.message = "Cannot save document revision tree";
+                    that.error(err);
+                }
+            );
+        };
+        f.getDocumentTree();
+    };
+
     return that;
 });
