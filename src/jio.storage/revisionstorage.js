@@ -300,13 +300,13 @@ jIO.addStorageType('revision', function (spec, my) {
         doc = command.cloneDoc();
         docid = command.getDocId();
         if (typeof doc._rev === "string" &&
-            priv.checkRevisionFormat(doc._rev)) {
+            !priv.checkRevisionFormat(doc._rev)) {
             that.error({
                 "status": 31,
                 "statusText": "Wrong Revision Format",
                 "error": "wrong_revision_format",
                 "message": "The document previous revision does not match "+
-                    "[0-9]+-[0-9a-zA-Z]+",
+                    "^[0-9]+-[0-9a-zA-Z]+$",
                 "reason": "Previous revision is wrong"
             });
             return;
@@ -314,6 +314,9 @@ jIO.addStorageType('revision', function (spec, my) {
         if (typeof docid !== "string") {
             doc._id = priv.generateUuid();
             docid = doc._id;
+        }
+        if (priv.update_doctree_allowed === undefined) {
+            priv.update_doctree_allowed = true;
         }
         f.getDocumentTree = function () {
             var option = command.cloneOption();
@@ -327,7 +330,17 @@ jIO.addStorageType('revision', function (spec, my) {
                 option,
                 function (response) {
                     doctree = response;
-                    f.postDocument("put");
+                    if (priv.update_doctree_allowed) {
+                        f.postDocument("put");
+                    } else {
+                        that.error({
+                            "status": 409,
+                            "statusText": "Conflict",
+                            "error": "conflict",
+                            "message": "Cannot update a document",
+                            "reason": "Document update conflict"
+                        });
+                    }
                 }, function (err) {
                     switch(err.status) {
                     case 404:
@@ -398,6 +411,9 @@ jIO.addStorageType('revision', function (spec, my) {
      * @param  {object} command The JIO command
      */
     that.put = function (command) {
+        if (command.cloneDoc()._rev === undefined) {
+            priv.update_doctree_allowed = false;
+        }
         that.post(command);
     };
 
