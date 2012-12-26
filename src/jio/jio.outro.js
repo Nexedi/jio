@@ -332,9 +332,10 @@
      * Put an attachment to a document.
      * @method putAttachment
      * @param  {object} doc The document object. Contains at least:
-     * - {string} _id The document id: "doc_id/attchment_id"
-     * - {string} _data Base64 attachment data
-     * - {string} _mimetype The attachment mimetye
+     * - {string} id The document id: "doc_id/attchment_id"
+     * - {string} data Base64 attachment data
+     * - {string} mimetype The attachment mimetype
+     * - {string} rev The attachment revision
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
      * - {boolean} revs Include revision history of the document.
@@ -348,13 +349,17 @@
     Object.defineProperty(that,"putAttachment",{
         configurable:false,enumerable:false,writable:false,value:
         function(doc, options, success, error) {
-            var param = priv.parametersToObject(
+            var param, k, doc_with_underscores = {};
+            param = priv.parametersToObject(
                 [options, success, error],
                 {max_retry: 0}
             );
-
+            for (k in doc) {
+                doc_with_underscores["_"+k] = doc[k];
+            }
+            console.log (doc_with_underscores);
             priv.addJob(putAttachmentCommand,{
-                doc:doc,
+                doc:doc_with_underscores,
                 options:param.options,
                 callbacks:{success:param.success,error:param.error}
             });
