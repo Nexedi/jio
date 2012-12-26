@@ -5,127 +5,34 @@
 var newLocalStorage = function (spec, my) {
 
     spec = spec || {};
-    var that = my.basicStorage(spec, my),
-        priv = {},
+    var that, priv, localstorage;
+    that = my.basicStorage(spec, my);
+    priv = {};
 
-        /*
-        * Wrapper for the localStorage used to simplify instion of any kind of
-        * values
-        */
-        localstorage = {
-            getItem: function (item) {
-                return JSON.parse(localStorage.getItem(item));
-            },
-            setItem: function (item, value) {
-                return localStorage.setItem(item, JSON.stringify(value));
-            },
-            deleteItem: function (item) {
-                delete localStorage[item];
-            }
+    /*
+     * Wrapper for the localStorage used to simplify instion of any kind of
+     * values
+     */
+    localstorage = {
+        getItem: function (item) {
+            return JSON.parse(localStorage.getItem(item));
         },
-        storage_user_array_name,
-        storage_file_array_name;
+        setItem: function (item, value) {
+            return localStorage.setItem(item, JSON.stringify(value));
+        },
+        deleteItem: function (item) {
+            delete localStorage[item];
+        }
+    };
 
-    // attributes 
+    // attributes
     priv.username = spec.username || '';
     priv.applicationname = spec.applicationname || 'untitled';
 
-    storage_user_array_name = 'jio/local_user_array';
-    storage_file_array_name = 'jio/local_file_name_array/' +
+    priv.localpath = 'jio/localstorage/' +
         priv.username + '/' + priv.applicationname;
 
-    /**
-     * Returns a list of users.
-     * @method getUserArray
-     * @return {array} The list of users.
-     */
-    priv.getUserArray = function () {
-        return localstorage.getItem(storage_user_array_name) || [];
-    };
-
-    /**
-     * Adds a user to the user list.
-     * @method addUser
-     * @param  {string} user_name The user name.
-     */
-    priv.addUser = function (user_name) {
-        var user_array = priv.getUserArray();
-        user_array.push(user_name);
-        localstorage.setItem(storage_user_array_name, user_array);
-    };
-
-    /**
-     * checks if a user exists in the user array.
-     * @method doesUserExist
-     * @param  {string} user_name The user name
-     * @return {boolean} true if exist, else false
-     */
-    priv.doesUserExist = function (user_name) {
-        var user_array = priv.getUserArray(), i, l;
-        for (i = 0, l = user_array.length; i < l; i += 1) {
-            if (user_array[i] === user_name) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    /**
-     * Returns the file names of all existing files owned by the user.
-     * @method getFileNameArray
-     * @return {array} All the existing file paths.
-     */
-    priv.getFileNameArray = function () {
-        return localstorage.getItem(storage_file_array_name) || [];
-    };
-
-    /**
-     * Adds a file name to the local file name array.
-     * @method addFileName
-     * @param  {string} file_name The new file name.
-     */
-    priv.addFileName = function (file_name) {
-        var file_name_array = priv.getFileNameArray();
-        file_name_array.push(file_name);
-        localstorage.setItem(storage_file_array_name, file_name_array);
-    };
-
-    /**
-     * Removes a file name from the local file name array.
-     * @method removeFileName
-     * @param  {string} file_name The file name to remove.
-     */
-    priv.removeFileName = function (file_name) {
-        var i, l, array = priv.getFileNameArray(), new_array = [];
-        for (i = 0, l = array.length; i < l; i+= 1) {
-            if (array[i] !== file_name) {
-                new_array.push(array[i]);
-            }
-        }
-        localstorage.setItem(storage_file_array_name, new_array);
-    };
-
-    /**
-     * Extends [obj] adding 0 to 3 values according to [command] options.
-     * @method manageOptions
-     * @param  {object} obj The obj to extend
-     * @param  {object} command The JIO command
-     * @param  {object} doc The document object
-     */
-    priv.manageOptions = function (obj, command, doc) {
-        obj = obj || {};
-        if (command.getOption('revs')) {
-            obj.revisions = doc._revisions;
-        }
-        if (command.getOption('revs_info')) {
-            obj.revs_info = doc._revs_info;
-        }
-        if (command.getOption('conflicts')) {
-            obj.conflicts = {total_rows:0, rows:[]};
-        }
-        return obj;
-    };
-
+    // ==================== Tools ====================
     /**
      * Update [doc] the document object and remove [doc] keys
      * which are not in [new_doc]. It only changes [doc] keys not starting
@@ -151,72 +58,17 @@ var newLocalStorage = function (spec, my) {
     };
 
     /**
-     * Create a new document
-     * @method setDocument
-     * @param  {object} command Command object
-     * @param  {string} trigger Put/Post
+     * Checks if an object has no enumerable keys
+     * @method objectIsEmpty
+     * @param  {object} obj The object
+     * @return {boolean} true if empty, else false
      */
-    priv.setDocument = function (command, trigger) {
-        var doc = command.getDoc(),
-            document_id = doc._id,
-            document_rev = doc._rev,
-            document_path = 'jio/local/'+priv.username+'/'+
-                    priv.applicationname+'/'+document_id+
-                    '/'+document_rev;
-
-        if (trigger === 'put'){
-            priv.documentObjectUpdate(doc, command.cloneDoc());
+    priv.objectIsEmpty = function (obj) {
+        var k;
+        for (k in obj) {
+            return false;
         }
-
-        localstorage.setItem(document_path, doc);
-
-        if (trigger === 'post'){
-            if (!priv.doesUserExist(priv.username)) {
-                priv.addUser(priv.username);
-            }
-            priv.addFileName(document_id);
-        }
-
-        return priv.manageOptions(
-            {ok:true,id:document_id,rev:document_rev}, command, doc);
-    };
-
-    /**
-     * get a document or attachment
-     * @method getDocument
-     * @param  {object} command Command object
-     */
-    priv.getDocument = function (command) {
-        var doc = command.getDoc();
-            document_id = doc._id;
-            document_rev = doc._rev;
-            document_path = 'jio/local/'+priv.username+'/'+
-                    priv.applicationname+'/'+document_id+
-                    '/'+document_rev;
-
-        localStorage.getItem( document_path );
-
-        return priv.manageOptions(
-            {ok:true,id:document_id,rev:document_rev}, command, doc);
-    };
-
-    /**
-     * delete a document or attachment
-     * @method getDocument
-     * @param  {object} command Command object
-     */
-    priv.deleteDocument = function (command) {
-        var doc = command.getDoc();
-            document_id = doc._id;
-            document_rev = doc._rev;
-            document_path = 'jio/local/'+priv.username+'/'+
-                    priv.applicationname+'/'+document_id+
-                    '/'+document_rev;
-
-        localStorage.deleteItem( document_path );
-
-        return priv.manageOptions(
-            {ok:true,id:document_id,rev:document_rev}, command, doc);
+        return true;
     };
 
     // ===================== overrides ======================
@@ -228,144 +80,237 @@ var newLocalStorage = function (spec, my) {
     };
 
     that.validateState = function() {
-        if (priv.username) {
+        if (typeof priv.username === "string" &&
+            priv.username !== '') {
             return '';
         }
         return 'Need at least one parameter: "username".';
     };
 
+    // ==================== commands ====================
     /**
      * Create a document in local storage.
-     * @method  _post
+     * @method post
      * @param  {object} command The JIO command
-     *
-     * Available options:
-     * - {boolean} conflicts Add a conflicts object to the response
-     * - {boolean} revs Add the revisions history of the document
-     * - {boolean} revs_info Add revisions informations
-     *
      */
-    that._post = function (command) {
+    that.post = function (command) {
         setTimeout (function () {
-            that.success(priv.setDocument(command,'post'));
+            var doc = command.getDocId();
+            if (!(typeof doc === "string" && doc !== "")) {
+                that.error({
+                    "status": 405,
+                    "statusText": "Method Not Allowed",
+                    "error": "method_not_allowed",
+                    "message": "Cannot create document which id is undefined",
+                    "reason": "Document id is undefined"
+                });
+                return;
+            }
+            doc = localstorage.getItem(
+                priv.localpath + "/" + doc);
+            if (doc === null) {
+                // the document does not exists
+                localstorage.setItem(
+                    priv.localpath + "/" + command.getDocId(),
+                    command.cloneDoc());
+                that.success({"ok":true,"id":command.getDocId()});
+            } else {
+                // the document already exists
+                that.error({
+                    "status": 409,
+                    "statusText": "Conflicts",
+                    "error": "conflicts",
+                    "message": "Cannot create a new document",
+                    "reason": "Document already exists"
+                });
+            }
         });
     };
 
     /**
      * Create or update a document in local storage.
-     * @method  _put
+     * @method put
      * @param  {object} command The JIO command
-     *
-     * Available options:
-     * - {boolean} conflicts Add a conflicts object to the response
-     * - {boolean} revs Add the revisions history of the document
-     * - {boolean} revs_info Add revisions informations
-     *
      */
-    that._put = function (command) {
+    that.put = function (command) {
         setTimeout(function () {
-            var docid = command.getDocId(),
-                path = 'jio/local/'+priv.username+'/'+
-                        priv.applicationname+'/'+docid,
-                doc = localstorage.getItem(path);
-
-            if (!doc) {
-                that.success(priv.setDocument(command, 'post'));
+            var doc;
+            doc = localstorage.getItem(
+                priv.localpath + "/" + command.getDocId());
+            if (doc === null) {
+                //  the document does not exists
+                doc = command.cloneDoc();
             } else {
-                that.success(priv.documentUpdate(command, 'put'));
+                // the document already exists
+                priv.documentObjectUpdate(doc, command.cloneDoc());
             }
+            // write
+            localstorage.setItem(
+                priv.localpath + "/" + command.getDocId(),
+                doc);
+            that.success({"ok":true,"id":command.getDocId()});
         });
     };
 
     /**
      * Add an attachment to a document
-     * @method  _putAttachment
+     * @method  putAttachment
      * @param  {object} command The JIO command
-     *
-     * Available options:
-     * - {boolean} conflicts Add a conflicts object to the response
-     * - {boolean} revs Add the revisions history of the document
-     * - {boolean} revs_info Add revisions informations
      */
-    that._putAttachment = function (command) {
+    that.putAttachment = function (command) {
         setTimeout(function () {
-            that.success(priv.setDocument(command, 'put');
+            var doc;
+            doc = localstorage.getItem(
+                priv.localpath + "/" + command.getDocId());
+            if (doc === null) {
+                //  the document does not exists
+                that.error({
+                    "status": 404,
+                    "statusText": "Not Found",
+                    "error": "not_found",
+                    "message": "Impossible to add attachment",
+                    "reason": "Document not found"
+                });
+                return;
+            } else {
+                // the document already exists
+                doc["_attachments"] = doc["_attachments"] || {};
+                doc["_attachments"][command.getAttachmentId()] = {
+                    "content_type": command.getAttachmentMimeType(),
+                    "digest": "md5-"+command.md5SumAttachmentData(),
+                    "length": command.getAttachmentLength()
+                };
+            }
+            // upload data
+            localstorage.setItem(
+                priv.localpath + "/" + command.getDocId() + "/" +
+                    command.getAttachmentId(),
+                command.getAttachmentData()
+            );
+            // write document
+            localstorage.setItem(
+                priv.localpath + "/" + command.getDocId(),
+                doc);
+            that.success({
+                "ok":true,
+                "_id":command.getDocId()+"/"+command.getAttachmentId()
+            });
         });
     };
 
     /**
      * Get a document or attachment
-     * @method  get
+     * @method get
      * @param  {object} command The JIO command
-     *
-     * Available options:
-     * - {boolean} conflicts Add a conflicts object to the response
-     * - {boolean} revs Add the revisions history of the document
-     * - {boolean} revs_info Add revisions informations
      */
-    that._get = function (command) {
+    that.get = function (command) {
         setTimeout (function () {
-            that.success( priv.getDocument(command) );
+            var doc;
+            if (typeof command.getAttachmentId() === "string") {
+                // seeking for an attachment
+                doc = localstorage.getItem(
+                    priv.localpath + "/" + command.getDocId() + "/" +
+                        command.getAttachmentId());
+                if (doc !== null) {
+                    that.success(doc);
+                } else {
+                    that.error({
+                        "status": 404,
+                        "statusText": "Not Found",
+                        "error": "not_found",
+                        "message": "Cannot find the attachment ",
+                        "reason": "attachment does not exists"
+                    });
+                }
+            } else {
+                // seeking for a document
+                doc = localstorage.getItem(
+                    priv.localpath + "/" + command.getDocId());
+                if (doc !== null) {
+                    that.success(doc);
+                } else {
+                    that.error({
+                        "status": 404,
+                        "statusText": "Not Found",
+                        "error": "not_found",
+                        "message": "Cannot find the document",
+                        "reason": "Document does not exists"
+                    });
+                }
+            }
         });
-
     };
 
     /**
      * Remove a document or attachment
-     * @method  remove
+     * @method remove
      * @param  {object} command The JIO command
-     *
-     * Available options:
-     * - {boolean} conflicts Add a conflicts object to the response
-     * - {boolean} revs Add the revisions history of the document
-     * - {boolean} revs_info Add revisions informations
      */
-    that._remove = function (command) {
+    that.remove = function (command) {
         setTimeout (function () {
-            that.success( priv.deleteDocument(command) );
+            var doc;
+            doc = localstorage.getItem(
+                priv.localpath + "/" + command.getDocId());
+            if (typeof command.getAttachmentId() === "string") {
+                // seeking for an attachment
+                localstorage.deleteItem(
+                    priv.localpath + "/" + command.getDocId() + "/" +
+                        command.getAttachmentId());
+                // remove attachment from document
+                if (doc !== null && typeof doc === "object" &&
+                    typeof doc["_attachments"] === "object") {
+                    delete doc["_attachments"][command.getAttachmentId()];
+                    if (priv.objectIsEmpty(doc["_attachments"])) {
+                        delete doc["_attachments"];
+                    }
+                    localstorage.setItem(
+                        priv.localpath + "/" + command.getDocId(),
+                        doc);
+                }
+                that.success({
+                    "ok": true,
+                    "id": command.getDocId()+"/"+command.getAttachmentId()
+                });
+            } else {
+                // seeking for a document
+                var attachment_list = [], i;
+                if (doc !== null && typeof doc === "object" &&
+                    typeof doc["_attachments"] === "object") {
+                    // prepare list of attachments
+                    for (i in doc["_attachments"]) {
+                        attachment_list.push(i);
+                    }
+                }
+                localstorage.deleteItem(
+                    priv.localpath + "/" + command.getDocId());
+                // delete all attachments
+                for (i = 0; i < attachment_list.length; i += 1) {
+                    localstorage.deleteItem(
+                        priv.localpath+"/"+command.getDocId()+"/"+
+                            attachment_list[i]);
+                }
+                that.success({
+                    "ok": true,
+                    "id": command.getDocId()
+                });
+            }
         });
     };
 
     /**
-     * get all filenames belonging to a user from the document index
-     * @method  allDocs
+     * Get all filenames belonging to a user from the document index
+     * @method allDocs
      * @param  {object} command The JIO command
-     *
-     * Available options:
-     * - {boolean} conflicts Add a conflicts object to the response
-     * - {boolean} revs Add the revisions history of the document
-     * - {boolean} revs_info Add revisions informations
-     * - {boolean} include_docs Include documents with index
      */
-    that._allDocs = function (command) {
+    that.allDocs = function (command) {
         setTimeout(function () {
-            var new_array = [],
-                array = priv.getFileNameArray(),
-                i,l,
-                path = 'jio/local/'+priv.username+'/'+priv.applicationname,
-                include_docs = command.getOption('include_docs'),
-                doc, item;
-
-            for (i = 0, l = array.length; i < l; i += 1) {
-                item = array[i];
-
-                if (include_docs === true){
-                    doc = that._get(path+'/'+item.id+'/'+item.value.key );
-                    new_array.push({
-                        "id":item.id,
-                        "key":item.key,
-                        "value":item.value,
-                        "doc":doc
-                    });
-                } else {
-                    new_array.push({
-                        "id":item.id,
-                        "key":item.key,
-                        "value":item.value
-                    });
-                }
-            }
-            that.success ({total_rows:new_array.length,rows:new_array});
+            that.error({
+                "status": 405,
+                "statusText": "Method Not Allowed",
+                "error": "method_not_allowed",
+                "message": "Your are not allowed to use this command",
+                "reason": "LocalStorage forbids AllDocs command executions"
+            });
         });
     };
 

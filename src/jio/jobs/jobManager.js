@@ -25,7 +25,7 @@ var jobManager = (function(spec) {
      * @return {array} The job array.
      */
     priv.getJobArray = function() {
-        return LocalOrCookieStorage.getItem(priv.getJobArrayName())||[];
+        return localstorage.getItem(priv.getJobArrayName())||[];
     };
 
     /**
@@ -37,7 +37,7 @@ var jobManager = (function(spec) {
         for (i = 0; i < priv.job_array.length; i+= 1) {
             new_a.push(priv.job_array[i].serialized());
         }
-        LocalOrCookieStorage.setItem(priv.getJobArrayName(),new_a);
+        localstorage.setItem(priv.getJobArrayName(),new_a);
     };
 
     /**
@@ -90,7 +90,7 @@ var jobManager = (function(spec) {
             clearInterval(priv.interval_id);
             priv.interval_id = null;
             if (priv.job_array.length === 0) {
-                LocalOrCookieStorage.deleteItem(priv.getJobArrayName());
+                localstorage.deleteItem(priv.getJobArrayName());
             }
         }
     };
@@ -105,7 +105,7 @@ var jobManager = (function(spec) {
         var i, jio_id_a;
         priv.lastrestore = priv.lastrestore || 0;
         if (priv.lastrestore > (Date.now()) - 2000) { return; }
-        jio_id_a = LocalOrCookieStorage.getItem('jio/id_array')||[];
+        jio_id_a = localstorage.getItem('jio/id_array')||[];
         for (i = 0; i < jio_id_a.length; i+= 1) {
             priv.restoreOldJioId(jio_id_a[i]);
         }
@@ -119,7 +119,7 @@ var jobManager = (function(spec) {
      */
     priv.restoreOldJioId = function(id) {
         var jio_date;
-        jio_date = LocalOrCookieStorage.getItem('jio/id/'+id)||0;
+        jio_date = localstorage.getItem('jio/id/'+id)||0;
         if (new Date(jio_date).getTime() < (Date.now() - 10000)) { // 10 sec
             priv.restoreOldJobFromJioId(id);
             priv.removeOldJioId(id);
@@ -134,7 +134,7 @@ var jobManager = (function(spec) {
      */
     priv.restoreOldJobFromJioId = function(id) {
         var i, jio_job_array;
-        jio_job_array = LocalOrCookieStorage.getItem('jio/job_array/'+id)||[];
+        jio_job_array = localstorage.getItem('jio/job_array/'+id)||[];
         for (i = 0; i < jio_job_array.length; i+= 1) {
             var command_object = command(jio_job_array[i].command);
             if (command_object.canBeRestored()) {
@@ -152,14 +152,14 @@ var jobManager = (function(spec) {
      */
     priv.removeOldJioId = function(id) {
         var i, jio_id_array, new_array = [];
-        jio_id_array = LocalOrCookieStorage.getItem('jio/id_array')||[];
+        jio_id_array = localstorage.getItem('jio/id_array')||[];
         for (i = 0; i < jio_id_array.length; i+= 1) {
             if (jio_id_array[i] !== id) {
                 new_array.push(jio_id_array[i]);
             }
         }
-        LocalOrCookieStorage.setItem('jio/id_array',new_array);
-        LocalOrCookieStorage.deleteItem('jio/id/'+id);
+        localstorage.setItem('jio/id_array',new_array);
+        localstorage.deleteItem('jio/id/'+id);
     };
 
     /**
@@ -168,7 +168,7 @@ var jobManager = (function(spec) {
      * @param  {number} id The jio id.
      */
     priv.removeJobArrayFromJioId = function(id) {
-        LocalOrCookieStorage.deleteItem('jio/job_array/'+id);
+        localstorage.deleteItem('jio/job_array/'+id);
     };
 
     /**

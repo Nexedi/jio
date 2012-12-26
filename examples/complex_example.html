@@ -138,6 +138,7 @@ var clearlog = function () {
   <div id="log">
   </div>
   <script type="text/javascript" src="../localorcookiestorage.js"></script>
+  <script type="text/javascript" src="../lib/md5/md5.js"></script>
   <script type="text/javascript" src="../jio.js"></script>
   <script type="text/javascript" src="../lib/jquery/jquery.min.js"></script>
   <script type="text/javascript" src="../lib/base64/base64.js"></script>
@@ -217,7 +218,7 @@ var callback = function (err,val,begin_date) {
     log ('return : ' + JSON.stringify (val));
 };
 var command = function (method) {
-    var begin_date = Date.now(), doc = {}, opts = {}, other = {};
+    var begin_date = Date.now(), doc = {}, opts = {};
     log (method);
     if (!my_jio) {
         return error ('no jio set');
@@ -230,14 +231,11 @@ var command = function (method) {
 
     switch (method) {
     case 'putAttachment':
-        other.docid = $('#document_id').attr('value');
-        other.revision = $('#prev_rev').attr('value');
-        other.content = $('#content').attr('value');
-        other.mimetype = $('#mimetype').attr('value');
-        log ('docid: '+ other.docid);
-        log ('revision: '+ other.revision);
-        log ('content: '+ other.content);
-        log ('mimetype: '+ other.mimetype);
+        doc.id = $('#document_id').attr('value');
+        doc.rev = $('#prev_rev').attr('value');
+        doc.data = $('#content').attr('value');
+        doc.mimetype = $('#mimetype').attr('value');
+        log ('attachment: '+ JSON.stringify (doc));
         break;
     case 'post':
     case 'put':
@@ -260,6 +258,7 @@ var command = function (method) {
     log ('opts: ' + JSON.stringify (opts));
 
     switch (method) {
+    case "putAttachment":
     case 'remove':
     case 'post':
     case 'put':
@@ -272,14 +271,6 @@ var command = function (method) {
         my_jio[method](opts,function (err,val) {
             callback(err,val,begin_date);
         });
-        break;
-    case 'putAttachment':
-        my_jio[method](
-            other.docid, other.revision, other.content,
-            other.mimetype, opts, function (err, val) {
-                callback(err,val,begin_date);
-            }
-        );
         break;
     }
 };

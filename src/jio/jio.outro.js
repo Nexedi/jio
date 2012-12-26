@@ -12,7 +12,7 @@
         // Initialize the jio id and add the new id to the list
         if (priv.id === null) {
             var i, jio_id_a =
-                LocalOrCookieStorage.getItem (jio_id_array_name) || [];
+                localstorage.getItem (jio_id_array_name) || [];
             priv.id = 1;
             for (i = 0; i < jio_id_a.length; i+= 1) {
                 if (jio_id_a[i] >= priv.id) {
@@ -20,7 +20,7 @@
                 }
             }
             jio_id_a.push(priv.id);
-            LocalOrCookieStorage.setItem (jio_id_array_name,jio_id_a);
+            localstorage.setItem (jio_id_array_name,jio_id_a);
             activityUpdater.setId(priv.id);
             jobManager.setId(priv.id);
         }
@@ -143,6 +143,8 @@
             } else {
                 param.callback = callback1;
             }
+        } else {
+            param.callback = function () {};
         }
     };
 
@@ -176,7 +178,8 @@
     /**
      * Post a document.
      * @method post
-     * @param  {object} doc The document {"content":}.
+     * @param  {object} doc The document object. Contains at least:
+     * - {string} _id The document id (optional), "/" are forbidden
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
      * - {boolean} revs Include revision history of the document.
@@ -206,7 +209,8 @@
     /**
      * Put a document.
      * @method put
-     * @param  {object} doc The document {"_id":,"_rev":,"content":}.
+     * @param  {object} doc The document object. Contains at least:
+     * - {string} _id The document id, "/" are forbidden
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
      * - {boolean} revs Include revision history of the document.
@@ -236,7 +240,7 @@
     /**
      * Get a document.
      * @method get
-     * @param  {string} docid The document id (the path).
+     * @param  {string} docid The document id: "doc_id" or "doc_id/attachmt_id".
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
      * - {string} rev The revision we want to get.
@@ -267,7 +271,8 @@
     /**
      * Remove a document.
      * @method remove
-     * @param  {object} doc The document {"_id":,"_rev":}.
+     * @param  {object} doc The document object. Contains at least:
+     * - {string} _id The document id: "doc_id" or "doc_id/attachment_id"
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
      * - {boolean} revs Include revision history of the document.
@@ -312,7 +317,7 @@
         configurable:false,enumerable:false,writable:false,value:
         function(options, success, error) {
             var param = priv.parametersToObject(
-                [options,success.error],
+                [options,success,error],
                 {max_retry: 3}
             );
 
@@ -326,10 +331,11 @@
     /**
      * Put an attachment to a document.
      * @method putAttachment
-     * @param  {string} id The attachment id ("document/attachment").
-     * @param  {string} rev The document revision.
-     * @param  {string} doc Base64 attachment content.
-     * @param  {string} mimetype The attachment mimetype
+     * @param  {object} doc The document object. Contains at least:
+     * - {string} id The document id: "doc_id/attchment_id"
+     * - {string} data Base64 attachment data
+     * - {string} mimetype The attachment mimetype
+     * - {string} rev The attachment revision
      * @param  {object} options (optional) Contains some options:
      * - {number} max_retry The number max of retries, 0 = infinity.
      * - {boolean} revs Include revision history of the document.
@@ -342,14 +348,18 @@
      */
     Object.defineProperty(that,"putAttachment",{
         configurable:false,enumerable:false,writable:false,value:
-        function(id, rev, doc, mimetype, options, success, error) {
-            var param = priv.parametersToObject(
+        function(doc, options, success, error) {
+            var param, k, doc_with_underscores = {};
+            param = priv.parametersToObject(
                 [options, success, error],
                 {max_retry: 0}
             );
-
+            for (k in doc) {
+                doc_with_underscores["_"+k] = doc[k];
+            }
+            console.log (doc_with_underscores);
             priv.addJob(putAttachmentCommand,{
-                doc:{_id:id,content:doc,_rev:rev,mimetype:mimetype},
+                doc:doc_with_underscores,
                 options:param.options,
                 callbacks:{success:param.success,error:param.error}
             });

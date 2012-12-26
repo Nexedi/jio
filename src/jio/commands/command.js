@@ -11,12 +11,6 @@ var command = function(spec, my) {
         'remove':removeCommand,
         'allDocs':allDocsCommand,
         'putAttachment':putAttachmentCommand
-        '_post':_postCommand,
-        '_put':_putCommand,
-        '_get':_getCommand,
-        '_remove':_removeCommand,
-        '_allDocs':_allDocsCommand,
-        '_putAttachment':_putAttachmentCommand
     };
     // creates the good command thanks to his label
     if (spec.label && priv.commandlist[spec.label]) {
@@ -27,7 +21,7 @@ var command = function(spec, my) {
 
     priv.tried     = 0;
     priv.doc       = spec.doc || {};
-    priv.docid     = spec.docid || spec.doc._id || '';
+    priv.docid     = spec.docid || priv.doc._id;
     priv.option    = spec.options || {};
     priv.callbacks = spec.callbacks || {};
     priv.success   = priv.callbacks.success || function (){};
@@ -44,15 +38,26 @@ var command = function(spec, my) {
     // Methods //
     /**
      * Returns a serialized version of this command.
+     * @method super_serialized
+     * @return {object} The serialized command.
+     */
+    that.super_serialized = function () {
+        var o = that.serialized() || {};
+        o["label"] = that.getLabel();
+        o["tried"] = priv.tried;
+        o["doc"] = that.cloneDoc();
+        o["option"] = that.cloneOption();
+        return o;
+    };
+
+    /**
+     * Returns a serialized version of this command.
      * Override this function.
      * @method serialized
      * @return {object} The serialized command.
      */
     that.serialized = function() {
-        return {label:that.getLabel(),
-                tried:priv.tried,
-                doc:that.cloneDoc(),
-                option:that.cloneOption()};
+        return {};
     };
 
     /**
@@ -70,6 +75,9 @@ var command = function(spec, my) {
      * @return {string} The document id
      */
     that.getDocId = function () {
+        if (typeof priv.docid !== "string") {
+            return undefined;
+        }
         return priv.docid.split('/')[0];
     };
 
@@ -79,6 +87,9 @@ var command = function(spec, my) {
      * @return {string} The attachment id
      */
     that.getAttachmentId = function () {
+        if (typeof priv.docid !== "string") {
+            return undefined;
+        }
         return priv.docid.split('/')[1];
     };
 
@@ -89,6 +100,42 @@ var command = function(spec, my) {
      */
     that.getDoc = function() {
         return priv.doc;
+    };
+
+    /**
+     * Returns the data of the attachment
+     * @method getAttachmentData
+     * @return {string} The data
+     */
+    that.getAttachmentData = function () {
+        return priv.doc._data;
+    };
+
+    /**
+     * Returns the data length of the attachment
+     * @method getAttachmentLength
+     * @return {number} The length
+     */
+    that.getAttachmentLength = function () {
+        return priv.doc._data.length;
+    };
+
+    /**
+     * Returns the mimetype of the attachment
+     * @method getAttachmentMimeType
+     * @return {string} The mimetype
+     */
+    that.getAttachmentMimeType = function () {
+        return priv.doc._mimetype;
+    };
+
+    /**
+     * Generate the md5sum of the attachment data
+     * @method md5SumAttachmentData
+     * @return {string} The md5sum
+     */
+    that.md5SumAttachmentData = function () {
+        return hex_md5(priv.doc._data);
     };
 
     /**
@@ -116,7 +163,8 @@ var command = function(spec, my) {
      * @param  {object} storage The storage.
      */
     that.validate = function (storage) {
-        if (!(priv.docid || priv.doc._id).match(/^[^\/]+([\/][^\/]+)?$/)) {
+        if (typeof priv.docid === "string" &&
+            !priv.docid.match(/^[^\/]+([\/][^\/]+)?$/)) {
             that.error({
                 status:21,statusText:'Invalid Document Id',
                 error:'invalid_document_id',
@@ -253,11 +301,7 @@ var command = function(spec, my) {
      * @return {object} The clone of the command options.
      */
     that.cloneOption = function () {
-        var k, o = {};
-        for (k in priv.option) {
-            o[k] = priv.option[k];
-        }
-        return o;
+        return JSON.parse(JSON.stringify(priv.option));
     };
 
     /**
@@ -266,14 +310,7 @@ var command = function(spec, my) {
      * @return {object} The clone of the document.
      */
     that.cloneDoc = function () {
-        if (priv.docid) {
-            return priv.docid;
-        }
-        var k, o = {};
-        for (k in priv.doc) {
-            o[k] = priv.doc[k];
-        }
-        return o;
+        return JSON.parse(JSON.stringify(priv.doc));
     };
 
     return that;
