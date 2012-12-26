@@ -95,9 +95,19 @@ var newLocalStorage = function (spec, my) {
      */
     that.post = function (command) {
         setTimeout (function () {
-            var doc;
+            var doc = command.getDocId();
+            if (!(typeof doc === "string" && doc !== "")) {
+                that.error({
+                    "status": 405,
+                    "statusText": "Method Not Allowed",
+                    "error": "method_not_allowed",
+                    "message": "Cannot create document which id is undefined",
+                    "reason": "Document id is undefined"
+                });
+                return;
+            }
             doc = localstorage.getItem(
-                priv.localpath + "/" + command.getDocId());
+                priv.localpath + "/" + doc);
             if (doc === null) {
                 // the document does not exists
                 localstorage.setItem(
@@ -247,7 +257,8 @@ var newLocalStorage = function (spec, my) {
                     priv.localpath + "/" + command.getDocId() + "/" +
                         command.getAttachmentId());
                 // remove attachment from document
-                if (typeof doc["_attachments"] === "object") {
+                if (doc !== null && typeof doc === "object" &&
+                    typeof doc["_attachments"] === "object") {
                     delete doc["_attachments"][command.getAttachmentId()];
                     if (priv.objectIsEmpty(doc["_attachments"])) {
                         delete doc["_attachments"];
@@ -263,7 +274,8 @@ var newLocalStorage = function (spec, my) {
             } else {
                 // seeking for a document
                 var attachment_list = [], i;
-                if (typeof doc["_attachments"] === "object") {
+                if (doc !== null && typeof doc === "object" &&
+                    typeof doc["_attachments"] === "object") {
                     // prepare list of attachments
                     for (i in doc["_attachments"]) {
                         attachment_list.push(i);
