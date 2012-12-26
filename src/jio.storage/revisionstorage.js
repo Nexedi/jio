@@ -8,6 +8,7 @@
  * }
  */
 jIO.addStorageType('revision', function (spec, my) {
+    "use strict";
     var that, priv = {};
     spec = spec || {};
     that = my.basicStorage(spec, my);
@@ -155,7 +156,9 @@ jIO.addStorageType('revision', function (spec, my) {
      * @return {array} The added document revs_info
      */
     priv.postToDocumentTree = function (doctree, doc) {
-        var revs_info = [], next_rev, selectNode, selected_node = doctree;
+        var i, revs_info, next_rev, next_rev_str, selectNode, selected_node;
+        revs_info = [];
+        selected_node = doctree;
         selectNode = function (node) {
             var i;
             if (typeof node.rev !== "undefined") {
@@ -192,11 +195,27 @@ jIO.addStorageType('revision', function (spec, my) {
         }
         next_rev = priv.generateNextRevision(
             doc._rev || 0, JSON.stringify(doc) + JSON.stringify(revs_info));
+        next_rev_str = next_rev.join("-");
+        // don't add if the next rev already exists
+        console.log (JSON.stringify (revs_info));
+        for (i = 0; i < selected_node.children.length; i += 1) {
+            console.log (selected_node.children[i].rev);
+            if (selected_node.children[i].rev === next_rev_str) {
+                revs_info.unshift({
+                    "rev": next_rev_str,
+                    "status": "available"
+                });
+                if (selected_node.children[i].status !== "available") {
+                    selected_node.children[i].status = "available";
+                }
+                return revs_info;
+            }
+        }
         revs_info.unshift({
             "rev": next_rev.join('-'),
             "status": "available"
         });
-        selected_node.children.push({
+        selected_node.children.unshift({
             "rev": next_rev.join('-'),
             "status": "available",
             "children": []
