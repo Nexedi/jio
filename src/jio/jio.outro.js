@@ -143,6 +143,8 @@
             } else {
                 param.callback = callback1;
             }
+        } else {
+            param.callback = function () {};
         }
     };
 
