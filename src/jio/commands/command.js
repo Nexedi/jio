@@ -21,7 +21,7 @@ var command = function(spec, my) {
 
     priv.tried     = 0;
     priv.doc       = spec.doc || {};
-    priv.docid     = spec.docid || spec.doc._id || '';
+    priv.docid     = spec.docid || priv.doc._id;
     priv.option    = spec.options || {};
     priv.callbacks = spec.callbacks || {};
     priv.success   = priv.callbacks.success || function (){};
@@ -75,6 +75,9 @@ var command = function(spec, my) {
      * @return {string} The document id
      */
     that.getDocId = function () {
+        if (typeof priv.docid !== "string") {
+            return undefined;
+        }
         return priv.docid.split('/')[0];
     };
 
@@ -84,6 +87,9 @@ var command = function(spec, my) {
      * @return {string} The attachment id
      */
     that.getAttachmentId = function () {
+        if (typeof priv.docid !== "string") {
+            return undefined;
+        }
         return priv.docid.split('/')[1];
     };
 
@@ -157,7 +163,8 @@ var command = function(spec, my) {
      * @param  {object} storage The storage.
      */
     that.validate = function (storage) {
-        if (!priv.docid.match(/^[^\/]+([\/][^\/]+)?$/)) {
+        if (typeof priv.docid === "string" &&
+            !priv.docid.match(/^[^\/]+([\/][^\/]+)?$/)) {
             that.error({
                 status:21,statusText:'Invalid Document Id',
                 error:'invalid_document_id',

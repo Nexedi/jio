@@ -13,7 +13,7 @@ var putAttachmentCommand = function(spec, my) {
     };
 
     that.validateState = function () {
-        if (typeof that.getAttachmentId() === "undefined") {
+        if (typeof that.getAttachmentId() !== "string") {
             that.error({
                 "status": 22,
                 "statusText": "Attachment Id Required",

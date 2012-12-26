@@ -11,7 +11,7 @@ var putCommand = function(spec, my) {
     };
 
     that.validateState = function () {
-        if (typeof that.getDocId() === "string" && that.getDocId() === "") {
+        if (!(typeof that.getDocId() === "string" && that.getDocId() !== "")) {
             that.error({
                 "status": 20,
                 "statusText": "Document Id Required",

@@ -15,7 +15,7 @@ var postCommand = function(spec, my) {
             that.error({
                 "status": 21,
                 "statusText": "Invalid Document Id",
-                "error": "Invalid Document Id",
+                "error": "invalid_document_id",
                 "message": "The document id contains '/' characters "+
                     "which are forbidden",
                 "reason": "Document id contains '/' character(s)"
