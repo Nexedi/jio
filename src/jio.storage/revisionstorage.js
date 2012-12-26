@@ -12,6 +12,16 @@ jIO.addStorageType('revision', function (spec, my) {
     spec = spec || {};
     that = my.basicStorage(spec, my);
 
+    priv.substorage_key = "secondstorage";
+    priv.doctree_suffix = ".revision_tree.json";
+    priv.substorage = spec[priv.substorage_key];
+
+    that.serialized = function () {
+        var o = {};
+        o[priv.substorage_key] = priv.substorage;
+        return o;
+    };
+
     /**
      * Generate a new uuid
      * @method generateUuid
@@ -85,25 +95,6 @@ jIO.addStorageType('revision', function (spec, my) {
     };
 
     /**
-     * Creates the error object for all errors
-     * @method createErrorObject
-     * @param  {number} error_code The error code
-     * @param  {string} error_name The error name
-     * @param  {string} message The error message
-     * @param  {object} error_object The error object (optional)
-     * @return {object} Error object
-     */
-    priv.createErrorObject = function (error_code, error_name,
-                                       message, error_object) {
-        error_object = error_object || {};
-        error_okject["status"] = error_code || 0;
-        error_object["statusText"] = error_name;
-        error_object["error"] = error_name.toLowerCase().split(' ').join('_');
-        error_object["message"] = error_object["error"] = message;
-        return error_object;
-    };
-
-    /**
      * Creates an empty document tree
      * @method createDocumentTree
      * @param  {array} children An array of children (optional)
@@ -157,6 +148,63 @@ jIO.addStorageType('revision', function (spec, my) {
     };
 
     /**
+     * Add a document revision to the document tree
+     * @method postToDocumentTree
+     * @param  {object} doctree The document tree object
+     * @param  {object} doc The document object
+     * @return {array} The added document revs_info
+     */
+    priv.postToDocumentTree = function (doctree, doc) {
+        var revs_info = [], next_rev, selectNode, selected_node = doctree;
+        selectNode = function (node) {
+            var i;
+            if (typeof node.rev !== "undefined") {
+                // node is not root
+                revs_info.unshift({"rev":node.rev,"status":node.status});
+            }
+            if (node.rev === doc._rev) {
+                selected_node = node;
+                return "node_selected";
+            } else {
+                for (i = 0; i < node.children.length; i += 1) {
+                    if (selectNode(node.children[i]) === "node_selected") {
+                        return "node_selected";
+                    }
+                    revs_info.shift();
+                }
+            }
+        };
+        if (typeof doc._rev === "string") {
+            // document has a previous revision
+            if (selectNode(selected_node) !== "node_selected") {
+                // no node was selected, so add a node with a specific rev
+                revs_info.unshift({
+                    "rev": doc._rev,
+                    "status": "missing"
+                });
+                selected_node.children.unshift({
+                    "rev": doc._rev,
+                    "status": "missing",
+                    "children": []
+                });
+                selected_node = selected_node.children[0];
+            }
+        }
+        next_rev = priv.generateNextRevision(
+            doc._rev || 0, JSON.stringify(doc) + JSON.stringify(revs_info));
+        revs_info.unshift({
+            "rev": next_rev.join('-'),
+            "status": "available"
+        });
+        selected_node.children.push({
+            "rev": next_rev.join('-'),
+            "status": "available",
+            "children": []
+        });
+        return revs_info;
+    };
+
+    /**
      * Gets an array of leaves revisions from document tree
      * @method getLeavesFromDocumentTree
      * @param  {object} document_tree The document tree
@@ -181,43 +229,6 @@ jIO.addStorageType('revision', function (spec, my) {
         };
         search(document_tree);
         return result;
-    };
-
-    priv.createDocument = function (doc, id, prev_rev) {
-        var hash, rev;
-        if (typeof prev_rev === "undefined") {
-            hash = priv.hashCode(doc);
-            doc._rev = "1-"+hash;
-            doc._id = id;
-            doc._revisions = {
-                "start": 1,
-                "ids": [hash]
-            };
-            doc._revs_info = [{
-                "rev": "1-"+hash,
-                "status": "available"
-            }];
-
-            return doc;
-        } else {
-            // xxx do not hash _key of doc!
-            prev_rev = priv.revisionToArray(prev_rev);
-            rev = priv.generateNextRevision(prev_rev,doc);
-            doc._rev = rev.join('-');
-            doc._id = id;
-            doc._revisions = {
-                "start": rev[0],
-                "ids": [rev[1],prev_rev[1]]
-            };
-            doc._revs_info = [{
-                "rev": rev.join('-'),
-                "status": "available"
-            },{
-                "rev": prev_rev.join('-'),
-                "status": "missing"
-            }];
-            return doc;
-        }
     };
 
     return that;
