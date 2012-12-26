@@ -231,10 +231,10 @@ var command = function (method) {
 
     switch (method) {
     case 'putAttachment':
-        doc._id = $('#document_id').attr('value');
-        doc._rev = $('#prev_rev').attr('value');
-        doc._data = $('#content').attr('value');
-        doc._mimetype = $('#mimetype').attr('value');
+        doc.id = $('#document_id').attr('value');
+        doc.rev = $('#prev_rev').attr('value');
+        doc.data = $('#content').attr('value');
+        doc.mimetype = $('#mimetype').attr('value');
         log ('attachment: '+ JSON.stringify (doc));
         break;
     case 'post':

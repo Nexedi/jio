@@ -17,6 +17,7 @@ var log = function (o) {
   <div id="log">
   </div>
   <script type="text/javascript" src="../localorcookiestorage.js"></script>
+  <script type="text/javascript" src="../lib/md5/md5.js"></script>
   <script type="text/javascript" src="../jio.js"></script>
   <script type="text/javascript" src="../lib/jquery/jquery.min.js"></script>
   <script type="text/javascript" src="../lib/base64/base64.js"></script>
@@ -28,29 +29,50 @@ var log = function (o) {
 var my_jio = null;
 
 log ('Welcome to the jIO example.html!')
-log ('--> Create jIO instance');
+log ('-> Create jIO instance');
 
 my_jio = jIO.newJio({
     type: 'local', username: 'jIOtest', applicationname: 'example'
 });
 
-log ('--> put "hello" document to localStorage');
-// careful ! asynchronous method
-my_jio.put({_id:'hello',content:'world'},function (val) {
-    log ('done');
+// careful ! asynchronous methods
+log ('-> post "video" document metadata to localStorage');
+my_jio.post({_id:'video', title:'My Video Title', codec:'vorbis', language:'en', description: 'Image compilation'}, function (val) {
+
+    log ('-> put "thumbnail" attachment to localStorage');
+    my_jio.putAttachment({id:"video/thumb.jpg", data:"BASE64DATA", mimetype:'image/jpeg'}, function (val) {
+
+        log ('-> put "video" attachment to localStorage');
+        my_jio.putAttachment({id:"video/myvideo.ogg", data:"BASE64DATATOO", mimetype:'video/ogg'}, function (val) {
+            log ('Done! Refresh the page to see get and remove command.');
+        }, function (err) {
+            log ('Error! '+ err.reason);
+        });
+
+    }, function (err) {
+        log ('Error! ' + err.reason);
+    });
+
 }, function (err) {
-    log ('error!');
+    log ('Error! ' + err.reason);
+
+    log ('-> get "video" document metadata from localStorage');
+    my_jio.get('video', function (val) {
+        log ('Title is: "' + val["title"] + '"');
+
+        log ('-> remove "video" document from localStorage');
+        my_jio.remove({_id:'video'}, function (val) {
+            log ('Done! Refresh the page to see post and putAttachment command.');
+        }, function (err) {
+            log ('Error! ' + err.reason);
+        });
+
+    }, function (err) {
+        log ('Error! ' + err.reason);
+    });
+
 });
 
-setTimeout ( function () {
-    log ('--> get "hello" document from localStorage');
-
-    my_jio.get('hello',function (val) {
-        log ('done, content: ' + val.content);
-    }, function (err) {
-        log ('error!');
-    });
-}, 500);
         //-->
   </script>
 </body>
