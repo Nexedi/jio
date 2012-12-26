@@ -92,7 +92,7 @@ jIO.addStorageType('revision', function (spec, my) {
      * @return {boolean} True if ok, else false
      */
     priv.checkRevisionFormat = function (revision) {
-        return /^[0-9]+-[0-9a-zA-Z]+$/.test(revision);
+        return (/^[0-9]+-[0-9a-zA-Z]+$/.test(revision));
     };
 
     /**
@@ -122,19 +122,36 @@ jIO.addStorageType('revision', function (spec, my) {
      * The winner is the deeper revision on the left.
      * @method getWinnerRevisionFromDocumentTree
      * @param  {object} document_tree The document tree
-     * @return {string} The winner revision
+     * @return {array} The winner revs info array
+     */
+    /**
+     * Gets the winner revision from a document tree.
+     * The winner is the deeper revision on the left.
+     * @method getWinnerRevisionFromDocumentTree
+     * @param  {object} document_tree The document tree
+     * @return {array} The winner revs info array
      */
     priv.getWinnerRevisionFromDocumentTree = function (document_tree) {
-        var i, result, search;
-        result = {"deep":-1,"revision":''};
-        // search method fills "result" with the winner revision
+        var i, result, search, revs_info = [];
+        result = [];
+        // search method fills "result" with the winner revs info
         search = function (document_tree, deep) {
             var i;
+            if (typeof document_tree.rev !== "undefined") {
+                // node is not root
+                revs_info.unshift({
+                    "rev":document_tree.rev,
+                    "status":document_tree.status
+                });
+            }
             if (document_tree.children.length === 0) {
                 // This node is a leaf
-                if (result.deep < deep) {
+                if (result.length < deep) {
                     // The leaf is deeper than result
-                    result = {"deep":deep,"revision":document_tree.rev};
+                    result = [];
+                    for (i = 0; i < revs_info.length; i += 1) {
+                        result.push(revs_info[i]);
+                    }
                 }
                 return;
             }
@@ -142,10 +159,11 @@ jIO.addStorageType('revision', function (spec, my) {
             for (i = 0; i < document_tree.children.length; i += 1) {
                 // searching deeper to find the deeper leaf
                 search(document_tree.children[i], deep+1);
+                revs_info.shift();
             }
         };
         search(document_tree, 0);
-        return result.rev;
+        return result;
     };
 
     /**
@@ -197,9 +215,7 @@ jIO.addStorageType('revision', function (spec, my) {
             doc._rev || 0, JSON.stringify(doc) + JSON.stringify(revs_info));
         next_rev_str = next_rev.join("-");
         // don't add if the next rev already exists
-        console.log (JSON.stringify (revs_info));
         for (i = 0; i < selected_node.children.length; i += 1) {
-            console.log (selected_node.children[i].rev);
             if (selected_node.children[i].rev === next_rev_str) {
                 revs_info.unshift({
                     "rev": next_rev_str,
@@ -227,9 +243,10 @@ jIO.addStorageType('revision', function (spec, my) {
      * Gets an array of leaves revisions from document tree
      * @method getLeavesFromDocumentTree
      * @param  {object} document_tree The document tree
+     * @param  {string} except The revision to except
      * @return {array} The array of leaves revisions
      */
-    priv.getLeavesFromDocumentTree = function (document_tree) {
+    priv.getLeavesFromDocumentTree = function (document_tree, except) {
         var i, result, search;
         result = [];
         // search method fills [result] with the winner revision
@@ -237,6 +254,9 @@ jIO.addStorageType('revision', function (spec, my) {
             var i;
             if (document_tree.children.length === 0) {
                 // This node is a leaf
+                if (except !== undefined && except === document_tree.rev) {
+                    return;
+                }
                 result.push(document_tree.rev);
                 return;
             }
@@ -250,6 +270,22 @@ jIO.addStorageType('revision', function (spec, my) {
         return result;
     };
 
+    /**
+     * Convert revs_info to a simple revisions history
+     * @method revsInfoToHistory
+     * @param  {array} revs_info The revs info
+     * @return {object} The revisions history
+     */
+    priv.revsInfoToHistory = function (revs_info) {
+        var revisions = {"start":0,"ids":[]}, i;
+        if (revs_info.length > 0) {
+            revisions.start = revs_info[0].rev.split('-')[0];
+        }
+        for (i = 0; i < revs_info.length; i += 1) {
+            revisions.ids.push(revs_info[i].rev.split('-')[1]);
+        }
+        return revisions;
+    };
 
     /**
      * Post the document metadata and create or update a document tree.
