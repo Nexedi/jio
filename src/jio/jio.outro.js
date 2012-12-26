@@ -317,7 +317,7 @@
         configurable:false,enumerable:false,writable:false,value:
         function(options, success, error) {
             var param = priv.parametersToObject(
-                [options,success.error],
+                [options,success,error],
                 {max_retry: 3}
             );
 
