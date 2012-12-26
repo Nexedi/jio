@@ -417,5 +417,100 @@ jIO.addStorageType('revision', function (spec, my) {
         that.post(command);
     };
 
+    /**
+     * Get the document metadata or attachment.
+     * Options:
+     * - {boolean} revs Add simple revision history (false by default).
+     * - {boolean} revs_info Add revs info (false by default).
+     * - {boolean} conflicts Add conflict object (false by default).
+     * @method get
+     * @param  {object} command The JIO command
+     */
+    that.get = function (command) {
+        var f = {}, doctree, revs_info, prev_rev, revs_info, option;
+        option = command.cloneOption();
+        if (option["max_retry"] === 0) {
+            option["max_retry"] = 3;
+        }
+        prev_rev = command.getDocInfo("_rev");
+        if (typeof prev_rev === "string") {
+            if (!priv.checkRevisionFormat(prev_rev)) {
+                that.error({
+                    "status": 31,
+                    "statusText": "Wrong Revision Format",
+                    "error": "wrong_revision_format",
+                    "message": "The document previous revision does not match "+
+                        "[0-9]+-[0-9a-zA-Z]+",
+                    "reason": "Previous revision is wrong"
+                });
+                return;
+            }
+        }
+        f.getDocumentTree = function () {
+            that.addJob(
+                "get",
+                priv.substorage,
+                command.getDocId()+priv.doctree_suffix,
+                option,
+                function (response) {
+                    doctree = response;
+                    revs_info = priv.getWinnerRevisionFromDocumentTree(doctree);
+                    if (prev_rev === undefined) {
+                        prev_rev = revs_info[0].rev;
+                    }
+                    f.getDocument(command.getDocId()+"."+prev_rev);
+                }, function (err) {
+                    switch(err.status) {
+                    case 404:
+                        that.error(err);
+                        break;
+                    default:
+                        err.message = "Cannot get document revision tree";
+                        that.error(err);
+                        break;
+                    }
+                }
+            );
+        };
+        f.getDocument = function (docid) {
+            that.addJob(
+                "get",
+                priv.substorage,
+                docid,
+                option,
+                function (response) {
+                    var i, conflict_array;
+                    if (typeof response !== "string") {
+                        response._id = command.getDocId();
+                        response._rev = prev_rev;
+                        if (command.getOption("revs") === true) {
+                            response._revisions =
+                                priv.revsInfoToHistory(revs_info);
+                        }
+                        if (command.getOption("revs_info") === true) {
+                            response._revs_info = revs_info;
+                        }
+                        if (command.getOption("conflicts") === true) {
+                            response._conflicts =
+                                priv.getLeavesFromDocumentTree(
+                                    doctree, prev_rev);
+                            if (response._conflicts.length === 0) {
+                                delete response._conflicts;
+                            }
+                        }
+                    }
+                    that.success(response);
+                }, function (err) {
+                    that.error(err);
+                }
+            );
+        };
+        if (command.getAttachmentId()) {
+            f.getDocument(command.getDocId()+"/"+command.getAttachmentId());
+        } else {
+            f.getDocumentTree();
+        }
+    };
+
     return that;
 });
