@@ -1,6 +1,5 @@
 (function () { var thisfun = function(loader) {
     var JIO = loader.JIO,
-    LocalOrCookieStorage = loader.LocalOrCookieStorage,
     sjcl = loader.sjcl,
     Base64 = loader.Base64,
     $ = loader.jQuery;
@@ -19,12 +18,28 @@ contains = function (array,content) {
     }
     return false;
 },
-clean_up_local_storage_function = function(){
-    var k, storageObject = LocalOrCookieStorage.getAll();
+// localStorage wrapper
+localstorage = {
+    clear: function () {
+        return localStorage.clear();
+    },
+    getItem: function (item) {
+        var value = localStorage.getItem(item);
+        return value === null? null: JSON.parse(value);
+    },
+    setItem: function (item,value) {
+        return localStorage.setItem(item,JSON.stringify (value));
+    },
+    removeItem: function (item) {
+        return localStorage.removeItem(item);
+    }
+},
+cleanUpLocalStorage = function(){
+    var k, storageObject = localstorage.getAll();
     for (k in storageObject) {
         var splitk = k.split('/');
         if ( splitk[0] === 'jio' ) {
-            LocalOrCookieStorage.deleteItem(k);
+            localstorage.removeItem(k);
         }
     }
     var d = document.createElement ('div');
@@ -34,11 +49,10 @@ clean_up_local_storage_function = function(){
     localStorage.clear();
 },
 base_tick = 30000,
-basic_test_function_generator = function(o,res,value,message) {
+basicTestFunctionGenerator = function(o,res,value,message) {
 
     return function(err,val) {
-        var jobstatus = (err?'fail':'done'),
-            val = ( isEmptyObject(value) && isUUID(val._id) ) ? {} : val;
+        var jobstatus = (err?'fail':'done');
 
         switch (res) {
         case 'status':
@@ -56,15 +70,15 @@ basic_test_function_generator = function(o,res,value,message) {
         deepEqual (val,value,message);
     };
 },
-basic_spy_function = function(o,res,value,message,fun) {
+basicSpyFunction = function(o,res,value,message,fun) {
 
     fun = fun || 'f';
-    o[fun] = basic_test_function_generator(o,res,value,message);
+    o[fun] = basicTestFunctionGenerator(o,res,value,message);
     o.t.spy(o,fun);
 },
-basic_tick_function = function (o) {
+basicTickFunction = function (o) {
     var tick, fun, i = 1;
-    tick = 1000;
+    tick = 10000;
     fun = fun || 'f';
 
     if (typeof arguments[i] === 'number') {
@@ -83,7 +97,7 @@ basic_tick_function = function (o) {
     }
 },
 // debug function to show custumized log at the bottom of the page
-my_log = function (html_string) {
+myLog = function (html_string) {
     document.querySelector ('div#log').innerHTML += html_string + '<hr/>';
 },
 getXML = function (url) {
@@ -95,181 +109,88 @@ getXML = function (url) {
 objectifyDocumentArray = function (array) {
     var obj = {}, k;
     for (k = 0; k < array.length; k += 1) {
-        obj[array[k].id] = array[k];
+        obj[array[k]._id] = array[k];
     }
     return obj;
 },
-addFileToLocalStorage = function (user,appid,file) {
-    var i, l, found = false, filenamearray,
-    userarray = LocalOrCookieStorage.getItem('jio/local_user_array') || [];
-    for (i = 0, l = userarray.length; i < l; i+= 1) {
-        if (userarray[i] === user) { found = true; }
-    }
-    if (!found) {
-        userarray.push(user);
-        LocalOrCookieStorage.setItem('jio/local_user_array',userarray);
-        LocalOrCookieStorage.setItem(
-            'jio/local_file_name_array/'+user+'/'+appid,[file._id]);
-    } else {
-        filenamearray =
-            LocalOrCookieStorage.getItem(
-                'jio/local_file_name_array/'+user+'/'+appid) || [];
-        filenamearray.push(file._id);
-        LocalOrCookieStorage.setItem(
-            'jio/local_file_name_array/'+user+'/'+appid,
-            filenamearray);
-        LocalOrCookieStorage.setItem(
-            'jio/local/'+user+'/'+appid+'/'+file._id,
-            file);
-    }
-    LocalOrCookieStorage.setItem(
-        'jio/local/'+user+'/'+appid+'/'+file._id,
-        file);
+getLastJob = function (id) {
+    return (localstorage.getItem("jio/job_array/"+id) || [undefined]).pop();
 },
-removeFileFromLocalStorage = function (user,appid,file) {
-    var i, l, newarray = [],
-    filenamearray =
-        LocalOrCookieStorage.getItem(
-            'jio/local_file_name_array/'+user+'/'+appid) || [];
-    for (i = 0, l = filenamearray.length; i < l; i+= 1) {
-        if (filenamearray[i] !== file._id) {
-            newarray.push(filenamearray[i]);
-        }
-    }
-    LocalOrCookieStorage.setItem('jio/local_file_name_array/'+user+'/'+appid,
-                                 newarray);
-    LocalOrCookieStorage.deleteItem(
-        'jio/local/'+user+'/'+appid+'/'+file._id);
-},
-makeRevsAccordingToRevsInfo = function (revs,revs_info) {
-    var i, j;
-    for (i = 0; i < revs.start; i+= 1) {
-        for (j = 0; j < revs_info.length; j+= 1) {
-            var id = revs_info[j].rev.split('-'); id.shift(); id = id.join('-');
-            if (revs.ids[i] === id) {
-                revs.ids[i] = revs_info[j].rev.split('-')[0];
+generateTools = function (sinon) {
+    var o = {};
+    o.t = sinon;
+    o.clock = o.t.sandbox.useFakeTimers();
+    o.clock.tick(base_tick);
+    o.spy = basicSpyFunction;
+    o.tick = basicTickFunction;
+    o.testLastJobLabel = function (label, mess) {
+        deepEqual(
+            getLastJob(o.jio.getId()).command.label,
+            label,
+            mess
+        );
+    };
+    o.testLastJobId = function (id, mess) {
+        deepEqual(
+            getLastJob(o.jio.getId()).id,
+            id,
+            mess
+        );
+    };
+    o.testLastJobWaitForTime = function (mess) {
+        ok(getLastJob(o.jio.getId()).status.waitfortime > 0, mess);
+    };
+    o.testLastJobWaitForJob = function (job_id_array, mess) {
+        deepEqual(
+            getLastJob(o.jio.getId()).status.waitforjob,
+            job_id_array,
+            mess
+        );
+    };
+    o.waitUntilAJobExists = function (timeout) {
+        var cpt = 0
+        while (true) {
+            if (getLastJob(o.jio.getId()) !== undefined) {
                 break;
             }
+            if (timeout >= cpt) {
+                ok(false, "no job added to the queue");
+                break;
+            }
+            o.clock.tick(25);
+            cpt += 25;
         }
-    }
-},
-checkRev = function (rev) {
-    if (typeof rev === 'string') {
-        if (rev.split('-').length > 1 &&
-            parseInt(rev.split('-')[0],10) > 0) {
-            return rev;
+    };
+    o.waitUntilLastJobIs = function (state) {
+        while (true) {
+            if (getLastJob(o.jio.getId()) === undefined) {
+                ok(false, "a job is never called");
+                break;
+            }
+            if (getLastJob(o.jio.getId()).status.label === state) {
+                break;
+            }
+            o.clock.tick(25);
         }
-    }
-    return 'ERROR: not a good revision!';
-},
-checkConflictRow = function (row) {
-    var fun;
-    if (typeof row === 'object') {
-        if (row.value && typeof row.value._solveConflict === 'function') {
-            fun = row.value._solveConflict;
-            row.value._solveConflict = 'function';
-        }
-    }
-    return fun;
-},
-getHashFromRev = function (rev) {
-    var id = rev;
-    if (typeof id === 'string') {
-        id = id.split('-');
-        id.shift(); id = id.join('-');
-    }
-    return id;
-},
-revs_infoContains = function (revs_info, rev) {
-    var i;
-    if (typeof revs_info !== 'object') {
-        return undefined;
-    }
-    for (i = 0; i < revs_info.length || 0; i+= 1) {
-        if (revs_info[i].rev && revs_info[i].rev === rev) {
-            return true;
-        }
-    }
-    return false;
-},
-isUUID = function( _id ){
-
-    var re = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
-    if ( re.test( _id ) ){
-        return true;
-    } else {
-        return false;
-    }
-},
-isEmptyObject = function( obj) {
-    var key;
-
-    if (obj.length && obj.length > 0){
-        return false;
-    }
-    if (obj.length && obj.length === 0){
-        return true;
-    }
-    for (key in obj) {
-        if (hasOwnProperty.call(obj, key)){
-            return false;
-        }
-    }
-    return true;
-},
+    };
+    return o;
+};
 //// end tools
 
 //// test methods ////
-checkReply = function(o,tick,fun){
-    basic_tick_function(o,tick,fun);
-},
-checkFile = function (response, o, tick, value, fun) {
-    o.tmp = localstorage.getItem('jio/local/'+o.username+'/jiotests/'+
-        response.id+'/'+response.rev );
-
-    // remove everything not needed for basic response
-    o.tmp.ok = true;
-    delete o.tmp._revisions;
-    delete o.tmp._revs_info;
-    delete o.tmp.content;
-
-    if (o.tmp) {
-        deepEqual (o.tmp,{
-            "ok":response.ok,
-            "_id":response.id,
-            "_rev":response.rev,
-            },'document was created or updated');
-    } else {
-        ok (false, 'document was not created or updated');
-    }
-},
-
-checkTreeNode = function (response,o,tick,value,fun) {
-    o.tmp = localstorage.getItem('jio/local/'+o.username+'/jiotests/'+
-        response.id+'/revision_tree' );
-
-    if (o.tmp) {
-        deepEqual (o.tmp,o.buildTestTree,'tree node was created');
-    } else {
-        ok (false, 'tree node was not created');
-    }
-};
-
-
 
 //// QUnit Tests ////
-
 module ('Jio Global tests');
 
 test ( "Jio simple methods", function () {
-    var clock = this.sandbox.useFakeTimers(); clock.tick(base_tick);
     // Test Jio simple methods
     // It checks if we can create several instance of jio at the same
     // time. Checks if they don't overlap informations, if they are
     // started and stopped correctly and if they are ready when they
     // have to be ready.
 
-    var o = {};
+    var o = generateTools(this);
+
     o.jio = JIO.newJio();
     ok ( o.jio, 'a new jio -> 1');
 
@@ -312,917 +233,776 @@ test ( "Jio simple methods", function () {
 //     o.jio.stop();
 // });
 
-module ( 'Jio Dummy Storages' );
+module ( "Jio Dummy Storages" );
 
-test ('All tests', function () {
-    // Tests all dummy storages from jio.dummystorages.js
-    // It is simple tests, but they will be used by replicate storage later
-    // for sync operation.
+test ("All requests ok", function () {
+    // Tests the request methods and the response with dummy storages
 
-    var o = {}; o.t = this; o.clock = o.t.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.spy = basic_spy_function;
-    o.tick = basic_tick_function;
+    var o = generateTools(this);
 
     // All Ok Dummy Storage
-    o.jio = JIO.newJio({'type':'dummyallok'});
+    o.jio = JIO.newJio({"type": "dummyallok"});
 
-    // post empty
-    o.jio.post({},
-        function(err, response) {
-            o.spy(o,'value',{"ok":true, "id":response.id, "rev":response.rev},
-                  'dummyallok post/create empty object');
-            o.f(response);
-        });
+    // post empty document, some storage can create there own id (like couchdb
+    // generates uuid). In this case, the dummy storage write an undefined id.
+    o.spy(o, "value", {"ok": true, "id": undefined},
+          "Post document with empty id");
+    o.jio.post({}, o.f);
     o.tick(o);
 
-    // post
-    o.jio.post({"content":"basic_content"},
-        function(err, response) {
-            o.spy(o,'value',{"ok":true, "id":response.id, "rev":response.rev},
-                  'dummyallok post/create object');
-            o.f(response);
-        });
+    // post non empty document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Post non empty document");
+    o.jio.post({"_id": "file", "title": "myFile"}, o.f);
     o.tick(o);
 
-    // put
-    o.jio.put({"_id":"file","content":"basic_content"},
-        function(err, response) {
-            o.spy(o,'value',{"ok":true, "id":"file", "rev":response.rev},
-                  'dummyallok put create object');
-            o.f(response);
-        });
+    // put without id
+    // error 20 -> document id required
+    o.spy(o, "status", 20, "Put document with empty id");
+    o.jio.put({}, o.f);
     o.tick(o);
 
-    /*
-
-    // load
-    o.spy(o,'value',{_id:'file',content:'content',_last_modified:15000,
-                     _creation_date:10000},'dummyallok loading');
-    o.jio.get('file',o.f);
+    // put non empty document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Put non empty document");
+    o.jio.put({"_id": "file", "title": "myFile"}, o.f);
     o.tick(o);
 
-    // remove
-    o.spy(o,'value',{ok:true,id:"file"},'dummyallok removing');
-    o.jio.remove({_id:'file'},o.f);
+    // put an attachment without attachment id
+    // error 22 -> attachment id required
+    o.spy(o, "status", 22,
+          "Put attachment without id");
+    o.jio.putAttachment({
+        "id": "file",
+        "data": "0123456789",
+        "mimetype": "text/plain"
+    }, o.f);
     o.tick(o);
 
-    // get list
-    o.spy (o,'value',{
-        total_rows:2,
-        rows:[{
-            id:'file',key:'file',
-            value:{
-                content:'filecontent',
-                _last_modified:15000,
-                _creation_date:10000
-            }
-        },{
-            id:'memo',key:'memo',
-            value:{
-                content:'memocontent',
-                _last_modified:25000,
-                _creation_date:20000
-            }
-        }]
-    },'dummyallok getting list');
-    o.jio.allDocs({metadata_only:false},o.f);
+    // put an attachment
+    o.spy(o, "value", {"ok": true, "id": "file/attmt"},
+          "Put attachment");
+    o.jio.putAttachment({
+        "id": "file/attmt",
+        "data": "0123456789",
+        "mimetype": "text/plain"
+    }, o.f);
     o.tick(o);
-    o.jio.stop();
 
-
-    o.jio = JIO.newJio({'type':'dummyallok'});
-    // save
-    o.spy(o,'value',{ok:true,id:'file'},'dummyallok saving1','f');
-    o.spy(o,'value',{ok:true,id:'file2'},'dummyallok saving2','f2');
-    o.spy(o,'value',{ok:true,id:'file3'},'dummyallok saving3','f3');
-    o.jio.put({_id:'file',content:'content'},o.f);
-    o.jio.put({_id:'file2',content:'content2'},o.f2);
-    o.jio.put({_id:'file3',content:'content3'},o.f3);
-    o.tick(o, 1000, 'f');
-    o.tick(o, 'f2');
-    o.tick(o, 'f3');
-    o.jio.stop();
-
-
-    // All Fail Dummy Storage
-    o.jio = JIO.newJio({'type':'dummyallfail'});
-    // save
-    o.spy (o,'status',0,'dummyallfail saving');
-    o.jio.put({_id:'file',content:'content'},o.f);
+    // get document
+    o.spy(o, "value", {"_id": "file", "title": "get_title"}, "Get document");
+    o.jio.get("file", o.f);
     o.tick(o);
-    // load
-    o.spy (o,'status',0,'dummyallfail loading');
-    o.jio.get('file',o.f);
+
+    // get attachment
+    o.spy(o, "value", "0123456789", "Get attachment");
+    o.jio.get("file/attmt", o.f);
     o.tick(o);
-    // remove
-    o.spy (o,'status',0,'dummyallfail removing');
-    o.jio.remove({_id:'file'},o.f);
+
+    // remove document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Remove document");
+    o.jio.remove({"_id": "file"}, o.f);
     o.tick(o);
-    // get list
-    o.spy (o,'status',0,'dummyallfail getting list');
+
+    // remove attachment
+    o.spy(o, "value", {"ok": true, "id": "file/attmt"}, "Remove attachment");
+    o.jio.remove({"_id": "file/attmt"}, o.f);
+    o.tick(o);
+
+    // alldocs
+    // error 405 -> Method not allowed
+    o.spy(o, "status", 405, "AllDocs fail");
     o.jio.allDocs(o.f);
     o.tick(o);
-    o.jio.stop();
 
-    // All Not Found Dummy Storage
-    o.jio = JIO.newJio({'type':'dummyallnotfound'});
-    // save
-    o.spy(o,'value',{ok:true,id:'file'},'dummyallnotfound saving');
-    o.jio.put({_id:'file',content:'content'},o.f);
-    o.tick(o);
-    // load
-    o.spy(o,'status',404,'dummyallnotfound loading')
-    o.jio.get('file',o.f);
-    o.tick(o);
-    // remove
-    o.spy(o,'value',{ok:true,id:'file'},'dummyallnotfound removing');
-    o.jio.remove({_id:'file'},o.f);
-    o.tick(o);
-    // get list
-    o.spy(o,'status',404,'dummyallnotfound getting list');
-    o.jio.allDocs (o.f);
-    o.tick(o);
-    o.jio.stop();
-
-    */
-});
-/*
-module ( 'Jio Job Managing' );
-
-test ('Simple Job Elimination', function () {
-    var clock = this.sandbox.useFakeTimers(); clock.tick(base_tick);
-    var o = {}, id = 0;
-    o.f1 = this.spy(); o.f2 = this.spy();
-
-    o.jio = JIO.newJio({type:'dummyallok',applicationname:'jiotests'});
-    id = o.jio.getId();
-    o.jio.put({_id:'file',content:'content'},
-              {max_retry:1},o.f1);
-    ok(LocalOrCookieStorage.getItem('jio/job_array/'+id)[0],
-       'job creation');
-    o.jio.remove({_id:'file'},{max_retry:1},o.f2);
-    o.tmp = LocalOrCookieStorage.getItem('jio/job_array/'+id)[0];
-    deepEqual(o.tmp.command.label,'remove','job elimination');
     o.jio.stop();
 });
 
-test ('Simple Job Replacement', function () {
-    // Test if the second job write over the first one
+test ("All requests fail", function () {
+    // Tests the request methods and the err object with dummy storages
 
-    var o = {};
-    o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.id = 0;
-    o.f1 = function (err,val) {
-        if (err) {
-            o.err = err;
-        } else {
-            o.err = {status:'done'};
-        }
-    };
-    this.spy(o,'f1');
-    o.f2 = this.spy();
+    var o = generateTools(this);
 
-    o.jio = JIO.newJio({type:'dummyallok',applicationname:'jiotests'});
-    o.id = o.jio.getId();
-    o.jio.put({_id:'file',content:'content'},o.f1);
-    o.clock.tick(10);
-    o.jio.put({_id:'file',content:'content'},o.f2);
-    deepEqual(LocalOrCookieStorage.getItem(
-        'jio/job_array/'+o.id)[0].date,base_tick + 10,
-              'The first job date have to be equal to the second job date.');
-    o.clock.tick(1000);
-    deepEqual([o.f1.calledOnce,o.err.status],[true,12],
-       'callback for the first save request -> result fail');
-    ok(o.f2.calledOnce,'second callback is called once');
+    // All Ok Dummy Storage
+    o.jio = JIO.newJio({"type": "dummyallfail"});
+
+    // post empty document
+    // error 0 -> unknown
+    o.spy(o, "status", 0, "Post document with empty id");
+    o.jio.post({}, o.f);
+    o.tick(o);
+
+    // test if the job still exists
+    if (getLastJob(o.jio.getId()) !== undefined) {
+        ok(false, "The job is not removed from the job queue");
+    }
+
+    // post non empty document
+    o.spy(o, "status", 0, "Post non empty document");
+    o.jio.post({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put without id
+    // error 20 -> document id required
+    o.spy(o, "status", 20, "Put document with empty id");
+    o.jio.put({}, o.f);
+    o.tick(o);
+
+    // put non empty document
+    o.spy(o, "status", 0, "Put non empty document");
+    o.jio.put({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put an attachment without attachment id
+    // error 22 -> attachment id required
+    o.spy(o, "status", 22,
+          "Put attachment without id");
+    o.jio.putAttachment({
+        "id": "file",
+        "data": "0123456789",
+        "mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // put an attachment
+    o.spy(o, "status", 0,
+          "Put attachment");
+    o.jio.putAttachment({
+        "id": "file/attmt",
+        "data": "0123456789",
+        "mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // get document
+    o.spy(o, "status", 0, "Get document");
+    o.jio.get("file", o.f);
+    o.tick(o);
+
+    // get attachment
+    o.spy(o, "status", 0, "Get attachment");
+    o.jio.get("file/attmt", o.f);
+    o.tick(o);
+
+    // remove document
+    o.spy(o, "status", 0, "Remove document");
+    o.jio.remove({"_id": "file"}, o.f);
+    o.tick(o);
+
+    // remove attachment
+    o.spy(o, "status", 0, "Remove attachment");
+    o.jio.remove({"_id": "file/attmt"}, o.f);
+    o.tick(o);
+
+    // alldocs
+    // error 405 -> Method not allowed
+    o.spy(o, "status", 405, "AllDocs fail");
+    o.jio.allDocs(o.f);
+    o.tick(o);
+
+    o.jio.stop();
+});
+
+test ("All document not found", function () {
+    // Tests the request methods without document
+
+    var o = generateTools(this);
+
+    // All Ok Dummy Storage
+    o.jio = JIO.newJio({"type": "dummyallnotfound"});
+
+    // post document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Post document");
+    o.jio.post({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Put document");
+    o.jio.put({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put an attachment without attachment id
+    // error 22 -> attachment id required
+    o.spy(o, "status", 22,
+          "Put attachment without id");
+    o.jio.putAttachment({
+        "id": "file",
+        "data": "0123456789",
+        "mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // put an attachment
+    o.spy(o, "value", {"ok": true, "id": "file/attmt"},
+          "Put attachment");
+    o.jio.putAttachment({
+        "id": "file/attmt",
+        "data": "0123456789",
+        "mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // get document
+    o.spy(o, "status", 404, "Get document");
+    o.jio.get("file", o.f);
+    o.tick(o);
+
+    // get attachment
+    o.spy(o, "status", 404, "Get attachment");
+    o.jio.get("file/attmt", o.f);
+    o.tick(o);
+
+    // remove document
+    o.spy(o, "status", 404, "Remove document");
+    o.jio.remove({"_id": "file"}, o.f);
+    o.tick(o);
+
+    // remove attachment
+    o.spy(o, "status", 404, "Remove attachment");
+    o.jio.remove({"_id": "file/attmt"}, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+});
+
+test ("All document found", function () {
+    // Tests the request methods with document
+
+    var o = generateTools(this);
+
+    // All Ok Dummy Storage
+    o.jio = JIO.newJio({"type": "dummyallfound"});
+
+    // post non empty document
+    o.spy(o, "status", 409, "Post document");
+    o.jio.post({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put non empty document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Put non empty document");
+    o.jio.put({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put an attachment without attachment id
+    // error 22 -> attachment id required
+    o.spy(o, "status", 22,
+          "Put attachment without id");
+    o.jio.putAttachment({
+        "id": "file",
+        "data": "0123456789",
+        "mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // put an attachment
+    o.spy(o, "value", {"ok": true, "id": "file/attmt"},
+          "Put attachment");
+    o.jio.putAttachment({
+        "id": "file/attmt",
+        "data": "0123456789",
+        "mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // get document
+    o.spy(o, "value", {"_id": "file", "title": "get_title"}, "Get document");
+    o.jio.get("file", o.f);
+    o.tick(o);
+
+    // get attachment
+    o.spy(o, "value", "0123456789", "Get attachment");
+    o.jio.get("file/attmt", o.f);
+    o.tick(o);
+
+    // remove document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Remove document");
+    o.jio.remove({"_id": "file"}, o.f);
+    o.tick(o);
+
+    // remove attachment
+    o.spy(o, "value", {"ok": true, "id": "file/attmt"}, "Remove attachment");
+    o.jio.remove({"_id": "file/attmt"}, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+});
+
+module ( "Jio Job Managing" );
+
+test ("Several Jobs at the same time", function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({"type":"dummyallok"});
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job1", "f");
+    o.spy(o, "value", {"ok": true, "id": "file2"}, "job2", "f2");
+    o.spy(o, "value", {"ok": true, "id": "file3"}, "job3", "f3");
+    o.jio.put({"_id": "file",  "content": "content"}, o.f);
+    o.jio.put({"_id": "file2", "content": "content2"}, o.f2);
+    o.jio.put({"_id": "file3", "content": "content3"}, o.f3);
+    o.tick(o, 1000, "f");
+    o.tick(o, "f2");
+    o.tick(o, "f3");
     o.jio.stop();
 
-    o.jio = JIO.newJio({type:'dummyallok',applicationname:'jiotests'});
-    o.ok1 = 0;
-    o.jio.get('file1',function (err,val) {
-        deepEqual (err || val,
-                   {_id:'file1',content:'content',
-                    _creation_date:10000,_last_modified:15000},
-                   'First load');
-        o.ok1 ++;
+});
+
+test ("Similar Jobs at the same time (Replace)", function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({"type":"dummyallok"});
+    o.spy(o, "status", 12, "job1 replaced", "f");
+    o.spy(o, "status", 12, "job2 replaced", "f2");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job3 ok", "f3");
+    o.jio.put({"_id": "file", "content": "content"}, o.f);
+    o.jio.put({"_id": "file", "content": "content"}, o.f2);
+    o.jio.put({"_id": "file", "content": "content"}, o.f3);
+    o.tick(o, 1000, "f");
+    o.tick(o, "f2");
+    o.tick(o, "f3");
+    o.jio.stop();
+
+});
+
+test ("One document aim jobs at the same time (Wait for job(s))" , function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({"type":"dummyallok"});
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job1", "f");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job2", "f2");
+    o.spy(o, "value", {"_id": "file", "title": "get_title"}, "job3", "f3");
+
+    o.jio.post({"_id": "file", "content": "content"}, o.f);
+    o.testLastJobWaitForJob(undefined, "job1 is not waiting for someone");
+
+    o.jio.put({"_id": "file", "content": "content"}, o.f2);
+    o.testLastJobWaitForJob([1], "job2 is waiting");
+
+    o.jio.get("file", o.f3);
+    o.testLastJobWaitForJob([1, 2], "job3 is waiting");
+
+    o.tick(o, 1000, "f");
+    o.tick(o, "f2");
+    o.tick(o, "f3");
+    o.jio.stop();
+
+});
+
+test ("One document aim jobs at the same time (Elimination)" , function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({"type":"dummyallok"});
+    o.spy(o, "status", 10, "job1 stopped", "f");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job2", "f2");
+
+    o.jio.post({"_id": "file", "content": "content"}, o.f);
+    o.testLastJobLabel("post", "job1 exists");
+
+    o.jio.remove({"_id": "file"}, o.f2);
+    o.testLastJobLabel("remove", "job1 does not exist anymore");
+
+    o.tick(o, 1000, "f");
+    o.tick(o, "f2");
+    o.jio.stop();
+
+});
+
+test ("One document aim jobs at the same time (Not Acceptable)" , function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({"type":"dummyallok"});
+    o.spy(o, "value", {"_id": "file", "title": "get_title"}, "job1", "f");
+    o.spy(o, "status", 11, "job2 is not acceptable", "f2");
+
+    o.jio.get("file", o.f);
+    o.testLastJobId(1, "job1 added to queue");
+    o.waitUntilLastJobIs("on going");
+
+    o.jio.get("file", o.f2);
+    o.testLastJobId(1, "job2 not added");
+
+    o.tick(o, 1000, "f");
+    o.tick(o, "f2");
+    o.jio.stop();
+
+});
+
+test ("Server will be available soon (Wait for time)" , function () {
+
+    var o = generateTools(this);
+    o.max_retry = 3;
+
+    o.jio = JIO.newJio({"type":"dummyall3tries"});
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job1", "f");
+
+    o.jio.put({"_id": "file", "content": "content"},
+              {"max_retry": o.max_retry}, o.f);
+    for (o.i = 0; o.i < o.max_retry - 1; o.i += 1) {
+        o.waitUntilLastJobIs("on going");
+        o.waitUntilLastJobIs("wait");
+        o.testLastJobWaitForTime("job1 is waiting for time");
+    }
+
+    o.tick(o, 1000, "f");
+    o.jio.stop();
+
+});
+
+module ( "Jio Restore");
+
+test ("Restore old Jio", function() {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "dummyall3tries",
+        "applicationname": "jiotests"
     });
-    o.ok2 = 0;
-    o.jio.get('file2',function (err,val) {
-        deepEqual (err || val,
-                   {_id:'file2',content:'content',
-                    _creation_date:10000,_last_modified:15000},
-                   'Second load must not replace the first one');
-        o.ok2 ++;
-    });
-    o.clock.tick(1000);
-    if (o.ok1 !== 1) {
-        ok (false,'no response / too much response');
-    }
-    if (o.ok2 !== 1) {
-        ok (false,'no response / too much response');
-    }
-    o.jio.stop();
-});
 
-test ('Simple Job Waiting', function () {
-    // Test if the second job doesn't erase the first on going one
+    o.jio_id = o.jio.getId();
 
-    var o = {};
-    o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.id = 0;
-    o.f = function (err,val) {
-        deepEqual(err || val,{ok:true,id:'file'},'job 1 result');
-    };
-    o.f3 = o.f; this.spy(o,'f3');
-    o.f4 = o.f; this.spy(o,'f4');
-    o.checkCallback = function (fun_name,message) {
-        if (!o[fun_name].calledOnce) {
-            if (o[fun_name].called) {
-                ok(false, 'too much response');
-            } else {
-                ok(false, 'no response');
-            }
-        } else {
-            ok(true,message);
-        }
-    };
-
-    o.jio = JIO.newJio({type:'dummyallok',applicationname:'jiotests'});
-    o.id = o.jio.getId();
-    o.jio.put({_id:'file',content:'content'},o.f3);
-    o.clock.tick(200);
-    o.jio.put({_id:'file',content:'content1'},o.f4);
-
-    o.tmp0 = LocalOrCookieStorage.getItem('jio/job_array/'+o.id)[0];
-    o.tmp1 = LocalOrCookieStorage.getItem('jio/job_array/'+o.id)[1];
-
-    ok(o.tmp0 && o.tmp0.id === 1,'job 1 exists');
-    deepEqual(o.tmp0.status.label,'on going','job 1 is on going');
-    ok(o.tmp1 && o.tmp1.id === 2,'job 2 exists');
-    deepEqual(o.tmp1.status.label,'wait','job 2 waiting');
-    deepEqual(o.tmp1.status.waitforjob,[1],
-              'job 2 must wait for the first to end');
-
-    o.clock.tick(1000);
-    o.checkCallback('f3','first request passed');
-    o.checkCallback('f4','restore waiting job');
-
-    o.jio.stop();
-});
-
-test ('Simple Time Waiting' , function () {
-    // Test if the job that have fail wait until a certain moment to restart.
-    // It will use the dummyall3tries, which will work after the 3rd try.
-
-    var o = {}, clock = this.sandbox.useFakeTimers(), id = 0;
-    clock.tick(base_tick);
-    o.f = function (err,val) {
-        if (err) {
-            o.res = err;
-        } else {
-            o.res = val;
-        }
-    };
-    this.spy(o,'f');
-    o.jio = JIO.newJio({type:'dummyall3tries',applicationname:'jiotests'});
-    o.jio.put({_id:'file',content:'content'},{max_retry:3},o.f);
-    clock.tick(10000);
-    if (!o.f.calledOnce) {
-        if (o.f.called) {
-            ok(false,'callback called too much times.');
-        } else {
-            ok(false,'no response.');
-        }
-    }
-    deepEqual(o.res,{ok:true,id:'file'},'job done.');
-    o.jio.stop();
-});
-
-module ( 'Jio Restore');
-
-test ('Restore old Jio', function() {
-    var o = {};
-    o.clock = this.sandbox.useFakeTimers();
-    o.f = function() {
-        ok(false,'must never be called!');
-    };
-    this.spy(o,'f');
-    o.jio = JIO.newJio({type:'dummyall3tries',applicationname:'jiotests'});
-    o.id = o.jio.getId();
-    ok(true,'create jio, id = ' + o.id);
-    o.jio.put({_id:'file',content:'content'},{max_retry:3},o.f);
-    o.clock.tick(1000);
+    o.jio.put({"_id": "file", "title": "myFile"}, {"max_retry":3}, o.f);
+    o.waitUntilLastJobIs("on going");
     o.jio.close();
-    o.jio = JIO.newJio({type:'dummyallok',applicationname:'jiotests'});
-    o.clock.tick(11000);        // 10 sec
-    deepEqual(LocalOrCookieStorage.getItem('jio/job_array/'+o.id),null,
-              'job array list must be empty');
-    o.tmp1 = LocalOrCookieStorage.getItem('jio/job_array/'+o.jio.getId());
-    if (o.tmp1.length > 0) {
-        deepEqual([o.tmp1[0].command.label,o.tmp1[0].command.doc._id,
-                   o.tmp1[0].command.doc.content],
-                  ['put','file','content'],
-                  'job which id is id = ' +o.jio.getId()+', restored the jio');
-    } else {
-        ok (false, 'The recovered job must exists');
-    }
+
+    o.jio = JIO.newJio({
+        "type": "dummyallok",
+        "applicationname": "jiotests"
+    });
+    o.waitUntilAJobExists(30000); // timeout 30 sec
+    o.testLastJobLabel("put", "Job restored");
+    o.clock.tick(1000);
+    ok(getLastJob(o.jio.getId()) === undefined,
+       "Job executed");
+
     o.jio.stop();
+
 });
 
-*/
+module ( "Jio LocalStorage" );
 
-module ( 'Jio LocalStorage' );
+test ("Post", function(){
 
-// ============================== POST ==========================
-test ('Post', function(){
+    var o = generateTools(this);
 
-    // runs following assertions
-    // 1) POST with id - should be an error
-    // 2) POST with attachment - should be an error
-    // 3) POST CREATE with content
-    // 4) check that document is created with UUID.revision
-    // 5) check that document revision tree is created
-    // 6) POST UPDATE
-
-    var o = {};
-        o.t = this;
-        o.clock = o.t.sandbox.useFakeTimers(),
-        localstorage = {
-            getItem: function (item) {
-                return JSON.parse (localStorage.getItem(item));
-            },
-            setItem: function (item,value) {
-                return localStorage.setItem(item,JSON.stringify(value));
-            },
-            deleteItem: function (item) {
-                delete localStorage[item];
-            }
-        };
-
-    o.clock.tick(base_tick);
-    o.spy = basic_spy_function;
-    o.clean = clean_up_local_storage_function();
-    o.username = 'MrPost';
-    o.testRevisionStorage = [];
-
-    // let's go
-    o.jio = JIO.newJio({ type:'local', username:o.username,
-                         applicationname:'jiotests' });
-    // ========================================
-    // 1) POST with id
-    o.jio.post({"_id":'file',"content":'content'},function(err, response){
-        o.spy (o,'value',{
-            "error": 'forbidden',
-            "message": 'Forbidden',
-            "reason": 'ID cannot be supplied with a POST request. Please use PUT',
-            "status": 403,
-            "statusText": 'Forbidden'
-        },'POST with id = 403 forbidden');
-        o.f(err);
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "upost",
+        "applicationname": "apost"
     });
-    checkReply(o,null,true);
-    o.clock.tick(base_tick);
-    // ========================================
-    // 2) POST attachment
-    o.jio.post({"_id":'file/ABC', "mimetype":'text/html', 
-               "content":'<b>hello</b>'},function(err, response){
-        o.spy (o,'value',{
-            "error": 'forbidden',
-            "message": 'Forbidden',
-            "reason": 'Attachment cannot be added with a POST request',
-            "status": 403,
-            "statusText": 'Forbidden'
-            },'POST attachment = 403 forbidden'); 
-        o.f(err);
-    });
-    checkReply(o,null,true);
-    o.clock.tick(base_tick);
-    // ========================================
-    // 3) POST content
-    o.jio.post({"content":'content'},
-        function(err, response) {
-            o.spy(o,'value',{"ok":true,"id":response.id,"rev":response.rev},
-                    'POST content = ok');
-            o.f(response);
 
-            // store falseRevision
-            o.falseRevision = response.rev;
-
-            // build tree manually
-            o.testRevisionStorage.push(response.rev);
-            o.buildTestTree = {"kids":[],"rev":o.testRevisionStorage[0],
-                "status":'available',"type":'leaf'};
-
-            // 4) check if document is created and correct
-            checkFile(response, o, null, true);
-            // 5) check if document tree is created and correct
-            checkTreeNode(response, o, null, true);
-        });
-    checkReply(o,null,true);
-    o.clock.tick(base_tick);
-    // END POST
-    o.jio.stop();
-    o.clean;
-});
-
-// ============================== PUT ==========================
-
-test ('Put', function(){
-
-    // runs following assertions
-    // 1)  PUT without ID = 409
-    // 2)  PUT with wrong ID/rev = 404
-    // 3)  PUT CREATE response
-    // 4)  check file was created
-    // 5)  check tree was created
-    // 6)  PUT UPDATE response
-    // 7)  check file was replaced
-    // 8)  check tree was updated
-    // 9)  PUT UPDATE 2 response
-    // 10) check file was replaced
-    // 11) check tree was updated
-    // 12) PUT UPDATE false revision = 409
-    // 13) SYNC-PUT no revs_info = 409
-    // 14) SYNC-PUT revs_info response
-    // 15) check if file created
-    // 16) check if tree was merged
-    // 17) SYNC-PUT revs_info dead leaf response
-    // 18) check that file was NOT created
-    // 19) check that tree was updated
-
-    var fake_rev_0,
-        fake_rev_1,
-        fake_rev_2,
-        fake_id_0,
-        fake_id_1,
-        fake_id_2,
-
-        o = {}; 
-        o.t = this;
-        o.clock = o.t.sandbox.useFakeTimers();
-        o.falseRevision;
-        localstorage = {
-            getItem: function (item) {
-                return JSON.parse (localStorage.getItem(item));
-            },
-            setItem: function (item,value) {
-                return localStorage.setItem(item,JSON.stringify (value));
-            },
-            deleteItem: function (item) {
-                delete localStorage[item];
-            }
-        };
-
-    o.clock.tick(base_tick);
-    o.spy = basic_spy_function;
-    o.clean = clean_up_local_storage_function();
-    o.username = 'MrPutt';
-    o.testRevisionStorage = [];
-
-    // let's go
-    o.jio = JIO.newJio({ type:'local', username:o.username,
-                         applicationname:'jiotests' });
-    // ========================================
-    // 1) PUT without ID
-    o.jio.put({"content":'content'},function(err, response){
-
-        o.spy (o,'value',{
-            "error": 'conflict',
-            "message": 'Document update conflict.',
-            "reason": 'Missing Document ID and or Revision',
-            "status": 409,
-            "statusText": 'Conflict'
-            },'PUT without id = 409 Conflict');
-        o.f(err);
-    });
-    checkReply(o,null,true);
-    o.clock.tick(base_tick);
-    // ========================================
-    //  2) PUT wrong id/rev
-    o.jio.put({"content":'content', "_id":'myDoc',
-               "_rev":'1-ABCDEFG'}, function(err, response){
-        o.spy (o,'value',{
-            "error": 'not found',
-            "message": 'Document not found.',
-            "reason": 'Document not found, please check revision and/or ID',
-            "status": 404,
-            "statusText": 'Not found'
-        },'PUT with wrong id/revision = 404 Not found');
-        o.f(err);
-    });
-    checkReply(o,null,true);
-    o.clock.tick(base_tick);
-    // ========================================
-    // 3) PUT content
-    o.jio.put({"content":'content',"_id":'myDoc'},
-        function(err, response) {
-
-            o.spy(o,'value',{"ok":true,"id":response.id,"rev":response.rev},
-                    'PUT content = ok');
-            o.f(response);
-
-            o.falseRevision = response.rev;
-            o.testRevisionStorage.unshift(response.rev);
-            o.buildTestTree = {"kids":[],"rev":o.testRevisionStorage[0],
-                "status":'available',"type":'leaf'};
-            // ========================================
-            // 4) check file was created
-            checkFile(response, o, null, true);
-            // ========================================
-            // 5) check tree was created
-            checkTreeNode(response, o, null, true);
-        });
-    checkReply(o,null,true);
-    o.clock.tick(base_tick);
-    // ========================================
-    // 6) PUT UPDATE (modify content)
-    o.jio.put({"content":'content_modified',"_id":'myDoc',
-                    "_rev":o.testRevisionStorage[0]},
-        function(err, response) {
-            o.spy(o,'value',{"ok":true,"id":response.id,"rev":response.rev},
-                'PUT content = ok');
-            o.f(response);
-
-            o.testRevisionStorage.unshift(response.rev);
-            o.buildTestTree = {"kids":[{"kids":[],"rev":
-                o.testRevisionStorage[0],"status":'available',
-                "type":'leaf'}],"rev":o.testRevisionStorage[1],
-                "status":'deleted',"type":'branch'};
-            // ========================================
-            // 7) check document was replaced
-            checkFile(response, o, null, true);
-            // ========================================
-            // 8) check tree was updated
-            checkTreeNode(response, o, null, true);
-        });
-    checkReply(o,null,true);
-    o.clock.tick(base_tick);
-    // ========================================
-    // 9. update document (modify again)
-    o.jio.put({"content":'content_modified_again',
-                "_id":'myDoc', "_rev":o.testRevisionStorage[0]},
-        function(err, response) {
-            o.spy(o,'value',{"ok":true,"id":response.id,
-                    "rev":response.rev}, 'PUT content = ok');
-            o.f(response);
-
-            o.testRevisionStorage.unshift(response.rev);
-            o.buildTestTree = {"kids":[{"kids":[{"kids":[],
-                "rev":o.testRevisionStorage[0],"status":'available',
-                "type":'leaf'}],"rev":o.testRevisionStorage[1],
-                "status":'deleted',"type":'branch'}],
-                "rev":o.testRevisionStorage[2],"status":'deleted',
-                "type":'branch'};
-
-            // 10) check document was replaced
-            checkFile(response, o, null, true);
-            // 11) check tree was updated
-            checkTreeNode(response, o, null, true);
-
-        });
-    checkReply(o,null,true);
-    o.clock.tick(base_tick);
-    // ========================================
-    // 12) PUT false revision
-    o.jio.put({"content":'content_modified_false',
-                "_id":'myDoc',
-                "_rev":o.falseRevision},function(err, response){
-        o.spy (o,'value',{
-            "error": 'conflict',
-            "message": 'Document update conflict.',
-            "reason":
-                'Revision supplied is not the latest revision',
-            "status": 409,
-            "statusText": 'Conflict'
-        },'PUT false revision = 409 Conflict');
-        o.f(err);
-    });
-    checkReply(o,null,true);
-    o.clock.tick(base_tick);
-    // ========================================
-    // 13) SYNC-PUT no revs_info
-    o.jio.put({"content":'content_modified_false',
-                "_id":'myDoc',
-                "_rev":'1-abcdefg'},function(err, response){
-        o.spy (o,'value',{
-            "error": 'conflict',
-            "message": 'Document update conflict.',
-            "reason":
-                'Missing revs_info required for sync-put',
-            "status": 409,
-            "statusText": 'Conflict'
-        },'PUT no sync info = 409 Conflict');
-        o.f(err);
-    });
-    checkReply(o,null,true);
-    o.clock.tick(base_tick);
-
-    // add a new document version with fake revs_info
-    // the new document has the same origin and first edit,
-    // then it was changed to a new version (3-a9d...),
-    // which was changed to a fourth version (4-b5bb...),
-    // the tree must merge on o.testRevisionStorage[1]
-    // and add the two new dummy revisions into the final
-    // tree. Also the new document should be stored
-    // in local storage.
-    fake_rev_2 = o.testRevisionStorage[2];
-    fake_rev_1 = o.testRevisionStorage[1];
-    fake_rev_0 = o.testRevisionStorage[0];
-    fake_id_2 = o.testRevisionStorage[2].split('-')[1];
-    fake_id_1 = o.testRevisionStorage[1].split('-')[1];
-    fake_id_0 = o.testRevisionStorage[0].split('-')[1];
-    // ========================================
-    // 14) PUT UPDATE A TREE using revs_info
-    o.jio.put({
-        "content":'a_new_version',
-        "_id":'myDoc',
-        "_rev":"4-b5bb2f1657ac5ac270c14b2335e51ef1ffccc0a7259e14bce46380d6c446eb89",
-        "_revs_info":[
-            {"rev":"4-b5bb2f1657ac5ac270c14b2335e51ef1ffccc0a7259e14bce46380d6c446eb89","status":"available"},
-            {"rev":"3-a9dac9ff5c8e1b2fce58e5397e9b6a8de729d5c6eff8f26a7b71df6348986123","status":"deleted"},
-            {"rev":fake_rev_1,"status":"deleted"},
-            {"rev":fake_rev_0,"status":"deleted"}
-        ],
-        "_revisions":{
-            "start":4,
-            "ids":[
-                "b5bb2f1657ac5ac270c14b2335e51ef1ffccc0a7259e14bce46380d6c446eb89",
-                "a9dac9ff5c8e1b2fce58e5397e9b6a8de729d5c6eff8f26a7b71df6348986123",
-                fake_id_1,
-                fake_id_0
-                ]}
-        },
-        function(err, response) {
-            o.buildTestTree = {
-                "kids":[
-                    {
-                    "kids":[
-                        {"kids":[],"rev":o.testRevisionStorage[0],"status":'available',"type":'leaf'},
-                        {"kids":[{
-                            "kids":[],
-                            "rev":"4-b5bb2f1657ac5ac270c14b2335e51ef1ffccc0a7259e14bce46380d6c446eb89",
-                            "status":'available', "type":'leaf'
-                            }],
-                            "rev":"3-a9dac9ff5c8e1b2fce58e5397e9b6a8de729d5c6eff8f26a7b71df6348986123",
-                            "status":'deleted',"type":'branch'
-                            }],
-                    "rev":o.testRevisionStorage[1],"status":'deleted',"type":'branch'}],
-                "rev":o.testRevisionStorage[2],"status":'deleted',"type":'branch'
-            };
-            o.spy(o,'value',{"ok":true,"id":response.id,
-                    "rev":response.rev}, 'PUT SYNC = ok');
-            o.f(response);
-            // 15) check document was stored
-            checkFile(response, o, null, true);
-            // 16) check tree was updated
-            checkTreeNode(response, o, null, true);
-        });
-    checkReply(o,null,true);
-    o.clock.tick(base_tick);
-    // ========================================
-    // 17) PUT UPDATE (deleted tree)
-    o.jio.put({
-        "content":'a_deleted_version',
-        "_id":'myDoc',
-        "_rev":"3-05210795b6aa8cb5e1e7f021960d233cf963f1052b1a41777ca1a2aff8fd4b61",
-        "_revs_info":[
-                {"rev":"3-05210795b6aa8cb5e1e7f021960d233cf963f1052b1a41777ca1a2aff8fd4b61","status":"deleted"},
-                {"rev":"2-67ac10df5b7e2582f2ea2344b01c68d461f44b98fef2c5cba5073cc3bdb5a844","status":"deleted"},
-                {"rev":fake_rev_2,"status":"deleted"}
-        ],
-        "_revisions":{
-            "start":3,
-            "ids":[
-                "05210795b6aa8cb5e1e7f021960d233cf963f1052b1a41777ca1a2aff8fd4b61",
-                "67ac10df5b7e2582f2ea2344b01c68d461f44b98fef2c5cba5073cc3bdb5a844",
-                fake_id_2
-            ]}
-        },
-        function(err, response) {
-
-            o.buildTestTree = {
-                "kids":[{
-                    "kids":[
-                        {"kids":[],
-                         "rev":o.testRevisionStorage[0],
-                         "status":'available',
-                         "type":'leaf'
-                        },
-                        {"kids":[{
-                            "kids":[],
-                            "rev":"4-b5bb2f1657ac5ac270c14b2335e51ef1ffccc0a7259e14bce46380d6c446eb89",
-                            "status":'available', "type":'leaf'
-                         }],
-                        "rev":"3-a9dac9ff5c8e1b2fce58e5397e9b6a8de729d5c6eff8f26a7b71df6348986123",
-                        "status":'deleted',
-                        "type":'branch'
-                        }],
-                    "rev":o.testRevisionStorage[1],
-                    "status":'deleted',
-                    "type":'branch'
-                    },{
-                     "kids":[
-                        {
-                        "kids":[],
-                        "rev":"3-05210795b6aa8cb5e1e7f021960d233cf963f1052b1a41777ca1a2aff8fd4b61",
-                        "status":'deleted',
-                        "type":'leaf'
-                        }],
-                     "rev":"2-67ac10df5b7e2582f2ea2344b01c68d461f44b98fef2c5cba5073cc3bdb5a844",
-                     "status":'deleted',
-                     "typ":'branch'
-                    }],
-                "rev":o.testRevisionStorage[2],
-                "status":'deleted',
-                "type":'branch'
-            };
-            o.spy(o,'value',{"ok":true,"id":response.id,
-                    "rev":response.rev}, 'PUT SYNC dead leaf = ok');
-            o.f(response);
-            // 18) check document was stored
-            checkFile(response, o, null, true);
-            // 19) check tree was updated
-            checkTreeNode(response, o, null, true);
-        });
-    checkReply(o,null,true);
-    o.clock.tick(base_tick);
-    // END PUT
-    o.jio.stop();
-    o.clean;
-});
-
-
-// ====================== PUTATTACHMENT ==========================
-test ('PutAttachment', function(){
-
-    // runs following assertions
-    // 1) PUTATTACHMENT with wrong id/rev1
-    // 2) PUTATTACHMENT without id/rev1
-
-    var o = {}; 
-        o.t = this;
-        o.clock = o.t.sandbox.useFakeTimers();
-        o.falseRevision;
-        localstorage = {
-            getItem: function (item) {
-                return JSON.parse (localStorage.getItem(item));
-            },
-            setItem: function (item,value) {
-                return localStorage.setItem(item,JSON.stringify (value));
-            },
-            deleteItem: function (item) {
-                delete localStorage[item];
-            }
-        };
-
-    o.clock.tick(base_tick);
-    o.spy = basic_spy_function;
-    o.clean = clean_up_local_storage_function();
-    o.username = 'MrPuttAttachment';
-    o.testRevisionStorage = [];
-
-    // let's go
-    o.jio = JIO.newJio({ type:'local', username:o.username,
-                         applicationname:'jiotests' });
-    // ========================================
-    // 1) PUTATTACHMENT with wrong id/rev
-    o.jio.putAttachment("ABC/DEF","A-1aaa","<b>hello</b>","text/html",function(err, response){
-        o.spy (o,'value',{
-            "error": 'not found',
-            "message": 'Document not found.',
-            "reason": 'Document not found, please check document ID',
-            "status": 404,
-            "statusText": 'Not found'
-            },'PUTATTACHMENT without id = 404 NOT FOUND');
-        o.f(err);
-    });
-    checkReply(o,null,true);
-    // ========================================
-    // 2) PUTATTACHMENT with wrong id/rev
-    /*
-    o.jio.putAttachment("ABC/DEF","text/html","<b>hello</b>",function(err, response){
-        o.spy (o,'value',{
-            "error": 'not found',
-            "message": 'Document not found.',
-            "reason": 'Document not found, please check document ID',
-            "status": 404,
-            "statusText": 'Not found'
-            },'PUTATTACHMENT without id = 404 NOT FOUND');
-        o.f(err);
-    });
-    checkReply(o,null,true);
-    */
-});
-
-/*
-test ('Document load', function () {
-    // Test if LocalStorage can load documents.
-    // We launch a loading from localstorage and we check if the file is
-    // realy loaded.
-
-    var o = {}; o.clock = this.sandbox.useFakeTimers(); o.t = this;
-    o.clock.tick(base_tick);
-    o.spy = basic_spy_function;
-    o.tick = basic_tick_function;
-
-    o.jio = JIO.newJio({type:'local',username:'MrLoadName',
-                        applicationname:'jiotests'});
-    // save and check document existence
-    o.doc = {_id:'file',content:'content',
-             _last_modified:1234,_creation_date:1000};
-
-    o.spy(o,'status',404,'loading document failure');
-    o.jio.get('file',o.f);
+    // post without id
+    o.spy (o, "status", 405, "Post without id");
+    o.jio.post({}, o.f);
     o.tick(o);
 
-    addFileToLocalStorage('MrLoadName','jiotests',o.doc);
-    o.spy(o,'value',o.doc,'loading document success');
-    o.jio.get('file',o.f);
+    // post non empty document
+    o.spy (o, "value", {"ok": true, "id": "post1"}, "Post");
+    o.jio.post({"_id": "post1", "title": "myPost1"}, o.f);
+    o.tick(o);
+
+    deepEqual(
+        localstorage.getItem("jio/localstorage/upost/apost/post1"),
+        {
+            "_id": "post1",
+            "title": "myPost1"
+        },
+        "Check document"
+    );
+
+    // post but document already exists
+    o.spy (o, "status", 409, "Post but document already exists");
+    o.jio.post({"_id": "post1", "title": "myPost2"}, o.f);
     o.tick(o);
 
     o.jio.stop();
 });
-*//*
-test ('Get document list', function () {
-    // Test if LocalStorage can get a list of documents.
-    // We create 2 documents inside localStorage to check them.
 
-    var o = {}; o.clock = this.sandbox.useFakeTimers(); o.t = this;
-    o.clock.tick(base_tick);
-    o.mytest = function (value){
-        o.f = function (err,val) {
-            if (val) {
-                deepEqual (objectifyDocumentArray(val.rows),
-                           objectifyDocumentArray(value),'getting list');
-            } else {
-                deepEqual (err,value,'getting list');
+
+test ("Put", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "uput",
+        "applicationname": "aput"
+    });
+
+    // put without id
+    o.spy (o, "status", 20, "Put without id");
+    o.jio.put({}, o.f);
+    o.tick(o);
+
+    // put non empty document
+    o.spy (o, "value", {"ok": true, "id": "put1"}, "Creates a document");
+    o.jio.put({"_id": "put1", "title": "myPut1"}, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem("jio/localstorage/uput/aput/put1"),
+        {
+            "_id": "put1",
+            "title": "myPut1"
+        },
+        "Check document"
+    );
+
+    // put but document already exists
+    o.spy (o, "value", {"ok": true, "id": "put1"}, "Update the document");
+    o.jio.put({"_id": "put1", "title": "myPut2"}, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem("jio/localstorage/uput/aput/put1"),
+        {
+            "_id": "put1",
+            "title": "myPut2"
+        },
+        "Check document"
+    );
+
+    o.jio.stop();
+
+});
+
+test ("PutAttachment", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "uputattmt",
+        "applicationname": "aputattmt"
+    });
+
+    // putAttachment without doc id
+    // error 20 -> document id required
+    o.spy(o, "status", 20, "PutAttachment without doc id");
+    o.jio.putAttachment({}, o.f);
+    o.tick(o);
+
+    // putAttachment without attmt id
+    // error 22 -> attachment id required
+    o.spy(o, "status", 22, "PutAttachment without attmt id");
+    o.jio.putAttachment({"id": "putattmt1"}, o.f);
+    o.tick(o);
+
+    // putAttachment without document
+    // error 404 -> not found
+    o.spy(o, "status", 404, "PutAttachment without document");
+    o.jio.putAttachment({"id": "putattmt1/putattmt2"}, o.f);
+    o.tick(o);
+
+    // adding a document
+    localstorage.setItem("jio/localstorage/uputattmt/aputattmt/putattmt1", {
+        "_id": "putattmt1",
+        "title": "myPutAttmt1"
+    });
+
+    // putAttachment with document
+    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
+          "PutAttachment with document, without data");
+    o.jio.putAttachment({"id": "putattmt1/putattmt2"}, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem("jio/localstorage/uputattmt/aputattmt/putattmt1"),
+        {
+            "_id": "putattmt1",
+            "title": "myPutAttmt1",
+            "_attachments": {
+                "putattmt2": {
+                    "length": 0,
+                    // md5("")
+                    "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
+                }
             }
-        };
-        o.t.spy(o,'f');
-        o.jio.allDocs(o.f);
-        o.clock.tick(1000);
-        if (!o.f.calledOnce) {
-            if (o.f.called) {
-                ok(false, 'too much results');
-            } else {
-                ok(false, 'no response');
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/uputattmt/aputattmt/putattmt1/putattmt2"),
+        "", "Check attachment"
+    );
+
+    // update attachment
+    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
+          "Update Attachment, with data");
+    o.jio.putAttachment({"id": "putattmt1/putattmt2", "data": "abc"}, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem("jio/localstorage/uputattmt/aputattmt/putattmt1"),
+        {
+            "_id": "putattmt1",
+            "title": "myPutAttmt1",
+            "_attachments": {
+                "putattmt2": {
+                    "length": 3,
+                    // md5("abc")
+                    "digest": "md5-900150983cd24fb0d6963f7d28e17f72"
+                }
             }
-        }
-    };
-    o.jio = JIO.newJio({type:'local',username:'MrListName',
-                        applicationname:'jiotests'});
-    o.doc1 = {_id:'file',content:'content',
-              _last_modified:1,_creation_date:0};
-    o.doc2 = {_id:'memo',content:'test',
-              _last_modified:5,_creation_date:2};
-    addFileToLocalStorage ('MrListName','jiotests',o.doc1);
-    addFileToLocalStorage ('MrListName','jiotests',o.doc2);
-    o.mytest ([{
-        id:o.doc2._id,key:o.doc2._id,
-        value:{
-            _creation_date:o.doc2._creation_date,
-            _last_modified:o.doc2._last_modified
-        }
-    },{
-        id:o.doc1._id,key:o.doc1._id,
-        value:{
-            _last_modified:o.doc1._last_modified,
-            _creation_date:o.doc1._creation_date
-        }
-    }]);
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/uputattmt/aputattmt/putattmt1/putattmt2"),
+        "abc", "Check attachment"
+    );
 
     o.jio.stop();
 });
-*//*
-test ('Document remove', function () {
-    // Test if LocalStorage can remove documents.
-    // We launch a remove from localstorage and we check if the file is
-    // realy removed.
 
-    var o = {}; o.clock = this.sandbox.useFakeTimers(); o.t = this;
-    o.clock.tick(base_tick);
-    o.spy = basic_spy_function;
-    o.tick = function () {
-        basic_tick_function.apply(basic_tick_function,arguments);
-        // check if the file is still there
-        o.tmp = LocalOrCookieStorage.getItem (
-            'jio/local/MrRemoveName/jiotests/file');
-        ok (!o.tmp, 'check no content');
+test ("Get", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "uget",
+        "applicationname": "aget"
+    });
+
+    // get unexistant document
+    o.spy(o, "status", 404, "Get unexistant document");
+    o.jio.get("get1", o.f);
+    o.tick(o);
+
+    // get unexistant attachment
+    o.spy(o, "status", 404, "Get unexistant attachment");
+    o.jio.get("get1/get2", o.f);
+    o.tick(o);
+
+    // adding a document
+    o.doc_get1 = {
+        "_id": "get1",
+        "title": "myGet1"
     };
+    localstorage.setItem("jio/localstorage/uget/aget/get1", o.doc_get1);
 
-    o.jio = JIO.newJio({type:'local',username:'MrRemoveName',
-                        applicationname:'jiotests'});
-    // test removing a file
-    o.spy (o,'value',{ok:true,id:'file'},'removing document');
-    addFileToLocalStorage ('MrRemoveName','jiotests',{_id:'file'});
-    o.jio.remove({_id:'file'},o.f);
-    o.tick (o);
+    // get document
+    o.spy(o, "value", o.doc_get1, "Get document");
+    o.jio.get("get1", o.f);
+    o.tick(o);
+
+    // get unexistant attachment (document exists)
+    o.spy(o, "status", 404, "Get unexistant attachment (document exists)");
+    o.jio.get("get1/get2", o.f);
+    o.tick(o);
+
+    // adding an attachment
+    o.doc_get1["_attachments"] = {
+        "get2": {
+            "length": 2,
+            // md5("de")
+            "digest": "md5-5f02f0889301fd7be1ac972c11bf3e7d"
+        }
+    };
+    localstorage.setItem("jio/localstorage/uget/aget/get1", o.doc_get1);
+    localstorage.setItem("jio/localstorage/uget/aget/get1/get2", "de");
+
+    // get attachment
+    o.spy(o, "value", "de", "Get attachment");
+    o.jio.get("get1/get2", o.f);
+    o.tick(o);
 
     o.jio.stop();
+
 });
-*/
+
+test ("Remove", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "uremove",
+        "applicationname": "aremove"
+    });
+
+    // remove unexistant document
+    o.spy(o, "status", 404, "Remove unexistant document");
+    o.jio.remove({"_id": "remove1"}, o.f);
+    o.tick(o);
+
+    // remove unexistant document/attachment
+    o.spy(o, "status", 404, "Remove unexistant document/attachment");
+    o.jio.remove({"_id": "remove1/remove2"}, o.f);
+    o.tick(o);
+
+    // adding a document
+    localstorage.setItem("jio/localstorage/uremove/aremove/remove1", {
+        "_id": "remove1",
+        "title": "myRemove1"
+    });
+
+    // remove document
+    o.spy(o, "value", {"ok": true, "id": "remove1"}, "Remove document");
+    o.jio.remove({"_id": "remove1"}, o.f);
+    o.tick(o);
+
+    // check document
+    ok(localstorage.getItem("jio/localstorage/uremove/aremove/remove1")===null,
+       "Check documuent");
+
+    // adding a document + attmt
+    localstorage.setItem("jio/localstorage/uremove/aremove/remove1", {
+        "_id": "remove1",
+        "title": "myRemove1",
+        "_attachments": {
+            "remove2": {
+                "length": 4,
+                "digest": "md5-blahblah"
+            }
+        }
+    });
+    localstorage.setItem(
+        "jio/localstorage/uremove/aremove/remove1/remove2", "fghi");
+
+    // remove attachment
+    o.spy(o, "value", {"ok": true, "id": "remove1"}, "Remove attachment");
+    o.jio.remove({"_id": "remove1"}, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+
+});
+
+
+test ("AllDocs", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "ualldocs",
+        "applicationname": "aalldocs"
+    });
+
+    // alldocs
+    // error 405 -> method not allowed
+    o.spy(o, "status", 405, "Method not allowed");
+    o.jio.allDocs(o.f);
+    o.tick(o);
+
+    o.jio.stop();
+
+});
+
 /*
 module ('Jio DAVStorage');
 
@@ -2818,7 +2598,6 @@ if (window.requirejs) {
         paths: {
             jiotestsloader: './jiotests.loader',
 
-            LocalOrCookieStorage: './testlocalorcookiestorage',
             jQueryAPI: '../lib/jquery/jquery',
             jQuery: '../js/jquery.requirejs_module',
             JIO: '../src/jio',
@@ -2832,8 +2611,7 @@ if (window.requirejs) {
     });
     require(['jiotestsloader'],thisfun);
 } else {
-    thisfun ({LocalOrCookieStorage:LocalOrCookieStorage,
-              JIO:jIO,
+    thisfun ({JIO:jIO,
               sjcl:sjcl,
               Base64:Base64,
               jQuery:jQuery});
