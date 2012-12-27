@@ -5,6 +5,7 @@
 //     - dummyallnotfound
 //     - dummyall3tries
 //     - dummyalldocs
+//     - dummyallfound
 (function () { var jioDummyStorageLoader = function ( jIO ) {
 
     ////////////////////////////////////////////////////////////////////////////
@@ -198,9 +199,12 @@
 
         that.remove = function (command) {
             setTimeout (function () {
-                that.success ({
-                    "ok": true,
-                    "id": command.getDocId()
+                that.error ({
+                    "status": 404,
+                    "statusText": "Not Found",
+                    "error": "not_found",
+                    "message": "Cannot remove an unexistant document",
+                    "reason": "missing" // or deleted
                 });
             }, 100);
         }; // end remove
@@ -415,12 +419,93 @@
     // end Dummy Storage All Docs
     ////////////////////////////////////////////////////////////////////////////
 
+    ////////////////////////////////////////////////////////////////////////////
+    // Dummy Storage 6 : all found
+    newDummyStorageAllFound = function ( spec, my ) {
+        var that = my.basicStorage( spec, my );
+
+        that.post = function (command) {
+            setTimeout (function () {
+                that.error({
+                    "status": 409,
+                    "statusText": "Conflicts",
+                    "error": "conflicts",
+                    "message": "Cannot create a new document",
+                    "reason": "Document already exists"
+                });
+            }, 100);
+        }; // end post
+
+        that.put = function (command) {
+            setTimeout (function () {
+                that.success ({
+                    "ok": true,
+                    "id": command.getDocId()
+                });
+            }, 100);
+        }; // end put
+
+        that.putAttachment = function (command) {
+            setTimeout (function () {
+                that.success ({
+                    "ok": true,
+                    "id": command.getDocId()+"/"+command.getAttachmentId()
+                });
+            }, 100);
+        }; // end put
+
+        that.get = function (command) {
+            setTimeout(function () {
+                if (command.getAttachmentId()) {
+                    return that.success ('0123456789');
+                }
+                that.success ({
+                    "_id": command.getDocId(),
+                    "title":'get_title'
+                });
+            }, 100);            // 100 ms, for jiotests simple job waiting
+        }; // end get
+
+        that.allDocs = function (command) {
+            setTimeout(function () {
+                that.error({
+                    "status": 405,
+                    "statusText": "Method Not Allowed",
+                    "error": "method_not_allowed",
+                    "message": "Your are not allowed to use this command",
+                    "reason": "LocalStorage forbids AllDocs command executions"
+                });
+            });
+        }; // end allDocs
+
+        that.remove = function (command) {
+            setTimeout (function () {
+                if (command.getAttachmentId()) {
+                    that.success({
+                        "ok": true,
+                        "id": command.getDocId()+"/"+command.getAttachmentId()
+                    });
+                } else {
+                    that.success({
+                        "ok": true,
+                        "id": command.getDocId()
+                    });
+                }
+            }, 100);            // 100 ms, for jiotests simple job waiting
+        }; // end remove
+
+        return that;
+    },
+    // end Dummy Storage All Not Found
+    ////////////////////////////////////////////////////////////////////////////
+
     // add key to storageObjectType of global jio
     jIO.addStorageType('dummyallok', newDummyStorageAllOk);
     jIO.addStorageType('dummyallfail', newDummyStorageAllFail);
     jIO.addStorageType('dummyallnotfound', newDummyStorageAllNotFound);
     jIO.addStorageType('dummyall3tries', newDummyStorageAll3Tries);
     jIO.addStorageType('dummyalldocs', newDummyStorageAllDocs);
+    jIO.addStorageType('dummyallfound', newDummyStorageAllFound);
 
 };
 
