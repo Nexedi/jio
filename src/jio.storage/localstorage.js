@@ -194,7 +194,7 @@ var newLocalStorage = function (spec, my) {
                 doc);
             that.success({
                 "ok":true,
-                "_id":command.getDocId()+"/"+command.getAttachmentId()
+                "id":command.getDocId()+"/"+command.getAttachmentId()
             });
         });
     };
@@ -249,38 +249,57 @@ var newLocalStorage = function (spec, my) {
      */
     that.remove = function (command) {
         setTimeout (function () {
-            var doc;
+            var doc, error;
+            error = function (word) {
+                that.error({
+                    "status": 404,
+                    "statusText": "Not Found",
+                    "error": "not_found",
+                    "message": word+" not found",
+                    "reason": "missing"
+                });
+            };
             doc = localstorage.getItem(
                 priv.localpath + "/" + command.getDocId());
             if (typeof command.getAttachmentId() === "string") {
-                // seeking for an attachment
-                localstorage.removeItem(
-                    priv.localpath + "/" + command.getDocId() + "/" +
-                        command.getAttachmentId());
                 // remove attachment from document
                 if (doc !== null && typeof doc === "object" &&
                     typeof doc["_attachments"] === "object") {
-                    delete doc["_attachments"][command.getAttachmentId()];
-                    if (priv.objectIsEmpty(doc["_attachments"])) {
-                        delete doc["_attachments"];
+                    if (typeof doc["_attachments"][
+                        command.getAttachmentId()] === "object") {
+                        delete doc["_attachments"][command.getAttachmentId()];
+                        if (priv.objectIsEmpty(doc["_attachments"])) {
+                            delete doc["_attachments"];
+                        }
+                        localstorage.setItem(
+                            priv.localpath + "/" + command.getDocId(),
+                            doc);
+                        localstorage.removeItem(
+                            priv.localpath + "/" + command.getDocId() + "/" +
+                                command.getAttachmentId());
+                        that.success({
+                            "ok": true,
+                            "id": command.getDocId()+"/"+
+                                command.getAttachmentId()
+                        });
+                    } else {
+                        error("Attachment");
                     }
-                    localstorage.setItem(
-                        priv.localpath + "/" + command.getDocId(),
-                        doc);
+                } else {
+                    error("Document");
                 }
-                that.success({
-                    "ok": true,
-                    "id": command.getDocId()+"/"+command.getAttachmentId()
-                });
             } else {
                 // seeking for a document
                 var attachment_list = [], i;
-                if (doc !== null && typeof doc === "object" &&
-                    typeof doc["_attachments"] === "object") {
-                    // prepare list of attachments
-                    for (i in doc["_attachments"]) {
-                        attachment_list.push(i);
+                if (doc !== null && typeof doc === "object") {
+                    if (typeof doc["_attachments"] === "object") {
+                        // prepare list of attachments
+                        for (i in doc["_attachments"]) {
+                            attachment_list.push(i);
+                        }
                     }
+                } else {
+                    return error("Document");
                 }
                 localstorage.removeItem(
                     priv.localpath + "/" + command.getDocId());
