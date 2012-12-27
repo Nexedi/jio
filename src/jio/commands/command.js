@@ -21,6 +21,9 @@ var command = function(spec, my) {
 
     priv.tried     = 0;
     priv.doc       = spec.doc || {};
+    if (typeof priv.doc !== "object") {
+        priv.doc = {"_id": priv.doc.toString()};
+    }
     priv.docid     = spec.docid || priv.doc._id;
     priv.option    = spec.options || {};
     priv.callbacks = spec.callbacks || {};
@@ -98,7 +101,7 @@ var command = function(spec, my) {
      * @return {string} The data
      */
     that.getAttachmentData = function () {
-        return priv.doc._data;
+        return priv.doc._data || "";
     };
 
     /**
@@ -107,7 +110,7 @@ var command = function(spec, my) {
      * @return {number} The length
      */
     that.getAttachmentLength = function () {
-        return priv.doc._data.length;
+        return (priv.doc._data || "").length;
     };
 
     /**
@@ -125,7 +128,7 @@ var command = function(spec, my) {
      * @return {string} The md5sum
      */
     that.md5SumAttachmentData = function () {
-        return hex_md5(priv.doc._data);
+        return hex_md5(priv.doc._data || "");
     };
 
     /**

@@ -357,7 +357,7 @@
             for (k in doc) {
                 doc_with_underscores["_"+k] = doc[k];
             }
-            console.log (doc_with_underscores);
+
             priv.addJob(putAttachmentCommand,{
                 doc:doc_with_underscores,
                 options:param.options,
