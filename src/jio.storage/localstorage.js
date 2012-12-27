@@ -15,13 +15,14 @@ var newLocalStorage = function (spec, my) {
      */
     localstorage = {
         getItem: function (item) {
-            return JSON.parse(localStorage.getItem(item));
+            var value = localStorage.getItem(item);
+            return value === null? null: JSON.parse(value);
         },
         setItem: function (item, value) {
             return localStorage.setItem(item, JSON.stringify(value));
         },
-        deleteItem: function (item) {
-            delete localStorage[item];
+        removeItem: function (item) {
+            return localStorage.removeItem(item);
         }
     };
 
@@ -253,7 +254,7 @@ var newLocalStorage = function (spec, my) {
                 priv.localpath + "/" + command.getDocId());
             if (typeof command.getAttachmentId() === "string") {
                 // seeking for an attachment
-                localstorage.deleteItem(
+                localstorage.removeItem(
                     priv.localpath + "/" + command.getDocId() + "/" +
                         command.getAttachmentId());
                 // remove attachment from document
@@ -281,11 +282,11 @@ var newLocalStorage = function (spec, my) {
                         attachment_list.push(i);
                     }
                 }
-                localstorage.deleteItem(
+                localstorage.removeItem(
                     priv.localpath + "/" + command.getDocId());
                 // delete all attachments
                 for (i = 0; i < attachment_list.length; i += 1) {
-                    localstorage.deleteItem(
+                    localstorage.removeItem(
                         priv.localpath+"/"+command.getDocId()+"/"+
                             attachment_list[i]);
                 }
