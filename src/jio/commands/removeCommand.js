@@ -28,8 +28,8 @@ var removeCommand = function(spec, my) {
                     "message": "The attachment id must not be an empty string",
                     "reason": "Attachment id is empty"
                 });
+                return false;
             }
-            return false;
         }
         return true;
     };
