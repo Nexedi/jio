@@ -1,9 +1,10 @@
-// Adds 3 dummy storages to JIO
+// Adds 5 dummy storages to JIO
 // type:
 //     - dummyallok
 //     - dummyallfail
 //     - dummyallnotfound
 //     - dummyall3tries
+//     - dummyalldocs
 (function () { var jioDummyStorageLoader = function ( jIO ) {
 
     ////////////////////////////////////////////////////////////////////////////
@@ -11,64 +12,24 @@
     var newDummyStorageAllOk = function ( spec, my ) {
         var that = my.basicStorage( spec, my );
 
-        var super_serialized = that.serialized;
-        that.serialized = function () {
-            var o = super_serialized();
-            o.username = spec.username;
-            return o;
+        that.specToStore = function () {
+            return {"username":spec.username};
         };
-
-        // Fake revisions
-        var fakeCount = 0;
-        var generateRevision = function(command, action, reset){
-
-            var that = {},
-                priv = {},
-                fakeRevision = "",
-                fakeCount = reset === true ? 0 : fakeCount,
-                now = Date.now();
-
-            that.makeHash = function(){
-                return that.hashCode('' + command.getDocId() + ' ' + now + '');
-            };
-
-            that.hashCode = function (string) {
-                return hex_sha256(string);
-            };
-
-            that.generateNextRev = function (previous_revision, string) {
-                return (parseInt(previous_revision.split('-')[0],10)+1) + '-' +
-                    priv.hashCode(previous_revision + string);
-            };
-
-            if ( fakeRevision === "" && fakeCount === 0 ){
-                fakeRevision = '1-'+that.makeHash();
-            } else {
-                if( action !== "post"){
-                    fakeRevision = that.generateNextRev( fakeRev, that.makeHash );
-                }
-            }
-
-            return fakeRevision;
-        };
-
 
         that.post = function (command) {
             setTimeout (function () {
                 that.success({
-                    ok:true,
-                    id:command.getDocId(),
-                    rev:generateRevision(command, "post", true)
+                    "ok": true,
+                    "id": command.getDocId()
                 });
-            }, 100);
+            }, 100);            // 100 ms, for jiotests simple job waiting
         }; // end post
 
         that.put = function (command) {
             setTimeout (function () {
                 that.success ({
-                    ok:true,
-                    id:command.getDocId(),
-                    rev:generateRevision(command, "put", true)
+                    "ok": true,
+                    "id": command.getDocId()
                 });
             }, 100);            // 100 ms, for jiotests simple job waiting
         }; // end put
@@ -76,49 +37,50 @@
         that.putAttachment = function (command) {
             setTimeout (function () {
                 that.success ({
-                    ok:true,
-                    id:command.getDocId(),
-                    rev:generateRevision(command, "putAttachment", true)
+                    "ok": true,
+                    "id": command.getDocId()+"/"+command.getAttachmentId()
                 });
             }, 100);            // 100 ms, for jiotests simple job waiting
         }; // end putAttachment
 
         that.get = function (command) {
             setTimeout(function () {
+                if (command.getAttachmentId()) {
+                    return that.success ('0123456789');
+                }
                 that.success ({
-                    _id:command.getDocId(),
-                    _rev:generateRevision(command, "get", true),
-                    content:'content'
+                    "_id": command.getDocId(),
+                    "title":'get_title'
                 });
-            }, 100);
-        }; // end get           // 100 ms, for jiotests simple job waiting
+            }, 100);            // 100 ms, for jiotests simple job waiting
+        }; // end get
 
         that.allDocs = function (command) {
             setTimeout(function () {
-                var o = {
-                    total_rows: 2,
-                    rows: [{
-                        id:'file',
-                        key:'file',
-                        value: {"rev":generateRevision(command, "allDocs", true)}
-                        },{
-                        id:'memo',
-                        key:'memo',
-                        value: {"rev":generateRevision(command, "allDocs", true)}
-                        }]
-                    };
-                that.success(o);
-            }, 100);
+                that.error({
+                    "status": 405,
+                    "statusText": "Method Not Allowed",
+                    "error": "method_not_allowed",
+                    "message": "Your are not allowed to use this command",
+                    "reason": "LocalStorage forbids AllDocs command executions"
+                });
+            });
         }; // end allDocs
 
         that.remove = function (command) {
             setTimeout (function () {
-                that.success({
-                    ok:true,
-                    id:command.getDocId(),
-                    rev:generateRevision(command, "remove", true)
-                });
-            }, 100);
+                if (command.getAttachmentId()) {
+                    that.success({
+                        "ok": true,
+                        "id": command.getDocId()+"/"+command.getAttachmentId()
+                    });
+                } else {
+                    that.success({
+                        "ok": true,
+                        "id": command.getDocId()
+                    });
+                }
+            }, 100);            // 100 ms, for jiotests simple job waiting
         }; // end remove
 
         return that;
@@ -137,7 +99,7 @@
                              error:'unknown_error',
                              message:'Execution encountred an error.',
                              reason:'Execution encountred an error'});
-            });
+            }, 100);
         };
 
         that.post = function (command) {
@@ -148,12 +110,24 @@
             priv.error();
         }; // end put
 
+        that.putAttachment = function (command) {
+            priv.error();
+        }; // end put
+
         that.get = function (command) {
             priv.error();
         }; // end get
 
         that.allDocs = function (command) {
-            priv.error();
+            setTimeout(function () {
+                that.error({
+                    "status": 405,
+                    "statusText": "Method Not Allowed",
+                    "error": "method_not_allowed",
+                    "message": "Your are not allowed to use this command",
+                    "reason": "LocalStorage forbids AllDocs command executions"
+                });
+            });
         }; // end allDocs
 
         that.remove = function (command) {
@@ -172,8 +146,8 @@
         that.post = function (command) {
             setTimeout (function () {
                 that.success ({
-                    ok:true,
-                    id:command.getDocId()
+                    "ok": true,
+                    "id": command.getDocId()
                 });
             }, 100);
         }; // end post
@@ -181,37 +155,52 @@
         that.put = function (command) {
             setTimeout (function () {
                 that.success ({
-                    ok:true,
-                    id:command.getDocId()
+                    "ok": true,
+                    "id": command.getDocId()
+                });
+            }, 100);
+        }; // end put
+
+        that.putAttachment = function (command) {
+            setTimeout (function () {
+                that.success ({
+                    "ok": true,
+                    "id": command.getDocId()+"/"+command.getAttachmentId()
                 });
             }, 100);
         }; // end put
 
         that.get = function (command) {
             setTimeout(function () {
-                that.error ({status:404,statusText:'Not Found',
-                             error:'not_found',
-                             message:'Document "'+ command.getDocId() +
-                             '" not found.',
-                             reason:'Document "'+ command.getDocId() +
-                             '" not found'});
+                that.error ({
+                    "status": 404,
+                    "statusText": "Not Found",
+                    "error": "not_found",
+                    "message": "Document '"+ command.getDocId() +
+                        "' not found",
+                    "reason": "Document '"+ command.getDocId() +
+                        "' does not exist"
+                });
             }, 100);
         }; // end get
 
         that.allDocs = function (command) {
             setTimeout(function () {
-                that.error ({status:404,statusText:'Not Found',
-                             error:'not_found',
-                             message:'User list not found.',
-                             reason:'User list not found'});
-            }, 100);
+                that.error({
+                    "status": 405,
+                    "statusText": "Method Not Allowed",
+                    "error": "method_not_allowed",
+                    "message": "Your are not allowed to use this command",
+                    "reason": "LocalStorage forbids AllDocs command executions"
+                });
+            });
         }; // end allDocs
 
         that.remove = function (command) {
             setTimeout (function () {
                 that.success ({
-                    ok:true,
-                    id:command.getDocId()
+                    "ok": true,
+                    "id": command.getDocId()
                 });
             }, 100);
         }; // end remove
@@ -226,15 +215,12 @@
     newDummyStorageAll3Tries = function ( spec, my ) {
         var that = my.basicStorage( spec, my ), priv = {};
 
-        // this serialized method is used to make simple difference between
+        // this specToStore method is used to make simple difference between
         // two dummyall3tries storages:
         // so  {type:'dummyall3tries',a:'b'} differs from
         //     {type:'dummyall3tries',c:'d'}.
-        var super_serialized = that.serialized;
-        that.serialized = function () {
-            var o = super_serialized();
-            o.applicationname = spec.applicationname;
-            return o;
+        that.specToStore = function () {
+            return {"applicationname": spec.applicationname};
         };
 
         priv.doJob = function (command,if_ok_return) {
@@ -243,12 +229,16 @@
                 priv.Try3OKElseFail (command.getTried(),if_ok_return);
             }, 100);
         };
+
         priv.Try3OKElseFail = function (tries,if_ok_return) {
             if ( typeof tries === 'undefined' ) {
-                return that.error ({status:0,statusText:'Unknown Error',
-                                    error:'unknown_error',
-                                    message:'Cannot get tried.',
-                                    reason:'Cannot get tried'});
+                return that.error ({
+                    "status": 0,
+                    "statusText": "Unknown Error",
+                    "error": "unknown_error",
+                    "message": "Cannot get tried",
+                    "reason": "Unknown"
+                });
             }
             if ( tries < 3 ) {
                 return that.retry (
@@ -258,55 +248,171 @@
                 return that.success (if_ok_return);
             }
             if ( tries > 3 ) {
-                return that.error ({status:1,statusText:'Too Much Tries',
-                                    error:'too_much_tries',
-                                    message:'Too much tries.',
-                                    reason:'Too much tries'});
+                return that.error ({
+                    "status": 1,
+                    "statusText": "Too Much Tries",
+                    "error": "too_much_tries",
+                    "message": "Too much tries",
+                    "reason": "Too much tries"
+                });
             }
         };
 
         that.post = function (command) {
-            priv.doJob (command,{ok:true,id:command.getDocId()});
+            priv.doJob (command,{"ok": true,"id": command.getDocId()});
         }; // end post
 
         that.put = function (command) {
-            priv.doJob (command,{ok:true,id:command.getDocId()});
+            priv.doJob (command,{"ok": true,"id": command.getDocId()});
+        }; // end put
+
+        that.putAttachment = function (command) {
+            priv.doJob (command,{
+                "ok": true,
+                "id": command.getDocId()+"/"+command.getAttachmentId()
+            });
         }; // end put
 
         that.get = function (command) {
-            priv.doJob (command,{
-                _id: command.getDocId(),
-                content: 'content '+command.getDocId(),
-                _creation_date: 11000,
-                _last_modified: 17000
-            });
+            if (command.getAttachmentId()) {
+                priv.doJob (command,"0123456789");
+            } else {
+                priv.doJob (command,{
+                    "_id": command.getDocId(),
+                    "title": 'Title of '+command.getDocId(),
+                });
+            }
         }; // end get
 
         that.allDocs = function (command) {
-            priv.doJob(command,{
-                total_rows:2,
-                rows:[{
-                    id:'file',key:'file',
-                    value:{
-                        _creation_date:10000,
-                        _last_modified:15000
-                    }
-                },{
-                    id:'memo',key:'memo',
-                    value:{
-                        _creation_date:20000,
-                        _last_modified:25000
-                    }
-                }]});
+            setTimeout(function () {
+                that.error({
+                    "status": 405,
+                    "statusText": "Method Not Allowed",
+                    "error": "method_not_allowed",
+                    "message": "Your are not allowed to use this command",
+                    "reason": "LocalStorage forbids AllDocs command executions"
+                });
+            });
         }; // end allDocs
 
         that.remove = function (command) {
-            priv.doJob(command,{ok:true,id:command.getDocId()});
+            if (command.getAttachmentId()) {
+                priv.doJob(command,{
+                    "ok": true,
+                    "id": command.getDocId()+"/"+command.getAttachmentId()
+                });
+            } else {
+                priv.doJob(command,{"ok": true,"id": command.getDocId()});
+            }
+        }; // end remove
+
+        return that;
+    },
+    // end Dummy Storage All 3 Tries
+    ////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Dummy Storage 5 : all docs
+    newDummyStorageAllDocs = function (spec, my) {
+        var that = my.basicStorage(spec, my);
+
+        that.specToStore = function () {
+            return {"username": spec.username};
+        };
+
+        that.post = function (command) {
+            setTimeout (function () {
+                that.success({
+                    "ok": true,
+                    "id": command.getDocId()
+                });
+            }, 100);            // 100 ms, for jiotests simple job waiting
+        }; // end post
+
+        that.put = function (command) {
+            setTimeout (function () {
+                that.success ({
+                    "ok": true,
+                    "id": command.getDocId()
+                });
+            }, 100);            // 100 ms, for jiotests simple job waiting
+        }; // end put
+
+        that.putAttachment = function (command) {
+            setTimeout (function () {
+                that.success ({
+                    "ok": true,
+                    "id": command.getDocId()+"/"+command.getAttachmentId()
+                });
+            }, 100);            // 100 ms, for jiotests simple job waiting
+        }; // end putAttachment
+
+        that.get = function (command) {
+            setTimeout(function () {
+                if (command.getAttachmentId()) {
+                    return that.success ('0123456789');
+                }
+                that.success ({
+                    "_id": command.getDocId(),
+                    "title": "get_title"
+                });
+            }, 100);            // 100 ms, for jiotests simple job waiting
+        }; // end get
+
+        that.allDocs = function (command) {
+            setTimeout(function () {
+                var addRow, o = {
+                    "total_rows": 0,
+                    "rows": []
+                };
+                addRow = function (id, key, doc) {
+                    var row = {
+                        "id": "file",
+                        "key": "file",
+                        "value": {}
+                    };
+                    if (command.getOption("include_docs")) {
+                        row["doc"] = doc;
+                    }
+                    o.rows.push(row);
+                    o.total_rows += 1;
+                };
+                addRow("file", "file", {
+                    "_id": "file",
+                    "Title": "myFile",
+                });
+                addRow(
+                    "mylongtitledfilethatidontliketowritebyhandonablackboard",
+                    "mylongti.alias1",
+                    {
+                        "_id": "mylongtitledfilethatidontliketowritebyhandonablackboard",
+                        "Title": "myLongFile",
+                    }
+                );
+                that.success(o);
+            });
+        }; // end allDocs
+
+        that.remove = function (command) {
+            setTimeout (function () {
+                if (command.getAttachmentId()) {
+                    that.success({
+                        "ok": true,
+                        "id": command.getDocId()+"/"+command.getAttachmentId()
+                    });
+                } else {
+                    that.success({
+                        "ok": true,
+                        "id": command.getDocId()
+                    });
+                }
+            }, 100);            // 100 ms, for jiotests simple job waiting
         }; // end remove
 
         return that;
     };
-    // end Dummy Storage All 3 Tries
+    // end Dummy Storage All Docs
     ////////////////////////////////////////////////////////////////////////////
 
     // add key to storageObjectType of global jio
@@ -314,6 +420,7 @@
     jIO.addStorageType('dummyallfail', newDummyStorageAllFail);
     jIO.addStorageType('dummyallnotfound', newDummyStorageAllNotFound);
     jIO.addStorageType('dummyall3tries', newDummyStorageAll3Tries);
+    jIO.addStorageType('dummyalldocs', newDummyStorageAllDocs);
 
 };
 
