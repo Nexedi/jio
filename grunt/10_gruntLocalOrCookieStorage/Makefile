@@ -1,4 +1,0 @@
-auto: grunt
-
-grunt:
-	grunt

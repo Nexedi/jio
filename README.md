@@ -60,7 +60,7 @@ jIO is separated in 2 parts, core library and storage library(ies). The core mus
 Getting started
 ---------------
 
-This short tutorial is designed to help you get started using jIO. First, download the jIO core and the jIO storages scripts (git clone http://git.erp5.org/repos/jio.git) and their dependencies ([LocalOrCookieStorage](http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/localorcookiestorage.js), [jQuery](http://jquery.com), [base64](http://www.webtoolkit.info/javascript-base64.html), [sjcl](http://crypto.stanford.edu/sjcl/), [sha2](http://anmar.eu.org/projects/jssha2/)). Then, add the scripts in your HTML page as following:
+This short tutorial is designed to help you get started using jIO. First, download the jIO core and the jIO storages scripts (git clone http://git.erp5.org/repos/jio.git) and their dependencies ([jQuery](http://jquery.com), [base64](http://www.webtoolkit.info/javascript-base64.html), [sjcl](http://crypto.stanford.edu/sjcl/), [sha2](http://anmar.eu.org/projects/jssha2/)). Then, add the scripts in your HTML page as following:
 
 ```
 <!-- jIO Core -->

@@ -87,7 +87,6 @@ module.exports = function(grunt) {
                 browser: true
             },
             globals: {
-                LocalOrCookieStorage: true,
                 hex_md5: true,
                 console: true,
                 unescape: true,

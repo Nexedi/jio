@@ -37,9 +37,9 @@ var newIndexStorage = function ( spec, my ) {
     };
 
     priv.indexStorage = function () {
-        var obj = LocalOrCookieStorage.getItem (storage_object_name) || {};
+        var obj = localStorage.getItem (storage_object_name) || {};
         obj[priv.secondstorage_spec] = new Date().getTime();
-        LocalOrCookieStorage.setItem (storage_object_name,obj);
+        localStorage.setItem (storage_object_name,obj);
     };
 
     priv.formatToFileObject = function (row) {
@@ -68,24 +68,24 @@ var newIndexStorage = function ( spec, my ) {
         for (i = 0; i < file_array.length; i+= 1) {
             obj[file_array[i].id] = priv.formatToFileObject(file_array[i]);
         }
-        LocalOrCookieStorage.setItem (storage_file_object_name,obj);
+        localStorage.setItem (storage_file_object_name,obj);
     };
 
     priv.getFileObject = function (docid) {
-        var obj = LocalOrCookieStorage.getItem (storage_file_object_name) || {};
+        var obj = localStorage.getItem (storage_file_object_name) || {};
         return obj[docid];
     };
 
     priv.addFile = function (file_obj) {
-        var obj = LocalOrCookieStorage.getItem (storage_file_object_name) || {};
+        var obj = localStorage.getItem (storage_file_object_name) || {};
         obj[file_obj._id] = file_obj;
-        LocalOrCookieStorage.setItem (storage_file_object_name,obj);
+        localStorage.setItem (storage_file_object_name,obj);
     };
 
     priv.removeFile = function (docid) {
-        var obj = LocalOrCookieStorage.getItem (storage_file_object_name) || {};
+        var obj = localStorage.getItem (storage_file_object_name) || {};
         delete obj[docid];
-        LocalOrCookieStorage.setItem (storage_file_object_name,obj);
+        localStorage.setItem (storage_file_object_name,obj);
     };
 
     /**
@@ -167,7 +167,7 @@ var newIndexStorage = function ( spec, my ) {
      * @method allDocs
      */
     that.allDocs = function (command) {
-        var obj = LocalOrCookieStorage.getItem (storage_file_object_name);
+        var obj = localStorage.getItem (storage_file_object_name);
         if (obj) {
             priv.update();
             setTimeout(function (){
