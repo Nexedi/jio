@@ -38,26 +38,16 @@ var command = function(spec, my) {
     // Methods //
     /**
      * Returns a serialized version of this command.
-     * @method super_serialized
+     * @method serialized
      * @return {object} The serialized command.
      */
-    that.super_serialized = function () {
-        var o = that.serialized() || {};
+    that.serialized = function () {
+        var o = {};
         o["label"] = that.getLabel();
         o["tried"] = priv.tried;
         o["doc"] = that.cloneDoc();
         o["option"] = that.cloneOption();
         return o;
-    };
-
-    /**
-     * Returns a serialized version of this command.
-     * Override this function.
-     * @method serialized
-     * @return {object} The serialized command.
-     */
-    that.serialized = function() {
-        return {};
     };
 
     /**

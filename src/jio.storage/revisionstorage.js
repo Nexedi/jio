@@ -17,7 +17,7 @@ jIO.addStorageType('revision', function (spec, my) {
     priv.doctree_suffix = ".revision_tree.json";
     priv.substorage = spec[priv.substorage_key];
 
-    that.serialized = function () {
+    that.specToStore = function () {
         var o = {};
         o[priv.substorage_key] = priv.substorage;
         return o;

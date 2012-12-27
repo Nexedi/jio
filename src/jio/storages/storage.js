@@ -56,19 +56,20 @@ var storage = function(spec, my) {
      * @method serialized
      * @return {object} The serialized storage.
      */
-    that.super_serialized = function() {
-        var o = that.serialized() || {};
+    that.serialized = function() {
+        var o = that.specToStore() || {};
         o["type"] = that.getType();
         return o;
     };
 
     /**
-     * Returns a serialized version of this storage.
+     * Returns an object containing spec to store on localStorage, in order to
+     * be restored later if something wrong happen.
      * Override this method!
-     * @method serialized
-     * @return {object} The serialized version of this storage
+     * @method specToStore
+     * @return {object} The spec to store
      */
-    that.serialized = function () {
+    that.specToStore = function () {
         return {};
     };
 

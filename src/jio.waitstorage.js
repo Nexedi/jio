@@ -19,9 +19,8 @@
             return '';
         };
 
-        var super_serialized = that.serialized;
-        that.serialized = function () {
-            var o = super_serialized();
+        that.specToStore = function () {
+            var o = {};
             o.delay = priv.delay;
             o.storage = priv.secondstorage_spec;
             o.save = priv.save;

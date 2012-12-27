@@ -72,7 +72,7 @@ var newLocalStorage = function (spec, my) {
     };
 
     // ===================== overrides ======================
-    that.serialized = function () {
+    that.specToStore = function () {
         return {
             "applicationname": priv.applicationname,
             "username": priv.username
