@@ -110,7 +110,7 @@ var newLocalStorage = function (spec, my) {
             doc = localstorage.getItem(
                 priv.localpath + "/" + doc);
             if (doc === null) {
-                // the document does not exists
+                // the document does not exist
                 localstorage.setItem(
                     priv.localpath + "/" + command.getDocId(),
                     command.cloneDoc());
@@ -139,7 +139,7 @@ var newLocalStorage = function (spec, my) {
             doc = localstorage.getItem(
                 priv.localpath + "/" + command.getDocId());
             if (doc === null) {
-                //  the document does not exists
+                //  the document does not exist
                 doc = command.cloneDoc();
             } else {
                 // the document already exists
@@ -164,7 +164,7 @@ var newLocalStorage = function (spec, my) {
             doc = localstorage.getItem(
                 priv.localpath + "/" + command.getDocId());
             if (doc === null) {
-                //  the document does not exists
+                //  the document does not exist
                 that.error({
                     "status": 404,
                     "statusText": "Not Found",
@@ -219,8 +219,8 @@ var newLocalStorage = function (spec, my) {
                         "status": 404,
                         "statusText": "Not Found",
                         "error": "not_found",
-                        "message": "Cannot find the attachment ",
-                        "reason": "attachment does not exists"
+                        "message": "Cannot find the attachment",
+                        "reason": "Attachment does not exist"
                     });
                 }
             } else {
@@ -235,7 +235,7 @@ var newLocalStorage = function (spec, my) {
                         "statusText": "Not Found",
                         "error": "not_found",
                         "message": "Cannot find the document",
-                        "reason": "Document does not exists"
+                        "reason": "Document does not exist"
                     });
                 }
             }
