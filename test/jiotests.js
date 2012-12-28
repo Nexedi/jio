@@ -1025,6 +1025,81 @@ test ("AllDocs", function(){
 
 });
 
+module ( "Jio Revision Storage + Local Storage" );
+
+test ("Post", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "revision",
+        "secondstorage": {
+            "type": "local",
+            "username": "urevpost",
+            "applicationname": "arevpost"
+        }
+    });
+
+    // post without id
+    o.spy (o, "status", undefined, "Post without id");
+    o.jio.post({}, function (err, response) {
+        o.f.apply(arguments);
+        if (isUuid((err || response).id)) {
+            ok(true, "Uuid format");
+        } else {
+            deepEqual((err || response).id,
+                      "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "Uuid format");
+        }
+    });
+    o.tick(o);
+
+    // post non empty document
+    o.doc = {"_id": "post1", "title": "myPost1"};
+    o.revs_info = [];
+    o.rev = "1-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.spy (o, "value", {"ok": true, "id": "post1", "rev": o.rev}, "Post");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc["_id"] = "post1."+o.rev;
+    deepEqual(
+        localstorage.getItem("jio/localstorage/urevpost/arevpost/post1."+o.rev),
+        o.doc, "Check document"
+    );
+
+    // post and document already exists
+    o.doc = {"_id": "post1", "title": "myPost2"};
+    o.revs_info = [];
+    o.rev = "1-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.spy (o, "value", {
+        "ok": true, "id": "post1", "rev": o.rev
+    }, "Post and document already exists");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // post + revision
+    o.doc = {"_id": "post1", "_rev": o.rev, "title": "myPost2"};
+    o.revs_info = [{"rev": o.rev, "status": "available"}];
+    o.rev = "2-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.spy (o, "status", undefined, "Post + revision");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // // keep_revision_history
+    // ok (false, "keep_revision_history Option Not Implemented");
+
+    // check document
+    o.doc["_id"] = "post1."+o.rev;
+    deepEqual(
+        localstorage.getItem("jio/localstorage/urevpost/arevpost/post1."+o.rev),
+        o.doc, "Check document"
+    );
+
+    o.jio.stop();
+
+});
+
 /*
 module ('Jio DAVStorage');
 
