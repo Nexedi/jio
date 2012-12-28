@@ -686,7 +686,8 @@ test ("Restore old Jio", function() {
     o.jio_id = o.jio.getId();
 
     o.jio.put({"_id": "file", "title": "myFile"}, {"max_retry":3}, o.f);
-    o.waitUntilLastJobIs("on going");
+    o.waitUntilLastJobIs("initial"); // "on going" or "wait" should work
+    // xxx also test with o.waitUntilLastJobIs("on going") ?
     o.jio.close();
 
     o.jio = JIO.newJio({
