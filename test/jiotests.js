@@ -123,30 +123,44 @@ generateTools = function (sinon) {
     o.clock.tick(base_tick);
     o.spy = basicSpyFunction;
     o.tick = basicTickFunction;
+    // test methods
     o.testLastJobLabel = function (label, mess) {
-        deepEqual(
-            getLastJob(o.jio.getId()).command.label,
-            label,
-            mess
-        );
+        var lastjob = getLastJob(o.jio.getId());
+        if (lastjob) {
+            deepEqual(lastjob.command.label, label, mess);
+        } else {
+            deepEqual("No job on the queue", "Job with label: "+label, mess);
+        }
     };
     o.testLastJobId = function (id, mess) {
-        deepEqual(
-            getLastJob(o.jio.getId()).id,
-            id,
-            mess
-        );
+        var lastjob = getLastJob(o.jio.getId());
+        if (lastjob) {
+            deepEqual(lastjob.id, id, mess);
+        } else {
+            deepEqual("No job on the queue", "Job with id: "+id, mess);
+        }
     };
     o.testLastJobWaitForTime = function (mess) {
-        ok(getLastJob(o.jio.getId()).status.waitfortime > 0, mess);
+        var lastjob = getLastJob(o.jio.getId());
+        if (lastjob) {
+            ok(lastjob.status.waitfortime > 0, mess);
+        } else {
+            deepEqual("No job on the queue", "Job waiting for time", mess);
+        }
     };
     o.testLastJobWaitForJob = function (job_id_array, mess) {
-        deepEqual(
-            getLastJob(o.jio.getId()).status.waitforjob,
-            job_id_array,
-            mess
-        );
+        var lastjob = getLastJob(o.jio.getId());
+        if (lastjob) {
+            deepEqual(lastjob.status.waitforjob, job_id_array, mess);
+        } else {
+            deepEqual(
+                "No job on the queue",
+                "Job waiting for: " + JSON.stringify (job_id_array),
+                mess
+            );
+        }
     };
+    // wait method
     o.waitUntilAJobExists = function (timeout) {
         var cpt = 0
         while (true) {
@@ -154,7 +168,7 @@ generateTools = function (sinon) {
                 break;
             }
             if (timeout >= cpt) {
-                ok(false, "no job added to the queue");
+                ok(false, "No job were added to the queue");
                 break;
             }
             o.clock.tick(25);
@@ -164,7 +178,7 @@ generateTools = function (sinon) {
     o.waitUntilLastJobIs = function (state) {
         while (true) {
             if (getLastJob(o.jio.getId()) === undefined) {
-                ok(false, "a job is never called");
+                ok(false, "No job have state: " + state);
                 break;
             }
             if (getLastJob(o.jio.getId()).status.label === state) {
@@ -174,10 +188,18 @@ generateTools = function (sinon) {
         }
     };
     return o;
-};
+},
 //// end tools
 
-//// test methods ////
+//// test function
+isUuid = function (uuid) {
+    var x = "[0-9a-fA-F]{4}";
+    if (typeof uuid !== "string" ) {
+        return false;
+    }
+    return uuid.match("^"+x+x+"-"+x+"-"+x+"-"+x+"-"+x+x+x+"$") === null?
+        false: true;
+};
 
 //// QUnit Tests ////
 module ('Jio Global tests');
