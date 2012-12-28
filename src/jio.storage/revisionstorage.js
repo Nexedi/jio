@@ -432,7 +432,7 @@ jIO.addStorageType('revision', function (spec, my) {
         if (option["max_retry"] === 0) {
             option["max_retry"] = 3;
         }
-        prev_rev = command.getDocInfo("_rev");
+        prev_rev = command.getOption("rev");
         if (typeof prev_rev === "string") {
             if (!priv.checkRevisionFormat(prev_rev)) {
                 that.error({
