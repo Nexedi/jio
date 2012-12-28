@@ -70,16 +70,42 @@ basicTestFunctionGenerator = function(o,res,value,message) {
         deepEqual (val,value,message);
     };
 },
-basicSpyFunction = function(o,res,value,message,fun) {
 
-    fun = fun || 'f';
-    o[fun] = basicTestFunctionGenerator(o,res,value,message);
-    o.t.spy(o,fun);
+/**
+ * Prepare a specific test for jio and create a spy.
+ * It creates a function [function_name] in [obj] which can be use as a
+ * jio callback. To prepare the test, we need to know what kind of return
+ * value you want -> [result_type]:
+ * - "status": [value] is compared with err.status, the error code
+ * - "jobstatus": [value] check if the request is "fail" or "done"
+ * - "value": [value] is compared to the response
+ * @method basicSpyFunction
+ * @param  {object} obj The object to work with
+ * @param  {string} result_type The result type
+ * @param  {object} value The value to be compared
+ * @param  {string} message The test message
+ * @param  {string} function_name The callback name
+ */
+basicSpyFunction = function(obj, result_type, value, message, function_name) {
+
+    function_name = function_name || 'f';
+    obj[function_name] =
+        basicTestFunctionGenerator(obj, result_type, value, message);
+    obj.t.spy(obj, function_name);
 },
-basicTickFunction = function (o) {
+
+/**
+ * Advances in time and execute the test previously prepared.
+ * The default function to test is "f" in [obj].
+ * @method basicTickFunction
+ * @param  {object} obj The object to work with
+ * @param  {number} tick The time to advance in ms (optional)
+ * @param  {function_name} function_name The callback to test (optional)
+ */
+basicTickFunction = function (obj) {
     var tick, fun, i = 1;
     tick = 10000;
-    fun = fun || 'f';
+    fun = "f";
 
     if (typeof arguments[i] === 'number') {
         tick = arguments[i]; i++;
@@ -87,12 +113,12 @@ basicTickFunction = function (o) {
     if (typeof arguments[i] === 'string') {
         fun = arguments[i]; i++;
     }
-    o.clock.tick(tick);
-    if (!o[fun].calledOnce) {
-        if (o[fun].called) {
-            ok(false, 'too much results (o.' + fun +')');
+    obj.clock.tick(tick);
+    if (!obj[fun].calledOnce) {
+        if (obj[fun].called) {
+            ok(false, 'too much results (obj.' + fun +')');
         } else {
-            ok(false, 'no response (o.' + fun +')');
+            ok(false, 'no response (obj.' + fun +')');
         }
     }
 },
@@ -755,6 +781,7 @@ test ("Put", function(){
     });
 
     // put without id
+    // error 20 -> document id required
     o.spy (o, "status", 20, "Put without id");
     o.jio.put({}, o.f);
     o.tick(o);
