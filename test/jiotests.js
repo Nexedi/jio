@@ -1100,6 +1100,65 @@ test ("Post", function(){
 
 });
 
+test ("Put", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "revision",
+        "secondstorage": {
+            "type": "local",
+            "username": "urevput",
+            "applicationname": "arevput"
+        }
+    });
+
+    // put without id
+    // error 20 -> document id required
+    o.spy (o, "status", 20, "Put without id");
+    o.jio.put({}, o.f);
+    o.tick(o);
+
+    // put non empty document
+    o.doc = {"_id": "put1", "title": "myPut1"};
+    o.revs_info = [];
+    o.rev = "1-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.spy (o, "value", {"ok": true, "id": "put1", "rev": o.rev},
+           "Creates a document");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc["_id"] = "put1."+o.rev;
+    deepEqual(
+        localstorage.getItem("jio/localstorage/urevput/arevput/put1."+o.rev),
+        o.doc, "Check document"
+    );
+
+    // put and document already exists
+    o.spy (o, "status", 409, "Update the document");
+    o.jio.put({"_id": "put1", "title": "myPut2"}, o.f);
+    o.tick(o);
+
+    // post + revision
+    o.doc = {"_id": "put1", "_rev": o.rev, "title": "myPut2"};
+    o.revs_info = [{"rev": o.rev, "status": "available"}];
+    o.rev = "2-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.spy (o, "status", undefined, "Put + revision");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc["_id"] = "put1."+o.rev;
+    deepEqual(
+        localstorage.getItem("jio/localstorage/urevput/arevput/put1."+o.rev),
+        o.doc, "Check document"
+    );
+
+    o.jio.stop();
+
+});
+
 /*
 module ('Jio DAVStorage');
 
