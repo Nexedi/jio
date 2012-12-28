@@ -1160,6 +1160,130 @@ test ("Put", function(){
 
 });
 
+test ("Get", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "revision",
+        "secondstorage": {
+            "type": "local",
+            "username": "urevget",
+            "applicationname": "arevget"
+        }
+    });
+    o.localpath = "jio/localstorage/urevget/arevget";
+
+    // get unexistant document
+    o.spy(o, "status", 404, "Get unexistant document (winner)");
+    o.jio.get("get1", o.f);
+    o.tick(o);
+
+    // get unexistant attachment
+    o.spy(o, "status", 404, "Get unexistant attachment (winner)");
+    o.jio.get("get1/get2", o.f);
+    o.tick(o);
+
+    // adding a document
+    o.doctree = {"children":[{
+        "rev": "1-rev1", "status": "available", "children": []
+    }]};
+    o.doc_myget1 = {"_id": "get1", "title": "myGet1"};
+    localstorage.setItem(o.localpath+"/get1.revision_tree.json", o.doctree);
+    localstorage.setItem(o.localpath+"/get1.1-rev1", o.doc_myget1);
+
+    // get document
+    o.doc_myget1["_rev"] = "1-rev1";
+    o.spy(o, "value", o.doc_myget1, "Get document (winner)");
+    o.jio.get("get1", o.f);
+    o.tick(o);
+    delete o.doc_myget1["_rev"];
+
+    // adding two documents
+    o.doctree = {"children":[{
+        "rev": "1-rev1", "status": "available", "children": []
+    },{
+        "rev": "1-rev2", "status": "available", "children": [{
+            "rev": "2-rev3", "status": "available", "children": []
+        }]
+    }]};
+    o.doc_myget2 = {"_id": "get1", "title": "myGet2"};
+    o.doc_myget3 = {"_id": "get1", "title": "myGet3"};
+    localstorage.setItem(o.localpath+"/get1.revision_tree.json", o.doctree);
+    localstorage.setItem(o.localpath+"/get1.1-rev2", o.doc_myget2);
+    localstorage.setItem(o.localpath+"/get1.2-rev3", o.doc_myget3);
+
+    // get document
+    o.doc_myget3["_rev"] = "2-rev3";
+    o.spy(o, "value", o.doc_myget3,
+          "Get document (winner, after posting another one)");
+    o.jio.get("get1", o.f);
+    o.tick(o);
+    delete o.doc_myget3["_rev"];
+
+    // get unexistant specific document
+    o.spy(o, "status", 404, "Get document (unexistant specific revision)");
+    o.jio.get("get1", {"rev": "1-rev0"}, o.f);
+    o.tick(o);
+
+    // get specific document
+    o.doc_myget2["_rev"] = "1-rev2";
+    o.spy(o, "value", o.doc_myget2, "Get document (specific revision)");
+    o.jio.get("get1", {"rev": "1-rev2"}, o.f);
+    o.tick(o);
+    delete o.doc_myget2["_rev"];
+
+    // adding an attachment
+    o.attmt_myget2 = {
+        "get2": {
+            "length": 3,
+            "digest": "md5-dontcare"
+        }
+    };
+    o.doctree["children"][1]["attachment"] = o.attmt_myget2;
+    localstorage.setItem(o.localpath+"/get1.1-rev2", o.doc_myget2);
+    localstorage.setItem(o.localpath+"/get1.1-rev2/get2", "abc");
+
+    // get attachment winner
+    o.spy(o, "value", "abc", "Get attachment (winner)");
+    o.jio.get("get1/get2", o.f);
+    o.tick(o);
+
+    // get unexistant attachment specific rev
+    o.spy(o, "status", 404, "Get unexistant attachment (specific revision)");
+    o.jio.get("get1/get2", {"rev": "1-rev1"}, o.f);
+    o.tick(o);
+
+    // get attachment specific rev
+    o.spy(o, "value", "abc", "Get attachment (specific revision)");
+    o.jio.get("get1/get2", {"rev": "1-rev2"}, o.f);
+    o.tick(o);
+
+    // get document with attachment (specific revision)
+    o.attmt_myget2["get2"]["revpos"] = 1;
+    o.doc_myget2["_rev"] = "1-rev2";
+    o.doc_myget2["_attachments"] = o.attmt_myget2;
+    o.spy(o, "value", o.doc_myget2,
+          "Get document attachment (specific revision)");
+    o.jio.get("get1", {"rev": "1-rev2"}, o.f);
+    o.tick(o);
+    delete o.doc_myget2["_rev"];
+    delete o.doc_myget2["_attachments"];
+
+    // get document with attachment (winner)
+    o.doc_myget3["_rev"] = "2-rev3";
+    o.doc_myget3["_attachments"] = o.attmt_myget2;
+    o.spy(o, "value", o.doc_myget3, "Get document attachment (winner)");
+    o.jio.get("get1", o.f);
+    o.tick(o);
+    delete o.doc_myget3["_rev"];
+    delete o.doc_myget3["_attachments"];
+    delete o.attmt_myget2["get2"]["revpos"];
+
+    o.jio.stop();
+
+});
+
 /*
 module ('Jio DAVStorage');
 
