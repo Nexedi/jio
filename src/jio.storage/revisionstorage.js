@@ -355,8 +355,8 @@ jIO.addStorageType('revision', function (spec, my) {
     priv.getRevisionFromPosition = function (revs_info, rev_pos) {
         var i;
         for (i = revs_info.length - 1; i >= 0; i -= 1) {
-            if (priv.revisionToArray(revs_info.rev)[0] === rev_pos) {
-                return revs_info.rev;
+            if (priv.revisionToArray(revs_info[i].rev)[0] === rev_pos) {
+                return revs_info[i].rev;
             }
         }
         return '';
