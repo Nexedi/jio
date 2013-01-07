@@ -1291,11 +1291,14 @@ test ("Get", function(){
     o.attmt_myget2 = {
         "get2": {
             "length": 3,
-            "digest": "md5-dontcare"
+            "digest": "md5-dontcare",
+            "revpos": 1
         }
     };
-    o.doctree["children"][1]["attachment"] = o.attmt_myget2;
+    o.doc_myget2["_attachments"] = o.attmt_myget2;
+    o.doc_myget3["_attachments"] = o.attmt_myget2;
     localstorage.setItem(o.localpath+"/get1.1-rev2", o.doc_myget2);
+    localstorage.setItem(o.localpath+"/get1.2-rev3", o.doc_myget3);
     localstorage.setItem(o.localpath+"/get1.1-rev2/get2", "abc");
 
     // get attachment winner
@@ -1320,13 +1323,9 @@ test ("Get", function(){
     o.tick(o);
 
     // get document with attachment (specific revision)
-    o.attmt_myget2_cloned = clone(o.attmt_myget2);
-    o.attmt_myget2_cloned["get2"]["revpos"] = 1;
-    o.doc_myget2_cloned = clone(o.doc_myget2);
-    o.doc_myget2_cloned["_rev"] = "1-rev2";
-    o.doc_myget2_cloned["_attachments"] = o.attmt_myget2_cloned;
+    o.doc_myget2_cloned["_attachments"] = o.attmt_myget2;
     o.spy(o, "value", o.doc_myget2_cloned,
-          "Get document attachment (specific revision)");
+          "Get document which have an attachment (specific revision)");
     o.jio.get("get1", {
         "revs_info": true, "revs": true, "conflicts": true,
         "rev": "1-rev2"
@@ -1334,10 +1333,9 @@ test ("Get", function(){
     o.tick(o);
 
     // get document with attachment (winner)
-    o.doc_myget3_cloned = clone(o.doc_myget3);
-    o.doc_myget3_cloned["_rev"] = "2-rev3";
-    o.doc_myget3_cloned["_attachments"] = o.attmt_myget2_cloned;
-    o.spy(o, "value", o.doc_myget3_cloned, "Get document attachment (winner)");
+    o.doc_myget3_cloned["_attachments"] = o.attmt_myget2;
+    o.spy(o, "value", o.doc_myget3_cloned,
+          "Get document which have an attachment (winner)");
     o.jio.get("get1", {"revs_info": true, "revs": true, "conflicts": true},
               o.f);
     o.tick(o);
