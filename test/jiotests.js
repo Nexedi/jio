@@ -1366,13 +1366,13 @@ test ("Remove", function(){
 
     // 1. remove document without revision
     o.spy (o, "status", 404,
-             "Remove document (no doctree, no revision)");
+           "Remove document (no doctree, no revision)");
     o.jio.remove({"_id":"remove1"}, o.f);
     o.tick(o);
 
     // 2. remove attachment without revision
     o.spy (o, "status", 404,
-             "Remove attachment (no doctree, no revision)");
+           "Remove attachment (no doctree, no revision)");
     o.jio.remove({"_id":"remove1/remove2"}, o.f);
     o.tick(o);
 
@@ -1390,12 +1390,12 @@ test ("Remove", function(){
     o.attmt_myremove1 = {
         "remove2": {
             "length": 3,
-            "digest": "md5-dontcare"
+            "digest": "md5-dontcare",
+            "revpos":1
         },
-        "revpos":1
     };
     o.doc_myremove1 = {"_id": "remove1", "title": "myRemove1",
-        "_rev":o.very_old_rev, "_attachments":o.attmt_myremove1};
+                       "_rev":o.very_old_rev, "_attachments":o.attmt_myremove1};
     o.revisions = {"start":1,"ids":[o.very_old_rev.split('-'),[1]]}
     o.old_rev = "2-"+generateRevisionHash(o.doc_myremove1, o.revisions);
 
@@ -1418,14 +1418,14 @@ test ("Remove", function(){
     o.tick(o);
 
     o.revisions = {"start": 2, "ids":[o.old_rev.split('-')[1],
-        o.very_old_rev.split('-')[1]
-    ]};
+                                      o.very_old_rev.split('-')[1]
+                                     ]};
     o.doc_myremove1 = {"_id":"remove1/remove2","_rev":o.old_rev};
     o.rev = "3-"+generateRevisionHash(o.doc_myremove1, o.revisions);
 
     // 4. remove existing attachment with revision
     o.spy (o, "value", {"ok": true, "id": "remove1", "rev": o.rev},
-             "Remove existing attachment (revision)");
+           "Remove existing attachment (revision)");
     o.jio.remove({"_id":"remove1/remove2","_rev":o.old_rev}, o.f);
     o.tick(o);
 
@@ -1441,9 +1441,9 @@ test ("Remove", function(){
 
     // 5. check if document tree has been updated correctly
     deepEqual(localstorage.getItem("jio/localstorage/urevrem/arevrem/"+
-        "remove1.revision_tree.json" ),
-         o.testtree, "Check if document tree has been updated correctly"
-    );
+                                   "remove1.revision_tree.json" ),
+              o.testtree, "Check if document tree has been updated correctly"
+             );
 
     // 6. check if attachment has been removed
 
@@ -1460,7 +1460,7 @@ test ("Remove", function(){
         "revpos":1
     };
     o.doc_myremove2 = {"_id": "remove1", "title": "myRemove2",
-        "_rev":"1-rev2", "_attachments":o.attmt_myremove2};
+                       "_rev":"1-rev2", "_attachments":o.attmt_myremove2};
     o.revisions = {"start":1,"ids":["rev2"] };
     o.second_old_rev = "2-"+generateRevisionHash(o.doc_myremove2, o.revisions);
 
@@ -1475,11 +1475,11 @@ test ("Remove", function(){
                 "rev": o.rev, "status": "available", "children":[]
             }]
         }]
-        },{
+    },{
         "rev": "1-rev2", "status": "available", "children": [{
             "rev": o.second_old_rev, "status": "available", "children":[]
-            }]
-        }]};
+        }]
+    }]};
     localstorage.setItem(o.localpath+"/remove1.revision_tree.json", o.doctree);
 
     // 8. remove non existing attachment without revision
@@ -1502,7 +1502,8 @@ test ("Remove", function(){
     o.jio.remove({"_id":"remove1","_rev":o.second_old_rev}, o.f);
     o.tick(o);
 
-    o.revisions = {"start": 3, "ids":[o.rev.split('-')[1],
+    o.revisions = {"start": 3, "ids":[
+        o.rev.split('-')[1],
         o.old_rev.split('-')[1],o.very_old_rev.split('-')[1]
     ]};
     o.doc_myremove4 = {"_id":"remove1","_rev":o.rev};
@@ -1510,7 +1511,7 @@ test ("Remove", function(){
 
     // 11. remove document version with revision
     o.spy (o, "value", {"ok": true, "id": "remove1", "rev": o.second_new_rev},
-             "Remove document (with revision)");
+           "Remove document (with revision)");
     o.jio.remove({"_id":"remove1", "_rev":o.rev}, o.f);
     o.tick(o);
 
