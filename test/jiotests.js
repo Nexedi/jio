@@ -1508,9 +1508,9 @@ test ("Remove", function(){
 });
 
 
-module ( "Test Revisionstorage + Localstorage" );
+module ( "Jio Revision Storage + Local Storage" );
 
-test ("sample", function(){
+test ("Scenario", function(){
 
     var o = generateTools(this);
 
@@ -1527,7 +1527,8 @@ test ("sample", function(){
     // 1. put non empty document A-1
     o.doc = {"_id": "sample1", "title": "mySample1"};
     o.revs_info = [];
-    o.rev = "1-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.hex = hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.rev = "1-"+o.hex;
 
     o.spy (o, "value", {"ok": true, "id": "sample1", "rev": o.rev}, "Put non empty document A-1");
     o.jio.put(o.doc, o.f);
@@ -1545,7 +1546,8 @@ test ("sample", function(){
     // 3. FAKE IT
     o.doc_f = {"_id": "sample1", "title": "mySample2"};
     o.revs_info_f = [];
-    o.rev_f = "1-"+hex_sha256(JSON.stringify(o.doc_f)+JSON.stringify(o.revs_info_f));
+    o.hex_f = hex_sha256(JSON.stringify(o.doc_f)+JSON.stringify(o.revs_info_f));
+    o.rev_f = "1-"+o.hex_f;
     o.doc_f2 = {"_id": "sample1."+o.rev_f, "title": "mySample2"};
 
     localstorage.setItem(o.localpath+"/sample1."+o.rev_f, o.doc_f2);
@@ -1557,40 +1559,65 @@ test ("sample", function(){
     localstorage.setItem(o.localpath+"/sample1.revision_tree.json", o.doctree);
 
     // 3. GET first version
-    o.spy(o, "value", {"_id": "sample1", "title": "mySample1", "_rev": o.rev},
-          "Get first document (using revison)");
-    o.jio.get("sample1", {"rev": o.rev}, o.f);
+    o.mydocSample1 = {"_id": "sample1", "title": "mySample1", "_rev": o.rev};
+    o.mydocSample1._revisions = {"ids":[o.hex], "start":1 };
+    o.mydocSample1._revs_info = [{"rev": o.rev, "status": "available"}];
+    o.mydocSample1._conflicts = [o.rev_f];
+    o.spy(o, "value", o.mydocSample1, "Get first document (using revison)");
+    o.jio.get("sample1", {
+        "revs_info": true, "revs": true, "conflicts": true,
+        "rev": o.rev }, o.f);
     o.tick(o);
 
     // 4. MODFIY first version
     o.doc_2 = {"_id": "sample1", "_rev": o.rev, "title": "mySample1_modified"};
-    o.revs_info_2 = [{"rev": o.rev, "status": "available"}];
-    o.rev_2 = "2-"+hex_sha256(JSON.stringify(o.doc_2)+JSON.stringify(o.revs_info_2));
+    o.revs_info_2 = o.mydocSample1._revs_info;
+    o.hex_2 = hex_sha256(JSON.stringify(o.doc_2)+
+        JSON.stringify(o.revs_info_2));
+    o.rev_2 = "2-"+o.hex_2;
     o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_2}, "Modify first document");
     o.jio.put(o.doc_2, o.f);
     o.tick(o);
 
     // 5. GET second version
-    o.spy(o, "value", {"_id": "sample1", "title": "mySample2", "_rev": o.rev_f},
+    o.mydocSample2 = {"_id": "sample1", "title": "mySample2", "_rev": o.rev_f};
+    o.mydocSample2._revisions = {"ids":[o.hex_f], "start":1 };
+    o.mydocSample2._revs_info = [{"rev": o.rev_f, "status": "available"}];
+    o.mydocSample2._conflicts = [o.rev_2];
+    o.spy(o, "value", o.mydocSample2,
           "Get second document (using revison)");
-    o.jio.get("sample1", {"rev": o.rev_f}, o.f);
+    o.jio.get("sample1", {
+        "revs_info": true, "revs": true, "conflicts": true,
+        "rev": o.rev_f }, o.f);
     o.tick(o);
 
     // 6. MODFIY second version
-    o.doc_f2 = {"_id": "sample1", "_rev": o.rev_f, "title": "mySample2_modified"};
-    o.revs_info_f2 = [{"rev": o.rev_f, "status": "available"}];
-    o.rev_f2 = "2-"+hex_sha256(JSON.stringify(o.doc_f2)+JSON.stringify(o.revs_info_f2));
-    o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_f2}, "Modify second document");
+    o.doc_f2 = {"_id": "sample1", "_rev": o.rev_f, 
+        "title":"mySample2_modified"};
+    o.revs_info_f2 = o.mydocSample2._revs_info;
+    o.hex_f2 = hex_sha256(JSON.stringify(o.doc_f2)+
+        JSON.stringify(o.revs_info_f2));
+    o.rev_f2 = "2-"+o.hex_f2;
+    o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_f2}, 
+        "Modify second document");
     o.jio.put(o.doc_f2, o.f);
     o.tick(o);
 
-    // 7. GET document with conflict!
-    o.spy(o, "value", {"_id": "sample1", "title": "mySample2", "_rev": o.rev_f},
-          "Get second document (using revison)");
-    o.jio.get("sample1", o.f);
+    // 7. GET document without revision = winner & conflict!
+    o.mydocSample3 = {"_id": "sample1", "title": "mySample1_modified",
+          "_rev": o.rev_2,"_conflicts":[o.rev_f2]};
+    o.mydocSample3._revs_info = [{"rev": o.rev_2, "status": "available"},{
+        "rev":o.rev,"status":"available"
+        }];
+    o.mydocSample3._revisions = {"ids":[o.hex_2, o.hex], "start":2 };
+    o.spy(o, "value", o.mydocSample3,
+          "Get second document (using revison) = Two conflicting versions");
+    o.jio.get("sample1", {"revs_info": true, "revs": true, "conflicts": true,
+        }, o.f);
     o.tick(o);
 
     o.jio.stop();
+
 });
 /*
 module ('Jio DAVStorage');
