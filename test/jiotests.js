@@ -1223,19 +1223,24 @@ test ("Get", function(){
     localstorage.setItem(o.localpath+"/get1.1-rev1", o.doc_myget1);
 
     // get document
-    o.doc_myget1["_rev"] = "1-rev1";
-    o.spy(o, "value", o.doc_myget1, "Get document (winner)");
-    o.jio.get("get1", o.f);
+    o.doc_myget1_cloned = clone(o.doc_myget1);
+    o.doc_myget1_cloned["_rev"] = "1-rev1";
+    o.doc_myget1_cloned["_revisions"] = {"start": 1, "ids": ["rev1"]};
+    o.doc_myget1_cloned["_revs_info"] = [{
+        "rev": "1-rev1", "status": "available"
+    }];
+    o.spy(o, "value", o.doc_myget1_cloned, "Get document (winner)");
+    o.jio.get("get1", {"revs_info": true, "revs": true, "conflicts": true},
+              o.f);
     o.tick(o);
-    delete o.doc_myget1["_rev"];
 
     // adding two documents
     o.doctree = {"children":[{
-        "rev": "1-rev1", "status": "available", "children": [{
+        "rev": "1-rev1", "status": "available", "children": []
+    },{
+        "rev": "1-rev2", "status": "available", "children": [{
             "rev": "2-rev3", "status": "available", "children": []
         }]
-    },{
-        "rev": "1-rev2", "status": "available", "children": []
     }]};
     o.doc_myget2 = {"_id": "get1", "title": "myGet2"};
     o.doc_myget3 = {"_id": "get1", "title": "myGet3"};
@@ -1244,27 +1249,54 @@ test ("Get", function(){
     localstorage.setItem(o.localpath+"/get1.2-rev3", o.doc_myget3);
 
     // get document
-    o.doc_myget3["_rev"] = "2-rev3";
-    o.spy(o, "value", o.doc_myget3,
+    o.doc_myget3_cloned = clone(o.doc_myget3);
+    o.doc_myget3_cloned["_rev"] = "2-rev3";
+    o.doc_myget3_cloned["_revisions"] = {"start": 2, "ids": ["rev3","rev2"]};
+    o.doc_myget3_cloned["_revs_info"] = [{
+        "rev": "2-rev3", "status": "available"
+    },{
+        "rev": "1-rev2", "status": "available"
+    }];
+    o.doc_myget3_cloned["_conflicts"] = ["1-rev1"];
+    o.spy(o, "value", o.doc_myget3_cloned,
           "Get document (winner, after posting another one)");
-    o.jio.get("get1", o.f);
+    o.jio.get("get1", {"revs_info": true, "revs": true, "conflicts": true},
+              o.f);
     o.tick(o);
-    delete o.doc_myget3["_rev"];
 
     // get unexistant specific document
     o.spy(o, "status", 404, "Get document (unexistant specific revision)");
-    o.jio.get("get1", {"rev": "1-rev0"}, o.f);
+    o.jio.get("get1", {
+        "revs_info": true, "revs": true, "conflicts": true,
+        "rev": "1-rev0"
+    }, o.f);
     o.tick(o);
 
     // get specific document
-    o.doc_myget2["_rev"] = "1-rev2";
-    o.spy(o, "value", o.doc_myget2, "Get document (specific revision)");
-    o.jio.get("get1", {"rev": "1-rev2"}, o.f);
+    o.doc_myget2_cloned = clone(o.doc_myget2);
+    o.doc_myget2_cloned["_rev"] = "1-rev2";
+    o.doc_myget2_cloned["_revisions"] = {"start": 1, "ids": ["rev2"]};
+    o.doc_myget2_cloned["_revs_info"] = [{
+        "rev": "1-rev2", "status": "available"
+    }];
+    o.doc_myget2_cloned["_conflicts"] = ["1-rev1"];
+    o.spy(o, "value", o.doc_myget2_cloned, "Get document (specific revision)");
+    o.jio.get("get1", {
+        "revs_info": true, "revs": true, "conflicts": true,
+        "rev": "1-rev2"
+    }, o.f);
     o.tick(o);
-    delete o.doc_myget2["_rev"];
 
-    // localstorage.setItem(o.localpath+"/get1.1-rev2/get2", "abc");
-    localstorage.setItem(o.localpath+"/get1.2-rev3/get2", "abc");
+    // adding an attachment
+    o.attmt_myget2 = {
+        "get2": {
+            "length": 3,
+            "digest": "md5-dontcare"
+        }
+    };
+    o.doctree["children"][1]["attachment"] = o.attmt_myget2;
+    localstorage.setItem(o.localpath+"/get1.1-rev2", o.doc_myget2);
+    localstorage.setItem(o.localpath+"/get1.1-rev2/get2", "abc");
 
     // get attachment winner
     o.spy(o, "value", "abc", "Get attachment (winner)");
@@ -1273,49 +1305,42 @@ test ("Get", function(){
 
     // get unexistant attachment specific rev
     o.spy(o, "status", 404, "Get unexistant attachment (specific revision)");
-    o.jio.get("get1/get2", {"rev": "1-rev1"}, o.f);
+    o.jio.get("get1/get2", {
+        "revs_info": true, "revs": true, "conflicts": true,
+        "rev": "1-rev1"
+    }, o.f);
     o.tick(o);
 
     // get attachment specific rev
     o.spy(o, "value", "abc", "Get attachment (specific revision)");
-    o.jio.get("get1/get2", {"rev": "2-rev3"}, o.f);
+    o.jio.get("get1/get2", {
+        "revs_info": true, "revs": true, "conflicts": true,
+        "rev": "1-rev2"
+    }, o.f);
     o.tick(o);
-
-    // adding an attachment
-    o.attmt_myget2 = {
-        "get2": {
-            "length": 3,
-            "digest": "md5-dontcare"
-        },
-        "revpos":1,
-    };
-    o.doc_myget2["_rev"] = "1-rev2";
-    o.doc_myget2["_attachments"] = o.attmt_myget2;
-
-    o.doctree["children"][1]["attachment"] = o.attmt_myget2;
-    localstorage.setItem(o.localpath+"/get1.1-rev2", o.doc_myget2);
 
     // get document with attachment (specific revision)
-    o.spy(o, "value", o.doc_myget2,
+    o.attmt_myget2_cloned = clone(o.attmt_myget2);
+    o.attmt_myget2_cloned["get2"]["revpos"] = 1;
+    o.doc_myget2_cloned = clone(o.doc_myget2);
+    o.doc_myget2_cloned["_rev"] = "1-rev2";
+    o.doc_myget2_cloned["_attachments"] = o.attmt_myget2_cloned;
+    o.spy(o, "value", o.doc_myget2_cloned,
           "Get document attachment (specific revision)");
-    o.jio.get("get1", {"rev": "1-rev2"}, o.f);
+    o.jio.get("get1", {
+        "revs_info": true, "revs": true, "conflicts": true,
+        "rev": "1-rev2"
+    }, o.f);
     o.tick(o);
-    delete o.doc_myget2["_rev"];
-    delete o.doc_myget2["_attachments"];
 
     // get document with attachment (winner)
-    o.doc_myget3["_rev"] = "2-rev3";
-    o.doc_myget3["_attachments"] = o.attmt_myget2;
-
-    o.doctree["children"][1]["attachment"] = o.attmt_myget3;
-    localstorage.setItem(o.localpath+"/get1.2-rev3", o.doc_myget3);
-
-    o.spy(o, "value", o.doc_myget3, "Get document attachment (winner)");
-    o.jio.get("get1", o.f);
+    o.doc_myget3_cloned = clone(o.doc_myget3);
+    o.doc_myget3_cloned["_rev"] = "2-rev3";
+    o.doc_myget3_cloned["_attachments"] = o.attmt_myget2_cloned;
+    o.spy(o, "value", o.doc_myget3_cloned, "Get document attachment (winner)");
+    o.jio.get("get1", {"revs_info": true, "revs": true, "conflicts": true},
+              o.f);
     o.tick(o);
-    delete o.doc_myget3["_rev"];
-    delete o.doc_myget3["_attachments"];
-    delete o.attmt_myget2["get2"]["revpos"];
 
     o.jio.stop();
 
