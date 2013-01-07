@@ -1364,13 +1364,13 @@ test ("Remove", function(){
     });
     o.localpath = "jio/localstorage/urevrem/arevrem";
 
-    // remove document without revision
+    // 1. remove document without revision
     o.spy (o, "status", 404,
              "Remove document (no doctree, no revision)");
     o.jio.remove({"_id":"remove1"}, o.f);
     o.tick(o);
 
-    // remove attachment without revision
+    // 2. remove attachment without revision
     o.spy (o, "status", 404,
              "Remove attachment (no doctree, no revision)");
     o.jio.remove({"_id":"remove1/remove2"}, o.f);
@@ -1397,8 +1397,8 @@ test ("Remove", function(){
     };
     o.doc_myremove1 = {"_id": "remove1", "title": "myRemove1",
         "_rev":o.very_old_rev, "_attachments":o.attmt_myremove1};
-    o.revs_info = [{"rev": o.very_old_rev, "status": "available"}];
-    o.old_rev = "2-"+hex_sha256(JSON.stringify(o.doc_myremove1)+JSON.stringify(o.revs_info));
+    o.revisions = {"start":1,"ids":[o.very_old_rev.split('-'),[1]]}
+    o.old_rev = "2-"+generateRevisionHash(o.doc_myremove1, o.revisions);
 
     localstorage.setItem(o.localpath+"/remove1."+o.old_rev, o.doc_myremove1);
     localstorage.setItem(o.localpath+"/remove1."+o.old_rev+"/remove2", "xyz");
@@ -1407,43 +1407,50 @@ test ("Remove", function(){
         "rev": o.very_old_rev, "status": "available", "children": [{
             "rev": o.old_rev, "status": "available", "children": []
         }]
-        },{
-            "rev": "1-rev2", "status": "available", "children": []
-        }]};
+    },{
+        "rev": "1-rev2", "status": "available", "children": []
+    }]};
     localstorage.setItem(o.localpath+"/remove1.revision_tree.json", o.doctree);
 
-    // 1. remove non existing attachment with revision
+    // 3. remove non existing attachment with revision
     o.spy(o, "status", 404,
           "Remove NON-existing attachment (revision)");
     o.jio.remove({"_id":"remove1.1-rev2/remove0","_rev":o.old_rev}, o.f);
     o.tick(o);
 
-    o.revs_info = [
-                    {"rev": o.old_rev, "status": "available"},
-                    {"rev": o.very_old_rev, "status": "available"}
-                  ];
-
-    // xxx on remove, doc only includes the parameters passed in the remove callback
-    // to generate correct hash, need to modify here
+    o.revisions = {"start": 2, "ids":[o.old_rev.split('-')[1],
+        o.very_old_rev.split('-')[1]
+    ]};
     o.doc_myremove1 = {"_id":"remove1/remove2","_rev":o.old_rev};
-    o.rev = "3-"+hex_sha256(JSON.stringify(o.doc_myremove1)+JSON.stringify(o.revs_info));
+    o.rev = "3-"+generateRevisionHash(o.doc_myremove1, o.revisions);
 
-    o.doctree = {"children":[{
-        "rev": o.very_old_rev, "status": "available", "children": [{
-            "rev": o.old_rev, "status": "available", "children": [{
-                "rev": o.rev, "status": "available", "children":[]
-            }]
-        }]
-        },{
-            "rev": "1-rev2", "status": "available", "children": []
-        }]};
-    localstorage.setItem(o.localpath+"/remove1.revision_tree.json", o.doctree);
-
-    // 2. remove existing attachment with revision
+    // 4. remove existing attachment with revision
     o.spy (o, "value", {"ok": true, "id": "remove1", "rev": o.rev},
              "Remove existing attachment (revision)");
     o.jio.remove({"_id":"remove1/remove2","_rev":o.old_rev}, o.f);
     o.tick(o);
+
+    o.testtree = {"children":[{
+        "rev": o.very_old_rev, "status": "available", "children": [{
+            "rev": o.old_rev, "status": "available", "children": [{
+                "rev": o.rev, "status": "available", "children": []
+            }]
+        }]
+    },{
+        "rev": "1-rev2", "status": "available", "children": []
+    }]};
+
+    // 5. check if document tree has been updated correctly
+    deepEqual(localstorage.getItem("jio/localstorage/urevrem/arevrem/"+
+        "remove1.revision_tree.json" ),
+         o.testtree, "Check if document tree has been updated correctly"
+    );
+
+    // 6. check if attachment has been removed
+
+
+
+    // 7. check if document is updated
 
     // add another attachment
     o.attmt_myremove2 = {
@@ -1455,11 +1462,9 @@ test ("Remove", function(){
     };
     o.doc_myremove2 = {"_id": "remove1", "title": "myRemove2",
         "_rev":"1-rev2", "_attachments":o.attmt_myremove2};
-    o.second_old_rev = "2-"+hex_sha256(JSON.stringify(o.doc_myremove1)+JSON.stringify(o.revs_info));
-    o.revs_info = [
-                    {"rev":o.second_old_rev, "status":"available"},
-                    {"rev": "1-rev2", "status": "available"}
-    ];
+    o.revisions = {"start":1,"ids":["rev2"] };
+    o.second_old_rev = "2-"+generateRevisionHash(o.doc_myremove2, o.revisions);
+
     localstorage.setItem(o.localpath+"/remove1."+o.second_old_rev, o.doc_myremove2);
     localstorage.setItem(o.localpath+"/remove1."+o.second_old_rev+"/remove3", "stu");
 
@@ -1476,48 +1481,39 @@ test ("Remove", function(){
         }]};
     localstorage.setItem(o.localpath+"/remove1.revision_tree.json", o.doctree);
 
-    // 3. remove non existing attachment without revision
+    // 8. remove non existing attachment without revision
     o.spy (o,"status", 409,
            "409 - Removing non-existing-attachment (no revision)");
     o.jio.remove({"_id":"remove1/remove0"}, o.f);
     o.tick(o);
 
-    o.revs_info = [
-                    {"rev": o.second_old_rev, "status": "available"},
-                    {"rev": "1-rev2", "status": "available"}
-                  ];
-
+    o.revisions = {"start":2,"ids":[o.second_old_rev.split('-')[1],"rev2"]};
     o.doc_myremove3 = {"_id":"remove1/remove3","_rev":o.second_old_rev};
-    o.second_rev = "3-"+hex_sha256(JSON.stringify(o.doc_myremove3)+JSON.stringify(o.revs_info));
+    o.second_rev = "3-"+generateRevisionHash(o.doc_myremove3, o.revisions);
 
-    // 4. remove existing attachment without revision
+    // 9. remove existing attachment without revision
     o.spy (o,"status", 409, "409 - Removing existing attachment (no revision)");
     o.jio.remove({"_id":"remove1/remove3"}, o.f);
     o.tick(o);
 
-    // 5. remove wrong revision
+    // 10. remove wrong revision
     o.spy (o,"status", 409, "409 - Removing document (false revision)");
     o.jio.remove({"_id":"remove1","_rev":o.second_old_rev}, o.f);
     o.tick(o);
 
-    o.revs_info = [
-                    {"rev": o.rev, "status": "available"},
-                    {"rev": o.old_rev, "status": "available"},
-                    {"rev": o.very_old_rev,
-                        "status":"available"}
-                  ];
-
+    o.revisions = {"start": 3, "ids":[o.rev.split('-')[1],
+        o.old_rev.split('-')[1],o.very_old_rev.split('-')[1]
+    ]};
     o.doc_myremove4 = {"_id":"remove1","_rev":o.rev};
-    o.second_new_rev =
-"4-"+hex_sha256(JSON.stringify(o.doc_myremove4)+JSON.stringify(o.revs_info));
+    o.second_new_rev = "4-"+generateRevisionHash(o.doc_myremove4, o.revisions);
 
-    // 6. remove revision
+    // 11. remove document version with revision
     o.spy (o, "value", {"ok": true, "id": "remove1", "rev": o.second_new_rev},
              "Remove document (with revision)");
     o.jio.remove({"_id":"remove1", "_rev":o.rev}, o.f);
     o.tick(o);
 
-    // 7. remove document without revision
+    // 12. remove document without revision
     o.spy (o,"status", 409, "409 - Removing document (no revision)");
     o.jio.remove({"_id":"remove1"}, o.f);
     o.tick(o);
@@ -1544,29 +1540,31 @@ test ("Scenario", function(){
 
     // 1. put non empty document A-1
     o.doc = {"_id": "sample1", "title": "mySample1"};
-    o.revs_info = [];
-    o.hex = hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.revisions = {"start": 0, "ids": []};
+    o.hex = generateRevisionHash(o.doc, o.revisions);
     o.rev = "1-"+o.hex;
 
-    o.spy (o, "value", {"ok": true, "id": "sample1", "rev": o.rev}, "Put non empty document A-1");
+    o.spy (o, "value", {"ok": true, "id": "sample1", "rev": o.rev},
+        "Open Application with Revision and Local Storage, create document");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
     // 2. put non empty document A-2
     o.doc_b = {"_id": "sample1", "title": "mySample2"};
-    o.revs_info_b = [];
-    o.rev_b = "1-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.revisions_b = {"start": 0, "ids": []};
+    o.hex_b = generateRevisionHash(o.doc_b, o.revisions_b);
+    o.rev_b = "1-"+o.hex_b;
 
-    o.spy (o,"status", 409, "409 Try to put non empty document A-2");
-    o.jio.put(o.doc, o.f);
+    o.spy (o,"status", 409, "409 - Try to create 2nd version (in first tab)");
+    o.jio.put(o.doc_b, o.f);
     o.tick(o);
 
-    // 3. FAKE IT
+    // FAKE IT
     o.doc_f = {"_id": "sample1", "title": "mySample2"};
-    o.revs_info_f = [];
-    o.hex_f = hex_sha256(JSON.stringify(o.doc_f)+JSON.stringify(o.revs_info_f));
+    o.revisions_f = {"start": 0, "ids": []};
+    o.hex_f = generateRevisionHash(o.doc_f, o.revisions_f);
     o.rev_f = "1-"+o.hex_f;
-    o.doc_f2 = {"_id": "sample1."+o.rev_f, "title": "mySample2"};
+    o.doc_f2 = {"_id": "sample1", "title": "mySample2"};
 
     localstorage.setItem(o.localpath+"/sample1."+o.rev_f, o.doc_f2);
 
@@ -1576,52 +1574,58 @@ test ("Scenario", function(){
     ]};
     localstorage.setItem(o.localpath+"/sample1.revision_tree.json", o.doctree);
 
-    // 3. GET first version
+    // 3. Check that 2nd version has been created (manually)
+    deepEqual(
+        localstorage.getItem(o.localpath+"/sample1."+o.rev_f),
+        o.doc_f, "Create 2nd version in new tab (manually in local storage)"
+    );
+
+    // 4. GET first version
     o.mydocSample1 = {"_id": "sample1", "title": "mySample1", "_rev": o.rev};
     o.mydocSample1._revisions = {"ids":[o.hex], "start":1 };
     o.mydocSample1._revs_info = [{"rev": o.rev, "status": "available"}];
     o.mydocSample1._conflicts = [o.rev_f];
-    o.spy(o, "value", o.mydocSample1, "Get first document (using revison)");
+    o.spy(o, "value", o.mydocSample1, "Get first version");
     o.jio.get("sample1", {
         "revs_info": true, "revs": true, "conflicts": true,
         "rev": o.rev }, o.f);
     o.tick(o);
 
-    // 4. MODFIY first version
+    // 5. MODFIY first version
     o.doc_2 = {"_id": "sample1", "_rev": o.rev, "title": "mySample1_modified"};
-    o.revs_info_2 = o.mydocSample1._revs_info;
-    o.hex_2 = hex_sha256(JSON.stringify(o.doc_2)+
-        JSON.stringify(o.revs_info_2));
+    o.revisions_2 = {"start": 1, "ids":[o.rev.split('-')[1]
+    ]};
+    o.hex_2 = generateRevisionHash(o.doc_2, o.revisions_2);
     o.rev_2 = "2-"+o.hex_2;
-    o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_2}, "Modify first document");
+    o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_2},
+           "Modify first version");
     o.jio.put(o.doc_2, o.f);
     o.tick(o);
 
-    // 5. GET second version
+    // 6. GET second version
     o.mydocSample2 = {"_id": "sample1", "title": "mySample2", "_rev": o.rev_f};
-    o.mydocSample2._revisions = {"ids":[o.hex_f], "start":1 };
+    o.mydocSample2._revisions = {"start":1 , "ids":[o.hex_f]};
     o.mydocSample2._revs_info = [{"rev": o.rev_f, "status": "available"}];
     o.mydocSample2._conflicts = [o.rev_2];
     o.spy(o, "value", o.mydocSample2,
-          "Get second document (using revison)");
+          "Get second version");
     o.jio.get("sample1", {
         "revs_info": true, "revs": true, "conflicts": true,
         "rev": o.rev_f }, o.f);
     o.tick(o);
 
-    // 6. MODFIY second version
-    o.doc_f2 = {"_id": "sample1", "_rev": o.rev_f, 
+    // 7. MODFIY second version
+    o.doc_f2 = {"_id": "sample1", "_rev": o.rev_f,
         "title":"mySample2_modified"};
-    o.revs_info_f2 = o.mydocSample2._revs_info;
-    o.hex_f2 = hex_sha256(JSON.stringify(o.doc_f2)+
-        JSON.stringify(o.revs_info_f2));
+    o.revisions_f2 = {"start":1 , "ids":[o.hex_f]};
+    o.hex_f2 = generateRevisionHash(o.doc_f2, o.revisions_f2)
     o.rev_f2 = "2-"+o.hex_f2;
-    o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_f2}, 
+    o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_f2},
         "Modify second document");
     o.jio.put(o.doc_f2, o.f);
     o.tick(o);
 
-    // 7. GET document without revision = winner & conflict!
+    // 8. GET document without revision = winner & conflict!
     o.mydocSample3 = {"_id": "sample1", "title": "mySample1_modified",
           "_rev": o.rev_2,"_conflicts":[o.rev_f2]};
     o.mydocSample3._revs_info = [{"rev": o.rev_2, "status": "available"},{
@@ -1629,7 +1633,7 @@ test ("Scenario", function(){
         }];
     o.mydocSample3._revisions = {"ids":[o.hex_2, o.hex], "start":2 };
     o.spy(o, "value", o.mydocSample3,
-          "Get second document (using revison) = Two conflicting versions");
+          "Get Document = Two conflicting versions = conflict");
     o.jio.get("sample1", {"revs_info": true, "revs": true, "conflicts": true,
         }, o.f);
     o.tick(o);
