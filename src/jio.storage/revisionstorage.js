@@ -254,11 +254,11 @@ jIO.addStorageType('revision', function (spec, my) {
         // search method fills [result] with the winner revision
         search = function (document_tree) {
             var i;
+            if (except !== undefined && except === document_tree.rev) {
+                return;
+            }
             if (document_tree.children.length === 0) {
                 // This node is a leaf
-                if (except !== undefined && except === document_tree.rev) {
-                    return;
-                }
                 result.push(document_tree.rev);
                 return;
             }
