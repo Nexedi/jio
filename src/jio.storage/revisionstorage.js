@@ -298,7 +298,7 @@ jIO.addStorageType('revision', function (spec, my) {
     priv.revsInfoToHistory = function (revs_info) {
         var revisions = {"start":0,"ids":[]}, i;
         if (revs_info.length > 0) {
-            revisions.start = revs_info[0].rev.split('-')[0];
+            revisions.start = parseInt(revs_info[0].rev.split('-')[0],10);
         }
         for (i = 0; i < revs_info.length; i += 1) {
             revisions.ids.push(revs_info[i].rev.split('-')[1]);
