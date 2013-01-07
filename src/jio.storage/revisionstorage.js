@@ -118,6 +118,45 @@ jIO.addStorageType('revision', function (spec, my) {
     };
 
     /**
+     * Gets the specific revision from a document tree.
+     * @method getRevisionFromDocumentTree
+     * @param  {object} document_tree The document tree
+     * @param  {string} revision The specific revision
+     * @return {array} The good revs info array
+     */
+    priv.getRevisionFromDocumentTree = function (document_tree, revision) {
+        var i, result, search, revs_info = [];
+        result = [];
+        // search method fills "result" with the good revs info
+        search = function (document_tree) {
+            var i;
+            if (typeof document_tree.rev !== "undefined") {
+                // node is not root
+                revs_info.unshift({
+                    "rev":document_tree.rev,
+                    "status":document_tree.status
+                });
+                if (document_tree.rev === revision) {
+                    result = revs_info;
+                    return;
+                }
+            }
+            // This node has children
+            for (i = 0; i < document_tree.children.length; i += 1) {
+                // searching deeper to find the good rev
+                search(document_tree.children[i]);
+                if (result.length > 0) {
+                    // The result is already found
+                    return;
+                }
+                revs_info.shift();
+            }
+        };
+        search(document_tree);
+        return result;
+    };
+
+    /**
      * Gets the winner revision from a document tree.
      * The winner is the deeper revision on the left.
      * @method getWinnerRevisionFromDocumentTree
