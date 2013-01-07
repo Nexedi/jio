@@ -1358,6 +1358,18 @@ test ("Remove", function(){
     });
     o.localpath = "jio/localstorage/urevrem/arevrem";
 
+    // remove document without revision
+    o.spy (o, "status", 404,
+             "Remove document (no doctree, no revision)");
+    o.jio.remove({"_id":"remove1"}, o.f);
+    o.tick(o);
+
+    // remove attachment without revision
+    o.spy (o, "status", 404,
+             "Remove attachment (no doctree, no revision)");
+    o.jio.remove({"_id":"remove1/remove2"}, o.f);
+    o.tick(o);
+
     // adding two documents
     o.doc_myremove1 = {"_id": "remove1", "title": "myRemove1"};
     o.doc_myremove2 = {"_id": "remove1", "title": "myRemove2"};
