@@ -1417,9 +1417,9 @@ test ("Remove", function(){
     o.jio.remove({"_id":"remove1.1-rev2/remove0","_rev":o.old_rev}, o.f);
     o.tick(o);
 
-    o.revisions = {"start": 2, "ids":[o.old_rev.split('-')[1],
-                                      o.very_old_rev.split('-')[1]
-                                     ]};
+    o.revisions = {"start": 2, "ids":[
+        o.old_rev.split('-')[1], o.very_old_rev.split('-')[1]
+    ]};
     o.doc_myremove1 = {"_id":"remove1/remove2","_rev":o.old_rev};
     o.rev = "3-"+generateRevisionHash(o.doc_myremove1, o.revisions);
 
@@ -1440,10 +1440,9 @@ test ("Remove", function(){
     }]};
 
     // 5. check if document tree has been updated correctly
-    deepEqual(localstorage.getItem("jio/localstorage/urevrem/arevrem/"+
-                                   "remove1.revision_tree.json" ),
-              o.testtree, "Check if document tree has been updated correctly"
-             );
+    deepEqual(localstorage.getItem(
+        "jio/localstorage/urevrem/arevrem/remove1.revision_tree.json"
+    ),o.testtree, "Check if document tree has been updated correctly");
 
     // 6. check if attachment has been removed
 
