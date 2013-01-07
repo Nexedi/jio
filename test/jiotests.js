@@ -1395,7 +1395,8 @@ test ("Remove", function(){
     localstorage.setItem(o.localpath+"/remove1.revision_tree.json", o.doctree);
 
     // 1. remove non existing attachment with revision
-    o.spy(o, "status", 404, "Remove non existing attachment (with revision)");
+    o.spy(o, "status", 404,
+          "Remove NON-existing attachment (revision)");
     o.jio.remove({"_id":"remove1.1-rev2/remove0","_rev":o.old_rev}, o.f);
     o.tick(o);
 
@@ -1422,7 +1423,7 @@ test ("Remove", function(){
 
     // 2. remove existing attachment with revision
     o.spy (o, "value", {"ok": true, "id": "remove1", "rev": o.rev},
-             "Remove attachment (with revision)");
+             "Remove existing attachment (revision)");
     o.jio.remove({"_id":"remove1/remove2","_rev":o.old_rev}, o.f);
     o.tick(o);
 
@@ -1458,7 +1459,8 @@ test ("Remove", function(){
     localstorage.setItem(o.localpath+"/remove1.revision_tree.json", o.doctree);
 
     // 3. remove non existing attachment without revision
-    o.spy (o,"status", 404, "Remove non existing attachment (without revision)")
+    o.spy (o,"status", 409,
+           "409 - Removing non-existing-attachment (no revision)");
     o.jio.remove({"_id":"remove1/remove0"}, o.f);
     o.tick(o);
 
@@ -1471,32 +1473,34 @@ test ("Remove", function(){
     o.second_rev = "3-"+hex_sha256(JSON.stringify(o.doc_myremove3)+JSON.stringify(o.revs_info));
 
     // 4. remove existing attachment without revision
-    o.spy (o, "value", {"ok": true, "id": "remove1", "rev": o.second_rev},
-             "Remove attachment (without revision)");
+    o.spy (o,"status", 409, "409 - Removing existing attachment (no revision)");
     o.jio.remove({"_id":"remove1/remove3"}, o.f);
     o.tick(o);
 
     // 5. remove wrong revision
-    o.spy (o,"status", 409, "Removing wrong revision (not latest)");
+    o.spy (o,"status", 409, "409 - Removing document (false revision)");
     o.jio.remove({"_id":"remove1","_rev":o.second_old_rev}, o.f);
     o.tick(o);
 
     o.revs_info = [
-                    {"rev": o.second_rev, "status":"available"},
-                    {"rev": o.second_old_rev, "status": "available"},
-                    {"rev": "1-rev2", "status": "available"}
+                    {"rev": o.rev, "status": "available"},
+                    {"rev": o.old_rev, "status": "available"},
+                    {"rev": o.very_old_rev,
+                        "status":"available"}
                   ];
-    o.doc_myremove4 = {"_id":"remove1","_rev":o.second_rev};
-    o.second_new_rev = "4-"+hex_sha256(JSON.stringify(o.doc_myremove4)+JSON.stringify(o.revs_info));
+
+    o.doc_myremove4 = {"_id":"remove1","_rev":o.rev};
+    o.second_new_rev =
+"4-"+hex_sha256(JSON.stringify(o.doc_myremove4)+JSON.stringify(o.revs_info));
 
     // 6. remove revision
     o.spy (o, "value", {"ok": true, "id": "remove1", "rev": o.second_new_rev},
-             "Remove attachment (with revision)");
-    o.jio.remove({"_id":"remove1", "_rev":o.second_rev}, o.f);
+             "Remove document (with revision)");
+    o.jio.remove({"_id":"remove1", "_rev":o.rev}, o.f);
     o.tick(o);
 
     // 7. remove document without revision
-    o.spy (o,"status", 409, "Removing document without revision and multiple existing versions");
+    o.spy (o,"status", 409, "409 - Removing document (no revision)");
     o.jio.remove({"_id":"remove1"}, o.f);
     o.tick(o);
 
