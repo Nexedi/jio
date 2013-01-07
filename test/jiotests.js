@@ -1395,7 +1395,7 @@ test ("Remove", function(){
         },
     };
     o.doc_myremove1 = {"_id": "remove1", "title": "myRemove1",
-                       "_rev":o.very_old_rev, "_attachments":o.attmt_myremove1};
+                       "_attachments":o.attmt_myremove1};
     o.revisions = {"start":1,"ids":[o.very_old_rev.split('-'),[1]]}
     o.old_rev = "2-"+generateRevisionHash(o.doc_myremove1, o.revisions);
 
@@ -1442,13 +1442,17 @@ test ("Remove", function(){
     // 5. check if document tree has been updated correctly
     deepEqual(localstorage.getItem(
         "jio/localstorage/urevrem/arevrem/remove1.revision_tree.json"
-    ),o.testtree, "Check if document tree has been updated correctly");
+    ),o.testtree, "Check document tree");
 
     // 6. check if attachment has been removed
-
-
+    deepEqual(localstorage.getItem(
+        "jio/localstorage/urevrem/arevrem/remove1."+o.rev+"/remove2"
+    ), null, "Check attachment");
 
     // 7. check if document is updated
+    deepEqual(localstorage.getItem(
+        "jio/localstorage/urevrem/arevrem/remove1."+o.rev
+    ), {"_id": "remove1."+o.rev}, "Check document");
 
     // add another attachment
     o.attmt_myremove2 = {
@@ -1459,7 +1463,7 @@ test ("Remove", function(){
         "revpos":1
     };
     o.doc_myremove2 = {"_id": "remove1", "title": "myRemove2",
-                       "_rev":"1-rev2", "_attachments":o.attmt_myremove2};
+                       "_attachments":o.attmt_myremove2};
     o.revisions = {"start":1,"ids":["rev2"] };
     o.second_old_rev = "2-"+generateRevisionHash(o.doc_myremove2, o.revisions);
 
@@ -1506,7 +1510,8 @@ test ("Remove", function(){
         o.old_rev.split('-')[1],o.very_old_rev.split('-')[1]
     ]};
     o.doc_myremove4 = {"_id":"remove1","_rev":o.rev};
-    o.second_new_rev = "4-"+generateRevisionHash(o.doc_myremove4, o.revisions);
+    o.second_new_rev = "4-"+
+        generateRevisionHash(o.doc_myremove4, o.revisions, true);
 
     // 11. remove document version with revision
     o.spy (o, "value", {"ok": true, "id": "remove1", "rev": o.second_new_rev},
@@ -1514,7 +1519,24 @@ test ("Remove", function(){
     o.jio.remove({"_id":"remove1", "_rev":o.rev}, o.f);
     o.tick(o);
 
-    // 12. remove document without revision
+    o.testtree["children"][0]["children"][0]["children"][0]["children"].push({
+        "rev": o.second_new_rev,
+        "status": "deleted",
+        "children": []
+    });
+    deepEqual(localstorage.getItem(
+        "jio/localstorage/urevrem/arevrem/remove1.revision_tree.json"
+    ), o.testtree, "Check document tree");
+
+    deepEqual(localstorage.getItem(
+        "jio/localstorage/urevrem/arevrem/remove1."+o.second_new_rev+"/remove2"
+    ), null, "Check attachment");
+
+    deepEqual(localstorage.getItem(
+        "jio/localstorage/urevrem/arevrem/remove1."+o.second_new_rev
+    ), null, "Check document");
+
+    // remove document without revision
     o.spy (o,"status", 409, "409 - Removing document (no revision)");
     o.jio.remove({"_id":"remove1"}, o.f);
     o.tick(o);
