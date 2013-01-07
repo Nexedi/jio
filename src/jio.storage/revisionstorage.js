@@ -212,10 +212,6 @@ jIO.addStorageType('revision', function (spec, my) {
             revs_info = [],
             selected_node = doctree;
 
-        if (doc._rev === undefined && priv.missing_revision){
-            doc._rev = priv.missing_revision;
-        }
-
         selectNode = function (node) {
             var i;
             if (typeof node.rev !== "undefined") {
@@ -465,7 +461,6 @@ jIO.addStorageType('revision', function (spec, my) {
                 doctree,
                 command.cloneOption(),
                 function (response) {
-
                     that.success({
                         "ok":true,
                         "id":docid,
@@ -684,8 +679,7 @@ jIO.addStorageType('revision', function (spec, my) {
                 return;
             }
         }
-
-        // get doctree
+// get doctree
         that.addJob(
             "get",
             priv.substorage,
@@ -694,91 +688,35 @@ jIO.addStorageType('revision', function (spec, my) {
             function (response) {
                 response._conflicts = priv.getLeavesFromDocumentTree(response);
 
-                // really necessary...?
                 if (del_rev === undefined) {
-                    // single leaf = can be deleted
-                    if (response._conflicts.length === 1) {
-                        f.removeDocument(command.getDocId()+"."+
-                            response._conflicts[0]);
-                        delete response._conflicts;
-                    } else {
-                        // multiple leaves = only if deleting attachment,
-                        // because unique document.revision/attachment
-                        if (typeof command.getAttachmentId() === "string"){
-                            for (i = 0; i < response._conflicts.length; i += 1){
-                                del_rev = response._conflicts[i];
-                                that.addJob(
-                                    "get",
-                                    priv.substorage,
-                                    command.getDocId()+"."+response._conflicts[i],
-                                    option,
-                                    function (nested_response) {
-                                        if (typeof nested_response._attachments === "object") {
-                                            if (nested_response._attachments[command.getAttachmentId()] !== undefined){
-                                                revision_found = true;
-                                                correct_revision = del_rev;
-                                            }
-                                        }
-
-                                        if ( revision_count === response._conflicts.length-1 &&
-                                            revision_found !== true ){
-                                            that.error({
-                                                "status": 404,
-                                                "statusText": "Not Found",
-                                                "error": "not_found",
-                                                "message": "Attachment not found, please check attachment ID",
-                                                "reason": "Incorrect Attachment ID"
-                                            });
-                                            return;
-                                        }
-
-                                        if (revision_found === true ){
-                                            priv.missing_revision = correct_revision;
-                                            delete response._conflicts;
-                                            f.removeDocument(command.getDocId()+"."+
-                                                correct_revision+"/"+command.getAttachmentId());
-                                        }
-                                        revision_count += 1;
-                                    },
-                                    function (err) {
-                                        that.error({
-                                            "status": 404,
-                                            "statusText": "Not Found",
-                                            "error": "not_found",
-                                            "message": "Attachment not found, please check document ID",
-                                            "reason": "Incorrect document ID"
-                                        });
-                                    }
-                                );
-                            }
-                        } else {
-                        // conflict
-                        // return conflict message here, so user can pick a document version
-                        that.error({
-                            "status": 409,
-                            "statusText": "Conflict",
-                            "error": "conflict",
-                            "message": "Document update conflict.",
-                            "reason": "Cannot delete a document without revision when multiple versions exist"
+                    // no revision provided
+                    that.error({
+                        "status": 409,
+                        "statusText": "Conflict",
+                        "error": "conflict",
+                        "message": "Document update conflict.",
+                        "reason": "Cannot delete a document without revision"
                         });
-                        return;
-                        }
-                    }
+                    return;
                 } else {
                     // revision provided
                     if (typeof command.getAttachmentId() === "string"){
                         f.removeDocument(command.getDocId()+"."+del_rev+"/"+
                             command.getAttachmentId());
                     } else {
-                        if (priv.isRevisionALeaf(del_rev, response._conflicts)){
-                            f.removeDocument(command.getDocId()+"."+del_rev);
+                        if (del_rev ===
+                        priv.getWinnerRevisionFromDocumentTree(response)[0].rev
+                            ){
+                            priv.dummy = true;
+                            f.removeDocument(command.getDocId()+"."+
+                            del_rev);
                         } else {
                             that.error({
-                                "status": 409,
-                                "statusText": "Conflict",
-                                "error": "conflict",
-                                "message": "Document update conflict.",
-                                "reason": "Trying to remove an outdated revision"
+                            "status": 409,
+                            "statusText": "Conflict",
+                            "error": "conflict",
+                            "message": "Document update conflict.",
+                            "reason": "Trying to remove non-latest revision"
                             });
                             return;
                         }
@@ -790,7 +728,7 @@ jIO.addStorageType('revision', function (spec, my) {
                     "status": 404,
                     "statusText": "Not Found",
                     "error": "not_found",
-                    "message": "Document tree not found, please check document ID",
+                "message": "Document tree not found, please checkdocument ID",
                     "reason": "Incorrect document ID"
                 });
                 return;
