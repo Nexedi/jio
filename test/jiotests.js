@@ -1380,11 +1380,10 @@ test ("Remove", function(){
     o.doc_myremove1 = {"_id": "remove1", "title": "myRemove1"};
     o.doc_myremove2 = {"_id": "remove1", "title": "myRemove2"};
 
-    // revs_info 1-rev1 document version
-    o.revs_info = [];
-    o.very_old_rev = "1-"+hex_sha256(JSON.stringify(o.doc_myremove1)+JSON.stringify(o.revs_info));
+    o.very_old_rev = "1-veryoldrev";
 
-    localstorage.setItem(o.localpath+"/remove1."+o.very_old_rev, o.doc_myremove1);
+    localstorage.setItem(o.localpath+"/remove1."+o.very_old_rev,
+                         o.doc_myremove1);
     localstorage.setItem(o.localpath+"/remove1.1-rev2", o.doc_myremove1);
 
     // add attachment
@@ -1465,8 +1464,10 @@ test ("Remove", function(){
     o.revisions = {"start":1,"ids":["rev2"] };
     o.second_old_rev = "2-"+generateRevisionHash(o.doc_myremove2, o.revisions);
 
-    localstorage.setItem(o.localpath+"/remove1."+o.second_old_rev, o.doc_myremove2);
-    localstorage.setItem(o.localpath+"/remove1."+o.second_old_rev+"/remove3", "stu");
+    localstorage.setItem(o.localpath+"/remove1."+o.second_old_rev,
+                         o.doc_myremove2);
+    localstorage.setItem(o.localpath+"/remove1."+o.second_old_rev+"/remove3",
+                         "stu");
 
     o.doctree = {"children":[{
         "rev": o.very_old_rev, "status": "available", "children": [{
