@@ -346,6 +346,23 @@ jIO.addStorageType('revision', function (spec, my) {
     };
 
     /**
+     * Returns the revision of the revision position from a revs_info array.
+     * @method getRevisionFromPosition
+     * @param  {array} revs_info The revs_info array
+     * @param  {number} rev_pos The revision position number
+     * @return {string} The revision of the good position (empty string if fail)
+     */
+    priv.getRevisionFromPosition = function (revs_info, rev_pos) {
+        var i;
+        for (i = revs_info.length - 1; i >= 0; i -= 1) {
+            if (priv.revisionToArray(revs_info.rev)[0] === rev_pos) {
+                return revs_info.rev;
+            }
+        }
+        return '';
+    };
+
+    /**
      * Post the document metadata and create or update a document tree.
      * Options:
      * - {boolean} keep_revision_history To keep the previous revisions
