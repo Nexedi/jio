@@ -18,6 +18,9 @@ contains = function (array,content) {
     }
     return false;
 },
+clone = function (obj) {
+    return JSON.parse(JSON.stringify(obj));
+},
 // localStorage wrapper
 localstorage = {
     clear: function () {
