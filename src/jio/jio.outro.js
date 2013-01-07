@@ -7,6 +7,8 @@
 
     priv.storage_spec = spec;
 
+    priv.environments = {};
+
     // initialize //
     priv.init = function() {
         // Initialize the jio id and add the new id to the list
@@ -38,9 +40,14 @@
     Object.defineProperty(that,"storage",{
         configurable:false,enumerable:false,writable:false,value:
         function(spec, my, forcetype) {
+            var spec_str;
             spec = spec || {};
             my = my || {};
             my.basicStorage = storage;
+            spec_str = JSON.stringify(spec);
+            // environment initialization
+            priv.environments[spec_str] = priv.environments[spec_str] || {};
+            my.env = priv.environments[spec_str];
             my.storage = that.storage; // NOTE : or proxy storage
             var type = forcetype || spec.type || 'base';
             if (type === 'base') {
