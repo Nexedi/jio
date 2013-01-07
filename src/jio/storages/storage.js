@@ -144,6 +144,9 @@ var storage = function(spec, my) {
         return command (o, my);
     };
 
+    priv.storage = my.storage;
+    delete my.storage;
+
     that.addJob = function (method,storage_spec,doc,option,success,error) {
         var command_opt = {
             options: option,
@@ -158,7 +161,7 @@ var storage = function(spec, my) {
         }
         jobManager.addJob (
             job({
-                storage:my.storage(storage_spec||{}),
+                storage:priv.storage(storage_spec||{}),
                 command:priv.newCommand(method,command_opt)
             }, my)
         );
