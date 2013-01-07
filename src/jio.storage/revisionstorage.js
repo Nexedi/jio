@@ -433,12 +433,8 @@ jIO.addStorageType('revision', function (spec, my) {
             );
         };
         f.postDocument = function (doctree_update_method) {
-            revs_info = priv.postToDocumentTree(doctree, doc,
-                priv.update_doctree_on_remove);
-
-            // I don't understand why?
+            revs_info = priv.postToDocumentTree(doctree, doc);
             doc._id = docid+"."+revs_info[0].rev;
-
             that.addJob(
                 "post",
                 priv.substorage,
@@ -511,7 +507,7 @@ jIO.addStorageType('revision', function (spec, my) {
      * @param  {object} command The JIO command
      */
     that.get = function (command) {
-        var f = {}, doctree, revs_info, prev_rev, rev_path, option;
+        var f = {}, doctree, revs_info, prev_rev, option;
         option = command.cloneOption();
         if (option["max_retry"] === 0) {
             option["max_retry"] = 3;
@@ -538,11 +534,16 @@ jIO.addStorageType('revision', function (spec, my) {
                 option,
                 function (response) {
                     doctree = response;
-                    revs_info = priv.getWinnerRevisionFromDocumentTree(doctree);
                     if (prev_rev === undefined) {
+                        revs_info =
+                            priv.getWinnerRevisionFromDocumentTree(doctree);
                         prev_rev = revs_info[0].rev;
+                    } else {
+                        revs_info =
+                            priv.getRevisionFromDocumentTree(doctree, prev_rev);
                     }
-                    f.getDocument(command.getDocId()+"."+prev_rev);
+                    f.getDocument(command.getDocId()+"."+prev_rev,
+                                  command.getAttachmentId());
                 }, function (err) {
                     switch(err.status) {
                     case 404:
@@ -556,14 +557,36 @@ jIO.addStorageType('revision', function (spec, my) {
                 }
             );
         };
-        f.getDocument = function (docid) {
+        f.getDocument = function (docid, attmtid) {
             that.addJob(
                 "get",
                 priv.substorage,
                 docid,
                 option,
                 function (response) {
+                    var attmt;
                     if (typeof response !== "string") {
+                        if (attmtid !== undefined) {
+                            if (response._attachments !== undefined) {
+                                attmt = response._attachments[attmtid];
+                                if (attmt !== undefined) {
+                                    prev_rev =
+                                        priv.getRevisionFromPosition(
+                                            revs_info, attmt.revpos);
+                                    f.getDocument(command.getDocId()+"."+
+                                                  prev_rev+"/"+attmtid);
+                                    return;
+                                }
+                            }
+                            that.error({
+                                "status": 404,
+                                "statusText": "Not Found",
+                                "error": "not_found",
+                                "message": "Cannot find the attachment",
+                                "reason": "Attachment is missing"
+                            });
+                            return;
+                        }
                         response._id = command.getDocId();
                         response._rev = prev_rev;
                         if (command.getOption("revs") === true) {
@@ -588,36 +611,9 @@ jIO.addStorageType('revision', function (spec, my) {
                 }
             );
         };
-        if (command.getAttachmentId()) {
-            // xxx: no revision passed = get tree and winning revision
-            if ( prev_rev  === undefined ){
-                that.addJob(
-                    "get",
-                    priv.substorage,
-                    command.getDocId()+priv.doctree_suffix,
-                    option,
-                    function (response) {
-                        rev_path = "."+priv.getWinnerRevisionFromDocumentTree(
-                                response)[0].rev;
-                        f.getDocument(command.getDocId()+
-                            rev_path+"/"+command.getAttachmentId());
-                    },
-                    function (err) {
-                        that.error({
-                            "status": 404,
-                            "statusText": "Not Found",
-                            "error": "not_found",
-                            "message": "Document tree not found, please check document ID",
-                            "reason": "Incorrect document ID"
-                        });
-                        return;
-                    }
-                );
-
-            } else {
-               f.getDocument(command.getDocId()+"."+
-                    prev_rev+"/"+command.getAttachmentId());
-            }
+        if (command.getAttachmentId() && prev_rev !== undefined) {
+            f.getDocument(command.getDocId()+"."+prev_rev+
+                          "/"+command.getAttachmentId());
         } else {
             f.getDocumentTree();
         }
