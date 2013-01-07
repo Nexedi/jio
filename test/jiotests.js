@@ -1228,11 +1228,11 @@ test ("Get", function(){
 
     // adding two documents
     o.doctree = {"children":[{
-        "rev": "1-rev1", "status": "available", "children": []
-    },{
-        "rev": "1-rev2", "status": "available", "children": [{
+        "rev": "1-rev1", "status": "available", "children": [{
             "rev": "2-rev3", "status": "available", "children": []
         }]
+    },{
+        "rev": "1-rev2", "status": "available", "children": []
     }]};
     o.doc_myget2 = {"_id": "get1", "title": "myGet2"};
     o.doc_myget3 = {"_id": "get1", "title": "myGet3"};
@@ -1260,16 +1260,8 @@ test ("Get", function(){
     o.tick(o);
     delete o.doc_myget2["_rev"];
 
-    // adding an attachment
-    o.attmt_myget2 = {
-        "get2": {
-            "length": 3,
-            "digest": "md5-dontcare"
-        }
-    };
-    o.doctree["children"][1]["attachment"] = o.attmt_myget2;
-    localstorage.setItem(o.localpath+"/get1.1-rev2", o.doc_myget2);
-    localstorage.setItem(o.localpath+"/get1.1-rev2/get2", "abc");
+    // localstorage.setItem(o.localpath+"/get1.1-rev2/get2", "abc");
+    localstorage.setItem(o.localpath+"/get1.2-rev3/get2", "abc");
 
     // get attachment winner
     o.spy(o, "value", "abc", "Get attachment (winner)");
@@ -1283,13 +1275,24 @@ test ("Get", function(){
 
     // get attachment specific rev
     o.spy(o, "value", "abc", "Get attachment (specific revision)");
-    o.jio.get("get1/get2", {"rev": "1-rev2"}, o.f);
+    o.jio.get("get1/get2", {"rev": "2-rev3"}, o.f);
     o.tick(o);
 
-    // get document with attachment (specific revision)
-    o.attmt_myget2["get2"]["revpos"] = 1;
+    // adding an attachment
+    o.attmt_myget2 = {
+        "get2": {
+            "length": 3,
+            "digest": "md5-dontcare"
+        },
+        "revpos":1,
+    };
     o.doc_myget2["_rev"] = "1-rev2";
     o.doc_myget2["_attachments"] = o.attmt_myget2;
+
+    o.doctree["children"][1]["attachment"] = o.attmt_myget2;
+    localstorage.setItem(o.localpath+"/get1.1-rev2", o.doc_myget2);
+
+    // get document with attachment (specific revision)
     o.spy(o, "value", o.doc_myget2,
           "Get document attachment (specific revision)");
     o.jio.get("get1", {"rev": "1-rev2"}, o.f);
@@ -1300,6 +1303,10 @@ test ("Get", function(){
     // get document with attachment (winner)
     o.doc_myget3["_rev"] = "2-rev3";
     o.doc_myget3["_attachments"] = o.attmt_myget2;
+
+    o.doctree["children"][1]["attachment"] = o.attmt_myget3;
+    localstorage.setItem(o.localpath+"/get1.2-rev3", o.doc_myget3);
+
     o.spy(o, "value", o.doc_myget3, "Get document attachment (winner)");
     o.jio.get("get1", o.f);
     o.tick(o);
@@ -1311,6 +1318,250 @@ test ("Get", function(){
 
 });
 
+test ("Remove", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "revision",
+        "secondstorage": {
+            "type": "local",
+            "username": "urevrem",
+            "applicationname": "arevrem"
+        }
+    });
+    o.localpath = "jio/localstorage/urevrem/arevrem";
+
+    // adding two documents
+    o.doc_myremove1 = {"_id": "remove1", "title": "myRemove1"};
+    o.doc_myremove2 = {"_id": "remove1", "title": "myRemove2"};
+
+    // revs_info 1-rev1 document version
+    o.revs_info = [];
+    o.very_old_rev = "1-"+hex_sha256(JSON.stringify(o.doc_myremove1)+JSON.stringify(o.revs_info));
+
+    localstorage.setItem(o.localpath+"/remove1."+o.very_old_rev, o.doc_myremove1);
+    localstorage.setItem(o.localpath+"/remove1.1-rev2", o.doc_myremove1);
+
+    // add attachment
+    o.attmt_myremove1 = {
+        "remove2": {
+            "length": 3,
+            "digest": "md5-dontcare"
+        },
+        "revpos":1
+    };
+    o.doc_myremove1 = {"_id": "remove1", "title": "myRemove1",
+        "_rev":o.very_old_rev, "_attachments":o.attmt_myremove1};
+    o.revs_info = [{"rev": o.very_old_rev, "status": "available"}];
+    o.old_rev = "2-"+hex_sha256(JSON.stringify(o.doc_myremove1)+JSON.stringify(o.revs_info));
+
+    localstorage.setItem(o.localpath+"/remove1."+o.old_rev, o.doc_myremove1);
+    localstorage.setItem(o.localpath+"/remove1."+o.old_rev+"/remove2", "xyz");
+
+    o.doctree = {"children":[{
+        "rev": o.very_old_rev, "status": "available", "children": [{
+            "rev": o.old_rev, "status": "available", "children": []
+        }]
+        },{
+            "rev": "1-rev2", "status": "available", "children": []
+        }]};
+    localstorage.setItem(o.localpath+"/remove1.revision_tree.json", o.doctree);
+
+    // 1. remove non existing attachment with revision
+    o.spy(o, "status", 404, "Remove non existing attachment (with revision)");
+    o.jio.remove({"_id":"remove1.1-rev2/remove0","_rev":o.old_rev}, o.f);
+    o.tick(o);
+
+    o.revs_info = [
+                    {"rev": o.old_rev, "status": "available"},
+                    {"rev": o.very_old_rev, "status": "available"}
+                  ];
+
+    // xxx on remove, doc only includes the parameters passed in the remove callback
+    // to generate correct hash, need to modify here
+    o.doc_myremove1 = {"_id":"remove1/remove2","_rev":o.old_rev};
+    o.rev = "3-"+hex_sha256(JSON.stringify(o.doc_myremove1)+JSON.stringify(o.revs_info));
+
+    o.doctree = {"children":[{
+        "rev": o.very_old_rev, "status": "available", "children": [{
+            "rev": o.old_rev, "status": "available", "children": [{
+                "rev": o.rev, "status": "available", "children":[]
+            }]
+        }]
+        },{
+            "rev": "1-rev2", "status": "available", "children": []
+        }]};
+    localstorage.setItem(o.localpath+"/remove1.revision_tree.json", o.doctree);
+
+    // 2. remove existing attachment with revision
+    o.spy (o, "value", {"ok": true, "id": "remove1", "rev": o.rev},
+             "Remove attachment (with revision)");
+    o.jio.remove({"_id":"remove1/remove2","_rev":o.old_rev}, o.f);
+    o.tick(o);
+
+    // add another attachment
+    o.attmt_myremove2 = {
+        "remove3": {
+            "length": 3,
+            "digest": "md5-hello123"
+        },
+        "revpos":1
+    };
+    o.doc_myremove2 = {"_id": "remove1", "title": "myRemove2",
+        "_rev":"1-rev2", "_attachments":o.attmt_myremove2};
+    o.second_old_rev = "2-"+hex_sha256(JSON.stringify(o.doc_myremove1)+JSON.stringify(o.revs_info));
+    o.revs_info = [
+                    {"rev":o.second_old_rev, "status":"available"},
+                    {"rev": "1-rev2", "status": "available"}
+    ];
+    localstorage.setItem(o.localpath+"/remove1."+o.second_old_rev, o.doc_myremove2);
+    localstorage.setItem(o.localpath+"/remove1."+o.second_old_rev+"/remove3", "stu");
+
+    o.doctree = {"children":[{
+        "rev": o.very_old_rev, "status": "available", "children": [{
+            "rev": o.old_rev, "status": "available", "children": [{
+                "rev": o.rev, "status": "available", "children":[]
+            }]
+        }]
+        },{
+        "rev": "1-rev2", "status": "available", "children": [{
+            "rev": o.second_old_rev, "status": "available", "children":[]
+            }]
+        }]};
+    localstorage.setItem(o.localpath+"/remove1.revision_tree.json", o.doctree);
+
+    // 3. remove non existing attachment without revision
+    o.spy (o,"status", 404, "Remove non existing attachment (without revision)")
+    o.jio.remove({"_id":"remove1/remove0"}, o.f);
+    o.tick(o);
+
+    o.revs_info = [
+                    {"rev": o.second_old_rev, "status": "available"},
+                    {"rev": "1-rev2", "status": "available"}
+                  ];
+
+    o.doc_myremove3 = {"_id":"remove1/remove3","_rev":o.second_old_rev};
+    o.second_rev = "3-"+hex_sha256(JSON.stringify(o.doc_myremove3)+JSON.stringify(o.revs_info));
+
+    // 4. remove existing attachment without revision
+    o.spy (o, "value", {"ok": true, "id": "remove1", "rev": o.second_rev},
+             "Remove attachment (without revision)");
+    o.jio.remove({"_id":"remove1/remove3"}, o.f);
+    o.tick(o);
+
+    // 5. remove wrong revision
+    o.spy (o,"status", 409, "Removing wrong revision (not latest)");
+    o.jio.remove({"_id":"remove1","_rev":o.second_old_rev}, o.f);
+    o.tick(o);
+
+    o.revs_info = [
+                    {"rev": o.second_rev, "status":"available"},
+                    {"rev": o.second_old_rev, "status": "available"},
+                    {"rev": "1-rev2", "status": "available"}
+                  ];
+    o.doc_myremove4 = {"_id":"remove1","_rev":o.second_rev};
+    o.second_new_rev = "4-"+hex_sha256(JSON.stringify(o.doc_myremove4)+JSON.stringify(o.revs_info));
+
+    // 6. remove revision
+    o.spy (o, "value", {"ok": true, "id": "remove1", "rev": o.second_new_rev},
+             "Remove attachment (with revision)");
+    o.jio.remove({"_id":"remove1", "_rev":o.second_rev}, o.f);
+    o.tick(o);
+
+    // 7. remove document without revision
+    o.spy (o,"status", 409, "Removing document without revision and multiple existing versions");
+    o.jio.remove({"_id":"remove1"}, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+});
+
+
+module ( "Test Revisionstorage + Localstorage" );
+
+test ("sample", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "revision",
+        "secondstorage": {
+            "type": "local",
+            "username": "usam1",
+            "applicationname": "asam1"
+        }
+    });
+    o.localpath = "jio/localstorage/usam1/asam1";
+
+    // 1. put non empty document A-1
+    o.doc = {"_id": "sample1", "title": "mySample1"};
+    o.revs_info = [];
+    o.rev = "1-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+
+    o.spy (o, "value", {"ok": true, "id": "sample1", "rev": o.rev}, "Put non empty document A-1");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // 2. put non empty document A-2
+    o.doc_b = {"_id": "sample1", "title": "mySample2"};
+    o.revs_info_b = [];
+    o.rev_b = "1-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+
+    o.spy (o,"status", 409, "409 Try to put non empty document A-2");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // 3. FAKE IT
+    o.doc_f = {"_id": "sample1", "title": "mySample2"};
+    o.revs_info_f = [];
+    o.rev_f = "1-"+hex_sha256(JSON.stringify(o.doc_f)+JSON.stringify(o.revs_info_f));
+    o.doc_f2 = {"_id": "sample1."+o.rev_f, "title": "mySample2"};
+
+    localstorage.setItem(o.localpath+"/sample1."+o.rev_f, o.doc_f2);
+
+    o.doctree = {"children":[
+        { "rev": o.rev, "status": "available", "children": []},
+        { "rev": o.rev_f, "status": "available", "children": []}
+    ]};
+    localstorage.setItem(o.localpath+"/sample1.revision_tree.json", o.doctree);
+
+    // 3. GET first version
+    o.spy(o, "value", {"_id": "sample1", "title": "mySample1", "_rev": o.rev},
+          "Get first document (using revison)");
+    o.jio.get("sample1", {"rev": o.rev}, o.f);
+    o.tick(o);
+
+    // 4. MODFIY first version
+    o.doc_2 = {"_id": "sample1", "_rev": o.rev, "title": "mySample1_modified"};
+    o.revs_info_2 = [{"rev": o.rev, "status": "available"}];
+    o.rev_2 = "2-"+hex_sha256(JSON.stringify(o.doc_2)+JSON.stringify(o.revs_info_2));
+    o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_2}, "Modify first document");
+    o.jio.put(o.doc_2, o.f);
+    o.tick(o);
+
+    // 5. GET second version
+    o.spy(o, "value", {"_id": "sample1", "title": "mySample2", "_rev": o.rev_f},
+          "Get second document (using revison)");
+    o.jio.get("sample1", {"rev": o.rev_f}, o.f);
+    o.tick(o);
+
+    // 6. MODFIY second version
+    o.doc_f2 = {"_id": "sample1", "_rev": o.rev_f, "title": "mySample2_modified"};
+    o.revs_info_f2 = [{"rev": o.rev_f, "status": "available"}];
+    o.rev_f2 = "2-"+hex_sha256(JSON.stringify(o.doc_f2)+JSON.stringify(o.revs_info_f2));
+    o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_f2}, "Modify second document");
+    o.jio.put(o.doc_f2, o.f);
+    o.tick(o);
+
+    // 7. GET document with conflict!
+    o.spy(o, "value", {"_id": "sample1", "title": "mySample2", "_rev": o.rev_f},
+          "Get second document (using revison)");
+    o.jio.get("sample1", o.f);
+    o.tick(o);
+
+    o.jio.stop();
+});
 /*
 module ('Jio DAVStorage');
 

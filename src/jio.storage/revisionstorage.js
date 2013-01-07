@@ -124,13 +124,6 @@ jIO.addStorageType('revision', function (spec, my) {
      * @param  {object} document_tree The document tree
      * @return {array} The winner revs info array
      */
-    /**
-     * Gets the winner revision from a document tree.
-     * The winner is the deeper revision on the left.
-     * @method getWinnerRevisionFromDocumentTree
-     * @param  {object} document_tree The document tree
-     * @return {array} The winner revs info array
-     */
     priv.getWinnerRevisionFromDocumentTree = function (document_tree) {
         var i, result, search, revs_info = [];
         result = [];
@@ -163,7 +156,11 @@ jIO.addStorageType('revision', function (spec, my) {
             }
         };
         search(document_tree, 0);
-        return result;
+        // xxx shouldn't this return only a single revision
+        // from the document tree? Currently multiple revisions
+        // are passed back
+        // return result;
+        return [result[0]];
     };
 
     /**
@@ -171,12 +168,19 @@ jIO.addStorageType('revision', function (spec, my) {
      * @method postToDocumentTree
      * @param  {object} doctree The document tree object
      * @param  {object} doc The document object
+     * @param  {boolean} set_node_to_deleted true/false
      * @return {array} The added document revs_info
      */
-    priv.postToDocumentTree = function (doctree, doc) {
-        var i, revs_info, next_rev, next_rev_str, selectNode, selected_node;
-        revs_info = [];
-        selected_node = doctree;
+    priv.postToDocumentTree = function (doctree, doc, set_node_to_deleted) {
+        var i, revs_info, next_rev, next_rev_str, next_rev_status,
+            selectNode, selected_node,
+            revs_info = [],
+            selected_node = doctree;
+
+        if (doc._rev === undefined && priv.missing_revision){
+            doc._rev = priv.missing_revision;
+        }
+
         selectNode = function (node) {
             var i;
             if (typeof node.rev !== "undefined") {
@@ -214,15 +218,17 @@ jIO.addStorageType('revision', function (spec, my) {
         next_rev = priv.generateNextRevision(
             doc._rev || 0, JSON.stringify(doc) + JSON.stringify(revs_info));
         next_rev_str = next_rev.join("-");
+        next_rev_status = set_node_to_deleted === true ? "deleted" : "available";
+
         // don't add if the next rev already exists
         for (i = 0; i < selected_node.children.length; i += 1) {
             if (selected_node.children[i].rev === next_rev_str) {
                 revs_info.unshift({
                     "rev": next_rev_str,
-                    "status": "available"
+                    "status": next_rev_status
                 });
-                if (selected_node.children[i].status !== "available") {
-                    selected_node.children[i].status = "available";
+                if (selected_node.children[i].status !== next_rev_status) {
+                    selected_node.children[i].status = next_rev_status;
                 }
                 return revs_info;
             }
@@ -271,6 +277,23 @@ jIO.addStorageType('revision', function (spec, my) {
     };
 
     /**
+     * Check if revision is a leaf
+     * @method isRevisionALeaf
+     * @param  {string} revision revision to check
+     * @param  {array} leaves all leaves on tree
+     * @return {boolean} true/false
+     */
+    priv.isRevisionALeaf = function (revision, leaves) {
+        var i;
+        for (i = 0; i < leaves.length; i+=1) {
+            if (leaves[i] === revision){
+                return true;
+            }
+        }
+        return false;
+    };
+
+    /**
      * Convert revs_info to a simple revisions history
      * @method revsInfoToHistory
      * @param  {array} revs_info The revs info
@@ -299,6 +322,7 @@ jIO.addStorageType('revision', function (spec, my) {
         var f = {}, doctree, revs_info, doc, docid;
         doc = command.cloneDoc();
         docid = command.getDocId();
+
         if (typeof doc._rev === "string" &&
             !priv.checkRevisionFormat(doc._rev)) {
             that.error({
@@ -329,6 +353,7 @@ jIO.addStorageType('revision', function (spec, my) {
                 docid+priv.doctree_suffix,
                 option,
                 function (response) {
+
                     doctree = response;
                     if (priv.update_doctree_allowed) {
                         f.postDocument("put");
@@ -356,8 +381,12 @@ jIO.addStorageType('revision', function (spec, my) {
             );
         };
         f.postDocument = function (doctree_update_method) {
-            revs_info = priv.postToDocumentTree(doctree, doc);
+            revs_info = priv.postToDocumentTree(doctree, doc,
+                priv.update_doctree_on_remove);
+
+            // I don't understand why?
             doc._id = docid+"."+revs_info[0].rev;
+
             that.addJob(
                 "post",
                 priv.substorage,
@@ -365,7 +394,8 @@ jIO.addStorageType('revision', function (spec, my) {
                 command.cloneOption(),
                 function (response) {
                     f.sendDocumentTree (doctree_update_method);
-                }, function (err) {
+                },
+                function (err) {
                     switch(err.status) {
                     case 409:
                         // file already exists
@@ -387,12 +417,14 @@ jIO.addStorageType('revision', function (spec, my) {
                 doctree,
                 command.cloneOption(),
                 function (response) {
+
                     that.success({
                         "ok":true,
                         "id":docid,
                         "rev":revs_info[0].rev
-                    })
-                }, function (err) {
+                    });
+                },
+                function (err) {
                     // xxx do we try to delete the posted document ?
                     err.message = "Cannot save document revision tree";
                     that.error(err);
@@ -427,7 +459,7 @@ jIO.addStorageType('revision', function (spec, my) {
      * @param  {object} command The JIO command
      */
     that.get = function (command) {
-        var f = {}, doctree, revs_info, prev_rev, revs_info, option;
+        var f = {}, doctree, revs_info, prev_rev, rev_path, option;
         option = command.cloneOption();
         if (option["max_retry"] === 0) {
             option["max_retry"] = 3;
@@ -479,7 +511,6 @@ jIO.addStorageType('revision', function (spec, my) {
                 docid,
                 option,
                 function (response) {
-                    var i, conflict_array;
                     if (typeof response !== "string") {
                         response._id = command.getDocId();
                         response._rev = prev_rev;
@@ -506,10 +537,217 @@ jIO.addStorageType('revision', function (spec, my) {
             );
         };
         if (command.getAttachmentId()) {
-            f.getDocument(command.getDocId()+"/"+command.getAttachmentId());
+            // xxx: no revision passed = get tree and winning revision
+            if ( prev_rev  === undefined ){
+                that.addJob(
+                    "get",
+                    priv.substorage,
+                    command.getDocId()+priv.doctree_suffix,
+                    option,
+                    function (response) {
+                        rev_path = "."+priv.getWinnerRevisionFromDocumentTree(
+                                response)[0].rev;
+                        f.getDocument(command.getDocId()+
+                            rev_path+"/"+command.getAttachmentId());
+                    },
+                    function (err) {
+                        that.error({
+                            "status": 404,
+                            "statusText": "Not Found",
+                            "error": "not_found",
+                            "message": "Document tree not found, please check document ID",
+                            "reason": "Incorrect document ID"
+                        });
+                        return;
+                    }
+                );
+
+            } else {
+               f.getDocument(command.getDocId()+"."+
+                    prev_rev+"/"+command.getAttachmentId());
+            }
         } else {
             f.getDocumentTree();
         }
+    };
+
+    /**
+     * Remove document or attachment.
+     * Options:
+     * - {boolean} keep_revision_history To keep the previous revisions
+     * @method remove
+     * @param  {object} command The JIO command
+     */
+    that.remove = function (command) {
+        var f = {}, del_rev, option, i,
+        revision_found = false, revision_count = 0, correct_revision;
+        option = command.cloneOption();
+        if (option["max_retry"] === 0) {
+            option["max_retry"] = 3;
+        }
+        del_rev = command.getDoc()._rev;
+
+        f.removeDocument = function (docid) {
+            if (command.getOption("keep_revision_history") !== true) {
+                that.addJob(
+                    "remove",
+                    priv.substorage,
+                    docid,
+                    option,
+                    function (response) {
+                        if ( command.getAttachmentId() === undefined ) {
+                            priv.update_doctree_on_remove = true;
+                        } else {
+                            priv.update_doctree_on_remove = false;
+                        }
+                        that.post(command);
+                    },
+                    function (err) {
+                        that.error({
+                            "status": 404,
+                            "statusText": "Not Found",
+                            "error": "not_found",
+                            "message": "File not found",
+                            "reason": "Document was not found"
+                        });
+                        return;
+                    }
+                );
+            } else {
+                // keep history = update document tree only
+                if (command.getAttachmentId() === undefined ) {
+                    priv.update_doctree_on_remove = true;
+                } else {
+                    priv.update_doctree_on_remove = false;
+                }
+                that.post(command);
+            }
+        };
+        if (typeof del_rev === "string") {
+            if (!priv.checkRevisionFormat(del_rev)) {
+                that.error({
+                    "status": 31,
+                    "statusText": "Wrong Revision Format",
+                    "error": "wrong_revision_format",
+                    "message": "The document previous revision does not match "+
+                        "[0-9]+-[0-9a-zA-Z]+",
+                    "reason": "Previous revision is wrong"
+                });
+                return;
+            }
+        }
+
+        // get doctree
+        that.addJob(
+            "get",
+            priv.substorage,
+            command.getDocId()+priv.doctree_suffix,
+            option,
+            function (response) {
+                response._conflicts = priv.getLeavesFromDocumentTree(response);
+
+                // really necessary...?
+                if (del_rev === undefined) {
+                    // single leaf = can be deleted
+                    if (response._conflicts.length === 1) {
+                        f.removeDocument(command.getDocId()+"."+
+                            response._conflicts[0]);
+                        delete response._conflicts;
+                    } else {
+                        // multiple leaves = only if deleting attachment,
+                        // because unique document.revision/attachment
+                        if (typeof command.getAttachmentId() === "string"){
+                            for (i = 0; i < response._conflicts.length; i += 1){
+                                del_rev = response._conflicts[i];
+                                that.addJob(
+                                    "get",
+                                    priv.substorage,
+                                    command.getDocId()+"."+response._conflicts[i],
+                                    option,
+                                    function (nested_response) {
+                                        if (typeof nested_response._attachments === "object") {
+                                            if (nested_response._attachments[command.getAttachmentId()] !== undefined){
+                                                revision_found = true;
+                                                correct_revision = del_rev;
+                                            }
+                                        }
+
+                                        if ( revision_count === response._conflicts.length-1 &&
+                                            revision_found !== true ){
+                                            that.error({
+                                                "status": 404,
+                                                "statusText": "Not Found",
+                                                "error": "not_found",
+                                                "message": "Attachment not found, please check attachment ID",
+                                                "reason": "Incorrect Attachment ID"
+                                            });
+                                            return;
+                                        }
+
+                                        if (revision_found === true ){
+                                            priv.missing_revision = correct_revision;
+                                            delete response._conflicts;
+                                            f.removeDocument(command.getDocId()+"."+
+                                                correct_revision+"/"+command.getAttachmentId());
+                                        }
+                                        revision_count += 1;
+                                    },
+                                    function (err) {
+                                        that.error({
+                                            "status": 404,
+                                            "statusText": "Not Found",
+                                            "error": "not_found",
+                                            "message": "Attachment not found, please check document ID",
+                                            "reason": "Incorrect document ID"
+                                        });
+                                    }
+                                );
+                            }
+                        } else {
+                        // conflict
+                        // return conflict message here, so user can pick a document version
+                        that.error({
+                            "status": 409,
+                            "statusText": "Conflict",
+                            "error": "conflict",
+                            "message": "Document update conflict.",
+                            "reason": "Cannot delete a document without revision when multiple versions exist"
+                        });
+                        return;
+                        }
+                    }
+                } else {
+                    // revision provided
+                    if (typeof command.getAttachmentId() === "string"){
+                        f.removeDocument(command.getDocId()+"."+del_rev+"/"+
+                            command.getAttachmentId());
+                    } else {
+                        if (priv.isRevisionALeaf(del_rev, response._conflicts)){
+                            f.removeDocument(command.getDocId()+"."+del_rev);
+                        } else {
+                            that.error({
+                                "status": 409,
+                                "statusText": "Conflict",
+                                "error": "conflict",
+                                "message": "Document update conflict.",
+                                "reason": "Trying to remove an outdated revision"
+                            });
+                            return;
+                        }
+                    }
+                }
+            },
+            function (err) {
+                that.error({
+                    "status": 404,
+                    "statusText": "Not Found",
+                    "error": "not_found",
+                    "message": "Document tree not found, please check document ID",
+                    "reason": "Incorrect document ID"
+                });
+                return;
+            }
+        );
     };
 
     return that;
