@@ -156,11 +156,7 @@ jIO.addStorageType('revision', function (spec, my) {
             }
         };
         search(document_tree, 0);
-        // xxx shouldn't this return only a single revision
-        // from the document tree? Currently multiple revisions
-        // are passed back
-        // return result;
-        return [result[0]];
+        return result;
     };
 
     /**
