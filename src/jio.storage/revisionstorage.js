@@ -798,5 +798,22 @@ jIO.addStorageType('revision', function (spec, my) {
         );
     };
 
+    /**
+     * Get all documents
+     * @method allDocs
+     * @param  {object} command The JIO command
+     */
+    that.allDocs = function (command) {
+        setTimeout(function () {
+            that.error({
+                "status": 405,
+                "statusText": "Method Not Allowed",
+                "error": "method_not_allowed",
+                "message": "Your are not allowed to use this command",
+                "reason": "LocalStorage forbids AllDocs command executions"
+            });
+        });
+    };
+
     return that;
 });
