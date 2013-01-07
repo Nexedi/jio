@@ -930,13 +930,13 @@ test ("Get", function(){
         "applicationname": "aget"
     });
 
-    // get unexistant document
-    o.spy(o, "status", 404, "Get unexistant document");
+    // get inexistent document
+    o.spy(o, "status", 404, "Get inexistent document");
     o.jio.get("get1", o.f);
     o.tick(o);
 
-    // get unexistant attachment
-    o.spy(o, "status", 404, "Get unexistant attachment");
+    // get inexistent attachment
+    o.spy(o, "status", 404, "Get inexistent attachment");
     o.jio.get("get1/get2", o.f);
     o.tick(o);
 
@@ -952,8 +952,8 @@ test ("Get", function(){
     o.jio.get("get1", o.f);
     o.tick(o);
 
-    // get unexistant attachment (document exists)
-    o.spy(o, "status", 404, "Get unexistant attachment (document exists)");
+    // get inexistent attachment (document exists)
+    o.spy(o, "status", 404, "Get inexistent attachment (document exists)");
     o.jio.get("get1/get2", o.f);
     o.tick(o);
 
@@ -987,13 +987,13 @@ test ("Remove", function(){
         "applicationname": "aremove"
     });
 
-    // remove unexistant document
-    o.spy(o, "status", 404, "Remove unexistant document");
+    // remove inexistent document
+    o.spy(o, "status", 404, "Remove inexistent document");
     o.jio.remove({"_id": "remove1"}, o.f);
     o.tick(o);
 
-    // remove unexistant document/attachment
-    o.spy(o, "status", 404, "Remove unexistant document/attachment");
+    // remove inexistent document/attachment
+    o.spy(o, "status", 404, "Remove inexistent document/attachment");
     o.jio.remove({"_id": "remove1/remove2"}, o.f);
     o.tick(o);
 
@@ -1204,13 +1204,13 @@ test ("Get", function(){
     });
     o.localpath = "jio/localstorage/urevget/arevget";
 
-    // get unexistant document
-    o.spy(o, "status", 404, "Get unexistant document (winner)");
+    // get inexistent document
+    o.spy(o, "status", 404, "Get inexistent document (winner)");
     o.jio.get("get1", o.f);
     o.tick(o);
 
-    // get unexistant attachment
-    o.spy(o, "status", 404, "Get unexistant attachment (winner)");
+    // get inexistent attachment
+    o.spy(o, "status", 404, "Get inexistent attachment (winner)");
     o.jio.get("get1/get2", o.f);
     o.tick(o);
 
@@ -1264,8 +1264,8 @@ test ("Get", function(){
               o.f);
     o.tick(o);
 
-    // get unexistant specific document
-    o.spy(o, "status", 404, "Get document (unexistant specific revision)");
+    // get inexistent specific document
+    o.spy(o, "status", 404, "Get document (inexistent specific revision)");
     o.jio.get("get1", {
         "revs_info": true, "revs": true, "conflicts": true,
         "rev": "1-rev0"
@@ -1303,8 +1303,8 @@ test ("Get", function(){
     o.jio.get("get1/get2", o.f);
     o.tick(o);
 
-    // get unexistant attachment specific rev
-    o.spy(o, "status", 404, "Get unexistant attachment (specific revision)");
+    // get inexistent attachment specific rev
+    o.spy(o, "status", 404, "Get inexistent attachment (specific revision)");
     o.jio.get("get1/get2", {
         "revs_info": true, "revs": true, "conflicts": true,
         "rev": "1-rev1"
