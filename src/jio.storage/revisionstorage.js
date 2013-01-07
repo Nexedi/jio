@@ -74,10 +74,15 @@ jIO.addStorageType('revision', function (spec, my) {
      * to generate a hash code.
      * @methode generateNextRev
      * @param  {string} previous_revision The previous revision
-     * @param  {string} string String to help generate hash code
+     * @param  {object} doc The document metadata
+     * @param  {object} revisions The revision history
+     * @param  {boolean} deleted_flag The deleted flag
      * @return {array} 0:The next revision number and 1:the hash code
      */
-    priv.generateNextRevision = function (previous_revision, string) {
+    priv.generateNextRevision = function (previous_revision,
+                                          doc, revisions, deleted_flag) {
+        var string = JSON.stringify(doc) + JSON.stringify(revisions) +
+            JSON.stringify(deleted_flag? true: false);
         if (typeof previous_revision === "number") {
             return [previous_revision + 1, priv.hashCode(string)];
         }
@@ -247,7 +252,8 @@ jIO.addStorageType('revision', function (spec, my) {
             }
         }
         next_rev = priv.generateNextRevision(
-            doc._rev || 0, JSON.stringify(doc) + JSON.stringify(revs_info));
+            doc._rev || 0, doc, priv.revsInfoToHistory(revs_info),
+            set_node_to_deleted);
         next_rev_str = next_rev.join("-");
         next_rev_status = set_node_to_deleted === true ? "deleted" : "available";
 

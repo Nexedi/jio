@@ -21,6 +21,13 @@ contains = function (array,content) {
 clone = function (obj) {
     return JSON.parse(JSON.stringify(obj));
 },
+// generates a revision hash from document metadata, revision history
+// and the deleted_flag
+generateRevisionHash = function (doc, revisions, deleted_flag) {
+    var string = JSON.stringify(doc) + JSON.stringify(revisions) +
+        JSON.stringify(deleted_flag? true: false);
+    return hex_sha256(string);
+},
 // localStorage wrapper
 localstorage = {
     clear: function () {
@@ -1086,8 +1093,8 @@ test ("Post", function(){
 
     // post non empty document
     o.doc = {"_id": "post1", "title": "myPost1"};
-    o.revs_info = [];
-    o.rev = "1-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.revisions = {"start": 0, "ids": []};
+    o.rev = "1-"+generateRevisionHash(o.doc, o.revisions);
     o.spy (o, "value", {"ok": true, "id": "post1", "rev": o.rev}, "Post");
     o.jio.post(o.doc, o.f);
     o.tick(o);
@@ -1101,8 +1108,7 @@ test ("Post", function(){
 
     // post and document already exists
     o.doc = {"_id": "post1", "title": "myPost2"};
-    o.revs_info = [];
-    o.rev = "1-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.rev = "1-"+generateRevisionHash(o.doc, o.revisions);
     o.spy (o, "value", {
         "ok": true, "id": "post1", "rev": o.rev
     }, "Post and document already exists");
@@ -1111,8 +1117,8 @@ test ("Post", function(){
 
     // post + revision
     o.doc = {"_id": "post1", "_rev": o.rev, "title": "myPost2"};
-    o.revs_info = [{"rev": o.rev, "status": "available"}];
-    o.rev = "2-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.revisions = {"start": 1, "ids": [o.rev.split('-')[1]]};
+    o.rev = "2-"+generateRevisionHash(o.doc, o.revisions);
     o.spy (o, "status", undefined, "Post + revision");
     o.jio.post(o.doc, o.f);
     o.tick(o);
@@ -1152,8 +1158,8 @@ test ("Put", function(){
 
     // put non empty document
     o.doc = {"_id": "put1", "title": "myPut1"};
-    o.revs_info = [];
-    o.rev = "1-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.revisions = {"start": 0, "ids": []};
+    o.rev = "1-"+generateRevisionHash(o.doc, o.revisions);
     o.spy (o, "value", {"ok": true, "id": "put1", "rev": o.rev},
            "Creates a document");
     o.jio.put(o.doc, o.f);
@@ -1173,8 +1179,8 @@ test ("Put", function(){
 
     // post + revision
     o.doc = {"_id": "put1", "_rev": o.rev, "title": "myPut2"};
-    o.revs_info = [{"rev": o.rev, "status": "available"}];
-    o.rev = "2-"+hex_sha256(JSON.stringify(o.doc)+JSON.stringify(o.revs_info));
+    o.revisions = {"start": 1, "ids": [o.rev.split('-')[1]]};
+    o.rev = "2-"+generateRevisionHash(o.doc, o.revisions);
     o.spy (o, "status", undefined, "Put + revision");
     o.jio.put(o.doc, o.f);
     o.tick(o);
