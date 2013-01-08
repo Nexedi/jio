@@ -1567,30 +1567,22 @@ test ("Scenario", function(){
     });
     o.localpath = "jio/localstorage/usam1/asam1";
 
-    // 1. new application
-    ok ( o.jio, "Open Application with Revision and Local Storage (new JIO)");
+    // new application
+    ok ( o.jio, "I open my application with revision and localstorage");
 
-    // 2. put non empty document A-1
+    // put non empty document A-1
     o.doc = {"_id": "sample1", "title": "mySample1"};
     o.revisions = {"start": 0, "ids": []};
     o.hex = generateRevisionHash(o.doc, o.revisions);
     o.rev = "1-"+o.hex;
 
     o.spy (o, "value", {"ok": true, "id": "sample1", "rev": o.rev},
-        "Create a new document");
+"Then, I create a new document (no attachment), my application "+
+"keep the revision in memory");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
-    o.doc_response = {"_id": "sample1."+o.rev, "title": "mySample1"};
-
-    // 3. check that document was created
-    deepEqual(
-        localstorage.getItem(o.localpath+"/sample1."+o.rev),
-        o.doc_response,
-            "Keep this document and revision in memory (document exists)"
-    );
-
-    // 4. open new tab (JIO)
+    // open new tab (JIO)
     o.jio2 = JIO.newJio({
         "type": "revision",
         "secondstorage": {
@@ -1601,31 +1593,33 @@ test ("Scenario", function(){
     });
     o.localpath = "jio/localstorage/usam1/asam1";
 
-    // 5. Create a new JIO in a new tab
-    ok ( o.jio2, "Open a new tab (new JIO)");
+    // Create a new JIO in a new tab
+    ok ( o.jio2, "Now, I am opening a new tab, with the same application"+
+    " and the same storage tree");
 
-    // 6. Get the document from the first storage
+    // Get the document from the first storage
     o.doc._rev = o.rev;
     o.doc._revisions = {"ids":[o.hex], "start":1 };
     o.doc._revs_info = [{"rev": o.rev, "status": "available"}];
-    o.spy(o, "value", o.doc, "Get the first document in new tab");
+    o.spy(o, "value", o.doc, "And, on this new tab, I load the document,"+
+        "and my application keep the revision in memory");
     o.jio2.get("sample1", {
         "revs_info": true, "revs": true, "conflicts": true,
         "rev": o.rev }, o.f);
     o.tick(o);
 
-    // 7. MODFIY the 2nd version
+    // MODFIY the 2nd version
     o.doc_2 = {"_id": "sample1", "_rev": o.rev,
         "title":"mySample2_modified"};
     o.revisions_2 = {"start":1 , "ids":[o.hex]};
     o.hex_2 = generateRevisionHash(o.doc_2, o.revisions_2)
     o.rev_2 = "2-"+o.hex_2;
     o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_2},
-        "Modify document in 2nd tab");
+        "So, I can modify and update it");
     o.jio2.put(o.doc_2, o.f);
     o.tick(o);
 
-    // 8. MODFIY first version
+    // MODFIY first version
     o.doc_1 = {"_id": "sample1", "_rev": o.rev,
         "title": "mySample1_modified"};
     o.revisions_1 = {"start": 1, "ids":[o.rev.split('-')[1]
@@ -1633,19 +1627,18 @@ test ("Scenario", function(){
     o.hex_1 = generateRevisionHash(o.doc_1, o.revisions_1);
     o.rev_1 = "2-"+o.hex_1;
     o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_1},
-           "Modify document in first tab");
+           "Back to the first tab, I update the document.");
     o.jio.put(o.doc_1, o.f);
     o.tick(o);
 
-    // 9. Close 2nd tab
-    o.jio2.close();
-    ok ( o.jio2, "Close 2nd tab (close jio2)");
-
-    // 10. Close 1st tab
+    // Close 1st tab
     o.jio.close();
-    ok ( o.jio, "Close 1st tab (close jio1)");
 
-    // 11 Reopen JIO
+    // Close 2nd tab
+    o.jio2.close();
+    ok ( o.jio2, "I close tab both tabs");
+
+    // Reopen JIO
     o.jio = JIO.newJio({
         "type": "revision",
         "secondstorage": {
@@ -1655,9 +1648,9 @@ test ("Scenario", function(){
         }
     });
     o.localpath = "jio/localstorage/usam1/asam1";
-    ok ( o.jio, "Reopen application");
+    ok ( o.jio, "Later, I open my application again");
 
-    // 12. GET document without revision = winner & conflict!
+    // GET document without revision = winner & conflict!
     o.mydocSample3 = {"_id": "sample1", "title": "mySample1_modified",
           "_rev": o.rev_1};
     o.mydocSample3._conflicts = [o.rev_2]
@@ -1666,12 +1659,13 @@ test ("Scenario", function(){
         }];
     o.mydocSample3._revisions = {"ids":[o.hex_1, o.hex], "start":2 };
     o.spy(o, "value", o.mydocSample3,
-          "Get Document = Two conflicting versions");
+          "I load the same document as before, and a popup shows that "+
+          "there is a conflict");
     o.jio.get("sample1", {"revs_info": true, "revs": true, "conflicts": true,
         }, o.f);
     o.tick(o);
 
-    // 13. REMOVE one of the two conflicting versions
+    // REMOVE one of the two conflicting versions
     o.revisions = {"start": 2, "ids":[
         o.rev_1.split('-')[1],o.rev.split('-')[1]
     ]};
@@ -1679,13 +1673,12 @@ test ("Scenario", function(){
     o.rev_3 = "3-"+generateRevisionHash(o.doc_myremove3, o.revisions,true);
 
     o.spy (o, "value", {"ok": true, "id": "sample1", "rev": o.rev_3},
-            "Remove one of the conflicting document version");
+           "I choose one of the document and close the application.");
     o.jio.remove({"_id":"sample1", "_rev":o.rev_1}, o.f);
     o.tick(o);
 
-    // 14. END
+    // END
     o.jio.stop();
-    ok ( o.jio, "Close application");
 
 });
 
