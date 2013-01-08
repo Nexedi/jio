@@ -3,18 +3,18 @@ var newConflictManagerStorage = function ( spec, my ) {
     var that = my.basicStorage( spec, my ), priv = {};
 
     var storage_exists = (spec.storage?true:false);
-    priv.secondstorage_spec = spec.storage || {type:'base'};
-    priv.secondstorage_string = JSON.stringify (priv.secondstorage_spec);
+    priv.sub_storage_spec = spec.storage || {type:'base'};
+    priv.sub_storage_string = JSON.stringify (priv.sub_storage_spec);
 
     var local_namespace = 'jio/conflictmanager/'+
-        priv.secondstorage_string+'/';
+        priv.sub_storage_string+'/';
 
     var empty_fun = function (){};
 
     var super_serialized = that.serialized;
     that.serialized = function () {
         var o = super_serialized();
-        o.storage = priv.secondstorage_spec;
+        o.storage = priv.sub_storage_spec;
         return o;
     };
 
@@ -28,29 +28,29 @@ var newConflictManagerStorage = function ( spec, my ) {
     priv.getDistantMetadata = function (command,path,success,error) {
         var cloned_option = command.cloneOption ();
         cloned_option.metadata_only = false;
-        that.addJob ('get',priv.secondstorage_spec,path,cloned_option,
+        that.addJob ('get',priv.sub_storage_spec,path,cloned_option,
                      success, error);
     };
 
     priv.saveMetadataToDistant = function (command,path,content,success,error) {
-        that.addJob ('put',priv.secondstorage_spec,
+        that.addJob ('put',priv.sub_storage_spec,
                      {_id:path,content:JSON.stringify (content)},
                      command.cloneOption(),success,error);
     };
 
     priv.saveNewRevision = function (command,path,content,success,error) {
-        that.addJob ('post',priv.secondstorage_spec,{_id:path,content:content},
+        that.addJob ('post',priv.sub_storage_spec,{_id:path,content:content},
                      command.cloneOption(),success,error);
     };
 
     priv.loadRevision = function (command,path,success,error) {
-        that.addJob('get',priv.secondstorage_spec,path,command.cloneOption(),
+        that.addJob('get',priv.sub_storage_spec,path,command.cloneOption(),
                     success, error);
     };
 
     priv.deleteAFile = function (command,path,success,error) {
         var cloned_option = command.cloneOption();
-        that.addJob ('remove',priv.secondstorage_spec,{_id:path},
+        that.addJob ('remove',priv.sub_storage_spec,{_id:path},
                      command.cloneOption(), success, error);
     };
 
@@ -654,7 +654,7 @@ var newConflictManagerStorage = function ( spec, my ) {
                 am.call(o,'error',[error]);
             };
             cloned_option.metadata_only = true;
-            that.addJob ('allDocs',priv.secondstorage_spec,null,cloned_option,
+            that.addJob ('allDocs',priv.sub_storage_spec,null,cloned_option,
                          success,error);
         };
         o.filterTheList = function (result) {

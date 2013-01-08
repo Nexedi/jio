@@ -4,7 +4,7 @@
  * Description:
  * {
  *     "type": "revision",
- *     "secondstorage": <sub storage description>
+ *     "sub_storage": <sub storage description>
  * }
  */
 jIO.addStorageType('revision', function (spec, my) {
@@ -13,7 +13,7 @@ jIO.addStorageType('revision', function (spec, my) {
     spec = spec || {};
     that = my.basicStorage(spec, my);
 
-    priv.substorage_key = "secondstorage";
+    priv.substorage_key = "sub_storage";
     priv.doctree_suffix = ".revision_tree.json";
     priv.substorage = spec[priv.substorage_key];
 

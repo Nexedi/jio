@@ -3,8 +3,8 @@
     var newWaitStorage = function ( spec, my ) {
         var that = my.basicStorage( spec, my ), priv = {};
 
-        var validatestate_secondstorage = spec.storage || false;
-        priv.secondstorage_spec = spec.storage || {type:'base'};
+        var validatestate_sub_storage = spec.storage || false;
+        priv.sub_storage_spec = spec.storage || {type:'base'};
         priv.delay = spec.delay || 5000;
         priv.save = spec.save || true;
         priv.load = spec.load || false;
@@ -12,7 +12,7 @@
         priv.remove = spec.remove || false;
 
         that.validateState = function () {
-            if (!validatestate_secondstorage) {
+            if (!validatestate_sub_storage) {
                 return 'Need at least one parameter: "storage" '+
                     'containing storage specifications.';
             }
@@ -22,7 +22,7 @@
         that.specToStore = function () {
             var o = {};
             o.delay = priv.delay;
-            o.storage = priv.secondstorage_spec;
+            o.storage = priv.sub_storage_spec;
             o.save = priv.save;
             o.load = priv.load;
             o.getlist = priv.getlist;
@@ -36,7 +36,7 @@
                 delay = priv.delay;
             }
             setTimeout (function () {
-                that.addJob ( that.newStorage(priv.secondstorage_spec),
+                that.addJob ( that.newStorage(priv.sub_storage_spec),
                               command );
                 that.end();
             }, delay);

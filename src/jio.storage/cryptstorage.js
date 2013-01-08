@@ -6,15 +6,15 @@ var newCryptedStorage = function ( spec, my ) {
 
     priv.username = spec.username || '';
     priv.password = spec.password || '';
-    priv.secondstorage_spec = spec.storage || {type:'base'};
-    priv.secondstorage_string = JSON.stringify (priv.secondstorage_string);
+    priv.sub_storage_spec = spec.storage || {type:'base'};
+    priv.sub_storage_string = JSON.stringify (priv.sub_storage_string);
 
     var super_serialized = that.serialized;
     that.serialized = function () {
         var o = super_serialized();
         o.username = priv.username;
         o.password = priv.password; // TODO : unsecured !!!
-        o.storage = priv.secondstorage_string;
+        o.storage = priv.sub_storage_string;
         return o;
     };
 
@@ -129,7 +129,7 @@ var newCryptedStorage = function ( spec, my ) {
             cloned_doc = command.cloneDoc();
             cloned_doc._id = new_file_name;
             cloned_doc.content = new_file_content;
-            that.addJob ('put',priv.secondstorage_spec,cloned_doc,
+            that.addJob ('put',priv.sub_storage_spec,cloned_doc,
                          command.cloneOption(),success,error);
         };
         am.wait(o,'save',1);
@@ -150,7 +150,7 @@ var newCryptedStorage = function ( spec, my ) {
             });
         };
         o.get = function () {
-            that.addJob('get',priv.secondstorage_spec,new_file_name,
+            that.addJob('get',priv.sub_storage_spec,new_file_name,
                         command.cloneOption(),o.success,o.error);
         };
         o.success = function (val) {
@@ -181,7 +181,7 @@ var newCryptedStorage = function ( spec, my ) {
     that.allDocs = function (command) {
         var result_array = [], am = priv.newAsyncModule(), o = {};
         o.allDocs = function () {
-            that.addJob ('allDocs', priv.secondstorage_spec, null,
+            that.addJob ('allDocs', priv.sub_storage_spec, null,
                          command.cloneOption(), o.onSuccess, o.error);
         };
         o.onSuccess = function (val) {
@@ -247,7 +247,7 @@ var newCryptedStorage = function ( spec, my ) {
         o.removeDocument = function () {
             var cloned_doc = command.cloneDoc();
             cloned_doc._id = new_file_name;
-            that.addJob ('remove', priv.secondstorage_spec, cloned_doc,
+            that.addJob ('remove', priv.sub_storage_spec, cloned_doc,
                          command.cloneOption(), o.success, that.error);
         };
         o.success = function (val) {

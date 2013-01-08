@@ -1084,7 +1084,7 @@ test ("Post", function(){
 
     o.jio = JIO.newJio({
         "type": "revision",
-        "secondstorage": {
+        "sub_storage": {
             "type": "local",
             "username": "urevpost",
             "applicationname": "arevpost"
@@ -1156,7 +1156,7 @@ test ("Put", function(){
 
     o.jio = JIO.newJio({
         "type": "revision",
-        "secondstorage": {
+        "sub_storage": {
             "type": "local",
             "username": "urevput",
             "applicationname": "arevput"
@@ -1215,7 +1215,7 @@ test ("Get", function(){
 
     o.jio = JIO.newJio({
         "type": "revision",
-        "secondstorage": {
+        "sub_storage": {
             "type": "local",
             "username": "urevget",
             "applicationname": "arevget"
@@ -1369,7 +1369,7 @@ test ("Remove", function(){
 
     o.jio = JIO.newJio({
         "type": "revision",
-        "secondstorage": {
+        "sub_storage": {
             "type": "local",
             "username": "urevrem",
             "applicationname": "arevrem"
@@ -1572,7 +1572,7 @@ test ("Scenario", function(){
 
     o.jio = JIO.newJio({
         "type": "revision",
-        "secondstorage": {
+        "sub_storage": {
             "type": "local",
             "username": "usam1",
             "applicationname": "asam1"
@@ -1598,7 +1598,7 @@ test ("Scenario", function(){
     // open new tab (JIO)
     o.jio2 = JIO.newJio({
         "type": "revision",
-        "secondstorage": {
+        "sub_storage": {
             "type": "local",
             "username": "usam1",
             "applicationname": "asam1"
@@ -1655,7 +1655,7 @@ test ("Scenario", function(){
     // Reopen JIO
     o.jio = JIO.newJio({
         "type": "revision",
-        "secondstorage": {
+        "sub_storage": {
             "type": "local",
             "username": "usam1",
             "applicationname": "asam1"
@@ -2213,11 +2213,11 @@ test ('Get document list', function () {
 test ('Remove document', function () {
     var o = {}; o.clock = this.sandbox.useFakeTimers();
     o.clock.tick(base_tick);
-    o.secondstorage = {type:'dummyall3tries',username:'indexremove'}
+    o.sub_storage = {type:'dummyall3tries',username:'indexremove'}
     o.storage_file_object_name = 'jio/indexed_file_object/'+
-        JSON.stringify (o.secondstorage);
+        JSON.stringify (o.sub_storage);
 
-    o.jio = JIO.newJio({type:'indexed',storage:o.secondstorage});
+    o.jio = JIO.newJio({type:'indexed',storage:o.sub_storage});
     o.f = function (err,val) {
         if (err) {
             err = err.status;
@@ -2586,12 +2586,12 @@ test ('Revision Conflict', function() {
         ok (!LocalOrCookieStorage.getItem(o.localNamespace + string),
             message || '"' + string + '" does not exists.');
     };
-    o.secondstorage_spec = {type:'local',
+    o.sub_storage_spec = {type:'local',
                             username:'revisionconflict',
                             applicationname:'jiotests'}
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
-                        storage:o.secondstorage_spec});
+                        storage:o.sub_storage_spec});
     // create a new file
     o.spy(o,'value',
           {ok:true,id:'file.doc',rev:'1',conflicts:{total_rows:0,rows:[]},
@@ -2750,12 +2750,12 @@ test ('Conflict in a conflict solving', function () {
         ok (!LocalOrCookieStorage.getItem(o.localNamespace + string),
             message || '"' + string + '" does not exists.');
     };
-    o.secondstorage_spec = {type:'local',
+    o.sub_storage_spec = {type:'local',
                             username:'conflictconflict',
                             applicationname:'jiotests'}
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
-                        storage:o.secondstorage_spec});
+                        storage:o.sub_storage_spec});
     // create a new file
     o.test_message = 'new file "file.doc", revision: "0".'
     o.f = o.t.spy();
@@ -2937,12 +2937,12 @@ test ('Remove revision conflict', function () {
         ok (!LocalOrCookieStorage.getItem(o.localNamespace + string),
             message || '"' + string + '" does not exists.');
     };
-    o.secondstorage_spec = {type:'local',
+    o.sub_storage_spec = {type:'local',
                             username:'removeconflict',
                             applicationname:'jiotests'}
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
-                        storage:o.secondstorage_spec});
+                        storage:o.sub_storage_spec});
 
     o.test_message = 'new file "file.doc", revision: "0".';
     o.f = o.t.spy();
@@ -3167,12 +3167,12 @@ test ('Load Revisions', function () {
     o.clock.tick (base_tick);
     o.spy = basic_spy_function;
     o.tick = basic_tick_function;
-    o.secondstorage_spec = {type:'local',
+    o.sub_storage_spec = {type:'local',
                             username:'loadrevisions',
                             applicationname:'jiotests'}
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
-                        storage:o.secondstorage_spec});
+                        storage:o.sub_storage_spec});
     o.spy(o,'status',404,'load file rev:1,','f'); // 12 === Replaced
     o.spy(o,'status',404,'load file rev:2','g');
     o.spy(o,'status',404,'and load file rev:3 at the same time','h');
@@ -3188,13 +3188,13 @@ test ('Get revision List', function () {
     o.clock.tick (base_tick);
     o.spy = basic_spy_function;
     o.tick = basic_tick_function;
-    o.secondstorage_spec = {type:'local',
+    o.sub_storage_spec = {type:'local',
                             username:'getrevisionlist',
                             applicationname:'jiotests'}
     o.rev = {};
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
-                        storage:o.secondstorage_spec});
+                        storage:o.sub_storage_spec});
     o.spy(o,'value',{total_rows:0,rows:[]},'Get revision list');
     o.jio.allDocs(o.f);
     o.tick(o);

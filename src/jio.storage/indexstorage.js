@@ -2,23 +2,23 @@ var newIndexStorage = function ( spec, my ) {
     spec = spec || {};
     var that = my.basicStorage( spec, my ), priv = {};
 
-    var validatestate_secondstorage = spec.storage || false;
-    priv.secondstorage_spec = spec.storage || {type:'base'};
-    priv.secondstorage_string = JSON.stringify (priv.secondstorage_spec);
+    var validatestate_sub_storage = spec.storage || false;
+    priv.sub_storage_spec = spec.storage || {type:'base'};
+    priv.sub_storage_string = JSON.stringify (priv.sub_storage_spec);
 
     var storage_object_name = 'jio/indexed_storage_object';
     var storage_file_object_name = 'jio/indexed_file_object/'+
-        priv.secondstorage_string;
+        priv.sub_storage_string;
 
     var super_serialized = that.serialized;
     that.serialized = function () {
         var o = super_serialized();
-        o.storage = priv.secondstorage_spec;
+        o.storage = priv.sub_storage_spec;
         return o;
     };
 
     that.validateState = function () {
-        if (!validatestate_secondstorage) {
+        if (!validatestate_sub_storage) {
             return 'Need at least one parameter: "storage" '+
                 'containing storage specifications.';
         }
@@ -38,7 +38,7 @@ var newIndexStorage = function ( spec, my ) {
 
     priv.indexStorage = function () {
         var obj = localStorage.getItem (storage_object_name) || {};
-        obj[priv.secondstorage_spec] = new Date().getTime();
+        obj[priv.sub_storage_spec] = new Date().getTime();
         localStorage.setItem (storage_object_name,obj);
     };
 
@@ -99,7 +99,7 @@ var newIndexStorage = function ( spec, my ) {
         var success = function (val) {
             priv.setFileArray(val.rows);
         };
-        that.addJob ('allDocs', priv.secondstorage_spec,null,
+        that.addJob ('allDocs', priv.sub_storage_spec,null,
                      {max_retry:3},success,function(){});
     };
 
@@ -122,7 +122,7 @@ var newIndexStorage = function ( spec, my ) {
             that.error(err);
         };
         priv.indexStorage();
-        that.addJob ('put',priv.secondstorage_spec,cloned_doc,
+        that.addJob ('put',priv.sub_storage_spec,cloned_doc,
                      cloned_option,success,error);
     }; // end put
 
@@ -140,7 +140,7 @@ var newIndexStorage = function ( spec, my ) {
         },
         get = function () {
             var cloned_option = command.cloneOption();
-            that.addJob ('get',priv.secondstorage_spec,command.cloneDoc(),
+            that.addJob ('get',priv.sub_storage_spec,command.cloneDoc(),
                          cloned_option,success,error);
             that.end();
         };
@@ -181,7 +181,7 @@ var newIndexStorage = function ( spec, my ) {
             error = function (err) {
                 that.error(err);
             };
-            that.addJob ('allDocs', priv.secondstorage_spec,null,
+            that.addJob ('allDocs', priv.sub_storage_spec,null,
                          command.cloneOption(),success,error);
         }
     }; // end allDocs
@@ -199,7 +199,7 @@ var newIndexStorage = function ( spec, my ) {
         error = function (err) {
             that.error(err);
         };
-        that.addJob ('remove',priv.secondstorage_spec,command.cloneDoc(),
+        that.addJob ('remove',priv.sub_storage_spec,command.cloneDoc(),
                      command.cloneOption(),success,error);
     }; // end remove
 
