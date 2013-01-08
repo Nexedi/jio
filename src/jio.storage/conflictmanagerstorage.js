@@ -1,4 +1,4 @@
-var newConflictManagerStorage = function ( spec, my ) {
+jIO.addStorageType('conflictmanager', function (spec, my) {
     spec = spec || {};
     var that = my.basicStorage( spec, my ), priv = {};
 
@@ -903,4 +903,3 @@ var newConflictManagerStorage = function ( spec, my ) {
 
     return that;
 };
-jIO.addStorageType('conflictmanager', newConflictManagerStorage);

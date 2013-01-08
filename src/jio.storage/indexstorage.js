@@ -1,4 +1,4 @@
-var newIndexStorage = function ( spec, my ) {
+jIO.addStorageType ('indexed', function (spec, my) {
     spec = spec || {};
     var that = my.basicStorage( spec, my ), priv = {};
 
@@ -205,4 +205,3 @@ var newIndexStorage = function ( spec, my ) {
 
     return that;
 };
-jIO.addStorageType ('indexed', newIndexStorage);
