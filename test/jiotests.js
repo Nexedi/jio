@@ -1090,20 +1090,44 @@ test ("Post", function(){
             "application_name": "arevpost"
         }
     });
+    o.localpath = "jio/localstorage/urevpost/arevpost";
 
     // post without id
+    o.revisions = {"start": 0, "ids": []};
     o.spy (o, "status", undefined, "Post without id");
     o.jio.post({}, function (err, response) {
         o.f.apply(arguments);
-        var uuid = (err || response).id;
-        ok(isUuid(uuid), "Uuid should look like "
-           + "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + uuid);
+        o.uuid = (err || response).id;
+        ok(isUuid(o.uuid), "Uuid should look like " +
+           "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + o.uuid);
     });
     o.tick(o);
+    o.rev = "1-"+generateRevisionHash({"_id": o.uuid}, o.revisions);
+
+    // check document
+    deepEqual(
+        localstorage.getItem(o.localpath + "/" + o.uuid + "." + o.rev),
+        {"_id": o.uuid + "." + o.rev},
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree = {
+        "_id": o.uuid + ".revision_tree.json",
+        "children": [{
+            "rev": o.rev, "status": "available", "children": []
+        }]
+    };
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/" + o.uuid + ".revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
 
     // post non empty document
     o.doc = {"_id": "post1", "title": "myPost1"};
-    o.revisions = {"start": 0, "ids": []};
     o.rev = "1-"+generateRevisionHash(o.doc, o.revisions);
     o.spy (o, "value", {"ok": true, "id": "post1", "rev": o.rev}, "Post");
     o.jio.post(o.doc, o.f);
@@ -1112,8 +1136,22 @@ test ("Post", function(){
     // check document
     o.doc["_id"] = "post1."+o.rev;
     deepEqual(
-        localstorage.getItem("jio/localstorage/urevpost/arevpost/post1."+o.rev),
-        o.doc, "Check document"
+        localstorage.getItem(o.localpath + "/post1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree._id = "post1.revision_tree.json";
+    o.doc_tree.children[0] = {
+        "rev": o.rev, "status": "available", "children": []
+    };
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/post1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
     );
 
     // post and document already exists
@@ -1124,6 +1162,27 @@ test ("Post", function(){
     }, "Post and document already exists");
     o.jio.post(o.doc, o.f);
     o.tick(o);
+
+    // check document
+    o.doc["_id"] = "post1."+o.rev;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/post1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree._id = "post1.revision_tree.json";
+    o.doc_tree.children.unshift({
+        "rev": o.rev, "status": "available", "children": []
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/post1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
 
     // post + revision
     o.doc = {"_id": "post1", "_rev": o.rev, "title": "myPost2"};
@@ -1139,8 +1198,22 @@ test ("Post", function(){
     // check document
     o.doc["_id"] = "post1."+o.rev;
     deepEqual(
-        localstorage.getItem("jio/localstorage/urevpost/arevpost/post1."+o.rev),
-        o.doc, "Check document"
+        localstorage.getItem(o.localpath + "/post1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree._id = "post1.revision_tree.json";
+    o.doc_tree.children[0].children.unshift({
+        "rev": o.rev, "status": "available", "children": []
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/post1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
     );
 
     o.jio.stop();
