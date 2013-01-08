@@ -1424,7 +1424,6 @@ test ("Remove", function(){
     o.rev = "3-"+generateRevisionHash(o.doc_myremove1, o.revisions);
 
     // 4. remove existing attachment with revision
-
     o.spy (o, "value", {"ok": true, "id": "remove1."+o.rev, "rev": o.rev},
            "Remove existing attachment (revision)");
     o.jio.remove({"_id":"remove1/remove2","_rev":o.old_rev}, o.f);
@@ -1673,13 +1672,15 @@ test ("Scenario", function(){
     o.tick(o);
 
     // 13. REMOVE one of the two conflicting versions
-    o.revisions = {"start": 1, "ids":[o.rev.split('-')[1]]};
-    o.doc_myremove4 = {"ok": true, "id": "sample1", "rev": o.rev_1};
-    o.rev_3 = "3-"+generateRevisionHash(o.doc_myremove4, o.revisions);
+    o.revisions = {"start": 2, "ids":[
+        o.rev_1.split('-')[1],o.rev.split('-')[1]
+    ]};
+    o.doc_myremove3 = {"_id": "sample1", "_rev": o.rev_1};
+    o.rev_3 = "3-"+generateRevisionHash(o.doc_myremove3, o.revisions,true);
 
     o.spy (o, "value", {"ok": true, "id": "sample1", "rev": o.rev_3},
             "Remove one of the conflicting document version");
-    o.jio.remove({"_id":"sample1", "_rev":o.rev_2}, o.f);
+    o.jio.remove({"_id":"sample1", "_rev":o.rev_1}, o.f);
     o.tick(o);
 
     // 14. END

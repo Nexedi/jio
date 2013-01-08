@@ -680,7 +680,6 @@ jIO.addStorageType('revision', function (spec, my) {
                                 doctree,
                                 command.cloneOption(),
                                 function (response) {
-
                                     that.success({
                                         "ok":true,
                                         "id":command.getDocId(),
