@@ -224,7 +224,7 @@
         // so  {type:'dummyall3tries',a:'b'} differs from
         //     {type:'dummyall3tries',c:'d'}.
         that.specToStore = function () {
-            return {"applicationname": spec.applicationname};
+            return {"application_name": spec.application_name};
         };
 
         priv.doJob = function (command,if_ok_return) {

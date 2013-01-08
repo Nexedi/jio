@@ -23,8 +23,8 @@ var newDAVStorage = function ( spec, my ) {
 
     priv.username = spec.username || '';
     priv.secured_username = priv.convertSlashes(priv.username);
-    priv.applicationname = spec.applicationname || 'untitled';
-    priv.secured_applicationname = priv.convertSlashes(priv.applicationname);
+    priv.application_name = spec.application_name || 'untitled';
+    priv.secured_application_name = priv.convertSlashes(priv.application_name);
     priv.url = spec.url || '';
     priv.password = spec.password || ''; // TODO : is it secured ?
 
@@ -32,7 +32,7 @@ var newDAVStorage = function ( spec, my ) {
     that.serialized = function() {
         var o = super_serialized();
         o.username = priv.username;
-        o.applicationname = priv.applicationname;
+        o.application_name = priv.application_name;
         o.url = priv.url;
         o.password = priv.password; // TODO : not realy secured...
         return o;
@@ -82,7 +82,7 @@ var newDAVStorage = function ( spec, my ) {
         $.ajax ( {
             url: priv.url + '/' +
                 priv.secured_username + '/' +
-                priv.secured_applicationname + '/' +
+                priv.secured_application_name + '/' +
                 secured_docid + '?_=' + Date.now(), // to make url unique!
                 // and avoid chrome PUT on cache !
             type: type,
@@ -127,7 +127,7 @@ var newDAVStorage = function ( spec, my ) {
             $.ajax ( {
                 url: priv.url + '/' +
                     priv.secured_username + '/' +
-                    priv.secured_applicationname + '/' +
+                    priv.secured_application_name + '/' +
                     secured_docid + '?_=' + Date.now(),
                 type: "GET",
                 async: true,
@@ -163,7 +163,7 @@ var newDAVStorage = function ( spec, my ) {
         $.ajax ( {
             url: priv.url + '/' +
                 priv.secured_username + '/' +
-                priv.secured_applicationname + '/' +
+                priv.secured_application_name + '/' +
                 secured_docid + '?_=' + Date.now(),
             type: "PROPFIND",
             async: true,
@@ -217,7 +217,7 @@ var newDAVStorage = function ( spec, my ) {
             $.ajax ( {
                 url: priv.url + '/' +
                     priv.secured_username + '/' +
-                    priv.secured_applicationname + '/' +
+                    priv.secured_application_name + '/' +
                     priv.secureDocId(file.id) + '?_=' + Date.now(),
                 type: "GET",
                 async: true,
@@ -245,7 +245,7 @@ var newDAVStorage = function ( spec, my ) {
             $.ajax ( {
                 url: priv.url + '/' +
                     priv.secured_username + '/' +
-                    priv.secured_applicationname + '/' + '?_=' + Date.now(),
+                    priv.secured_application_name + '/' + '?_=' + Date.now(),
                 async: true,
                 type: 'PROPFIND',
                 dataType: 'xml',
@@ -341,7 +341,7 @@ var newDAVStorage = function ( spec, my ) {
         $.ajax ( {
             url: priv.url + '/' +
                 priv.secured_username + '/' +
-                priv.secured_applicationname + '/' +
+                priv.secured_application_name + '/' +
                 secured_docid + '?_=' + Date.now(),
             type: "DELETE",
             async: true,

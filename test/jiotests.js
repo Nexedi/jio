@@ -725,7 +725,7 @@ test ("Restore old Jio", function() {
 
     o.jio = JIO.newJio({
         "type": "dummyall3tries",
-        "applicationname": "jiotests"
+        "application_name": "jiotests"
     });
 
     o.jio_id = o.jio.getId();
@@ -737,7 +737,7 @@ test ("Restore old Jio", function() {
 
     o.jio = JIO.newJio({
         "type": "dummyallok",
-        "applicationname": "jiotests"
+        "application_name": "jiotests"
     });
     o.waitUntilAJobExists(30000); // timeout 30 sec
     o.testLastJobLabel("put", "Job restored");
@@ -758,7 +758,7 @@ test ("Post", function(){
     o.jio = JIO.newJio({
         "type": "local",
         "username": "upost",
-        "applicationname": "apost"
+        "application_name": "apost"
     });
 
     // post without id
@@ -796,7 +796,7 @@ test ("Put", function(){
     o.jio = JIO.newJio({
         "type": "local",
         "username": "uput",
-        "applicationname": "aput"
+        "application_name": "aput"
     });
 
     // put without id
@@ -846,7 +846,7 @@ test ("PutAttachment", function(){
     o.jio = JIO.newJio({
         "type": "local",
         "username": "uputattmt",
-        "applicationname": "aputattmt"
+        "application_name": "aputattmt"
     });
 
     // putAttachment without doc id
@@ -943,7 +943,7 @@ test ("Get", function(){
     o.jio = JIO.newJio({
         "type": "local",
         "username": "uget",
-        "applicationname": "aget"
+        "application_name": "aget"
     });
 
     // get inexistent document
@@ -1000,7 +1000,7 @@ test ("Remove", function(){
     o.jio = JIO.newJio({
         "type": "local",
         "username": "uremove",
-        "applicationname": "aremove"
+        "application_name": "aremove"
     });
 
     // remove inexistent document
@@ -1063,7 +1063,7 @@ test ("AllDocs", function(){
     o.jio = JIO.newJio({
         "type": "local",
         "username": "ualldocs",
-        "applicationname": "aalldocs"
+        "application_name": "aalldocs"
     });
 
     // alldocs
@@ -1087,7 +1087,7 @@ test ("Post", function(){
         "sub_storage": {
             "type": "local",
             "username": "urevpost",
-            "applicationname": "arevpost"
+            "application_name": "arevpost"
         }
     });
 
@@ -1159,7 +1159,7 @@ test ("Put", function(){
         "sub_storage": {
             "type": "local",
             "username": "urevput",
-            "applicationname": "arevput"
+            "application_name": "arevput"
         }
     });
 
@@ -1218,7 +1218,7 @@ test ("Get", function(){
         "sub_storage": {
             "type": "local",
             "username": "urevget",
-            "applicationname": "arevget"
+            "application_name": "arevget"
         }
     });
     o.localpath = "jio/localstorage/urevget/arevget";
@@ -1372,7 +1372,7 @@ test ("Remove", function(){
         "sub_storage": {
             "type": "local",
             "username": "urevrem",
-            "applicationname": "arevrem"
+            "application_name": "arevrem"
         }
     });
     o.localpath = "jio/localstorage/urevrem/arevrem";
@@ -1575,7 +1575,7 @@ test ("Scenario", function(){
         "sub_storage": {
             "type": "local",
             "username": "usam1",
-            "applicationname": "asam1"
+            "application_name": "asam1"
         }
     });
     o.localpath = "jio/localstorage/usam1/asam1";
@@ -1601,7 +1601,7 @@ test ("Scenario", function(){
         "sub_storage": {
             "type": "local",
             "username": "usam1",
-            "applicationname": "asam1"
+            "application_name": "asam1"
         }
     });
     o.localpath = "jio/localstorage/usam1/asam1";
@@ -1658,7 +1658,7 @@ test ("Scenario", function(){
         "sub_storage": {
             "type": "local",
             "username": "usam1",
-            "applicationname": "asam1"
+            "application_name": "asam1"
         }
     });
     o.localpath = "jio/localstorage/usam1/asam1";
@@ -1752,7 +1752,7 @@ test ('Document load', function () {
     o.jio = JIO.newJio({type:'dav',username:'davload',
                         password:'checkpwd',
                         url:'https://ca-davstorage:8080',
-                        applicationname:'jiotests'});
+                        application_name:'jiotests'});
     // note: http errno:
     //     200 OK
     //     201 Created
@@ -1817,7 +1817,7 @@ test ('Document save', function () {
     o.jio = JIO.newJio({type:'dav',username:'davsave',
                         password:'checkpwd',
                         url:'https://ca-davstorage:8080',
-                        applicationname:'jiotests'});
+                        application_name:'jiotests'});
     // note: http errno:
     //     200 OK
     //     201 Created
@@ -1884,7 +1884,7 @@ test ('Get Document List', function () {
     o.jio = JIO.newJio({type:'dav',username:'davlist',
                         password:'checkpwd',
                         url:'https://ca-davstorage:8080',
-                        applicationname:'jiotests'});
+                        application_name:'jiotests'});
     o.mytest('fail to get list',true,undefined,404);
     o.mytest('getting list',true,[{
         id:'file',key:'file',
@@ -1949,7 +1949,7 @@ test ('Remove document', function () {
     o.jio = JIO.newJio({type:'dav',username:'davremove',
                         password:'checkpwd',
                         url:'https://ca-davstorage:8080',
-                        applicationname:'jiotests'});
+                        application_name:'jiotests'});
 
     o.mytest('remove document',{ok:true,id:'file'},204);
     o.mytest('remove an already removed document',404,404);
@@ -2247,7 +2247,7 @@ test ('Document save' , function () {
                       password:'mypwd',
                       storage:{type:'local',
                                username:'cryptsavelocal',
-                               applicationname:'jiotests'}});
+                               application_name:'jiotests'}});
     o.f = function (err,val) {
         if (err) {
             err = err.status;
@@ -2282,7 +2282,7 @@ test ('Document load' , function () {
                       password:'mypwd',
                       storage:{type:'local',
                                username:'cryptloadlocal',
-                               applicationname:'jiotests'}});
+                               application_name:'jiotests'}});
     o.f = function (err,val) {
         deepEqual (err || val,{
             _id:'testload',content:'contentoftest',
@@ -2312,7 +2312,7 @@ test ('Get Document List', function () {
                       password:'mypwd',
                       storage:{type:'local',
                                username:'cryptgetlistlocal',
-                               applicationname:'jiotests'}});
+                               application_name:'jiotests'}});
     o.f = function (err,val) {
         deepEqual (err || objectifyDocumentArray(val.rows),
                    objectifyDocumentArray(o.doc_list),'Getting list');
@@ -2367,7 +2367,7 @@ test ('Remove document', function () {
                       password:'mypwd',
                       storage:{type:'local',
                                username:'cryptremovelocal',
-                               applicationname:'jiotests'}});
+                               application_name:'jiotests'}});
     o.f = function (err,val) {
         deepEqual (err || val,{ok:true,id:'file'},'Document remove');
     };
@@ -2413,7 +2413,7 @@ test ('Simple methods', function () {
                         username:'methods',
                         storage:{type:'local',
                                  username:'conflictmethods',
-                                 applicationname:'jiotests'}});
+                                 application_name:'jiotests'}});
     // PUT
     o.spy({ok:true,id:'file.doc',rev:'1'},'saving "file.doc".');
     o.jio.put({_id:'file.doc',content:'content1'},function (err,val) {
@@ -2588,7 +2588,7 @@ test ('Revision Conflict', function() {
     };
     o.sub_storage_spec = {type:'local',
                             username:'revisionconflict',
-                            applicationname:'jiotests'}
+                            application_name:'jiotests'}
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
                         storage:o.sub_storage_spec});
@@ -2752,7 +2752,7 @@ test ('Conflict in a conflict solving', function () {
     };
     o.sub_storage_spec = {type:'local',
                             username:'conflictconflict',
-                            applicationname:'jiotests'}
+                            application_name:'jiotests'}
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
                         storage:o.sub_storage_spec});
@@ -2939,7 +2939,7 @@ test ('Remove revision conflict', function () {
     };
     o.sub_storage_spec = {type:'local',
                             username:'removeconflict',
-                            applicationname:'jiotests'}
+                            application_name:'jiotests'}
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
                         storage:o.sub_storage_spec});
@@ -3169,7 +3169,7 @@ test ('Load Revisions', function () {
     o.tick = basic_tick_function;
     o.sub_storage_spec = {type:'local',
                             username:'loadrevisions',
-                            applicationname:'jiotests'}
+                            application_name:'jiotests'}
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
                         storage:o.sub_storage_spec});
@@ -3190,7 +3190,7 @@ test ('Get revision List', function () {
     o.tick = basic_tick_function;
     o.sub_storage_spec = {type:'local',
                             username:'getrevisionlist',
-                            applicationname:'jiotests'}
+                            application_name:'jiotests'}
     o.rev = {};
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',

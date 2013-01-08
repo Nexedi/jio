@@ -28,10 +28,10 @@ var newLocalStorage = function (spec, my) {
 
     // attributes
     priv.username = spec.username || '';
-    priv.applicationname = spec.applicationname || 'untitled';
+    priv.application_name = spec.application_name || 'untitled';
 
     priv.localpath = 'jio/localstorage/' +
-        priv.username + '/' + priv.applicationname;
+        priv.username + '/' + priv.application_name;
 
     // ==================== Tools ====================
     /**
@@ -75,7 +75,7 @@ var newLocalStorage = function (spec, my) {
     // ===================== overrides ======================
     that.specToStore = function () {
         return {
-            "applicationname": priv.applicationname,
+            "application_name": priv.application_name,
             "username": priv.username
         };
     };
