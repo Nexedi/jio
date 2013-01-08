@@ -1095,12 +1095,9 @@ test ("Post", function(){
     o.spy (o, "status", undefined, "Post without id");
     o.jio.post({}, function (err, response) {
         o.f.apply(arguments);
-        if (isUuid((err || response).id)) {
-            ok(true, "Uuid format");
-        } else {
-            deepEqual((err || response).id,
-                      "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "Uuid format");
-        }
+        var uuid = (err || response).id;
+        ok(isUuid(uuid), "Uuid should look like "
+           + "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + uuid);
     });
     o.tick(o);
 
