@@ -660,9 +660,9 @@ jIO.addStorageType('revision', function (spec, my) {
         f.removeDocument = function (docid, doctree) {
             if (command.getOption("keep_revision_history") !== true) {
                 if (command.getAttachmentId() === undefined){
-
                     // update tree
-                    priv.postToDocumentTree(doctree, command.getDoc(), true);
+                    revs_info = priv.postToDocumentTree(doctree,
+                        command.getDoc(), true);
 
                     // remove revision
                     that.addJob(
@@ -671,17 +671,19 @@ jIO.addStorageType('revision', function (spec, my) {
                         docid,
                         option,
                         function (response) {
-
                             // put tree
+                            doctree._id = command.getDocId()+
+                                priv.doctree_suffix;
                             that.addJob(
                                 "put",
                                 priv.substorage,
                                 doctree,
                                 command.cloneOption(),
                                 function (response) {
+
                                     that.success({
                                         "ok":true,
-                                        "id":docid,
+                                        "id":command.getDocId(),
                                         "rev":revs_info[0].rev
                                     });
                                 },

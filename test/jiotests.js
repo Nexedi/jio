@@ -1503,7 +1503,7 @@ test ("Remove", function(){
 
     // 10. remove wrong revision
     o.spy (o,"status", 409, "409 - Removing document (false revision)");
-    o.jio.remove({"_id":"remove1","_rev":o.second_old_rev}, o.f);
+    o.jio.remove({"_id":"remove1","_rev":"1-rev2"}, o.f);
     o.tick(o);
 
     o.revisions = {"start": 3, "ids":[
@@ -1515,7 +1515,8 @@ test ("Remove", function(){
         generateRevisionHash(o.doc_myremove4, o.revisions, true);
 
     // 11. remove document version with revision
-    o.spy (o, "value", {"ok": true, "id": "remove1", "rev": o.second_new_rev},
+    o.spy (o, "value", {"ok": true, "id": "remove1", "rev":
+        o.second_new_rev},
            "Remove document (with revision)");
     o.jio.remove({"_id":"remove1", "_rev":o.rev}, o.f);
     o.tick(o);
@@ -1525,7 +1526,12 @@ test ("Remove", function(){
         "status": "deleted",
         "children": []
     });
-    /*
+    o.testtree["children"][1]["children"].push({
+        "rev":o.second_old_rev,
+        "status":"available",
+        "children":[]
+    });
+
     deepEqual(localstorage.getItem(
         "jio/localstorage/urevrem/arevrem/remove1.revision_tree.json"
     ), o.testtree, "Check document tree");
@@ -1542,7 +1548,7 @@ test ("Remove", function(){
     o.spy (o,"status", 409, "409 - Removing document (no revision)");
     o.jio.remove({"_id":"remove1"}, o.f);
     o.tick(o);
-    */
+
     o.jio.stop();
 });
 
