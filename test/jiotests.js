@@ -1454,7 +1454,7 @@ test ("Remove", function(){
     deepEqual(localstorage.getItem(
         "jio/localstorage/urevrem/arevrem/remove1."+o.rev
     ), {"_id": "remove1."+o.rev, "title":"myRemove1"}, "Check document");
-/*
+
     // add another attachment
     o.attmt_myremove2 = {
         "remove3": {
@@ -1525,6 +1525,7 @@ test ("Remove", function(){
         "status": "deleted",
         "children": []
     });
+    /*
     deepEqual(localstorage.getItem(
         "jio/localstorage/urevrem/arevrem/remove1.revision_tree.json"
     ), o.testtree, "Check document tree");
@@ -1541,11 +1542,10 @@ test ("Remove", function(){
     o.spy (o,"status", 409, "409 - Removing document (no revision)");
     o.jio.remove({"_id":"remove1"}, o.f);
     o.tick(o);
-*/
+    */
     o.jio.stop();
 });
 
-/*
 module ( "Jio Revision Storage + Local Storage" );
 
 test ("Scenario", function(){
@@ -1681,7 +1681,7 @@ test ("Scenario", function(){
     ok ( o.jio, "Close application");
 
 });
-*/
+
 /*
 module ('Jio DAVStorage');
 
