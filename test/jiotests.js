@@ -4,6 +4,15 @@
     Base64 = loader.Base64,
     $ = loader.jQuery;
 
+// localStorage cleanup
+var k;
+for (k in localStorage) {
+    if (/^jio\//.test(k)) {
+        localStorage.removeItem(k);
+    }
+}
+delete k;
+
 //// Tools
 var empty_fun = function (){},
 contains = function (array,content) {
