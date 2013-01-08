@@ -84,7 +84,7 @@ basicTestFunctionGenerator = function(o,res,value,message) {
             val = err || val;
             break;
         default:
-            return;
+            ok(false, "Unknown case " + res);
         }
         deepEqual (val,value,message);
     };
