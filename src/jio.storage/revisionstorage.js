@@ -272,11 +272,13 @@ jIO.addStorageType('revision', function (spec, my) {
             "rev": next_rev.join('-'),
             "status": flag
         });
+
         selected_node.children.unshift({
             "rev": next_rev.join('-'),
             "status": flag,
             "children": []
         });
+
         return revs_info;
     };
 
@@ -648,8 +650,7 @@ jIO.addStorageType('revision', function (spec, my) {
      * @param  {object} command The JIO command
      */
     that.remove = function (command) {
-        var f = {}, del_rev, option, i,
-        revision_found = false, revision_count = 0, correct_revision;
+        var f = {}, del_rev, option, new_doc, revs_info, new_id;
         option = command.cloneOption();
         if (option["max_retry"] === 0) {
             option["max_retry"] = 3;
@@ -658,31 +659,126 @@ jIO.addStorageType('revision', function (spec, my) {
 
         f.removeDocument = function (docid, doctree) {
             if (command.getOption("keep_revision_history") !== true) {
-                that.addJob(
-                    "remove",
-                    priv.substorage,
-                    docid,
-                    option,
-                    function (response) {
-                        if (typeof command.getAttachmentId() === undefined ){
-                            priv.postToDocumentTree(doctree, command.getDoc(),
-                                true
+                if (command.getAttachmentId() === undefined){
+
+                    // update tree
+                    priv.postToDocumentTree(doctree, command.getDoc(), true);
+
+                    // remove revision
+                    that.addJob(
+                        "remove",
+                        priv.substorage,
+                        docid,
+                        option,
+                        function (response) {
+
+                            // put tree
+                            that.addJob(
+                                "put",
+                                priv.substorage,
+                                doctree,
+                                command.cloneOption(),
+                                function (response) {
+                                    that.success({
+                                        "ok":true,
+                                        "id":docid,
+                                        "rev":revs_info[0].rev
+                                    });
+                                },
+                                function (err){
+                                    that.error({
+                                        "status": 409,
+                                        "statusText": "Conflict",
+                                        "error": "conflict",
+                                        "message": "Document update conflict.",
+                                        "reason": "Cannot update document tree"
+                                    });
+                                    return;
+                                }
                             );
-                        } else {
-                            priv.postToDocumentTree(doctree, command.getDoc());
+                        },
+                        function (err) {
+                            that.error({
+                                "status": 404,
+                                "statusText": "Not Found",
+                                "error": "not_found",
+                                "message": "File not found",
+                                "reason": "Document was not found"
+                            });
+                            return;
                         }
-                    },
-                    function (err) {
-                        that.error({
-                            "status": 404,
-                            "statusText": "Not Found",
-                            "error": "not_found",
-                            "message": "File not found",
-                            "reason": "Document was not found"
-                        });
-                        return;
-                    }
-                );
+                    );
+                } else {
+                    // get previsous document
+                    that.addJob(
+                        "get",
+                        priv.substorage,
+                        command.getDocId()+"."+del_rev,
+                        option,
+                        function (response) {
+                            // update tree
+                            revs_info = priv.postToDocumentTree(doctree,
+                                command.getDoc());
+
+                            new_doc = response;
+                            delete new_doc._attachments;
+                            new_doc._id = new_doc._id+"."+revs_info[0].rev;
+
+                            // post new document version
+                            that.addJob(
+                                "post",
+                                priv.substorage,
+                                new_doc,
+                                command.cloneOption(),
+                                function (response) {
+
+                                    // put tree
+                                    doctree._id = command.getDocId()+
+                                        priv.doctree_suffix;
+                                    that.addJob(
+                                        "put",
+                                        priv.substorage,
+                                        doctree,
+                                        command.cloneOption(),
+                                        function (response) {
+                                            that.success({
+                                                "ok":true,
+                                                "id":new_doc._id,
+                                                "rev":revs_info[0].rev
+                                            });
+                                        },
+                                        function (err) {
+                                            err.message =
+                                        "Cannot save document revision tree";
+                                            that.error(err);
+                                        }
+                                    );
+
+                                },
+                                function (err){
+                                    that.error({
+                                        "status": 409,
+                                        "statusText": "Conflict",
+                                        "error": "conflict",
+                                        "message": "Document update conflict.",
+                                        "reason": "Cannot update document"
+                                    });
+                                    return;
+                                }
+                            );
+                        },
+                        function (err) {
+                            that.error({
+                                "status": 404,
+                                "statusText": "Not Found",
+                                "error": "not_found",
+                                "message": "File not found",
+                                "reason": "Document was not found"
+                            });
+                            return;
+                        }
+                    );
+                }
             } else {
                 // keep history = update document tree only
             }
@@ -722,25 +818,24 @@ jIO.addStorageType('revision', function (spec, my) {
                     return;
                 } else {
                     // revision provided
-                    if (typeof command.getAttachmentId() === "string"){
-                        f.removeDocument(command.getDocId()+"."+del_rev+"/"+
-                            command.getAttachmentId(), response);
-                    } else {
-                        // loop leaves
-                        if (priv.isRevisionALeaf(del_rev,
-                            priv.getLeavesFromDocumentTree(response)) === true){
-                                f.removeDocument(command.getDocId()+"."+
-                            del_rev, response);
+                    if (priv.isRevisionALeaf( response, del_rev) === true){
+                        if (typeof command.getAttachmentId() === "string"){
+                            f.removeDocument(command.getDocId()+"."+del_rev+
+                                "/"+command.getAttachmentId(), response);
                         } else {
-                            that.error({
-                            "status": 409,
-                            "statusText": "Conflict",
-                            "error": "conflict",
-                            "message": "Document update conflict.",
-                            "reason": "Trying to remove non-latest revision"
-                            });
-                            return;
+                            f.removeDocument(command.getDocId()+"."+ del_rev,
+                                response
+                            );
                         }
+                    } else {
+                        that.error({
+                        "status": 409,
+                        "statusText": "Conflict",
+                        "error": "conflict",
+                        "message": "Document update conflict.",
+                        "reason": "Trying to remove non-latest revision"
+                        });
+                        return;
                     }
                 }
             },
