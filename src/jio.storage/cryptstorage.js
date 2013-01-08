@@ -1,4 +1,4 @@
-var newCryptedStorage = function ( spec, my ) {
+jIO.addStorageType('crypt', function (spec, my) {
     spec = spec || {};
     var that = my.basicStorage( spec, my ), priv = {};
 
@@ -259,4 +259,3 @@ var newCryptedStorage = function ( spec, my ) {
 
     return that;
 };
-jIO.addStorageType('crypt', newCryptedStorage);

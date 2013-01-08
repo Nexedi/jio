@@ -1,4 +1,4 @@
-var newReplicateStorage = function ( spec, my ) {
+jIO.addStorageType('replicate', function (spec, my) {
     spec = spec || {};
     var that = my.basicStorage( spec, my ), priv = {};
 
@@ -102,4 +102,3 @@ var newReplicateStorage = function ( spec, my ) {
 
     return that;
 };
-jIO.addStorageType('replicate', newReplicateStorage);

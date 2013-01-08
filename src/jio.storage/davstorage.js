@@ -1,4 +1,4 @@
-var newDAVStorage = function ( spec, my ) {
+jIO.addStorageType('dav', function ( spec, my ) {
     spec = spec || {};
     var that = my.basicStorage( spec, my ), priv = {};
 
@@ -369,4 +369,3 @@ var newDAVStorage = function ( spec, my ) {
 
     return that;
 };
-jIO.addStorageType('dav', newDAVStorage);

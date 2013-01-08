@@ -2,7 +2,7 @@
  * JIO Local Storage. Type = 'local'.
  * Local browser "database" storage.
  */
-var newLocalStorage = function (spec, my) {
+jIO.addStorageType('local', function (spec, my) {
 
     spec = spec || {};
     var that, priv, localstorage;
@@ -335,5 +335,4 @@ var newLocalStorage = function (spec, my) {
     };
 
     return that;
-};
-jIO.addStorageType('local', newLocalStorage);
+});
