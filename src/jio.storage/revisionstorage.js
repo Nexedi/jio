@@ -318,14 +318,36 @@ jIO.addStorageType('revision', function (spec, my) {
      * @param  {array} leaves all leaves on tree
      * @return {boolean} true/false
      */
-    priv.isRevisionALeaf = function (revision, leaves) {
-        var i;
-        for (i = 0; i < leaves.length; i+=1) {
-            if (leaves[i] === revision){
-                return true;
+    priv.isRevisionALeaf = function (document_tree, revision) {
+        var i, result, search;
+        result = undefined;
+        // search method fills "result" with the good revs info
+        search = function (document_tree) {
+            var i;
+            if (typeof document_tree.rev !== "undefined") {
+                // node is not root
+                if (document_tree.rev === revision) {
+                    if (document_tree.children.length === 0) {
+                        // This node is a leaf
+                        result = true
+                        return;
+                    }
+                    result = false;
+                    return;
+                }
             }
-        }
-        return false;
+            // This node has children
+            for (i = 0; i < document_tree.children.length; i += 1) {
+                // searching deeper to find the good rev
+                search(document_tree.children[i]);
+                if (result !== undefined) {
+                    // The result is already found
+                    return;
+                }
+            }
+        };
+        search(document_tree);
+        return result || false;
     };
 
     /**
