@@ -181,7 +181,8 @@ jIO.addStorageType('revision', function (spec, my) {
                     "status":document_tree.status
                 });
             }
-            if (document_tree.children.length === 0) {
+            if (document_tree.children.length === 0 &&
+                document_tree.status !== "deleted" ) {
                 // This node is a leaf
                 if (result.length < deep) {
                     // The leaf is deeper than result
@@ -298,7 +299,8 @@ jIO.addStorageType('revision', function (spec, my) {
             if (except !== undefined && except === document_tree.rev) {
                 return;
             }
-            if (document_tree.children.length === 0) {
+            if (document_tree.children.length === 0 &&
+                document_tree.status !== "deleted") {
                 // This node is a leaf
                 result.push(document_tree.rev);
                 return;

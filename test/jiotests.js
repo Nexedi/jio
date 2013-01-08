@@ -1678,6 +1678,19 @@ test ("Scenario", function(){
     o.jio.remove({"_id":"sample1", "_rev":o.rev_1}, o.f);
     o.tick(o);
 
+    // check to see if conflict still exists
+    o.mydocSample4 = {"_id": "sample1", "title": "mySample2_modified",
+                      "_rev": o.rev_2};
+    o.mydocSample4._revs_info = [{"rev": o.rev_2, "status": "available"},{
+        "rev":o.rev,"status":"available"
+        }];
+    o.mydocSample4._revisions = {"ids":[o.hex_2, o.hex], "start":2 };
+
+    o.spy(o, "value", o.mydocSample4, "Test if conflict still exists");
+    o.jio.get("sample1", {"revs_info": true, "revs": true,
+              "conflicts": true,}, o.f);
+    o.tick(o);
+
     // END
     o.jio.stop();
 
