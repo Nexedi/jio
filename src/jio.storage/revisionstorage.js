@@ -636,7 +636,7 @@ jIO.addStorageType('revision', function (spec, my) {
         }
         del_rev = command.getDoc()._rev;
 
-        f.removeDocument = function (docid) {
+        f.removeDocument = function (docid, doctree) {
             if (command.getOption("keep_revision_history") !== true) {
                 that.addJob(
                     "remove",
@@ -644,12 +644,13 @@ jIO.addStorageType('revision', function (spec, my) {
                     docid,
                     option,
                     function (response) {
-                        if ( command.getAttachmentId() === undefined ) {
-                            priv.update_doctree_on_remove = true;
+                        if (typeof command.getAttachmentId() === undefined ){
+                            priv.postToDocumentTree(doctree, command.getDoc(),
+                                true
+                            );
                         } else {
-                            priv.update_doctree_on_remove = false;
+                            priv.postToDocumentTree(doctree, command.getDoc());
                         }
-                        that.post(command);
                     },
                     function (err) {
                         that.error({
@@ -664,12 +665,6 @@ jIO.addStorageType('revision', function (spec, my) {
                 );
             } else {
                 // keep history = update document tree only
-                if (command.getAttachmentId() === undefined ) {
-                    priv.update_doctree_on_remove = true;
-                } else {
-                    priv.update_doctree_on_remove = false;
-                }
-                that.post(command);
             }
         };
         if (typeof del_rev === "string") {
@@ -685,7 +680,8 @@ jIO.addStorageType('revision', function (spec, my) {
                 return;
             }
         }
-// get doctree
+
+        // get doctree
         that.addJob(
             "get",
             priv.substorage,
@@ -708,14 +704,13 @@ jIO.addStorageType('revision', function (spec, my) {
                     // revision provided
                     if (typeof command.getAttachmentId() === "string"){
                         f.removeDocument(command.getDocId()+"."+del_rev+"/"+
-                            command.getAttachmentId());
+                            command.getAttachmentId(), response);
                     } else {
-                        if (del_rev ===
-                        priv.getWinnerRevisionFromDocumentTree(response)[0].rev
-                            ){
-                            priv.dummy = true;
-                            f.removeDocument(command.getDocId()+"."+
-                            del_rev);
+                        // loop leaves
+                        if (priv.isRevisionALeaf(del_rev,
+                            priv.getLeavesFromDocumentTree(response)) === true){
+                                f.removeDocument(command.getDocId()+"."+
+                            del_rev, response);
                         } else {
                             that.error({
                             "status": 409,
