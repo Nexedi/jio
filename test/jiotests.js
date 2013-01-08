@@ -1026,7 +1026,7 @@ test ("Remove", function(){
 
     // check document
     ok(localstorage.getItem("jio/localstorage/uremove/aremove/remove1")===null,
-       "Check documuent");
+       "Check document");
 
     // adding a document + attmt
     localstorage.setItem("jio/localstorage/uremove/aremove/remove1", {
@@ -1043,9 +1043,13 @@ test ("Remove", function(){
         "jio/localstorage/uremove/aremove/remove1/remove2", "fghi");
 
     // remove attachment
-    o.spy(o, "value", {"ok": true, "id": "remove1"}, "Remove attachment");
+    o.spy(o, "value", {"ok": true, "id": "remove1"}, "Remove document and attachment");
     o.jio.remove({"_id": "remove1"}, o.f);
     o.tick(o);
+    ok(localstorage.getItem("jio/localstorage/uremove/aremove/remove1"
+       )===null, "Check document is removed");
+    ok(localstorage.getItem("jio/localstorage/uremove/aremove/remove1/remove2"
+      )===null, "Check attachment is removed");
 
     o.jio.stop();
 
