@@ -45,41 +45,41 @@ var clearlog = function () {
   <table border="1" style="width: 100%;">
     <tr style="font-style:italic;">
       <th>simple storage</th><th>multi storage</th><th>distant storage</th>
-      <th>conflict managing</th><th>custom storage description</th>
+      <th>revision managing</th><th>custom storage description</th>
     </tr>
     <tr>
       <th>local</th><th>crypt & local</th><th>dav</th>
-      <th>conflictmanager & local</th><th>custom</th>
+      <th>revision & local</th><th>custom</th>
     </tr>
     <tr>
       <th>
         <input type="text" id="localuser" value="localuser" placeholder="username" /><br />
-        <input type="text" id="localapp" value="localapp" placeholder="applicationname" /><br />
+        <input type="text" id="localapp" value="localapp" placeholder="application_name" /><br />
       </th>
       <th>
         <input type="text" id="cryptuser" value="cryptuser" placeholder="username" /><br />
-        <input type="text" id="cryptapp" value="cryptapp" placeholder="applicationname" /><br />
+        <input type="text" id="cryptapp" value="cryptapp" placeholder="application_name" /><br />
         <input type="password" id="cryptpassword" value="pwd" placeholder="password" /><br />
       </th>
       <th>
         <input type="text" id="davuser" value="" placeholder="username" /><br />
-        <input type="text" id="davapp" value="" placeholder="applicationname" /><br />
+        <input type="text" id="davapp" value="" placeholder="application_name" /><br />
         <input type="password" id="davpassword" value="" placeholder="password" /><br />
         <input type="text" id="davurl" value="" placeholder="url" /><br />
       </th>
       <th>
-        <input type="text" id="conflictuser" value="localuser" placeholder="username" /><br />
-        <input type="text" id="conflictapp" value="localapp" placeholder="applicationname" /><br />
+        <input type="text" id="revisionuser" value="localuser" placeholder="username" /><br />
+        <input type="text" id="revisionapp" value="localapp" placeholder="application_name" /><br />
       </th>
       <th style="width:100%;">
-        <textarea id="customstorage" style="width:98%;">{&quot;type&quot;:&quot;local&quot;,&quot;username&quot;:&quot;customuser&quot;,&quot;applicationname&quot;:&quot;customapp&quot;,&quot;customkey&quot;:&quot;customvalue&quot;}</textarea>
+        <textarea id="customstorage" style="width:98%;">{&quot;type&quot;:&quot;local&quot;,&quot;username&quot;:&quot;customuser&quot;,&quot;application_name&quot;:&quot;customapp&quot;,&quot;customkey&quot;:&quot;customvalue&quot;}</textarea>
       </th>
     </tr>
     <tr>
       <th><button onclick="newLocalJio()">Create New jIO</button></th>
       <th><button onclick="newCryptJio()">Create New jIO</button></th>
       <th><button onclick="newDavJio()">Create New jIO</button></th>
-      <th><button onclick="newConflictJio()">Create New jIO</button></th>
+      <th><button onclick="newRevisionJio()">Create New jIO</button></th>
       <th><button onclick="newCustomJio()">Create New jIO</button></th>
     </tr>
   </table>
@@ -139,11 +139,16 @@ var clearlog = function () {
   </div>
   <script type="text/javascript" src="../lib/md5/md5.js"></script>
   <script type="text/javascript" src="../jio.js"></script>
+  <script type="text/javascript" src="../src/jio.storage/localstorage.js">
+  </script>
   <script type="text/javascript" src="../lib/jquery/jquery.min.js"></script>
   <script type="text/javascript" src="../lib/base64/base64.js"></script>
-  <script type="text/javascript" src="../lib/sjcl/sjcl.min.js"></script>
+  <script type="text/javascript" src="../src/jio.storage/davstorage.js">
+  </script>
   <script type="text/javascript" src="../lib/jsSha2/sha2.js"></script>
-  <script type="text/javascript" src="../jio.storage.js"></script>
+  <script type="text/javascript" src="../src/jio.storage/revisionstorage.js">
+  </script>
+  <script type="text/javascript" src="../lib/sjcl/sjcl.min.js"></script>
   <script type="text/javascript">
     <!--
 var my_jio = null;
@@ -151,7 +156,7 @@ var newLocalJio = function () {
     var localuser, localapp;
     localuser = $('#localuser').attr('value');
     localapp = $('#localapp').attr('value');
-    var spec = {type: 'local', username: localuser, applicationname: localapp};
+    var spec = {type: 'local', username: localuser, application_name: localapp};
     if (my_jio) { log('closing older jio'); my_jio.close(); }
     log ('local storage description object: ' + JSON.stringify (spec));
     my_jio = jIO.newJio(spec);
@@ -162,7 +167,7 @@ var newCryptJio = function () {
     app = $('#cryptapp').attr('value');
     pwd = $('#cryptpassword').attr('value');
     var spec = {type: 'crypt', username: user, password: pwd, storage:{
-        type: 'local', username: user, applicationname: app
+        type: 'local', username: user, application_name: app
     }};
     if (my_jio) { log('closing older jio'); my_jio.close(); }
     log ('crypt storage description object: ' + JSON.stringify (spec));
@@ -175,24 +180,24 @@ var newDavJio = function () {
     pwd = $('#davpassword').attr('value');
     url = $('#davurl').attr('value');
     var spec = {
-        type: 'dav', username: user, applicationname: app,
+        type: 'dav', username: user, application_name: app,
         password: pwd, url: url
     };
     if (my_jio) { log('closing older jio'); my_jio.close(); }
     log ('dav storage description object: ' + JSON.stringify (spec));
     my_jio = jIO.newJio(spec);
 };
-var newConflictJio = function () {
+var newRevisionJio = function () {
     var user, app;
-    user = $('#conflictuser').attr('value');
-    app = $('#conflictapp').attr('value');
+    user = $('#revisionuser').attr('value');
+    app = $('#revisionapp').attr('value');
     var spec = {
-        type: 'conflictmanager', storage: {
-            type: 'local', username: user, applicationname: app
+        type: 'revision', sub_storage: {
+            type: 'local', username: user, application_name: app
         }
     };
     if (my_jio) { log('closing older jio'); my_jio.close(); }
-    log ('conflict manager storage description object: '+JSON.stringify (spec));
+    log ('revision storage description object: '+JSON.stringify (spec));
     my_jio = jIO.newJio(spec);
 };
 var newCustomJio = function () {
