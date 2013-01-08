@@ -1232,6 +1232,7 @@ test ("Put", function(){
             "application_name": "arevput"
         }
     });
+    o.localpath = "jio/localstorage/urevput/arevput";
 
     // put without id
     // error 20 -> document id required
@@ -1249,10 +1250,26 @@ test ("Put", function(){
     o.tick(o);
 
     // check document
-    o.doc["_id"] = "put1."+o.rev;
+    o.doc._id = "put1." + o.rev;
     deepEqual(
-        localstorage.getItem("jio/localstorage/urevput/arevput/put1."+o.rev),
-        o.doc, "Check document"
+        localstorage.getItem(o.localpath + "/put1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree = {
+        "_id": "put1.revision_tree.json",
+        "children": [{
+            "rev": o.rev, "status": "available", "children": []
+        }]
+    };
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/put1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
     );
 
     // put and document already exists
@@ -1260,7 +1277,8 @@ test ("Put", function(){
     o.jio.put({"_id": "put1", "title": "myPut2"}, o.f);
     o.tick(o);
 
-    // post + revision
+
+    // put + revision
     o.doc = {"_id": "put1", "_rev": o.rev, "title": "myPut2"};
     o.revisions = {"start": 1, "ids": [o.rev.split('-')[1]]};
     o.rev = "2-"+generateRevisionHash(o.doc, o.revisions);
@@ -1269,10 +1287,23 @@ test ("Put", function(){
     o.tick(o);
 
     // check document
-    o.doc["_id"] = "put1."+o.rev;
+    o.doc._id = "put1." + o.rev;
     deepEqual(
-        localstorage.getItem("jio/localstorage/urevput/arevput/put1."+o.rev),
-        o.doc, "Check document"
+        localstorage.getItem(o.localpath + "/put1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree.children[0].children.unshift({
+        "rev": o.rev, "status": "available", "children": []
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/put1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
     );
 
     o.jio.stop();
