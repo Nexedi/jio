@@ -84,52 +84,73 @@ var storage = function(spec, my) {
 
     that.post = function () {
         setTimeout(function () {
-            that.error(that.createErrorObject(
-                0,"Not Implemented Yet","\"Post\" command is not implemented"
-            ));
+            that.error({
+                "status": 0,
+                "statusText": "Not Implemented",
+                "error": "not_implemented",
+                "message": "\"Post\" command is not implemented",
+                "reason": "Command not implemented"
+            });
         });
     };
 
     that.put = function () {
         setTimeout(function () {
-            that.error(that.createErrorObject(
-                0,"Not Implemented Yet","\"Put\" command is not implemented"
-            ));
+            that.error({
+                "status": 0,
+                "statusText": "Not Implemented",
+                "error": "not_implemented",
+                "message": "\"Put\" command is not implemented",
+                "reason": "Command not implemented"
+            });
         });
     };
 
     that.putAttachment = function () {
         setTimeout(function () {
-            that.error(that.createErrorObject(
-                0,"Not Implemented Yet",
-                "\"PutAttachment\" command is not implemented"
-            ));
+            that.error({
+                "status": 0,
+                "statusText": "Not Implemented",
+                "error": "not_implemented",
+                "message": "\"PutAttachment\" command is not implemented",
+                "reason": "Command not implemented"
+            });
         });
     };
 
     that.get = function () {
         setTimeout(function () {
-            that.error(that.createErrorObject(
-                0,"Not Implemented Yet","\"Get\" command is not implemented"
-            ));
+            that.error({
+                "status": 0,
+                "statusText": "Not Implemented",
+                "error": "not_implemented",
+                "message": "\"Get\" command is not implemented",
+                "reason": "Command not implemented"
+            });
         });
     };
 
     that.allDocs = function () {
         setTimeout(function () {
-            that.error(that.createErrorObject(
-                0,"Not Implemented Yet",
-                "\"AllDocs\" command is not implemented"
-            ));
+            that.error({
+                "status": 0,
+                "statusText": "Not Implemented",
+                "error": "not_implemented",
+                "message": "\"AllDocs\" command is not implemented",
+                "reason": "Command not implemented"
+            });
         });
     };
 
     that.remove = function () {
         setTimeout(function () {
-            that.error(that.createErrorObject(
-                0,"Not Implemented Yet",
-                "\"Remove\" command is not implemented"
-            ));
+            that.error({
+                "status": 0,
+                "statusText": "Not Implemented",
+                "error": "not_implemented",
+                "message": "\"Remove\" command is not implemented",
+                "reason": "Command not implemented"
+            });
         });
     };
 
