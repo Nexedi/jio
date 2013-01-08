@@ -1577,8 +1577,8 @@ test ("Scenario", function(){
     o.rev = "1-"+o.hex;
 
     o.spy (o, "value", {"ok": true, "id": "sample1", "rev": o.rev},
-"Then, I create a new document (no attachment), my application "+
-"keep the revision in memory");
+           "Then, I create a new document (no attachment), my application "+
+           "keep the revision in memory");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
@@ -1594,8 +1594,8 @@ test ("Scenario", function(){
     o.localpath = "jio/localstorage/usam1/asam1";
 
     // Create a new JIO in a new tab
-    ok ( o.jio2, "Now, I am opening a new tab, with the same application"+
-    " and the same storage tree");
+    ok (o.jio2, "Now, I am opening a new tab, with the same application"+
+        " and the same storage tree");
 
     // Get the document from the first storage
     o.doc._rev = o.rev;
@@ -1615,13 +1615,14 @@ test ("Scenario", function(){
     o.hex_2 = generateRevisionHash(o.doc_2, o.revisions_2)
     o.rev_2 = "2-"+o.hex_2;
     o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_2},
-        "So, I can modify and update it");
+           "So, I can modify and update it");
     o.jio2.put(o.doc_2, o.f);
     o.tick(o);
 
     // MODFIY first version
-    o.doc_1 = {"_id": "sample1", "_rev": o.rev,
-        "title": "mySample1_modified"};
+    o.doc_1 = {
+        "_id": "sample1", "_rev": o.rev, "title": "mySample1_modified"
+    };
     o.revisions_1 = {"start": 1, "ids":[o.rev.split('-')[1]
     ]};
     o.hex_1 = generateRevisionHash(o.doc_1, o.revisions_1);
@@ -1652,7 +1653,7 @@ test ("Scenario", function(){
 
     // GET document without revision = winner & conflict!
     o.mydocSample3 = {"_id": "sample1", "title": "mySample1_modified",
-          "_rev": o.rev_1};
+                      "_rev": o.rev_1};
     o.mydocSample3._conflicts = [o.rev_2]
     o.mydocSample3._revs_info = [{"rev": o.rev_1, "status": "available"},{
         "rev":o.rev,"status":"available"
