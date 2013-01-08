@@ -855,9 +855,9 @@ test ("PutAttachment", function(){
     o.jio.putAttachment({}, o.f);
     o.tick(o);
 
-    // putAttachment without attmt id
+    // putAttachment without attachment id
     // error 22 -> attachment id required
-    o.spy(o, "status", 22, "PutAttachment without attmt id");
+    o.spy(o, "status", 22, "PutAttachment without attachment id");
     o.jio.putAttachment({"id": "putattmt1"}, o.f);
     o.tick(o);
 
@@ -1026,7 +1026,7 @@ test ("Remove", function(){
 
     // check document
     ok(localstorage.getItem("jio/localstorage/uremove/aremove/remove1")===null,
-       "Check document");
+       "Check document is removed");
 
     // adding a document + attmt
     localstorage.setItem("jio/localstorage/uremove/aremove/remove1", {
