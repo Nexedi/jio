@@ -208,15 +208,15 @@ jIO.addStorageType('revision', function (spec, my) {
      * @method postToDocumentTree
      * @param  {object} doctree The document tree object
      * @param  {object} doc The document object
-     * @param  {boolean} set_node_to_deleted true/false
+     * @param  {boolean} set_node_to_deleted Set the revision to deleted
      * @return {array} The added document revs_info
      */
     priv.postToDocumentTree = function (doctree, doc, set_node_to_deleted) {
-        var i, revs_info, next_rev, next_rev_str, next_rev_status,
-            selectNode, selected_node,
-            revs_info = [],
-            selected_node = doctree;
-
+        var i, revs_info, next_rev, next_rev_str, selectNode, selected_node,
+            flag;
+        flag = set_node_to_deleted === true ? "deleted" : "available";
+        revs_info = [];
+        selected_node = doctree;
         selectNode = function (node) {
             var i;
             if (typeof node.rev !== "undefined") {
@@ -255,28 +255,26 @@ jIO.addStorageType('revision', function (spec, my) {
             doc._rev || 0, doc, priv.revsInfoToHistory(revs_info),
             set_node_to_deleted);
         next_rev_str = next_rev.join("-");
-        next_rev_status = set_node_to_deleted === true ? "deleted" : "available";
-
         // don't add if the next rev already exists
         for (i = 0; i < selected_node.children.length; i += 1) {
             if (selected_node.children[i].rev === next_rev_str) {
                 revs_info.unshift({
                     "rev": next_rev_str,
-                    "status": next_rev_status
+                    "status": flag
                 });
-                if (selected_node.children[i].status !== next_rev_status) {
-                    selected_node.children[i].status = next_rev_status;
+                if (selected_node.children[i].status !== flag) {
+                    selected_node.children[i].status = flag;
                 }
                 return revs_info;
             }
         }
         revs_info.unshift({
             "rev": next_rev.join('-'),
-            "status": "available"
+            "status": flag
         });
         selected_node.children.unshift({
             "rev": next_rev.join('-'),
-            "status": "available",
+            "status": flag,
             "children": []
         });
         return revs_info;
