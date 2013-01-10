@@ -1,6 +1,6 @@
 OUT			= jio.js
 UGLY_OUT	= jio.min.js
-LINT_CMD	= jslint --terse --indent 2 --maxlen 80
+LINT_CMD	= jslint --terse
 UGLIFY_CMD	= uglifyjs
 FILE_DIR	= src/jio
 STORAGE_DIR = src/jio.storage
@@ -23,13 +23,12 @@ uglify:
 
 # lint all files in FILES and STORAGE_FILES
 # command: jslint [options] file
-# [options] are defined in the source file:
-# The file can contain a line beginning by:
-# // -*- jslint: [options] -*-
-# If there is several such lines, only the first is used. Example:
-# // -*- jslint: --sloppy --maxlen 80 --predef hex_sha256 -*-
+# [options] are defined at the top of the source file:
+# Example:
+# /*jslint indent: 2, maxlen: 80 */
+# /*global hex_sha256: true, jQuery: true */
 lint:
-	bash -c "result=0 ; for file in $(LINT_FILES:%=$(FILE_DIR)/%.js) $(STORAGE_FILES:%=$(STORAGE_DIR)/%.js) ; do out=\"\$$($(LINT_CMD) \$$(grep '^//  *-\*-  *jslint: .* -\*-' \$$file | head -1 | sed 's/^\/\/  *-\*-  *jslint: \(.*\) -\*-/\1/') \$$file)\" ; res=\$$? ; [ \$$res != 0 ] && echo \"\$$out\" ; [ \$$res -gt \$$result ] && result=\$$res ; done ; exit \$$result ;"
+	$(LINT_CMD) -- $(LINT_FILES:%=$(FILE_DIR)/%.js)
 
 .phony: clean
 clean:
