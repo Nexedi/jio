@@ -1,24 +1,25 @@
-var allDocsCommand = function(spec, my) {
-    var that = command(spec, my);
-    spec = spec || {};
-    my = my || {};
-    // Attributes //
-    // Methods //
-    that.getLabel = function() {
-        return 'allDocs';
-    };
+var allDocsCommand = function (spec, my) {
+  var that = command(spec, my);
 
-    that.executeOn = function(storage) {
-        storage.allDocs (that);
-    };
+  spec = spec || {};
+  my = my || {};
+  // Attributes //
+  // Methods //
+  that.getLabel = function () {
+    return 'allDocs';
+  };
 
-    that.canBeRestored = function() {
-        return false;
-    };
+  that.executeOn = function (storage) {
+    storage.allDocs(that);
+  };
 
-    that.validateState = function () {
-        return true;
-    };
+  that.canBeRestored = function () {
+    return false;
+  };
 
-    return that;
+  that.validateState = function () {
+    return true;
+  };
+
+  return that;
 };
