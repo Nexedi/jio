@@ -1,74 +1,75 @@
-var activityUpdater = (function(spec, my) {
-    var that = {};
-    spec = spec || {};
-    my = my || {};
-    // Attributes //
-    var priv = {};
-    priv.id = spec.id || 0;
-    priv.interval = 400;
-    priv.interval_id = null;
+/*jslint indent: 2, maxlen: 80, sloppy: true */
+/*global localstorage: true, setInterval: true, clearInterval: true */
+var activityUpdater = (function (spec, my) {
+  var that = {}, priv = {};
+  spec = spec || {};
+  my = my || {};
 
-    // Methods //
-    /**
-     * Update the last activity date in the localStorage.
-     * @method touch
-     */
-    priv.touch = function() {
-        localstorage.setItem ('jio/id/'+priv.id, Date.now());
-    };
+  priv.id = spec.id || 0;
+  priv.interval = 400;
+  priv.interval_id = null;
 
-    /**
-     * Sets the jio id into the activity.
-     * @method setId
-     * @param  {number} id The jio id.
-     */
-    that.setId = function(id) {
-        priv.id = id;
-    };
+  // Methods //
+  /**
+   * Update the last activity date in the localStorage.
+   * @method touch
+   */
+  priv.touch = function () {
+    localstorage.setItem('jio/id/' + priv.id, Date.now());
+  };
 
-    /**
-     * Sets the interval delay between two updates.
-     * @method setIntervalDelay
-     * @param  {number} ms In milliseconds
-     */
-    that.setIntervalDelay = function(ms) {
-        priv.interval = ms;
-    };
+  /**
+   * Sets the jio id into the activity.
+   * @method setId
+   * @param  {number} id The jio id.
+   */
+  that.setId = function (id) {
+    priv.id = id;
+  };
 
-    /**
-     * Gets the interval delay.
-     * @method getIntervalDelay
-     * @return {number} The interval delay.
-     */
-    that.getIntervalDelay = function() {
-        return priv.interval;
-    };
+  /**
+   * Sets the interval delay between two updates.
+   * @method setIntervalDelay
+   * @param  {number} ms In milliseconds
+   */
+  that.setIntervalDelay = function (ms) {
+    priv.interval = ms;
+  };
 
-    /**
-     * Starts the activity updater. It will update regulary the last activity
-     * date in the localStorage to show to other jio instance that this instance
-     * is active.
-     * @method start
-     */
-    that.start = function() {
-        if (!priv.interval_id) {
-            priv.touch();
-            priv.interval_id = setInterval(function() {
-                priv.touch();
-            }, priv.interval);
-        }
-    };
+  /**
+   * Gets the interval delay.
+   * @method getIntervalDelay
+   * @return {number} The interval delay.
+   */
+  that.getIntervalDelay = function () {
+    return priv.interval;
+  };
 
-    /**
-     * Stops the activity updater.
-     * @method stop
-     */
-    that.stop = function() {
-        if (priv.interval_id !== null) {
-            clearInterval(priv.interval_id);
-            priv.interval_id = null;
-        }
-    };
+  /**
+   * Starts the activity updater. It will update regulary the last activity
+   * date in the localStorage to show to other jio instance that this instance
+   * is active.
+   * @method start
+   */
+  that.start = function () {
+    if (!priv.interval_id) {
+      priv.touch();
+      priv.interval_id = setInterval(function () {
+        priv.touch();
+      }, priv.interval);
+    }
+  };
 
-    return that;
+  /**
+   * Stops the activity updater.
+   * @method stop
+   */
+  that.stop = function () {
+    if (priv.interval_id !== null) {
+      clearInterval(priv.interval_id);
+      priv.interval_id = null;
+    }
+  };
+
+  return that;
 }());
