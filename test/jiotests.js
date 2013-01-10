@@ -1,8 +1,5 @@
 (function () { var thisfun = function(loader) {
-    var JIO = loader.JIO,
-    sjcl = loader.sjcl,
-    Base64 = loader.Base64,
-    $ = loader.jQuery;
+    var JIO = loader.JIO;
 
 // localStorage cleanup
 var k;
@@ -145,12 +142,12 @@ basicTickFunction = function (obj) {
 myLog = function (html_string) {
     document.querySelector ('div#log').innerHTML += html_string + '<hr/>';
 },
-getXML = function (url) {
-    var tmp = '';
-    $.ajax({'url':url,async:false,
-            dataType:'text',success:function(xml){tmp=xml;}});
-    return tmp;
-},
+// getXML = function (url) {
+//     var tmp = '';
+//     $.ajax({'url':url,async:false,
+//             dataType:'text',success:function(xml){tmp=xml;}});
+//     return tmp;
+// },
 objectifyDocumentArray = function (array) {
     var obj = {}, k;
     for (k = 0; k < array.length; k += 1) {
@@ -3418,10 +3415,7 @@ if (window.requirejs) {
     });
     require(['jiotestsloader'],thisfun);
 } else {
-    thisfun ({JIO:jIO,
-              sjcl:sjcl,
-              Base64:Base64,
-              jQuery:jQuery});
+    thisfun ({JIO:jIO});
 }
 
 }());
