@@ -1,3 +1,5 @@
+/*jslint indent: 2, maxlen: 80, sloppy: true */
+/*global command: true */
 var allDocsCommand = function (spec, my) {
   var that = command(spec, my);
 
