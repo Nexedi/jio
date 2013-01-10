@@ -8,16 +8,19 @@ FILE_DIR	= src/jio
 STORAGE_DIR = src/jio.storage
 
 # The order is important!
-LINT_FILES  = exceptions jio.intro storages/* commands/* jobs/status/* jobs/job announcements/announcement activityUpdater announcements/announcer jobs/jobIdHandler jobs/jobManager jobs/jobRules jio.outro jioNamespace
-FILES		= intro $(LINT_FILES) outro
-STORAGE_FILES = *
+CONCAT_NAMES = intro exceptions jio.intro storages/* commands/* jobs/status/* jobs/job announcements/announcement activityUpdater announcements/announcer jobs/jobIdHandler jobs/jobManager jobs/jobRules jio.core jio.outro jioNamespace outro
+STORAGE_NAMES = *
+LINT_NAMES  = exceptions storages/* commands/* jobs/status/* jobs/* announcements/* activityUpdater jio.core jioNamespace
+
+CONCAT_FILES = $(CONCAT_NAMES:%=$(FILE_DIR)/%.js)
+LINT_FILES  = $(LINT_NAMES:%=$(FILE_DIR)/%.js) $(STORAGE_NAMES:%=$(STORAGE_DIR)/%.js)
 
 auto: build lint
 build: concat uglify
 
 # concat source FILES to build jio.js
 concat:
-	cat $(FILES:%=$(FILE_DIR)/%.js) > "$(OUT)"
+	cat $(CONCAT_FILES) > "$(OUT)"
 
 # uglify jio.js to build jio.min.js
 uglify:
@@ -30,7 +33,7 @@ uglify:
 # /*jslint indent: 2, maxlen: 80 */
 # /*global hex_sha256: true, jQuery: true */
 lint:
-	$(LINT_CMD) $(LINT_FILES:%=$(FILE_DIR)/%.js)
+	$(LINT_CMD) $(LINT_FILES)
 
 .phony: clean
 clean:
