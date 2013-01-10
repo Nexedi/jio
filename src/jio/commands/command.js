@@ -1,4 +1,8 @@
-// -*- jslint: --nomen --todo --maxlen 80 -*-
+/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*global postCommand: true, putCommand: true, getCommand: true,
+         removeCommand: true, allDocsCommand: true,
+         putAttachmentCommand: true, failStatus: true, doneStatus: true,
+         hex_md5: true */
 var command = function (spec, my) {
   var that = {},
     priv = {};
