@@ -1,13 +1,14 @@
-var jobIdHandler = (function(spec) {
-    var that = {};
-    spec = spec || {};
-    // Attributes //
-    var id = 0;
-    // Methods //
-    that.nextId = function() {
-        id = id + 1;
-        return id;
-    };
+/*jslint indent: 2, maxlen: 80, sloppy: true */
+var jobIdHandler = (function (spec) {
+  var that = {},
+    id = 0;
+  spec = spec || {};
 
-    return that;
+  // Methods //
+  that.nextId = function () {
+    id = id + 1;
+    return id;
+  };
+
+  return that;
 }());
