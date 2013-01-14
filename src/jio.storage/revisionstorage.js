@@ -252,11 +252,10 @@ jIO.addStorageType('revision', function (spec, my) {
           "rev": doc._rev,
           "status": "missing"
         });
-        selected_node.children.unshift({
-          "rev": doc._rev,
-          "status": "missing",
-          "children": []
-        });
+        selected_node.children.unshift(priv.createDocumentTreeNode(
+          doc._rev,
+          "missing"
+        ));
         selected_node = selected_node.children[0];
       }
     }
@@ -285,11 +284,10 @@ jIO.addStorageType('revision', function (spec, my) {
       "status": flag
     });
 
-    selected_node.children.unshift({
-      "rev": next_rev.join('-'),
-      "status": flag,
-      "children": []
-    });
+    selected_node.children.unshift(priv.createDocumentTreeNode(
+      next_rev.join('-'),
+      flag
+    ));
 
     return revs_info;
   };
