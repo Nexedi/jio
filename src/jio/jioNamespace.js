@@ -29,11 +29,13 @@ var jioNamespace = (function (spec) {
         instance = null;
       if (typeof storage === 'string') {
         storage = JSON.parse(storage);
+      } else {
+        storage = JSON.parse(JSON.stringify(storage));
       }
       storage = storage || {
         type: 'base'
       };
-      instance = jio(spec);
+      instance = jio(storage);
       instance.start();
       return instance;
     }
