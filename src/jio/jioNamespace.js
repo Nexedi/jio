@@ -13,11 +13,7 @@ var jioNamespace = (function (spec) {
   /**
    * Creates a new jio instance.
    * @method newJio
-   * @param  {object} spec The parameters:
-   * - {object} spec.storage: A storage description
-   *     - {string} spec.storage.type: The storage type
-   *     - {string} spec.storage.username: The user name
-   *     - {string} spec.storage.application_name: The application name
+   * @param  {object} spec The storage description
    * @return {object} The new Jio instance.
    */
   Object.defineProperty(that, "newJio", {
