@@ -1,9 +1,14 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global jIO: true, $: true, Base64: true  */
+// test here: http://enable-cors.org/
+//http://metajack.im/2010/01/19/crossdomain-ajax-for-xmpp-http-binding-made-easy
 jIO.addStorageType('dav', function (spec, my) {
+
   spec = spec || {};
-  var that = my.basicStorage(spec, my), priv = {},
-    super_serialized = that.serialized;
+  var that, priv, super_serialized;
+  that = my.basicStorage(spec, my);
+  priv = {};
+  super_serialized = that.serialized;
 
   priv.secureDocId = function (string) {
     var split = string.split('/'),
@@ -27,19 +32,17 @@ jIO.addStorageType('dav', function (spec, my) {
   };
 
 
+  // ==================== Attributes  ====================
   priv.username = spec.username || '';
   priv.secured_username = priv.convertSlashes(priv.username);
-  priv.application_name = spec.application_name || 'untitled';
-  priv.secured_application_name = priv.convertSlashes(priv.application_name);
+  priv.password = spec.password || '';
   priv.url = spec.url || '';
-  priv.password = spec.password || ''; // TODO : is it secured ?
 
   that.serialized = function () {
     var o = super_serialized();
     o.username = priv.username;
-    o.application_name = priv.application_name;
     o.url = priv.url;
-    o.password = priv.password; // TODO : not realy secured...
+    o.password = priv.password;
     return o;
   };
 
@@ -81,35 +84,160 @@ jIO.addStorageType('dav', function (spec, my) {
     return async;
   };
 
-  priv.putOrPost = function (command, type) {
+  priv.checkCors = function(){
+    return $.support.cors;
+  };
 
-    var secured_docid = priv.secureDocId(command.getDocId());
-    $.ajax({
-      url: priv.url + '/' + priv.secured_username + '/' +
-        priv.secured_application_name + '/' + secured_docid + '?_=' +
-        Date.now(),
-      // to make url unique and avoid chrome PUT on cache !
-      type: type,
-      data: command.getDocContent(),
-      async: true,
-      dataType: 'text', // TODO is it necessary ?
-      headers: {
-        'Authorization': 'Basic ' + Base64.encode(priv.username + ':' +
-          priv.password)
-      },
-      // xhrFields: {withCredentials: 'true'}, // cross domain
-      success: function () {
-        that.success({
-          ok: true,
-          id: command.getDocId()
+  // wedDav methods rfc4918
+  // PROPFIND
+  // PROPPATCH
+  // MCKOL
+  // GET 
+  //    > resource = return content of element  xyz.abc
+  //    > collection > allDocs
+  //    > attachment = return content of element  xyz_.abc/att.def
+  // HEAD
+  // POST
+  // DELETE
+  // PUT
+  // COPY
+  // MOVE
+  // LOCK
+  // UNLOCK
+
+  priv.putOrPost = function (command, type) {
+    var doc = command.getDocId(),
+        secured_docid;
+
+    // no docId
+    if (!(typeof doc === "string" && doc !== "")) {
+        that.error({
+          "status": 405,
+          "statusText": "Method Not Allowed",
+          "error": "method_not_allowed",
+          "message": "Cannot create document which id is undefined",
+          "reason": "Document id is undefined"
         });
+        return;
+    }
+
+    // no cross domain ajax
+    if (priv.checkCors === false) {
+      that.error({
+          "status": 405,
+          "statusText": "Method Not Allowed",
+          "error": "method_not_allowed",
+          "message": "Browser does not support cross domain ajax requests",
+          "reason": "cors is undefined"
+        });
+      return;
+    }
+
+    secured_docid = priv.secureDocId(command.getDocId());
+    url = priv.url + '/' + secured_docid;
+
+    // see if the document exists
+    $.ajax({
+      url: url + '?_=' + Date.now(),
+      type: "GET",
+      async: true,
+      dataType: 'text',
+      crossdomain : true,
+      headers : {
+         Authorization: 'Basic ' + Base64.encode(
+          priv.username + ':' + priv.password
+           )
+         },
+      // xhrFields: {withCredentials: 'true'},
+      success: function (content) {
+        if (type === 'POST') {
+          // POST the document already exists
+          that.error({
+              "status": 409,
+              "statusText": "Conflicts",
+              "error": "conflicts",
+              "message": "Cannot create a new document",
+              "reason": "Document already exists"
+            });
+          return;
+        } else {
+          // PUT update document
+          // remove first or can webDav overwrite?
+          $.ajax({
+            url: url + '?_=' + Date.now(),
+            type: type,
+            data: command.getDoc(),
+            async: true,
+            crossdomain: true,
+            headers : {
+              Authorization: 'Basic ' + Base64.encode(
+                priv.username + ':' + priv.password
+                )
+              },
+            // xhrFields: {withCredentials: 'true'}, 
+            success: function () {
+              that.success({
+                ok: true,
+                id: command.getDocId()
+              });
+            },
+            error: function (type) {
+              that.error({
+                "status": 409,
+                "statusText": "Conflicts",
+                "error": "conflicts",
+                "message": "Cannot modify document",
+                "reason": "Error trying to write to remote storage"
+              });
+              return;
+            }
+          });
+        }
       },
-      error: function (type) {
-        // TODO : make statusText to lower case and add '_'
-        type.error = type.statusText;
-        type.reason = 'Cannot save "' + command.getDocId() + '"';
-        type.message = type.reason + '.';
-        that.retry(type);
+      error: function (err) {
+        if (err.status === 404) {
+          $.ajax({
+            url: url + '?_=' + Date.now(),
+            // must always use put, POST only seems to work on collections
+            type: 'PUT',
+            data: command.getDoc(),
+            async: true,
+            crossdomain: true,
+            headers : {
+              Authorization: 'Basic ' + Base64.encode(
+                priv.username + ':' + priv.password
+                )
+              },
+            // xhrFields: {withCredentials: 'true'}, 
+            success: function (response) {
+              that.success({
+                ok: true,
+                id: command.getDocId()
+              });
+            },
+            error: function (type) {
+              that.error({
+                "status": 409,
+                "statusText": "Conflicts",
+                "error": "conflicts",
+                "message": "Cannot modify document",
+                "reason": "Error trying to write to remote storage"
+              });
+              return;
+            }
+          });
+
+        } else {
+          // error accessing remote storage
+          that.error({
+            "status": err.status,
+            "statusText": err.statusText,
+            "error": "error",
+            "message": err.message,
+            "reason": "Failed to access remote storage"
+          });
+          return;
+        }
       }
     });
   };
@@ -130,6 +258,92 @@ jIO.addStorageType('dav', function (spec, my) {
    * Loads a document from a distant dav storage.
    * @method get
    */
+  that.get = function (command) {
+    var doc = command.getDocId(),
+        secured_docid;
+
+    // no docId
+    if (!(typeof doc === "string" && doc !== "")) {
+        that.error({
+          "status": 405,
+          "statusText": "Method Not Allowed",
+          "error": "method_not_allowed",
+          "message": "Cannot create document which id is undefined",
+          "reason": "Document id is undefined"
+        });
+        return;
+    }
+    // no cors support
+    if (priv.checkCors === false) {
+      that.error({
+          "status": 405,
+          "statusText": "Method Not Allowed",
+          "error": "method_not_allowed",
+          "message": "Browser does not support cross domain ajax requests",
+          "reason": "cors is undefined"
+        });
+      return;
+    }
+    secured_docid = priv.secureDocId(command.getDocId());
+    url = priv.url + '/' + secured_docid;
+
+    // get attachment
+    if (typeof command.getAttachmentId() === "string") {
+      $.ajax({
+        url: url + '?_=' + Date.now(),
+        type: type,
+        data: command.getDoc(),
+        async: true,
+        crossdomain: true,
+        headers : {
+          Authorization: 'Basic ' + Base64.encode(
+            priv.username + ':' + priv.password
+            )
+          },
+        // xhrFields: {withCredentials: 'true'}, 
+        success: function (response) {
+          that.success(response)
+        },
+        error: function (type) {
+          that.error({
+            "status": 404,
+            "statusText": "Not Found",
+            "error": "not_found",
+            "message": "Cannot find the attachment",
+            "reason": "Attachment does not exist"
+          });
+        }
+      });
+    } else {
+      // get document
+      $.ajax({
+        url: url + '?_=' + Date.now(),
+        type: type,
+        data: command.getDoc(),
+        async: true,
+        crossdomain: true,
+        headers : {
+          Authorization: 'Basic ' + Base64.encode(
+            priv.username + ':' + priv.password
+            )
+          },
+        // xhrFields: {withCredentials: 'true'}, 
+        success: function (response) {
+          that.success(response)
+        },
+        error: function (type) {
+          that.error({
+            "status": 404,
+            "statusText": "Not Found",
+            "error": "not_found",
+            "message": "Cannot find the document",
+            "reason": "Document does not exist"
+          });
+        }
+      });
+    }
+  };
+
   that.get = function (command) {
     var secured_docid = priv.secureDocId(command.getDocId()),
       doc = {},
@@ -214,6 +428,7 @@ jIO.addStorageType('dav', function (spec, my) {
     });
   };
 
+  
   /**
    * Gets a document list from a distant dav storage.
    * @method allDocs
@@ -389,6 +604,5 @@ jIO.addStorageType('dav', function (spec, my) {
       }
     });
   };
-
   return that;
 });
