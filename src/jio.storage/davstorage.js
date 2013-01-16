@@ -162,7 +162,6 @@ jIO.addStorageType('dav', function (spec, my) {
           return;
         } else {
           // PUT update document
-          // remove first or can webDav overwrite?
           $.ajax({
             url: url + '?_=' + Date.now(),
             type: type,

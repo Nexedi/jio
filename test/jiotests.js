@@ -2039,7 +2039,7 @@ test ("Post", function () {
     // post non empty document
     o.addFakeServerResponse("PUT", "myFile", 201, "HTML RESPONSE");
     o.spy(o, "value", {"id": "myFile", "ok": true},
-          "Post non empty document");
+          "Create = POST non empty document");
     o.jio.post({"_id": "myFile", "title": "hello there"}, o.f);
     o.clock.tick(5000);
     o.server.respond();
@@ -2056,6 +2056,58 @@ test ("Post", function () {
     o.jio.stop();
 
     // do the same tests live webDav-Server
+    // check for credentials in sinon
+    /* also check for equality
+
+    deepEqual(
+        localstorage.getItem("jio/localstorage/uput/aput/put1"),
+        {
+            "_id": "put1",
+            "title": "myPut1"
+        },
+        "Check document"
+    );
+    */
+});
+
+test ("Put", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "dav",
+        "username": "davput",
+        "password": "checkpwd",
+        "url": "https://ca-davstorage:8080"
+    });
+
+    // put without id => id required
+    o.spy (o, "status", 20, "Put without id");
+    o.jio.put({}, o.f);
+    o.clock.tick(5000);
+
+    // put non empty document
+    o.addFakeServerResponse("PUT", "put1", 201, "HTML RESPONSE");
+    o.spy (o, "value", {"ok": true, "id": "put1"},
+           "Create = PUT non empty document");
+    o.jio.put({"_id": "put1", "title": "myPut1"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    // put but document already exists = update
+    o.answer = JSON.stringify({"_id": "put1", "title": "myPut1"});
+    o.addFakeServerResponse("GET", "put1", 200, o.answer);
+    o.addFakeServerResponse("PUT", "put1", 201, "HTML RESPONSE");
+    o.spy (o, "value", {"ok": true, "id": "put1"}, "Updated the document");
+    o.jio.put({"_id": "put1", "title": "myPut2abcdedg"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    o.jio.stop();
+
+    // do the same tests live webDav-Server
+    // check for credentials in sinon
+
 });
 /*
     // note: http errno:
