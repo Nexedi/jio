@@ -25,7 +25,11 @@ contains = function (array,content) {
     return false;
 },
 clone = function (obj) {
-    return JSON.parse(JSON.stringify(obj));
+  var tmp = JSON.stringify(obj);
+  if (tmp !== undefined) {
+    return JSON.parse(tmp);
+  }
+  return tmp;
 },
 // generates a revision hash from document metadata, revision history
 // and the deleted_flag
