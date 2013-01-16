@@ -1813,6 +1813,200 @@ test ("Scenario", function(){
 
 });
 
+  module ("JIO Replicate Revision Storage");
+
+  var testReplicateRevisionStorageGenerator = function (
+    sinon, jio_description, document_name_have_revision
+  ) {
+
+    var o = generateTools(sinon), leavesAction, generateLocalPath;
+
+    o.jio = JIO.newJio(jio_description);
+
+    generateLocalPath = function (storage_description) {
+      return "jio/localstorage/" + storage_description.username + "/" +
+        storage_description.application_name;
+    };
+
+    leavesAction = function (action, storage_description, param) {
+      var i;
+      if (param === undefined) {
+        param = {};
+      } else {
+        param = clone(param);
+      }
+      if (storage_description.storage_list !== undefined) {
+        // it is the replicate revision storage tree
+        for (i = 0; i < storage_description.storage_list.length; i += 1) {
+          leavesAction(action, storage_description.storage_list[i], param);
+        }
+      } else if (storage_description.sub_storage !== undefined) {
+        // it is the revision storage tree
+        param.revision = true;
+        leavesAction(action, storage_description.sub_storage, param);
+      } else {
+        // it is the storage tree leaf
+        param[storage_description.type] = true;
+        action(storage_description, param);
+      }
+    };
+    o.leavesAction = function (action) {
+      leavesAction(action, jio_description);
+    };
+
+    // post a new document without id
+    o.doc = {"title": "post document without id"};
+    o.revision = {"start": 0, "ids": []};
+    o.spy(o, "status", undefined, "Post document (without id)");
+    o.jio.post(o.doc, function (err, response) {
+      o.f.apply(arguments);
+      o.response_rev = (err || response).rev;
+      if (isUuid((err || response).id)) {
+        ok(true, "Uuid format");
+        o.uuid = (err || response).id;
+      } else {
+        deepEqual((err || response).id,
+                  "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "Uuid format");
+      }
+    });
+    o.tick(o);
+
+    // check document
+    o.doc._id = o.uuid;
+    o.rev = "1";
+    o.local_rev = "1-" + generateRevisionHash(o.doc, o.revision);
+    o.leavesAction(function (storage_description, param) {
+      var suffix = "", doc = clone(o.doc);
+      if (param.revision) {
+        deepEqual(o.response_rev, o.rev, "Check revision");
+        doc._id += "." + o.local_rev;
+        suffix = "." + o.local_rev;
+      }
+      deepEqual(
+        localstorage.getItem(generateLocalPath(storage_description) +
+                             "/" + o.uuid + suffix),
+        doc, "Check document"
+      );
+    });
+
+    // post a new document with id
+    o.doc = {"_id": "post1", "title": "post new doc with id"};
+    o.rev = "1"
+    o.spy(o, "value", {"ok": true, "id": "post1", "rev": o.rev},
+          "Post document (with id)");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.local_rev = "1-" + generateRevisionHash(o.doc, o.revision);
+    o.leavesAction(function (storage_description, param) {
+      var suffix = "", doc = clone(o.doc);
+      if (param.revision) {
+        doc._id += "." + o.local_rev;
+        suffix = "." + o.local_rev;
+      }
+      deepEqual(
+        localstorage.getItem(generateLocalPath(storage_description) +
+                             "/post1" + suffix),
+        doc, "Check document"
+      );
+    });
+
+    // post same document without revision
+    o.doc = {"_id": "post1", "title": "post same document without revision"};
+    o.rev = "2";
+    o.spy(o, "value", {"ok": true, "id": "post1", "rev": o.rev},
+          "Post same document (without revision)");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.local_rev = "1-" + generateRevisionHash(o.doc, o.revision);
+    o.leavesAction(function (storage_description, param) {
+      var suffix = "", doc = clone(o.doc);
+      if (param.revision) {
+        doc._id += "." + o.local_rev;
+        suffix = "." + o.local_rev;
+      }
+      deepEqual(
+        localstorage.getItem(generateLocalPath(storage_description) +
+                             "/post1" + suffix),
+        doc, "Check document"
+      );
+    });
+
+    // post a new revision
+    o.doc = {"_id": "post1", "title": "post new revision", "_rev": o.rev};
+    o.rev = "3";
+    o.spy(o, "value", {"ok": true, "id": "post1", "rev": o.rev},
+          "Post document (with revision)");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.revision.start += 1;
+    o.revision.ids.unshift(o.local_rev.split("-").slice(1).join("-"));
+    o.doc._rev = o.local_rev;
+    o.local_rev = "2-" + generateRevisionHash(o.doc, o.revision);
+    o.leavesAction(function (storage_description, param) {
+      var suffix = "", doc = clone(o.doc);
+      delete doc._rev;
+      if (param.revision) {
+        doc._id += "." + o.local_rev;
+        suffix = "." + o.local_rev;
+      }
+      deepEqual(
+        localstorage.getItem(generateLocalPath(storage_description) +
+                             "/post1" + suffix),
+        doc, "Check document"
+      );
+    });
+
+    o.jio.stop();
+
+  };
+
+  test ("[Local Storage] Scenario", function () {
+    testReplicateRevisionStorageGenerator(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "local",
+        "username": "ureploc",
+        "application_name": "areploc"
+      }]
+    });
+  });
+  test ("[Revision + Local Storage] Scenario", function () {
+    testReplicateRevisionStorageGenerator(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "ureprevloc",
+          "application_name": "areprevloc"
+        }
+      }]
+    });
+  });
+  test ("[Revision + Local Storage, Local Storage] Scenario", function () {
+    testReplicateRevisionStorageGenerator(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "ureprevlocloc",
+          "application_name": "areprevlocloc"
+        }
+      },{
+        "type": "local",
+        "username": "ureprevlocloc2",
+        "application_name": "areprevlocloc2"
+      }]
+    });
+  });
+
 /*
 module ('Jio DAVStorage');
 
