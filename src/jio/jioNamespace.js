@@ -26,7 +26,10 @@ var jioNamespace = (function (spec) {
       if (typeof storage === 'string') {
         storage = JSON.parse(storage);
       } else {
-        storage = JSON.parse(JSON.stringify(storage));
+        storage = JSON.stringify(storage);
+        if (storage !== undefined) {
+          storage = JSON.parse(storage);
+        }
       }
       storage = storage || {
         type: 'base'
