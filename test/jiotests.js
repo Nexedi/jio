@@ -107,7 +107,6 @@ basicTestFunctionGenerator = function(o,res,value,message) {
  * @param  {string} function_name The callback name
  */
 basicSpyFunction = function(obj, result_type, value, message, function_name) {
-
     function_name = function_name || 'f';
     obj[function_name] =
         basicTestFunctionGenerator(obj, result_type, value, message);
@@ -142,16 +141,18 @@ basicTickFunction = function (obj) {
         }
     }
 },
-// debug function to show custumized log at the bottom of the page
-myLog = function (html_string) {
-    document.querySelector ('div#log').innerHTML += html_string + '<hr/>';
+getXML = function (url) {
+    var tmp = '';
+    $.ajax({
+      url: url,
+      async: false,
+      dataType: 'text',
+      success: function (xml) {
+        tmp=xml;
+      }
+    });
+    return tmp;
 },
-// getXML = function (url) {
-//     var tmp = '';
-//     $.ajax({'url':url,async:false,
-//             dataType:'text',success:function(xml){tmp=xml;}});
-//     return tmp;
-// },
 objectifyDocumentArray = function (array) {
     var obj = {}, k;
     for (k = 0; k < array.length; k += 1) {
@@ -165,10 +166,12 @@ getLastJob = function (id) {
 generateTools = function (sinon) {
     var o = {};
     o.t = sinon;
+    o.server = o.t.sandbox.useFakeServer();
     o.clock = o.t.sandbox.useFakeTimers();
     o.clock.tick(base_tick);
     o.spy = basicSpyFunction;
     o.tick = basicTickFunction;
+
     // test methods
     o.testLastJobLabel = function (label, mess) {
         var lastjob = getLastJob(o.jio.getId());
@@ -233,6 +236,14 @@ generateTools = function (sinon) {
             o.clock.tick(25);
         }
     };
+    o.addFakeServerResponse = function (method, path, status, response) {
+      var url = new RegExp('https:\\/\\/ca-davstorage:8080\\/' + path +
+                      '(\\?.*|$)');
+      o.server.respondWith(method, url,
+        [status, { "Content-Type": 'application/xml' }, response]
+      );
+    }
+
     return o;
 },
 //// end tools
@@ -1813,7 +1824,7 @@ test ("Scenario", function(){
 
 });
 
-  module ("JIO Replicate Revision Storage");
+module ("JIO Replicate Revision Storage");
 
   var testReplicateRevisionStorageGenerator = function (
     sinon, jio_description, document_name_have_revision
@@ -2007,9 +2018,71 @@ test ("Scenario", function(){
     });
   });
 
-/*
-module ('Jio DAVStorage');
+module ("Jio DAVStorage");
 
+test ("Post", function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "dav",
+        "username": "davpost",
+        "password": "checkpwd",
+        "url": "https://ca-davstorage:8080"
+    });
+
+    // post without id
+    o.spy (o, "status", 405, "Post without id");
+    o.jio.post({}, o.f);
+    o.clock.tick(5000);
+
+    // post non empty document
+    o.addFakeServerResponse("PUT", "myFile", 201, "HTML RESPONSE");
+    o.spy(o, "value", {"id": "myFile", "ok": true},
+          "Post non empty document");
+    o.jio.post({"_id": "myFile", "title": "hello there"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    // post but document already exists (post = error!, put = ok)
+    o.answer = JSON.stringify({"_id": "myFile", "title": "hello there"});
+    o.addFakeServerResponse("GET", "myFile", 200, o.answer);
+    o.spy (o, "status", 409, "Post but document already exists");
+    o.jio.post({"_id": "myFile", "title": "hello again"}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.clock.tick(5000);
+
+    o.jio.stop();
+
+    // do the same tests live webDav-Server
+});
+/*
+    // note: http errno:
+    //     200 OK
+    //     201 Created
+    //     204 No Content
+    //     207 Multi Status
+    //     403 Forbidden
+    //     404 Not Found
+    //     405 Not Allowed
+
+    server.respondWith (
+      // lastmodified = 7000, creationdate = 5000
+      "PROPFIND",
+          /https:\/\/ca-davstorage:8080\/davpost\/myFile(\?.*|$)/,
+      [errnoprop,{'Content-Type':'text/xml; charset="utf-8"'},
+        o.davpost]);
+
+    server.respondWith ("MKCOL","https://ca-davstorage:8080/dav",
+                          [200,{},'']);
+    server.respondWith ("MKCOL","https://ca-davstorage:8080/dav/davpost",
+                          [200,{},'']);
+    server.respondWith ("MKCOL",
+                        "https://ca-davstorage:8080/dav/davpost/jiotests",
+                          [200,{},'']);
+ */
+/*
 test ('Document load', function () {
     // Test if DavStorage can load documents.
 
@@ -2067,72 +2140,7 @@ test ('Document load', function () {
     o.jio.stop();
 });
 
-test ('Document save', function () {
-    // Test if DavStorage can save documents.
 
-    var o = {};
-    o.davsave = getXML('responsexml/davsave');
-    o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.t = this;
-    o.mytest = function (message,value,errnoput,errnoprop) {
-        var server = o.t.sandbox.useFakeServer();
-        server.respondWith (
-            // lastmodified = 7000, creationdate = 5000
-            "PROPFIND",
-                /https:\/\/ca-davstorage:8080\/davsave\/jiotests\/file(\?.*|$)/,
-            [errnoprop,{'Content-Type':'text/xml; charset="utf-8"'},
-             o.davsave]);
-        server.respondWith (
-            "PUT",
-                /https:\/\/ca-davstorage:8080\/davsave\/jiotests\/file(\?.*|$)/,
-            [errnoput, {'Content-Type':'x-www-form-urlencoded'},
-             'content']);
-        server.respondWith (
-            "GET",
-                /https:\/\/ca-davstorage:8080\/davsave\/jiotests\/file(\?.*|$)/,
-            [errnoprop===207?200:errnoprop,{},'content']);
-        // server.respondWith ("MKCOL","https://ca-davstorage:8080/dav",
-        //                     [200,{},'']);
-        // server.respondWith ("MKCOL","https://ca-davstorage:8080/dav/davsave",
-        //                     [200,{},'']);
-        // server.respondWith ("MKCOL",
-        //                    "https://ca-davstorage:8080/dav/davsave/jiotests",
-        //                     [200,{},'']);
-        o.f = basic_test_function_generator(o,'value',value,message);
-        o.t.spy(o,'f');
-        o.jio.put({_id:'file',content:'content'},o.f);
-        o.clock.tick(1000);
-        server.respond();
-        if (!o.f.calledOnce) {
-            if (o.f.called) {
-                ok(false, 'too much results');
-            } else {
-                ok(false, 'no response');
-            }
-        }
-    };
-    o.jio = JIO.newJio({type:'dav',username:'davsave',
-                        password:'checkpwd',
-                        url:'https://ca-davstorage:8080',
-                        application_name:'jiotests'});
-    // note: http errno:
-    //     200 OK
-    //     201 Created
-    //     204 No Content
-    //     207 Multi Status
-    //     403 Forbidden
-    //     404 Not Found
-    // // the path does not exist, we want to create it, and save the file.
-    // mytest('create path if not exists, and create document',
-    //        true,201,404);
-    // the document does not exist, we want to create it
-    o.mytest('create document',{ok:true,id:'file'},201,404);
-    o.clock.tick(8000);
-    // the document already exists, we want to overwrite it
-    o.mytest('overwrite document',{ok:true,id:'file'},204,207);
-    o.jio.stop();
-});
 
 test ('Get Document List', function () {
     // Test if DavStorage can get a list a document.
@@ -2212,6 +2220,7 @@ test ('Get Document List', function () {
             _last_modified:1335955713000
         }
     }],207);
+
     o.jio.stop();
 });
 
@@ -2252,8 +2261,10 @@ test ('Remove document', function () {
     o.mytest('remove document',{ok:true,id:'file'},204);
     o.mytest('remove an already removed document',404,404);
     o.jio.stop();
-});
 
+});
+*/
+/*
 module ('Jio ReplicateStorage');
 
 test ('Document load', function () {
