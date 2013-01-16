@@ -1198,6 +1198,7 @@ test ("Post", function(){
 
     // check document
     o.doc["_id"] = "post1."+o.rev;
+    delete o.doc._rev;
     deepEqual(
         localstorage.getItem(o.localpath + "/post1." + o.rev),
         o.doc,
@@ -1289,6 +1290,7 @@ test ("Put", function(){
 
     // check document
     o.doc._id = "put1." + o.rev;
+    delete o.doc._rev;
     deepEqual(
         localstorage.getItem(o.localpath + "/put1." + o.rev),
         o.doc,

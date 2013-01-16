@@ -474,6 +474,7 @@ jIO.addStorageType('revision', function (spec, my) {
     f.postDocument = function (doctree_update_method) {
       revs_info = priv.postToDocumentTree(doctree, doc);
       doc._id = docid + "." + revs_info[0].rev;
+      delete doc._rev;
       that.addJob(
         "post",
         priv.substorage,
