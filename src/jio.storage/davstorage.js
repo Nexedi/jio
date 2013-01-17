@@ -88,22 +88,31 @@ jIO.addStorageType('dav', function (spec, my) {
     return $.support.cors;
   };
 
-  // wedDav methods rfc4918
-  // PROPFIND
-  // PROPPATCH
-  // MCKOL
-  // GET 
-  //    > resource = return content of element  xyz.abc
-  //    > collection > allDocs
-  //    > attachment = return content of element  xyz_.abc/att.def
-  // HEAD
-  // POST
-  // DELETE
-  // PUT
-  // COPY
-  // MOVE
-  // LOCK
-  // UNLOCK
+  // wedDav methods rfc4918 (short summary)
+  // COPY     Reproduces single resources (files) and collections (directory
+  //          trees). Will overwrite files (if specified by request) but will
+  //          respond 209 (Conflict) if it would overwrite a tree
+  // DELETE   deletes files and directory trees
+  // GET      just the vanilla HTTP/1.1 behaviour
+  // HEAD     ditto
+  // LOCK     locks a resources
+  // MKCOL    creates a directory
+  // MOVE     Moves (rename or copy) a file or a directory tree. Will
+  //          'overwrite' files (if specified by the request) but will respond
+  //          209 (Conflict) if it would overwrite a tree.
+  // OPTIONS  If WebDAV is enabled and available for the path this reports the
+  //          WebDAV extension methods
+  // PROPFIND Retrieves the requested file characteristics, DAV lock status
+  //          and 'dead' properties for individual files, a directory and its
+  //          child files, or a directory tree
+  // PROPPATCHset and remove 'dead' meta-data properties
+  // PUT      Update or create resource or collections
+  // UNLOCK   unlocks a resource
+
+  // Notes: all Ajax requests should be CORS (cross-domain)
+  // adding custom headers triggers preflight OPTIONS request!
+  // http://remysharp.com/2011/04/21/getting-cors-working/
+
 
   priv.putOrPost = function (command, type) {
     var doc = command.getDocId(),
@@ -241,17 +250,154 @@ jIO.addStorageType('dav', function (spec, my) {
     });
   };
 
+  /**
+   * Creates a new document
+   * @method  post
+   * @param  {object} command The JIO command
+   */
   that.post = function (command) {
     priv.putOrPost(command, 'POST');
   };
 
   /**
-   * Saves a document in the distant dav storage.
-   * @method put
+   * Creates or updates a document
+   * @method  put
+   * @param  {object} command The JIO command
    */
   that.put = function (command) {
     priv.putOrPost(command, 'PUT');
-  }; // end put
+  };
+
+  /**
+   * Add an attachment to a document
+   * @method  putAttachment
+   * @param  {object} command The JIO command
+   */
+  that.putAttachment = function (command) {
+    var docid = command.getDocId(), doc,
+        secured_docid, secured_attachmentid, attachment_url;
+
+    // no docId
+    if (!(typeof docid === "string" && docid !== "")) {
+        that.error({
+          "status": 405,
+          "statusText": "Method Not Allowed",
+          "error": "method_not_allowed",
+          "message": "Cannot create document which id is undefined",
+          "reason": "Document id is undefined"
+        });
+        return;
+    }
+
+    // no cross domain ajax
+    if (priv.checkCors === false) {
+      that.error({
+          "status": 405,
+          "statusText": "Method Not Allowed",
+          "error": "method_not_allowed",
+          "message": "Browser does not support cross domain ajax requests",
+          "reason": "cors is undefined"
+        });
+      return;
+    }
+    secured_docid = priv.secureDocId(docid);
+    url = priv.url + '/' + secured_docid;
+
+    // see if the underlying document exists ||
+    $.ajax({
+      url: url + '?_=' + Date.now(),
+      type: 'GET',
+      async: true,
+      dataType: 'text',
+      crossdomain : true,
+      headers : {
+         Authorization: 'Basic ' + Base64.encode(
+          priv.username + ':' + priv.password
+           )
+         },
+      success: function (response) {
+        doc = JSON.parse(response);
+
+        // the document exists - update document
+        doc._attachments = doc._attachments || {};
+        doc._attachments[command.getAttachmentId()] = {
+          "content_type": command.getAttachmentMimeType(),
+          "digest": "md5-" + command.md5SumAttachmentData(),
+          "length": command.getAttachmentLength()
+        };
+
+        // put updated document data
+        $.ajax({
+          url: url + '?_=' + Date.now(),
+          type: 'PUT',
+          data: doc,
+          async: true,
+          crossdomain: true,
+          headers : {
+            Authorization: 'Basic ' + Base64.encode(
+              priv.username + ':' + priv.password
+              )
+            },
+          // xhrFields: {withCredentials: 'true'},
+          success: function () {
+            secured_attachmentid = priv.secureDocId(command.getAttachmentId());
+            attachment_url = url + '/' + secured_attachmentid;
+
+            $.ajax({
+              url: attachment_url + '?_=' + Date.now(),
+              type: 'PUT',
+              data: command.getDoc(),
+              async: true,
+              crossdomain: true,
+              headers : {
+                Authorization: 'Basic ' + Base64.encode(
+                  priv.username + ':' + priv.password
+                  )
+                },
+              // xhrFields: {withCredentials: 'true'},
+              success: function (response) {
+                that.success({
+                  ok: true,
+                  id: command.getDocId()+'/'+command.getAttachmentId()
+                });
+              },
+              error: function (type) {
+                that.error({
+                  "status": 409,
+                  "statusText": "Conflicts",
+                  "error": "conflicts",
+                  "message": "Cannot modify document",
+                  "reason": "Error trying to save attachment to remote storage"
+                });
+                return;
+              }
+            });
+          },
+          error: function (type) {
+            that.error({
+              "status": 409,
+              "statusText": "Conflicts",
+              "error": "conflicts",
+              "message": "Cannot modify document",
+              "reason": "Error trying to write to remote storage"
+            });
+            return;
+          }
+        });
+      },
+      error: function () {
+        //  the document does not exist
+        that.error({
+          "status": 404,
+          "statusText": "Not Found",
+          "error": "not_found",
+          "message": "Impossible to add attachment",
+          "reason": "Document not found"
+        });
+        return;
+      }
+    });
+  };
 
   /**
    * Loads a document from a distant dav storage.

@@ -239,6 +239,7 @@ generateTools = function (sinon) {
     o.addFakeServerResponse = function (method, path, status, response) {
       var url = new RegExp('https:\\/\\/ca-davstorage:8080\\/' + path +
                       '(\\?.*|$)');
+     // console.log("adding response for: "+method+" "+url );
       o.server.respondWith(method, url,
         [status, { "Content-Type": 'application/xml' }, response]
       );
@@ -2049,14 +2050,15 @@ test ("Post", function () {
     o.addFakeServerResponse("GET", "myFile", 200, o.answer);
     o.spy (o, "status", 409, "Post but document already exists");
     o.jio.post({"_id": "myFile", "title": "hello again"}, o.f);
-    o.clock.tick(1000);
-    o.server.respond();
     o.clock.tick(5000);
+    o.server.respond();
 
+    // as all custom headers trigger preflight requests, the test also
+    // need to simulate CORS (cross domain ajax with preflight)
+    // custom header may be authentication for example
     o.jio.stop();
 
-    // do the same tests live webDav-Server
-    // check for credentials in sinon
+    // do the same tests live webDav-Server simulating CORS!
     /* also check for equality
 
     deepEqual(
@@ -2093,6 +2095,9 @@ test ("Put", function(){
     o.jio.put({"_id": "put1", "title": "myPut1"}, o.f);
     o.clock.tick(5000);
     o.server.respond();
+    //console.log( o.server );
+    //console.log( o.server.requests[0].requestHeaders );
+    //console.log( o.server.requests[0].responseHeaders );
 
     // put but document already exists = update
     o.answer = JSON.stringify({"_id": "put1", "title": "myPut1"});
@@ -2105,10 +2110,73 @@ test ("Put", function(){
 
     o.jio.stop();
 
-    // do the same tests live webDav-Server
+    // do the same tests live webDav-Server/simulate CORS
     // check for credentials in sinon
 
 });
+
+test ("PutAttachment", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "dav",
+        "username": "davput",
+        "password": "checkpwd",
+        "url": "https://ca-davstorage:8080"
+    });
+
+    // putAttachment without doc id => id required
+    o.spy(o, "status", 20, "PutAttachment without doc id");
+    o.jio.putAttachment({}, o.f);
+    o.clock.tick(5000);
+
+    // putAttachment without attachment id => attachment id required
+    o.spy(o, "status", 22, "PutAttachment without attachment id");
+    o.jio.putAttachment({"id": "putattmt1"}, o.f);
+    o.clock.tick(5000);
+
+    // putAttachment without underlying document => not found
+    o.addFakeServerResponse("GET", "putattmtx", 404, "HTML RESPONSE");
+    o.spy(o, "status", 404, "PutAttachment without document");
+    o.jio.putAttachment({"id": "putattmtx/putattmt2"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    // putAttachment with document without data
+    o.answer = JSON.stringify({"_id": "putattmt1", "title": "myPutAttm1"});
+    o.addFakeServerResponse("GET", "putattmt1", 200, o.answer);
+    o.addFakeServerResponse("PUT", "putattmt1", 201, "HTML RESPONSE");
+    o.addFakeServerResponse("PUT", "putattmt1/putattmt2", 201,"HTML RESPONSE");
+    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
+          "PutAttachment with document, without data");
+    o.jio.putAttachment({"id": "putattmt1/putattmt2"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    // check document
+    // check attachment
+
+    // update attachment
+    o.answer = JSON.stringify({"_id": "putattmt1", "title": "myPutAttm1"});
+    o.addFakeServerResponse("GET", "putattmt1", 200, o.answer);
+    o.addFakeServerResponse("PUT", "putattmt1", 201, "HTML RESPONSE");
+    o.addFakeServerResponse("PUT", "putattmt1/putattmt2", 201,"HTML RESPONSE");
+    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
+          "Update Attachment, with data");
+    o.jio.putAttachment({"id": "putattmt1/putattmt2", "data": "abc"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    // check document
+    // check attachment
+
+    o.jio.stop();
+
+    // do the same tests live webDav-Server/simulate CORS
+    // check for credentials in sinon
+});
+
 /*
     // note: http errno:
     //     200 OK
