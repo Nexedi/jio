@@ -2121,7 +2121,7 @@ test ("PutAttachment", function(){
 
     o.jio = JIO.newJio({
         "type": "dav",
-        "username": "davput",
+        "username": "davputattm",
         "password": "checkpwd",
         "url": "https://ca-davstorage:8080"
     });
@@ -2177,6 +2177,62 @@ test ("PutAttachment", function(){
     // check for credentials in sinon
 });
 
+test ("Get", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "dav",
+        "username": "davget",
+        "password": "checkpwd",
+        "url": "https://ca-davstorage:8080"
+    });
+
+    // get inexistent document
+    o.addFakeServerResponse("GET", "get1", 404, "HTML RESPONSE");
+    o.spy(o, "status", 404, "Get non existing document");
+    o.jio.get("get1", o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    // get inexistent attachment
+    o.addFakeServerResponse("GET", "get1/get2", 404, "HTML RESPONSE");
+    o.spy(o, "status", 404, "Get non existing attachment");
+    o.jio.get("get1/get2", o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    // get document
+    o.answer = JSON.stringify({"_id": "get3", "title": "some title"});
+    o.addFakeServerResponse("GET", "get3", 200, o.answer);
+    o.spy(o, "value", {"_id": "get3", "title": "some title"}, "Get document");
+    o.jio.get("get3", o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    // get inexistent attachment (document exists)
+    o.addFakeServerResponse("GET", "get3/getx", 404, "HTML RESPONSE");
+    o.spy(o, "status", 404, "Get non existing attachment (doc exists)");
+    o.jio.get("get3/getx", o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    // get attachment
+    o.answer = JSON.stringify({"_id": "get4", "title": "some attachment"});
+    o.addFakeServerResponse("GET", "get3/get4", 200, o.answer);
+    o.spy(o, "value", {"_id": "get4", "title": "some attachment"},
+      "Get attachment");
+    o.jio.get("get3/get4", o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    o.jio.stop();
+
+    // do the same tests live webDav-Server/simulate CORS
+    // check for credentials in sinon
+});
+
+
 /*
     // note: http errno:
     //     200 OK
@@ -2203,64 +2259,6 @@ test ("PutAttachment", function(){
                           [200,{},'']);
  */
 /*
-test ('Document load', function () {
-    // Test if DavStorage can load documents.
-
-    var o = {};
-    o.davload = getXML('responsexml/davload'),
-    o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.t = this;
-    o.mytest = function (message,doc,errprop,errget) {
-        var server = o.t.sandbox.useFakeServer();
-        server.respondWith (
-            "PROPFIND",
-                /https:\/\/ca-davstorage:8080\/davload\/jiotests\/file(\?.*|$)/,
-            [errprop,{'Content-Type':'text/xml; charset="utf-8"'},
-             o.davload]);
-        server.respondWith (
-            "GET",
-                /https:\/\/ca-davstorage:8080\/davload\/jiotests\/file(\?.*|$)/,
-            [errget,{},'content']);
-        o.f = function (err,val) {
-            if (err) {
-                err = err.status;
-            }
-            deepEqual (err || val,doc,message);
-        };
-        o.t.spy(o,'f');
-        o.jio.get('file',{max_retry:1},o.f);
-        o.clock.tick(1000);
-        server.respond();
-        if (!o.f.calledOnce) {
-            if (o.f.called) {
-                ok(false, 'too much results');
-            } else {
-                ok(false, 'no response');
-            }
-        }
-    };
-    o.jio = JIO.newJio({type:'dav',username:'davload',
-                        password:'checkpwd',
-                        url:'https://ca-davstorage:8080',
-                        application_name:'jiotests'});
-    // note: http errno:
-    //     200 OK
-    //     201 Created
-    //     204 No Content
-    //     207 Multi Status
-    //     403 Forbidden
-    //     404 Not Found
-    // load an inexistant document.
-    o.mytest ('load inexistant document',404,404,404);
-    // load a document.
-    o.mytest ('load document',{_id:'file',content:'content',
-                               _last_modified:1335953199000,
-                               _creation_date:1335953202000},207,200);
-    o.jio.stop();
-});
-
-
 
 test ('Get Document List', function () {
     // Test if DavStorage can get a list a document.

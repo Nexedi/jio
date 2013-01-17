@@ -400,15 +400,16 @@ jIO.addStorageType('dav', function (spec, my) {
   };
 
   /**
-   * Loads a document from a distant dav storage.
-   * @method get
+   * Get a document or attachment from distant storage
+   * @method  get
+   * @param  {object} command The JIO command
    */
   that.get = function (command) {
-    var doc = command.getDocId(),
+    var docid = command.getDocId(), doc,
         secured_docid;
 
     // no docId
-    if (!(typeof doc === "string" && doc !== "")) {
+    if (!(typeof docid === "string" && docid !== "")) {
         that.error({
           "status": 405,
           "statusText": "Method Not Allowed",
@@ -432,22 +433,24 @@ jIO.addStorageType('dav', function (spec, my) {
     secured_docid = priv.secureDocId(command.getDocId());
     url = priv.url + '/' + secured_docid;
 
-    // get attachment
     if (typeof command.getAttachmentId() === "string") {
+      secured_attachmentid = priv.secureDocId(command.getAttachmentId());
+      attachment_url = url + '/' + secured_attachmentid;
+      // get attachment
       $.ajax({
-        url: url + '?_=' + Date.now(),
-        type: type,
-        data: command.getDoc(),
+        url: attachment_url + '?_=' + Date.now(),
+        type: 'GET',
         async: true,
-        crossdomain: true,
+        dataType: 'text',
+        crossdomain : true,
         headers : {
           Authorization: 'Basic ' + Base64.encode(
             priv.username + ':' + priv.password
             )
           },
-        // xhrFields: {withCredentials: 'true'}, 
         success: function (response) {
-          that.success(response)
+          doc = JSON.parse(response);
+          that.success(doc);
         },
         error: function (type) {
           that.error({
@@ -463,18 +466,21 @@ jIO.addStorageType('dav', function (spec, my) {
       // get document
       $.ajax({
         url: url + '?_=' + Date.now(),
-        type: type,
-        data: command.getDoc(),
+        type: 'GET',
         async: true,
-        crossdomain: true,
+        dataType: 'text',
+        crossdomain : true,
         headers : {
           Authorization: 'Basic ' + Base64.encode(
             priv.username + ':' + priv.password
             )
           },
-        // xhrFields: {withCredentials: 'true'}, 
         success: function (response) {
-          that.success(response)
+          // metadata_only should not be handled by jIO, as it is a
+          // webDav only option, shouldn't it?
+          // ditto for content_only
+          doc = JSON.parse(response);
+          that.success(doc);
         },
         error: function (type) {
           that.error({
@@ -489,91 +495,6 @@ jIO.addStorageType('dav', function (spec, my) {
     }
   };
 
-  that.get = function (command) {
-    var secured_docid = priv.secureDocId(command.getDocId()),
-      doc = {},
-      getContent = function () {
-        $.ajax({
-          url: priv.url + '/' + priv.secured_username + '/' +
-            priv.secured_application_name + '/' + secured_docid + '?_=' +
-            Date.now(),
-          type: "GET",
-          async: true,
-          dataType: 'text', // TODO is it necessary ?
-          headers: {
-            'Authorization': 'Basic ' + Base64.encode(priv.username + ':' +
-              priv.password)
-          },
-          // xhrFields: {withCredentials: 'true'}, // cross domain
-          success: function (content) {
-            doc.content = content;
-            that.success(doc);
-          },
-          error: function (type) {
-            type.error = type.statusText; // TODO : to lower case
-            if (type.status === 404) {
-              type.message = 'Document "' + command.getDocId() +
-                '" not found.';
-              type.reason = 'missing';
-              that.error(type);
-            } else {
-              type.reason =
-                'An error occured when trying to get "' +
-                  command.getDocId() + '"';
-              type.message = type.reason + '.';
-              that.retry(type);
-            }
-          }
-        });
-      };
-    doc._id = command.getDocId();
-    // NOTE : if (command.getOption('content_only') { return getContent(); }
-    // Get properties
-    $.ajax({
-      url: priv.url + '/' + priv.secured_username + '/' +
-        priv.secured_application_name + '/' +
-        secured_docid + '?_=' + Date.now(),
-      type: "PROPFIND",
-      async: true,
-      dataType: 'xml',
-      headers: {
-        'Authorization': 'Basic ' + Base64.encode(priv.username + ':' +
-          priv.password)
-      },
-      success: function (xmlData) {
-        $(xmlData).find('lp1\\:getlastmodified, getlastmodified').each(
-          function () {
-            doc._last_modified = new Date($(this).text()).getTime();
-          }
-        );
-        $(xmlData).find('lp1\\:creationdate, creationdate').each(
-          function () {
-            doc._creation_date = new Date($(this).text()).getTime();
-          }
-        );
-        if (!command.getOption('metadata_only')) {
-          getContent();
-        } else {
-          that.success(doc);
-        }
-      },
-      error: function (type) {
-        if (type.status === 404) {
-          type.message = 'Cannot find "' + command.getDocId() +
-            '" informations.';
-          type.reason = 'missing';
-          that.error(type);
-        } else {
-          type.reason = 'Cannot get "' + command.getDocId() +
-            '" informations';
-          type.message = type.reason + '.';
-          that.retry(type);
-        }
-      }
-    });
-  };
-
-  
   /**
    * Gets a document list from a distant dav storage.
    * @method allDocs
