@@ -61,18 +61,6 @@ jIO.addStorageType('dav', function (spec, my) {
     return o;
   };
 
-  /**
-   * If some other parameters is needed, it returns an error message.
-   * @method validateState
-   * @return {string} '' -> ok, 'message' -> error
-   */
-  that.validateState = function () {
-    if (priv.secured_username && priv.url) {
-      return '';
-    }
-    return 'Need at least 2 parameters: "username" and "url".';
-  };
-
   priv.newAsyncModule = function () {
     var async = {};
     async.call = function (obj, function_name, arglist) {
@@ -765,59 +753,74 @@ jIO.addStorageType('dav', function (spec, my) {
   };
 
   /**
-   * Gets a document list from a distant dav storage.
+   * Gets a document list from a distant dav storage
    * @method allDocs
+   * @param  {object} command The JIO command
    */
+  //{
+  // "total_rows": 4,
+  // "rows": [
+  //    {
+  //    "id": "otherdoc",
+  //    "key": "otherdoc",
+  //    "value": {
+  //      "rev": "1-3753476B70A49EA4D8C9039E7B04254C"
+  //    }
+  //  },{...}
+  // ]
+  //}
+
   that.allDocs = function (command) {
-    var rows = [],
+    var rows = [], url,
       am = priv.newAsyncModule(),
       o = {};
 
     o.getContent = function (file) {
       $.ajax({
-        url: priv.url + '/' + priv.secured_username + '/' +
-          priv.secured_application_name + '/' + priv.secureDocId(file.id) +
-          '?_=' + Date.now(),
-        type: "GET",
+        url: priv.url + '/' + priv.secureDocId(file.id) + '?_=' + Date.now(),
+        type: 'GET',
         async: true,
-        dataType: 'text', // TODO : is it necessary ?
+        dataType: 'text',
         headers: {
-          'Authorization': 'Basic ' + Base64.encode(priv.username + ':' +
-            priv.password)
+          'Authorization': 'Basic ' + Base64.encode(
+            priv.username + ':' + priv.password)
         },
         success: function (content) {
           file.value.content = content;
-          // WARNING : files can be disordered because
-          // of asynchronous action
           rows.push(file);
           am.call(o, 'success');
         },
         error: function (type) {
-          type.error = type.statusText; // TODO : to lower case
-          type.reason = 'Cannot get a document ' +
-            'content from DAVStorage';
-          type.message = type.message + '.';
+          that.error({
+            "status": 404,
+            "statusText": "Not Found",
+            "error": "not_found",
+            "message": "Cannot find the document",
+            "reason": "Cannot get a document from DAVStorage"
+          });
           am.call(o, 'error', [type]);
         }
       });
     };
+
     o.getDocumentList = function () {
+      url = priv.url + '/';
       $.ajax({
-        url: priv.url + '/' + priv.secured_username + '/' +
-          priv.secured_application_name + '/' + '?_=' + Date.now(),
-        async: true,
+        url: url + '?_=' + Date.now(),
         type: 'PROPFIND',
+        async: true,
         dataType: 'xml',
-        headers: {
-          'Authorization': 'Basic ' + Base64.encode(
+        crossdomain : true,
+        headers : {
+          Authorization: 'Basic ' + Base64.encode(
             priv.username + ':' + priv.password
-          ),
+            ),
           Depth: '1'
-        },
-        // xhrFields: {withCredentials: 'true'}, // cross domain
+          },
         success: function (xmlData) {
           var response = $(xmlData).find('D\\:response, response'),
             len = response.length;
+
           if (len === 1) {
             return am.call(o, 'success');
           }
@@ -833,24 +836,10 @@ jIO.addStorageType('dav', function (spec, my) {
                 file.id = priv.restoreSlashes(file.id);
                 file.key = file.id;
               });
-              if (file.id === '.htaccess' || file.id === '.htpasswd') {
-                return;
-              }
-              $(data).find('lp1\\:getlastmodified, getlastmodified').each(
-                function () {
-                  file.value._last_modified = new Date(
-                    $(this).text()
-                  ).getTime();
-                }
-              );
-              $(data).find('lp1\\:creationdate, creationdate').each(
-                function () {
-                  file.value._creation_date = new Date(
-                    $(this).text()
-                  ).getTime();
-                }
-              );
-              if (!command.getOption('metadata_only')) {
+              // this should probably also filter for the "." in case
+              // there is a title.revision. Then we could fill value in
+              // allDocs, too!
+              if (command.getOption('include_content')) {
                 am.call(o, 'getContent', [file]);
               } else {
                 rows.push(file);
@@ -860,17 +849,14 @@ jIO.addStorageType('dav', function (spec, my) {
           });
         },
         error: function (type) {
-          if (type.status === 404) {
-            type.error = 'not_found';
-            type.reason = 'missing';
-            am.call(o, 'error', [type]);
-          } else {
-            type.error = type.statusText; // TODO : to lower case
-            type.reason =
-              'Cannot get a document list from DAVStorage';
-            type.message = type.reason + '.';
-            am.call(o, 'retry', [type]);
-          }
+          that.error({
+            "status": 404,
+            "statusText": "Not Found",
+            "error": "not_found",
+            "message": "Cannot find the document",
+            "reason": "Cannot get a document list from DAVStorage"
+          });
+          am.call(o, 'retry', [type]);
         }
       });
     };
@@ -895,8 +881,9 @@ jIO.addStorageType('dav', function (spec, my) {
         rows: rows
       });
     };
+    // first get the XML list
     am.call(o, 'getDocumentList');
-  }; // end allDocs
+  };
 
   return that;
 });

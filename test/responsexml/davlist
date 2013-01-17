@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <D:multistatus xmlns:D="DAV:">
   <D:response xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/">
-    <D:href>/davgetlist/jiotests/</D:href>
+    <D:href>/some/path/</D:href>
     <D:propstat>
       <D:prop>
         <lp1:resourcetype><D:collection/></lp1:resourcetype>
@@ -25,7 +25,7 @@
     </D:propstat>
   </D:response>
   <D:response xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/">
-    <D:href>/davgetlist/jiotests/file</D:href>
+    <D:href>/some/path/alldocs1</D:href>
     <D:propstat>
       <D:prop>
         <lp1:resourcetype/>
@@ -50,7 +50,7 @@
     </D:propstat>
   </D:response>
   <D:response xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/">
-    <D:href>/davgetlist/jiotests/memo</D:href>
+    <D:href>/some/path/alldocs2</D:href>
     <D:propstat>
       <D:prop>
         <lp1:resourcetype/>

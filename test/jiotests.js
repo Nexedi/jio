@@ -142,16 +142,8 @@ basicTickFunction = function (obj) {
     }
 },
 getXML = function (url) {
-    var tmp = '';
-    $.ajax({
-      url: url,
-      async: false,
-      dataType: 'text',
-      success: function (xml) {
-        tmp=xml;
-      }
-    });
-    return tmp;
+  var xml = $.ajax({url:url, async:false});
+  return xml.responseText;
 },
 objectifyDocumentArray = function (array) {
     var obj = {}, k;
@@ -165,6 +157,10 @@ getLastJob = function (id) {
 },
 generateTools = function (sinon) {
     var o = {};
+
+    // need to make server requests before activating fakeServer
+    o.davlist = getXML('responsexml/davlist');
+
     o.t = sinon;
     o.server = o.t.sandbox.useFakeServer();
     o.clock = o.t.sandbox.useFakeTimers();
@@ -239,7 +235,6 @@ generateTools = function (sinon) {
     o.addFakeServerResponse = function (method, path, status, response) {
       var url = new RegExp('https:\\/\\/ca-davstorage:8080\\/' + path +
                       '(\\?.*|$)');
-     // console.log("adding response for: "+method+" "+url );
       o.server.respondWith(method, url,
         [status, { "Content-Type": 'application/xml' }, response]
       );
@@ -258,7 +253,6 @@ isUuid = function (uuid) {
     return uuid.match("^"+x+x+"-"+x+"-"+x+"-"+x+"-"+x+x+x+"$") === null?
         false: true;
 };
-
 //// QUnit Tests ////
 module ('Jio Global tests');
 
@@ -2322,91 +2316,47 @@ test ("Remove", function(){
     // check for credentials in sinon
 });
 
+test ("AllDocs", function () {
 
-/*
+  var o = generateTools(this);
 
-test ('Get Document List', function () {
-    // Test if DavStorage can get a list a document.
+    o.jio = JIO.newJio({
+        "type": "dav",
+        "username": "davall",
+        "password": "checkpwd",
+        "url": "https://ca-davstorage:8080"
+    });
 
-    var o = {};
-    o.davlist = getXML('responsexml/davlist');
-    o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.t = this;
-    o.mytest = function (message,metadata_only,value,errnoprop) {
-        var server = o.t.sandbox.useFakeServer();
-        server.respondWith (
-            "PROPFIND",
-                /https:\/\/ca-davstorage:8080\/davlist\/jiotests\/(\?.*|$)/,
-            [errnoprop,{'Content-Type':'text/xml; charset="utf-8"'},
-             o.davlist]);
-        server.respondWith (
-            "GET",
-                /https:\/\/ca-davstorage:8080\/davlist\/jiotests\/file(\?.*|$)/,
-            [200,{},'content']);
-        server.respondWith (
-            "GET",
-                /https:\/\/ca-davstorage:8080\/davlist\/jiotests\/memo(\?.*|$)/,
-            [200,{},'content2']);
-        o.f = function (err,val) {
-            if (err) {
-                result = undefined;
-            } else {
-                deepEqual (objectifyDocumentArray(val.rows),
-                           objectifyDocumentArray(value),message);
-                return;
-            }
-            deepEqual (result, value, message);
-        };
-        o.t.spy(o,'f');
-        o.jio.allDocs({metadata_only:metadata_only},o.f);
-        o.clock.tick(1000);
-        server.respond();
-        if (!o.f.calledOnce) {
-            if (o.f.called) {
-                ok(false, 'too much results');
-            } else {
-                ok(false, 'no response');
-            }
-        }
-    };
-    o.jio = JIO.newJio({type:'dav',username:'davlist',
-                        password:'checkpwd',
-                        url:'https://ca-davstorage:8080',
-                        application_name:'jiotests'});
-    o.mytest('fail to get list',true,undefined,404);
-    o.mytest('getting list',true,[{
-        id:'file',key:'file',
-        value:{
-            _creation_date:1335962911000,
-            _last_modified:1335962907000
-        }
-    },{
-        id:'memo',key:'memo',
-        value:{
-            _creation_date:1335894073000,
-            _last_modified:1335955713000
-        }
-    }],207);
-    o.mytest('getting list',false,[{
-        id:'file',key:'file',
-        value:{
-            content:'content',
-            _creation_date:1335962911000,
-            _last_modified:1335962907000
-        }
-    },{
-        id:'memo',key:'memo',
-        value:{
-            content:'content2',
-            _creation_date:1335894073000,
-            _last_modified:1335955713000
-        }
-    }],207);
+  // get allDocs, no content
+  o.addFakeServerResponse("PROPFIND", "", 200, o.davlist);
+  o.thisShouldBeTheAnswer = {
+      "rows": [
+        {"id": "alldocs1", "key": "alldocs1", "value": {}},
+        {"id": "alldocs2", "key": "alldocs2", "value": {}}
+      ],
+      "total_rows": 2
+  }
+  o.spy(o, "value", o.thisShouldBeTheAnswer, "allDocs (no content)");
+  o.jio.allDocs(o.f);
+  o.clock.tick(5000);
+  o.server.respond();
 
-    o.jio.stop();
+  // allDocs with option include
+  o.all1 = JSON.stringify({"_id": "allDocs1", "title": "a doc title"});
+  o.all2 = JSON.stringify({"_id": "allDocs2", "title": "another doc title"});
+  o.addFakeServerResponse("GET", "alldocs1", 200, o.all1);
+  o.addFakeServerResponse("GET", "alldocs2", 200, o.all2);
+  o.spy(o, "value", o.thisShouldBeTheAnswer, "allDocs (include_docs)");
+  o.jio.allDocs({"include_docs":true}, o.f);
+  o.clock.tick(5000);
+  o.server.respond();
+
+  // do the same tests live webDav-Server/simulate CORS
+  // check for credentials in sinon
+
+  o.jio.stop();
 });
-*/
+
 /*
 module ('Jio ReplicateStorage');
 
