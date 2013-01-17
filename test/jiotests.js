@@ -2232,32 +2232,97 @@ test ("Get", function(){
     // check for credentials in sinon
 });
 
+test ("Remove", function(){
 
-/*
-    // note: http errno:
-    //     200 OK
-    //     201 Created
-    //     204 No Content
-    //     207 Multi Status
-    //     403 Forbidden
-    //     404 Not Found
-    //     405 Not Allowed
+    var o = generateTools(this);
 
-    server.respondWith (
-      // lastmodified = 7000, creationdate = 5000
-      "PROPFIND",
-          /https:\/\/ca-davstorage:8080\/davpost\/myFile(\?.*|$)/,
-      [errnoprop,{'Content-Type':'text/xml; charset="utf-8"'},
-        o.davpost]);
+    o.jio = JIO.newJio({
+        "type": "dav",
+        "username": "davremove",
+        "password": "checkpwd",
+        "url": "https://ca-davstorage:8080"
+    });
 
-    server.respondWith ("MKCOL","https://ca-davstorage:8080/dav",
-                          [200,{},'']);
-    server.respondWith ("MKCOL","https://ca-davstorage:8080/dav/davpost",
-                          [200,{},'']);
-    server.respondWith ("MKCOL",
-                        "https://ca-davstorage:8080/dav/davpost/jiotests",
-                          [200,{},'']);
- */
+    // remove inexistent document
+    o.addFakeServerResponse("GET", "remove1", 404, "HTML RESPONSE");
+    o.spy(o, "status", 404, "Remove non existening document");
+    o.jio.remove({"_id": "remove1"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    // remove inexistent document/attachment
+    o.addFakeServerResponse("GET", "remove1/remove2", 404, "HTML RESPONSE");
+    o.spy(o, "status", 404, "Remove inexistent document/attachment");
+    o.jio.remove({"_id": "remove1/remove2"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    // remove document
+    o.answer = JSON.stringify({"_id": "remove3", "title": "some doc"});
+    o.addFakeServerResponse("GET", "remove3", 200, o.answer);
+    o.addFakeServerResponse("REMOVE", "remove3", 200, "HTML RESPONSE");
+    o.spy(o, "value", {"ok": true, "id": "remove3"}, "Remove document");
+    o.jio.remove({"_id": "remove3"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    o.answer = JSON.stringify({
+      "_id": "remove4",
+      "title": "some doc",
+      "_attachments": {
+            "remove5": {
+                "length": 4,
+                "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
+            }
+      }
+    });
+    // remove attachment
+    o.addFakeServerResponse("GET", "remove4", 200, o.answer);
+    o.addFakeServerResponse("PUT", "remove4", 201, "HTML RESPONSE");
+    o.addFakeServerResponse("REMOVE", "remove4/remove5", 200, "HTML RESPONSE");
+    o.spy(o, "value", {"ok": true, "id": "remove4/remove5"},
+          "Remove attachment");
+    o.jio.remove({"_id": "remove4/remove5"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    o.answer = JSON.stringify({
+      "_id": "remove6",
+      "title": "some other doc",
+      "_attachments": {
+            "remove7": {
+                "length": 4,
+                "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
+            },
+            "remove8": {
+                "length": 4,
+                "digest": "md5-e41d8cd98f00b204e9800998ecf8427e"
+            },
+            "remove9": {
+                "length": 4,
+                "digest": "md5-f41d8cd98f00b204e9800998ecf8427e"
+            }
+      }
+    });
+    // remove document with multiple attachments
+    o.addFakeServerResponse("GET", "remove6", 200, o.answer);
+    o.addFakeServerResponse("REMOVE", "remove6/remove7", 200, "HTML RESPONSE");
+    o.addFakeServerResponse("REMOVE", "remove6/remove8", 200, "HTML RESPONSE");
+    o.addFakeServerResponse("REMOVE", "remove6/remove9", 200, "HTML RESPONSE");
+    o.addFakeServerResponse("REMOVE", "remove6", 200, "HTML RESPONSE");
+    o.spy(o, "value", {"ok": true, "id": "remove6"},
+          "Remove document with multiple attachments");
+    o.jio.remove({"_id": "remove6"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+
+    o.jio.stop();
+
+    // do the same tests live webDav-Server/simulate CORS
+    // check for credentials in sinon
+});
+
+
 /*
 
 test ('Get Document List', function () {
@@ -2340,46 +2405,6 @@ test ('Get Document List', function () {
     }],207);
 
     o.jio.stop();
-});
-
-test ('Remove document', function () {
-    // Test if DavStorage can remove documents.
-
-    var o = {}; o.clock = this.sandbox.useFakeTimers(); o.t = this;
-    o.clock.tick(base_tick);
-    o.mytest = function (message,value,errnodel) {
-        var server = o.t.sandbox.useFakeServer();
-        server.respondWith (
-            "DELETE",
-                /https:\/\/ca-davstorage:8080\/davremove\/jiotests\/file(\?.*|$)/,
-            [errnodel,{},'']);
-        o.f = function (err,val) {
-            if (err) {
-                err = err.status;
-            }
-            deepEqual (err || val,value,message);
-        };
-        o.t.spy(o,'f');
-        o.jio.remove({_id:'file'},o.f);
-        o.clock.tick(1000);
-        server.respond();
-        if (!o.f.calledOnce) {
-            if (o.f.called) {
-                ok(false, 'too much results');
-            } else {
-                ok(false, 'no response');
-            }
-        }
-    };
-    o.jio = JIO.newJio({type:'dav',username:'davremove',
-                        password:'checkpwd',
-                        url:'https://ca-davstorage:8080',
-                        application_name:'jiotests'});
-
-    o.mytest('remove document',{ok:true,id:'file'},204);
-    o.mytest('remove an already removed document',404,404);
-    o.jio.stop();
-
 });
 */
 /*

@@ -31,6 +31,21 @@ jIO.addStorageType('dav', function (spec, my) {
     return string.split('%2F').join('/');
   };
 
+  /**
+   * Checks if an object has no enumerable keys
+   * @method objectIsEmpty
+   * @param  {object} obj The object
+   * @return {boolean} true if empty, else false
+   */
+  priv.objectIsEmpty = function (obj) {
+    var k;
+    for (k in obj) {
+      if (obj.hasOwnProperty(k)) {
+        return false;
+      }
+    }
+    return true;
+  };
 
   // ==================== Attributes  ====================
   priv.username = spec.username || '';
@@ -406,7 +421,7 @@ jIO.addStorageType('dav', function (spec, my) {
    */
   that.get = function (command) {
     var docid = command.getDocId(), doc,
-        secured_docid;
+        secured_docid, secured_attachmentid, attachment_url;
 
     // no docId
     if (!(typeof docid === "string" && docid !== "")) {
@@ -430,8 +445,6 @@ jIO.addStorageType('dav', function (spec, my) {
         });
       return;
     }
-    secured_docid = priv.secureDocId(command.getDocId());
-    url = priv.url + '/' + secured_docid;
 
     if (typeof command.getAttachmentId() === "string") {
       secured_attachmentid = priv.secureDocId(command.getAttachmentId());
@@ -463,6 +476,9 @@ jIO.addStorageType('dav', function (spec, my) {
         }
       });
     } else {
+      secured_docid = priv.secureDocId(command.getDocId());
+      url = priv.url + '/' + secured_docid;
+
       // get document
       $.ajax({
         url: url + '?_=' + Date.now(),
@@ -481,6 +497,259 @@ jIO.addStorageType('dav', function (spec, my) {
           // ditto for content_only
           doc = JSON.parse(response);
           that.success(doc);
+        },
+        error: function (type) {
+          that.error({
+            "status": 404,
+            "statusText": "Not Found",
+            "error": "not_found",
+            "message": "Cannot find the document",
+            "reason": "Document does not exist"
+          });
+        }
+      });
+    }
+  };
+
+  /**
+   * Remove a document or attachment
+   * @method remove
+   * @param  {object} command The JIO command
+   */
+  that.remove = function (command) {
+    var docid = command.getDocId(), doc,
+        secured_docid, secured_attachmentid, attachment_url,
+        attachment_list = [], i, j, k = 1;
+
+    // no docId
+    if (!(typeof docid === "string" && docid !== "")) {
+        that.error({
+          "status": 405,
+          "statusText": "Method Not Allowed",
+          "error": "method_not_allowed",
+          "message": "Cannot create document which id is undefined",
+          "reason": "Document id is undefined"
+        });
+        return;
+    }
+    // no cors support
+    if (priv.checkCors === false) {
+      that.error({
+          "status": 405,
+          "statusText": "Method Not Allowed",
+          "error": "method_not_allowed",
+          "message": "Browser does not support cross domain ajax requests",
+          "reason": "cors is undefined"
+        });
+      return;
+    }
+
+    secured_docid = priv.secureDocId(command.getDocId());
+    url = priv.url + '/' + secured_docid;
+
+    if (typeof command.getAttachmentId() === "string") {
+      secured_attachmentid = priv.secureDocId(command.getAttachmentId());
+      attachment_url = url + '/' + secured_attachmentid;
+      // remove attachment
+      $.ajax({
+        url: attachment_url + '?_=' + Date.now(),
+        type: 'REMOVE',
+        async: true,
+        crossdomain : true,
+        headers : {
+          Authorization: 'Basic ' + Base64.encode(
+            priv.username + ':' + priv.password
+            )
+          },
+        success: function (response) {
+          // retrieve underlying document
+          $.ajax({
+            url: url + '?_=' + Date.now(),
+            type: 'GET',
+            async: true,
+            dataType: 'text',
+            crossdomain : true,
+            headers : {
+              Authorization: 'Basic ' + Base64.encode(
+                priv.username + ':' + priv.password
+                )
+              },
+            success: function (response) {
+              // underlying document
+              doc = JSON.parse(response);
+
+              // update doc._attachments
+              if (typeof doc._attachments === "object") {
+                if (typeof doc._attachments[command.getAttachmentId()] ===
+                    "object") {
+                  delete doc._attachments[command.getAttachmentId()];
+                  if (priv.objectIsEmpty(doc._attachments)) {
+                    delete doc._attachments;
+                  }
+                  // PUT back to server
+                  $.ajax({
+                    url: url + '?_=' + Date.now(),
+                    type: 'PUT',
+                    data: doc,
+                    async: true,
+                    crossdomain: true,
+                    headers : {
+                      Authorization: 'Basic ' + Base64.encode(
+                        priv.username + ':' + priv.password
+                        )
+                      },
+                    // xhrFields: {withCredentials: 'true'},
+                    success: function (response) {
+                      that.success({
+                        "ok": true,
+                        "id": command.getDocId()+'/'+command.getAttachmentId()
+                      });
+                    },
+                    error: function (type) {
+                      that.error({
+                        "status": 409,
+                        "statusText": "Conflicts",
+                        "error": "conflicts",
+                        "message": "Cannot modify document",
+                        "reason": "Error trying to update document attachments"
+                      });
+                      return;
+                    }
+                  });
+                } else {
+                   // sure this if-else is needed?
+                   that.error({
+                    "status": 404,
+                    "statusText": "Not Found",
+                    "error": "not_found",
+                    "message": "Cannot find the document",
+                    "reason": "Error trying to update document attachments"
+                  });
+                }
+              } else {
+                // no attachments, we are done
+                that.success({
+                  "ok": true,
+                  "id": command.getDocId() + '/' + command.getAttachmentId()
+                });
+              }
+            },
+            error: function (type) {
+              that.error({
+                "status": 404,
+                "statusText": "Not Found",
+                "error": "not_found",
+                "message": "Cannot find the document",
+                "reason": "Document does not exist"
+              });
+            }
+          });
+        },
+        error: function (type) {
+          that.error({
+            "status": 404,
+            "statusText": "Not Found",
+            "error": "not_found",
+            "message": "Cannot find the attachment",
+            "reason": "Error trying to remove attachment"
+          });
+        }
+      });
+    } else {
+      secured_docid = priv.secureDocId(command.getDocId());
+      url = priv.url + '/' + secured_docid;
+
+      // get document to also remove all attachments
+      $.ajax({
+        url: url + '?_=' + Date.now(),
+        type: 'GET',
+        async: true,
+        dataType: 'text',
+        crossdomain : true,
+        headers : {
+          Authorization: 'Basic ' + Base64.encode(
+            priv.username + ':' + priv.password
+            )
+          },
+        success: function (response) {
+          doc = JSON.parse(response);
+          // prepare attachment loop
+          if (typeof doc._attachments === "object") {
+            // prepare list of attachments
+            for (i in doc._attachments) {
+              if (doc._attachments.hasOwnProperty(i)) {
+                attachment_list.push(i);
+              }
+            }
+          }
+          // delete document
+          $.ajax({
+            url: url + '?_=' + Date.now(),
+            type: 'REMOVE',
+            async: true,
+            crossdomain : true,
+            headers : {
+              Authorization: 'Basic ' + Base64.encode(
+                priv.username + ':' + priv.password
+                )
+              },
+            success: function (response) {
+              j = attachment_list.length;
+              // no attachments, done
+              if (j === 0) {
+                that.success({
+                  "ok": true,
+                  "id": command.getDocId()
+                });
+              } else {
+                for (i = 0; i < j; i += 1) {
+                  secured_attachmentid = priv.secureDocId(attachment_list[i]);
+                  attachment_url = url + '/' + secured_attachmentid;
+
+                  $.ajax({
+                    url: attachment_url + '?_=' + Date.now(),
+                    type: 'REMOVE',
+                    async: true,
+                    crossdomain : true,
+                    headers : {
+                      Authorization: 'Basic ' + Base64.encode(
+                        priv.username + ':' + priv.password
+                        )
+                      },
+                    success: function (response) {
+                      // all deleted, return response, need k as async couter
+                      if (j === k){
+                        that.success({
+                          "ok": true,
+                          "id": command.getDocId()
+                        });
+                      } else {
+                        k += 1;
+                      }
+                    },
+                    error: function (type) {
+                       that.error({
+                        "status": 404,
+                        "statusText": "Not Found",
+                        "error": "not_found",
+                        "message": "Cannot find the attachment",
+                        "reason": "Error trying to remove attachment"
+                      });
+                    }
+                  });
+                };
+              }
+            },
+            error: function (type) {
+              that.error({
+                "status": 404,
+                "statusText": "Not Found",
+                "error": "not_found",
+                "message": "Cannot find the document",
+                "reason": "Error trying to remove document"
+              });
+            }
+          });
         },
         error: function (type) {
           that.error({
@@ -629,46 +898,5 @@ jIO.addStorageType('dav', function (spec, my) {
     am.call(o, 'getDocumentList');
   }; // end allDocs
 
-  /**
-   * Removes a document from a distant dav storage.
-   * @method remove
-   */
-  that.remove = function (command) {
-
-    var secured_docid = priv.secureDocId(command.getDocId());
-    $.ajax({
-      url: priv.url + '/' + priv.secured_username + '/' +
-        priv.secured_application_name + '/' + secured_docid + '?_=' +
-        Date.now(),
-      type: "DELETE",
-      async: true,
-      headers: {
-        'Authorization': 'Basic ' + Base64.encode(
-          priv.username + ':' + priv.password
-        )
-      },
-      // xhrFields: {withCredentials: 'true'}, // cross domain
-      // jslint: removed params data, state, type
-      success: function () {
-        that.success({
-          ok: true,
-          id: command.getDocId()
-        });
-      },
-      error: function (type) {
-        if (type.status === 404) {
-          //that.success({ok:true,id:command.getDocId()});
-          type.error = 'not_found';
-          type.reason = 'missing';
-          type.message = 'Cannot remove missing file.';
-          that.error(type);
-        } else {
-          type.reason = 'Cannot remove "' + that.getDocId() + '"';
-          type.message = type.reason + '.';
-          that.retry(type);
-        }
-      }
-    });
-  };
   return that;
 });
