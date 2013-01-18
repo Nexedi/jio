@@ -185,7 +185,7 @@ jIO.addStorageType('dav', function (spec, my) {
                 priv.username + ':' + priv.password
                 )
               },
-            // xhrFields: {withCredentials: 'true'}, 
+            // xhrFields: {withCredentials: 'true'},
             success: function () {
               that.success({
                 ok: true,
@@ -219,7 +219,7 @@ jIO.addStorageType('dav', function (spec, my) {
                 priv.username + ':' + priv.password
                 )
               },
-            // xhrFields: {withCredentials: 'true'}, 
+            // xhrFields: {withCredentials: 'true'},
             success: function (response) {
               that.success({
                 ok: true,
