@@ -158,9 +158,6 @@ getLastJob = function (id) {
 generateTools = function (sinon) {
     var o = {};
 
-    // need to make server requests before activating fakeServer
-    o.davlist = getXML('responsexml/davlist');
-
     o.t = sinon;
     o.server = o.t.sandbox.useFakeServer();
     o.clock = o.t.sandbox.useFakeTimers();
@@ -2318,7 +2315,9 @@ test ("Remove", function(){
 
 test ("AllDocs", function () {
 
-  var o = generateTools(this);
+  // need to make server requests before activating fakeServer
+  var davlist = getXML('responsexml/davlist'),
+    o = generateTools(this);
 
     o.jio = JIO.newJio({
         "type": "dav",
@@ -2328,7 +2327,7 @@ test ("AllDocs", function () {
     });
 
   // get allDocs, no content
-  o.addFakeServerResponse("PROPFIND", "", 200, o.davlist);
+  o.addFakeServerResponse("PROPFIND", "", 200, davlist);
   o.thisShouldBeTheAnswer = {
       "rows": [
         {"id": "alldocs1", "key": "alldocs1", "value": {}},
