@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global toSend: true, jIO: true, jQuery: true, Base64: true */
+/*global toSend: true, jIO: true, jQuery: true, btoa: true */
 
   /**
    * JIO XWiki based storage. Type = 'xwiki'.
@@ -10,7 +10,7 @@
 .1:8080/xwiki","space":"OfficeJS"}
    */
 
-(function ($, Base64) {
+(function ($) {
 
   var newXWikiStorage = function (spec, my) {
     var that, priv, escapeDocId, restoreDocId,
@@ -57,7 +57,7 @@
         async: true,
         dataType: 'text',
         headers: {
-          'Authorization': 'Basic ' + Base64.encode(priv.username + ':' +
+          'Authorization': 'Basic ' + btoa(priv.username + ':' +
             priv.password)
         },
         success: function (html) {
@@ -82,7 +82,7 @@
         async: true,
         dataType: 'xml',
         headers: {
-          'Authorization': 'Basic ' + Base64.encode(priv.username + ':' +
+          'Authorization': 'Basic ' + btoa(priv.username + ':' +
             priv.password)
         },
         success: function (xmlData) {
@@ -141,7 +141,7 @@
           async: true,
           dataType: 'text',
           headers: {
-            'Authorization': 'Basic ' + Base64.encode(priv.username + ':' +
+            'Authorization': 'Basic ' + btoa(priv.username + ':' +
               priv.password)
           },
           data: {
@@ -202,7 +202,7 @@
           async: true,
           dataType: 'text',
           headers: {
-            'Authorization': 'Basic ' + Base64.encode(priv.username + ':' +
+            'Authorization': 'Basic ' + btoa(priv.username + ':' +
               priv.password)
           },
           success: function (html) {
@@ -230,7 +230,7 @@
         async: true,
         dataType: 'xml',
         headers: {
-          'Authorization': 'Basic ' + Base64.encode(priv.username + ':' +
+          'Authorization': 'Basic ' + btoa(priv.username + ':' +
             priv.password)
         },
         success: function (xmlData) {
@@ -319,7 +319,7 @@
           async: true,
           dataType: 'text',
           headers: {
-            'Authorization': 'Basic ' + Base64.encode(priv.username + ':' +
+            'Authorization': 'Basic ' + btoa(priv.username + ':' +
               priv.password)
           },
           data: {
@@ -338,4 +338,4 @@
     return that;
   };
   jIO.addStorageType('xwiki', newXWikiStorage);
-}(jQuery, Base64));
+}(jQuery));

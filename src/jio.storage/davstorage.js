@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global jIO: true, $: true, Base64: true  */
+/*global jIO: true, $: true, btoa: true  */
 // test here: http://enable-cors.org/
 //http://metajack.im/2010/01/19/crossdomain-ajax-for-xmpp-http-binding-made-easy
 jIO.addStorageType('dav', function (spec, my) {
@@ -177,7 +177,7 @@ jIO.addStorageType('dav', function (spec, my) {
       dataType: 'text',
       crossdomain : true,
       headers : {
-        Authorization: 'Basic ' + Base64.encode(
+        Authorization: 'Basic ' + btoa(
           priv.username + ':' + priv.password
         )
       },
@@ -202,7 +202,7 @@ jIO.addStorageType('dav', function (spec, my) {
           async: true,
           crossdomain: true,
           headers : {
-            Authorization: 'Basic ' + Base64.encode(
+            Authorization: 'Basic ' + btoa(
               priv.username + ':' + priv.password
             )
           },
@@ -234,11 +234,11 @@ jIO.addStorageType('dav', function (spec, my) {
             async: true,
             crossdomain: true,
             headers : {
-              Authorization: 'Basic ' + Base64.encode(
+              Authorization: 'Basic ' + btoa(
                 priv.username + ':' + priv.password
               )
             },
-            // xhrFields: {withCredentials: 'true'}, 
+            // xhrFields: {withCredentials: 'true'},
             success: function () {
               that.success({
                 ok: true,
@@ -335,7 +335,7 @@ jIO.addStorageType('dav', function (spec, my) {
       dataType: 'text',
       crossdomain : true,
       headers : {
-        Authorization: 'Basic ' + Base64.encode(
+        Authorization: 'Basic ' + btoa(
           priv.username + ':' + priv.password
         )
       },
@@ -357,7 +357,7 @@ jIO.addStorageType('dav', function (spec, my) {
           async: true,
           crossdomain: true,
           headers : {
-            Authorization: 'Basic ' + Base64.encode(
+            Authorization: 'Basic ' + btoa(
               priv.username + ':' + priv.password
             )
           },
@@ -373,7 +373,7 @@ jIO.addStorageType('dav', function (spec, my) {
               async: true,
               crossdomain: true,
               headers : {
-                Authorization: 'Basic ' + Base64.encode(
+                Authorization: 'Basic ' + btoa(
                   priv.username + ':' + priv.password
                 )
               },
@@ -474,7 +474,7 @@ jIO.addStorageType('dav', function (spec, my) {
         dataType: 'text',
         crossdomain : true,
         headers : {
-          Authorization: 'Basic ' + Base64.encode(
+          Authorization: 'Basic ' + btoa(
             priv.username + ':' + priv.password
           )
         },
@@ -502,7 +502,7 @@ jIO.addStorageType('dav', function (spec, my) {
         dataType: 'text',
         crossdomain : true,
         headers : {
-          Authorization: 'Basic ' + Base64.encode(
+          Authorization: 'Basic ' + btoa(
             priv.username + ':' + priv.password
           )
         },
@@ -573,7 +573,7 @@ jIO.addStorageType('dav', function (spec, my) {
         async: true,
         crossdomain : true,
         headers : {
-          Authorization: 'Basic ' + Base64.encode(
+          Authorization: 'Basic ' + btoa(
             priv.username + ':' + priv.password
           )
         },
@@ -586,7 +586,7 @@ jIO.addStorageType('dav', function (spec, my) {
             dataType: 'text',
             crossdomain : true,
             headers : {
-              Authorization: 'Basic ' + Base64.encode(
+              Authorization: 'Basic ' + btoa(
                 priv.username + ':' + priv.password
               )
             },
@@ -610,7 +610,7 @@ jIO.addStorageType('dav', function (spec, my) {
                     async: true,
                     crossdomain: true,
                     headers : {
-                      Authorization: 'Basic ' + Base64.encode(
+                      Authorization: 'Basic ' + btoa(
                         priv.username + ':' + priv.password
                       )
                     },
@@ -682,7 +682,7 @@ jIO.addStorageType('dav', function (spec, my) {
         dataType: 'text',
         crossdomain : true,
         headers : {
-          Authorization: 'Basic ' + Base64.encode(
+          Authorization: 'Basic ' + btoa(
             priv.username + ':' + priv.password
           )
         },
@@ -705,7 +705,7 @@ jIO.addStorageType('dav', function (spec, my) {
             async: true,
             crossdomain : true,
             headers : {
-              Authorization: 'Basic ' + Base64.encode(
+              Authorization: 'Basic ' + btoa(
                 priv.username + ':' + priv.password
               )
             },
@@ -725,7 +725,7 @@ jIO.addStorageType('dav', function (spec, my) {
                     async: true,
                     crossdomain : true,
                     headers : {
-                      Authorization: 'Basic ' + Base64.encode(
+                      Authorization: 'Basic ' + btoa(
                         priv.username + ':' + priv.password
                       )
                     },
@@ -816,7 +816,7 @@ jIO.addStorageType('dav', function (spec, my) {
         async: true,
         dataType: 'text',
         headers: {
-          'Authorization': 'Basic ' + Base64.encode(
+          'Authorization': 'Basic ' + btoa(
             priv.username + ':' + priv.password
           )
         },
@@ -847,7 +847,7 @@ jIO.addStorageType('dav', function (spec, my) {
         dataType: "xml",
         crossdomain : true,
         headers : {
-          Authorization: 'Basic ' + Base64.encode(
+          Authorization: 'Basic ' + btoa(
             priv.username + ':' + priv.password
           ),
           Depth: '1'

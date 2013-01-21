@@ -3734,8 +3734,6 @@ if (window.requirejs) {
             jQueryAPI: '../lib/jquery/jquery',
             jQuery: '../js/jquery.requirejs_module',
             JIO: '../src/jio',
-            Base64API: '../lib/base64/base64',
-            Base64: '../js/base64.requirejs_module',
             JIODummyStorages: '../src/jio.dummystorages',
             JIOStorages: '../src/jio.storage',
             SJCLAPI:'../lib/sjcl/sjcl.min',
