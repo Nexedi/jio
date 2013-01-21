@@ -87,6 +87,57 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
     return my.env[docid];
   };
 
+  priv.updateEnv = function (doc_env, doc_env_rev, index, doc_rev) {
+    doc_env.last_revisions[index] = doc_rev;
+    if (doc_rev !== undefined) {
+      if (!doc_env.my_revisions[doc_env_rev]) {
+        doc_env.my_revisions[doc_env_rev] = [];
+        doc_env.my_revisions[doc_env_rev].length = priv.storage_list.length;
+      }
+      doc_env.my_revisions[doc_env_rev][index] = doc_rev;
+      doc_env.distant_revisions[doc_rev] = doc_env_rev;
+    }
+  };
+
+  /**
+   * Clones an object
+   * @method cloneObject
+   * @param  {object} object The object to clone
+   * @return {object} The cloned object
+   */
+  priv.clone = function (object) {
+    var tmp = JSON.stringify(object);
+    if (tmp === undefined) {
+      return undefined;
+    }
+    return JSON.parse(tmp);
+  };
+
+  priv.send = function (method, index, doc, option, callback) {
+    var wrapped_callback_success, wrapped_callback_error;
+    wrapped_callback_success = function (response) {
+      callback(method, index, undefined, response);
+    };
+    wrapped_callback_error = function (err) {
+      callback(method, index, err, undefined);
+    };
+    that.addJob(
+      method,
+      priv.storage_list[index],
+      doc,
+      option,
+      wrapped_callback_success,
+      wrapped_callback_error
+    );
+  };
+
+  priv.sendToAll = function (method, doc, option, callback) {
+    var i;
+    for (i = 0; i < priv.storage_list.length; i += 1) {
+      priv.send(method, i, doc, option, callback);
+    }
+  };
+
   /**
    * Post the document metadata to all sub storages
    * @method post
@@ -111,56 +162,41 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       if (typeof doc._id !== "string") {
         doc._id = priv.generateUuid();
       }
-      if (priv.update_doctree_allowed === undefined) {
-        priv.update_doctree_allowed = true;
+      if (priv.post_allowed === undefined) {
+        priv.post_allowed = true;
       }
       doc_env = my.env[doc._id];
       if (doc_env && doc_env.id) {
-        if (!priv.update_doctree_allowed) {
-          that.error({
-            "status": 409,
-            "statusText": "Conflict",
-            "error": "conflict",
-            "message": "Cannot update a document",
-            "reason": "Document update conflict"
-          });
-          return;
-        }
       } else {
         doc_env = priv.initEnv(doc._id);
+      }
+      if (!priv.post_allowed && !doc_env.my_revisions[doc._rev]) {
+        that.error({
+          "status": 409,
+          "statusText": "Conflict",
+          "error": "conflict",
+          "message": "Cannot update a document",
+          "reason": "Document update conflict"
+        });
+        return;
       }
       my_rev = priv.getNextRevision(doc._id);
       functions.sendDocument();
     };
-    functions.sendDocumentIndex = function (method, index, callback) {
-      var wrapped_callback_success, wrapped_callback_error;
-      wrapped_callback_success = function (response) {
-        callback(method, index, undefined, response);
-      };
-      wrapped_callback_error = function (err) {
-        callback(method, index, err, undefined);
-      };
-      if (typeof doc._rev === "string" &&
-          doc_env.my_revisions[doc._rev] !== undefined) {
-        doc._rev = doc_env.my_revisions[doc._rev][index];
-      }
-      that.addJob(
-        method,
-        priv.storage_list[index],
-        doc,
-        command.cloneOption(),
-        wrapped_callback_success,
-        wrapped_callback_error
-      );
-    };
     functions.sendDocument = function () {
       var i;
-      doc_env.my_revisions[my_rev] = doc_env.my_revisions[my_rev] || [];
-      doc_env.my_revisions[my_rev].length = priv.storage_list.length;
       for (i = 0; i < priv.storage_list.length; i += 1) {
-        functions.sendDocumentIndex(
-          doc_env.last_revisions[i] === "unique_" + i ? "put" : "post",
+        var cloned_doc = priv.clone(doc);
+        if (typeof cloned_doc._rev === "string" &&
+            doc_env.my_revisions[cloned_doc._rev] !== undefined) {
+          cloned_doc._rev = doc_env.my_revisions[cloned_doc._rev][i];
+        }
+        priv.send(
+          doc_env.last_revisions[i] === "unique_" + i ||
+            cloned_doc._rev !== undefined ? "put" : "post",
           i,
+          cloned_doc,
+          command.cloneOption(),
           functions.checkSendResult
         );
       }
@@ -177,30 +213,78 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
             return;
           }
         }
-        functions.updateEnv(index, undefined);
+        priv.updateEnv(doc_env, my_rev, index, undefined);
         functions.error(err);
         return;
       }
       // success
-      functions.updateEnv(index, response.rev || "unique_" + index);
+      priv.updateEnv(
+        doc_env,
+        my_rev,
+        index,
+        response.rev || "unique_" + index
+      );
       functions.success({"ok": true, "id": doc._id, "rev": my_rev});
     };
-    functions.updateEnv = function (index, revision) {
-      doc_env.last_revisions[index] = revision;
-      doc_env.my_revisions[my_rev][index] = revision;
-      doc_env.distant_revisions[revision] = my_rev;
-    };
     functions.success = function (response) {
-      if (!functions.success_called_once) {
-        functions.success_called_once = true;
-        that.success(response);
-      }
+      // can be called once
+      that.success(response);
+      functions.success = function () {};
     };
     functions.error_count = 0;
     functions.error = function (err) {
       functions.error_count += 1;
       if (functions.error_count === priv.storage_list.length) {
         that.error(err);
+        functions.error = function () {};
+      }
+    };
+    functions.begin();
+  };
+
+  /**
+   * Get the document metadata from all sub storages, get the fastest.
+   * @method get
+   * @param  {object} command The JIO command
+   */
+  that.get = function (command) {
+    var functions = {}, doc_env, docid, my_rev, waiting_response;
+    functions.begin = function () {
+      docid = command.cloneDocId();
+
+      doc_env = my.env[doc._id];
+      if (!doc_env || !doc_env.id) {
+        // document environment is not set
+        doc_env = priv.initEnv(doc._id);
+      }
+      my_rev = priv.getNextRevision(doc._id);
+      priv.sendToAll("get", docid, command.cloneOption(), functions.callback);
+    };
+    functions.callback = function (method, index, err, response) {
+      if (err) {
+        priv.updateEnv(doc_env, my_rev, index, undefined);
+        functions.error(err);
+        return;
+      }
+      priv.updateEnv(
+        doc_env,
+        my_rev,
+        index,
+        response._rev || "unique_" + index
+      );
+      response._rev = my_rev;
+      functions.success(response);
+    };
+    functions.success = function (response) {
+      that.success(response);
+      functions.success = function () {};
+    };
+    functions.error_count = 0;
+    functions.error = function (err) {
+      functions.error_count += 1;
+      if (functions.error_count === priv.storage_list.length) {
+        that.error(err);
+        functions.error = function () {};
       }
     };
     functions.begin();
