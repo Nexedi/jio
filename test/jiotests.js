@@ -1287,7 +1287,8 @@ test ("Put", function(){
     o.doc = {"_id": "put1", "_rev": o.rev, "title": "myPut2"};
     o.revisions = {"start": 1, "ids": [o.rev.split('-')[1]]};
     o.rev = "2-"+generateRevisionHash(o.doc, o.revisions);
-    o.spy (o, "status", undefined, "Put + revision");
+    o.spy (o, "value", {"id": "put1", "ok": true, "rev": o.rev},
+           "Put + revision");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
@@ -1303,6 +1304,42 @@ test ("Put", function(){
     // check document tree
     o.doc_tree.children[0].children.unshift({
         "rev": o.rev, "status": "available", "children": []
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/put1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    // put + wrong revision
+    o.doc = {"_id": "put1", "_rev": "3-wr3", "title": "myPut3"};
+    o.revisions = {"start": 3, "ids": ["wr3"]};
+    o.rev = "4-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {"id": "put1", "ok": true, "rev": o.rev},
+           "Put + wrong revision");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc._id = "put1." + o.rev;
+    delete o.doc._rev;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/put1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree.children.unshift({
+      "rev": "3-wr3",
+      "status": "missing",
+      "children": [{
+        "rev": o.rev,
+        "status": "available",
+        "children": []
+      }]
     });
     deepEqual(
         localstorage.getItem(
