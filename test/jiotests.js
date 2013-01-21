@@ -2044,23 +2044,7 @@ test ("Post", function () {
     o.clock.tick(5000);
     o.server.respond();
 
-    // as all custom headers trigger preflight requests, the test also
-    // need to simulate CORS (cross domain ajax with preflight)
-    // custom header may be authentication for example
     o.jio.stop();
-
-    // do the same tests live webDav-Server simulating CORS!
-    /* also check for equality
-
-    deepEqual(
-        localstorage.getItem("jio/localstorage/uput/aput/put1"),
-        {
-            "_id": "put1",
-            "title": "myPut1"
-        },
-        "Check document"
-    );
-    */
 });
 
 test ("Put", function(){
@@ -2100,10 +2084,6 @@ test ("Put", function(){
     o.server.respond();
 
     o.jio.stop();
-
-    // do the same tests live webDav-Server/simulate CORS
-    // check for credentials in sinon
-
 });
 
 test ("PutAttachment", function(){
@@ -2128,9 +2108,9 @@ test ("PutAttachment", function(){
     o.clock.tick(5000);
 
     // putAttachment without underlying document => not found
-    o.addFakeServerResponse("GET", "putattmtx", 404, "HTML RESPONSE");
-    o.spy(o, "status", 404, "PutAttachment without document");
-    o.jio.putAttachment({"id": "putattmtx/putattmt2"}, o.f);
+    o.addFakeServerResponse("GET", "putattmtx", 22, "HTML RESPONSE");
+    o.spy(o, "status", 22, "PutAttachment without document");
+    o.jio.putAttachment({"id": "putattmtx.putattmt2"}, o.f);
     o.clock.tick(5000);
     o.server.respond();
 
@@ -2138,34 +2118,25 @@ test ("PutAttachment", function(){
     o.answer = JSON.stringify({"_id": "putattmt1", "title": "myPutAttm1"});
     o.addFakeServerResponse("GET", "putattmt1", 200, o.answer);
     o.addFakeServerResponse("PUT", "putattmt1", 201, "HTML RESPONSE");
-    o.addFakeServerResponse("PUT", "putattmt1/putattmt2", 201,"HTML RESPONSE");
+    o.addFakeServerResponse("PUT", "putattmt1.putattmt2", 201,"HTML RESPONSE");
     o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
           "PutAttachment with document, without data");
     o.jio.putAttachment({"id": "putattmt1/putattmt2"}, o.f);
     o.clock.tick(5000);
     o.server.respond();
 
-    // check document
-    // check attachment
-
     // update attachment
     o.answer = JSON.stringify({"_id": "putattmt1", "title": "myPutAttm1"});
     o.addFakeServerResponse("GET", "putattmt1", 200, o.answer);
     o.addFakeServerResponse("PUT", "putattmt1", 201, "HTML RESPONSE");
-    o.addFakeServerResponse("PUT", "putattmt1/putattmt2", 201,"HTML RESPONSE");
+    o.addFakeServerResponse("PUT", "putattmt1.putattmt2", 201,"HTML RESPONSE");
     o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
           "Update Attachment, with data");
     o.jio.putAttachment({"id": "putattmt1/putattmt2", "data": "abc"}, o.f);
     o.clock.tick(5000);
     o.server.respond();
 
-    // check document
-    // check attachment
-
     o.jio.stop();
-
-    // do the same tests live webDav-Server/simulate CORS
-    // check for credentials in sinon
 });
 
 test ("Get", function(){
@@ -2187,7 +2158,7 @@ test ("Get", function(){
     o.server.respond();
 
     // get inexistent attachment
-    o.addFakeServerResponse("GET", "get1/get2", 404, "HTML RESPONSE");
+    o.addFakeServerResponse("GET", "get1.get2", 404, "HTML RESPONSE");
     o.spy(o, "status", 404, "Get non existing attachment");
     o.jio.get("get1/get2", o.f);
     o.clock.tick(5000);
@@ -2202,7 +2173,7 @@ test ("Get", function(){
     o.server.respond();
 
     // get inexistent attachment (document exists)
-    o.addFakeServerResponse("GET", "get3/getx", 404, "HTML RESPONSE");
+    o.addFakeServerResponse("GET", "get3.getx", 404, "HTML RESPONSE");
     o.spy(o, "status", 404, "Get non existing attachment (doc exists)");
     o.jio.get("get3/getx", o.f);
     o.clock.tick(5000);
@@ -2210,7 +2181,7 @@ test ("Get", function(){
 
     // get attachment
     o.answer = JSON.stringify({"_id": "get4", "title": "some attachment"});
-    o.addFakeServerResponse("GET", "get3/get4", 200, o.answer);
+    o.addFakeServerResponse("GET", "get3.get4", 200, o.answer);
     o.spy(o, "value", {"_id": "get4", "title": "some attachment"},
       "Get attachment");
     o.jio.get("get3/get4", o.f);
@@ -2218,9 +2189,6 @@ test ("Get", function(){
     o.server.respond();
 
     o.jio.stop();
-
-    // do the same tests live webDav-Server/simulate CORS
-    // check for credentials in sinon
 });
 
 test ("Remove", function(){
@@ -2242,7 +2210,7 @@ test ("Remove", function(){
     o.server.respond();
 
     // remove inexistent document/attachment
-    o.addFakeServerResponse("GET", "remove1/remove2", 404, "HTML RESPONSE");
+    o.addFakeServerResponse("GET", "remove1.remove2", 404, "HTML RESPONSE");
     o.spy(o, "status", 404, "Remove inexistent document/attachment");
     o.jio.remove({"_id": "remove1/remove2"}, o.f);
     o.clock.tick(5000);
@@ -2251,7 +2219,7 @@ test ("Remove", function(){
     // remove document
     o.answer = JSON.stringify({"_id": "remove3", "title": "some doc"});
     o.addFakeServerResponse("GET", "remove3", 200, o.answer);
-    o.addFakeServerResponse("REMOVE", "remove3", 200, "HTML RESPONSE");
+    o.addFakeServerResponse("DELETE", "remove3", 200, "HTML RESPONSE");
     o.spy(o, "value", {"ok": true, "id": "remove3"}, "Remove document");
     o.jio.remove({"_id": "remove3"}, o.f);
     o.clock.tick(5000);
@@ -2270,7 +2238,7 @@ test ("Remove", function(){
     // remove attachment
     o.addFakeServerResponse("GET", "remove4", 200, o.answer);
     o.addFakeServerResponse("PUT", "remove4", 201, "HTML RESPONSE");
-    o.addFakeServerResponse("REMOVE", "remove4/remove5", 200, "HTML RESPONSE");
+    o.addFakeServerResponse("DELETE", "remove4.remove5", 200, "HTML RESPONSE");
     o.spy(o, "value", {"ok": true, "id": "remove4/remove5"},
           "Remove attachment");
     o.jio.remove({"_id": "remove4/remove5"}, o.f);
@@ -2297,10 +2265,10 @@ test ("Remove", function(){
     });
     // remove document with multiple attachments
     o.addFakeServerResponse("GET", "remove6", 200, o.answer);
-    o.addFakeServerResponse("REMOVE", "remove6/remove7", 200, "HTML RESPONSE");
-    o.addFakeServerResponse("REMOVE", "remove6/remove8", 200, "HTML RESPONSE");
-    o.addFakeServerResponse("REMOVE", "remove6/remove9", 200, "HTML RESPONSE");
-    o.addFakeServerResponse("REMOVE", "remove6", 200, "HTML RESPONSE");
+    o.addFakeServerResponse("DELETE", "remove6.remove7", 200, "HTML RESPONSE");
+    o.addFakeServerResponse("DELETE", "remove6.remove8", 200, "HTML RESPONSE");
+    o.addFakeServerResponse("DELETE", "remove6.remove9", 200, "HTML RESPONSE");
+    o.addFakeServerResponse("DELETE", "remove6", 200, "HTML RESPONSE");
     o.spy(o, "value", {"ok": true, "id": "remove6"},
           "Remove document with multiple attachments");
     o.jio.remove({"_id": "remove6"}, o.f);
@@ -2308,9 +2276,6 @@ test ("Remove", function(){
     o.server.respond();
 
     o.jio.stop();
-
-    // do the same tests live webDav-Server/simulate CORS
-    // check for credentials in sinon
 });
 
 test ("AllDocs", function () {
@@ -2341,21 +2306,82 @@ test ("AllDocs", function () {
   o.server.respond();
 
   // allDocs with option include
-  o.all1 = JSON.stringify({"_id": "allDocs1", "title": "a doc title"});
-  o.all2 = JSON.stringify({"_id": "allDocs2", "title": "another doc title"});
-  o.addFakeServerResponse("GET", "alldocs1", 200, o.all1);
-  o.addFakeServerResponse("GET", "alldocs2", 200, o.all2);
+  o.all1 = {"_id": "allDocs1", "title": "a doc title"};
+  o.all2 = {"_id": "allDocs2", "title": "another doc title"};
+  o.thisShouldBeTheAnswer = {
+      "rows": [
+        {"id": "alldocs1", "key": "alldocs1", "value": {}, "doc": o.all1},
+        {"id": "alldocs2", "key": "alldocs2", "value": {}, "doc": o.all2}
+      ],
+      "total_rows": 2
+  }
+  o.addFakeServerResponse("GET", "alldocs1", 200, JSON.stringify(o.all1));
+  o.addFakeServerResponse("GET", "alldocs2", 200, JSON.stringify(o.all2));
   o.spy(o, "value", o.thisShouldBeTheAnswer, "allDocs (include_docs)");
   o.jio.allDocs({"include_docs":true}, o.f);
   o.clock.tick(5000);
   o.server.respond();
 
-  // do the same tests live webDav-Server/simulate CORS
-  // check for credentials in sinon
-
   o.jio.stop();
 });
 
+// NOTES: this test is for a live webDav server on localstorage
+// see the documentation how to setup an apache2 webDav-server
+// tests cannot be run subsequently, so only do one test at a time
+/*
+test ("webDav Live Server setup", function () {
+
+    var o = generateTools(this);
+
+    // turn off fakeserver - otherwise no requests will be made
+    o.server.restore();
+
+    o.jio = JIO.newJio({
+        "type": "dav",
+        "username": "davlive",
+        "password": "checkpwd",
+        "url": "http://127.0.1.1/dav"
+    });
+
+    // not used, check console for responses
+    // o.spy(o, "value", {"id": "_id_", "ok": true}, "Live Webdav");
+
+    // post a new document
+    o.jio.post({"_id": "one.json", "title": "hello"}), o.f);
+    o.clock.tick(5000);
+
+    // modify document
+    o.jio.put({"_id": "one.json", "title": "hello modified"}), o.f);
+    o.clock.tick(5000);
+
+    // add attachment
+    o.jio.putAttachment({
+      "id": "one.json/att.txt",
+      "mimetype": "text/plain",
+      "content":"there2"
+    }, o.f);
+
+    // test allDocs
+    o.jio.allDocs({"include_docs":true},
+      function(s){console.log(s);},
+      function ( e ) {console.log(e);
+    }, o.f);
+    o.clock.tick(5000);
+
+    // get Attachment
+    o.jio.get("one.json/att.txt", o.f);
+    o.clock.tick(5000);
+
+    // remove Attachment
+    o.jio.remove("one.json/att.txt", o.f.);
+    o.clock.tick(5000);
+
+    // remove Document
+    o.jio.remove("one.json", o.f.);
+    o.clock.tick(5000);
+    o.jio.stop();
+});
+*/
 /*
 module ('Jio ReplicateStorage');
 

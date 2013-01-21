@@ -87,8 +87,29 @@ jIO.addStorageType('dav', function (spec, my) {
     return async;
   };
 
-  priv.checkCors = function(){
+  /**
+   * Checks if a browser supports cors (cross domain ajax requests)
+   * @method checkCors
+   * @return {boolean} true if supported, else false
+   */
+  priv.checkCors = function () {
     return $.support.cors;
+  };
+
+  /**
+   * Replaces last "." with "_." in document filenames
+   * @method underscoreFileExtenisons
+   * @param {string} url url to clean up
+   * @return {string} clean_url cleaned up URL
+   */
+  priv.underscoreFileExtenisons = function (url) {
+    var clean_url = url.replace(/,\s(\w+)$/, "_.$1");
+    return clean_url;
+  };
+
+  priv.restoreDots = function (url) {
+    var clean_url = url.replace(/_\./g, '.');
+    return clean_url;
   };
 
   // wedDav methods rfc4918 (short summary)
@@ -118,36 +139,36 @@ jIO.addStorageType('dav', function (spec, my) {
 
 
   priv.putOrPost = function (command, type) {
-    var doc = command.getDocId(),
-        secured_docid;
+    var docid = command.getDocId(),
+      secured_docid,
+      url;
 
     // no docId
-    if (!(typeof doc === "string" && doc !== "")) {
-        that.error({
-          "status": 405,
-          "statusText": "Method Not Allowed",
-          "error": "method_not_allowed",
-          "message": "Cannot create document which id is undefined",
-          "reason": "Document id is undefined"
-        });
-        return;
+    if (!(typeof docid === "string" && docid !== "")) {
+      that.error({
+        "status": 405,
+        "statusText": "Method Not Allowed",
+        "error": "method_not_allowed",
+        "message": "Cannot create document which id is undefined",
+        "reason": "Document id is undefined"
+      });
+      return;
     }
 
     // no cross domain ajax
     if (priv.checkCors === false) {
       that.error({
-          "status": 405,
-          "statusText": "Method Not Allowed",
-          "error": "method_not_allowed",
-          "message": "Browser does not support cross domain ajax requests",
-          "reason": "cors is undefined"
-        });
+        "status": 405,
+        "statusText": "Method Not Allowed",
+        "error": "method_not_allowed",
+        "message": "Browser does not support cross domain ajax requests",
+        "reason": "cors is undefined"
+      });
       return;
     }
 
     secured_docid = priv.secureDocId(command.getDocId());
-    url = priv.url + '/' + secured_docid;
-
+    url = priv.url + '/' + priv.underscoreFileExtenisons(secured_docid);
     // see if the document exists
     $.ajax({
       url: url + '?_=' + Date.now(),
@@ -156,43 +177,75 @@ jIO.addStorageType('dav', function (spec, my) {
       dataType: 'text',
       crossdomain : true,
       headers : {
-         Authorization: 'Basic ' + Base64.encode(
+        Authorization: 'Basic ' + Base64.encode(
           priv.username + ':' + priv.password
-           )
-         },
+        )
+      },
       // xhrFields: {withCredentials: 'true'},
-      success: function (content) {
+      success: function () {
         if (type === 'POST') {
           // POST the document already exists
           that.error({
+            "status": 409,
+            "statusText": "Conflicts",
+            "error": "conflicts",
+            "message": "Cannot create a new document",
+            "reason": "Document already exists"
+          });
+          return;
+        }
+        // PUT update document
+        $.ajax({
+          url: url,
+          type: type,
+          data: JSON.stringify(command.getDoc()),
+          async: true,
+          crossdomain: true,
+          headers : {
+            Authorization: 'Basic ' + Base64.encode(
+              priv.username + ':' + priv.password
+            )
+          },
+          // xhrFields: {withCredentials: 'true'},
+          success: function () {
+            that.success({
+              ok: true,
+              id: command.getDocId()
+            });
+          },
+          error: function () {
+            that.error({
               "status": 409,
               "statusText": "Conflicts",
               "error": "conflicts",
-              "message": "Cannot create a new document",
-              "reason": "Document already exists"
+              "message": "Cannot modify document",
+              "reason": "Error trying to write to remote storage"
             });
-          return;
-        } else {
-          // PUT update document
+          }
+        });
+      },
+      error: function (err) {
+        // Firefox returns 0 instead of 404 on CORS?
+        if (err.status === 404 || err.status === 0) {
           $.ajax({
-            url: url + '?_=' + Date.now(),
-            type: type,
-            data: command.getDoc(),
+            url: url,
+            type: 'PUT',
+            data: JSON.stringify(command.getDoc()),
             async: true,
             crossdomain: true,
             headers : {
               Authorization: 'Basic ' + Base64.encode(
                 priv.username + ':' + priv.password
-                )
-              },
-            // xhrFields: {withCredentials: 'true'},
+              )
+            },
+            // xhrFields: {withCredentials: 'true'}, 
             success: function () {
               that.success({
                 ok: true,
                 id: command.getDocId()
               });
             },
-            error: function (type) {
+            error: function () {
               that.error({
                 "status": 409,
                 "statusText": "Conflicts",
@@ -200,41 +253,6 @@ jIO.addStorageType('dav', function (spec, my) {
                 "message": "Cannot modify document",
                 "reason": "Error trying to write to remote storage"
               });
-              return;
-            }
-          });
-        }
-      },
-      error: function (err) {
-        if (err.status === 404) {
-          $.ajax({
-            url: url + '?_=' + Date.now(),
-            // must always use put, POST only seems to work on collections
-            type: 'PUT',
-            data: command.getDoc(),
-            async: true,
-            crossdomain: true,
-            headers : {
-              Authorization: 'Basic ' + Base64.encode(
-                priv.username + ':' + priv.password
-                )
-              },
-            // xhrFields: {withCredentials: 'true'},
-            success: function (response) {
-              that.success({
-                ok: true,
-                id: command.getDocId()
-              });
-            },
-            error: function (type) {
-              that.error({
-                "status": 409,
-                "statusText": "Conflicts",
-                "error": "conflicts",
-                "message": "Cannot modify document",
-                "reason": "Error trying to write to remote storage"
-              });
-              return;
             }
           });
 
@@ -247,7 +265,6 @@ jIO.addStorageType('dav', function (spec, my) {
             "message": err.message,
             "reason": "Failed to access remote storage"
           });
-          return;
         }
       }
     });
@@ -277,36 +294,40 @@ jIO.addStorageType('dav', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.putAttachment = function (command) {
-    var docid = command.getDocId(), doc,
-        secured_docid, secured_attachmentid, attachment_url;
+    var docid = command.getDocId(),
+      doc,
+      url,
+      secured_docid,
+      secured_attachmentid,
+      attachment_url;
 
     // no docId
     if (!(typeof docid === "string" && docid !== "")) {
-        that.error({
-          "status": 405,
-          "statusText": "Method Not Allowed",
-          "error": "method_not_allowed",
-          "message": "Cannot create document which id is undefined",
-          "reason": "Document id is undefined"
-        });
-        return;
+      that.error({
+        "status": 405,
+        "statusText": "Method Not Allowed",
+        "error": "method_not_allowed",
+        "message": "Cannot create document which id is undefined",
+        "reason": "Document id is undefined"
+      });
+      return;
     }
 
     // no cross domain ajax
     if (priv.checkCors === false) {
       that.error({
-          "status": 405,
-          "statusText": "Method Not Allowed",
-          "error": "method_not_allowed",
-          "message": "Browser does not support cross domain ajax requests",
-          "reason": "cors is undefined"
-        });
+        "status": 405,
+        "statusText": "Method Not Allowed",
+        "error": "method_not_allowed",
+        "message": "Browser does not support cross domain ajax requests",
+        "reason": "cors is undefined"
+      });
       return;
     }
     secured_docid = priv.secureDocId(docid);
-    url = priv.url + '/' + secured_docid;
+    url = priv.url + '/' + priv.underscoreFileExtenisons(secured_docid);
 
-    // see if the underlying document exists ||
+    // see if the underlying document exists
     $.ajax({
       url: url + '?_=' + Date.now(),
       type: 'GET',
@@ -314,10 +335,10 @@ jIO.addStorageType('dav', function (spec, my) {
       dataType: 'text',
       crossdomain : true,
       headers : {
-         Authorization: 'Basic ' + Base64.encode(
+        Authorization: 'Basic ' + Base64.encode(
           priv.username + ':' + priv.password
-           )
-         },
+        )
+      },
       success: function (response) {
         doc = JSON.parse(response);
 
@@ -328,43 +349,42 @@ jIO.addStorageType('dav', function (spec, my) {
           "digest": "md5-" + command.md5SumAttachmentData(),
           "length": command.getAttachmentLength()
         };
-
         // put updated document data
         $.ajax({
           url: url + '?_=' + Date.now(),
           type: 'PUT',
-          data: doc,
+          data: JSON.stringify(doc),
           async: true,
           crossdomain: true,
           headers : {
             Authorization: 'Basic ' + Base64.encode(
               priv.username + ':' + priv.password
-              )
-            },
+            )
+          },
           // xhrFields: {withCredentials: 'true'},
           success: function () {
             secured_attachmentid = priv.secureDocId(command.getAttachmentId());
-            attachment_url = url + '/' + secured_attachmentid;
-
+            attachment_url = url + '.' +
+              priv.underscoreFileExtenisons(secured_attachmentid);
             $.ajax({
               url: attachment_url + '?_=' + Date.now(),
               type: 'PUT',
-              data: command.getDoc(),
+              data: JSON.stringify(command.getDoc()),
               async: true,
               crossdomain: true,
               headers : {
                 Authorization: 'Basic ' + Base64.encode(
                   priv.username + ':' + priv.password
-                  )
-                },
+                )
+              },
               // xhrFields: {withCredentials: 'true'},
-              success: function (response) {
+              success: function () {
                 that.success({
                   ok: true,
-                  id: command.getDocId()+'/'+command.getAttachmentId()
+                  id: command.getDocId() + '/' + command.getAttachmentId()
                 });
               },
-              error: function (type) {
+              error: function () {
                 that.error({
                   "status": 409,
                   "statusText": "Conflicts",
@@ -376,7 +396,7 @@ jIO.addStorageType('dav', function (spec, my) {
               }
             });
           },
-          error: function (type) {
+          error: function () {
             that.error({
               "status": 409,
               "statusText": "Conflicts",
@@ -408,35 +428,44 @@ jIO.addStorageType('dav', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.get = function (command) {
-    var docid = command.getDocId(), doc,
-        secured_docid, secured_attachmentid, attachment_url;
+    var docid = command.getDocId(),
+      doc,
+      url,
+      secured_docid,
+      secured_attachmentid,
+      attachment_url;
 
     // no docId
     if (!(typeof docid === "string" && docid !== "")) {
-        that.error({
-          "status": 405,
-          "statusText": "Method Not Allowed",
-          "error": "method_not_allowed",
-          "message": "Cannot create document which id is undefined",
-          "reason": "Document id is undefined"
-        });
-        return;
+      that.error({
+        "status": 405,
+        "statusText": "Method Not Allowed",
+        "error": "method_not_allowed",
+        "message": "Cannot create document which id is undefined",
+        "reason": "Document id is undefined"
+      });
+      return;
     }
     // no cors support
     if (priv.checkCors === false) {
       that.error({
-          "status": 405,
-          "statusText": "Method Not Allowed",
-          "error": "method_not_allowed",
-          "message": "Browser does not support cross domain ajax requests",
-          "reason": "cors is undefined"
-        });
+        "status": 405,
+        "statusText": "Method Not Allowed",
+        "error": "method_not_allowed",
+        "message": "Browser does not support cross domain ajax requests",
+        "reason": "cors is undefined"
+      });
       return;
     }
+    secured_docid = priv.secureDocId(command.getDocId());
+    url = priv.url + '/' + priv.underscoreFileExtenisons(secured_docid);
 
     if (typeof command.getAttachmentId() === "string") {
       secured_attachmentid = priv.secureDocId(command.getAttachmentId());
-      attachment_url = url + '/' + secured_attachmentid;
+      attachment_url = url + '.' + priv.underscoreFileExtenisons(
+        secured_attachmentid
+      );
+
       // get attachment
       $.ajax({
         url: attachment_url + '?_=' + Date.now(),
@@ -447,13 +476,13 @@ jIO.addStorageType('dav', function (spec, my) {
         headers : {
           Authorization: 'Basic ' + Base64.encode(
             priv.username + ':' + priv.password
-            )
-          },
+          )
+        },
         success: function (response) {
           doc = JSON.parse(response);
           that.success(doc);
         },
-        error: function (type) {
+        error: function () {
           that.error({
             "status": 404,
             "statusText": "Not Found",
@@ -464,8 +493,6 @@ jIO.addStorageType('dav', function (spec, my) {
         }
       });
     } else {
-      secured_docid = priv.secureDocId(command.getDocId());
-      url = priv.url + '/' + secured_docid;
 
       // get document
       $.ajax({
@@ -477,8 +504,8 @@ jIO.addStorageType('dav', function (spec, my) {
         headers : {
           Authorization: 'Basic ' + Base64.encode(
             priv.username + ':' + priv.password
-            )
-          },
+          )
+        },
         success: function (response) {
           // metadata_only should not be handled by jIO, as it is a
           // webDav only option, shouldn't it?
@@ -486,7 +513,7 @@ jIO.addStorageType('dav', function (spec, my) {
           doc = JSON.parse(response);
           that.success(doc);
         },
-        error: function (type) {
+        error: function () {
           that.error({
             "status": 404,
             "statusText": "Not Found",
@@ -505,51 +532,52 @@ jIO.addStorageType('dav', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.remove = function (command) {
-    var docid = command.getDocId(), doc,
-        secured_docid, secured_attachmentid, attachment_url,
-        attachment_list = [], i, j, k = 1;
+    var docid = command.getDocId(), doc, url,
+      secured_docid, secured_attachmentid, attachment_url,
+      attachment_list = [], i, j, k = 1, deleteAttachment;
 
     // no docId
     if (!(typeof docid === "string" && docid !== "")) {
-        that.error({
-          "status": 405,
-          "statusText": "Method Not Allowed",
-          "error": "method_not_allowed",
-          "message": "Cannot create document which id is undefined",
-          "reason": "Document id is undefined"
-        });
-        return;
+      that.error({
+        "status": 405,
+        "statusText": "Method Not Allowed",
+        "error": "method_not_allowed",
+        "message": "Cannot create document which id is undefined",
+        "reason": "Document id is undefined"
+      });
     }
     // no cors support
     if (priv.checkCors === false) {
       that.error({
-          "status": 405,
-          "statusText": "Method Not Allowed",
-          "error": "method_not_allowed",
-          "message": "Browser does not support cross domain ajax requests",
-          "reason": "cors is undefined"
-        });
-      return;
+        "status": 405,
+        "statusText": "Method Not Allowed",
+        "error": "method_not_allowed",
+        "message": "Browser does not support cross domain ajax requests",
+        "reason": "cors is undefined"
+      });
     }
 
     secured_docid = priv.secureDocId(command.getDocId());
-    url = priv.url + '/' + secured_docid;
+    url = priv.url + '/' + priv.underscoreFileExtenisons(secured_docid);
 
+    // remove attachment
     if (typeof command.getAttachmentId() === "string") {
       secured_attachmentid = priv.secureDocId(command.getAttachmentId());
-      attachment_url = url + '/' + secured_attachmentid;
-      // remove attachment
+      attachment_url = url + '.' + priv.underscoreFileExtenisons(
+        secured_attachmentid
+      );
+
       $.ajax({
         url: attachment_url + '?_=' + Date.now(),
-        type: 'REMOVE',
+        type: 'DELETE',
         async: true,
         crossdomain : true,
         headers : {
           Authorization: 'Basic ' + Base64.encode(
             priv.username + ':' + priv.password
-            )
-          },
-        success: function (response) {
+          )
+        },
+        success: function () {
           // retrieve underlying document
           $.ajax({
             url: url + '?_=' + Date.now(),
@@ -560,8 +588,8 @@ jIO.addStorageType('dav', function (spec, my) {
             headers : {
               Authorization: 'Basic ' + Base64.encode(
                 priv.username + ':' + priv.password
-                )
-              },
+              )
+            },
             success: function (response) {
               // underlying document
               doc = JSON.parse(response);
@@ -578,22 +606,23 @@ jIO.addStorageType('dav', function (spec, my) {
                   $.ajax({
                     url: url + '?_=' + Date.now(),
                     type: 'PUT',
-                    data: doc,
+                    data: JSON.stringify(doc),
                     async: true,
                     crossdomain: true,
                     headers : {
                       Authorization: 'Basic ' + Base64.encode(
                         priv.username + ':' + priv.password
-                        )
-                      },
+                      )
+                    },
                     // xhrFields: {withCredentials: 'true'},
-                    success: function (response) {
+                    success: function () {
                       that.success({
                         "ok": true,
-                        "id": command.getDocId()+'/'+command.getAttachmentId()
+                        "id": command.getDocId() + '/' +
+                          command.getAttachmentId()
                       });
                     },
-                    error: function (type) {
+                    error: function () {
                       that.error({
                         "status": 409,
                         "statusText": "Conflicts",
@@ -601,12 +630,11 @@ jIO.addStorageType('dav', function (spec, my) {
                         "message": "Cannot modify document",
                         "reason": "Error trying to update document attachments"
                       });
-                      return;
                     }
                   });
                 } else {
-                   // sure this if-else is needed?
-                   that.error({
+                  // sure this if-else is needed?
+                  that.error({
                     "status": 404,
                     "statusText": "Not Found",
                     "error": "not_found",
@@ -622,7 +650,7 @@ jIO.addStorageType('dav', function (spec, my) {
                 });
               }
             },
-            error: function (type) {
+            error: function () {
               that.error({
                 "status": 404,
                 "statusText": "Not Found",
@@ -633,7 +661,7 @@ jIO.addStorageType('dav', function (spec, my) {
             }
           });
         },
-        error: function (type) {
+        error: function () {
           that.error({
             "status": 404,
             "statusText": "Not Found",
@@ -643,9 +671,8 @@ jIO.addStorageType('dav', function (spec, my) {
           });
         }
       });
+    // remove document
     } else {
-      secured_docid = priv.secureDocId(command.getDocId());
-      url = priv.url + '/' + secured_docid;
 
       // get document to also remove all attachments
       $.ajax({
@@ -657,31 +684,32 @@ jIO.addStorageType('dav', function (spec, my) {
         headers : {
           Authorization: 'Basic ' + Base64.encode(
             priv.username + ':' + priv.password
-            )
-          },
+          )
+        },
         success: function (response) {
+          var x;
           doc = JSON.parse(response);
           // prepare attachment loop
           if (typeof doc._attachments === "object") {
             // prepare list of attachments
-            for (i in doc._attachments) {
-              if (doc._attachments.hasOwnProperty(i)) {
-                attachment_list.push(i);
+            for (x in doc._attachments) {
+              if (doc._attachments.hasOwnProperty(x)) {
+                attachment_list.push(x);
               }
             }
           }
           // delete document
           $.ajax({
             url: url + '?_=' + Date.now(),
-            type: 'REMOVE',
+            type: 'DELETE',
             async: true,
             crossdomain : true,
             headers : {
               Authorization: 'Basic ' + Base64.encode(
                 priv.username + ':' + priv.password
-                )
-              },
-            success: function (response) {
+              )
+            },
+            success: function () {
               j = attachment_list.length;
               // no attachments, done
               if (j === 0) {
@@ -690,23 +718,20 @@ jIO.addStorageType('dav', function (spec, my) {
                   "id": command.getDocId()
                 });
               } else {
-                for (i = 0; i < j; i += 1) {
-                  secured_attachmentid = priv.secureDocId(attachment_list[i]);
-                  attachment_url = url + '/' + secured_attachmentid;
-
+                deleteAttachment = function (attachment_url, j, k) {
                   $.ajax({
                     url: attachment_url + '?_=' + Date.now(),
-                    type: 'REMOVE',
+                    type: 'DELETE',
                     async: true,
                     crossdomain : true,
                     headers : {
                       Authorization: 'Basic ' + Base64.encode(
                         priv.username + ':' + priv.password
-                        )
-                      },
-                    success: function (response) {
+                      )
+                    },
+                    success: function () {
                       // all deleted, return response, need k as async couter
-                      if (j === k){
+                      if (j === k) {
                         that.success({
                           "ok": true,
                           "id": command.getDocId()
@@ -715,8 +740,8 @@ jIO.addStorageType('dav', function (spec, my) {
                         k += 1;
                       }
                     },
-                    error: function (type) {
-                       that.error({
+                    error: function () {
+                      that.error({
                         "status": 404,
                         "statusText": "Not Found",
                         "error": "not_found",
@@ -726,9 +751,16 @@ jIO.addStorageType('dav', function (spec, my) {
                     }
                   });
                 };
+                for (i = 0; i < j; i += 1) {
+                  secured_attachmentid = priv.secureDocId(attachment_list[i]);
+                  attachment_url = url + '.' + priv.underscoreFileExtenisons(
+                    secured_attachmentid
+                  );
+                  deleteAttachment(attachment_url, j, k);
+                }
               }
             },
-            error: function (type) {
+            error: function () {
               that.error({
                 "status": 404,
                 "statusText": "Not Found",
@@ -739,7 +771,7 @@ jIO.addStorageType('dav', function (spec, my) {
             }
           });
         },
-        error: function (type) {
+        error: function () {
           that.error({
             "status": 404,
             "statusText": "Not Found",
@@ -769,24 +801,27 @@ jIO.addStorageType('dav', function (spec, my) {
   //  },{...}
   // ]
   //}
-
   that.allDocs = function (command) {
     var rows = [], url,
       am = priv.newAsyncModule(),
       o = {};
 
     o.getContent = function (file) {
+      var docid = priv.secureDocId(file.id),
+        url = priv.url + '/' + docid;
+
       $.ajax({
-        url: priv.url + '/' + priv.secureDocId(file.id) + '?_=' + Date.now(),
+        url: url + '?_=' + Date.now(),
         type: 'GET',
         async: true,
         dataType: 'text',
         headers: {
           'Authorization': 'Basic ' + Base64.encode(
-            priv.username + ':' + priv.password)
+            priv.username + ':' + priv.password
+          )
         },
         success: function (content) {
-          file.value.content = content;
+          file.doc = JSON.parse(content);
           rows.push(file);
           am.call(o, 'success');
         },
@@ -809,16 +844,16 @@ jIO.addStorageType('dav', function (spec, my) {
         url: url + '?_=' + Date.now(),
         type: 'PROPFIND',
         async: true,
-        dataType: 'xml',
+        dataType: "xml",
         crossdomain : true,
         headers : {
           Authorization: 'Basic ' + Base64.encode(
             priv.username + ':' + priv.password
-            ),
+          ),
           Depth: '1'
-          },
-        success: function (xmlData) {
-          var response = $(xmlData).find('D\\:response, response'),
+        },
+        success: function (xml) {
+          var response = $(xml).find('D\\:response, response'),
             len = response.length;
 
           if (len === 1) {
@@ -836,10 +871,7 @@ jIO.addStorageType('dav', function (spec, my) {
                 file.id = priv.restoreSlashes(file.id);
                 file.key = file.id;
               });
-              // this should probably also filter for the "." in case
-              // there is a title.revision. Then we could fill value in
-              // allDocs, too!
-              if (command.getOption('include_content')) {
+              if (command.getOption('include_docs')) {
                 am.call(o, 'getContent', [file]);
               } else {
                 rows.push(file);
