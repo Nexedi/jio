@@ -1349,6 +1349,48 @@ test ("Put", function(){
         "Check document tree"
     );
 
+    // put + revision history
+    o.doc = {
+      "_id": "put1",
+      "_revs": ["3-rh3", "2-rh2", "1-rh1"],
+      "title": "myPut3"
+    };
+    o.spy (o, "value", {"id": "put1", "ok": true, "rev": "3-rh3"},
+           "Put + revision history");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc._id = "put1.3-rh3";
+    delete o.doc._revs;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/put1.3-rh3"),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree.children.unshift({
+      "rev": "1-rh1",
+      "status": "missing",
+      "children": [{
+        "rev": "2-rh2",
+        "status": "missing",
+        "children": [{
+          "rev": "3-rh3",
+          "status": "available",
+          "children": []
+        }]
+      }]
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/put1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
     o.jio.stop();
 
 });
