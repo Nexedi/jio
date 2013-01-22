@@ -211,6 +211,48 @@ jIO.addStorageType('revision', function (spec, my) {
   };
 
   /**
+   * Add a document revision branch to the document tree
+   * @method updateDocumentTree
+   * @param  {object} doctree The document tree object
+   * @param  {array} revs The revisions array
+   * @param  {boolean} deleted The deleted flag
+   * @param  {array} The document revs_info
+   */
+  priv.updateDocumentTree = function (doctree, revs, deleted) {
+    var revs_info, doctree_iterator, flag;
+    revs_info = [];
+    revs = JSON.parse(JSON.stringify(revs));
+    doctree_iterator = doctree;
+    while (revs.length > 0) {
+      var i, rev = revs.pop(0);
+      revs_info.unshift({
+        "rev": rev,
+        "status": "missing"
+      });
+      for (i = 0; i < doctree_iterator.children.length; i += 1) {
+        if (doctree_iterator.children[i].rev === rev) {
+          doctree_iterator = doctree_iterator.children[i];
+          revs_info[0].status = doctree_iterator.status;
+          rev = undefined;
+          break;
+        }
+      }
+      if (rev) {
+        doctree_iterator.children.unshift({
+          "rev": rev,
+          "status": "missing",
+          "children": []
+        });
+        doctree_iterator = doctree_iterator.children[0];
+      }
+    }
+    flag = deleted === true ? "deleted" : "available";
+    revs_info[0].status = flag;
+    doctree_iterator.status = flag;
+    return revs_info;
+  };
+
+  /**
    * Add a document revision to the document tree
    * @method postToDocumentTree
    * @param  {object} doctree The document tree object
@@ -472,9 +514,14 @@ jIO.addStorageType('revision', function (spec, my) {
       );
     };
     f.postDocument = function (doctree_update_method) {
-      revs_info = priv.postToDocumentTree(doctree, doc);
+      if (doc._revs) {
+        revs_info = priv.updateDocumentTree(doctree, doc._revs);
+      } else {
+        revs_info = priv.postToDocumentTree(doctree, doc);
+      }
       doc._id = docid + "." + revs_info[0].rev;
       delete doc._rev;
+      delete doc._revs;
       that.addJob(
         "post",
         priv.substorage,
@@ -530,7 +577,8 @@ jIO.addStorageType('revision', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.put = function (command) {
-    if (command.cloneDoc()._rev === undefined) {
+    var doc = command.cloneDoc();
+    if (doc._rev === undefined && doc._revs === undefined) {
       priv.update_doctree_allowed = false;
     }
     that.post(command);
