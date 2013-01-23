@@ -2653,13 +2653,16 @@ test ("Post", function () {
     o.tick(o);
 
     // check document
-    o.indexPost = {
+    o.fakeIndex = {
+      "_id": "ipost_indices.json",
       "indexAB": {"keyword_abc":["some_id"], "keyword_def":["some_id"]},
       "indexA": {"keyword_abc":["some_id"]}
     };
-    deepEqual(
-      o.jio.get("ipost_indices.json"), o.indexPost, "Check index file"
-    );
+    o.jio.get("ipost_indices.json",function(err, response){
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
 
     // post with escapable characters
     o.doc = {"_id": "other_id", "title": "myPost2",
@@ -2689,7 +2692,7 @@ test ("Put", function(){
           "type": "indexed",
           "indices": [
               {"name":"indexA", "fields":["author"]},
-              {"name":"indexAB", "fields":["author","findMeC"]}
+              {"name":"indexAB", "fields":["author","year"]}
           ],
           "sub_storage": {
             "type": "local",
@@ -2711,33 +2714,35 @@ test ("Put", function(){
     o.tick(o);
 
     // check index file
-    o.indexPut = {
-        "indexA": {"John Doe": ["put1"]},
-        "indexAB": {"John Doe": ["put1"]},
-        "_id": "iput_indices.json"
+    o.fakeIndex = {
+      "indexA": {"John Doe": ["put1"]},
+      "indexAB": {"John Doe": ["put1"]},
+      "_id": "iput_indices.json"
     };
-    deepEqual(
-        o.jio.get("iput_indices.json"), o.indexPut, "Check index file",
-        o.index, "Check index file"
-    );
+    o.jio.get("iput_indices.json",function(err, response){
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
 
-    // modify a document - modify keyword on index!
+    // modify document - modify keyword on index!
     o.doc = {"_id": "put1", "title": "myPuttter1", "author":"Jane Doe"};
     o.spy (o, "value", {"ok": true, "id": "put1"},
-      "Modify document, update index file");
+      "Modify document, update keyword on index");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
     // check index file
-    o.index = {
-        "indexA": {"Jane Doe": ["put1"]},
-        "indexAB": {"Jane Doe": ["put1"]},
-        "_id": "iput_indices.json"
+    o.fakeIndex = {
+      "indexA": {"Jane Doe": ["put1"]},
+      "indexAB": {"Jane Doe": ["put1"]},
+      "_id": "iput_indices.json"
     };
-    deepEqual(
-        o.jio.get("iput_indices.json"), o.indexPut, "Check index file",
-        o.index, "Check index file"
-    );
+    o.jio.get("iput_indices.json",function(err, response){
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
 
     // add new document with same keyword!
     o.doc = {"_id": "new_doc", "title": "myPut2", "author":"Jane Doe"};
@@ -2747,15 +2752,36 @@ test ("Put", function(){
     o.tick(o);
 
     // check index file
-    o.index = {
-        "indexA": {"Jane Doe": ["put1", "new_doc"] },
-        "indexAB": {"Jane Doe": ["put1", "new_doc"]},
-        "_id": "iput_indices.json"
+    o.fakeIndex = {
+      "indexA": {"Jane Doe": ["put1", "new_doc"] },
+      "indexAB": {"Jane Doe": ["put1", "new_doc"]},
+      "_id": "iput_indices.json"
     };
-    deepEqual(
-        o.jio.get("iput_indices.json"), o.indexPut, "Check index file",
-        o.index, "Check index file"
-    );
+    o.jio.get("iput_indices.json",function(err, response){
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
+
+    // add second keyword to index file
+    o.doc = {"_id": "put1", "title": "myPut2", "author":"Jane Doe",
+      "year":"1912"};
+    o.spy (o, "value", {"ok": true, "id": "put1"},
+      "add second keyword to index file");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check index file
+    o.fakeIndex = {
+      "indexA": {"Jane Doe": ["put1"] },
+      "indexAB": {"Jane Doe": ["put1"],"1912": ["put1"]},
+      "_id": "iput_indices.json"
+    };
+    o.jio.get("iput_indices.json",function(err, response){
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
 
     // remove a keyword from an existing document
     o.doc = {"_id": "new_doc", "title": "myPut2"};
@@ -2765,64 +2791,185 @@ test ("Put", function(){
     o.tick(o);
 
     // check index file
-    o.index = {
-        "indexA": {"Jane Doe": ["put1"] },
-        "indexAB": {"Jane Doe": ["put1"]},
-        "_id": "iput_indices.json"
+    o.fakeIndex = {
+      "indexA": {"Jane Doe": ["put1"] },
+      "indexAB": {"Jane Doe": ["put1"], "1912": ["put1"]},
+      "_id": "iput_indices.json"
     };
+    o.jio.get("iput_indices.json",function(err, response){
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
+
+    o.jio.stop();
+});
+
+test ("PutAttachment", function(){
+
+    // not sure these need to be run, because the index does not change
+    // and only small modifications have been made to handle putAttachment
+    // tests are from localStorage putAttachment
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+          "type": "indexed",
+          "indices": [
+              {"name":"indexA", "fields":["author"]},
+              {"name":"indexAB", "fields":["author","year"]}
+          ],
+          "sub_storage": {
+            "type": "local",
+            "username": "iputatt",
+            "application_name": "iputatt"
+          }
+      });
+
+    // putAttachment without doc id
+    // error 20 -> document id required
+    o.spy(o, "status", 20, "PutAttachment without doc id");
+    o.jio.putAttachment({}, o.f);
+    o.tick(o);
+
+    // putAttachment without attachment id
+    // error 22 -> attachment id required
+    o.spy(o, "status", 22, "PutAttachment without attachment id");
+    o.jio.putAttachment({"id": "putattmt1"}, o.f);
+    o.tick(o);
+
+    // putAttachment without document
+    // error 404 -> not found
+    o.spy(o, "status", 404, "PutAttachment without document");
+    o.jio.putAttachment({"id": "putattmt1/putattmt2"}, o.f);
+    o.tick(o);
+
+    // putAttachment with document
+    o.doc = {"_id": "putattmt1","title": "myPutAttmt1"};
+    o.spy (o, "value", {"ok": true, "id": "putattmt1"},
+      "Put underlying document");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
+          "PutAttachment with document, without data");
+    o.jio.putAttachment({"id": "putattmt1/putattmt2"}, o.f);
+    o.tick(o);
+
+    // check document
     deepEqual(
-        o.jio.get("iput_indices.json"), o.indexPut, "Check index file",
-        o.index, "Check index file"
+        localstorage.getItem("jio/localstorage/iputatt/iputatt/putattmt1"),
+        {
+            "_id": "putattmt1",
+            "title": "myPutAttmt1",
+            "_attachments": {
+                "putattmt2": {
+                    "length": 0,
+                    // md5("")
+                    "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
+                }
+            }
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/iputatt/iputatt/putattmt1/putattmt2"),
+        "", "Check attachment"
+    );
+
+    // update attachment
+    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
+          "Update Attachment, with data");
+    o.jio.putAttachment({"id": "putattmt1/putattmt2", "data": "abc"}, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem("jio/localstorage/iputatt/iputatt/putattmt1"),
+        {
+            "_id": "putattmt1",
+            "title": "myPutAttmt1",
+            "_attachments": {
+                "putattmt2": {
+                    "length": 3,
+                    // md5("abc")
+                    "digest": "md5-900150983cd24fb0d6963f7d28e17f72"
+                }
+            }
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/iputatt/iputatt/putattmt1/putattmt2"),
+        "abc", "Check attachment"
     );
 
     o.jio.stop();
 });
-
-
 /*
-test ('Document load', function () {
-    var o = {}; o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.jio = JIO.newJio({type:'indexed',storage:{type:'dummyall3tries'}});
-    // loading must take long time with dummyall3tries
-    o.f = this.spy();
-    o.jio.get('memo',{max_retry:3,metadata_only:true},o.f);
-    o.clock.tick(1000);
-    ok(!o.f.called,'Callback must not be called');
-    // wait long time too retreive list
-    o.clock.tick(1000);
+test ("Get", function(){
 
-    // now we can test if the document metadata are loaded faster.
-    o.doc = {_id:'memo',_last_modified:25000,_creation_date:20000};
-    o.f2 = function (err,val) {
-        deepEqual (err||val,o.doc,'Document metadata retrieved');
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "uget",
+        "application_name": "aget"
+    });
+
+    // get inexistent document
+    o.spy(o, "status", 404, "Get inexistent document");
+    o.jio.get("get1", o.f);
+    o.tick(o);
+
+    // get inexistent attachment
+    o.spy(o, "status", 404, "Get inexistent attachment");
+    o.jio.get("get1/get2", o.f);
+    o.tick(o);
+
+    // adding a document
+    o.doc_get1 = {
+        "_id": "get1",
+        "title": "myGet1"
     };
-    this.spy(o,'f2');
-    o.jio.get('memo',{max_retry:3,metadata_only:true},o.f2);
-    o.clock.tick(1000);
-    if (!o.f2.calledOnce) {
-        if (o.f2.called) {
-            ok (false, 'too much results');
-        } else {
-            ok (false, 'no response');
+    localstorage.setItem("jio/localstorage/uget/aget/get1", o.doc_get1);
+
+    // get document
+    o.spy(o, "value", o.doc_get1, "Get document");
+    o.jio.get("get1", o.f);
+    o.tick(o);
+
+    // get inexistent attachment (document exists)
+    o.spy(o, "status", 404, "Get inexistent attachment (document exists)");
+    o.jio.get("get1/get2", o.f);
+    o.tick(o);
+
+    // adding an attachment
+    o.doc_get1["_attachments"] = {
+        "get2": {
+            "length": 2,
+            // md5("de")
+            "digest": "md5-5f02f0889301fd7be1ac972c11bf3e7d"
         }
-    }
-
-    // test a simple document loading
-    o.doc2 = {_id:'file',_last_modified:17000,
-              _creation_date:11000,content:'content file'};
-    o.f3 = function (err,val) {
-        deepEqual (err||val,o.doc2,'Simple document loading');
     };
-    this.spy(o,'f3');
-    o.jio.get('file',{max_retry:3},o.f3);
-    o.clock.tick(2000);
-    if (!o.f3.calledOnce) {
-        ok (false, 'no response / too much results');
-    }
+    localstorage.setItem("jio/localstorage/uget/aget/get1", o.doc_get1);
+    localstorage.setItem("jio/localstorage/uget/aget/get1/get2", "de");
+
+    // get attachment
+    o.spy(o, "value", "de", "Get attachment");
+    o.jio.get("get1/get2", o.f);
+    o.tick(o);
+
     o.jio.stop();
 });
+*/
 
+/*
 test ('Get document list', function () {
     var o = {}; o.clock = this.sandbox.useFakeTimers();
     o.clock.tick(base_tick);

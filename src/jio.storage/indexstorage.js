@@ -118,32 +118,48 @@ jIO.addStorageType('indexed', function (spec, my) {
   };
 
   /**
+   * Determine if a key/value pair exists in an object by VALUE
+   * @method searchObjectByValue
+   * @param  {object} indexToSearch The index to search
+   * @param  {string} docid The document id to find
+   * @param  {string} passback The value that should be returned
+   * @return {boolean} true/false
+   */
+  priv.searchIndexByValue = function (indexToSearch, docid, passback) {
+    var key, obj, prop;
+
+    for (key in indexToSearch) {
+        obj = indexToSearch[key];
+        for (prop in obj) {
+          if (obj[prop] === docid) {
+            return passback === "bool" ? true : key;
+          }
+        }
+      }
+    return false;
+  }
+
+  /**
    * Find id in indices
-   * @method docidInIndex
+   * @method isDocidInIndex
    * @param  {object} indices The file containing the indeces
    * @param  {object} doc The document which should be added to the index
    * @return {boolean} true/false
    */
-  priv.docidInIndex = function (indices, doc) {
-    var i, j, l = priv.indices.length, elements_to_check,
-      index, index_name, index_length;
+  priv.isDocidInIndex = function (indices, doc) {
+    var index, i, l = priv.indices.length;
 
     // loop indices
     for (i = 0; i < l; i += 1) {
-      index = priv.indices[i];
-      index_name = index["name"];
-      index_length = index.fields.length;
-      elements_to_check = priv.getObjectSize(indices[index_name]);
+      index = {};
+      index.reference = priv.indices[i];
+      index.name = index.reference["name"];
+      index.size = priv.getObjectSize(indices[index.name]);
 
-      if (elements_to_check > 0) {
-        for (var key in indices[index_name]) {
-          var obj = indices[index_name][key];
-          for (var prop in obj) {
-            if (obj[prop] === doc._id) {
-              return true;
-            }
-          }
-        }
+      if (index.size > 0) {
+        if (priv.searchIndexByValue(indices[index.name], doc._id, "bool")) {
+          return true
+        };
       }
     }
     return false;
@@ -154,35 +170,48 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @param  {object} indices The file containing the indeces
    * @param  {object} doc The document which should be added to the index
    */
-  priv.updateIndeces = function (indices, doc) {
-    var i, j, k, m, value,
-      index, index_name, index_length, index_field_array,
-      l = priv.indices.length,
-      docid = doc._id;
+  priv.updateIndices = function (indices, doc) {
+    var i, j, k, m, index,value, label, key, l = priv.indices.length;
 
     // loop indices
     for (i = 0; i < l; i += 1) {
-      index = priv.indices[i];
-      index_name = index["name"];
-      index_length = index.fields.length;
-      index_field_array = [];
+      // index object (reference and current iteration)
+      index = {};
+      index.reference = priv.indices[i];
+      index.reference_size = index.reference.fields.length;
+      index.name = index.reference["name"];
+      index.field_array = [];
+      index.current = indices[index.name];
+      index.current_size = priv.getObjectSize(index.current);
 
-      // loop index fields [keywords]
-      for (j = 0; j < index_length; j += 1) {
-        value = doc[index.fields[j]];
+      // build array of values to create entries in index
+      for (j = 0; j < index.reference_size; j += 1) {
+        label = index.reference.fields[j]
+        value = doc[label];
         if (value !== undefined) {
-          index_field_array.push(value);
+          // add a new entry
+          index.field_array.push(value);
+
+          // remove existing entries with same docid
+          // because items are stored as "keyword:id" pairs this is tricky
+          if (index.current_size > 0) {
+            key = priv.searchIndexByValue(indices[index.name], doc._id, "key");
+            if (!!key) {
+              delete index.current[key];
+            }
+          }
         }
       }
-
-      m = index_field_array.length;
-      if (m) {
-        for (k = 0; k < m; k += 1) {
-          if (indices[index_name] !== undefined) {
-            if (indices[index_name][index_field_array[k]] === undefined) {
-              indices[index_name][index_field_array[k]] = [];
+      // create keyword entries
+      if (index.current !== undefined) {
+        m = index.field_array.length;
+        if (m) {
+          for (k = 0; k < m; k += 1) {
+            index.current_keyword = [index.field_array[k]];
+            if (index.current[index.current_keyword] === undefined) {
+              index.current[index.current_keyword] = [];
             }
-            indices[index_name][index_field_array[k]].push(docid);
+            index.current[index.current_keyword].push(doc._id);
           }
         }
       }
@@ -194,8 +223,9 @@ jIO.addStorageType('indexed', function (spec, my) {
    * Post document to substorage and create/update index file(s)
    * @method post
    * @param  {object} command The JIO command
+   * @param  {string} source The source of the function call
    */
-  that.post = function (command) {
+  priv.postOrput = function (command, source) {
     var f = {}, indices, doc, docid;
     doc = command.cloneDoc();
     docid = command.getDocId();
@@ -214,16 +244,25 @@ jIO.addStorageType('indexed', function (spec, my) {
         priv.index_suffix,
         option,
         function (response) {
-          console.log("index file found, we post(put)");
-          console.log( indices );
           indices = response;
           f.postDocument("put");
         },
         function (err) {
           switch (err.status) {
           case 404:
-            indices = priv.createEmptyIndexArray();
-            f.postDocument("post");
+            if (source !== 'PUTATTACHMENT') {
+              indices = priv.createEmptyIndexArray();
+              f.postDocument("post");
+            } else {
+              that.error({
+                "status": 404,
+                "statusText": "Not Found",
+                "error": "not found",
+                "message": "Document not found",
+                "reason": "Document not found"
+              });
+        return;
+            }
             break;
           default:
             err.message = "Cannot retrieve index array";
@@ -234,9 +273,7 @@ jIO.addStorageType('indexed', function (spec, my) {
       );
     };
     f.postDocument = function (index_update_method) {
-      // if the index file already has an entry with this id,
-      // the document already exists
-      if (priv.docidInIndex(indices, doc) && index_update_method === 'POST') {
+      if (priv.isDocidInIndex(indices, doc) && source === 'POST') {
         // POST the document already exists
         that.error({
           "status": 409,
@@ -247,20 +284,37 @@ jIO.addStorageType('indexed', function (spec, my) {
         });
         return;
       } else {
-        indices = priv.updateIndeces(indices, doc);
+        if (source !== 'PUTATTACHMENT') {
+          indices = priv.updateIndices(indices, doc);
+        }
         that.addJob(
-          "post",
+          source === 'PUTATTACHMENT' ? "putAttachment" : "post",
           priv.substorage,
           doc,
           command.cloneOption(),
           function () {
-            f.sendIndices(index_update_method);
+            if (source !== 'PUTATTACHMENT') {
+              f.sendIndices(index_update_method);
+            } else {
+              docid = docid + '/' + command.getAttachmentId();
+              that.success({
+                "ok": true,
+                "id": docid
+              });
+            }
           },
           function (err) {
             switch (err.status) {
             case 409:
               // file already exists
-              f.sendIndices(index_update_method);
+              if (source !== 'PUTATTACHMENT') {
+                f.sendIndices(index_update_method);
+              } else {
+                that.success({
+                  "ok": true,
+                  "id": docid
+                });
+              }
               break;
             default:
               err.message = "Cannot upload document";
@@ -299,168 +353,68 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @method put
    * @param  {object} command The JIO command
    */
-  that.put = function (command) {
-    that.post(command);
+  that.post = function (command) {
+    priv.postOrput(command, 'POST');
   };
-/*
+
   /**
-   * @method formatToFileObject
-   * @param  {} row
-   * @return {} obj
-  *//*
-  priv.formatToFileObject = function (row) {
-    var k, obj = {
-      _id: row.id
-    };
-    for (k in row.value) {
-      if (row.value.hasOwnProperty(k)) {
-        obj[k] = row.value[k];
-      }
-    }
-    return obj;
-  };
-*/
-  /**
-   * @method allDocs
-   * @param  {} files_object
-   * @return {} obj
-  *//*
-  priv.allDocs = function (files_object) {
-    var k, obj = {
-      rows: []
-    }, i = 0;
-    for (k in files_object) {
-      if (files_object.hasOwnProperty(k)) {
-        obj.rows[i] = {};
-        obj.rows[i].value = files_object[k];
-        obj.rows[i].id = obj.rows[i].key = obj.rows[i].value._id;
-        delete obj.rows[i].value._id;
-        i += 1;
-      }
-    }
-    obj.total_rows = obj.rows.length;
-    return obj;
-  };
-*/
-  /**
-   * @method setFileArray
-   * @param  {} file_array
-  *//*
-  priv.setFileArray = function (file_array) {
-    var i, obj = {};
-    for (i = 0; i < file_array.length; i += 1) {
-      obj[file_array[i].id] = priv.formatToFileObject(file_array[i]);
-    }
-    localStorage.setItem(storage_file_object_name, obj);
-  };
-*/
-  /**
-   * @method getFileObject
-   * @param  {} docid
-   * @return {} obj
-  *//*
-  priv.getFileObject = function (docid) {
-    var obj = localStorage.getItem(storage_file_object_name) || {};
-    return obj[docid];
-  };
-*/
-  /**
-   * @method addFile
-   * @param  {} file_obj
-  *//*
-  priv.addFile = function (file_obj) {
-    var obj = localStorage.getItem(storage_file_object_name) || {};
-    obj[file_obj._id] = file_obj;
-    localStorage.setItem(storage_file_object_name, obj);
-  };
-*/
-  /**
-   * @method removeFile
-   * @param  {} docid
-  *//*
-  priv.removeFile = function (docid) {
-    var obj = localStorage.getItem(storage_file_object_name) || {};
-    delete obj[docid];
-    localStorage.setItem(storage_file_object_name, obj);
-  };
-*/
-  /**
-   * updates the storage.
-   * It will retreive all files from a storage. It is an asynchronous task
-   * so the update can be on going even if IndexedStorage has already
-   * returned the result.
-   * @method update
-  *//*
-  priv.update = function () {
-    that.addJob(
-      'allDocs',
-      priv.sub_storage_spec,
-      null,
-      {max_retry: 3},
-      function (response) {
-        priv.setFileArray(response.rows);
-      },
-      function () {}
-    );
-  };
-*/
-  /**
-   * Add put job to substorage and create/update index file(s)
+   * Update the document metadata and update the index
    * @method put
    * @param  {object} command The JIO command
-   *//*
+   */
   that.put = function (command) {
-    var cloned_doc = command.cloneDoc(),
-      cloned_option = command.cloneOption();
-    // create/update indexStorage
+    priv.postOrput(command, 'PUT');
+  };
 
-    //  fwd job
-    that.addJob('put', priv.sub_storage_spec, cloned_doc,
-      cloned_option,
+  /**
+   * Add an attachment to a document (no index modification)
+   * @method putAttachment
+   * @param  {object} command The JIO command
+   */
+  that.putAttachment = function (command) {
+    priv.postOrput(command, 'PUTATTACHMENT');
+  };
+
+  /**
+   * Get the document metadata or attachment.
+   * Options:
+   * - {boolean} revs Add simple revision history (false by default).
+   * - {boolean} revs_info Add revs info (false by default).
+   * - {boolean} conflicts Add conflict object (false by default).
+   * @method get
+   * @param  {object} command The JIO command
+   */
+  that.get = function (command) {
+    var option, docid;
+    option = command.cloneOption();
+    if (option.max_retry === 0) {
+      option.max_retry = 3;
+    }
+    if (command.getAttachmentId() !== undefined) {
+      docid = command.getDocId() + '/' + command.getAttachmentId();
+    } else {
+      docid = command.getDocId();
+    }
+    that.addJob(
+      "get",
+      priv.substorage,
+      docid,
+      option,
       function (response) {
-        priv.update();
         that.success(response);
       },
-      function (error) {
-        that.error(error);
+      function (err) {
+        that.error({
+          "status": 404,
+          "statusText": "Not Found",
+          "error": "not_found",
+          "message": "Cannot find the attachment",
+          "reason": "Document/Attachment not found"
+        });
       }
     );
   };
-
-  *//**
-   * Loads a document.
-   * @method get
-  *//*
-  that.get = function (command) {
-    // jslint unused var file_array
-    var success = function (val) {
-        that.success(val);
-      },
-      error = function (err) {
-        that.error(err);
-      },
-      get = function () {
-        var cloned_option = command.cloneOption();
-        that.addJob('get', priv.sub_storage_spec, command.cloneDoc(),
-          cloned_option, success, error);
-        that.end();
-      };
-    priv.indexStorage();
-    priv.update();
-    if (command.getOption('metadata_only')) {
-      setTimeout(function () {
-        var file_obj = priv.getFileObject(command.getDocId());
-        if (file_obj && (file_obj._last_modified || file_obj._creation_date)) {
-          that.success(file_obj);
-        } else {
-          get();
-        }
-      });
-    } else {
-      get();
-    }
-  }; // end get
- *//**
+/**
    * Removes a document.
    * @method remove
    *//*
