@@ -2619,9 +2619,64 @@ test ('Remove document', function () {
     o.mytest('DummyStorageAllOK,3tries: remove document.',{ok:true,id:'file'});
     o.jio.stop();
 });
+*/
+module ("Jio IndexStorage");
 
-module ('Jio IndexedStorage');
+test ("Post", function () {
 
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "indexed",
+        "indices": [{
+          "name":"indexA",
+          "fields":["findMeA"]
+        },{
+          "name":"indexAB",
+          "fields":["findMeA","findMeB"]
+        }],
+        "sub_storage": {
+          "type": "local",
+          "username": "ipost",
+          "application_name": "ipost"
+        }
+    });
+
+    // post without id
+    o.spy (o, "status", undefined, "Post without id");
+    o.jio.post({}, o.f);
+    o.tick(o);
+
+    // post non empty document
+    o.doc = {"_id": "some_id", "title": "myPost1",
+      "findMeA":"keyword_abc", "findMeB":"keyword_def"
+    };
+    o.spy (o, "value", {"ok": true, "id": "some_id"}, "Post document");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.indexPost = {
+      "indexAB": {"keyword_abc":["some_id"], "keyword_def":["some_id"]},
+      "indexA": {"keyword_abc":["some_id"]}
+    };
+    deepEqual(
+        o.jio.get("ipost_indices.json"),
+        o.indexPost,
+        "Check index file"
+    );
+
+    // post and document already exists
+    o.doc = {"_id": "some_id", "title": "myPost2",
+      "findMeA":"keyword_ghi", "findMeB":"keyword_jkl"
+    }
+    o.spy (o, "status", 409, "Post and document already exists");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+});
+/*
 test ('Document load', function () {
     var o = {}; o.clock = this.sandbox.useFakeTimers();
     o.clock.tick(base_tick);
@@ -2660,27 +2715,6 @@ test ('Document load', function () {
     o.jio.get('file',{max_retry:3},o.f3);
     o.clock.tick(2000);
     if (!o.f3.calledOnce) {
-        ok (false, 'no response / too much results');
-    }
-    o.jio.stop();
-});
-
-test ('Document save', function () {
-    var o = {}; o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.jio = JIO.newJio({type:'indexed',
-                        storage:{type:'dummyall3tries',
-                                 username:'indexsave'}});
-    o.f = function (err,val) {
-        if (err) {
-            err = err.status;
-        }
-        deepEqual (err || val,{ok:true,id:'file'},'document save');
-    };
-    this.spy(o,'f');
-    o.jio.put({_id:'file',content:'content'},{max_retry:3},o.f);
-    o.clock.tick(2000);
-    if (!o.f.calledOnce){
         ok (false, 'no response / too much results');
     }
     o.jio.stop();
@@ -2742,7 +2776,8 @@ test ('Remove document', function () {
 
     o.jio.stop();
 });
-
+*/
+/*
 module ('Jio CryptedStorage');
 
 test ('Document save' , function () {
