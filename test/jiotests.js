@@ -2628,13 +2628,10 @@ test ("Post", function () {
 
     o.jio = JIO.newJio({
         "type": "indexed",
-        "indices": [{
-          "name":"indexA",
-          "fields":["findMeA"]
-        },{
-          "name":"indexAB",
-          "fields":["findMeA","findMeB"]
-        }],
+        "indices": [
+            {"name":"indexA", "fields":["findMeA"]},
+            {"name":"indexAB", "fields":["findMeA","findMeB"]}
+        ],
         "sub_storage": {
           "type": "local",
           "username": "ipost",
@@ -2661,13 +2658,20 @@ test ("Post", function () {
       "indexA": {"keyword_abc":["some_id"]}
     };
     deepEqual(
-        o.jio.get("ipost_indices.json"),
-        o.indexPost,
-        "Check index file"
+      o.jio.get("ipost_indices.json"), o.indexPost, "Check index file"
     );
 
+    // post with escapable characters
+    o.doc = {"_id": "other_id", "title": "myPost2",
+      "findMeA":"keyword_*§$%&/()=?", "findMeB":"keyword_|ð@ł¶đæðſæðæſ³"
+    };
+    o.spy (o, "value", {"ok": true, "id": "other_id"},
+           "Post with escapable characters");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
     // post and document already exists
-    o.doc = {"_id": "some_id", "title": "myPost2",
+    o.doc = {"_id": "some_id", "title": "myPost3",
       "findMeA":"keyword_ghi", "findMeB":"keyword_jkl"
     }
     o.spy (o, "status", 409, "Post and document already exists");
@@ -2676,6 +2680,105 @@ test ("Post", function () {
 
     o.jio.stop();
 });
+
+test ("Put", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+          "type": "indexed",
+          "indices": [
+              {"name":"indexA", "fields":["author"]},
+              {"name":"indexAB", "fields":["author","findMeC"]}
+          ],
+          "sub_storage": {
+            "type": "local",
+            "username": "iput",
+            "application_name": "iput"
+          }
+      });
+
+    // put without id
+    // error 20 -> document id required
+    o.spy (o, "status", 20, "Put without id");
+    o.jio.put({}, o.f);
+    o.tick(o);
+
+    // put non empty document
+    o.doc = {"_id": "put1", "title": "myPut1", "author":"John Doe"};
+    o.spy (o, "value", {"ok": true, "id": "put1"}, "Put-create document");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check index file
+    o.indexPut = {
+        "indexA": {"John Doe": ["put1"]},
+        "indexAB": {"John Doe": ["put1"]},
+        "_id": "iput_indices.json"
+    };
+    deepEqual(
+        o.jio.get("iput_indices.json"), o.indexPut, "Check index file",
+        o.index, "Check index file"
+    );
+
+    // modify a document - modify keyword on index!
+    o.doc = {"_id": "put1", "title": "myPuttter1", "author":"Jane Doe"};
+    o.spy (o, "value", {"ok": true, "id": "put1"},
+      "Modify document, update index file");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check index file
+    o.index = {
+        "indexA": {"Jane Doe": ["put1"]},
+        "indexAB": {"Jane Doe": ["put1"]},
+        "_id": "iput_indices.json"
+    };
+    deepEqual(
+        o.jio.get("iput_indices.json"), o.indexPut, "Check index file",
+        o.index, "Check index file"
+    );
+
+    // add new document with same keyword!
+    o.doc = {"_id": "new_doc", "title": "myPut2", "author":"Jane Doe"};
+    o.spy (o, "value", {"ok": true, "id": "new_doc"},
+      "Add new document with same keyword");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check index file
+    o.index = {
+        "indexA": {"Jane Doe": ["put1", "new_doc"] },
+        "indexAB": {"Jane Doe": ["put1", "new_doc"]},
+        "_id": "iput_indices.json"
+    };
+    deepEqual(
+        o.jio.get("iput_indices.json"), o.indexPut, "Check index file",
+        o.index, "Check index file"
+    );
+
+    // remove a keyword from an existing document
+    o.doc = {"_id": "new_doc", "title": "myPut2"};
+    o.spy (o, "value", {"ok": true, "id": "new_doc"},
+      "Remove keyword from existing document");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check index file
+    o.index = {
+        "indexA": {"Jane Doe": ["put1"] },
+        "indexAB": {"Jane Doe": ["put1"]},
+        "_id": "iput_indices.json"
+    };
+    deepEqual(
+        o.jio.get("iput_indices.json"), o.indexPut, "Check index file",
+        o.index, "Check index file"
+    );
+
+    o.jio.stop();
+});
+
+
 /*
 test ('Document load', function () {
     var o = {}; o.clock = this.sandbox.useFakeTimers();

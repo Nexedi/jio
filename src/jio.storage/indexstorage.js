@@ -214,6 +214,8 @@ jIO.addStorageType('indexed', function (spec, my) {
         priv.index_suffix,
         option,
         function (response) {
+          console.log("index file found, we post(put)");
+          console.log( indices );
           indices = response;
           f.postDocument("put");
         },
@@ -234,7 +236,7 @@ jIO.addStorageType('indexed', function (spec, my) {
     f.postDocument = function (index_update_method) {
       // if the index file already has an entry with this id,
       // the document already exists
-      if (priv.docidInIndex(indices, doc)) {
+      if (priv.docidInIndex(indices, doc) && index_update_method === 'POST') {
         // POST the document already exists
         that.error({
           "status": 409,
@@ -292,6 +294,14 @@ jIO.addStorageType('indexed', function (spec, my) {
     f.getIndices();
   };
 
+  /**
+   * Update the document metadata and update the index
+   * @method put
+   * @param  {object} command The JIO command
+   */
+  that.put = function (command) {
+    that.post(command);
+  };
 /*
   /**
    * @method formatToFileObject
