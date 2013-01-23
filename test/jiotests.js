@@ -2911,16 +2911,26 @@ test ("PutAttachment", function(){
 
     o.jio.stop();
 });
-/*
+
 test ("Get", function(){
 
+    // not sure these need to be run, because the index does not change
+    // and only small modifications have been made to handle putAttachment
+    // tests are from localStorage putAttachment
     var o = generateTools(this);
 
     o.jio = JIO.newJio({
-        "type": "local",
-        "username": "uget",
-        "application_name": "aget"
-    });
+          "type": "indexed",
+          "indices": [
+              {"name":"indexA", "fields":["author"]},
+              {"name":"indexAB", "fields":["author","year"]}
+          ],
+          "sub_storage": {
+            "type": "local",
+            "username": "iget",
+            "application_name": "iget"
+          }
+      });
 
     // get inexistent document
     o.spy(o, "status", 404, "Get inexistent document");
@@ -2937,7 +2947,7 @@ test ("Get", function(){
         "_id": "get1",
         "title": "myGet1"
     };
-    localstorage.setItem("jio/localstorage/uget/aget/get1", o.doc_get1);
+    localstorage.setItem("jio/localstorage/iget/iget/get1", o.doc_get1);
 
     // get document
     o.spy(o, "value", o.doc_get1, "Get document");
@@ -2957,8 +2967,8 @@ test ("Get", function(){
             "digest": "md5-5f02f0889301fd7be1ac972c11bf3e7d"
         }
     };
-    localstorage.setItem("jio/localstorage/uget/aget/get1", o.doc_get1);
-    localstorage.setItem("jio/localstorage/uget/aget/get1/get2", "de");
+    localstorage.setItem("jio/localstorage/iget/iget/get1", o.doc_get1);
+    localstorage.setItem("jio/localstorage/iget/iget/get1/get2", "de");
 
     // get attachment
     o.spy(o, "value", "de", "Get attachment");
@@ -2967,7 +2977,7 @@ test ("Get", function(){
 
     o.jio.stop();
 });
-*/
+
 
 /*
 test ('Get document list', function () {
