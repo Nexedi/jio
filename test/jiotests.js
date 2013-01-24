@@ -229,9 +229,18 @@ generateTools = function (sinon) {
             o.clock.tick(25);
         }
     };
-    o.addFakeServerResponse = function (method, path, status, response) {
-      var url = new RegExp('https:\\/\\/ca-davstorage:8080\\/' + path +
-                      '(\\?.*|$)');
+    o.constructFakeServerUrl = function(type, path) {
+      switch (type) {
+        case "dav":
+          return 'https:\\/\\/ca-davstorage:8080\\/' + path + '(\\?.*|$)';
+          break;
+        case "s3":
+          return path;
+          break;
+      }
+    };
+    o.addFakeServerResponse = function (type, method, path, status, response) {
+      var url = new RegExp(o.constructFakeServerUrl(type, path) );
       o.server.respondWith(method, url,
         [status, { "Content-Type": 'application/xml' }, response]
       );
@@ -2108,7 +2117,7 @@ test ("Post", function () {
     o.clock.tick(5000);
 
     // post non empty document
-    o.addFakeServerResponse("PUT", "myFile", 201, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "PUT", "myFile", 201, "HTML RESPONSE");
     o.spy(o, "value", {"id": "myFile", "ok": true},
           "Create = POST non empty document");
     o.jio.post({"_id": "myFile", "title": "hello there"}, o.f);
@@ -2117,7 +2126,7 @@ test ("Post", function () {
 
     // post but document already exists (post = error!, put = ok)
     o.answer = JSON.stringify({"_id": "myFile", "title": "hello there"});
-    o.addFakeServerResponse("GET", "myFile", 200, o.answer);
+    o.addFakeServerResponse("dav", "GET", "myFile", 200, o.answer);
     o.spy (o, "status", 409, "Post but document already exists");
     o.jio.post({"_id": "myFile", "title": "hello again"}, o.f);
     o.clock.tick(5000);
@@ -2143,7 +2152,7 @@ test ("Put", function(){
     o.clock.tick(5000);
 
     // put non empty document
-    o.addFakeServerResponse("PUT", "put1", 201, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "PUT", "put1", 201, "HTML RESPONSE");
     o.spy (o, "value", {"ok": true, "id": "put1"},
            "Create = PUT non empty document");
     o.jio.put({"_id": "put1", "title": "myPut1"}, o.f);
@@ -2155,8 +2164,8 @@ test ("Put", function(){
 
     // put but document already exists = update
     o.answer = JSON.stringify({"_id": "put1", "title": "myPut1"});
-    o.addFakeServerResponse("GET", "put1", 200, o.answer);
-    o.addFakeServerResponse("PUT", "put1", 201, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "GET", "put1", 200, o.answer);
+    o.addFakeServerResponse("dav", "PUT", "put1", 201, "HTML RESPONSE");
     o.spy (o, "value", {"ok": true, "id": "put1"}, "Updated the document");
     o.jio.put({"_id": "put1", "title": "myPut2abcdedg"}, o.f);
     o.clock.tick(5000);
@@ -2187,7 +2196,7 @@ test ("PutAttachment", function(){
     o.clock.tick(5000);
 
     // putAttachment without underlying document => not found
-    o.addFakeServerResponse("GET", "putattmtx", 22, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "GET", "putattmtx", 22, "HTML RESPONSE");
     o.spy(o, "status", 22, "PutAttachment without document");
     o.jio.putAttachment({"id": "putattmtx.putattmt2"}, o.f);
     o.clock.tick(5000);
@@ -2195,9 +2204,10 @@ test ("PutAttachment", function(){
 
     // putAttachment with document without data
     o.answer = JSON.stringify({"_id": "putattmt1", "title": "myPutAttm1"});
-    o.addFakeServerResponse("GET", "putattmt1", 200, o.answer);
-    o.addFakeServerResponse("PUT", "putattmt1", 201, "HTML RESPONSE");
-    o.addFakeServerResponse("PUT", "putattmt1.putattmt2", 201,"HTML RESPONSE");
+    o.addFakeServerResponse("dav", "GET", "putattmt1", 200, o.answer);
+    o.addFakeServerResponse("dav", "PUT", "putattmt1", 201, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "PUT", "putattmt1.putattmt2", 201,"HTML"+
+      + "RESPONSE");
     o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
           "PutAttachment with document, without data");
     o.jio.putAttachment({"id": "putattmt1/putattmt2"}, o.f);
@@ -2206,9 +2216,10 @@ test ("PutAttachment", function(){
 
     // update attachment
     o.answer = JSON.stringify({"_id": "putattmt1", "title": "myPutAttm1"});
-    o.addFakeServerResponse("GET", "putattmt1", 200, o.answer);
-    o.addFakeServerResponse("PUT", "putattmt1", 201, "HTML RESPONSE");
-    o.addFakeServerResponse("PUT", "putattmt1.putattmt2", 201,"HTML RESPONSE");
+    o.addFakeServerResponse("dav", "GET", "putattmt1", 200, o.answer);
+    o.addFakeServerResponse("dav", "PUT", "putattmt1", 201, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "PUT", "putattmt1.putattmt2", 201,"HTML"+
+      "RESPONSE");
     o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
           "Update Attachment, with data");
     o.jio.putAttachment({"id": "putattmt1/putattmt2", "data": "abc"}, o.f);
@@ -2230,14 +2241,14 @@ test ("Get", function(){
     });
 
     // get inexistent document
-    o.addFakeServerResponse("GET", "get1", 404, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "GET", "get1", 404, "HTML RESPONSE");
     o.spy(o, "status", 404, "Get non existing document");
     o.jio.get("get1", o.f);
     o.clock.tick(5000);
     o.server.respond();
 
     // get inexistent attachment
-    o.addFakeServerResponse("GET", "get1.get2", 404, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "GET", "get1.get2", 404, "HTML RESPONSE");
     o.spy(o, "status", 404, "Get non existing attachment");
     o.jio.get("get1/get2", o.f);
     o.clock.tick(5000);
@@ -2245,14 +2256,14 @@ test ("Get", function(){
 
     // get document
     o.answer = JSON.stringify({"_id": "get3", "title": "some title"});
-    o.addFakeServerResponse("GET", "get3", 200, o.answer);
+    o.addFakeServerResponse("dav", "GET", "get3", 200, o.answer);
     o.spy(o, "value", {"_id": "get3", "title": "some title"}, "Get document");
     o.jio.get("get3", o.f);
     o.clock.tick(5000);
     o.server.respond();
 
     // get inexistent attachment (document exists)
-    o.addFakeServerResponse("GET", "get3.getx", 404, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "GET", "get3.getx", 404, "HTML RESPONSE");
     o.spy(o, "status", 404, "Get non existing attachment (doc exists)");
     o.jio.get("get3/getx", o.f);
     o.clock.tick(5000);
@@ -2260,7 +2271,7 @@ test ("Get", function(){
 
     // get attachment
     o.answer = JSON.stringify({"_id": "get4", "title": "some attachment"});
-    o.addFakeServerResponse("GET", "get3.get4", 200, o.answer);
+    o.addFakeServerResponse("dav", "GET", "get3.get4", 200, o.answer);
     o.spy(o, "value", {"_id": "get4", "title": "some attachment"},
       "Get attachment");
     o.jio.get("get3/get4", o.f);
@@ -2282,14 +2293,15 @@ test ("Remove", function(){
     });
 
     // remove inexistent document
-    o.addFakeServerResponse("GET", "remove1", 404, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "GET", "remove1", 404, "HTML RESPONSE");
     o.spy(o, "status", 404, "Remove non existening document");
     o.jio.remove({"_id": "remove1"}, o.f);
     o.clock.tick(5000);
     o.server.respond();
 
     // remove inexistent document/attachment
-    o.addFakeServerResponse("GET", "remove1.remove2", 404, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "GET", "remove1.remove2", 404, "HTML" +
+      "RESPONSE");
     o.spy(o, "status", 404, "Remove inexistent document/attachment");
     o.jio.remove({"_id": "remove1/remove2"}, o.f);
     o.clock.tick(5000);
@@ -2297,8 +2309,8 @@ test ("Remove", function(){
 
     // remove document
     o.answer = JSON.stringify({"_id": "remove3", "title": "some doc"});
-    o.addFakeServerResponse("GET", "remove3", 200, o.answer);
-    o.addFakeServerResponse("DELETE", "remove3", 200, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "GET", "remove3", 200, o.answer);
+    o.addFakeServerResponse("dav", "DELETE", "remove3", 200, "HTML RESPONSE");
     o.spy(o, "value", {"ok": true, "id": "remove3"}, "Remove document");
     o.jio.remove({"_id": "remove3"}, o.f);
     o.clock.tick(5000);
@@ -2315,9 +2327,10 @@ test ("Remove", function(){
       }
     });
     // remove attachment
-    o.addFakeServerResponse("GET", "remove4", 200, o.answer);
-    o.addFakeServerResponse("PUT", "remove4", 201, "HTML RESPONSE");
-    o.addFakeServerResponse("DELETE", "remove4.remove5", 200, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "GET", "remove4", 200, o.answer);
+    o.addFakeServerResponse("dav", "PUT", "remove4", 201, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "DELETE", "remove4.remove5", 200, "HTML"+
+      "RESPONSE");
     o.spy(o, "value", {"ok": true, "id": "remove4/remove5"},
           "Remove attachment");
     o.jio.remove({"_id": "remove4/remove5"}, o.f);
@@ -2343,11 +2356,14 @@ test ("Remove", function(){
       }
     });
     // remove document with multiple attachments
-    o.addFakeServerResponse("GET", "remove6", 200, o.answer);
-    o.addFakeServerResponse("DELETE", "remove6.remove7", 200, "HTML RESPONSE");
-    o.addFakeServerResponse("DELETE", "remove6.remove8", 200, "HTML RESPONSE");
-    o.addFakeServerResponse("DELETE", "remove6.remove9", 200, "HTML RESPONSE");
-    o.addFakeServerResponse("DELETE", "remove6", 200, "HTML RESPONSE");
+    o.addFakeServerResponse("dav", "GET", "remove6", 200, o.answer);
+    o.addFakeServerResponse("dav", "DELETE", "remove6.remove7", 200, "HTML"+
+      "RESPONSE");
+    o.addFakeServerResponse("dav", "DELETE", "remove6.remove8", 200, "HTML"+
+      "RESPONSE");
+    o.addFakeServerResponse("dav", "DELETE", "remove6.remove9", 200, "HTML"+
+      "RESPONSE");
+    o.addFakeServerResponse("dav", "DELETE", "remove6", 200, "HTML RESPONSE");
     o.spy(o, "value", {"ok": true, "id": "remove6"},
           "Remove document with multiple attachments");
     o.jio.remove({"_id": "remove6"}, o.f);
@@ -2371,7 +2387,7 @@ test ("AllDocs", function () {
     });
 
   // get allDocs, no content
-  o.addFakeServerResponse("PROPFIND", "", 200, davlist);
+  o.addFakeServerResponse("dav", "PROPFIND", "", 200, davlist);
   o.thisShouldBeTheAnswer = {
       "rows": [
         {"id": "alldocs1", "key": "alldocs1", "value": {}},
@@ -2394,8 +2410,10 @@ test ("AllDocs", function () {
       ],
       "total_rows": 2
   }
-  o.addFakeServerResponse("GET", "alldocs1", 200, JSON.stringify(o.all1));
-  o.addFakeServerResponse("GET", "alldocs2", 200, JSON.stringify(o.all2));
+  o.addFakeServerResponse("dav", "GET", "alldocs1", 200,
+    JSON.stringify(o.all1));
+  o.addFakeServerResponse("dav", "GET", "alldocs2", 200,
+    JSON.stringify(o.all2));
   o.spy(o, "value", o.thisShouldBeTheAnswer, "allDocs (include_docs)");
   o.jio.allDocs({"include_docs":true}, o.f);
   o.clock.tick(5000);
