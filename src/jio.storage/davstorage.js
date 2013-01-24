@@ -424,6 +424,10 @@ jIO.addStorageType('dav', function (spec, my) {
 
   /**
    * Get a document or attachment from distant storage
+   * Options:
+   * - {boolean} revs Add simple revision history (false by default).
+   * - {boolean} revs_info Add revs info (false by default).
+   * - {boolean} conflicts Add conflict object (false by default).
    * @method  get
    * @param  {object} command The JIO command
    */
