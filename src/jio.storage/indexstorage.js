@@ -73,16 +73,6 @@ jIO.addStorageType('indexed', function (spec, my) {
   };
 
   /**
-  * Escape string before storing
-  * @method sanitizeValue
-  * @param  {string} s The string to be sanitized
-  * @return {string} The sanitized string
-  */
-  priv.sanitizeValue = function (s) {
-    return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
-  };
-
-  /**
   * Get number of elements in object
   * @method getObjectSize
   * @param  {object} obj The object to check
@@ -247,6 +237,91 @@ jIO.addStorageType('indexed', function (spec, my) {
       }
     }
     return indices;
+  };
+
+  /**
+   * Build the alldocs response from the index file (overriding substorage)
+   * @method allDocsResponseFromIndex
+   * @param  {object} command The JIO command
+   * @param  {boolean} include_docs Whether to also supply the document
+   * @param  {object} option The options set for this method
+   * @returns {object} response The allDocs response
+   */
+  priv.allDocsResponseFromIndex = function (indices, include_docs, option) {
+     var i, j, k, m, n = 0, l = priv.indices.length,
+      index, key, obj, prop, found, file,
+      unique_count = 0, unique_docids = [], all_doc_response = {};
+
+    // loop indices
+    for (i = 0; i < l; i += 1) {
+      index = {};
+      index.reference = priv.indices[i];
+      index.name = index.reference["name"];
+      index.current = indices[index.name];
+      index.current_size = priv.getObjectSize(index.current);
+
+      // a lot of loops, not sure this is the fastest way
+      for (j = 0; j < index.current_size; j += 1) {
+        for (key in index.current) {
+          obj = index.current[key];
+          for (prop in obj) {
+            for ( k = 0; k < unique_docids.length; k++ ) {
+              if ( obj[prop] === unique_docids[k] ) {
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              unique_docids.push( obj[prop] );
+              unique_count += 1;
+            }
+          }
+        }
+      }
+    }
+    // construct allDocs response
+    all_doc_response.total_rows = unique_count;
+    all_doc_response.rows = [];
+    for (m = 0; m < unique_count; m += 1) {
+      // include_docs
+      if (include_docs) {
+        that.addJob(
+          "get",
+          priv.substorage,
+          unique_docids[m],
+          option,
+          function (content) {
+            file = { value: {} };
+            file.id = unique_docids[n];
+            file.key = unique_docids[n];
+            file.doc = content;
+            all_doc_response.rows.push(file);
+            // async counter, must be in callback
+            n += 1;
+            if (n === (unique_count)) {
+              that.success(all_doc_response);
+            }
+          },
+          function (error) {
+            that.error({
+              "status": 404,
+              "statusText": "Not Found",
+              "error": "not_found",
+              "message": "Cannot find the document",
+              "reason": "Cannot get a document from substorage"
+            });
+          }
+        );
+      } else {
+        file = { value: {} };
+        file.id = unique_docids[m];
+        file.key = unique_docids[m];
+        all_doc_response.rows.push(file);
+        if (m === (unique_count-1)) {
+          return all_doc_response;
+        }
+      }
+    }
   };
 
   /**
@@ -507,7 +582,6 @@ jIO.addStorageType('indexed', function (spec, my) {
                 f.removeDocument('doc');
               },
               function (err) {
-                // xxx do we try to delete the posted document ?
                 err.message = "Cannot save index file";
                 that.error(err);
               }
@@ -529,33 +603,60 @@ jIO.addStorageType('indexed', function (spec, my) {
     f.getIndices();
   };
 
- /**
-   * Gets a document list.
+  /**
+   * Gets a document list from the substorage
+   * Options:
+   * - {boolean} include_docs Also retrieve the actual document content.
    * @method allDocs
+   * @param  {object} command The JIO command
    */
-  /*
+  //{
+  // "total_rows": 4,
+  // "rows": [
+  //    {
+  //    "id": "otherdoc",
+  //    "key": "otherdoc",
+  //    "value": {
+  //      "rev": "1-3753476B70A49EA4D8C9039E7B04254C"
+  //    }
+  //  },{...}
+  // ]
+  //}
   that.allDocs = function (command) {
-    var obj = localStorage.getItem(storage_file_object_name),
-      success,
-      error;
-
-    if (obj) {
-      priv.update();
-      setTimeout(function () {
-        that.success(priv.allDocs(obj));
-      });
-    } else {
-      success = function (val) {
-        priv.setFileArray(val.rows);
-        that.success(val);
-      };
-      error = function (err) {
-        that.error(err);
-      };
-      that.addJob('allDocs', priv.sub_storage_spec, null,
-        command.cloneOption(), success, error);
+    var f = {}, indices, option, include_docs, all_docs_response;
+    option = command.cloneOption();
+    if (option.max_retry === 0) {
+      option.max_retry = 3;
     }
-  }; // end allDocs
-  */
+
+    f.getIndices = function () {
+      that.addJob(
+        "get",
+        priv.substorage,
+        priv.index_suffix,
+        option,
+        function (response) {
+          if (command.getOption('include_docs')) {
+            priv.allDocsResponseFromIndex(response, true, option);
+          } else {
+            all_docs_response =
+              priv.allDocsResponseFromIndex(response, false, option);
+              that.success(all_docs_response);
+          }
+        },
+        function (err) {
+          that.error({
+            "status": 404,
+            "statusText": "Not Found",
+            "error": "not_found",
+            "message": "Document index not found",
+            "reason": "There are no documents in the storage"
+          });
+        return;
+        }
+      );
+    };
+    f.getIndices();
+  };
   return that;
 });

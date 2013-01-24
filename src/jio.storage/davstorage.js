@@ -790,6 +790,8 @@ jIO.addStorageType('dav', function (spec, my) {
 
   /**
    * Gets a document list from a distant dav storage
+   * Options:
+   * - {boolean} include_docs Also retrieve the actual document content.
    * @method allDocs
    * @param  {object} command The JIO command
    */

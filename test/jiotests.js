@@ -2745,8 +2745,7 @@ test ("Put", function(){
 
     // modify document - modify keyword on index!
     o.doc = {"_id": "put1", "title": "myPuttter1", "author":"Jane Doe"};
-    o.spy (o, "value", {"ok": true, "id": "put1"},
-      "Modify document, update keyword on index");
+    o.spy (o, "value", {"ok": true, "id": "put1"}, "Modify existing document");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
@@ -2996,39 +2995,6 @@ test ("Get", function(){
     o.jio.stop();
 });
 
-
-/*
-test ('Get document list', function () {
-    var o = {}; o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.jio = JIO.newJio({type:'indexed',
-                        storage:{type:'dummyall3tries',
-                                 username:'indexgetlist'}});
-    o.doc1 = {id:'file',key:'file',value:{
-        _last_modified:15000,_creation_date:10000}};
-    o.doc2 = {id:'memo',key:'memo',value:{
-        _last_modified:25000,_creation_date:20000}};
-    // getting list must take long time with dummyall3tries
-    o.f = this.spy();
-    o.jio.allDocs({max_retry:3},o.f);
-    o.clock.tick(1000);
-    ok(!o.f.called,'Callback must not be called');
-    // wail long time too retreive list
-    o.clock.tick(1000);
-    // now we can test if the document list is loaded faster
-    o.f2 = function (err,val) {
-        deepEqual (err || objectifyDocumentArray(val.rows),
-                   objectifyDocumentArray([o.doc1,o.doc2]),'get document list');
-    };
-    this.spy(o,'f2');
-    o.jio.allDocs({max_retry:3},o.f2);
-    o.clock.tick(1000)
-    if (!o.f2.calledOnce) {
-        ok (false, 'no response / too much results');
-    }
-});
-*/
-
 test ("Remove", function(){
 
     // not sure these need to be run, because the index does not change
@@ -3037,17 +3003,17 @@ test ("Remove", function(){
     var o = generateTools(this);
 
     o.jio = JIO.newJio({
-          "type": "indexed",
-          "indices": [
-              {"name":"indexA", "fields":["author"]},
-              {"name":"indexAB", "fields":["author","year"]}
-          ],
-          "sub_storage": {
-            "type": "local",
-            "username": "irem",
-            "application_name": "irem"
-          }
-      });
+      "type": "indexed",
+      "indices": [
+          {"name":"indexA", "fields":["author"]},
+          {"name":"indexAB", "fields":["author","year"]}
+      ],
+      "sub_storage": {
+        "type": "local",
+        "username": "irem",
+        "application_name": "irem"
+      }
+    });
 
     // remove inexistent document
     o.spy(o, "status", 404, "Remove inexistent document");
@@ -3173,6 +3139,102 @@ test ("Remove", function(){
     o.jio.stop();
 });
 
+test ("AllDocs", function () {
+
+  var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+      "type": "indexed",
+      "indices": [
+          {"name":"indexA", "fields":["author"]},
+          {"name":"indexAB", "fields":["author","year"]}
+      ],
+      "sub_storage": {
+        "type": "local",
+        "username": "iall",
+        "application_name": "iall"
+      }
+    });
+
+  // adding documents
+  o.all1 = { "_id": "dragon.doc",
+    "title": "some title", "author": "Dr. No", "year": "1968"
+  };
+  o.spy (o, "value", {"ok": true, "id": "dragon.doc"}, "Put 1");
+  o.jio.put(o.all1, o.f);
+  o.tick(o);
+  o.all2 = {"_id": "timemachine",
+    "title": "hello world", "author": "Dr. Who", "year": "1968"
+  }
+  o.spy (o, "value", {"ok": true, "id": "timemachine"}, "Put 2");
+  o.jio.put(o.all2, o.f);
+  o.tick(o);
+  o.all3 = {"_id": "rocket.ppt",
+    "title": "sunshine.", "author": "Dr. Snuggles", "year": "1985"
+  }
+  o.spy (o, "value", {"ok": true, "id": "rocket.ppt"}, "Put 3");
+  o.jio.put(o.all3, o.f);
+  o.tick(o);
+  o.all4 = {"_id": "stick.jpg",
+    "title": "clouds", "author": "Dr. House", "year": "2005"
+  }
+  o.spy (o, "value", {"ok": true, "id": "stick.jpg"}, "Put 4");
+  o.jio.put(o.all4, o.f);
+  o.tick(o);
+
+  // check index
+  o.fakeIndex = {
+    "_id": "iall_indices.json",
+    "indexA": {
+      "Dr. No": ["dragon.doc"],
+      "Dr. Who": ["timemachine"],
+      "Dr. Snuggles": ["rocket.ppt"],
+      "Dr. House":["stick.jpg"]
+    },
+    "indexAB": {
+      "Dr. No": ["dragon.doc"],
+      "Dr. Who": ["timemachine"],
+      "Dr. Snuggles": ["rocket.ppt"],
+      "Dr. House":["stick.jpg"],
+      "1968": ["dragon.doc", "timemachine"],
+      "1985": ["rocket.ppt"],
+      "2005":["stick.jpg"]
+    }
+  };
+  o.jio.get("iall_indices.json",function(err, response){
+      o.actualIndex = response;
+      deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+  });
+  o.tick(o);
+
+  o.thisShouldBeTheAnswer = {
+    "rows": [
+      {"id": "dragon.doc", "key": "dragon.doc", "value": {} },
+      {"id": "timemachine", "key": "timemachine", "value": {} },
+      {"id": "rocket.ppt", "key": "rocket.ppt", "value": {} },
+      {"id": "stick.jpg", "key": "stick.jpg", "value": {} }
+    ],
+    "total_rows": 4
+  }
+  o.spy(o, "value", o.thisShouldBeTheAnswer, "allDocs (served by index)");
+  o.jio.allDocs(o.f);
+  o.tick(o);
+
+  o.thisShouldBeTheAnswer2 = {
+    "rows": [
+      {"id": "dragon.doc", "key": "dragon.doc", "value": {}, "doc": o.all1 },
+      {"id": "timemachine", "key": "timemachine", "value": {}, "doc": o.all2 },
+      {"id": "rocket.ppt", "key": "rocket.ppt", "value": {}, "doc": o.all3 },
+      {"id": "stick.jpg", "key": "stick.jpg", "value": {}, "doc": o.all4 }
+    ],
+    "total_rows": 4
+  }
+  o.spy(o, "value", o.thisShouldBeTheAnswer2, "allDocs (include_docs)");
+  o.jio.allDocs({"include_docs":true}, o.f);
+  o.tick(o);
+
+  o.jio.stop();
+});
 /*
 module ('Jio CryptedStorage');
 
