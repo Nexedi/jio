@@ -3027,34 +3027,152 @@ test ('Get document list', function () {
         ok (false, 'no response / too much results');
     }
 });
+*/
 
-test ('Remove document', function () {
-    var o = {}; o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.sub_storage = {type:'dummyall3tries',username:'indexremove'}
-    o.storage_file_object_name = 'jio/indexed_file_object/'+
-        JSON.stringify (o.sub_storage);
+test ("Remove", function(){
 
-    o.jio = JIO.newJio({type:'indexed',storage:o.sub_storage});
-    o.f = function (err,val) {
-        if (err) {
-            err = err.status;
-        }
-        deepEqual (err || val,{ok:true,id:'file'},'document remove');
+    // not sure these need to be run, because the index does not change
+    // and only small modifications have been made to handle putAttachment
+    // tests are from localStorage putAttachment
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+          "type": "indexed",
+          "indices": [
+              {"name":"indexA", "fields":["author"]},
+              {"name":"indexAB", "fields":["author","year"]}
+          ],
+          "sub_storage": {
+            "type": "local",
+            "username": "irem",
+            "application_name": "irem"
+          }
+      });
+
+    // remove inexistent document
+    o.spy(o, "status", 404, "Remove inexistent document");
+    o.jio.remove({"_id": "remove1"}, o.f);
+    o.tick(o);
+
+    // remove inexistent document/attachment
+    o.spy(o, "status", 404, "Remove inexistent document/attachment");
+    o.jio.remove({"_id": "remove1/remove2"}, o.f);
+    o.tick(o);
+
+    // adding a document
+    o.jio.put({"_id": "remove1", "title": "myRemove1",
+      "author": "Mr. President", "year": "2525"
+    });
+    o.tick(o);
+
+    // adding a 2nd document with same keywords
+    o.jio.put({"_id": "removeAlso", "title": "myRemove2",
+      "author": "Martin Mustermann", "year": "2525"
+    });
+    o.tick(o);
+
+    // remove document
+    o.spy(o, "value", {"ok": true, "id": "remove1"}, "Remove document");
+    o.jio.remove({"_id": "remove1"}, o.f);
+    o.tick(o);
+
+    // check index
+    o.fakeIndex = {
+      "_id": "irem_indices.json",
+      "indexA": { "Martin Mustermann": ["removeAlso"]},
+      "indexAB": {"2525": ["removeAlso"],"Martin Mustermann": ["removeAlso"]}
     };
-    this.spy(o,'f');
-    o.jio.remove({_id:'file'},{max_retry:3},o.f);
-    o.clock.tick(2000);
-    if (!o.f.calledOnce){
-        ok (false, 'no response / too much results');
-    }
+    o.jio.get("irem_indices.json",function(err, response){
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
 
-    o.tmp = LocalOrCookieStorage.getItem(o.storage_file_object_name) || {};
-    ok (!o.tmp.file,'File does not exists anymore');
+    // check document
+    o.spy(o, "status", 404, "Check if document has been removed");
+    o.jio.get("remove1", o.f);
+    o.tick(o);
+
+    // adding a new document
+    o.jio.put({"_id": "remove3",
+        "title": "myRemove1",
+        "author": "Mrs Sunshine",
+        "year": "1234"
+    });
+    o.tick(o);
+
+    // adding an attachment
+    o.jio.putAttachment({"id":"remove3/removeAtt", "mimetype":"text/plain",
+      "content":"hello"});
+    o.tick(o);
+
+    // add another attachment
+    o.jio.putAttachment({"id":"remove3/removeAtt2", "mimetype":"text/plain",
+      "content":"hello2"});
+    o.tick(o);
+
+    // remove attachment
+    o.spy(o, "value", {"ok": true, "id": "remove3/removeAtt2"},
+          "Remove one of multiple attachment");
+    o.jio.remove({"_id": "remove3/removeAtt2"}, o.f);
+    o.tick(o);
+
+    // check index
+    o.fakeIndex = {
+      "_id": "irem_indices.json",
+      "indexA": {
+        "Martin Mustermann": ["removeAlso"],
+        "Mrs Sunshine": ["remove3"]
+      },
+      "indexAB": {
+          "1234": ["remove3"],
+          "2525": ["removeAlso"],
+          "Martin Mustermann": ["removeAlso"],
+          "Mrs Sunshine": ["remove3"]
+      }
+    };
+    o.jio.get("irem_indices.json",function(err, response){
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
+
+    // remove document and attachment together
+    o.spy(o, "value", {"ok": true, "id": "remove3"},
+          "Remove one document and attachment together");
+    o.jio.remove({"_id": "remove3"}, o.f);
+    o.tick(o);
+
+    // check index
+    o.fakeIndex = {
+      "_id": "irem_indices.json",
+      "indexA": {
+        "Martin Mustermann": ["removeAlso"]
+      },
+      "indexAB": {
+          "2525": ["removeAlso"],
+          "Martin Mustermann": ["removeAlso"]
+      }
+    };
+    o.jio.get("irem_indices.json",function(err, response){
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
+
+    // check attachment
+    o.spy(o, "status", 404, "Check if attachment has been removed");
+    o.jio.get("remove3/removeAtt", o.f);
+    o.tick(o);
+
+    // check document
+    o.spy(o, "status", 404, "Check if document has been removed");
+    o.jio.get("remove3", o.f);
+    o.tick(o);
 
     o.jio.stop();
 });
-*/
+
 /*
 module ('Jio CryptedStorage');
 

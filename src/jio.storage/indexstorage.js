@@ -155,6 +155,7 @@ jIO.addStorageType('indexed', function (spec, my) {
       index.reference = priv.indices[i];
       index.name = index.reference["name"];
       index.size = priv.getObjectSize(indices[index.name]);
+      index.result_array;
 
       if (index.size > 0) {
         if (priv.searchIndexByValue(indices[index.name], doc._id, "bool")) {
@@ -163,6 +164,35 @@ jIO.addStorageType('indexed', function (spec, my) {
       }
     }
     return false;
+  }
+  priv.cleanIndices = function (indices, doc) {
+    var i, j, k, index, key, obj, prop, l = priv.indices.length,
+      docid = doc._id;
+
+    // loop indices (indexA, indexAB...)
+    for (i = 0; i < l; i += 1) {
+      // index object (reference and current-iteration)
+      index = {};
+      index.reference = priv.indices[i];
+      index.name = index.reference["name"];
+      index.current = indices[index.name];
+      index.current_size = priv.getObjectSize(index.current);
+
+      for (j = 0; j < index.current_size; j++) {
+        key = priv.searchIndexByValue(index.current, doc._id, "key");
+        index.result_array = index.current[key];
+        if (!!key) {
+          // if there is more than one docid in the result array,
+          // just remove this one and not the whole array
+          if (index.result_array.length > 1) {
+            index.result_array.splice(k,1);
+          } else {
+            delete index.current[key];
+          }
+        }
+      }
+    }
+    return indices;
   }
   /**
    * Adds entries to indices
@@ -414,23 +444,92 @@ jIO.addStorageType('indexed', function (spec, my) {
       }
     );
   };
-/**
-   * Removes a document.
+
+  /**
+   * Remove document or attachment - removing documents updates index!.
    * @method remove
-   *//*
+   * @param  {object} command The JIO command
+   */
   that.remove = function (command) {
-    var success = function (val) {
-      priv.removeFile(command.getDocId());
-      priv.update();
-      that.success(val);
-    },
-      error = function (err) {
-        that.error(err);
-      };
-    that.addJob('remove', priv.sub_storage_spec, command.cloneDoc(),
-      command.cloneOption(), success, error);
+    var f = {}, indices, doc, docid, option;
+
+    doc = command.cloneDoc();
+    option = command.cloneOption();
+    if (option.max_retry === 0) {
+      option.max_retry = 3;
+    }
+
+    f.removeDocument = function (type) {
+      if (type === 'doc') {
+        docid = command.getDocId();
+      } else {
+        docid = command.getDocId() + '/' + command.getAttachmentId();
+      }
+      that.addJob(
+        "remove",
+        priv.substorage,
+        docid,
+        option,
+        function (response) {
+          that.success(response);
+        },
+        function (err) {
+          that.error({
+            "status": 409,
+            "statusText": "Conflict",
+            "error": "conflict",
+            "message": "Document Update Conflict",
+            "reason": "Could not delete document or attachment"
+          });
+        }
+      );
+    };
+    f.getIndices = function () {
+      that.addJob(
+        "get",
+        priv.substorage,
+        priv.index_suffix,
+        option,
+        function (response) {
+          // if deleting an attachment
+          if (typeof command.getAttachmentId() === 'string'){
+            f.removeDocument('attachment')
+          } else {
+            indices = priv.cleanIndices(response, doc);
+            // store update index file
+            that.addJob(
+              "put",
+              priv.substorage,
+              indices,
+              command.cloneOption(),
+              function () {
+                // remove actual document
+                f.removeDocument('doc');
+              },
+              function (err) {
+                // xxx do we try to delete the posted document ?
+                err.message = "Cannot save index file";
+                that.error(err);
+              }
+            );
+          }
+        },
+        function (err) {
+          that.error({
+            "status": 404,
+            "statusText": "Not Found",
+            "error": "not_found",
+            "message": "Document index not found, please check document ID",
+            "reason": "Incorrect document ID"
+          });
+        return;
+        }
+      );
+    };
+    f.getIndices();
   };
-  *//**
+
+ /**
    * Gets a document list.
    * @method allDocs
    */
