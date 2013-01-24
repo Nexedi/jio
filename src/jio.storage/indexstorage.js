@@ -30,7 +30,7 @@
 jIO.addStorageType('indexed', function (spec, my) {
 
   "use strict";
-  var that, priv = {}, spec;
+  var that, priv = {};
 
   spec = spec || {};
   that = my.basicStorage(spec, my);
@@ -81,9 +81,9 @@ jIO.addStorageType('indexed', function (spec, my) {
   priv.getObjectSize = function (obj) {
     var size = 0, key;
     for (key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          size += 1;
-        }
+      if (obj.hasOwnProperty(key)) {
+        size += 1;
+      }
     }
     return size;
   };
@@ -95,12 +95,12 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @return {object} The new index array
    */
   priv.createEmptyIndexArray = function (indices) {
-    var obj, i, j = priv.indices.length,
+    var i, j = priv.indices.length,
       new_index_object = {}, new_index_name;
 
     if (indices === undefined) {
       for (i = 0; i < j; i += 1) {
-        new_index_name = priv.indices[i]["name"];
+        new_index_name = priv.indices[i].name;
         new_index_object[new_index_name] = {};
       }
     }
@@ -119,6 +119,7 @@ jIO.addStorageType('indexed', function (spec, my) {
     var key, obj, prop;
 
     for (key in indexToSearch) {
+      if (indexToSearch.hasOwnProperty(key)) {
         obj = indexToSearch[key];
         for (prop in obj) {
           if (obj[prop] === docid) {
@@ -126,8 +127,9 @@ jIO.addStorageType('indexed', function (spec, my) {
           }
         }
       }
+    }
     return false;
-  }
+  };
 
   /**
    * Find id in indices
@@ -143,39 +145,44 @@ jIO.addStorageType('indexed', function (spec, my) {
     for (i = 0; i < l; i += 1) {
       index = {};
       index.reference = priv.indices[i];
-      index.name = index.reference["name"];
+      index.name = index.reference.name;
       index.size = priv.getObjectSize(indices[index.name]);
-      index.result_array;
 
       if (index.size > 0) {
         if (priv.searchIndexByValue(indices[index.name], doc._id, "bool")) {
-          return true
-        };
+          return true;
+        }
       }
     }
     return false;
-  }
+  };
+
+  /**
+   * Clean up indexes when removing a file
+   * @method cleanIndices
+   * @param  {object} indices The file containing the indeces
+   * @param  {object} doc The document which should be added to the index
+   * @return {object} indices The cleaned up file
+   */
   priv.cleanIndices = function (indices, doc) {
-    var i, j, k, index, key, obj, prop, l = priv.indices.length,
-      docid = doc._id;
+    var i, j, k, index, key, l = priv.indices.length;
 
     // loop indices (indexA, indexAB...)
     for (i = 0; i < l; i += 1) {
       // index object (reference and current-iteration)
       index = {};
       index.reference = priv.indices[i];
-      index.name = index.reference["name"];
-      index.current = indices[index.name];
+      index.current = indices[index.reference.name];
       index.current_size = priv.getObjectSize(index.current);
 
-      for (j = 0; j < index.current_size; j++) {
+      for (j = 0; j < index.current_size; j += 1) {
         key = priv.searchIndexByValue(index.current, doc._id, "key");
         index.result_array = index.current[key];
         if (!!key) {
           // if there is more than one docid in the result array,
           // just remove this one and not the whole array
           if (index.result_array.length > 1) {
-            index.result_array.splice(k,1);
+            index.result_array.splice(k, 1);
           } else {
             delete index.current[key];
           }
@@ -183,7 +190,7 @@ jIO.addStorageType('indexed', function (spec, my) {
       }
     }
     return indices;
-  }
+  };
   /**
    * Adds entries to indices
    * @method createEmptyIndexArray
@@ -191,7 +198,7 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @param  {object} doc The document which should be added to the index
    */
   priv.updateIndices = function (indices, doc) {
-    var i, j, k, m, index,value, label, key, l = priv.indices.length;
+    var i, j, k, m, index, value, label, key, l = priv.indices.length;
 
     // loop indices
     for (i = 0; i < l; i += 1) {
@@ -199,14 +206,13 @@ jIO.addStorageType('indexed', function (spec, my) {
       index = {};
       index.reference = priv.indices[i];
       index.reference_size = index.reference.fields.length;
-      index.name = index.reference["name"];
       index.field_array = [];
-      index.current = indices[index.name];
+      index.current = indices[index.reference.name];
       index.current_size = priv.getObjectSize(index.current);
 
       // build array of values to create entries in index
       for (j = 0; j < index.reference_size; j += 1) {
-        label = index.reference.fields[j]
+        label = index.reference.fields[j];
         value = doc[label];
         if (value !== undefined) {
           // add a new entry
@@ -215,7 +221,8 @@ jIO.addStorageType('indexed', function (spec, my) {
           // remove existing entries with same docid
           // because items are stored as "keyword:id" pairs this is tricky
           if (index.current_size > 0) {
-            key = priv.searchIndexByValue(indices[index.name], doc._id, "key");
+            key = priv.searchIndexByValue(indices[index.reference.name],
+              doc._id, "key");
             if (!!key) {
               delete index.current[key];
             }
@@ -239,6 +246,9 @@ jIO.addStorageType('indexed', function (spec, my) {
     return indices;
   };
 
+  priv.getDocContent = function () {
+
+  };
   /**
    * Build the alldocs response from the index file (overriding substorage)
    * @method allDocsResponseFromIndex
@@ -248,32 +258,57 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @returns {object} response The allDocs response
    */
   priv.allDocsResponseFromIndex = function (indices, include_docs, option) {
-     var i, j, k, m, n = 0, l = priv.indices.length,
+    var i, j, k, m, n = 0, l = priv.indices.length,
       index, key, obj, prop, found, file,
-      unique_count = 0, unique_docids = [], all_doc_response = {};
+      unique_count = 0, unique_docids = [], all_doc_response = {},
+      success = function (content) {
+        file = { value: {} };
+        file.id = unique_docids[n];
+        file.key = unique_docids[n];
+        file.doc = content;
+        all_doc_response.rows.push(file);
+        // async counter, must be in callback
+        n += 1;
+        if (n === unique_count) {
+          that.success(all_doc_response);
+        }
+      },
+      error = function () {
+        that.error({
+          "status": 404,
+          "statusText": "Not Found",
+          "error": "not_found",
+          "message": "Cannot find the document",
+          "reason": "Cannot get a document from substorage"
+        });
+        return;
+      };
 
     // loop indices
     for (i = 0; i < l; i += 1) {
       index = {};
       index.reference = priv.indices[i];
-      index.name = index.reference["name"];
-      index.current = indices[index.name];
+      index.current = indices[index.reference.name];
       index.current_size = priv.getObjectSize(index.current);
 
       // a lot of loops, not sure this is the fastest way
       for (j = 0; j < index.current_size; j += 1) {
         for (key in index.current) {
-          obj = index.current[key];
-          for (prop in obj) {
-            for ( k = 0; k < unique_docids.length; k++ ) {
-              if ( obj[prop] === unique_docids[k] ) {
-                found = true;
-                break;
+          if (index.current.hasOwnProperty(key)) {
+            obj = index.current[key];
+            for (prop in obj) {
+              if (obj.hasOwnProperty(prop)) {
+                for (k = 0; k < unique_docids.length; k += 1) {
+                  if (obj[prop] === unique_docids[k]) {
+                    found = true;
+                    break;
+                  }
+                }
+                if (!found) {
+                  unique_docids.push(obj[prop]);
+                  unique_count += 1;
+                }
               }
-            }
-            if (!found) {
-              unique_docids.push( obj[prop] );
-              unique_count += 1;
             }
           }
         }
@@ -290,34 +325,15 @@ jIO.addStorageType('indexed', function (spec, my) {
           priv.substorage,
           unique_docids[m],
           option,
-          function (content) {
-            file = { value: {} };
-            file.id = unique_docids[n];
-            file.key = unique_docids[n];
-            file.doc = content;
-            all_doc_response.rows.push(file);
-            // async counter, must be in callback
-            n += 1;
-            if (n === (unique_count)) {
-              that.success(all_doc_response);
-            }
-          },
-          function (error) {
-            that.error({
-              "status": 404,
-              "statusText": "Not Found",
-              "error": "not_found",
-              "message": "Cannot find the document",
-              "reason": "Cannot get a document from substorage"
-            });
-          }
+          success,
+          error
         );
       } else {
         file = { value: {} };
         file.id = unique_docids[m];
         file.key = unique_docids[m];
         all_doc_response.rows.push(file);
-        if (m === (unique_count-1)) {
+        if (m === (unique_count - 1)) {
           return all_doc_response;
         }
       }
@@ -366,7 +382,7 @@ jIO.addStorageType('indexed', function (spec, my) {
                 "message": "Document not found",
                 "reason": "Document not found"
               });
-        return;
+              return;
             }
             break;
           default:
@@ -388,47 +404,46 @@ jIO.addStorageType('indexed', function (spec, my) {
           "reason": "Document already exists"
         });
         return;
-      } else {
-        if (source !== 'PUTATTACHMENT') {
-          indices = priv.updateIndices(indices, doc);
-        }
-        that.addJob(
-          source === 'PUTATTACHMENT' ? "putAttachment" : "post",
-          priv.substorage,
-          doc,
-          command.cloneOption(),
-          function () {
+      }
+      if (source !== 'PUTATTACHMENT') {
+        indices = priv.updateIndices(indices, doc);
+      }
+      that.addJob(
+        source === 'PUTATTACHMENT' ? "putAttachment" : "post",
+        priv.substorage,
+        doc,
+        command.cloneOption(),
+        function () {
+          if (source !== 'PUTATTACHMENT') {
+            f.sendIndices(index_update_method);
+          } else {
+            docid = docid + '/' + command.getAttachmentId();
+            that.success({
+              "ok": true,
+              "id": docid
+            });
+          }
+        },
+        function (err) {
+          switch (err.status) {
+          case 409:
+            // file already exists
             if (source !== 'PUTATTACHMENT') {
               f.sendIndices(index_update_method);
             } else {
-              docid = docid + '/' + command.getAttachmentId();
               that.success({
                 "ok": true,
                 "id": docid
               });
             }
-          },
-          function (err) {
-            switch (err.status) {
-            case 409:
-              // file already exists
-              if (source !== 'PUTATTACHMENT') {
-                f.sendIndices(index_update_method);
-              } else {
-                that.success({
-                  "ok": true,
-                  "id": docid
-                });
-              }
-              break;
-            default:
-              err.message = "Cannot upload document";
-              that.error(err);
-              break;
-            }
+            break;
+          default:
+            err.message = "Cannot upload document";
+            that.error(err);
+            break;
           }
-        );
-      }
+        }
+      );
     };
     f.sendIndices = function (method) {
       indices._id = priv.index_suffix;
@@ -508,7 +523,7 @@ jIO.addStorageType('indexed', function (spec, my) {
       function (response) {
         that.success(response);
       },
-      function (err) {
+      function () {
         that.error({
           "status": 404,
           "statusText": "Not Found",
@@ -548,7 +563,7 @@ jIO.addStorageType('indexed', function (spec, my) {
         function (response) {
           that.success(response);
         },
-        function (err) {
+        function () {
           that.error({
             "status": 409,
             "statusText": "Conflict",
@@ -567,8 +582,8 @@ jIO.addStorageType('indexed', function (spec, my) {
         option,
         function (response) {
           // if deleting an attachment
-          if (typeof command.getAttachmentId() === 'string'){
-            f.removeDocument('attachment')
+          if (typeof command.getAttachmentId() === 'string') {
+            f.removeDocument('attachment');
           } else {
             indices = priv.cleanIndices(response, doc);
             // store update index file
@@ -588,7 +603,7 @@ jIO.addStorageType('indexed', function (spec, my) {
             );
           }
         },
-        function (err) {
+        function () {
           that.error({
             "status": 404,
             "statusText": "Not Found",
@@ -596,7 +611,7 @@ jIO.addStorageType('indexed', function (spec, my) {
             "message": "Document index not found, please check document ID",
             "reason": "Incorrect document ID"
           });
-        return;
+          return;
         }
       );
     };
@@ -623,7 +638,7 @@ jIO.addStorageType('indexed', function (spec, my) {
   // ]
   //}
   that.allDocs = function (command) {
-    var f = {}, indices, option, include_docs, all_docs_response;
+    var f = {}, option, all_docs_response;
     option = command.cloneOption();
     if (option.max_retry === 0) {
       option.max_retry = 3;
@@ -641,10 +656,10 @@ jIO.addStorageType('indexed', function (spec, my) {
           } else {
             all_docs_response =
               priv.allDocsResponseFromIndex(response, false, option);
-              that.success(all_docs_response);
+            that.success(all_docs_response);
           }
         },
-        function (err) {
+        function () {
           that.error({
             "status": 404,
             "statusText": "Not Found",
@@ -652,7 +667,7 @@ jIO.addStorageType('indexed', function (spec, my) {
             "message": "Document index not found",
             "reason": "There are no documents in the storage"
           });
-        return;
+          return;
         }
       );
     };
