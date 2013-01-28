@@ -320,16 +320,42 @@ jIO.addStorageType('local', function (spec, my) {
    * @method allDocs
    * @param  {object} command The JIO command
    */
-  that.allDocs = function () {
-    setTimeout(function () {
+  that.allDocs = function (command) {
+    var i, s, j, file, items = 0, all_doc_response = {};
+
+    all_doc_response.rows = [];
+
+    for (i in localStorage) {
+      if (localStorage.hasOwnProperty(i)) {
+        // filter non-documents
+        s = new RegExp(priv.localpath + '\\/.*$');
+        if (s.test(i)) {
+          items += 1;
+          j = i.split('/').slice(-1)[0];
+
+          file = { value: {} };
+          file.id = j;
+          file.key = j;
+          if (command.getOption('include_docs')) {
+            file.doc = JSON.parse(localStorage.getItem(i));
+          }
+          all_doc_response.rows.push(file);
+        }
+      }
+    }
+    all_doc_response.total_rows = items;
+
+    if (items > 0) {
+      that.success(all_doc_response);
+    } else {
       that.error({
-        "status": 405,
-        "statusText": "Method Not Allowed",
-        "error": "method_not_allowed",
-        "message": "Your are not allowed to use this command",
-        "reason": "LocalStorage forbids AllDocs command executions"
+        "status": 404,
+        "statusText": "Not Found",
+        "error": "not_found",
+        "message": "No documents found",
+        "reason": "No documents found"
       });
-    });
+    }
   };
 
   return that;

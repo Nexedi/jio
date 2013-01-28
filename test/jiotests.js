@@ -1071,18 +1071,74 @@ test ("Remove", function(){
 
 test ("AllDocs", function(){
 
-    var o = generateTools(this);
+    var o = generateTools(this), i, m = 15;
 
     o.jio = JIO.newJio({
         "type": "local",
         "username": "ualldocs",
         "application_name": "aalldocs"
     });
+    o.localpath = "jio/localstorage/ualldocs/aalldocs";
+
+    // sample data
+    o.titles = ["Shawshank Redemption", "Godfather", "Godfather 2",
+      "Pulp Fiction", "The Good, The Bad and The Ugly", "12 Angry Men",
+      "The Dark Knight", "Schindlers List",
+      "Lord of the Rings - Return of the King", "Fight Club",
+      "Star Wars Episode V", "Lord Of the Rings - Fellowship of the Ring",
+      "One flew over the Cuckoo's Nest", "Inception", "Godfellas"
+    ];
+    o.years = [1994,1972,1974,1994,1966,1957,2008,1993,2003,1999,1980,2001,
+      1975,2010,1990
+    ];
+    o.director = ["Frank Darabont", "Francis Ford Coppola",
+      "Francis Ford Coppola", "Quentin Tarantino", "Sergio Leone",
+      "Sidney Lumet", "Christopher Nolan", "Steven Spielberg",
+      "Peter Jackson", "David Fincher", "Irvin Kershner", "Peter Jackson",
+      "Milos Forman", "Christopher Nolan", " Martin Scorsese"
+    ]
+    // set documents
+    for (i = 0; i < m; i += 1) {
+      o.fakeDoc = {};
+      o.fakeDoc._id = "doc_"+i;
+      o.fakeDoc.title = o.titles[i];
+      o.fakeDoc.year = o.years[i];
+      o.fakeDoc.author = o.director[i];
+      localstorage.setItem(o.localpath+"/doc_"+i, o.fakeDoc);
+    }
+
+    // response
+    o.allDocsResponse = {};
+    o.allDocsResponse.rows = [];
+    o.allDocsResponse.total_rows = 15;
+    for (i = 0; i < m; i += 1) {
+      o.allDocsResponse.rows.push({
+        "id": "doc_"+i,
+        "key": "doc_"+i,
+        "value": {}
+      });
+    };
+    // alldocs
+    o.spy(o, "value", o.allDocsResponse, "All docs");
+    o.jio.allDocs(o.f);
+    o.tick(o);
+
+    // include docs
+    o.allDocsResponse = {};
+    o.allDocsResponse.rows = [];
+    o.allDocsResponse.total_rows = 15;
+    for (i = 0; i < m; i += 1) {
+      o.allDocsResponse.rows.push({
+        "id": "doc_"+i,
+        "key": "doc_"+i,
+        "value": {},
+        "doc": localstorage.getItem(o.localpath+"/doc_"+i)
+      });
+    };
 
     // alldocs
-    // error 405 -> method not allowed
-    o.spy(o, "status", 405, "Method not allowed");
-    o.jio.allDocs(o.f);
+    o.spy(o, "value", o.allDocsResponse, "All docs (include docs)");
+    o.jio.allDocs({"include_docs":true}, o.f);
     o.tick(o);
 
     o.jio.stop();
