@@ -2673,8 +2673,19 @@ test ("Post", function () {
     // check document
     o.fakeIndex = {
       "_id": "ipost_indices.json",
-      "indexAB": {"keyword_abc":["some_id"], "keyword_def":["some_id"]},
-      "indexA": {"keyword_abc":["some_id"]}
+      "indexAB": {
+        "findMeA": {
+          "keyword_abc":["some_id"]
+        },
+        "findMeB": {
+          "keyword_def":["some_id"]
+        }
+      },
+      "indexA": {
+        "findMeA": {
+          "keyword_abc":["some_id"]
+        }
+      }
     };
     o.jio.get("ipost_indices.json",function(err, response){
        o.actualIndex = response;
@@ -2733,8 +2744,17 @@ test ("Put", function(){
 
     // check index file
     o.fakeIndex = {
-      "indexA": {"John Doe": ["put1"]},
-      "indexAB": {"John Doe": ["put1"]},
+      "indexA": {
+        "author": {
+          "John Doe": ["put1"]
+        }
+      },
+      "indexAB": {
+        "author": {
+          "John Doe": ["put1"]
+        },
+        "year": {}
+      },
       "_id": "iput_indices.json"
     };
     o.jio.get("iput_indices.json",function(err, response){
@@ -2751,8 +2771,17 @@ test ("Put", function(){
 
     // check index file
     o.fakeIndex = {
-      "indexA": {"Jane Doe": ["put1"]},
-      "indexAB": {"Jane Doe": ["put1"]},
+      "indexA": {
+        "author": {
+          "Jane Doe": ["put1"]
+          }
+      },
+      "indexAB": {
+        "author": {
+          "Jane Doe": ["put1"]
+          },
+        "year": {}
+      },
       "_id": "iput_indices.json"
     };
     o.jio.get("iput_indices.json",function(err, response){
@@ -2770,8 +2799,17 @@ test ("Put", function(){
 
     // check index file
     o.fakeIndex = {
-      "indexA": {"Jane Doe": ["put1", "new_doc"] },
-      "indexAB": {"Jane Doe": ["put1", "new_doc"]},
+      "indexA": {
+        "author": {
+          "Jane Doe": ["put1", "new_doc"]
+          }
+        },
+      "indexAB": {
+        "author": {
+          "Jane Doe": ["put1", "new_doc"]
+          },
+        "year": {}
+        },
       "_id": "iput_indices.json"
     };
     o.jio.get("iput_indices.json",function(err, response){
@@ -2790,8 +2828,19 @@ test ("Put", function(){
 
     // check index file
     o.fakeIndex = {
-      "indexA": {"Jane Doe": ["put1"] },
-      "indexAB": {"Jane Doe": ["put1"],"1912": ["put1"]},
+      "indexA": {
+        "author": {
+          "Jane Doe": ["put1"]
+          }
+        },
+      "indexAB": {
+        "author": {
+          "Jane Doe": ["put1"]
+          },
+        "year": {
+          "1912": ["put1"]
+          }
+        },
       "_id": "iput_indices.json"
     };
     o.jio.get("iput_indices.json",function(err, response){
@@ -2809,8 +2858,19 @@ test ("Put", function(){
 
     // check index file
     o.fakeIndex = {
-      "indexA": {"Jane Doe": ["put1"] },
-      "indexAB": {"Jane Doe": ["put1"], "1912": ["put1"]},
+      "indexA": {
+        "author": {
+          "Jane Doe": ["put1"]
+        }
+      },
+      "indexAB": {
+        "author": {
+          "Jane Doe": ["put1"]
+        }, 
+        "year": {
+          "1912": ["put1"]
+        }
+      },
       "_id": "iput_indices.json"
     };
     o.jio.get("iput_indices.json",function(err, response){
@@ -3045,8 +3105,19 @@ test ("Remove", function(){
     // check index
     o.fakeIndex = {
       "_id": "irem_indices.json",
-      "indexA": { "Martin Mustermann": ["removeAlso"]},
-      "indexAB": {"2525": ["removeAlso"],"Martin Mustermann": ["removeAlso"]}
+      "indexA": {
+         "author": {
+           "Martin Mustermann": ["removeAlso"]
+          }
+        },
+      "indexAB": {
+        "year": {
+          "2525": ["removeAlso"]
+        },
+        "author": {
+          "Martin Mustermann": ["removeAlso"]
+          }
+        }
     };
     o.jio.get("irem_indices.json",function(err, response){
        o.actualIndex = response;
@@ -3087,14 +3158,20 @@ test ("Remove", function(){
     o.fakeIndex = {
       "_id": "irem_indices.json",
       "indexA": {
-        "Martin Mustermann": ["removeAlso"],
-        "Mrs Sunshine": ["remove3"]
-      },
-      "indexAB": {
-          "1234": ["remove3"],
-          "2525": ["removeAlso"],
+        "author":{
           "Martin Mustermann": ["removeAlso"],
           "Mrs Sunshine": ["remove3"]
+        }
+      },
+      "indexAB": {
+        "year": {
+          "1234": ["remove3"],
+          "2525": ["removeAlso"]
+        },
+        "author": {
+          "Martin Mustermann": ["removeAlso"],
+          "Mrs Sunshine": ["remove3"]
+        }
       }
     };
     o.jio.get("irem_indices.json",function(err, response){
@@ -3113,11 +3190,17 @@ test ("Remove", function(){
     o.fakeIndex = {
       "_id": "irem_indices.json",
       "indexA": {
-        "Martin Mustermann": ["removeAlso"]
+        "author": {
+          "Martin Mustermann": ["removeAlso"]
+        }
       },
       "indexAB": {
-          "2525": ["removeAlso"],
+        "year": {
+          "2525": ["removeAlso"]
+        },
+        "author": {
           "Martin Mustermann": ["removeAlso"]
+        }
       }
     };
     o.jio.get("irem_indices.json",function(err, response){
@@ -3186,19 +3269,25 @@ test ("AllDocs", function () {
   o.fakeIndex = {
     "_id": "iall_indices.json",
     "indexA": {
-      "Dr. No": ["dragon.doc"],
-      "Dr. Who": ["timemachine"],
-      "Dr. Snuggles": ["rocket.ppt"],
-      "Dr. House":["stick.jpg"]
+      "author": {
+        "Dr. No": ["dragon.doc"],
+        "Dr. Who": ["timemachine"],
+        "Dr. Snuggles": ["rocket.ppt"],
+        "Dr. House":["stick.jpg"]
+      }
     },
     "indexAB": {
-      "Dr. No": ["dragon.doc"],
-      "Dr. Who": ["timemachine"],
-      "Dr. Snuggles": ["rocket.ppt"],
-      "Dr. House":["stick.jpg"],
-      "1968": ["dragon.doc", "timemachine"],
-      "1985": ["rocket.ppt"],
-      "2005":["stick.jpg"]
+      "author": {
+        "Dr. No": ["dragon.doc"],
+        "Dr. Who": ["timemachine"],
+        "Dr. Snuggles": ["rocket.ppt"],
+        "Dr. House":["stick.jpg"]
+      },
+      "year": {
+        "1968": ["dragon.doc", "timemachine"],
+        "1985": ["rocket.ppt"],
+        "2005":["stick.jpg"]
+      }
     }
   };
   o.jio.get("iall_indices.json",function(err, response){
@@ -3231,6 +3320,23 @@ test ("AllDocs", function () {
   }
   o.spy(o, "value", o.thisShouldBeTheAnswer2, "allDocs (include_docs)");
   o.jio.allDocs({"include_docs":true}, o.f);
+  o.tick(o);
+
+  // complex queries
+  o.thisShouldBeTheAnswer3 = {"nothing here":"yet"}
+  o.spy(o, "value", o.thisShouldBeTheAnswer3,
+    "allDocs (complex queries year >= 1985)");
+  o.jio.allDocs({
+    "query":{
+      "query":jIO.ComplexQueries.parse('(year: >= "1985" AND author:"D%")'),
+      "filter": {
+          "limit":[0,2],
+          "sort_on":[['key','descending']],
+          "select_list":['author','year']
+      },
+      "wildcard_character":'%'
+    }
+  }, o.f);
   o.tick(o);
 
   o.jio.stop();
