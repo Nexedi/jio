@@ -1361,7 +1361,8 @@ test ("Put", function(){
     // put + revision history
     o.doc = {
       "_id": "put1",
-      "_revs": ["3-rh3", "2-rh2", "1-rh1"],
+      //"_revs": ["3-rh3", "2-rh2", "1-rh1"], // same as below
+      "_revs": {"start": 3, "ids": ["rh3", "rh2", "rh1"]},
       "title": "myPut3"
     };
     o.spy (o, "value", {"id": "put1", "ok": true, "rev": "3-rh3"},

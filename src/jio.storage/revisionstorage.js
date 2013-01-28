@@ -26,6 +26,20 @@ jIO.addStorageType('revision', function (spec, my) {
   };
 
   /**
+   * Clones an object in deep (without functions)
+   * @method clone
+   * @param  {any} object The object to clone
+   * @return {any} The cloned object
+   */
+  priv.clone = function (object) {
+    var tmp = JSON.stringify(object);
+    if (tmp === undefined) {
+      return undefined;
+    }
+    return JSON.parse(tmp);
+  };
+
+  /**
    * Generate a new uuid
    * @method generateUuid
    * @return {string} The new uuid
@@ -67,6 +81,20 @@ jIO.addStorageType('revision', function (spec, my) {
         revision.split('-')[1]];
     }
     return revision;
+  };
+
+  /**
+   * Convert the revision history object to an array of revisions.
+   * @method revisionHistoryToArray
+   * @param  {object} revs The revision history
+   * @return {array} The revision array
+   */
+  priv.revisionHistoryToArray = function (revs) {
+    var i, start = revs.start, newlist = [];
+    for (i = 0; i < revs.ids.length; i += 1, start -= 1) {
+      newlist.push(start + "-" + revs.ids[i]);
+    }
+    return newlist;
   };
 
   /**
@@ -214,14 +242,20 @@ jIO.addStorageType('revision', function (spec, my) {
    * Add a document revision branch to the document tree
    * @method updateDocumentTree
    * @param  {object} doctree The document tree object
-   * @param  {array} revs The revisions array
+   * @param  {object|array} revs The revision history object or a revision array
    * @param  {boolean} deleted The deleted flag
    * @param  {array} The document revs_info
    */
   priv.updateDocumentTree = function (doctree, revs, deleted) {
     var revs_info, doctree_iterator, flag;
     revs_info = [];
-    revs = JSON.parse(JSON.stringify(revs));
+    if (revs.ids) {
+      // revs is a revision history object
+      revs = priv.revisionHistoryToArray(revs);
+    } else {
+      // revs is an array of revisions
+      revs = priv.clone(revs);
+    }
     doctree_iterator = doctree;
     while (revs.length > 0) {
       var i, rev = revs.pop(0);
