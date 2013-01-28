@@ -26,6 +26,18 @@
  *       "keyword_def": ["some_id"]
  *   }
  * }
+ * NOTES:
+ * It may be difficult to "un-sort" multi-field indices, like
+ * indexAB, because all keywords will be listed regrardless
+ * of underlying field, so an index on author and year would produce
+ * two entries per record like:
+ * 
+ * "William Shakespeare":["id_Romeo_and_Juliet", "id_Othello"],
+ * "1591":["id_Romeo_and_Juliet"],
+ * "1603":["id_Othello"]
+ * 
+ * So for direct lookups, this should be convient, but for other types
+ * of queries, it depends
  */
 jIO.addStorageType('indexed', function (spec, my) {
 
@@ -132,6 +144,23 @@ jIO.addStorageType('indexed', function (spec, my) {
   };
 
   /**
+   * Get element position in array
+   * @method getPositionInArray
+   * @param  {object} indices The index file
+   * @param  {object} indices The index file
+   * @returns {number} i Position of element in array
+   */
+  priv.getPositionInArray = function (element, array) {
+    var i;
+    for (i = 0; i < array.length; i += 1) {
+      if (array[i] === element) {
+        return i;
+      }
+    }
+    return null;
+  };
+
+  /**
    * Find id in indices
    * @method isDocidInIndex
    * @param  {object} indices The file containing the indeces
@@ -202,7 +231,7 @@ jIO.addStorageType('indexed', function (spec, my) {
 
     // loop indices
     for (i = 0; i < l; i += 1) {
-      // index object (reference and current iteration)
+      // index object (reference and current-iteration)
       index = {};
       index.reference = priv.indices[i];
       index.reference_size = index.reference.fields.length;
@@ -218,8 +247,7 @@ jIO.addStorageType('indexed', function (spec, my) {
           // add a new entry
           index.field_array.push(value);
 
-          // remove existing entries with same docid
-          // because items are stored as "keyword:id" pairs this is tricky
+          // remove existing entries with same docid (put-update!)
           if (index.current_size > 0) {
             key = priv.searchIndexByValue(indices[index.reference.name],
               doc._id, "key");
@@ -246,8 +274,100 @@ jIO.addStorageType('indexed', function (spec, my) {
     return indices;
   };
 
-  priv.getDocContent = function () {
+  /**
+   * Check available indices to find the best one. This index must have
+   * all "id" parameters of the query and if it also contains all values from
+   * the select-list, it can be used to run the whole query plus return results
+   * @method findBestIndexForQuery
+   * @param  {object} indices The index file
+   * @returns {object} response The query object constructed from Index file
+   */
+  priv.findBestIndexForQuery = function (indices, syntax) {
+    var i, j, k, l, m, n, o, p,
+      search_ids = [],
+      select_ids = syntax.filter.select_list,
+      index, query_param, search_param, use_index = [];
 
+    // array of necessary query ids
+    if (syntax.query.query_list === undefined) {
+      search_ids.push(syntax.query.id);
+    } else {
+      for (j = 0; j < syntax.query.query_list.length; j += 1) {
+        search_ids.push(syntax.query.query_list[j].id);
+      }
+    }
+
+    // loop indices
+    for (i = 0; i < priv.indices.length; i += 1) {
+      index = {};
+      index.reference = priv.indices[i];
+      index.reference_size = index.reference.fields.length;
+      o = search_ids.length;
+      for (k = 0; k < o; k += 1) {
+        // always check the first element in the array because it's spliced
+        query_param = search_ids[0];
+        for (l = 0; l < index.reference_size; l += 1) {
+          if (query_param === index.reference.fields[l]) {
+            search_ids.splice(
+              priv.getPositionInArray(query_param, search_ids),
+              1
+            );
+          }
+        }
+      }
+
+      // empty search_ids = index can be used, now check results
+      if (search_ids.length === 0) {
+        // can't return results if empty select_list (all fields)
+        if (select_ids.length === 0) {
+          use_index.push({
+            "name": index.reference.name,
+            "search": true,
+            "results": false
+          });
+        } else {
+          p = select_ids.length;
+          for (m = 0; m < p; m += 1) {
+            search_param = select_ids[0];
+            for (n = 0; n < index.reference_size; n += 1) {
+              if (search_param === index.reference.fields[n]) {
+                select_ids.splice(
+                  priv.getPositionInArray(search_param, select_ids),
+                  1
+                );
+              }
+            }
+          }
+          // empty select_list = index can do do query and results!
+          if (select_ids.length === 0) {
+            use_index.push({
+              "name": index.reference.name,
+              "search": true,
+              "results": true
+            });
+          } else {
+            use_index.push({
+              "name": index.reference.name,
+              "search": true,
+              "results": false
+            });
+          }
+        }
+      }
+    }
+    return use_index;
+  };
+
+  /**
+   * Converts the indices file into an object usable by complex queries
+   * @method convertIndicesToQueryObject
+   * @param  {object} indices The index file
+   * @returns {object} response The query object constructed from Index file
+   */
+  priv.convertIndicesToQueryObject = function (indices, query_syntax) {
+    var use_index = priv.findBestIndexForQuery(indices, query_syntax);
+
+    return indices;
   };
   /**
    * Build the alldocs response from the index file (overriding substorage)
@@ -638,7 +758,7 @@ jIO.addStorageType('indexed', function (spec, my) {
   // ]
   //}
   that.allDocs = function (command) {
-    var f = {}, option, all_docs_response;
+    var f = {}, option, all_docs_response, query_object, query_syntax;
     option = command.cloneOption();
     if (option.max_retry === 0) {
       option.max_retry = 3;
@@ -651,7 +771,14 @@ jIO.addStorageType('indexed', function (spec, my) {
         priv.index_suffix,
         option,
         function (response) {
-          if (command.getOption('include_docs')) {
+          query_syntax = command.getOption('query');
+          if (query_syntax !== undefined) {
+            // check to see if index can do the job
+            query_object = priv.convertIndicesToQueryObject(
+              response,
+              query_syntax
+            );
+          } else if (command.getOption('include_docs')) {
             priv.allDocsResponseFromIndex(response, true, option);
           } else {
             all_docs_response =
