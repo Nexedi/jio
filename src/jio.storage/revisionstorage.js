@@ -247,7 +247,7 @@ jIO.addStorageType('revision', function (spec, my) {
    * @param  {array} The document revs_info
    */
   priv.updateDocumentTree = function (doctree, revs, deleted) {
-    var revs_info, doctree_iterator, flag;
+    var revs_info, doctree_iterator, flag, i, rev;
     revs_info = [];
     if (revs.ids) {
       // revs is a revision history object
@@ -258,7 +258,7 @@ jIO.addStorageType('revision', function (spec, my) {
     }
     doctree_iterator = doctree;
     while (revs.length > 0) {
-      var i, rev = revs.pop(0);
+      rev = revs.pop(0);
       revs_info.unshift({
         "rev": rev,
         "status": "missing"
