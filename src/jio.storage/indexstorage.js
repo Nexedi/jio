@@ -107,13 +107,20 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @return {object} The new index array
    */
   priv.createEmptyIndexArray = function (indices) {
-    var i, j = priv.indices.length,
-      new_index_object = {}, new_index_name;
+    var i, k, j = priv.indices.length, new_index,
+      new_index_object = {}, new_index_name, new_index_fields;
 
     if (indices === undefined) {
       for (i = 0; i < j; i += 1) {
-        new_index_name = priv.indices[i].name;
+        new_index = priv.indices[i];
+        new_index_name = new_index.name;
+        new_index_fields = new_index.fields;
         new_index_object[new_index_name] = {};
+
+        // loop index fields and add objects to hold value/id pairs
+        for (k = 0; k < new_index_fields.length; k += 1) {
+          new_index_object[new_index_name][new_index_fields[k]] = {};
+        }
       }
     }
     return new_index_object;
@@ -168,18 +175,24 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @return {boolean} true/false
    */
   priv.isDocidInIndex = function (indices, doc) {
-    var index, i, l = priv.indices.length;
+    var index, i, j, label, l = priv.indices.length;
 
     // loop indices
     for (i = 0; i < l; i += 1) {
       index = {};
       index.reference = priv.indices[i];
-      index.name = index.reference.name;
-      index.size = priv.getObjectSize(indices[index.name]);
+      index.reference_size = index.reference.fields.length;
+      index.current = indices[index.reference.name];
 
-      if (index.size > 0) {
-        if (priv.searchIndexByValue(indices[index.name], doc._id, "bool")) {
-          return true;
+      for (j = 0; j < index.reference_size; j += 1) {
+        label = index.reference.fields[j];
+        index.current_size = priv.getObjectSize(index.current[label]);
+
+        // check for existing entries to remove (put-update)
+        if (index.current_size > 0) {
+          if (priv.searchIndexByValue(index.current[label], doc._id, "bool")) {
+            return true;
+          }
         }
       }
     }
@@ -194,26 +207,32 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @return {object} indices The cleaned up file
    */
   priv.cleanIndices = function (indices, doc) {
-    var i, j, k, index, key, l = priv.indices.length;
+    var i, j, k, index, key, label, l = priv.indices.length;
 
     // loop indices (indexA, indexAB...)
     for (i = 0; i < l; i += 1) {
-      // index object (reference and current-iteration)
       index = {};
       index.reference = priv.indices[i];
+      index.reference_size = index.reference.fields.length;
       index.current = indices[index.reference.name];
-      index.current_size = priv.getObjectSize(index.current);
 
-      for (j = 0; j < index.current_size; j += 1) {
-        key = priv.searchIndexByValue(index.current, doc._id, "key");
-        index.result_array = index.current[key];
-        if (!!key) {
-          // if there is more than one docid in the result array,
-          // just remove this one and not the whole array
-          if (index.result_array.length > 1) {
-            index.result_array.splice(k, 1);
-          } else {
-            delete index.current[key];
+      // loop index fields
+      for (j = 0; j < index.reference_size; j += 1) {
+        label = index.reference.fields[j];
+        index.current_size = priv.getObjectSize(index.current[label]);
+
+        // loop field entries
+        for (k = 0; k < index.current_size; k += 1) {
+          key = priv.searchIndexByValue(index.current[label], doc._id, "key");
+          index.result_array = index.current[label][key];
+          if (!!key) {
+            // if there is more than one docid in the result array,
+            // just remove this one and not the whole array
+            if (index.result_array.length > 1) {
+              index.result_array.splice(k, 1);
+            } else {
+              delete index.current[label][key];
+            }
           }
         }
       }
@@ -227,47 +246,38 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @param  {object} doc The document which should be added to the index
    */
   priv.updateIndices = function (indices, doc) {
-    var i, j, k, m, index, value, label, key, l = priv.indices.length;
+    var i, j, index, value, label, key, l = priv.indices.length;
 
     // loop indices
     for (i = 0; i < l; i += 1) {
-      // index object (reference and current-iteration)
       index = {};
       index.reference = priv.indices[i];
       index.reference_size = index.reference.fields.length;
-      index.field_array = [];
       index.current = indices[index.reference.name];
-      index.current_size = priv.getObjectSize(index.current);
 
       // build array of values to create entries in index
       for (j = 0; j < index.reference_size; j += 1) {
         label = index.reference.fields[j];
         value = doc[label];
         if (value !== undefined) {
-          // add a new entry
-          index.field_array.push(value);
+          index.current_size = priv.getObjectSize(index.current[label]);
 
-          // remove existing entries with same docid (put-update!)
+          // check for existing entries to remove (put-update)
           if (index.current_size > 0) {
-            key = priv.searchIndexByValue(indices[index.reference.name],
-              doc._id, "key");
+            key = priv.searchIndexByValue(
+              index.current[label],
+              doc._id,
+              "key"
+            );
             if (!!key) {
-              delete index.current[key];
+              delete index.current[label][key];
             }
           }
-        }
-      }
-      // create keyword entries
-      if (index.current !== undefined) {
-        m = index.field_array.length;
-        if (m) {
-          for (k = 0; k < m; k += 1) {
-            index.current_keyword = [index.field_array[k]];
-            if (index.current[index.current_keyword] === undefined) {
-              index.current[index.current_keyword] = [];
-            }
-            index.current[index.current_keyword].push(doc._id);
+          if (index.current[label][value] === undefined) {
+            index.current[label][value] = [];
           }
+          // add a new entry
+          index.current[label][value].push(doc._id);
         }
       }
     }
@@ -366,7 +376,6 @@ jIO.addStorageType('indexed', function (spec, my) {
    */
   priv.convertIndicesToQueryObject = function (indices, query_syntax) {
     var use_index = priv.findBestIndexForQuery(indices, query_syntax);
-
     return indices;
   };
   /**
@@ -379,7 +388,7 @@ jIO.addStorageType('indexed', function (spec, my) {
    */
   priv.allDocsResponseFromIndex = function (indices, include_docs, option) {
     var i, j, k, m, n = 0, l = priv.indices.length,
-      index, key, obj, prop, found, file,
+      index, key, obj, prop, found, file, label,
       unique_count = 0, unique_docids = [], all_doc_response = {},
       success = function (content) {
         file = { value: {} };
@@ -408,25 +417,33 @@ jIO.addStorageType('indexed', function (spec, my) {
     for (i = 0; i < l; i += 1) {
       index = {};
       index.reference = priv.indices[i];
+      index.reference_size = index.reference.fields.length;
       index.current = indices[index.reference.name];
-      index.current_size = priv.getObjectSize(index.current);
 
       // a lot of loops, not sure this is the fastest way
-      for (j = 0; j < index.current_size; j += 1) {
-        for (key in index.current) {
-          if (index.current.hasOwnProperty(key)) {
-            obj = index.current[key];
-            for (prop in obj) {
-              if (obj.hasOwnProperty(prop)) {
-                for (k = 0; k < unique_docids.length; k += 1) {
-                  if (obj[prop] === unique_docids[k]) {
-                    found = true;
-                    break;
+      // loop index fields
+      for (j = 0; j < index.reference_size; j += 1) {
+        label = index.reference.fields[j];
+        index.current_field = index.current[label];
+        index.current_size = priv.getObjectSize(index.current_field);
+
+        // loop field id array
+        for (j = 0; j < index.current_size; j += 1) {
+          for (key in index.current_field) {
+            if (index.current_field.hasOwnProperty(key)) {
+              obj = index.current_field[key];
+              for (prop in obj) {
+                if (obj.hasOwnProperty(prop)) {
+                  for (k = 0; k < unique_docids.length; k += 1) {
+                    if (obj[prop] === unique_docids[k]) {
+                      found = true;
+                      break;
+                    }
                   }
-                }
-                if (!found) {
-                  unique_docids.push(obj[prop]);
-                  unique_count += 1;
+                  if (!found) {
+                    unique_docids.push(obj[prop]);
+                    unique_count += 1;
+                  }
                 }
               }
             }
@@ -434,6 +451,7 @@ jIO.addStorageType('indexed', function (spec, my) {
         }
       }
     }
+
     // construct allDocs response
     all_doc_response.total_rows = unique_count;
     all_doc_response.rows = [];
@@ -771,6 +789,7 @@ jIO.addStorageType('indexed', function (spec, my) {
         priv.index_suffix,
         option,
         function (response) {
+          // should include_docs be possible besides complex queries?
           query_syntax = command.getOption('query');
           if (query_syntax !== undefined) {
             // check to see if index can do the job
