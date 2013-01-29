@@ -1141,6 +1141,29 @@ test ("AllDocs", function(){
     o.jio.allDocs({"include_docs":true}, o.f);
     o.tick(o);
 
+    // complex queries
+    o.thisShouldBeTheAnswer4 = [
+        {"title": "Inception", "year": 2010},
+        {"title": "The Dark Knight", "year": 2008},
+        {"title": "Lord of the Rings - Return of the King", "year": 2003},
+        {"title": "Lord Of the Rings - Fellowship of the Ring", "year": 2001},
+        {"title": "Fight Club", "year": 1999}
+    ];
+    o.spy(o, "value", o.thisShouldBeTheAnswer4,
+      "allDocs (complex queries year >= 1980, all query options)");
+    o.jio.allDocs({
+      "query":{
+        "query":'(year: >= "1980")',
+        "filter": {
+            "limit":[0,5],
+            "sort_on":[['year','descending']],
+            "select_list":['title','year']
+        },
+        "wildcard_character":'%'
+      }
+    }, o.f);
+    o.tick(o);
+
     o.jio.stop();
 
 });
@@ -3438,7 +3461,7 @@ test ("AllDocs", function () {
   o.spy(o, "value", o.thisShouldBeTheAnswer2, "allDocs (include_docs)");
   o.jio.allDocs({"include_docs":true}, o.f);
   o.tick(o);
-
+  /*
   // complex queries
   o.thisShouldBeTheAnswer3 = {"nothing here":"yet"}
   o.spy(o, "value", o.thisShouldBeTheAnswer3,
@@ -3455,7 +3478,7 @@ test ("AllDocs", function () {
     }
   }, o.f);
   o.tick(o);
-
+  */
   o.jio.stop();
 });
 /*

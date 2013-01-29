@@ -321,41 +321,71 @@ jIO.addStorageType('local', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.allDocs = function (command) {
-    var i, s, j, file, items = 0, all_doc_response = {};
+    var i, j, file, items = 0,
+      s = new RegExp(priv.localpath + '\\/.*$'),
+      all_doc_response = {},
+      query_object = [], query_syntax, query_response = [];
 
-    all_doc_response.rows = [];
+    query_syntax = command.getOption('query');
+    if (query_syntax === undefined) {
+      all_doc_response.rows = [];
 
-    for (i in localStorage) {
-      if (localStorage.hasOwnProperty(i)) {
-        // filter non-documents
-        s = new RegExp(priv.localpath + '\\/.*$');
-        if (s.test(i)) {
-          items += 1;
-          j = i.split('/').slice(-1)[0];
+      for (i in localStorage) {
+        if (localStorage.hasOwnProperty(i)) {
+          // filter non-documents
+          if (s.test(i)) {
+            items += 1;
+            j = i.split('/').slice(-1)[0];
 
-          file = { value: {} };
-          file.id = j;
-          file.key = j;
-          if (command.getOption('include_docs')) {
-            file.doc = JSON.parse(localStorage.getItem(i));
+            file = { value: {} };
+            file.id = j;
+            file.key = j;
+            if (command.getOption('include_docs')) {
+              file.doc = JSON.parse(localStorage.getItem(i));
+            }
+            all_doc_response.rows.push(file);
           }
-          all_doc_response.rows.push(file);
         }
       }
-    }
-    all_doc_response.total_rows = items;
-
-    if (items > 0) {
-      that.success(all_doc_response);
+      all_doc_response.total_rows = items;
+      if (items > 0) {
+        that.success(all_doc_response);
+        return;
+      }
     } else {
-      that.error({
-        "status": 404,
-        "statusText": "Not Found",
-        "error": "not_found",
-        "message": "No documents found",
-        "reason": "No documents found"
-      });
+      // create complex query object from returned results
+      for (i in localStorage) {
+        if (localStorage.hasOwnProperty(i)) {
+          if (s.test(i)) {
+            items += 1;
+            j = i.split('/').slice(-1)[0];
+            query_object.push(JSON.parse(localStorage.getItem(i)));
+          }
+        }
+      }
+      query_response = jIO.ComplexQueries.query({
+        query: query_syntax.query,
+        filter: {
+          sort_on: query_syntax.filter.sort_on,
+          limit: query_syntax.filter.limit,
+          select_list: query_syntax.filter.select_list
+        },
+        wildcard_character: query_syntax.wildcard_character
+      },
+        query_object
+        );
+      if (items > 0) {
+        that.success(query_response);
+        return;
+      }
     }
+    that.error({
+      "status": 404,
+      "statusText": "Not Found",
+      "error": "not_found",
+      "message": "No documents found",
+      "reason": "No documents found"
+    });
   };
 
   return that;
