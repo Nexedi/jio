@@ -2161,7 +2161,6 @@ module ("JIO Replicate Revision Storage");
     o.tick(o);
 
     // get the post document with specific revision
-    console.log(o.specific_rev);
     o.spy(o, "value", {
       "_id": "doc1",
       "title": "post new doc with id",

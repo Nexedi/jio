@@ -215,8 +215,7 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
         priv.post_allowed = true;
       }
       doc_env = my.env[doc._id];
-      if (doc_env && doc_env.id) {
-      } else {
+      if (!doc_env || !doc_env.id) {
         doc_env = priv.initEnv(doc._id);
       }
       my_rev = priv.generateNextRevision(doc._rev || 0, doc._id);
@@ -380,7 +379,9 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
           tmp_object = {};
           start = response._revisions.start;
           for (i = 0; i < response._revisions.ids.length; i += 1, start -= 1) {
-            tmp = doc_env.distant_revisions[start + "-" + response._revisions.ids[i]];
+            tmp = doc_env.distant_revisions[
+              start + "-" + response._revisions.ids[i]
+            ];
             if (tmp) {
               response._revisions.ids[i] = tmp.split("-").slice(1).join("-");
             }
