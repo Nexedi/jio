@@ -2004,7 +2004,6 @@ module ("JIO Replicate Revision Storage");
 
     // post a new document without id
     o.doc = {"title": "post document without id"};
-    o.revision = {"start": 0, "ids": []};
     o.spy(o, "status", undefined, "Post document (without id)");
     o.jio.post(o.doc, function (err, response) {
       o.f.apply(arguments);
@@ -2021,7 +2020,8 @@ module ("JIO Replicate Revision Storage");
 
     // check document
     o.doc._id = o.uuid;
-    o.rev = "1";
+    o.revision = {"start": 0, "ids": []};
+    o.rev = "1-1";
     o.local_rev = "1-" + generateRevisionHash(o.doc, o.revision);
     o.leavesAction(function (storage_description, param) {
       var suffix = "", doc = clone(o.doc);
@@ -2037,16 +2037,33 @@ module ("JIO Replicate Revision Storage");
       );
     });
 
+    // get the post document without revision
+    o.spy(o, "value", {
+      "_id": o.uuid,
+      "title": "post document without id",
+      "_rev": "1-1",
+      "_revisions": {"start": 1, "ids": ["1"]},
+      "_revs_info": [{"rev": "1-1", "status": "available"}]
+    }, "Get the previous document (without revision)");
+    o.jio.get(o.uuid, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
     // post a new document with id
-    o.doc = {"_id": "post1", "title": "post new doc with id"};
-    o.rev = "1"
-    o.spy(o, "value", {"ok": true, "id": "post1", "rev": o.rev},
+    o.doc = {"_id": "doc1", "title": "post new doc with id"};
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
           "Post document (with id)");
     o.jio.post(o.doc, o.f);
     o.tick(o);
 
     // check document
-    o.local_rev = "1-" + generateRevisionHash(o.doc, o.revision);
+    o.local_rev_hash = generateRevisionHash(o.doc, o.revision);
+    o.local_rev = "1-" + o.local_rev_hash;
+    o.specific_rev_hash = o.local_rev_hash;
+    o.specific_rev = o.local_rev;
     o.leavesAction(function (storage_description, param) {
       var suffix = "", doc = clone(o.doc);
       if (param.revision) {
@@ -2055,15 +2072,30 @@ module ("JIO Replicate Revision Storage");
       }
       deepEqual(
         localstorage.getItem(generateLocalPath(storage_description) +
-                             "/post1" + suffix),
+                             "/doc1" + suffix),
         doc, "Check document"
       );
     });
 
+    // get the post document without revision
+    o.spy(o, "value", {
+      "_id": "doc1",
+      "title": "post new doc with id",
+      "_rev": "1-1",
+      "_revisions": {"start": 1, "ids": ["1"]},
+      "_revs_info": [{"rev": "1-1", "status": "available"}]
+    }, "Get the previous document (without revision)");
+    o.jio.get("doc1", {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
     // post same document without revision
-    o.doc = {"_id": "post1", "title": "post same document without revision"};
-    o.rev = "2";
-    o.spy(o, "value", {"ok": true, "id": "post1", "rev": o.rev},
+    o.doc = {"_id": "doc1", "title": "post same document without revision"};
+    o.rev = "1-2";
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
           "Post same document (without revision)");
     o.jio.post(o.doc, o.f);
     o.tick(o);
@@ -2078,15 +2110,15 @@ module ("JIO Replicate Revision Storage");
       }
       deepEqual(
         localstorage.getItem(generateLocalPath(storage_description) +
-                             "/post1" + suffix),
+                             "/doc1" + suffix),
         doc, "Check document"
       );
     });
 
     // post a new revision
-    o.doc = {"_id": "post1", "title": "post new revision", "_rev": o.rev};
-    o.rev = "3";
-    o.spy(o, "value", {"ok": true, "id": "post1", "rev": o.rev},
+    o.doc = {"_id": "doc1", "title": "post new revision", "_rev": o.rev};
+    o.rev = "2-3";
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
           "Post document (with revision)");
     o.jio.post(o.doc, o.f);
     o.tick(o);
@@ -2096,6 +2128,7 @@ module ("JIO Replicate Revision Storage");
     o.revision.ids.unshift(o.local_rev.split("-").slice(1).join("-"));
     o.doc._rev = o.local_rev;
     o.local_rev = "2-" + generateRevisionHash(o.doc, o.revision);
+    o.specific_rev_conflict = o.local_rev;
     o.leavesAction(function (storage_description, param) {
       var suffix = "", doc = clone(o.doc);
       delete doc._rev;
@@ -2105,25 +2138,50 @@ module ("JIO Replicate Revision Storage");
       }
       deepEqual(
         localstorage.getItem(generateLocalPath(storage_description) +
-                             "/post1" + suffix),
+                             "/doc1" + suffix),
         doc, "Check document"
       );
     });
+
+    // get the post document with revision
+    o.spy(o, "value", {
+      "_id": "doc1",
+      "title": "post same document without revision",
+      "_rev": "1-2",
+      "_revisions": {"start": 1, "ids": ["2"]},
+      "_revs_info": [{"rev": "1-2", "status": "available"}],
+      "_conflicts": ["1-1"]
+    }, "Get the previous document (with revision)");
+    o.jio.get("doc1", {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true,
+      "rev": "1-2"
+    }, o.f);
+    o.tick(o);
+
+    // get the post document with specific revision
+    console.log(o.specific_rev);
+    o.spy(o, "value", {
+      "_id": "doc1",
+      "title": "post new doc with id",
+      "_rev": o.specific_rev,
+      "_revisions": {"start": 1, "ids": [o.specific_rev_hash]},
+      "_revs_info": [{"rev": o.specific_rev, "status": "available"}],
+      "_conflicts": [o.specific_rev_conflict]
+    }, "Get a previous document (with local storage revision)");
+    o.jio.get("doc1", {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true,
+      "rev": o.specific_rev
+    }, o.f);
+    o.tick(o);
 
     o.jio.stop();
 
   };
 
-  test ("[Local Storage] Scenario", function () {
-    testReplicateRevisionStorageGenerator(this, {
-      "type": "replicaterevision",
-      "storage_list": [{
-        "type": "local",
-        "username": "ureploc",
-        "application_name": "areploc"
-      }]
-    });
-  });
   test ("[Revision + Local Storage] Scenario", function () {
     testReplicateRevisionStorageGenerator(this, {
       "type": "replicaterevision",
@@ -2137,20 +2195,23 @@ module ("JIO Replicate Revision Storage");
       }]
     });
   });
-  test ("[Revision + Local Storage, Local Storage] Scenario", function () {
+  test ("2x [Revision + Local Storage] Scenario", function () {
     testReplicateRevisionStorageGenerator(this, {
       "type": "replicaterevision",
       "storage_list": [{
         "type": "revision",
         "sub_storage": {
           "type": "local",
-          "username": "ureprevlocloc",
-          "application_name": "areprevlocloc"
+          "username": "ureprevlocloc1",
+          "application_name": "areprevloc1"
         }
-      },{
-        "type": "local",
-        "username": "ureprevlocloc2",
-        "application_name": "areprevlocloc2"
+      }, {
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "ureprevlocloc2",
+          "application_name": "areprevloc2"
+        }
       }]
     });
   });
