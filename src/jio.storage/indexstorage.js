@@ -18,12 +18,18 @@
  * Index file will contain
  * {
  *   "_id": "ipost_indices.json",
- *   "indexA": {
- *       "keyword_abc": ["some_id","some_other_id",...]
+ *   "indexA":
+ *      "fieldA": {
+ *        "keyword_abc": ["some_id","some_other_id",...]
+ *      }
  *   },
  *   "indexAB": {
- *       "keyword_abc": ["some_id"],
+ *     "fieldA": {
+ *       "keyword_abc": ["some_id"]
+ *      },
+ *     "fieldB": {
  *       "keyword_def": ["some_id"]
+*      }
  *   }
  * }
  * NOTES:
