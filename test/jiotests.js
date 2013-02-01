@@ -1342,11 +1342,17 @@ test ("Put", function(){
         "Check document tree"
     );
 
-    // put and document already exists
-    o.spy (o, "status", 409, "Update the document");
-    o.jio.put({"_id": "put1", "title": "myPut2"}, o.f);
+    // put without rev and document already exists
+    o.doc = {"_id": "put1", "title": "myPut2"};
+    o.rev = "1-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {"ok": true, "id": "put1", "rev": o.rev},
+           "Put same document without revision");
+    o.jio.put(o.doc, o.f);
     o.tick(o);
 
+    o.doc_tree.children.unshift({
+        "rev": o.rev, "status": "available", "children": []
+    });
 
     // put + revision
     o.doc = {"_id": "put1", "_rev": o.rev, "title": "myPut2"};
