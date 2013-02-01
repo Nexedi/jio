@@ -504,9 +504,6 @@ jIO.addStorageType('revision', function (spec, my) {
       doc._id = priv.generateUuid();
       docid = doc._id;
     }
-    if (priv.update_doctree_allowed === undefined) {
-      priv.update_doctree_allowed = true;
-    }
     f.getDocumentTree = function () {
       var option = command.cloneOption();
       if (option.max_retry === 0) {
@@ -521,17 +518,7 @@ jIO.addStorageType('revision', function (spec, my) {
         function (response) {
 
           doctree = response;
-          if (priv.update_doctree_allowed) {
-            f.postDocument("put");
-          } else {
-            that.error({
-              "status": 409,
-              "statusText": "Conflict",
-              "error": "conflict",
-              "message": "Cannot update a document",
-              "reason": "Document update conflict"
-            });
-          }
+          f.postDocument("put");
         },
         function (err) {
           switch (err.status) {
@@ -611,10 +598,6 @@ jIO.addStorageType('revision', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.put = function (command) {
-    var doc = command.cloneDoc();
-    if (doc._rev === undefined && doc._revs === undefined) {
-      priv.update_doctree_allowed = false;
-    }
     that.post(command);
   };
 
