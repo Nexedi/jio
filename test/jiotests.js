@@ -2065,6 +2065,10 @@ module ("JIO Replicate Revision Storage");
     o.jio.post(o.doc, o.f);
     o.tick(o);
 
+    //  /
+    //  |
+    // 1-1
+
     // check document
     o.local_rev_hash = generateRevisionHash(o.doc, o.revision);
     o.local_rev = "1-" + o.local_rev_hash;
@@ -2106,6 +2110,10 @@ module ("JIO Replicate Revision Storage");
     o.jio.post(o.doc, o.f);
     o.tick(o);
 
+    //    /
+    //   / \
+    // 1-1 1-2
+
     // check document
     o.local_rev = "1-" + generateRevisionHash(o.doc, o.revision);
     o.leavesAction(function (storage_description, param) {
@@ -2128,6 +2136,12 @@ module ("JIO Replicate Revision Storage");
           "Post document (with revision)");
     o.jio.post(o.doc, o.f);
     o.tick(o);
+
+    //    /
+    //   / \
+    // 1-1 1-2
+    //      |
+    //     2-3
 
     // check document
     o.revision.start += 1;
@@ -2183,6 +2197,80 @@ module ("JIO Replicate Revision Storage");
     }, o.f);
     o.tick(o);
 
+    // put document without id
+    o.spy(o, "status", 20, "Put document without id")
+    o.jio.put({}, o.f);
+    o.tick(o);
+
+    // put document without rev
+    o.doc = {"_id": "doc1", "title": "put new document"};
+    o.rev = "1-4";
+    o.spy(o, "value", {"id": "doc1", "ok": true, "rev": o.rev},
+          "Put document without rev")
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    //    __/__
+    //   /  |  \
+    // 1-1 1-2 1-4
+    //      |
+    //     2-3
+
+    // put new revision
+    o.doc = {"_id": "doc1", "title": "put new revision", "_rev": "1-4"};
+    o.rev = "2-5";
+    o.spy(o, "value", {"id": "doc1", "ok": true, "rev": o.rev},
+          "Put document without rev")
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    //    __/__
+    //   /  |  \
+    // 1-1 1-2 1-4
+    //      |   |
+    //     2-3 2-5
+
+    // putAttachment to inexistent document
+    // putAttachment
+    // get document
+    // get attachment
+    // put document
+    // get document
+    // get attachment
+    // remove attachment
+    // get document
+    // get inexistent attachment
+
+    // remove document and conflict
+    o.rev = "3-6";
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
+          "Remove document");
+    o.jio.remove({"_id": "doc1", "_rev": "2-5"}, o.f);
+    o.tick(o);
+
+    // remove document and conflict
+    o.rev = "3-7";
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
+          "Remove document");
+    o.jio.remove({"_id": "doc1", "_rev": "2-3"}, o.f);
+    o.tick(o);
+
+    // remove document
+    o.rev = "2-8";
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
+          "Remove document");
+    o.jio.remove({"_id": "doc1", "_rev": "1-1"}, o.f);
+    o.tick(o);
+
+    // get inexistent document
+    o.spy(o, "status", 404, "Get inexistent document");
+    o.jio.get("doc1", {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
     o.jio.stop();
 
   };
@@ -2197,6 +2285,22 @@ module ("JIO Replicate Revision Storage");
           "username": "ureprevloc",
           "application_name": "areprevloc"
         }
+      }]
+    });
+  });
+  test("[Replicate Revision + Revision + Local Storage] Scenario", function () {
+    testReplicateRevisionStorageGenerator(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "replicaterevision",
+        "storage_list": [{
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "urepreprevloc",
+            "application_name": "arepreprevloc"
+          }
+        }]
       }]
     });
   });
@@ -2220,7 +2324,47 @@ module ("JIO Replicate Revision Storage");
       }]
     });
   });
-
+  test("2x [Replicate Rev + 2x [Rev + Local]] Scenario", function () {
+    testReplicateRevisionStorageGenerator(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "replicaterevision",
+        "storage_list": [{
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "urepreprevloc1",
+            "application_name": "arepreprevloc1"
+          }
+        }, {
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "urepreprevloc2",
+            "application_name": "arepreprevloc2"
+          }
+        }]
+      }, {
+        "type": "replicaterevision",
+        "storage_list": [{
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "urepreprevloc3",
+            "application_name": "arepreprevloc3"
+          }
+        }, {
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "urepreprevloc4",
+            "application_name": "arepreprevloc4"
+          }
+        }]
+      }]
+    });
+  });
+/*
 module ("Jio DAVStorage");
 
 test ("Post", function () {
