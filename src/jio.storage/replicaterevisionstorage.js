@@ -410,5 +410,82 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
     functions.begin();
   };
 
+  /**
+   * Remove the document or attachment from all sub storages.
+   * @method remove
+   * @param  {object} command The JIO command
+   */
+  that.remove = function (command) {
+    var functions = {}, doc_env, revs_info, doc, my_rev;
+    functions.begin = function () {
+      doc = command.cloneDoc();
+
+      if (typeof doc._rev === "string" && !priv.checkRevisionFormat(doc._rev)) {
+        that.error({
+          "status": 31,
+          "statusText": "Wrong Revision Format",
+          "error": "wrong_revision_format",
+          "message": "The document previous revision does not match " +
+            "^[0-9]+-[0-9a-zA-Z]+$",
+          "reason": "Previous revision is wrong"
+        });
+        return;
+      }
+      doc_env = my.env[doc._id];
+      if (!doc_env || !doc_env.id) {
+        doc_env = priv.initEnv(doc._id);
+      }
+      my_rev = priv.generateNextRevision(doc._rev || 0, doc._id);
+      functions.sendDocument();
+    };
+    functions.sendDocument = function () {
+      var i, cloned_doc;
+      for (i = 0; i < priv.storage_list.length; i += 1) {
+        cloned_doc = priv.clone(doc);
+        if (typeof cloned_doc._rev === "string" &&
+            doc_env.my_revisions[cloned_doc._rev] !== undefined) {
+          cloned_doc._rev = doc_env.my_revisions[cloned_doc._rev][i];
+        }
+        priv.send(
+          "remove",
+          i,
+          cloned_doc,
+          command.cloneOption(),
+          functions.checkSendResult
+        );
+      }
+      that.end();
+    };
+    functions.checkSendResult = function (method, index, err, response) {
+      if (err) {
+        priv.updateEnv(doc_env, my_rev, index, null);
+        functions.error(err);
+        return;
+      }
+      // success
+      priv.updateEnv(
+        doc_env,
+        my_rev,
+        index,
+        response.rev || "unique_" + index
+      );
+      functions.success({"ok": true, "id": doc._id, "rev": my_rev});
+    };
+    functions.success = function (response) {
+      // can be called once
+      that.success(response);
+      functions.success = priv.emptyFunction;
+    };
+    functions.error_count = 0;
+    functions.error = function (err) {
+      functions.error_count += 1;
+      if (functions.error_count === priv.storage_list.length) {
+        that.error(err);
+        functions.error = priv.emptyFunction;
+      }
+    };
+    functions.begin();
+  };
+
   return that;
 });

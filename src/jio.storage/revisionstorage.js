@@ -640,7 +640,18 @@ jIO.addStorageType('revision', function (spec, my) {
           doctree = response;
           if (prev_rev === undefined) {
             revs_info = priv.getWinnerRevisionFromDocumentTree(doctree);
-            prev_rev = revs_info[0].rev;
+            if (revs_info.length > 0) {
+              prev_rev = revs_info[0].rev;
+            } else {
+              that.error({
+                "status": 404,
+                "statusText": "Not Found",
+                "error": "not_found",
+                "message": "Cannot find the document",
+                "reason": "Document is deleted"
+              });
+              return;
+            }
           } else {
             revs_info = priv.getRevisionFromDocumentTree(doctree, prev_rev);
           }
