@@ -485,7 +485,7 @@ jIO.addStorageType('revision', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.post = function (command) {
-    var f = {}, doctree, revs_info, doc, docid;
+    var f = {}, doctree, revs_info, doc, docid, prev_doc;
     doc = command.cloneDoc();
     docid = command.getDocId();
 
@@ -514,32 +514,68 @@ jIO.addStorageType('revision', function (spec, my) {
         priv.substorage,
         docid + priv.doctree_suffix,
         option,
-
         function (response) {
-
           doctree = response;
-          f.postDocument("put");
+          f.updateRevsInfo();
+          f.getDocument();
         },
         function (err) {
           switch (err.status) {
           case 404:
             doctree = priv.createDocumentTree();
-            f.postDocument("post");
+            f.updateRevsInfo();
+            f.getDocument();
             break;
           default:
             err.message = "Cannot get document revision tree";
-            that.error(err);
+            f.error(err);
             break;
           }
         }
       );
     };
-    f.postDocument = function (doctree_update_method) {
+    f.getDocument = function () {
+      if (revs_info[1] === undefined) {
+        f.postDocument([]);
+      } else {
+        that.addJob(
+          "get",
+          priv.substorage,
+          command.getDocId() + "." + revs_info[1].rev,
+          command.getOption(),
+          function (response) {
+            var attachment_list = [], i;
+            prev_doc = response;
+            for (i in response._attachments) {
+              if (response._attachments.hasOwnProperty(i)) {
+                attachment_list.push({"id": i, "attachment": {
+                  "_id": command.getDocId() + "." + revs_info[0].rev + "/" + i,
+                  "_mimetype": response._attachments[i].content_type,
+                  "_data": undefined
+                }});
+              }
+            }
+            f.postDocument(attachment_list);
+          },
+          function (err) {
+            if (err.status === 404) {
+              f.postDocument([]);
+              return;
+            }
+            err.message = "Cannot retrieve document";
+            f.error(err);
+          }
+        );
+      }
+    };
+    f.updateRevsInfo = function () {
       if (doc._revs) {
         revs_info = priv.updateDocumentTree(doctree, doc._revs);
       } else {
         revs_info = priv.postToDocumentTree(doctree, doc);
       }
+    };
+    f.postDocument = function (attachment_list) {
       doc._id = docid + "." + revs_info[0].rev;
       delete doc._rev;
       delete doc._revs;
@@ -549,26 +585,69 @@ jIO.addStorageType('revision', function (spec, my) {
         doc,
         command.cloneOption(),
         function () {
-          f.sendDocumentTree(doctree_update_method);
+          var i;
+          if (attachment_list.length === 0) {
+            f.sendDocumentTree();
+          } else {
+            f.send_document_tree_count = attachment_list.length;
+            for (i = 0; i < attachment_list.length; i += 1) {
+              f.copyAttachment(attachment_list[i].id,
+                               attachment_list[i].attachment);
+            }
+          }
         },
         function (err) {
           switch (err.status) {
           case 409:
             // file already exists
-            f.sendDocumentTree(doctree_update_method);
+            f.sendDocumentTree();
             break;
           default:
             err.message = "Cannot upload document";
-            that.error(err);
+            f.error(err);
             break;
           }
         }
       );
     };
-    f.sendDocumentTree = function (method) {
+    f.copyAttachment = function (attachmentid, attachment) {
+      console.log(attachmentid);
+      that.addJob(
+        "get",
+        priv.substorage,
+        prev_doc._id + "/" + attachmentid,
+        command.cloneOption(),
+        function (response) {
+          attachment._data = response;
+          that.addJob(
+            "putAttachment",
+            priv.substorage,
+            attachment,
+            command.cloneOption(),
+            function (response) {
+              f.sendDocumentTree();
+            },
+            function (err) {
+              err.message = "Cannot copy previous attachment";
+              f.error(err);
+            }
+          );
+        },
+        function (err) {
+          err.message = "Cannot get previous attachment";
+          f.error(err);
+        }
+      );
+    };
+    f.send_document_tree_count = 0;
+    f.sendDocumentTree = function () {
+      f.send_document_tree_count -= 1;
+      if (f.send_document_tree_count > 0) {
+        return;
+      }
       doctree._id = docid + priv.doctree_suffix;
       that.addJob(
-        method,
+        "put",
         priv.substorage,
         doctree,
         command.cloneOption(),
@@ -582,9 +661,13 @@ jIO.addStorageType('revision', function (spec, my) {
         function (err) {
           // xxx do we try to delete the posted document ?
           err.message = "Cannot save document revision tree";
-          that.error(err);
+          f.error(err);
         }
       );
+    };
+    f.error = function (err) {
+      f.error = function () {};
+      that.error(err);
     };
     f.getDocumentTree();
   };
