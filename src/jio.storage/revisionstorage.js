@@ -691,10 +691,8 @@ jIO.addStorageType('revision', function (spec, my) {
           function (response) {
             var attachment_list = [], i;
             prev_doc = response;
-            console.log(0);
             for (i in response._attachments) {
               if (response._attachments.hasOwnProperty(i)) {
-                console.log(2);
                 attachment_list.push({"id": i, "attachment": {
                   "_id": command.getDocId() + "." + revs_info[0].rev + "/" + i,
                   "_mimetype": response._attachments[i].content_type,
@@ -712,7 +710,6 @@ jIO.addStorageType('revision', function (spec, my) {
       }
     };
     functions.postDocument = function (attachment_list) {
-      console.log(3);
       that.addJob(
         "post",
         priv.substorage,
@@ -720,15 +717,11 @@ jIO.addStorageType('revision', function (spec, my) {
         command.getOption(),
         function (response) {
           var i;
-          console.log(4);
           if (attachment_list.length === 0) {
-            console.log(5);
             functions.postAttachment();
           } else {
-            console.log(6);
             functions.post_attachment_count = attachment_list.length;
             for (i = 0; i < attachment_list.length; i += 1) {
-              console.log(7);
               functions.copyAttachment(attachment_list[i].id,
                                        attachment_list[i].attachment);
             }
@@ -741,14 +734,12 @@ jIO.addStorageType('revision', function (spec, my) {
       );
     };
     functions.copyAttachment = function (attachmentid, attachment) {
-      console.log(8);
       that.addJob(
         "get",
         priv.substorage,
         prev_doc._id + "/" + attachmentid,
         command.cloneOption(),
         function (response) {
-          console.log(7);
           attachment._data = response;
           that.addJob(
             "putAttachment",
@@ -756,18 +747,15 @@ jIO.addStorageType('revision', function (spec, my) {
             attachment,
             command.cloneOption(),
             function (response) {
-              console.log(9);
               functions.postAttachment();
             },
             function (err) {
-              console.log(10);
               err.message = "Cannot copy previous attachment";
               functions.error(err);
             }
           );
         },
         function (err) {
-          console.log(11);
           err.message = "Cannot copy previous attachment";
           functions.error(err);
         }
