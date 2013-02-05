@@ -10,6 +10,10 @@
  *        {"indexA",["field_A"]},
  *        {"indexAB",["field_A","field_B"]}
  *     ],
+ *     "field_types": {
+ *        "field_A": "dateTime",
+ *        "field_B": "string"
+ *      },
  *     "storage": [
  *         <sub storage description>,
  *         ...
@@ -17,7 +21,7 @@
  * }
  * Index file will contain
  * {
- *   "_id": "ipost_indices.json",
+ *   "_id": "app-name_indices.json",
  *   "indexA":
  *      "fieldA": {
  *        "keyword_abc": ["some_id","some_other_id",...]
@@ -54,6 +58,7 @@ jIO.addStorageType('indexed', function (spec, my) {
   that = my.basicStorage(spec, my);
 
   priv.indices = spec.indices;
+  priv.field_types = spec.field_types;
   priv.substorage_key = "sub_storage";
   priv.substorage = spec[priv.substorage_key];
   priv.index_indicator = spec.sub_storage.application_name || "index";
@@ -164,8 +169,8 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @returns {number} i Position of element in array
    */
   priv.getPositionInArray = function (element, array) {
-    var i;
-    for (i = 0; i < array.length; i += 1) {
+    var i, l = array.length;
+    for (i = 0; i < l; i += 1) {
       if (array[i] === element) {
         return i;
       }
@@ -291,36 +296,45 @@ jIO.addStorageType('indexed', function (spec, my) {
   };
 
   /**
-   * Check available indices to find the best one. This index must have
-   * all "id" parameters of the query and if it also contains all values from
-   * the select-list, it can be used to run the whole query plus return results
+   * Check available indices to find the best one.
+   * TODOS: NOT NICE, redo
    * @method findBestIndexForQuery
-   * @param  {object} indices The index file
+   * @param  {object} syntax of query
    * @returns {object} response The query object constructed from Index file
    */
-  priv.findBestIndexForQuery = function (indices, syntax) {
-    var i, j, k, l, m, n, o, p,
-      search_ids = [],
-      select_ids = syntax.filter.select_list,
-      index, query_param, search_param, use_index = [];
-
-    // array of necessary query ids
-    if (syntax.query.query_list === undefined) {
-      search_ids.push(syntax.query.id);
-    } else {
-      for (j = 0; j < syntax.query.query_list.length; j += 1) {
-        search_ids.push(syntax.query.query_list[j].id);
-      }
-    }
+  priv.findBestIndexForQuery = function (syntax) {
+    var i, j, k, l, n, p, o, element, key, block,
+      search_ids, use_index = [], select_ids = {}, index, query_param,
+      // need to parse into object
+      current_query = jIO.ComplexQueries.parse(syntax.query);
 
     // loop indices
     for (i = 0; i < priv.indices.length; i += 1) {
+      search_ids = [];
+      block = false;
       index = {};
       index.reference = priv.indices[i];
       index.reference_size = index.reference.fields.length;
-      o = search_ids.length;
-      for (k = 0; k < o; k += 1) {
-        // always check the first element in the array because it's spliced
+
+      // rebuild search_ids for iteration
+      if (current_query.query_list === undefined) {
+        search_ids.push(current_query.id);
+      } else {
+        for (j = 0; j < current_query.query_list.length; j += 1) {
+          if (priv.getPositionInArray(current_query.query_list[j].id,
+              search_ids) === null) {
+            search_ids.push(current_query.query_list[j].id);
+          }
+        }
+      }
+      // rebuild select_ids
+      for (o = 0; o < syntax.filter.select_list.length; o += 1) {
+        element = syntax.filter.select_list[o];
+        select_ids[element] = true;
+      }
+
+      // loop search ids and find matches in index
+      for (k = 0; k < search_ids.length; k += 1) {
         query_param = search_ids[0];
         for (l = 0; l < index.reference_size; l += 1) {
           if (query_param === index.reference.fields[l]) {
@@ -332,40 +346,34 @@ jIO.addStorageType('indexed', function (spec, my) {
         }
       }
 
-      // empty search_ids = index can be used, now check results
+      // search_ids empty  = all needed search fields found on index
       if (search_ids.length === 0) {
-        // can't return results if empty select_list (all fields)
-        if (select_ids.length === 0) {
+        p = priv.getObjectSize(select_ids);
+        if (p === 0) {
           use_index.push({
             "name": index.reference.name,
             "search": true,
             "results": false
           });
         } else {
-          p = select_ids.length;
-          for (m = 0; m < p; m += 1) {
-            search_param = select_ids[0];
-            for (n = 0; n < index.reference_size; n += 1) {
-              if (search_param === index.reference.fields[n]) {
-                select_ids.splice(
-                  priv.getPositionInArray(search_param, select_ids),
-                  1
-                );
-              }
+          for (n = 0; n < index.reference_size; n += 1) {
+            delete select_ids[index.reference.fields[n]];
+          }
+          for (key in select_ids) {
+            if (select_ids.hasOwnProperty(key)) {
+              use_index.push({
+                "name": index.reference.name,
+                "search": true,
+                "results": false
+              });
+              block = true;
             }
           }
-          // empty select_list = index can do do query and results!
-          if (select_ids.length === 0) {
+          if (block === false) {
             use_index.push({
               "name": index.reference.name,
               "search": true,
               "results": true
-            });
-          } else {
-            use_index.push({
-              "name": index.reference.name,
-              "search": true,
-              "results": false
             });
           }
         }
@@ -376,13 +384,78 @@ jIO.addStorageType('indexed', function (spec, my) {
 
   /**
    * Converts the indices file into an object usable by complex queries
-   * @method convertIndicesToQueryObject
+   * @method constructQueryObject
    * @param  {object} indices The index file
    * @returns {object} response The query object constructed from Index file
    */
-  priv.convertIndicesToQueryObject = function (indices, query_syntax) {
-    var use_index = priv.findBestIndexForQuery(indices, query_syntax);
-    return indices;
+  priv.constructQueryObject = function (indices, query_syntax) {
+    var j, k, l, m, n, use_index, index,
+      index_name, field_names, field, key, element,
+      query_index, query_object = [], field_name,
+      entry;
+
+    // returns index-to-use|can-do-query|can-do-query-and-results
+    use_index = priv.findBestIndexForQuery(query_syntax);
+
+    if (use_index.length > 0) {
+      for (j = 0; j < use_index.length; j += 1) {
+        index = use_index[j];
+
+        // NOTED: the index could be used to:
+        // (a) get all document ids matching query
+        // (b) get all document ids and results (= run complex query on index)
+        // right now, only (b) is supported, because the complex query is
+        // a single step process. If it was possible to first get the 
+        // relevant document ids, then get the results, the index could be
+        // used to do the first step plus use GET on the returned documents
+        if (index.search && index.results) {
+          index_name = use_index[j].name;
+          query_index = indices[index_name];
+
+          // get fieldnames from this index
+          for (k = 0; k < priv.indices.length; k += 1) {
+            if (priv.indices[k].name === use_index[j].name) {
+              field_names = priv.indices[k].fields;
+            }
+          }
+          for (l = 0; l < field_names.length; l += 1) {
+            field_name = field_names[l];
+            // loop entries for this field name
+            field = query_index[field_name];
+            for (key in field) {
+              if (field.hasOwnProperty(key)) {
+                element = field[key];
+                // key can be "string" or "number" right now
+                if (priv.field_types[field_name] === "number") {
+                  key = +key;
+                }
+                for (m = 0; m < element.length; m += 1) {
+                  if (priv.searchIndexByValue(
+                      query_object,
+                      element[m],
+                      "bool"
+                    )) {
+                    // loop object
+                    for (n = 0; n < query_object.length; n += 1) {
+                      entry = query_object[n];
+                      if (entry.id === element[m]) {
+                        entry[field_name] = key;
+                      }
+                    }
+                  } else {
+                    entry = {};
+                    entry.id = element[m];
+                    entry[field_name] = key;
+                    query_object.push(entry);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return query_object;
   };
   /**
    * Build the alldocs response from the index file (overriding substorage)
@@ -490,7 +563,7 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @param  {object} command The JIO command
    * @param  {string} source The source of the function call
    */
-  priv.postOrput = function (command, source) {
+  priv.postOrPut = function (command, source) {
     var f = {}, indices, doc, docid;
     doc = command.cloneDoc();
     docid = command.getDocId();
@@ -618,7 +691,7 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.post = function (command) {
-    priv.postOrput(command, 'POST');
+    priv.postOrPut(command, 'POST');
   };
 
   /**
@@ -627,7 +700,7 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.put = function (command) {
-    priv.postOrput(command, 'PUT');
+    priv.postOrPut(command, 'PUT');
   };
 
   /**
@@ -636,7 +709,7 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.putAttachment = function (command) {
-    priv.postOrput(command, 'PUTATTACHMENT');
+    priv.postOrPut(command, 'PUTATTACHMENT');
   };
 
   /**
@@ -782,7 +855,8 @@ jIO.addStorageType('indexed', function (spec, my) {
   // ]
   //}
   that.allDocs = function (command) {
-    var f = {}, option, all_docs_response, query_object, query_syntax;
+    var f = {}, option, all_docs_response, query_object, query_syntax,
+      query_response;
     option = command.cloneOption();
     if (option.max_retry === 0) {
       option.max_retry = 3;
@@ -795,14 +869,61 @@ jIO.addStorageType('indexed', function (spec, my) {
         priv.index_suffix,
         option,
         function (response) {
-          // should include_docs be possible besides complex queries?
           query_syntax = command.getOption('query');
+
           if (query_syntax !== undefined) {
-            // check to see if index can do the job
-            query_object = priv.convertIndicesToQueryObject(
-              response,
-              query_syntax
-            );
+
+            // build complex query object
+            query_object = priv.constructQueryObject(response, query_syntax);
+
+            if (query_object.length === 0) {
+              that.addJob(
+                "allDocs",
+                priv.substorage,
+                undefined,
+                option,
+                function (data) {
+                  that.success(data);
+                },
+                function (err) {
+                  switch (err.status) {
+                  case 405:
+                    that.error({
+                      "status": 405,
+                      "statusText": "Method Not Allowed",
+                      "error": "method_not_allowed",
+                      "message": "Method not allowed",
+                      "reason": "Could not run AllDocs on this storage"
+                    });
+                    break;
+                  default:
+                    that.error({
+                      "status": 404,
+                      "statusText": "Not Found",
+                      "error": "not_found",
+                      "message": "Could not run allDocs command",
+                      "reason": "There are no documents in the storage"
+                    });
+                    break;
+                  }
+                }
+              );
+            } else {
+              // we can use index, run query on index
+              query_response =
+                jIO.ComplexQueries.query({
+                  query: query_syntax.query,
+                  filter: {
+                    sort_on: query_syntax.filter.sort_on,
+                    limit: query_syntax.filter.limit,
+                    select_list: query_syntax.filter.select_list
+                  },
+                  wildcard_character: query_syntax.wildcard_character
+                },
+                  query_object
+                  );
+              that.success(query_response);
+            }
           } else if (command.getOption('include_docs')) {
             priv.allDocsResponseFromIndex(response, true, option);
           } else {

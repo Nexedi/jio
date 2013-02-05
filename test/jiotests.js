@@ -244,7 +244,15 @@ generateTools = function (sinon) {
       o.server.respondWith(method, url,
         [status, { "Content-Type": 'application/xml' }, response]
       );
-    }
+    };
+    o.sortArrayById = function(field, reverse, primer){
+      var key = function (x) {return primer ? primer(x[field]) : x[field]};
+
+      return function (a,b) {
+        var A = key(a), B = key(b);
+        return ( (A < B) ? -1 : ((A > B) ? 1 : 0) ) * [-1,1][+!!reverse];
+      }
+    };
 
     return o;
 },
@@ -1097,7 +1105,7 @@ test ("AllDocs", function(){
       "Peter Jackson", "David Fincher", "Irvin Kershner", "Peter Jackson",
       "Milos Forman", "Christopher Nolan", " Martin Scorsese"
     ]
-    // set documents
+
     for (i = 0; i < m; i += 1) {
       o.fakeDoc = {};
       o.fakeDoc._id = "doc_"+i;
@@ -2790,6 +2798,10 @@ test ("Post", function () {
             {"name":"indexA", "fields":["findMeA"]},
             {"name":"indexAB", "fields":["findMeA","findMeB"]}
         ],
+        "field_types": {
+          "findMeA": "string",
+          "findMeB": "string"
+        },
         "sub_storage": {
           "type": "local",
           "username": "ipost",
@@ -2863,6 +2875,10 @@ test ("Put", function(){
               {"name":"indexA", "fields":["author"]},
               {"name":"indexAB", "fields":["author","year"]}
           ],
+          "field_types": {
+            "author": "string",
+            "year": "number"
+          },
           "sub_storage": {
             "type": "local",
             "username": "iput",
@@ -3035,6 +3051,10 @@ test ("PutAttachment", function(){
               {"name":"indexA", "fields":["author"]},
               {"name":"indexAB", "fields":["author","year"]}
           ],
+          "field_types": {
+            "author": "string",
+            "year": "number"
+          },
           "sub_storage": {
             "type": "local",
             "username": "iputatt",
@@ -3142,6 +3162,10 @@ test ("Get", function(){
               {"name":"indexA", "fields":["author"]},
               {"name":"indexAB", "fields":["author","year"]}
           ],
+          "field_types": {
+            "author": "string",
+            "year": "number"
+          },
           "sub_storage": {
             "type": "local",
             "username": "iget",
@@ -3208,6 +3232,10 @@ test ("Remove", function(){
           {"name":"indexA", "fields":["author"]},
           {"name":"indexAB", "fields":["author","year"]}
       ],
+      "field_types": {
+            "author": "string",
+            "year": "number"
+      },
       "sub_storage": {
         "type": "local",
         "username": "irem",
@@ -3372,6 +3400,10 @@ test ("AllDocs", function () {
           {"name":"indexA", "fields":["author"]},
           {"name":"indexAB", "fields":["author","year"]}
       ],
+      "field_types": {
+        "author": "string",
+        "year": "number"
+      },
       "sub_storage": {
         "type": "local",
         "username": "iall",
@@ -3461,25 +3493,158 @@ test ("AllDocs", function () {
   o.spy(o, "value", o.thisShouldBeTheAnswer2, "allDocs (include_docs)");
   o.jio.allDocs({"include_docs":true}, o.f);
   o.tick(o);
-  /*
-  // complex queries
-  o.thisShouldBeTheAnswer3 = {"nothing here":"yet"}
-  o.spy(o, "value", o.thisShouldBeTheAnswer3,
-    "allDocs (complex queries year >= 1985)");
-  o.jio.allDocs({
-    "query":{
-      "query":jIO.ComplexQueries.parse('(year: >= "1985" AND author:"D%")'),
-      "filter": {
-          "limit":[0,2],
-          "sort_on":[['key','descending']],
-          "select_list":['author','year']
-      },
-      "wildcard_character":'%'
-    }
-  }, o.f);
-  o.tick(o);
-  */
+
   o.jio.stop();
+});
+
+test ("AllDocs Complex Queries", function () {
+
+  var o = generateTools(this), i, m = 15;
+
+    o.jio = JIO.newJio({
+      "type": "indexed",
+      "indices": [
+          {"name":"indexA", "fields":["director"]},
+          {"name":"indexAB", "fields":["title","year"]}
+          //,
+          //{"name":"indexABC", "fields":["title","year","director"]}
+      ],
+      "field_types": {
+        "director": "string",
+        "title": "string",
+        "year": "number"
+      },
+      "sub_storage": {
+        "type": "local",
+        "username": "icomplex",
+        "application_name": "acomplex"
+      }
+    });
+    o.localpath = "jio/localstorage/icomplex/acomplex";
+
+    // sample data
+    o.titles = ["Shawshank Redemption", "Godfather", "Godfather 2",
+      "Pulp Fiction", "The Good, The Bad and The Ugly", "12 Angry Men",
+      "The Dark Knight", "Schindlers List",
+      "Lord of the Rings - Return of the King", "Fight Club",
+      "Star Wars Episode V", "Lord Of the Rings - Fellowship of the Ring",
+      "One flew over the Cuckoo's Nest", "Inception", "Godfellas"
+    ];
+    o.years = [1994,1972,1974,1994,1966,1957,2008,1993,2003,1999,1980,2001,
+      1975,2010,1990
+    ];
+    o.director = ["Frank Darabont", "Francis Ford Coppola",
+      "Francis Ford Coppola", "Quentin Tarantino", "Sergio Leone",
+      "Sidney Lumet", "Christopher Nolan", "Steven Spielberg",
+      "Peter Jackson", "David Fincher", "Irvin Kershner", "Peter Jackson",
+      "Milos Forman", "Christopher Nolan", " Martin Scorsese"
+    ]
+
+    for (i = 0; i < m; i += 1) {
+      o.fakeDoc = {};
+      o.fakeDoc._id = ""+i;
+      o.fakeDoc.title = o.titles[i];
+      o.fakeDoc.year = o.years[i];
+      o.fakeDoc.director = o.director[i];
+      o.jio.put(o.fakeDoc);
+      o.clock.tick(1000);
+    }
+
+    // response
+    o.allDocsResponse = {};
+    o.allDocsResponse.rows = [];
+    o.allDocsResponse.total_rows = 15;
+    for (i = 0; i < m; i += 1) {
+      o.allDocsResponse.rows.push({
+        "id": ""+i,
+        "key": ""+i,
+        "value": {}
+      });
+    };
+
+    // alldocs
+    o.jio.allDocs(function (e, r) {
+      var x = r.rows.sort(o.sortArrayById('id', true, parseInt));
+      deepEqual(
+        {"total_rows":r.total_rows,"rows":x}, o.allDocsResponse,
+          "AllDocs response generated from index"
+      );
+    });
+    o.clock.tick(1000);
+
+    // include docs
+    o.allDocsResponse2 = {};
+    o.allDocsResponse2.rows = [];
+    o.allDocsResponse2.total_rows = 15;
+    for (i = 0; i < m; i += 1) {
+      o.allDocsResponse2.rows.push({
+        "id": ""+i,
+        "key": ""+i,
+        "value": {},
+        "doc": localstorage.getItem(o.localpath+"/"+i)
+      });
+    };
+
+    // alldocs
+    o.jio.allDocs({"include_docs":true}, function(e,r) {
+      var x = r.rows.sort(o.sortArrayById('id', true, parseInt));
+      deepEqual(
+        {"total_rows":r.total_rows,"rows":x}, o.allDocsResponse2,
+          "AllDocs response generated from index (include docs)"
+      );
+    });
+    o.clock.tick(1000);
+
+    // complex queries
+    o.thisShouldBeTheAnswer4 = [
+        {"title": "Inceptions", "year": 2010},
+        {"title": "The Dark Knight", "year": 2008},
+        {"title": "Lord of the Rings - Return of the King", "year": 2003},
+        {"title": "Lord Of the Rings - Fellowship of the Ring", "year": 2001},
+        {"title": "Fight Club", "year": 1999}
+    ];
+    o.spy(o, "value", o.thisShouldBeTheAnswer4,
+      "allDocs (complex queries year >= 1980, index used to do query)");
+    o.jio.allDocs({
+      "query":{
+        // "query":'(year: >= "1980" AND year: < "2000")',
+        "query":'(year: >= "1980")',
+        "filter": {
+            "limit":[0,5],
+            "sort_on":[['year','descending']],
+            "select_list":['title','year']
+        },
+        "wildcard_character":'%'
+      }
+    }, o.f);
+    o.tick(o);
+
+    // complex queries
+    o.thisShouldBeTheAnswer5 = [
+        {"director": "Christopher Nolan", "year": 2010},
+        {"director": "Christopher Nolan", "year": 2008},
+        {"director": "Peter Jackson", "year": 2003},
+        {"director": "Peter Jackson", "year": 2001},
+        {"director": "David Fincher", "year": 1999}
+    ];
+
+    o.spy(o, "value", o.thisShouldBeTheAnswer5,
+      "allDocs (complex queries year >= 1980, can't use index)");
+    o.jio.allDocs({
+      "query":{
+        // "query":'(year: >= "1980" AND year: < "2000")',
+        "query":'(year: >= "1980")',
+        "filter": {
+            "limit":[0,5],
+            "sort_on":[['year','descending']],
+            "select_list":['director','year']
+        },
+        "wildcard_character":'%'
+      }
+    }, o.f);
+    o.tick(o);
+
+    o.jio.stop();
 });
 /*
 module ('Jio CryptedStorage');
