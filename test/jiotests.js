@@ -3597,7 +3597,7 @@ test ("AllDocs Complex Queries", function () {
 
     // complex queries
     o.thisShouldBeTheAnswer4 = [
-        {"title": "Inceptions", "year": 2010},
+        {"title": "Inception", "year": 2010},
         {"title": "The Dark Knight", "year": 2008},
         {"title": "Lord of the Rings - Return of the King", "year": 2003},
         {"title": "Lord Of the Rings - Fellowship of the Ring", "year": 2001},
