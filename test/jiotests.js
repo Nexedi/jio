@@ -1501,6 +1501,166 @@ test ("Put", function(){
 
 });
 
+test("Put Attachment", function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+      "type": "revision",
+      "sub_storage": {
+        "type": "local",
+        "username": "urevputattmt",
+        "application_name": "arevputattmt"
+      }
+    });
+
+    // putAttachment without doc id
+    // error 20 -> document id required
+    o.spy(o, "status", 20, "PutAttachment without doc id");
+    o.jio.putAttachment({}, o.f);
+    o.tick(o);
+
+    // putAttachment without attachment id
+    // erorr 22 -> attachment id required
+    o.spy(o, "status", 22, "PutAttachment without attachment id");
+    o.jio.putAttachment({"id": "putattmt1"}, o.f);
+    o.tick(o);
+
+    // putAttachment without document
+    o.revisions = {"start": 0, "ids": []}
+    o.rev_hash = generateRevisionHash({"_id": "doc1/attmt1"},
+                                      o.revisions);
+    o.rev = "1-" + o.rev_hash;
+    o.spy(o, "value", {"ok": true, "id": "doc1/attmt1", "rev": o.rev},
+          "PutAttachment without document, without data");
+    o.jio.putAttachment({"id": "doc1/attmt1"}, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem(
+          "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
+        ),
+        {
+            "_id": "doc1." + o.rev,
+            "_attachments": {
+                "attmt1": {
+                    "length": 0,
+                    // md5("")
+                    "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
+                }
+            }
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
+            + "/attmt1"
+        ),
+        "", "Check attachment"
+    );
+
+    // update attachment
+    o.prev_rev = o.rev;
+    o.revisions = {"start": 1, "ids": [o.rev_hash]}
+    o.rev_hash = generateRevisionHash({
+      "_id": "doc1/attmt1",
+      "_data": "abc",
+      "_rev": o.prev_rev
+    }, o.revisions);
+    o.rev = "2-" + o.rev_hash;
+    o.spy(o, "value", {"ok": true, "id": "doc1/attmt1", "rev": o.rev},
+          "Update Attachment, with data");
+    o.jio.putAttachment({
+      "id": "doc1/attmt1",
+      "data": "abc",
+      "rev": o.prev_rev
+    }, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem(
+          "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
+        ),
+        {
+            "_id": "doc1." + o.rev,
+            "_attachments": {
+                "attmt1": {
+                    "length": 3,
+                    // md5("abc")
+                    "digest": "md5-900150983cd24fb0d6963f7d28e17f72"
+                }
+            }
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev +
+            "/attmt1"
+        ),
+        "abc", "Check attachment"
+    );
+
+    // putAttachment new attachment
+    o.prev_rev = o.rev;
+    o.revisions = {"start": 2, "ids": [o.rev_hash, o.revisions.ids[0]]}
+    o.rev_hash = generateRevisionHash({
+      "_id": "doc1/attmt2",
+      "_data": "def",
+      "_rev": o.prev_rev
+    }, o.revisions);
+    o.rev = "3-" + o.rev_hash;
+    o.spy(o, "value", {"ok": true, "id": "doc1/attmt2", "rev": o.rev},
+          "PutAttachment without document, without data");
+    o.jio.putAttachment({
+      "id": "doc1/attmt2",
+      "data": "def",
+      "rev": o.prev_rev
+    }, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem(
+          "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
+        ),
+        {
+            "_id": "doc1." + o.rev,
+            "_attachments": {
+                "attmt1": {
+                    "length": 3,
+                    "digest": "md5-900150983cd24fb0d6963f7d28e17f72"
+                },
+                "attmt2": {
+                    "length": 3,
+                    // md5("def")
+                    "digest": "md5-4ed9407630eb1000c0f6b63842defa7d"
+                }
+            }
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev +
+            "/attmt2"
+        ),
+        "def", "Check attachment"
+    );
+
+    o.jio.stop();
+
+});
+
 test ("Get", function(){
 
     var o = generateTools(this);
