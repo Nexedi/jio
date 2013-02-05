@@ -348,10 +348,7 @@ jIO.addStorageType('local', function (spec, my) {
         }
       }
       all_doc_response.total_rows = items;
-      if (items > 0) {
-        that.success(all_doc_response);
-        return;
-      }
+      that.success(all_doc_response);
     } else {
       // create complex query object from returned results
       for (i in localStorage) {
@@ -374,18 +371,8 @@ jIO.addStorageType('local', function (spec, my) {
       },
         query_object
         );
-      if (items > 0) {
-        that.success(query_response);
-        return;
-      }
+      that.success(query_response);
     }
-    that.error({
-      "status": 404,
-      "statusText": "Not Found",
-      "error": "not_found",
-      "message": "No documents found",
-      "reason": "No documents found"
-    });
   };
 
   return that;
