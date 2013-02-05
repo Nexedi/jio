@@ -1463,6 +1463,67 @@ test ("Put", function(){
         "Check document tree"
     );
 
+    // add attachment
+    o.doc._attachments = {
+      "att1": {
+        "length": 1,
+        "content_type": "text/plain",
+        "digest": "md5-0cc175b9c0f1b6a831c399e269772661"
+      },
+      "att2": {
+        "length": 2,
+        "content_type": "dont/care",
+        "digest": "md5-5360af35bde9ebd8f01f492dc059593c"
+      }
+    };
+    localstorage.setItem(o.localpath + "/put1.3-rh3", o.doc);
+    localstorage.setItem(o.localpath + "/put1.3-rh3/att1", "a");
+    localstorage.setItem(o.localpath + "/put1.3-rh3/att2", "bc");
+
+    // put + revision with attachment
+    o.attachments = o.doc._attachments;
+    o.doc = {"_id": "put1", "_rev": "3-rh3", "title": "myPut4"};
+    o.revisions = {"start": 3, "ids": ["rh3","rh2","rh1"]};
+    o.rev = "4-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {"id": "put1", "ok": true, "rev": o.rev},
+           "Put + revision (document contains attachments)");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc._id = "put1." + o.rev;
+    o.doc._attachments = o.attachments;
+    delete o.doc._rev;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/put1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check attachments
+    deepEqual(
+        localstorage.getItem(o.localpath + "/put1." + o.rev + "/att1"),
+        "a",
+        "Check Attachment"
+    );
+    deepEqual(
+        localstorage.getItem(o.localpath + "/put1." + o.rev + "/att2"),
+        "bc",
+        "Check Attachment"
+    );
+
+    // check document tree
+    o.doc_tree.children[0].children[0].children[0].children.unshift({
+        "rev": o.rev, "status": "available", "children": []
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/put1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
     o.jio.stop();
 
 });
