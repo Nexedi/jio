@@ -602,6 +602,239 @@ jIO.addStorageType('revision', function (spec, my) {
   };
 
   /**
+   * Create/Update the document attachment and update a document tree.
+   * Options:
+   * - {boolean} keep_revision_history To keep the previous revisions
+   *                                   (false by default) (NYI).
+   * @method putAttachment
+   * @param  {object} command The JIO command
+   */
+  that.putAttachment = function (command) {
+    var functions = {}, doc, doctree, revs_info, prev_doc;
+    doc = command.cloneDoc();
+    functions.begin = function () {
+      if (typeof doc._rev === "string" && !priv.checkRevisionFormat(doc._rev)) {
+        that.error({
+          "status": 31,
+          "statusText": "Wrong Revision Format",
+          "error": "wrong_revision_format",
+          "message": "The document previous revision does not match " +
+            "^[0-9]+-[0-9a-zA-Z]+$",
+          "reason": "Previous revision is wrong"
+        });
+        return;
+      }
+      functions.getDocumentTree();
+    };
+    functions.getDocumentTree = function () {
+      var option = command.cloneOption();
+      if (option.max_retry === 0) {
+        option.max_retry = 3;
+      }
+      that.addJob(
+        "get",
+        priv.substorage,
+        command.getDocId() + priv.doctree_suffix,
+        option,
+        function (response) {
+          doctree = response;
+          functions.updateRevsInfo();
+          functions.getDocument();
+        },
+        function (err) {
+          switch (err.status) {
+          case 404:
+            doctree = priv.createDocumentTree();
+            functions.updateRevsInfo();
+            functions.getDocument();
+            break;
+          default:
+            err.message = "Cannot get document revision tree";
+            that.error(err);
+            break;
+          }
+        }
+      );
+    };
+    functions.updateRevsInfo = function () {
+      if (doc._revs) {
+        revs_info = priv.updateDocumentTree(doctree, doc._revs);
+      } else {
+        revs_info = priv.postToDocumentTree(doctree, doc);
+      }
+    };
+    functions.postEmptyDocument = function () {
+      that.addJob(
+        "post",
+        priv.substorage,
+        {"_id": command.getDocId() + "." + revs_info[0].rev},
+        command.getOption(),
+        function (response) {
+          doc._rev = response.rev;
+          functions.postAttachment();
+        },
+        function (err) {
+          err.message = "Cannot upload document";
+          that.error(err);
+        }
+      );
+    };
+    functions.getDocument = function () {
+      if (revs_info[1] === undefined) {
+        functions.postEmptyDocument();
+      } else {
+        that.addJob(
+          "get",
+          priv.substorage,
+          command.getDocId() + "." + revs_info[1].rev,
+          command.getOption(),
+          function (response) {
+            var attachment_list = [], i;
+            prev_doc = response;
+            console.log(0);
+            for (i in response._attachments) {
+              if (response._attachments.hasOwnProperty(i)) {
+                console.log(2);
+                attachment_list.push({"id": i, "attachment": {
+                  "_id": command.getDocId() + "." + revs_info[0].rev + "/" + i,
+                  "_mimetype": response._attachments[i].content_type,
+                  "_data": undefined
+                }});
+              }
+            }
+            functions.postDocument(attachment_list);
+          },
+          function (err) {
+            err.message = "Cannot upload document";
+            that.error(err);
+          }
+        );
+      }
+    };
+    functions.postDocument = function (attachment_list) {
+      console.log(3);
+      that.addJob(
+        "post",
+        priv.substorage,
+        command.getDocId() + "." + revs_info[0].rev,
+        command.getOption(),
+        function (response) {
+          var i;
+          console.log(4);
+          if (attachment_list.length === 0) {
+            console.log(5);
+            functions.postAttachment();
+          } else {
+            console.log(6);
+            functions.post_attachment_count = attachment_list.length;
+            for (i = 0; i < attachment_list.length; i += 1) {
+              console.log(7);
+              functions.copyAttachment(attachment_list[i].id,
+                                       attachment_list[i].attachment);
+            }
+          }
+        },
+        function (err) {
+          err.message = "Cannot upload document";
+          that.error(err);
+        }
+      );
+    };
+    functions.copyAttachment = function (attachmentid, attachment) {
+      console.log(8);
+      that.addJob(
+        "get",
+        priv.substorage,
+        prev_doc._id + "/" + attachmentid,
+        command.cloneOption(),
+        function (response) {
+          console.log(7);
+          attachment._data = response;
+          that.addJob(
+            "putAttachment",
+            priv.substorage,
+            attachment,
+            command.cloneOption(),
+            function (response) {
+              console.log(9);
+              functions.postAttachment();
+            },
+            function (err) {
+              console.log(10);
+              err.message = "Cannot copy previous attachment";
+              functions.error(err);
+            }
+          );
+        },
+        function (err) {
+          console.log(11);
+          err.message = "Cannot copy previous attachment";
+          functions.error(err);
+        }
+      );
+    };
+    functions.post_attachment_count = 0;
+    functions.postAttachment = function () {
+      functions.post_attachment_count -= 1;
+      if (functions.post_attachment_count > 0) {
+        return;
+      }
+      that.addJob(
+        "putAttachment",
+        priv.substorage,
+        {
+          "_id": command.getDocId() + "." + revs_info[0].rev + "/" +
+            command.getAttachmentId(),
+          "_mimetype": command.getAttachmentMimeType(),
+          "_data": command.getAttachmentData()
+        },
+        command.cloneOption(),
+        function () {
+          functions.sendDocumentTree();
+        },
+        function (err) {
+          switch (err.status) {
+          case 409:
+            // file already exists
+            functions.sendDocumentTree();
+            break;
+          default:
+            err.message = "Cannot upload attachment";
+            functions.error(err);
+            break;
+          }
+        }
+      );
+    };
+    functions.sendDocumentTree = function () {
+      doctree._id = command.getDocId() + priv.doctree_suffix;
+      that.addJob(
+        "put",
+        priv.substorage,
+        doctree,
+        command.cloneOption(),
+        function () {
+          that.success({
+            "ok": true,
+            "id": command.getDocId() + "/" + command.getAttachmentId(),
+            "rev": revs_info[0].rev
+          });
+        },
+        function (err) {
+          // xxx do we try to delete the posted document ?
+          err.message = "Cannot save document revision tree";
+          functions.error(err);
+        }
+      );
+    };
+    functions.error = function (err) {
+      functions.error = function () {};
+      that.error(err);
+    };
+    functions.begin();
+  };
+
+  /**
    * Get the document metadata or attachment.
    * Options:
    * - {boolean} revs Add simple revision history (false by default).
