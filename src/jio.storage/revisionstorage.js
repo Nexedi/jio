@@ -786,6 +786,10 @@ jIO.addStorageType('revision', function (spec, my) {
             functions.postDocument(attachment_list);
           },
           function (err) {
+            if (err.status === 404) {
+              functions.postDocument([]);
+              return;
+            }
             err.message = "Cannot upload document";
             that.error(err);
           }
