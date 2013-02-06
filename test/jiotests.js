@@ -2536,7 +2536,7 @@ test ("AllDocs", function () {
         "password": "checkpwd",
         "url": "https://ca-davstorage:8080"
     });
-  console.log(davlist);
+
   // get allDocs, no content
   o.addFakeServerResponse("dav", "PROPFIND", "", 200, davlist);
   o.thisShouldBeTheAnswer = {
