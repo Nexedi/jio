@@ -203,19 +203,21 @@ generateTools = function (sinon) {
         }
     };
     // wait method
+    // NOTED: not sure I understood this correctly
     o.waitUntilAJobExists = function (timeout) {
-        var cpt = 0
+        var cpt = 0, job = false;
         while (true) {
             if (getLastJob(o.jio.getId()) !== undefined) {
+                job = true;
                 break;
             }
-            if (timeout >= cpt) {
-                ok(false, "No job were added to the queue");
+            if (cpt >= timeout) {
                 break;
             }
             o.clock.tick(25);
             cpt += 25;
         }
+        ok(job, "Waited until job was created");
     };
     o.waitUntilLastJobIs = function (state) {
         while (true) {
@@ -761,10 +763,11 @@ test ("Restore old Jio", function() {
         "application_name": "jiotests"
     });
     o.waitUntilAJobExists(30000); // timeout 30 sec
+
     o.testLastJobLabel("put", "Job restored");
     o.clock.tick(1000);
-    ok(getLastJob(o.jio.getId()) === undefined,
-       "Job executed");
+    ok(getLastJob(typeof o.jio.getId()) === undefined, "Job executed");
+    o.clock.tick(1000);
 
     o.jio.stop();
 
