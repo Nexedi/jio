@@ -765,8 +765,8 @@ test ("Restore old Jio", function() {
     o.waitUntilAJobExists(30000); // timeout 30 sec
 
     o.testLastJobLabel("put", "Job restored");
-    o.clock.tick(1000);
-    ok(getLastJob(typeof o.jio.getId()) === undefined, "Job executed");
+    o.clock.tick(2000);
+    ok(getLastJob(o.jio.getId()) === undefined, "Job executed");
     o.clock.tick(1000);
 
     o.jio.stop();
