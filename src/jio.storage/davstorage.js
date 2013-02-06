@@ -1,7 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global jIO: true, $: true, btoa: true  */
-// test here: http://enable-cors.org/
-//http://metajack.im/2010/01/19/crossdomain-ajax-for-xmpp-http-binding-made-easy
 jIO.addStorageType('dav', function (spec, my) {
 
   spec = spec || {};
@@ -47,7 +45,6 @@ jIO.addStorageType('dav', function (spec, my) {
     return true;
   };
 
-  // ==================== Attributes  ====================
   priv.username = spec.username || '';
   priv.secured_username = priv.convertSlashes(priv.username);
   priv.password = spec.password || '';
@@ -119,6 +116,32 @@ jIO.addStorageType('dav', function (spec, my) {
   };
 
   /**
+   * Runs all ajax requests for davStorage
+   * @method ajax
+   * @param {object} ajax_object The request parameters
+   */
+  priv.ajax = function (ajax_object) {
+    $.ajax({
+      url: ajax_object.url,
+      type: ajax_object.type,
+      async: true,
+      dataType: ajax_object.dataType || null,
+      data: ajax_object.data || null,
+      crossdomain : true,
+      headers : {
+        Authorization: 'Basic ' + btoa(
+          priv.username + ':' + priv.password
+        ),
+        Depth: ajax_object.headers === undefined ? null :
+            ajax_object.headers.depth
+      },
+      // xhrFields: {withCredentials: 'true'},
+      success: ajax_object.success,
+      error: ajax_object.error
+    });
+  };
+
+  /**
    * Creates error objects for this storage
    * @method createError
    * @param {string} url url to clean up
@@ -155,6 +178,27 @@ jIO.addStorageType('dav', function (spec, my) {
     return error;
   };
 
+  /**
+   * Check if method can be run on browser
+   * @method support
+   */
+  priv.support = function (docid) {
+    // no docId
+    if (!(typeof docid === "string" && docid !== "")) {
+      that.error(priv.createError(405, "Can't create document without id",
+        "Document id is undefined"
+        ));
+      return true;
+    }
+    // no cross domain ajax
+    if (priv.checkCors === false) {
+      that.error(priv.createError(405,
+        "Browser does not support cross domain ajax", "CORS is undefined"
+        ));
+      return true;
+    }
+  };
+
   // wedDav methods rfc4918 (short summary)
   // COPY     Reproduces single resources (files) and collections (directory
   //          trees). Will overwrite files (if specified by request) but will
@@ -182,40 +226,19 @@ jIO.addStorageType('dav', function (spec, my) {
 
 
   priv.putOrPost = function (command, type) {
-    var docid = command.getDocId(),
-      secured_docid,
-      url;
+    var docid = command.getDocId(), secured_docid, url, ajax_object;
 
-    // no docId
-    if (!(typeof docid === "string" && docid !== "")) {
-      that.error(priv.createError(405, "Can't create document without id",
-        "Document id is undefined"
-        ));
-      return;
-    }
-    // no cross domain ajax
-    if (priv.checkCors === false) {
-      that.error(priv.createError(405,
-        "Browser does not support cross domain ajax", "CORS is undefined"
-        ));
+    if (priv.support(docid)) {
       return;
     }
 
     secured_docid = priv.secureDocId(command.getDocId());
     url = priv.url + '/' + priv.underscoreFileExtenisons(secured_docid);
-    // see if the document exists
-    $.ajax({
+
+    ajax_object = {
       url: url + '?_=' + Date.now(),
       type: "GET",
-      async: true,
-      dataType: 'text',
-      crossdomain : true,
-      headers : {
-        Authorization: 'Basic ' + btoa(
-          priv.username + ':' + priv.password
-        )
-      },
-      // xhrFields: {withCredentials: 'true'},
+      dataType: "text",
       success: function () {
         if (type === 'POST') {
           // POST the document already exists
@@ -224,19 +247,10 @@ jIO.addStorageType('dav', function (spec, my) {
             ));
           return;
         }
-        // PUT update document
-        $.ajax({
+        ajax_object = {
           url: url,
           type: type,
           data: JSON.stringify(command.getDoc()),
-          async: true,
-          crossdomain: true,
-          headers : {
-            Authorization: 'Basic ' + btoa(
-              priv.username + ':' + priv.password
-            )
-          },
-          // xhrFields: {withCredentials: 'true'},
           success: function () {
             that.success({
               ok: true,
@@ -248,23 +262,16 @@ jIO.addStorageType('dav', function (spec, my) {
               "Error writing to remote storage"
               ));
           }
-        });
+        };
+        priv.ajax(ajax_object);
       },
       error: function (err) {
         // Firefox returns 0 instead of 404 on CORS?
         if (err.status === 404 || err.status === 0) {
-          $.ajax({
+          ajax_object = {
             url: url,
-            type: 'PUT',
+            type: "PUT",
             data: JSON.stringify(command.getDoc()),
-            async: true,
-            crossdomain: true,
-            headers : {
-              Authorization: 'Basic ' + btoa(
-                priv.username + ':' + priv.password
-              )
-            },
-            // xhrFields: {withCredentials: 'true'},
             success: function () {
               that.success({
                 ok: true,
@@ -276,8 +283,8 @@ jIO.addStorageType('dav', function (spec, my) {
                 "Cannot modify document", "Error writing to remote storage"
                 ));
             }
-          });
-
+          };
+          priv.ajax(ajax_object);
         } else {
           // error accessing remote storage
           that.error({
@@ -289,7 +296,8 @@ jIO.addStorageType('dav', function (spec, my) {
           });
         }
       }
-    });
+    };
+    priv.ajax(ajax_object);
   };
 
   /**
@@ -321,36 +329,18 @@ jIO.addStorageType('dav', function (spec, my) {
       url,
       secured_docid,
       secured_attachmentid,
-      attachment_url;
+      attachment_url,
+      ajax_object;
 
-    if (!(typeof docid === "string" && docid !== "")) {
-      that.error(priv.createError(405,
-        "Can't create document without id", "Document id is undefined"
-        ));
-      return;
-    }
-    if (priv.checkCors === false) {
-      that.error(priv.createError(405,
-        "Browser does not support cross domain ajax", "CORS is undefined"
-        ));
-      return;
-    }
+    priv.support(docid);
 
     secured_docid = priv.secureDocId(docid);
     url = priv.url + '/' + priv.underscoreFileExtenisons(secured_docid);
 
-    // see if the underlying document exists
-    $.ajax({
+    ajax_object = {
       url: url + '?_=' + Date.now(),
       type: 'GET',
-      async: true,
       dataType: 'text',
-      crossdomain : true,
-      headers : {
-        Authorization: 'Basic ' + btoa(
-          priv.username + ':' + priv.password
-        )
-      },
       success: function (response) {
         doc = JSON.parse(response);
 
@@ -362,34 +352,18 @@ jIO.addStorageType('dav', function (spec, my) {
           "length": command.getAttachmentLength()
         };
         // put updated document data
-        $.ajax({
+        ajax_object = {
           url: url + '?_=' + Date.now(),
           type: 'PUT',
           data: JSON.stringify(doc),
-          async: true,
-          crossdomain: true,
-          headers : {
-            Authorization: 'Basic ' + btoa(
-              priv.username + ':' + priv.password
-            )
-          },
-          // xhrFields: {withCredentials: 'true'},
           success: function () {
             secured_attachmentid = priv.secureDocId(command.getAttachmentId());
             attachment_url = url + '.' +
               priv.underscoreFileExtenisons(secured_attachmentid);
-            $.ajax({
+            ajax_object = {
               url: attachment_url + '?_=' + Date.now(),
               type: 'PUT',
               data: JSON.stringify(command.getDoc()),
-              async: true,
-              crossdomain: true,
-              headers : {
-                Authorization: 'Basic ' + btoa(
-                  priv.username + ':' + priv.password
-                )
-              },
-              // xhrFields: {withCredentials: 'true'},
               success: function () {
                 that.success({
                   ok: true,
@@ -402,7 +376,8 @@ jIO.addStorageType('dav', function (spec, my) {
                   ));
                 return;
               }
-            });
+            };
+            priv.ajax(ajax_object);
           },
           error: function () {
             that.error(priv.createError(409,
@@ -410,7 +385,8 @@ jIO.addStorageType('dav', function (spec, my) {
               ));
             return;
           }
-        });
+        };
+        priv.ajax(ajax_object);
       },
       error: function () {
         //  the document does not exist
@@ -419,7 +395,9 @@ jIO.addStorageType('dav', function (spec, my) {
           ));
         return;
       }
-    });
+    };
+    // see if the underlying document exists
+    priv.ajax(ajax_object);
   };
 
   /**
@@ -437,20 +415,13 @@ jIO.addStorageType('dav', function (spec, my) {
       url,
       secured_docid,
       secured_attachmentid,
-      attachment_url;
+      attachment_url,
+      ajax_object;
 
-    if (!(typeof docid === "string" && docid !== "")) {
-      that.error(priv.createError(405,
-        "Can't create document without id", "Document id is undefined"
-        ));
+    if (priv.support(docid)) {
       return;
     }
-    if (priv.checkCors === false) {
-      that.error(priv.createError(405,
-        "Browser does not support cross domain ajax", "CORS is undefined"
-        ));
-      return;
-    }
+
     secured_docid = priv.secureDocId(command.getDocId());
     url = priv.url + '/' + priv.underscoreFileExtenisons(secured_docid);
 
@@ -459,19 +430,11 @@ jIO.addStorageType('dav', function (spec, my) {
       attachment_url = url + '.' + priv.underscoreFileExtenisons(
         secured_attachmentid
       );
-
       // get attachment
-      $.ajax({
+      ajax_object = {
         url: attachment_url + '?_=' + Date.now(),
-        type: 'GET',
-        async: true,
-        dataType: 'text',
-        crossdomain : true,
-        headers : {
-          Authorization: 'Basic ' + btoa(
-            priv.username + ':' + priv.password
-          )
-        },
+        type: "GET",
+        dataType: "text",
         success: function (response) {
           doc = JSON.parse(response);
           that.success(doc);
@@ -481,21 +444,14 @@ jIO.addStorageType('dav', function (spec, my) {
             "Cannot find the attachment", "Attachment does not exist"
             ));
         }
-      });
+      };
+      priv.ajax(ajax_object);
     } else {
-
       // get document
-      $.ajax({
+      ajax_object = {
         url: url + '?_=' + Date.now(),
-        type: 'GET',
-        async: true,
-        dataType: 'text',
-        crossdomain : true,
-        headers : {
-          Authorization: 'Basic ' + btoa(
-            priv.username + ':' + priv.password
-          )
-        },
+        type: "GET",
+        dataType: "text",
         success: function (response) {
           // metadata_only should not be handled by jIO, as it is a
           // webDav only option, shouldn't it?
@@ -508,7 +464,8 @@ jIO.addStorageType('dav', function (spec, my) {
             "Cannot find the document", "Document does not exist"
             ));
         }
-      });
+      };
+      priv.ajax(ajax_object);
     }
   };
 
@@ -520,18 +477,9 @@ jIO.addStorageType('dav', function (spec, my) {
   that.remove = function (command) {
     var docid = command.getDocId(), doc, url,
       secured_docid, secured_attachmentid, attachment_url,
-      attachment_list = [], i, j, k = 1, deleteAttachment;
+      attachment_list = [], i, j, k = 1, deleteAttachment, ajax_object;
 
-    if (!(typeof docid === "string" && docid !== "")) {
-      that.error(priv.createError(405,
-        "Can't create document without id", "Document id is undefined"
-        ));
-      return;
-    }
-    if (priv.checkCors === false) {
-      that.error(priv.createError(405,
-        "Browser does not support cross domain ajax", "CORS is undefined"
-        ));
+    if (priv.support(docid)) {
       return;
     }
 
@@ -544,30 +492,15 @@ jIO.addStorageType('dav', function (spec, my) {
       attachment_url = url + '.' + priv.underscoreFileExtenisons(
         secured_attachmentid
       );
-
-      $.ajax({
+      ajax_object = {
         url: attachment_url + '?_=' + Date.now(),
-        type: 'DELETE',
-        async: true,
-        crossdomain : true,
-        headers : {
-          Authorization: 'Basic ' + btoa(
-            priv.username + ':' + priv.password
-          )
-        },
+        type: "DELETE",
         success: function () {
           // retrieve underlying document
-          $.ajax({
+          ajax_object = {
             url: url + '?_=' + Date.now(),
-            type: 'GET',
-            async: true,
-            dataType: 'text',
-            crossdomain : true,
-            headers : {
-              Authorization: 'Basic ' + btoa(
-                priv.username + ':' + priv.password
-              )
-            },
+            type: "GET",
+            dataType: "text",
             success: function (response) {
               // underlying document
               doc = JSON.parse(response);
@@ -581,18 +514,10 @@ jIO.addStorageType('dav', function (spec, my) {
                     delete doc._attachments;
                   }
                   // PUT back to server
-                  $.ajax({
+                  ajax_object = {
                     url: url + '?_=' + Date.now(),
                     type: 'PUT',
                     data: JSON.stringify(doc),
-                    async: true,
-                    crossdomain: true,
-                    headers : {
-                      Authorization: 'Basic ' + btoa(
-                        priv.username + ':' + priv.password
-                      )
-                    },
-                    // xhrFields: {withCredentials: 'true'},
                     success: function () {
                       that.success({
                         "ok": true,
@@ -605,7 +530,8 @@ jIO.addStorageType('dav', function (spec, my) {
                         "Cannot modify document", "Error saving attachment"
                         ));
                     }
-                  });
+                  };
+                  priv.ajax(ajax_object);
                 } else {
                   // sure this if-else is needed?
                   that.error(priv.createError(404,
@@ -625,29 +551,22 @@ jIO.addStorageType('dav', function (spec, my) {
                 "Cannot find the document", "Document does not exist"
                 ));
             }
-          });
+          };
+          priv.ajax(ajax_object);
         },
         error: function () {
           that.error(priv.createError(404,
             "Cannot find the attachment", "Error removing attachment"
             ));
         }
-      });
-    // remove document
+      };
+      priv.ajax(ajax_object);
+    // remove document incl. all attachments
     } else {
-
-      // get document to also remove all attachments
-      $.ajax({
+      ajax_object = {
         url: url + '?_=' + Date.now(),
         type: 'GET',
-        async: true,
         dataType: 'text',
-        crossdomain : true,
-        headers : {
-          Authorization: 'Basic ' + btoa(
-            priv.username + ':' + priv.password
-          )
-        },
         success: function (response) {
           var x;
           doc = JSON.parse(response);
@@ -661,16 +580,9 @@ jIO.addStorageType('dav', function (spec, my) {
             }
           }
           // delete document
-          $.ajax({
+          ajax_object = {
             url: url + '?_=' + Date.now(),
             type: 'DELETE',
-            async: true,
-            crossdomain : true,
-            headers : {
-              Authorization: 'Basic ' + btoa(
-                priv.username + ':' + priv.password
-              )
-            },
             success: function () {
               j = attachment_list.length;
               // no attachments, done
@@ -681,16 +593,9 @@ jIO.addStorageType('dav', function (spec, my) {
                 });
               } else {
                 deleteAttachment = function (attachment_url, j, k) {
-                  $.ajax({
+                  ajax_object = {
                     url: attachment_url + '?_=' + Date.now(),
                     type: 'DELETE',
-                    async: true,
-                    crossdomain : true,
-                    headers : {
-                      Authorization: 'Basic ' + btoa(
-                        priv.username + ':' + priv.password
-                      )
-                    },
                     success: function () {
                       // all deleted, return response, need k as async couter
                       if (j === k) {
@@ -707,7 +612,8 @@ jIO.addStorageType('dav', function (spec, my) {
                         "Cannot find attachment", "Error removing attachment"
                         ));
                     }
-                  });
+                  };
+                  priv.ajax(ajax_object);
                 };
                 for (i = 0; i < j; i += 1) {
                   secured_attachmentid = priv.secureDocId(attachment_list[i]);
@@ -723,14 +629,16 @@ jIO.addStorageType('dav', function (spec, my) {
                 "Cannot find the document", "Error removing document"
                 ));
             }
-          });
+          };
+          priv.ajax(ajax_object);
         },
         error: function () {
           that.error(priv.createError(404,
             "Cannot find the document", "Document does not exist"
             ));
         }
-      });
+      };
+      priv.ajax(ajax_object);
     }
   };
 
@@ -756,22 +664,16 @@ jIO.addStorageType('dav', function (spec, my) {
   that.allDocs = function (command) {
     var rows = [], url,
       am = priv.newAsyncModule(),
-      o = {};
+      o = {},
+      ajax_object;
 
     o.getContent = function (file) {
       var docid = priv.secureDocId(file.id),
         url = priv.url + '/' + docid;
-
-      $.ajax({
+      ajax_object = {
         url: url + '?_=' + Date.now(),
         type: 'GET',
-        async: true,
         dataType: 'text',
-        headers: {
-          'Authorization': 'Basic ' + btoa(
-            priv.username + ':' + priv.password
-          )
-        },
         success: function (content) {
           file.doc = JSON.parse(content);
           rows.push(file);
@@ -783,23 +685,16 @@ jIO.addStorageType('dav', function (spec, my) {
             ));
           am.call(o, 'error', [type]);
         }
-      });
+      };
+      priv.ajax(ajax_object);
     };
-
     o.getDocumentList = function () {
       url = priv.url + '/';
-      $.ajax({
+      ajax_object = {
         url: url + '?_=' + Date.now(),
-        type: 'PROPFIND',
-        async: true,
+        type: "PROPFIND",
         dataType: "xml",
-        crossdomain : true,
-        headers : {
-          Authorization: 'Basic ' + btoa(
-            priv.username + ':' + priv.password
-          ),
-          Depth: '1'
-        },
+        headers : { depth: '1' },
         success: function (xml) {
           var response = $(xml).find('D\\:response, response'),
             len = response.length;
@@ -834,7 +729,8 @@ jIO.addStorageType('dav', function (spec, my) {
             ));
           am.call(o, 'retry', [type]);
         }
-      });
+      };
+      priv.ajax(ajax_object);
     };
     o.retry = function (error) {
       am.neverCall(o, 'retry');
