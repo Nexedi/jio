@@ -1,3 +1,8 @@
+/*
+* Copyright 2013, Nexedi SA
+* Released under the LGPL license.
+* http://www.gnu.org/licenses/lgpl.html
+*/
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global jIO: true, localStorage: true, setTimeout: true */
 /**
