@@ -255,7 +255,6 @@ generateTools = function (sinon) {
         return ( (A < B) ? -1 : ((A > B) ? 1 : 0) ) * [-1,1][+!!reverse];
       }
     };
-
     return o;
 },
 //// end tools
@@ -1111,11 +1110,11 @@ test ("AllDocs", function(){
 
     for (i = 0; i < m; i += 1) {
       o.fakeDoc = {};
-      o.fakeDoc._id = "doc_"+i;
+      o.fakeDoc._id = "doc_"+(i < 10 ? "0"+i : i);
       o.fakeDoc.title = o.titles[i];
       o.fakeDoc.year = o.years[i];
       o.fakeDoc.author = o.director[i];
-      localstorage.setItem(o.localpath+"/doc_"+i, o.fakeDoc);
+      localstorage.setItem(o.localpath+"/doc_"+(i < 10 ? "0"+i : i), o.fakeDoc);
     }
 
     // response
@@ -1124,14 +1123,15 @@ test ("AllDocs", function(){
     o.allDocsResponse.total_rows = 15;
     for (i = 0; i < m; i += 1) {
       o.allDocsResponse.rows.push({
-        "id": "doc_"+i,
-        "key": "doc_"+i,
+        "id": "doc_"+(i < 10 ? "0"+i : i),
+        "key": "doc_"+(i < 10 ? "0"+i : i),
         "value": {}
       });
     };
     // alldocs
     o.spy(o, "value", o.allDocsResponse, "All docs");
     o.jio.allDocs(o.f);
+    o.clock.tick(1000);
     o.tick(o);
 
     // include docs
@@ -1140,10 +1140,10 @@ test ("AllDocs", function(){
     o.allDocsResponse.total_rows = 15;
     for (i = 0; i < m; i += 1) {
       o.allDocsResponse.rows.push({
-        "id": "doc_"+i,
-        "key": "doc_"+i,
+        "id": "doc_"+(i < 10 ? "0"+i : i),
+        "key": "doc_"+(i < 10 ? "0"+i : i),
         "value": {},
-        "doc": localstorage.getItem(o.localpath+"/doc_"+i)
+        "doc": localstorage.getItem(o.localpath+"/doc_"+(i < 10 ? "0"+i : i))
       });
     };
 
@@ -2536,7 +2536,7 @@ test ("AllDocs", function () {
         "password": "checkpwd",
         "url": "https://ca-davstorage:8080"
     });
-
+  console.log(davlist);
   // get allDocs, no content
   o.addFakeServerResponse("dav", "PROPFIND", "", 200, davlist);
   o.thisShouldBeTheAnswer = {
