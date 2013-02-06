@@ -107,9 +107,52 @@ jIO.addStorageType('dav', function (spec, my) {
     return clean_url;
   };
 
+  /**
+   * Replaces "_." with "." in document filenames
+   * @method restoreDots
+   * @param {string} url url to clean up
+   * @return {string} clean_url cleaned up URL
+   */
   priv.restoreDots = function (url) {
     var clean_url = url.replace(/_\./g, '.');
     return clean_url;
+  };
+
+  /**
+   * Creates error objects for this storage
+   * @method createError
+   * @param {string} url url to clean up
+   * @return {object} error The error object
+   */
+  priv.createError = function (status, message, reason) {
+    var error = {};
+
+    switch (status) {
+    case 404:
+      error.status = status;
+      error.statusText = "Not found";
+      error.error = "not_found";
+      error.message = message;
+      error.reason = reason;
+      break;
+
+    case 405:
+      error.status = status;
+      error.statusText = "Method Not Allowed";
+      error.error = "method_not_allowed";
+      error.message = message;
+      error.reason = reason;
+      break;
+
+    case 409:
+      error.status = status;
+      error.statusText = "Conflicts";
+      error.error = "conflicts";
+      error.message = message;
+      error.reason = reason;
+      break;
+    }
+    return error;
   };
 
   // wedDav methods rfc4918 (short summary)
@@ -145,25 +188,16 @@ jIO.addStorageType('dav', function (spec, my) {
 
     // no docId
     if (!(typeof docid === "string" && docid !== "")) {
-      that.error({
-        "status": 405,
-        "statusText": "Method Not Allowed",
-        "error": "method_not_allowed",
-        "message": "Cannot create document which id is undefined",
-        "reason": "Document id is undefined"
-      });
+      that.error(priv.createError(405, "Can't create document without id",
+        "Document id is undefined"
+        ));
       return;
     }
-
     // no cross domain ajax
     if (priv.checkCors === false) {
-      that.error({
-        "status": 405,
-        "statusText": "Method Not Allowed",
-        "error": "method_not_allowed",
-        "message": "Browser does not support cross domain ajax requests",
-        "reason": "cors is undefined"
-      });
+      that.error(priv.createError(405,
+        "Browser does not support cross domain ajax", "CORS is undefined"
+        ));
       return;
     }
 
@@ -185,13 +219,9 @@ jIO.addStorageType('dav', function (spec, my) {
       success: function () {
         if (type === 'POST') {
           // POST the document already exists
-          that.error({
-            "status": 409,
-            "statusText": "Conflicts",
-            "error": "conflicts",
-            "message": "Cannot create a new document",
-            "reason": "Document already exists"
-          });
+          that.error(priv.createError(409,
+            "Cannot create a new document", "Document already exists"
+            ));
           return;
         }
         // PUT update document
@@ -214,13 +244,9 @@ jIO.addStorageType('dav', function (spec, my) {
             });
           },
           error: function () {
-            that.error({
-              "status": 409,
-              "statusText": "Conflicts",
-              "error": "conflicts",
-              "message": "Cannot modify document",
-              "reason": "Error trying to write to remote storage"
-            });
+            that.error(priv.createError(409, "Cannot modify document",
+              "Error writing to remote storage"
+              ));
           }
         });
       },
@@ -246,13 +272,9 @@ jIO.addStorageType('dav', function (spec, my) {
               });
             },
             error: function () {
-              that.error({
-                "status": 409,
-                "statusText": "Conflicts",
-                "error": "conflicts",
-                "message": "Cannot modify document",
-                "reason": "Error trying to write to remote storage"
-              });
+              that.error(priv.createError(409,
+                "Cannot modify document", "Error writing to remote storage"
+                ));
             }
           });
 
@@ -301,29 +323,19 @@ jIO.addStorageType('dav', function (spec, my) {
       secured_attachmentid,
       attachment_url;
 
-    // no docId
     if (!(typeof docid === "string" && docid !== "")) {
-      that.error({
-        "status": 405,
-        "statusText": "Method Not Allowed",
-        "error": "method_not_allowed",
-        "message": "Cannot create document which id is undefined",
-        "reason": "Document id is undefined"
-      });
+      that.error(priv.createError(405,
+        "Can't create document without id", "Document id is undefined"
+        ));
+      return;
+    }
+    if (priv.checkCors === false) {
+      that.error(priv.createError(405,
+        "Browser does not support cross domain ajax", "CORS is undefined"
+        ));
       return;
     }
 
-    // no cross domain ajax
-    if (priv.checkCors === false) {
-      that.error({
-        "status": 405,
-        "statusText": "Method Not Allowed",
-        "error": "method_not_allowed",
-        "message": "Browser does not support cross domain ajax requests",
-        "reason": "cors is undefined"
-      });
-      return;
-    }
     secured_docid = priv.secureDocId(docid);
     url = priv.url + '/' + priv.underscoreFileExtenisons(secured_docid);
 
@@ -385,38 +397,26 @@ jIO.addStorageType('dav', function (spec, my) {
                 });
               },
               error: function () {
-                that.error({
-                  "status": 409,
-                  "statusText": "Conflicts",
-                  "error": "conflicts",
-                  "message": "Cannot modify document",
-                  "reason": "Error trying to save attachment to remote storage"
-                });
+                that.error(priv.createError(409,
+                  "Cannot modify document", "Error when saving attachment"
+                  ));
                 return;
               }
             });
           },
           error: function () {
-            that.error({
-              "status": 409,
-              "statusText": "Conflicts",
-              "error": "conflicts",
-              "message": "Cannot modify document",
-              "reason": "Error trying to write to remote storage"
-            });
+            that.error(priv.createError(409,
+              "Cannot modify document", "Error writing to remote storage"
+              ));
             return;
           }
         });
       },
       error: function () {
         //  the document does not exist
-        that.error({
-          "status": 404,
-          "statusText": "Not Found",
-          "error": "not_found",
-          "message": "Impossible to add attachment",
-          "reason": "Document not found"
-        });
+        that.error(priv.createError(404,
+          "Impossible to add attachment", "Document not found"
+          ));
         return;
       }
     });
@@ -439,26 +439,16 @@ jIO.addStorageType('dav', function (spec, my) {
       secured_attachmentid,
       attachment_url;
 
-    // no docId
     if (!(typeof docid === "string" && docid !== "")) {
-      that.error({
-        "status": 405,
-        "statusText": "Method Not Allowed",
-        "error": "method_not_allowed",
-        "message": "Cannot create document which id is undefined",
-        "reason": "Document id is undefined"
-      });
+      that.error(priv.createError(405,
+        "Can't create document without id", "Document id is undefined"
+        ));
       return;
     }
-    // no cors support
     if (priv.checkCors === false) {
-      that.error({
-        "status": 405,
-        "statusText": "Method Not Allowed",
-        "error": "method_not_allowed",
-        "message": "Browser does not support cross domain ajax requests",
-        "reason": "cors is undefined"
-      });
+      that.error(priv.createError(405,
+        "Browser does not support cross domain ajax", "CORS is undefined"
+        ));
       return;
     }
     secured_docid = priv.secureDocId(command.getDocId());
@@ -487,13 +477,9 @@ jIO.addStorageType('dav', function (spec, my) {
           that.success(doc);
         },
         error: function () {
-          that.error({
-            "status": 404,
-            "statusText": "Not Found",
-            "error": "not_found",
-            "message": "Cannot find the attachment",
-            "reason": "Attachment does not exist"
-          });
+          that.error(priv.createError(404,
+            "Cannot find the attachment", "Attachment does not exist"
+            ));
         }
       });
     } else {
@@ -518,13 +504,9 @@ jIO.addStorageType('dav', function (spec, my) {
           that.success(doc);
         },
         error: function () {
-          that.error({
-            "status": 404,
-            "statusText": "Not Found",
-            "error": "not_found",
-            "message": "Cannot find the document",
-            "reason": "Document does not exist"
-          });
+          that.error(priv.createError(404,
+            "Cannot find the document", "Document does not exist"
+            ));
         }
       });
     }
@@ -540,25 +522,17 @@ jIO.addStorageType('dav', function (spec, my) {
       secured_docid, secured_attachmentid, attachment_url,
       attachment_list = [], i, j, k = 1, deleteAttachment;
 
-    // no docId
     if (!(typeof docid === "string" && docid !== "")) {
-      that.error({
-        "status": 405,
-        "statusText": "Method Not Allowed",
-        "error": "method_not_allowed",
-        "message": "Cannot create document which id is undefined",
-        "reason": "Document id is undefined"
-      });
+      that.error(priv.createError(405,
+        "Can't create document without id", "Document id is undefined"
+        ));
+      return;
     }
-    // no cors support
     if (priv.checkCors === false) {
-      that.error({
-        "status": 405,
-        "statusText": "Method Not Allowed",
-        "error": "method_not_allowed",
-        "message": "Browser does not support cross domain ajax requests",
-        "reason": "cors is undefined"
-      });
+      that.error(priv.createError(405,
+        "Browser does not support cross domain ajax", "CORS is undefined"
+        ));
+      return;
     }
 
     secured_docid = priv.secureDocId(command.getDocId());
@@ -627,24 +601,16 @@ jIO.addStorageType('dav', function (spec, my) {
                       });
                     },
                     error: function () {
-                      that.error({
-                        "status": 409,
-                        "statusText": "Conflicts",
-                        "error": "conflicts",
-                        "message": "Cannot modify document",
-                        "reason": "Error trying to update document attachments"
-                      });
+                      that.error(priv.createError(409,
+                        "Cannot modify document", "Error saving attachment"
+                        ));
                     }
                   });
                 } else {
                   // sure this if-else is needed?
-                  that.error({
-                    "status": 404,
-                    "statusText": "Not Found",
-                    "error": "not_found",
-                    "message": "Cannot find the document",
-                    "reason": "Error trying to update document attachments"
-                  });
+                  that.error(priv.createError(404,
+                    "Cannot find document", "Error updating attachment"
+                    ));
                 }
               } else {
                 // no attachments, we are done
@@ -655,24 +621,16 @@ jIO.addStorageType('dav', function (spec, my) {
               }
             },
             error: function () {
-              that.error({
-                "status": 404,
-                "statusText": "Not Found",
-                "error": "not_found",
-                "message": "Cannot find the document",
-                "reason": "Document does not exist"
-              });
+              that.error(priv.createError(404,
+                "Cannot find the document", "Document does not exist"
+                ));
             }
           });
         },
         error: function () {
-          that.error({
-            "status": 404,
-            "statusText": "Not Found",
-            "error": "not_found",
-            "message": "Cannot find the attachment",
-            "reason": "Error trying to remove attachment"
-          });
+          that.error(priv.createError(404,
+            "Cannot find the attachment", "Error removing attachment"
+            ));
         }
       });
     // remove document
@@ -745,13 +703,9 @@ jIO.addStorageType('dav', function (spec, my) {
                       }
                     },
                     error: function () {
-                      that.error({
-                        "status": 404,
-                        "statusText": "Not Found",
-                        "error": "not_found",
-                        "message": "Cannot find the attachment",
-                        "reason": "Error trying to remove attachment"
-                      });
+                      that.error(priv.createError(404,
+                        "Cannot find attachment", "Error removing attachment"
+                        ));
                     }
                   });
                 };
@@ -765,24 +719,16 @@ jIO.addStorageType('dav', function (spec, my) {
               }
             },
             error: function () {
-              that.error({
-                "status": 404,
-                "statusText": "Not Found",
-                "error": "not_found",
-                "message": "Cannot find the document",
-                "reason": "Error trying to remove document"
-              });
+              that.error(priv.createError(404,
+                "Cannot find the document", "Error removing document"
+                ));
             }
           });
         },
         error: function () {
-          that.error({
-            "status": 404,
-            "statusText": "Not Found",
-            "error": "not_found",
-            "message": "Cannot find the document",
-            "reason": "Document does not exist"
-          });
+          that.error(priv.createError(404,
+            "Cannot find the document", "Document does not exist"
+            ));
         }
       });
     }
@@ -832,13 +778,9 @@ jIO.addStorageType('dav', function (spec, my) {
           am.call(o, 'success');
         },
         error: function (type) {
-          that.error({
-            "status": 404,
-            "statusText": "Not Found",
-            "error": "not_found",
-            "message": "Cannot find the document",
-            "reason": "Cannot get a document from DAVStorage"
-          });
+          that.error(priv.createError(404,
+            "Cannot find the document", "Can't get document from storage"
+            ));
           am.call(o, 'error', [type]);
         }
       });
@@ -887,13 +829,9 @@ jIO.addStorageType('dav', function (spec, my) {
           });
         },
         error: function (type) {
-          that.error({
-            "status": 404,
-            "statusText": "Not Found",
-            "error": "not_found",
-            "message": "Cannot find the document",
-            "reason": "Cannot get a document list from DAVStorage"
-          });
+          that.error(priv.createError(404,
+            "Cannot find the document", "Can't get document list"
+            ));
           am.call(o, 'retry', [type]);
         }
       });
