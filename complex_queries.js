@@ -1,3 +1,9 @@
+/*
+* Copyright 2013, Nexedi SA
+* Released under the LGPL license.
+* http://www.gnu.org/licenses/lgpl.html
+*/
+
 (function (scope) {
   "use strict";
   Object.defineProperty(scope, "ComplexQueries", {
@@ -29,15 +35,15 @@ Object.defineProperty(scope.ComplexQueries, "parse", {
 	This is in the public domain.
 */
 
-var _dbg_withtrace		= false;
-var _dbg_string			= new String();
+var NODEJS__dbg_withtrace		= false;
+var NODEJS__dbg_string			= new String();
 
-function __dbg_print( text )
+function __NODEJS_dbg_print( text )
 {
-	_dbg_string += text + "\n";
+	NODEJS__dbg_string += text + "\n";
 }
 
-function __lex( info )
+function __NODEJS_lex( info )
 {
 	var state		= 0;
 	var match		= -1;
@@ -243,7 +249,7 @@ switch( state )
 }
 
 
-function __parse( src, err_off, err_la )
+function __NODEJS_parse( src, err_off, err_la )
 {
 	var		sstack			= new Array();
 	var		vstack			= new Array();
@@ -371,7 +377,7 @@ var labels = new Array(
 	sstack.push( 0 );
 	vstack.push( 0 );
 	
-	la = __lex( info );
+	la = __NODEJS_lex( info );
 
 	while( true )
 	{
@@ -385,9 +391,9 @@ var labels = new Array(
 			}
 		}
 
-		if( _dbg_withtrace && sstack.length > 0 )
+		if( NODEJS__dbg_withtrace && sstack.length > 0 )
 		{
-			__dbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
+			__NODEJS_dbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
 							"\tLookahead: " + labels[la] + " (\"" + info.att + "\")\n" +
 							"\tAction: " + act + "\n" + 
 							"\tSource: \"" + info.src.substr( info.offset, 30 ) + ( ( info.offset + 30 < info.src.length ) ?
@@ -400,8 +406,8 @@ var labels = new Array(
 		//Panic-mode: Try recovery when parse-error occurs!
 		if( act == 25 )
 		{
-			if( _dbg_withtrace )
-				__dbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[la] );
+			if( NODEJS__dbg_withtrace )
+				__NODEJS_dbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[la] );
 			
 			err_cnt++;
 			err_off.push( info.offset - info.att.length );			
@@ -420,8 +426,8 @@ var labels = new Array(
 			
 			while( act == 25 && la != 19 )
 			{
-				if( _dbg_withtrace )
-					__dbg_print( "\tError recovery\n" +
+				if( NODEJS__dbg_withtrace )
+					__NODEJS_dbg_print( "\tError recovery\n" +
 									"Current lookahead: " + labels[la] + " (" + info.att + ")\n" +
 									"Action: " + act + "\n\n" );
 				if( la == -1 )
@@ -455,19 +461,19 @@ var labels = new Array(
 					vstack.push( rvstack[i] );
 				}
 				
-				la = __lex( info );
+				la = __NODEJS_lex( info );
 			}
 			
 			if( act == 25 )
 			{
-				if( _dbg_withtrace )
-					__dbg_print( "\tError recovery failed, terminating parse process..." );
+				if( NODEJS__dbg_withtrace )
+					__NODEJS_dbg_print( "\tError recovery failed, terminating parse process..." );
 				break;
 			}
 
 
-			if( _dbg_withtrace )
-				__dbg_print( "\tError recovery succeeded, continuing" );
+			if( NODEJS__dbg_withtrace )
+				__NODEJS_dbg_print( "\tError recovery succeeded, continuing" );
 		}
 		
 		/*
@@ -479,29 +485,29 @@ var labels = new Array(
 		//Shift
 		if( act > 0 )
 		{			
-			if( _dbg_withtrace )
-				__dbg_print( "Shifting symbol: " + labels[la] + " (" + info.att + ")" );
+			if( NODEJS__dbg_withtrace )
+				__NODEJS_dbg_print( "Shifting symbol: " + labels[la] + " (" + info.att + ")" );
 		
 			sstack.push( act );
 			vstack.push( info.att );
 			
-			la = __lex( info );
+			la = __NODEJS_lex( info );
 			
-			if( _dbg_withtrace )
-				__dbg_print( "\tNew lookahead symbol: " + labels[la] + " (" + info.att + ")" );
+			if( NODEJS__dbg_withtrace )
+				__NODEJS_dbg_print( "\tNew lookahead symbol: " + labels[la] + " (" + info.att + ")" );
 		}
 		//Reduce
 		else
 		{		
 			act *= -1;
 			
-			if( _dbg_withtrace )
-				__dbg_print( "Reducing by producution: " + act );
+			if( NODEJS__dbg_withtrace )
+				__NODEJS_dbg_print( "Reducing by producution: " + act );
 			
 			rval = void(0);
 			
-			if( _dbg_withtrace )
-				__dbg_print( "\tPerforming semantic action..." );
+			if( NODEJS__dbg_withtrace )
+				__NODEJS_dbg_print( "\tPerforming semantic action..." );
 			
 switch( act )
 {
@@ -589,8 +595,8 @@ switch( act )
 
 
 
-			if( _dbg_withtrace )
-				__dbg_print( "\tPopping " + pop_tab[act][1] + " off the stack..." );
+			if( NODEJS__dbg_withtrace )
+				__NODEJS_dbg_print( "\tPopping " + pop_tab[act][1] + " off the stack..." );
 				
 			for( var i = 0; i < pop_tab[act][1]; i++ )
 			{
@@ -611,24 +617,24 @@ switch( act )
 			if( act == 0 )
 				break;
 				
-			if( _dbg_withtrace )
-				__dbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
+			if( NODEJS__dbg_withtrace )
+				__NODEJS_dbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
 				
 			sstack.push( go );
 			vstack.push( rval );			
 		}
 		
-		if( _dbg_withtrace )
+		if( NODEJS__dbg_withtrace )
 		{		
-			alert( _dbg_string );
-			_dbg_string = new String();
+			alert( NODEJS__dbg_string );
+			NODEJS__dbg_string = new String();
 		}
 	}
 
-	if( _dbg_withtrace )
+	if( NODEJS__dbg_withtrace )
 	{
-		__dbg_print( "\nParse complete." );
-		alert( _dbg_string );
+		__NODEJS_dbg_print( "\nParse complete." );
+		alert( NODEJS__dbg_string );
 	}
 	
 	return err_cnt;
@@ -683,7 +689,7 @@ var error_offsets = [];
 var error_lookaheads = [];
 var error_count = 0;
 var result;
-if ( ( error_count = __parse( string, error_offsets, error_lookaheads ) ) > 0 ) {
+if ( ( error_count = __NODEJS_parse( string, error_offsets, error_lookaheads ) ) > 0 ) {
     var i;
     for (i = 0; i < error_count; ++i) {
         throw new Error ( "Parse error near \"" +

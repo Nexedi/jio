@@ -1,3 +1,9 @@
+/*
+* Copyright 2013, Nexedi SA
+* Released under the LGPL license.
+* http://www.gnu.org/licenses/lgpl.html
+*/
+
 (function (scope, hex_md5) {
   "use strict";
   var localstorage;
@@ -1794,12 +1800,14 @@ var jobRules = (function () {
   that.default_action = that.none;
   that.default_compare = function (job1, job2) {
     return (job1.getCommand().getDocId() === job2.getCommand().getDocId() &&
-    job1.getCommand().getDocInfo('_rev') ===
-    job2.getCommand().getDocInfo('_rev') &&
-    job1.getCommand().getOption('rev') ===
-    job2.getCommand().getOption('rev') &&
-    JSON.stringify(job1.getStorage().serialized()) ===
-    JSON.stringify(job2.getStorage().serialized()));
+            job1.getCommand().getAttachmentId() ===
+            job2.getCommand().getAttachmentId() &&
+            job1.getCommand().getDocInfo('_rev') ===
+            job2.getCommand().getDocInfo('_rev') &&
+            job1.getCommand().getOption('rev') ===
+            job2.getCommand().getOption('rev') &&
+            JSON.stringify(job1.getStorage().serialized()) ===
+            JSON.stringify(job2.getStorage().serialized()));
   };
 
   // Methods //
