@@ -1,22 +1,23 @@
 # dir
-JIO_DIR		= src/jio
-STORAGE_DIR 	= src/jio.storage
-QUERIES_DIR 	= src/queries
-JSCC_DIR   	= ~/modules/jscc
+JIO_DIR     = src/jio
+STORAGE_DIR = src/jio.storage
+QUERIES_DIR = src/queries
 
 # files
-JIO		= jio.js
-JIO_MIN		= jio.min.js
-COMPLEX		= complex_queries.js
-COMPLEX_MIN	= complex_queries.min.js
-PARSER_PAR  	= $(QUERIES_DIR)/parser.par
-PARSER_OUT   	= $(QUERIES_DIR)/parser.js
+JIO         = jio.js
+JIO_MIN     = jio.min.js
+COMPLEX     = complex_queries.js
+COMPLEX_MIN = complex_queries.min.js
+PARSER_PAR  = $(QUERIES_DIR)/parser.par
+PARSER_OUT  = $(QUERIES_DIR)/parser.js
 
-# using rhino
-JSCC_CMD   	= rhino $(JSCC_DIR)/jscc.js -t $(JSCC_DIR)/driver_web.js_ 
-# npm install jslint
+## js/cc using rhino
+#JSCC_CMD    = rhino ~/modules/jscc/jscc.js -t ~/modules/jscc/driver_web.js_
+# sh -c 'cd ; npm install jscc-node'
+JSCC_CMD   	= node ~/node_modules/jscc-node/jscc.js -t ~/node_modules/jscc-node/driver_node.js_
+# sh -c 'cd ; npm install jslint'
 LINT_CMD	= $(shell which jslint || echo node ~/node_modules/jslint/bin/jslint.js) --terse
-# npm install uglify-js
+# sh -c 'cd ; npm install uglify-js'
 UGLIFY_CMD	= $(shell which uglifyjs || echo node ~/node_modules/uglify-js/bin/uglifyjs)
 
 auto: compile build lint
@@ -33,7 +34,7 @@ CONCAT_JIO_FILES = $(CONCAT_JIO_NAMES:%=$(JIO_DIR)/%.js)
 LINT_FILES  = $(LINT_NAMES:%=$(JIO_DIR)/%.js) $(CONCAT_STORAGE_NAMES:%=$(STORAGE_DIR)/%.js)
 
 # build parser.js
-compile: 
+compile:
 	$(JSCC_CMD) -o $(PARSER_OUT) $(PARSER_PAR)
 
 # concat source files into jio.js and complex-queries.js
