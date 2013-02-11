@@ -361,21 +361,11 @@ jIO.addStorageType('local', function (spec, my) {
           if (s.test(i)) {
             items += 1;
             j = i.split('/').slice(-1)[0];
-            query_object.push(JSON.parse(localStorage.getItem(i)));
+            query_object.push(localstorage.getItem(i));
           }
         }
       }
-      query_response = jIO.ComplexQueries.query({
-        query: query_syntax.query,
-        filter: {
-          sort_on: query_syntax.filter.sort_on,
-          limit: query_syntax.filter.limit,
-          select_list: query_syntax.filter.select_list
-        },
-        wildcard_character: query_syntax.wildcard_character
-      },
-        query_object
-        );
+      query_response = jIO.ComplexQueries.query(query_syntax, query_object);
       that.success(query_response);
     }
   };

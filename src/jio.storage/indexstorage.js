@@ -916,17 +916,7 @@ jIO.addStorageType('indexed', function (spec, my) {
             } else {
               // we can use index, run query on index
               query_response =
-                jIO.ComplexQueries.query({
-                  query: query_syntax.query,
-                  filter: {
-                    sort_on: query_syntax.filter.sort_on,
-                    limit: query_syntax.filter.limit,
-                    select_list: query_syntax.filter.select_list
-                  },
-                  wildcard_character: query_syntax.wildcard_character
-                },
-                  query_object
-                  );
+                jIO.ComplexQueries.query(query_syntax, query_object);
               that.success(query_response);
             }
           } else if (command.getOption('include_docs')) {
