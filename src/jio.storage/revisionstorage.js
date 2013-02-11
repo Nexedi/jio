@@ -611,7 +611,6 @@ jIO.addStorageType('revision', function (spec, my) {
       );
     };
     f.copyAttachment = function (attachmentid, attachment) {
-      console.log(attachmentid);
       that.addJob(
         "get",
         priv.substorage,
