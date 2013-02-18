@@ -396,19 +396,13 @@ Object.defineProperty(that, "putAttachment", {
   enumerable: false,
   writable: false,
   value: function (doc, options, success, error) {
-    var param, k, doc_with_underscores = {};
-    param = priv.parametersToObject(
+    var param = priv.parametersToObject(
       [options, success, error],
       {max_retry: 0}
     );
-    for (k in doc) {
-      if (doc.hasOwnProperty(k) && k.match('[^_].*')) {
-        doc_with_underscores["_" + k] = doc[k];
-      }
-    }
 
     priv.addJob(putAttachmentCommand, {
-      doc: doc_with_underscores,
+      doc: doc,
       options: param.options,
       callbacks: {success: param.success, error: param.error}
     });

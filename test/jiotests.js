@@ -360,9 +360,9 @@ test ("All requests ok", function () {
     o.spy(o, "status", 22,
           "Put attachment without id");
     o.jio.putAttachment({
-        "id": "file",
-        "data": "0123456789",
-        "mimetype": "text/plain"
+        "_id": "file",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
     }, o.f);
     o.tick(o);
 
@@ -370,9 +370,9 @@ test ("All requests ok", function () {
     o.spy(o, "value", {"ok": true, "id": "file/attmt"},
           "Put attachment");
     o.jio.putAttachment({
-        "id": "file/attmt",
-        "data": "0123456789",
-        "mimetype": "text/plain"
+        "_id": "file/attmt",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
     }, o.f);
     o.tick(o);
 
@@ -445,9 +445,9 @@ test ("All requests fail", function () {
     o.spy(o, "status", 22,
           "Put attachment without id");
     o.jio.putAttachment({
-        "id": "file",
-        "data": "0123456789",
-        "mimetype": "text/plain"
+        "_id": "file",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
     }, o.f);
     o.tick(o);
 
@@ -455,9 +455,9 @@ test ("All requests fail", function () {
     o.spy(o, "status", 0,
           "Put attachment");
     o.jio.putAttachment({
-        "id": "file/attmt",
-        "data": "0123456789",
-        "mimetype": "text/plain"
+        "_id": "file/attmt",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
     }, o.f);
     o.tick(o);
 
@@ -513,9 +513,9 @@ test ("All document not found", function () {
     o.spy(o, "status", 22,
           "Put attachment without id");
     o.jio.putAttachment({
-        "id": "file",
-        "data": "0123456789",
-        "mimetype": "text/plain"
+        "_id": "file",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
     }, o.f);
     o.tick(o);
 
@@ -523,9 +523,9 @@ test ("All document not found", function () {
     o.spy(o, "value", {"ok": true, "id": "file/attmt"},
           "Put attachment");
     o.jio.putAttachment({
-        "id": "file/attmt",
-        "data": "0123456789",
-        "mimetype": "text/plain"
+        "_id": "file/attmt",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
     }, o.f);
     o.tick(o);
 
@@ -575,9 +575,9 @@ test ("All document found", function () {
     o.spy(o, "status", 22,
           "Put attachment without id");
     o.jio.putAttachment({
-        "id": "file",
-        "data": "0123456789",
-        "mimetype": "text/plain"
+        "_id": "file",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
     }, o.f);
     o.tick(o);
 
@@ -585,9 +585,9 @@ test ("All document found", function () {
     o.spy(o, "value", {"ok": true, "id": "file/attmt"},
           "Put attachment");
     o.jio.putAttachment({
-        "id": "file/attmt",
-        "data": "0123456789",
-        "mimetype": "text/plain"
+        "_id": "file/attmt",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
     }, o.f);
     o.tick(o);
 
@@ -881,13 +881,13 @@ test ("PutAttachment", function(){
     // putAttachment without attachment id
     // error 22 -> attachment id required
     o.spy(o, "status", 22, "PutAttachment without attachment id");
-    o.jio.putAttachment({"id": "putattmt1"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1"}, o.f);
     o.tick(o);
 
     // putAttachment without document
     // error 404 -> not found
     o.spy(o, "status", 404, "PutAttachment without document");
-    o.jio.putAttachment({"id": "putattmt1/putattmt2"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1/putattmt2"}, o.f);
     o.tick(o);
 
     // adding a document
@@ -899,7 +899,7 @@ test ("PutAttachment", function(){
     // putAttachment with document
     o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
           "PutAttachment with document, without data");
-    o.jio.putAttachment({"id": "putattmt1/putattmt2"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1/putattmt2"}, o.f);
     o.tick(o);
 
     // check document
@@ -929,7 +929,7 @@ test ("PutAttachment", function(){
     // update attachment
     o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
           "Update Attachment, with data");
-    o.jio.putAttachment({"id": "putattmt1/putattmt2", "data": "abc"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1/putattmt2", "_data": "abc"}, o.f);
     o.tick(o);
 
     // check document
@@ -1584,7 +1584,7 @@ test("Put Attachment", function () {
     // putAttachment without attachment id
     // erorr 22 -> attachment id required
     o.spy(o, "status", 22, "PutAttachment without attachment id");
-    o.jio.putAttachment({"id": "putattmt1"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1"}, o.f);
     o.tick(o);
 
     // putAttachment without document
@@ -1594,7 +1594,7 @@ test("Put Attachment", function () {
     o.rev = "1-" + o.rev_hash;
     o.spy(o, "value", {"ok": true, "id": "doc1/attmt1", "rev": o.rev},
           "PutAttachment without document, without data");
-    o.jio.putAttachment({"id": "doc1/attmt1"}, o.f);
+    o.jio.putAttachment({"_id": "doc1/attmt1"}, o.f);
     o.tick(o);
 
     // check document
@@ -1636,9 +1636,9 @@ test("Put Attachment", function () {
     o.spy(o, "value", {"ok": true, "id": "doc1/attmt1", "rev": o.rev},
           "Update Attachment, with data");
     o.jio.putAttachment({
-      "id": "doc1/attmt1",
-      "data": "abc",
-      "rev": o.prev_rev
+      "_id": "doc1/attmt1",
+      "_data": "abc",
+      "_rev": o.prev_rev
     }, o.f);
     o.tick(o);
 
@@ -1681,9 +1681,9 @@ test("Put Attachment", function () {
     o.spy(o, "value", {"ok": true, "id": "doc1/attmt2", "rev": o.rev},
           "PutAttachment without document, without data");
     o.jio.putAttachment({
-      "id": "doc1/attmt2",
-      "data": "def",
-      "rev": o.prev_rev
+      "_id": "doc1/attmt2",
+      "_data": "def",
+      "_rev": o.prev_rev
     }, o.f);
     o.tick(o);
 
@@ -3449,13 +3449,13 @@ test ("PutAttachment", function(){
     // putAttachment without attachment id
     // error 22 -> attachment id required
     o.spy(o, "status", 22, "PutAttachment without attachment id");
-    o.jio.putAttachment({"id": "putattmt1"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1"}, o.f);
     o.tick(o);
 
     // putAttachment without document
     // error 404 -> not found
     o.spy(o, "status", 404, "PutAttachment without document");
-    o.jio.putAttachment({"id": "putattmt1/putattmt2"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1/putattmt2"}, o.f);
     o.tick(o);
 
     // putAttachment with document
@@ -3467,7 +3467,7 @@ test ("PutAttachment", function(){
 
     o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
           "PutAttachment with document, without data");
-    o.jio.putAttachment({"id": "putattmt1/putattmt2"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1/putattmt2"}, o.f);
     o.tick(o);
 
     // check document
@@ -3497,7 +3497,7 @@ test ("PutAttachment", function(){
     // update attachment
     o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
           "Update Attachment, with data");
-    o.jio.putAttachment({"id": "putattmt1/putattmt2", "data": "abc"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1/putattmt2", "_data": "abc"}, o.f);
     o.tick(o);
 
     // check document
@@ -3685,13 +3685,13 @@ test ("Remove", function(){
     o.tick(o);
 
     // adding an attachment
-    o.jio.putAttachment({"id":"remove3/removeAtt", "mimetype":"text/plain",
-      "content":"hello"});
+    o.jio.putAttachment({"_id":"remove3/removeAtt", "_mimetype":"text/plain",
+      "_data":"hello"});
     o.tick(o);
 
     // add another attachment
-    o.jio.putAttachment({"id":"remove3/removeAtt2", "mimetype":"text/plain",
-      "content":"hello2"});
+    o.jio.putAttachment({"_id":"remove3/removeAtt2", "_mimetype":"text/plain",
+      "_data":"hello2"});
     o.tick(o);
 
     // remove attachment
