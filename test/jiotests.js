@@ -1800,9 +1800,8 @@ test ("Get", function(){
 
     // get inexistent specific document
     o.spy(o, "status", 404, "Get document (inexistent specific revision)");
-    o.jio.get({"_id": "get1"}, {
+    o.jio.get({"_id": "get1", "_rev": "1-rev0"}, {
         "revs_info": true, "revs": true, "conflicts": true,
-        "rev": "1-rev0"
     }, o.f);
     o.tick(o);
 
@@ -1815,9 +1814,8 @@ test ("Get", function(){
     }];
     o.doc_myget2_cloned["_conflicts"] = ["1-rev1"];
     o.spy(o, "value", o.doc_myget2_cloned, "Get document (specific revision)");
-    o.jio.get({"_id": "get1"}, {
+    o.jio.get({"_id": "get1", "_rev": "1-rev2"}, {
         "revs_info": true, "revs": true, "conflicts": true,
-        "rev": "1-rev2"
     }, o.f);
     o.tick(o);
 
@@ -1842,17 +1840,15 @@ test ("Get", function(){
 
     // get inexistent attachment specific rev
     o.spy(o, "status", 404, "Get inexistent attachment (specific revision)");
-    o.jio.get({"_id": "get1/get2"}, {
+    o.jio.get({"_id": "get1/get2", "_rev": "1-rev1"}, {
         "revs_info": true, "revs": true, "conflicts": true,
-        "rev": "1-rev1"
     }, o.f);
     o.tick(o);
 
     // get attachment specific rev
     o.spy(o, "value", "abc", "Get attachment (specific revision)");
-    o.jio.get({"_id": "get1/get2"}, {
+    o.jio.get({"_id": "get1/get2", "_rev": "1-rev2"}, {
         "revs_info": true, "revs": true, "conflicts": true,
-        "rev": "1-rev2"
     }, o.f);
     o.tick(o);
 
@@ -1860,9 +1856,8 @@ test ("Get", function(){
     o.doc_myget2_cloned["_attachments"] = o.attmt_myget2;
     o.spy(o, "value", o.doc_myget2_cloned,
           "Get document which have an attachment (specific revision)");
-    o.jio.get({"_id": "get1"}, {
+    o.jio.get({"_id": "get1", "_rev": "1-rev2"}, {
         "revs_info": true, "revs": true, "conflicts": true,
-        "rev": "1-rev2"
     }, o.f);
     o.tick(o);
 
@@ -2132,9 +2127,9 @@ test ("Scenario", function(){
     o.doc._revs_info = [{"rev": o.rev, "status": "available"}];
     o.spy(o, "value", o.doc, "And, on this new tab, I load the document,"+
         "and my application keep the revision in memory");
-    o.jio2.get({"_id": "sample1"}, {
+    o.jio2.get({"_id": "sample1", "_rev": o.rev}, {
         "revs_info": true, "revs": true, "conflicts": true,
-        "rev": o.rev }, o.f);
+    }, o.f);
     o.tick(o);
 
     // MODFIY the 2nd version
@@ -2431,11 +2426,10 @@ module ("JIO Replicate Revision Storage");
       "_revs_info": [{"rev": "1-2", "status": "available"}],
       "_conflicts": ["1-1"]
     }, "Get the previous document (with revision)");
-    o.jio.get({"_id": "doc1"}, {
+    o.jio.get({"_id": "doc1", "_rev": "1-2"}, {
       "conflicts": true,
       "revs": true,
       "revs_info": true,
-      "rev": "1-2"
     }, o.f);
     o.tick(o);
 
@@ -2448,11 +2442,10 @@ module ("JIO Replicate Revision Storage");
       "_revs_info": [{"rev": o.specific_rev, "status": "available"}],
       "_conflicts": [o.specific_rev_conflict]
     }, "Get a previous document (with local storage revision)");
-    o.jio.get({"_id": "doc1"}, {
+    o.jio.get({"_id": "doc1", "_rev": o.specific_rev}, {
       "conflicts": true,
       "revs": true,
       "revs_info": true,
-      "rev": o.specific_rev
     }, o.f);
     o.tick(o);
 

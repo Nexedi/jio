@@ -305,20 +305,19 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.get = function (command) {
-    var functions = {}, doc_env, docid, my_rev, revs_array = [];
+    var functions = {}, doc_env, doc, my_rev, revs_array = [];
     functions.begin = function () {
-      var i, option;
-      docid = command.getDocId();
+      var i;
+      doc = command.cloneDoc();
 
-      doc_env = my.env[docid];
+      doc_env = my.env[doc._id];
       if (!doc_env || !doc_env.id) {
         // document environment is not set
-        doc_env = priv.initEnv(docid);
+        doc_env = priv.initEnv(doc._id);
       }
       // document environment is set now
       revs_array.length = priv.storage_list.length;
-      option = command.cloneOption() || {};
-      my_rev = option.rev;
+      my_rev = doc._rev;
       if (my_rev) {
         functions.update_env = false;
       }
@@ -326,9 +325,9 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
         // request all sub storages
         if (doc_env.my_revisions[my_rev]) {
           // if my_rev exist, convert it to distant revision
-          option.rev = doc_env.my_revisions[my_rev][i];
+          doc._rev = doc_env.my_revisions[my_rev][i];
         }
-        priv.send("get", i, docid, priv.clone(option), functions.callback);
+        priv.send("get", i, doc, command.cloneOption(), functions.callback);
       }
     };
     functions.update_env = true;
@@ -349,7 +348,7 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       } else {
         // the document revision is unknown
         if (functions.update_env === true) {
-          my_rev = priv.generateNextRevision(0, docid);
+          my_rev = priv.generateNextRevision(0, doc._id);
           doc_env.my_revisions[my_rev] = revs_array;
           doc_env.distant_revisions[response._rev || "unique_" + index] =
             my_rev;

@@ -923,7 +923,7 @@ jIO.addStorageType('revision', function (spec, my) {
     if (option.max_retry === 0) {
       option.max_retry = 3;
     }
-    prev_rev = command.getOption("rev");
+    prev_rev = command.getDocInfo("_rev");
     if (typeof prev_rev === "string") {
       if (!priv.checkRevisionFormat(prev_rev)) {
         that.error({
@@ -941,7 +941,8 @@ jIO.addStorageType('revision', function (spec, my) {
       that.addJob(
         "get",
         priv.substorage,
-        command.getDocId() + priv.doctree_suffix,
+        {"_id": command.getDocId() + priv.doctree_suffix,
+         "_rev": command.getDocInfo("_rev")},
         option,
         function (response) {
           doctree = response;
@@ -982,7 +983,7 @@ jIO.addStorageType('revision', function (spec, my) {
       that.addJob(
         "get",
         priv.substorage,
-        docid,
+        {"_id": docid, "_rev": command.getDocInfo("_rev")},
         option,
         function (response) {
           var attmt;
