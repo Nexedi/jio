@@ -175,16 +175,10 @@ var storage = function (spec, my) {
 
   that.addJob = function (method, storage_spec, doc, option, success, error) {
     var command_opt = {
+      doc: doc,
       options: option,
       callbacks: {success: success, error: error}
     };
-    if (doc) {
-      if (method === 'get') {
-        command_opt.docid = doc;
-      } else {
-        command_opt.doc = doc;
-      }
-    }
     jobManager.addJob(job({
       storage: priv.storage(storage_spec || {}),
       command: priv.newCommand(method, command_opt)

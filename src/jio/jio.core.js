@@ -278,7 +278,8 @@ Object.defineProperty(that, "put", {
 /**
  * Get a document.
  * @method get
- * @param  {string} docid The document id: "doc_id" or "doc_id/attachmt_id".
+ * @param  {string} doc The document object. Contains at least:
+ * - {string} _id The document id: "doc_id" or "doc_id/attachment_id"
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
  * - {string} rev The revision we want to get.
@@ -294,14 +295,14 @@ Object.defineProperty(that, "get", {
   configurable: false,
   enumerable: false,
   writable: false,
-  value: function (id, options, success, error) {
+  value: function (doc, options, success, error) {
     var param = priv.parametersToObject(
       [options, success, error],
       {max_retry: 3}
     );
 
     priv.addJob(getCommand, {
-      docid: id,
+      doc: doc,
       options: param.options,
       callbacks: {success: param.success, error: param.error}
     });

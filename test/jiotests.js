@@ -378,12 +378,12 @@ test ("All requests ok", function () {
 
     // get document
     o.spy(o, "value", {"_id": "file", "title": "get_title"}, "Get document");
-    o.jio.get("file", o.f);
+    o.jio.get({"_id": "file"}, o.f);
     o.tick(o);
 
     // get attachment
     o.spy(o, "value", "0123456789", "Get attachment");
-    o.jio.get("file/attmt", o.f);
+    o.jio.get({"_id": "file/attmt"}, o.f);
     o.tick(o);
 
     // remove document
@@ -463,12 +463,12 @@ test ("All requests fail", function () {
 
     // get document
     o.spy(o, "status", 0, "Get document");
-    o.jio.get("file", o.f);
+    o.jio.get({"_id": "file"}, o.f);
     o.tick(o);
 
     // get attachment
     o.spy(o, "status", 0, "Get attachment");
-    o.jio.get("file/attmt", o.f);
+    o.jio.get({"_id": "file/attmt"}, o.f);
     o.tick(o);
 
     // remove document
@@ -531,12 +531,12 @@ test ("All document not found", function () {
 
     // get document
     o.spy(o, "status", 404, "Get document");
-    o.jio.get("file", o.f);
+    o.jio.get({"_id": "file"}, o.f);
     o.tick(o);
 
     // get attachment
     o.spy(o, "status", 404, "Get attachment");
-    o.jio.get("file/attmt", o.f);
+    o.jio.get({"_id": "file/attmt"}, o.f);
     o.tick(o);
 
     // remove document
@@ -593,12 +593,12 @@ test ("All document found", function () {
 
     // get document
     o.spy(o, "value", {"_id": "file", "title": "get_title"}, "Get document");
-    o.jio.get("file", o.f);
+    o.jio.get({"_id": "file"}, o.f);
     o.tick(o);
 
     // get attachment
     o.spy(o, "value", "0123456789", "Get attachment");
-    o.jio.get("file/attmt", o.f);
+    o.jio.get({"_id": "file/attmt"}, o.f);
     o.tick(o);
 
     // remove document
@@ -667,7 +667,7 @@ test ("One document aim jobs at the same time (Wait for job(s))" , function () {
     o.jio.put({"_id": "file", "content": "content"}, o.f2);
     o.testLastJobWaitForJob([1], "job2 is waiting");
 
-    o.jio.get("file", o.f3);
+    o.jio.get({"_id": "file"}, o.f3);
     o.testLastJobWaitForJob([1, 2], "job3 is waiting");
 
     o.tick(o, 1000, "f");
@@ -705,11 +705,11 @@ test ("One document aim jobs at the same time (Not Acceptable)" , function () {
     o.spy(o, "value", {"_id": "file", "title": "get_title"}, "job1", "f");
     o.spy(o, "status", 11, "job2 is not acceptable", "f2");
 
-    o.jio.get("file", o.f);
+    o.jio.get({"_id": "file"}, o.f);
     o.testLastJobId(1, "job1 added to queue");
     o.waitUntilLastJobIs("on going");
 
-    o.jio.get("file", o.f2);
+    o.jio.get({"_id": "file"}, o.f2);
     o.testLastJobId(1, "job2 not added");
 
     o.tick(o, 1000, "f");
@@ -971,12 +971,12 @@ test ("Get", function(){
 
     // get inexistent document
     o.spy(o, "status", 404, "Get inexistent document");
-    o.jio.get("get1", o.f);
+    o.jio.get({"_id": "get1"}, o.f);
     o.tick(o);
 
     // get inexistent attachment
     o.spy(o, "status", 404, "Get inexistent attachment");
-    o.jio.get("get1/get2", o.f);
+    o.jio.get({"_id": "get1/get2"}, o.f);
     o.tick(o);
 
     // adding a document
@@ -988,12 +988,12 @@ test ("Get", function(){
 
     // get document
     o.spy(o, "value", o.doc_get1, "Get document");
-    o.jio.get("get1", o.f);
+    o.jio.get({"_id": "get1"}, o.f);
     o.tick(o);
 
     // get inexistent attachment (document exists)
     o.spy(o, "status", 404, "Get inexistent attachment (document exists)");
-    o.jio.get("get1/get2", o.f);
+    o.jio.get({"_id": "get1/get2"}, o.f);
     o.tick(o);
 
     // adding an attachment
@@ -1009,7 +1009,7 @@ test ("Get", function(){
 
     // get attachment
     o.spy(o, "value", "de", "Get attachment");
-    o.jio.get("get1/get2", o.f);
+    o.jio.get({"_id": "get1/get2"}, o.f);
     o.tick(o);
 
     o.jio.stop();
@@ -1738,12 +1738,12 @@ test ("Get", function(){
 
     // get inexistent document
     o.spy(o, "status", 404, "Get inexistent document (winner)");
-    o.jio.get("get1", o.f);
+    o.jio.get({"_id": "get1"}, o.f);
     o.tick(o);
 
     // get inexistent attachment
     o.spy(o, "status", 404, "Get inexistent attachment (winner)");
-    o.jio.get("get1/get2", o.f);
+    o.jio.get({"_id": "get1/get2"}, o.f);
     o.tick(o);
 
     // adding a document
@@ -1762,7 +1762,8 @@ test ("Get", function(){
         "rev": "1-rev1", "status": "available"
     }];
     o.spy(o, "value", o.doc_myget1_cloned, "Get document (winner)");
-    o.jio.get("get1", {"revs_info": true, "revs": true, "conflicts": true},
+    o.jio.get({"_id": "get1"},
+              {"revs_info": true, "revs": true, "conflicts": true},
               o.f);
     o.tick(o);
 
@@ -1792,13 +1793,14 @@ test ("Get", function(){
     o.doc_myget3_cloned["_conflicts"] = ["1-rev1"];
     o.spy(o, "value", o.doc_myget3_cloned,
           "Get document (winner, after posting another one)");
-    o.jio.get("get1", {"revs_info": true, "revs": true, "conflicts": true},
+    o.jio.get({"_id": "get1"},
+              {"revs_info": true, "revs": true, "conflicts": true},
               o.f);
     o.tick(o);
 
     // get inexistent specific document
     o.spy(o, "status", 404, "Get document (inexistent specific revision)");
-    o.jio.get("get1", {
+    o.jio.get({"_id": "get1"}, {
         "revs_info": true, "revs": true, "conflicts": true,
         "rev": "1-rev0"
     }, o.f);
@@ -1813,7 +1815,7 @@ test ("Get", function(){
     }];
     o.doc_myget2_cloned["_conflicts"] = ["1-rev1"];
     o.spy(o, "value", o.doc_myget2_cloned, "Get document (specific revision)");
-    o.jio.get("get1", {
+    o.jio.get({"_id": "get1"}, {
         "revs_info": true, "revs": true, "conflicts": true,
         "rev": "1-rev2"
     }, o.f);
@@ -1835,12 +1837,12 @@ test ("Get", function(){
 
     // get attachment winner
     o.spy(o, "value", "abc", "Get attachment (winner)");
-    o.jio.get("get1/get2", o.f);
+    o.jio.get({"_id": "get1/get2"}, o.f);
     o.tick(o);
 
     // get inexistent attachment specific rev
     o.spy(o, "status", 404, "Get inexistent attachment (specific revision)");
-    o.jio.get("get1/get2", {
+    o.jio.get({"_id": "get1/get2"}, {
         "revs_info": true, "revs": true, "conflicts": true,
         "rev": "1-rev1"
     }, o.f);
@@ -1848,7 +1850,7 @@ test ("Get", function(){
 
     // get attachment specific rev
     o.spy(o, "value", "abc", "Get attachment (specific revision)");
-    o.jio.get("get1/get2", {
+    o.jio.get({"_id": "get1/get2"}, {
         "revs_info": true, "revs": true, "conflicts": true,
         "rev": "1-rev2"
     }, o.f);
@@ -1858,7 +1860,7 @@ test ("Get", function(){
     o.doc_myget2_cloned["_attachments"] = o.attmt_myget2;
     o.spy(o, "value", o.doc_myget2_cloned,
           "Get document which have an attachment (specific revision)");
-    o.jio.get("get1", {
+    o.jio.get({"_id": "get1"}, {
         "revs_info": true, "revs": true, "conflicts": true,
         "rev": "1-rev2"
     }, o.f);
@@ -1868,7 +1870,8 @@ test ("Get", function(){
     o.doc_myget3_cloned["_attachments"] = o.attmt_myget2;
     o.spy(o, "value", o.doc_myget3_cloned,
           "Get document which have an attachment (winner)");
-    o.jio.get("get1", {"revs_info": true, "revs": true, "conflicts": true},
+    o.jio.get({"_id": "get1"},
+              {"revs_info": true, "revs": true, "conflicts": true},
               o.f);
     o.tick(o);
 
@@ -2129,7 +2132,7 @@ test ("Scenario", function(){
     o.doc._revs_info = [{"rev": o.rev, "status": "available"}];
     o.spy(o, "value", o.doc, "And, on this new tab, I load the document,"+
         "and my application keep the revision in memory");
-    o.jio2.get("sample1", {
+    o.jio2.get({"_id": "sample1"}, {
         "revs_info": true, "revs": true, "conflicts": true,
         "rev": o.rev }, o.f);
     o.tick(o);
@@ -2188,7 +2191,8 @@ test ("Scenario", function(){
     o.spy(o, "value", o.mydocSample3,
           "I load the same document as before, and a popup shows that "+
           "there is a conflict");
-    o.jio.get("sample1", {"revs_info": true, "revs": true, "conflicts": true,
+    o.jio.get({"_id": "sample1"},
+              {"revs_info": true, "revs": true, "conflicts": true,
         }, o.f);
     o.tick(o);
 
@@ -2213,7 +2217,7 @@ test ("Scenario", function(){
     o.mydocSample4._revisions = {"ids":[o.hex_2, o.hex], "start":2 };
 
     o.spy(o, "value", o.mydocSample4, "Test if conflict still exists");
-    o.jio.get("sample1", {"revs_info": true, "revs": true,
+    o.jio.get({"_id": "sample1"}, {"revs_info": true, "revs": true,
               "conflicts": true,}, o.f);
     o.tick(o);
 
@@ -2306,7 +2310,7 @@ module ("JIO Replicate Revision Storage");
       "_revisions": {"start": 1, "ids": ["1"]},
       "_revs_info": [{"rev": "1-1", "status": "available"}]
     }, "Get the previous document (without revision)");
-    o.jio.get(o.uuid, {
+    o.jio.get({"_id": o.uuid}, {
       "conflicts": true,
       "revs": true,
       "revs_info": true
@@ -2350,7 +2354,7 @@ module ("JIO Replicate Revision Storage");
       "_revisions": {"start": 1, "ids": ["1"]},
       "_revs_info": [{"rev": "1-1", "status": "available"}]
     }, "Get the previous document (without revision)");
-    o.jio.get("doc1", {
+    o.jio.get({"_id": "doc1"}, {
       "conflicts": true,
       "revs": true,
       "revs_info": true
@@ -2427,7 +2431,7 @@ module ("JIO Replicate Revision Storage");
       "_revs_info": [{"rev": "1-2", "status": "available"}],
       "_conflicts": ["1-1"]
     }, "Get the previous document (with revision)");
-    o.jio.get("doc1", {
+    o.jio.get({"_id": "doc1"}, {
       "conflicts": true,
       "revs": true,
       "revs_info": true,
@@ -2444,7 +2448,7 @@ module ("JIO Replicate Revision Storage");
       "_revs_info": [{"rev": o.specific_rev, "status": "available"}],
       "_conflicts": [o.specific_rev_conflict]
     }, "Get a previous document (with local storage revision)");
-    o.jio.get("doc1", {
+    o.jio.get({"_id": "doc1"}, {
       "conflicts": true,
       "revs": true,
       "revs_info": true,
@@ -2519,7 +2523,7 @@ module ("JIO Replicate Revision Storage");
 
     // get inexistent document
     o.spy(o, "status", 404, "Get inexistent document");
-    o.jio.get("doc1", {
+    o.jio.get({"_id": "doc1"}, {
       "conflicts": true,
       "revs": true,
       "revs_info": true
@@ -3213,7 +3217,7 @@ test ("Post", function () {
         }
       }
     };
-    o.jio.get("ipost_indices.json",function(err, response){
+    o.jio.get({"_id": "ipost_indices.json"}, function (err, response) {
        o.actualIndex = response;
        deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
     });
@@ -3287,7 +3291,7 @@ test ("Put", function(){
       },
       "_id": "iput_indices.json"
     };
-    o.jio.get("iput_indices.json",function(err, response){
+    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
        o.actualIndex = response;
        deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
     });
@@ -3314,7 +3318,7 @@ test ("Put", function(){
       },
       "_id": "iput_indices.json"
     };
-    o.jio.get("iput_indices.json",function(err, response){
+    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
        o.actualIndex = response;
        deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
     });
@@ -3342,7 +3346,7 @@ test ("Put", function(){
         },
       "_id": "iput_indices.json"
     };
-    o.jio.get("iput_indices.json",function(err, response){
+    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
        o.actualIndex = response;
        deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
     });
@@ -3373,7 +3377,7 @@ test ("Put", function(){
         },
       "_id": "iput_indices.json"
     };
-    o.jio.get("iput_indices.json",function(err, response){
+    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
        o.actualIndex = response;
        deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
     });
@@ -3396,14 +3400,14 @@ test ("Put", function(){
       "indexAB": {
         "author": {
           "Jane Doe": ["put1"]
-        }, 
+        },
         "year": {
           "1912": ["put1"]
         }
       },
       "_id": "iput_indices.json"
     };
-    o.jio.get("iput_indices.json",function(err, response){
+    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
        o.actualIndex = response;
        deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
     });
@@ -3549,12 +3553,12 @@ test ("Get", function(){
 
     // get inexistent document
     o.spy(o, "status", 404, "Get inexistent document");
-    o.jio.get("get1", o.f);
+    o.jio.get({"_id": "get1"}, o.f);
     o.tick(o);
 
     // get inexistent attachment
     o.spy(o, "status", 404, "Get inexistent attachment");
-    o.jio.get("get1/get2", o.f);
+    o.jio.get({"_id": "get1/get2"}, o.f);
     o.tick(o);
 
     // adding a document
@@ -3566,12 +3570,12 @@ test ("Get", function(){
 
     // get document
     o.spy(o, "value", o.doc_get1, "Get document");
-    o.jio.get("get1", o.f);
+    o.jio.get({"_id": "get1"}, o.f);
     o.tick(o);
 
     // get inexistent attachment (document exists)
     o.spy(o, "status", 404, "Get inexistent attachment (document exists)");
-    o.jio.get("get1/get2", o.f);
+    o.jio.get({"_id": "get1/get2"}, o.f);
     o.tick(o);
 
     // adding an attachment
@@ -3587,7 +3591,7 @@ test ("Get", function(){
 
     // get attachment
     o.spy(o, "value", "de", "Get attachment");
-    o.jio.get("get1/get2", o.f);
+    o.jio.get({"_id": "get1/get2"}, o.f);
     o.tick(o);
 
     o.jio.stop();
@@ -3661,7 +3665,7 @@ test ("Remove", function(){
           }
         }
     };
-    o.jio.get("irem_indices.json",function(err, response){
+    o.jio.get({"_id": "irem_indices.json"},function(err, response){
        o.actualIndex = response;
        deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
     });
@@ -3669,7 +3673,7 @@ test ("Remove", function(){
 
     // check document
     o.spy(o, "status", 404, "Check if document has been removed");
-    o.jio.get("remove1", o.f);
+    o.jio.get({"_id": "remove1"}, o.f);
     o.tick(o);
 
     // adding a new document
@@ -3716,7 +3720,7 @@ test ("Remove", function(){
         }
       }
     };
-    o.jio.get("irem_indices.json",function(err, response){
+    o.jio.get({"_id": "irem_indices.json"}, function (err, response) {
        o.actualIndex = response;
        deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
     });
@@ -3745,7 +3749,7 @@ test ("Remove", function(){
         }
       }
     };
-    o.jio.get("irem_indices.json",function(err, response){
+    o.jio.get({"_id": "irem_indices.json"}, function (err, response) {
        o.actualIndex = response;
        deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
     });
@@ -3753,12 +3757,12 @@ test ("Remove", function(){
 
     // check attachment
     o.spy(o, "status", 404, "Check if attachment has been removed");
-    o.jio.get("remove3/removeAtt", o.f);
+    o.jio.get({"_id": "remove3/removeAtt"}, o.f);
     o.tick(o);
 
     // check document
     o.spy(o, "status", 404, "Check if document has been removed");
-    o.jio.get("remove3", o.f);
+    o.jio.get({"_id": "remove3"}, o.f);
     o.tick(o);
 
     o.jio.stop();
@@ -3836,7 +3840,7 @@ test ("AllDocs", function () {
       }
     }
   };
-  o.jio.get("iall_indices.json",function(err, response){
+  o.jio.get({"_id": "iall_indices.json"}, function (err, response) {
       o.actualIndex = response;
       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
   });
