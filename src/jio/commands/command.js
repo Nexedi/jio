@@ -235,6 +235,8 @@ var command = function (spec, my) {
     priv.on_going = false;
     priv.success(return_value);
     priv.end(doneStatus());
+    priv.success = function () {};
+    priv.error = function () {};
   };
   that.retry = function (return_error) {
     priv.on_going = false;
@@ -248,6 +250,8 @@ var command = function (spec, my) {
     priv.on_going = false;
     priv.error(return_error);
     priv.end(failStatus());
+    priv.success = function () {};
+    priv.error = function () {};
   };
   that.end = function () {
     priv.end(doneStatus());
