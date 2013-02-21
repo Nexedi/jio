@@ -642,12 +642,26 @@ test ("Similar Jobs at the same time (Update)", function () {
     o.spy(o, "value", {"ok": true, "id": "file"}, "job1 ok", "f");
     o.spy(o, "value", {"ok": true, "id": "file"}, "job2 ok", "f2");
     o.spy(o, "value", {"ok": true, "id": "file"}, "job3 ok", "f3");
-    o.jio.put({"_id": "file", "content": "content"}, o.f);
-    o.jio.put({"_id": "file", "content": "content"}, o.f2);
-    o.jio.put({"_id": "file", "content": "content"}, o.f3);
+    o.jio.put({"_id": "file", "content": "content"}, o.f); // 1
+    o.jio.put({"_id": "file", "content": "content"}, o.f2); // 2
+    o.jio.put({"_id": "file", "content": "content"}, o.f3); // 3
+    deepEqual(getLastJob(o.jio.getId()).id, 1, "Check job queue");
+    console.log(JSON.parse(JSON.stringify(localStorage)));
     o.tick(o, 1000, "f");
     o.tick(o, "f2");
     o.tick(o, "f3");
+
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job4 ok", "f");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job5 ok", "f2");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job6 ok", "f3");
+    o.jio.put({"_id": "file", "content": "content"}, o.f); // 4
+    o.jio.remove({"_id": "file", "content": "content"}, o.f2); // 5
+    o.jio.put({"_id": "file", "content": "content"}, o.f3); // 6
+    deepEqual(getLastJob(o.jio.getId()).id, 5, "Check job queue");
+    o.tick(o, 1000, "f");
+    o.tick(o, "f2");
+    o.tick(o, "f3");
+
     o.jio.stop();
 
 });
@@ -659,40 +673,20 @@ test ("One document aim jobs at the same time (Wait for job(s))" , function () {
     o.jio = JIO.newJio({"type":"dummyallok"});
     o.spy(o, "value", {"ok": true, "id": "file"}, "job1", "f");
     o.spy(o, "value", {"ok": true, "id": "file"}, "job2", "f2");
-    o.spy(o, "value", {"_id": "file", "title": "get_title"}, "job3", "f3");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job3", "f3");
 
-    o.jio.post({"_id": "file", "content": "content"}, o.f);
+    o.jio.put({"_id": "file", "content": "content"}, o.f);
     o.testLastJobWaitForJob(undefined, "job1 is not waiting for someone");
 
-    o.jio.put({"_id": "file", "content": "content"}, o.f2);
+    o.jio.remove({"_id": "file", "content": "content"}, o.f2);
     o.testLastJobWaitForJob([1], "job2 is waiting");
 
-    o.jio.get({"_id": "file"}, o.f3);
+    o.jio.put({"_id": "file"}, o.f3);
     o.testLastJobWaitForJob([1, 2], "job3 is waiting");
 
     o.tick(o, 1000, "f");
     o.tick(o, "f2");
     o.tick(o, "f3");
-    o.jio.stop();
-
-});
-
-test ("One document aim jobs at the same time (Elimination)" , function () {
-
-    var o = generateTools(this);
-
-    o.jio = JIO.newJio({"type":"dummyallok"});
-    o.spy(o, "status", 10, "job1 stopped", "f");
-    o.spy(o, "value", {"ok": true, "id": "file"}, "job2", "f2");
-
-    o.jio.post({"_id": "file", "content": "content"}, o.f);
-    o.testLastJobLabel("post", "job1 exists");
-
-    o.jio.remove({"_id": "file"}, o.f2);
-    o.testLastJobLabel("remove", "job1 does not exist anymore");
-
-    o.tick(o, 1000, "f");
-    o.tick(o, "f2");
     o.jio.stop();
 
 });
