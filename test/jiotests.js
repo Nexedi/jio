@@ -634,13 +634,13 @@ test ("Several Jobs at the same time", function () {
 
 });
 
-test ("Similar Jobs at the same time (Replace)", function () {
+test ("Similar Jobs at the same time (Update)", function () {
 
     var o = generateTools(this);
 
     o.jio = JIO.newJio({"type":"dummyallok"});
-    o.spy(o, "status", 12, "job1 replaced", "f");
-    o.spy(o, "status", 12, "job2 replaced", "f2");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job1 ok", "f");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job2 ok", "f2");
     o.spy(o, "value", {"ok": true, "id": "file"}, "job3 ok", "f3");
     o.jio.put({"_id": "file", "content": "content"}, o.f);
     o.jio.put({"_id": "file", "content": "content"}, o.f2);
@@ -690,27 +690,6 @@ test ("One document aim jobs at the same time (Elimination)" , function () {
 
     o.jio.remove({"_id": "file"}, o.f2);
     o.testLastJobLabel("remove", "job1 does not exist anymore");
-
-    o.tick(o, 1000, "f");
-    o.tick(o, "f2");
-    o.jio.stop();
-
-});
-
-test ("One document aim jobs at the same time (Not Acceptable)" , function () {
-
-    var o = generateTools(this);
-
-    o.jio = JIO.newJio({"type":"dummyallok"});
-    o.spy(o, "value", {"_id": "file", "title": "get_title"}, "job1", "f");
-    o.spy(o, "status", 11, "job2 is not acceptable", "f2");
-
-    o.jio.get({"_id": "file"}, o.f);
-    o.testLastJobId(1, "job1 added to queue");
-    o.waitUntilLastJobIs("on going");
-
-    o.jio.get({"_id": "file"}, o.f2);
-    o.testLastJobId(1, "job2 not added");
 
     o.tick(o, 1000, "f");
     o.tick(o, "f2");

@@ -35,8 +35,8 @@ var command = function (spec, my) {
   priv.docid = spec.docid || priv.doc._id;
   priv.option = spec.options || {};
   priv.callbacks = spec.callbacks || {};
-  priv.success = priv.callbacks.success || function () {};
-  priv.error = priv.callbacks.error || function () {};
+  priv.success = [priv.callbacks.success || function () {}];
+  priv.error = [priv.callbacks.error || function () {}];
   priv.retry = function () {
     that.error({
       status: 13,
@@ -232,11 +232,14 @@ var command = function (spec, my) {
    */
   that.executeOn = function (storage) {};
   that.success = function (return_value) {
+    var i;
     priv.on_going = false;
-    priv.success(return_value);
+    for (i = 0; i < priv.success.length; i += 1) {
+      priv.success[i](return_value);
+    }
     priv.end(doneStatus());
-    priv.success = function () {};
-    priv.error = function () {};
+    priv.success = [];
+    priv.error = [];
   };
   that.retry = function (return_error) {
     priv.on_going = false;
@@ -247,14 +250,30 @@ var command = function (spec, my) {
     }
   };
   that.error = function (return_error) {
+    var i;
     priv.on_going = false;
-    priv.error(return_error);
+    for (i = 0; i < priv.error.length; i += 1) {
+      priv.error[i](return_error);
+    }
     priv.end(failStatus());
-    priv.success = function () {};
-    priv.error = function () {};
+    priv.success = [];
+    priv.error = [];
   };
   that.end = function () {
     priv.end(doneStatus());
+  };
+  that.addCallbacks = function (success, error) {
+    if (arguments.length > 1) {
+      priv.success.push(success || function () {});
+      priv.error.push(error || function () {});
+    } else {
+      priv.success.push(function (response) {
+        (success || function () {})(undefined, response);
+      });
+      priv.error.push(function (err) {
+        (success || function () {})(err, undefined);
+      });
+    }
   };
   that.onSuccessDo = function (fun) {
     if (fun) {

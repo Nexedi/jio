@@ -210,7 +210,7 @@ var jobRules = (function () {
 
       For more information, see documentation
     */
-  that.addActionRule('post', true, 'post', that.dontAccept);
+  that.addActionRule('post', true, 'post', that.update);
   that.addActionRule('post', true, 'put', that.wait);
   that.addActionRule('post', true, 'get', that.wait);
   that.addActionRule('post', true, 'remove', that.wait);
@@ -221,12 +221,12 @@ var jobRules = (function () {
   that.addActionRule('post', false, 'remove', that.eliminate);
   that.addActionRule('post', false, 'putAttachment', that.wait);
 
-  that.addActionRule('put', true, 'post', that.dontAccept);
+  that.addActionRule('put', true, 'post', that.update);
   that.addActionRule('put', true, 'put', that.wait);
   that.addActionRule('put', true, 'get', that.wait);
   that.addActionRule('put', true, 'remove', that.wait);
   that.addActionRule('put', true, 'putAttachment', that.wait);
-  that.addActionRule('put', false, 'post', that.dontAccept);
+  that.addActionRule('put', false, 'post', that.update);
   that.addActionRule('put', false, 'put', that.update);
   that.addActionRule('put', false, 'get', that.wait);
   that.addActionRule('put', false, 'remove', that.eliminate);
@@ -234,7 +234,7 @@ var jobRules = (function () {
 
   that.addActionRule('get', true, 'post', that.wait);
   that.addActionRule('get', true, 'put', that.wait);
-  that.addActionRule('get', true, 'get', that.dontAccept);
+  that.addActionRule('get', true, 'get', that.update);
   that.addActionRule('get', true, 'remove', that.wait);
   that.addActionRule('get', true, 'putAttachment', that.wait);
   that.addActionRule('get', false, 'post', that.wait);
@@ -244,24 +244,24 @@ var jobRules = (function () {
   that.addActionRule('get', false, 'putAttachment', that.wait);
 
   that.addActionRule('remove', true, 'post', that.wait);
-  that.addActionRule('remove', true, 'get', that.dontAccept);
-  that.addActionRule('remove', true, 'remove', that.dontAccept);
-  that.addActionRule('remove', true, 'putAttachment', that.dontAccept);
+  that.addActionRule('remove', true, 'get', that.update);
+  that.addActionRule('remove', true, 'remove', that.update);
+  that.addActionRule('remove', true, 'putAttachment', that.update);
   that.addActionRule('remove', false, 'post', that.eliminate);
-  that.addActionRule('remove', false, 'put', that.dontAccept);
-  that.addActionRule('remove', false, 'get', that.dontAccept);
+  that.addActionRule('remove', false, 'put', that.update);
+  that.addActionRule('remove', false, 'get', that.update);
   that.addActionRule('remove', false, 'remove', that.update);
-  that.addActionRule('remove', false, 'putAttachment', that.dontAccept);
+  that.addActionRule('remove', false, 'putAttachment', that.update);
 
-  that.addActionRule('allDocs', true, 'allDocs', that.dontAccept);
+  that.addActionRule('allDocs', true, 'allDocs', that.update);
   that.addActionRule('allDocs', false, 'allDocs', that.update);
 
-  that.addActionRule('putAttachment', true, 'post', that.dontAccept);
+  that.addActionRule('putAttachment', true, 'post', that.update);
   that.addActionRule('putAttachment', true, 'put', that.wait);
   that.addActionRule('putAttachment', true, 'get', that.wait);
   that.addActionRule('putAttachment', true, 'remove', that.wait);
   that.addActionRule('putAttachment', true, 'putAttachment', that.wait);
-  that.addActionRule('putAttachment', false, 'post', that.dontAccept);
+  that.addActionRule('putAttachment', false, 'post', that.update);
   that.addActionRule('putAttachment', false, 'put', that.wait);
   that.addActionRule('putAttachment', false, 'get', that.wait);
   that.addActionRule('putAttachment', false, 'remove', that.eliminate);

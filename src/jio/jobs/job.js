@@ -155,16 +155,9 @@ var job = function (spec) {
   * @param  {object} job The other job.
   */
   that.update = function (job) {
-    priv.command.error({
-      status: 12,
-      statusText: 'Replaced',
-      error: 'replaced',
-      message: 'Job has been replaced by another one.',
-      reason: 'job has been replaced by another one'
-    });
+    priv.command.addCallbacks(job.getCommand().onSuccessDo()[0],
+                              job.getCommand().onErrorDo()[0]);
     priv.date = new Date(job.getDate().getTime());
-    priv.command = job.getCommand();
-    priv.status = job.getStatus();
   };
 
   /**
