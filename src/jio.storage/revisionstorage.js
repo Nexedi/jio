@@ -941,8 +941,10 @@ jIO.addStorageType('revision', function (spec, my) {
       that.addJob(
         "get",
         priv.substorage,
-        {"_id": command.getDocId() + priv.doctree_suffix,
-         "_rev": command.getDocInfo("_rev")},
+        {
+          "_id": command.getDocId() + priv.doctree_suffix,
+          "_rev": command.getDocInfo("_rev")
+        },
         option,
         function (response) {
           doctree = response;
