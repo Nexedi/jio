@@ -360,8 +360,8 @@ var command = function (spec, my) {
   priv.docid = spec.docid || priv.doc._id;
   priv.option = spec.options || {};
   priv.callbacks = spec.callbacks || {};
-  priv.success = priv.callbacks.success || function () {};
-  priv.error = priv.callbacks.error || function () {};
+  priv.success = [priv.callbacks.success || function () {}];
+  priv.error = [priv.callbacks.error || function () {}];
   priv.retry = function () {
     that.error({
       status: 13,
@@ -557,9 +557,14 @@ var command = function (spec, my) {
    */
   that.executeOn = function (storage) {};
   that.success = function (return_value) {
+    var i;
     priv.on_going = false;
-    priv.success(return_value);
+    for (i = 0; i < priv.success.length; i += 1) {
+      priv.success[i](return_value);
+    }
     priv.end(doneStatus());
+    priv.success = [];
+    priv.error = [];
   };
   that.retry = function (return_error) {
     priv.on_going = false;
@@ -570,12 +575,30 @@ var command = function (spec, my) {
     }
   };
   that.error = function (return_error) {
+    var i;
     priv.on_going = false;
-    priv.error(return_error);
+    for (i = 0; i < priv.error.length; i += 1) {
+      priv.error[i](return_error);
+    }
     priv.end(failStatus());
+    priv.success = [];
+    priv.error = [];
   };
   that.end = function () {
     priv.end(doneStatus());
+  };
+  that.addCallbacks = function (success, error) {
+    if (arguments.length > 1) {
+      priv.success.push(success || function () {});
+      priv.error.push(error || function () {});
+    } else {
+      priv.success.push(function (response) {
+        (success || function () {})(undefined, response);
+      });
+      priv.error.push(function (err) {
+        (success || function () {})(err, undefined);
+      });
+    }
   };
   that.onSuccessDo = function (fun) {
     if (fun) {
@@ -1230,16 +1253,9 @@ var job = function (spec) {
   * @param  {object} job The other job.
   */
   that.update = function (job) {
-    priv.command.error({
-      status: 12,
-      statusText: 'Replaced',
-      error: 'replaced',
-      message: 'Job has been replaced by another one.',
-      reason: 'job has been replaced by another one'
-    });
+    priv.command.addCallbacks(job.getCommand().onSuccessDo()[0],
+                              job.getCommand().onErrorDo()[0]);
     priv.date = new Date(job.getDate().getTime());
-    priv.command = job.getCommand();
-    priv.status = job.getStatus();
   };
 
   /**
@@ -1783,7 +1799,7 @@ var jobRules = (function () {
       return 'wait';
     }
   });
-  Object.defineProperty(that, "none", {
+  Object.defineProperty(that, "ok", {
     configurable: false,
     enumerable: false,
     writable: false,
@@ -1791,18 +1807,65 @@ var jobRules = (function () {
       return 'none';
     }
   });
-  that.default_action = that.none;
+  that.default_action = that.ok;
   that.default_compare = function (job1, job2) {
-    return (job1.getCommand().getDocId() === job2.getCommand().getDocId() &&
-            job1.getCommand().getAttachmentId() ===
-            job2.getCommand().getAttachmentId() &&
-            job1.getCommand().getDocInfo('_rev') ===
-            job2.getCommand().getDocInfo('_rev') &&
-            job1.getCommand().getOption('rev') ===
-            job2.getCommand().getOption('rev') &&
-            JSON.stringify(job1.getStorage().serialized()) ===
-            JSON.stringify(job2.getStorage().serialized()));
+    return job1.getId() !== job2.getId() &&
+      job1.getStatus().getLabel() !== "done" &&
+      job1.getStatus().getLabel() !== "fail" &&
+      JSON.stringify(job1.getStorage().serialized()) ===
+      JSON.stringify(job2.getStorage().serialized());
   };
+
+  // Compare Functions //
+
+  Object.defineProperty(that, "sameDocumentId", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: function (job1, job2) {
+      return job1.getCommand().getDocId() === job2.getCommand().getDocId();
+    }
+  });
+
+  Object.defineProperty(that, "sameRevision", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: function (job1, job2) {
+      return job1.getCommand().getDocInfo("_rev") ===
+        job2.getCommand().getDocInfo("_rev");
+    }
+  });
+
+  Object.defineProperty(that, "sameAttachmentId", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: function (job1, job2) {
+      return job1.getCommand().getAttachmentId() ===
+        job2.getCommand().getAttachmentId();
+    }
+  });
+
+  Object.defineProperty(that, "sameDocument", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: function (job1, job2) {
+      return JSON.stringify(job1.getCommand().cloneDoc()) ===
+        JSON.stringify(job2.getCommand().cloneDoc());
+    }
+  });
+
+  Object.defineProperty(that, "sameOption", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: function (job1, job2) {
+      return JSON.stringify(job1.getCommand().cloneOption()) ===
+        JSON.stringify(job2.getCommand().cloneOption());
+    }
+  });
 
   // Methods //
   /**
@@ -1813,16 +1876,28 @@ var jobRules = (function () {
    * @return {string} An action string.
    */
   priv.getAction = function (job1, job2) {
-    var j1label, j2label, j1status;
-    j1label = job1.getCommand().getLabel();
-    j2label = job2.getCommand().getLabel();
-    j1status = (job1.getStatus().getLabel() === 'on going' ?
-        'on going' : 'not on going');
-    if (priv.action[j1label] && priv.action[j1label][j1status] &&
-        priv.action[j1label][j1status][j2label]) {
-      return priv.action[j1label][j1status][j2label](job1, job2);
+    var method1, method2, tmp = priv.action, i, j, condition_list = [], res;
+    method1 = job1.getCommand().getLabel();
+    method2 = job2.getCommand().getLabel();
+    tmp = tmp[method1] = tmp[method1] || {};
+    tmp = tmp[method2] = tmp[method2] || [];
+    for (i = 0; i < tmp.length; i += 1) {
+      // browsing all method1 method2 rules
+      condition_list = tmp[i].condition_list;
+      res = true;
+      for (j = 0; j < condition_list.length; j += 1) {
+        // test all the rule's conditions
+        if (!condition_list[j](job1, job2)) {
+          res = false;
+          break;
+        }
+      }
+      if (res) {
+        // if all respects condition list, then action
+        return tmp[i].rule();
+      }
     }
-    return that.default_action(job1, job2);
+    return that.default_action();
   };
 
   /**
@@ -1833,10 +1908,11 @@ var jobRules = (function () {
    * @return {boolean} true if comparable, else false.
    */
   priv.canCompare = function (job1, job2) {
-    var job1label = job1.getCommand().getLabel(),
-      job2label = job2.getCommand().getLabel();
-    if (priv.compare[job1label] && priv.compare[job2label]) {
-      return priv.compare[job1label][job2label](job1, job2);
+    var method1, method2;
+    method1 = job1.getCommand().getLabel();
+    method2 = job2.getCommand().getLabel();
+    if (priv.compare[method1] && priv.compare[method1][method2]) {
+      return priv.compare[method1][method2](job1, job2);
     }
     return that.default_compare(job1, job2);
   };
@@ -1878,11 +1954,14 @@ var jobRules = (function () {
     configurable: false,
     enumerable: false,
     writable: false,
-    value: function (method1, ongoing, method2, rule) {
-      var ongoing_s = (ongoing ? 'on going' : 'not on going');
-      priv.action[method1] = priv.action[method1] || {};
-      priv.action[method1][ongoing_s] = priv.action[method1][ongoing_s] || {};
-      priv.action[method1][ongoing_s][method2] = rule;
+    value: function (method1, method2, condition_list, rule) {
+      var tmp = priv.action;
+      tmp = tmp[method1] = tmp[method1] || {};
+      tmp = tmp[method2] = tmp[method2] || [];
+      tmp.push({
+        "condition_list": condition_list,
+        "rule": rule
+      });
     }
   });
 
@@ -1906,112 +1985,86 @@ var jobRules = (function () {
 
   ////////////////////////////////////////////////////////////////////////////
   // Adding some rules
+
   /*
-      LEGEND:
-      - s: storage
-      - m: method
-      - n: name
-      - c: content
-      - o: options
-      - =: are equal
-      - !: are not equal
+    Rules
+    original job |job to add |condition                                |action
 
-      select ALL        s= n=
-      removefailordone  fail|done
-      /                           elim repl nacc wait
-      Remove     !ongoing  Save    1    x    x    x
-      Save       !ongoing  Remove  1    x    x    x
-      GetList    !ongoing  GetList 0    1    x    x
-      Remove     !ongoing  Remove  0    1    x    x
-      Load       !ongoing  Load    0    1    x    x
-      Save c=    !ongoing  Save    0    1    x    x
-      Save c!    !ongoing  Save    0    1    x    x
-      GetList     ongoing  GetList 0    0    1    x
-      Remove      ongoing  Remove  0    0    1    x
-      Remove      ongoing  Load    0    0    1    x
-      Remove     !ongoing  Load    0    0    1    x
-      Load        ongoing  Load    0    0    1    x
-      Save c=     ongoing  Save    0    0    1    x
-      Remove      ongoing  Save    0    0    0    1
-      Load        ongoing  Remove  0    0    0    1
-      Load        ongoing  Save    0    0    0    1
-      Load       !ongoing  Remove  0    0    0    1
-      Load       !ongoing  Save    0    0    0    1
-      Save        ongoing  Remove  0    0    0    1
-      Save        ongoing  Load    0    0    0    1
-      Save c!     ongoing  Save    0    0    0    1
-      Save       !ongoing  Load    0    0    0    1
-      GetList     ongoing  Remove  0    0    0    0
-      GetList     ongoing  Load    0    0    0    0
-      GetList     ongoing  Save    0    0    0    0
-      GetList    !ongoing  Remove  0    0    0    0
-      GetList    !ongoing  Load    0    0    0    0
-      GetList    !ongoing  Save    0    0    0    0
-      Remove      ongoing  GetList 0    0    0    0
-      Remove     !ongoing  GetList 0    0    0    0
-      Load        ongoing  GetList 0    0    0    0
-      Load       !ongoing  GetList 0    0    0    0
-      Save        ongoing  GetList 0    0    0    0
-      Save       !ongoing  GetList 0    0    0    0
+    post          post        same doc                                  update
+      "             "         same docid, same rev                      wait
+      "           put         same doc                                  update
+      "             "         same docid, same rev                      wait
+      "           putA                  "                               wait
+      "           remove                "                                 "
+    put           post        same doc                                  update
+      "             "         same docid, same rev                      wait
+      "           put         same doc                                  update
+      "             "         same docid, same rev                      wait
+      "           putA                  "                                 "
+      "           remove                "                                 "
+    putA          post        same docid, same rev                      wait
+      "           put                   "                                 "
+      "           putA        same doc                                  update
+      "             "         same docid, same rev, same attmt          wait
+      "           remove      same docid, same rev                        "
+    remove        post        same docid, same rev                      wait
+      "           put                   "                                 "
+      "           putA                  "                                 "
+      "           remove                "                               update
+    get           get         same doc, same options                    update
+    allDocs       allDocs     same doc, same options                    update
+   */
 
-      For more information, see documentation
-    */
-  that.addActionRule('post', true, 'post', that.dontAccept);
-  that.addActionRule('post', true, 'put', that.wait);
-  that.addActionRule('post', true, 'get', that.wait);
-  that.addActionRule('post', true, 'remove', that.wait);
-  that.addActionRule('post', true, 'putAttachment', that.wait);
-  that.addActionRule('post', false, 'post', that.update);
-  that.addActionRule('post', false, 'put', that.wait);
-  that.addActionRule('post', false, 'get', that.wait);
-  that.addActionRule('post', false, 'remove', that.eliminate);
-  that.addActionRule('post', false, 'putAttachment', that.wait);
+  that.addActionRule("post", "post", [that.sameDocument], that.update);
+  that.addActionRule("post", "post",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("post", "put", [that.sameDocument], that.update);
+  that.addActionRule("post", "put",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("post", "putAttachment",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("post", "remove",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
 
-  that.addActionRule('put', true, 'post', that.dontAccept);
-  that.addActionRule('put', true, 'put', that.wait);
-  that.addActionRule('put', true, 'get', that.wait);
-  that.addActionRule('put', true, 'remove', that.wait);
-  that.addActionRule('put', true, 'putAttachment', that.wait);
-  that.addActionRule('put', false, 'post', that.dontAccept);
-  that.addActionRule('put', false, 'put', that.update);
-  that.addActionRule('put', false, 'get', that.wait);
-  that.addActionRule('put', false, 'remove', that.eliminate);
-  that.addActionRule('put', false, 'putAttachment', that.wait);
+  that.addActionRule("put", "post", [that.sameDocument], that.update);
+  that.addActionRule("put", "post",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("put", "put", [that.sameDocument], that.update);
+  that.addActionRule("put", "put",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("put", "putAttachment",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("put", "remove",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
 
-  that.addActionRule('get', true, 'post', that.wait);
-  that.addActionRule('get', true, 'put', that.wait);
-  that.addActionRule('get', true, 'get', that.dontAccept);
-  that.addActionRule('get', true, 'remove', that.wait);
-  that.addActionRule('get', true, 'putAttachment', that.wait);
-  that.addActionRule('get', false, 'post', that.wait);
-  that.addActionRule('get', false, 'put', that.wait);
-  that.addActionRule('get', false, 'get', that.update);
-  that.addActionRule('get', false, 'remove', that.wait);
-  that.addActionRule('get', false, 'putAttachment', that.wait);
+  that.addActionRule("putAttachment", "post",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("putAttachment", "put",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("putAttachment", "putAttachment", [that.sameDocument],
+                     that.update);
+  that.addActionRule("putAttachment", "putAttachment", [
+    that.sameDocumentId,
+    that.sameRevision,
+    that.sameAttachmentId
+  ], that.wait);
+  that.addActionRule("putAttachment", "remove",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
 
-  that.addActionRule('remove', true, 'post', that.wait);
-  that.addActionRule('remove', true, 'get', that.dontAccept);
-  that.addActionRule('remove', true, 'remove', that.dontAccept);
-  that.addActionRule('remove', true, 'putAttachment', that.dontAccept);
-  that.addActionRule('remove', false, 'post', that.eliminate);
-  that.addActionRule('remove', false, 'put', that.dontAccept);
-  that.addActionRule('remove', false, 'get', that.dontAccept);
-  that.addActionRule('remove', false, 'remove', that.update);
-  that.addActionRule('remove', false, 'putAttachment', that.dontAccept);
+  that.addActionRule("remove", "post",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("remove", "put",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("remove", "putAttachment",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("remove", "remove",
+                     [that.sameDocumentId, that.sameRevision], that.update);
 
-  that.addActionRule('allDocs', true, 'allDocs', that.dontAccept);
-  that.addActionRule('allDocs', false, 'allDocs', that.update);
+  that.addActionRule("get", "get",
+                     [that.sameDocument, that.sameOption], that.update);
+  that.addActionRule("allDocs", "allDocs",
+                     [that.sameDocument, that.sameOption], that.update);
 
-  that.addActionRule('putAttachment', true, 'post', that.dontAccept);
-  that.addActionRule('putAttachment', true, 'put', that.wait);
-  that.addActionRule('putAttachment', true, 'get', that.wait);
-  that.addActionRule('putAttachment', true, 'remove', that.wait);
-  that.addActionRule('putAttachment', true, 'putAttachment', that.wait);
-  that.addActionRule('putAttachment', false, 'post', that.dontAccept);
-  that.addActionRule('putAttachment', false, 'put', that.wait);
-  that.addActionRule('putAttachment', false, 'get', that.wait);
-  that.addActionRule('putAttachment', false, 'remove', that.eliminate);
-  that.addActionRule('putAttachment', false, 'putAttachment', that.update);
   // end adding rules
   ////////////////////////////////////////////////////////////////////////////
   return that;
