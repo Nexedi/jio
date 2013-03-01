@@ -34,9 +34,14 @@ clone = function (obj) {
 // generates a revision hash from document metadata, revision history
 // and the deleted_flag
 generateRevisionHash = function (doc, revisions, deleted_flag) {
-    var string = JSON.stringify(doc) + JSON.stringify(revisions) +
-        JSON.stringify(deleted_flag? true: false);
-    return hex_sha256(string);
+  var string;
+  doc = clone(doc);
+  delete doc._rev;
+  delete doc._revs;
+  delete doc._revs_info;
+  string = JSON.stringify(doc) + JSON.stringify(revisions) +
+    JSON.stringify(deleted_flag? true: false);
+  return hex_sha256(string);
 },
 // localStorage wrapper
 localstorage = {
@@ -1264,7 +1269,8 @@ test ("Post", function(){
     o.doc = {"_id": "post1", "_rev": o.rev, "title": "myPost2"};
     o.revisions = {"start": 1, "ids": [o.rev.split('-')[1]]};
     o.rev = "2-"+generateRevisionHash(o.doc, o.revisions);
-    o.spy (o, "status", undefined, "Post + revision");
+    o.spy (o, "value", {"ok": true, "id": "post1", "rev": o.rev},
+           "Post + revision");
     o.jio.post(o.doc, o.f);
     o.tick(o);
 
@@ -1293,8 +1299,92 @@ test ("Post", function(){
         "Check document tree"
     );
 
-    o.jio.stop();
+    // add attachment
+    o.doc._attachments = {
+      "attachment_test": {
+        "length": 35,
+        "digest": "A",
+        "content_type": "oh/yeah"
+      }
+    };
+    localstorage.setItem(o.localpath + "/post1." + o.rev, o.doc);
+    localstorage.setItem(o.localpath + "/post1." + o.rev + "/attachment_test",
+                         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
+    // post + attachment copy
+    o.doc = {"_id": "post1", "_rev": o.rev, "title": "myPost2"};
+    o.revisions = {
+      "start": 2,
+      "ids": [o.rev.split('-')[1], o.revisions.ids[0]]
+    };
+    o.rev = "3-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {"ok": true, "id": "post1", "rev": o.rev},
+           "Post + attachment copy");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // check attachment
+    deepEqual(
+      localstorage.getItem(o.localpath + "/post1." + o.rev +
+                           "/attachment_test"),
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "Check Attachment"
+    );
+
+    // check document tree
+    o.doc_tree._id = "post1.revision_tree.json";
+    o.doc_tree.children[0].children[0].children.unshift({
+      "rev": o.rev, "status": "available", "children": []
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/post1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    // post + wrong revision
+    o.doc = {"_id": "post1", "_rev": "3-wr3", "title": "myPost3"};
+    o.revisions = {"start": 3, "ids": ["wr3"]};
+    o.rev = "4-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy(o, "value", {"id": "post1", "ok": true, "rev": o.rev},
+          "Postt + wrong revision");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem(o.localpath + "/post1.3-wr3"),
+        null,
+        "Check document"
+    );
+
+    // check document
+    o.doc._id = "post1." + o.rev;
+    delete o.doc._rev;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/post1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree._id = "post1.revision_tree.json";
+    o.doc_tree.children.unshift({
+      "rev": "3-wr3", "status": "missing", "children": [{
+        "rev": o.rev, "status": "available", "children": []
+      }]
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/post1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    o.jio.stop();
 });
 
 test ("Put", function(){
@@ -1562,7 +1652,7 @@ test("Put Attachment", function () {
 
     // putAttachment without document
     o.revisions = {"start": 0, "ids": []}
-    o.rev_hash = generateRevisionHash({"_id": "doc1/attmt1"},
+    o.rev_hash = generateRevisionHash({"_id": "doc1", "_attachment": "attmt1"},
                                       o.revisions);
     o.rev = "1-" + o.rev_hash;
     o.spy(o, "value", {"ok": true, "id": "doc1/attmt1", "rev": o.rev},
@@ -1601,9 +1691,9 @@ test("Put Attachment", function () {
     o.prev_rev = o.rev;
     o.revisions = {"start": 1, "ids": [o.rev_hash]}
     o.rev_hash = generateRevisionHash({
-      "_id": "doc1/attmt1",
+      "_id": "doc1",
       "_data": "abc",
-      "_rev": o.prev_rev
+      "_attachment": "attmt1",
     }, o.revisions);
     o.rev = "2-" + o.rev_hash;
     o.spy(o, "value", {"ok": true, "id": "doc1/attmt1", "rev": o.rev},
@@ -1646,9 +1736,9 @@ test("Put Attachment", function () {
     o.prev_rev = o.rev;
     o.revisions = {"start": 2, "ids": [o.rev_hash, o.revisions.ids[0]]}
     o.rev_hash = generateRevisionHash({
-      "_id": "doc1/attmt2",
+      "_id": "doc1",
       "_data": "def",
-      "_rev": o.prev_rev
+      "_attachment": "attmt2",
     }, o.revisions);
     o.rev = "3-" + o.rev_hash;
     o.spy(o, "value", {"ok": true, "id": "doc1/attmt2", "rev": o.rev},
@@ -1723,15 +1813,16 @@ test ("Get", function(){
     o.doctree = {"children":[{
         "rev": "1-rev1", "status": "available", "children": []
     }]};
-    o.doc_myget1 = {"_id": "get1", "title": "myGet1"};
+    o.doc_myget1 = {"_id": "get1.1-rev1", "title": "myGet1"};
     localstorage.setItem(o.localpath+"/get1.revision_tree.json", o.doctree);
     localstorage.setItem(o.localpath+"/get1.1-rev1", o.doc_myget1);
 
     // get document
     o.doc_myget1_cloned = clone(o.doc_myget1);
-    o.doc_myget1_cloned["_rev"] = "1-rev1";
-    o.doc_myget1_cloned["_revisions"] = {"start": 1, "ids": ["rev1"]};
-    o.doc_myget1_cloned["_revs_info"] = [{
+    o.doc_myget1_cloned._id = "get1";
+    o.doc_myget1_cloned._rev = "1-rev1";
+    o.doc_myget1_cloned._revisions = {"start": 1, "ids": ["rev1"]};
+    o.doc_myget1_cloned._revs_info = [{
         "rev": "1-rev1", "status": "available"
     }];
     o.spy(o, "value", o.doc_myget1_cloned, "Get document (winner)");
@@ -1748,14 +1839,15 @@ test ("Get", function(){
             "rev": "2-rev3", "status": "available", "children": []
         }]
     }]};
-    o.doc_myget2 = {"_id": "get1", "title": "myGet2"};
-    o.doc_myget3 = {"_id": "get1", "title": "myGet3"};
+    o.doc_myget2 = {"_id": "get1.1-rev2", "title": "myGet2"};
+    o.doc_myget3 = {"_id": "get1.2-rev3", "title": "myGet3"};
     localstorage.setItem(o.localpath+"/get1.revision_tree.json", o.doctree);
     localstorage.setItem(o.localpath+"/get1.1-rev2", o.doc_myget2);
     localstorage.setItem(o.localpath+"/get1.2-rev3", o.doc_myget3);
 
     // get document
     o.doc_myget3_cloned = clone(o.doc_myget3);
+    o.doc_myget3_cloned._id = "get1";
     o.doc_myget3_cloned["_rev"] = "2-rev3";
     o.doc_myget3_cloned["_revisions"] = {"start": 2, "ids": ["rev3","rev2"]};
     o.doc_myget3_cloned["_revs_info"] = [{
@@ -1780,6 +1872,7 @@ test ("Get", function(){
 
     // get specific document
     o.doc_myget2_cloned = clone(o.doc_myget2);
+    o.doc_myget2_cloned._id = "get1";
     o.doc_myget2_cloned["_rev"] = "1-rev2";
     o.doc_myget2_cloned["_revisions"] = {"start": 1, "ids": ["rev2"]};
     o.doc_myget2_cloned["_revs_info"] = [{
@@ -1793,18 +1886,16 @@ test ("Get", function(){
     o.tick(o);
 
     // adding an attachment
-    o.attmt_myget2 = {
+    o.attmt_myget3 = {
         "get2": {
             "length": 3,
             "digest": "md5-dontcare",
-            "revpos": 1
+            "content_type": "oh/yeah"
         }
     };
-    o.doc_myget2["_attachments"] = o.attmt_myget2;
-    o.doc_myget3["_attachments"] = o.attmt_myget2;
-    localstorage.setItem(o.localpath+"/get1.1-rev2", o.doc_myget2);
+    o.doc_myget3._attachments = o.attmt_myget3;
     localstorage.setItem(o.localpath+"/get1.2-rev3", o.doc_myget3);
-    localstorage.setItem(o.localpath+"/get1.1-rev2/get2", "abc");
+    localstorage.setItem(o.localpath+"/get1.2-rev3/get2", "abc");
 
     // get attachment winner
     o.spy(o, "value", "abc", "Get attachment (winner)");
@@ -1820,13 +1911,13 @@ test ("Get", function(){
 
     // get attachment specific rev
     o.spy(o, "value", "abc", "Get attachment (specific revision)");
-    o.jio.get({"_id": "get1/get2", "_rev": "1-rev2"}, {
+    o.jio.get({"_id": "get1/get2", "_rev": "2-rev3"}, {
         "revs_info": true, "revs": true, "conflicts": true,
     }, o.f);
     o.tick(o);
 
     // get document with attachment (specific revision)
-    o.doc_myget2_cloned["_attachments"] = o.attmt_myget2;
+    delete o.doc_myget2_cloned._attachments;
     o.spy(o, "value", o.doc_myget2_cloned,
           "Get document which have an attachment (specific revision)");
     o.jio.get({"_id": "get1", "_rev": "1-rev2"}, {
@@ -1835,7 +1926,7 @@ test ("Get", function(){
     o.tick(o);
 
     // get document with attachment (winner)
-    o.doc_myget3_cloned["_attachments"] = o.attmt_myget2;
+    o.doc_myget3_cloned._attachments = o.attmt_myget3;
     o.spy(o, "value", o.doc_myget3_cloned,
           "Get document which have an attachment (winner)");
     o.jio.get({"_id": "get1"},
@@ -1862,188 +1953,135 @@ test ("Remove", function(){
     o.localpath = "jio/localstorage/urevrem/arevrem";
 
     // 1. remove document without revision
-    o.spy (o, "status", 404,
-           "Remove document (no doctree, no revision)");
+    o.spy(o, "status", 409, "Remove document without revision " +
+          "-> 409 Conflict");
     o.jio.remove({"_id":"remove1"}, o.f);
     o.tick(o);
 
     // 2. remove attachment without revision
-    o.spy (o, "status", 404,
-           "Remove attachment (no doctree, no revision)");
+    o.spy(o, "status", 409, "Remove attachment without revision " +
+          "-> 409 Conflict");
     o.jio.remove({"_id":"remove1/remove2"}, o.f);
     o.tick(o);
 
-    // adding two documents
-    o.doc_myremove1 = {"_id": "remove1", "title": "myRemove1"};
-    o.doc_myremove2 = {"_id": "remove1", "title": "myRemove2"};
-
-    o.very_old_rev = "1-veryoldrev";
-
-    localstorage.setItem(o.localpath+"/remove1."+o.very_old_rev,
-                         o.doc_myremove1);
-    localstorage.setItem(o.localpath+"/remove1.1-rev2", o.doc_myremove1);
-
-    // add attachment
-    o.attmt_myremove1 = {
-        "remove2": {
-            "length": 3,
-            "digest": "md5-dontcare",
-            "revpos":1
-        },
+    // adding a document with attachments
+    o.doc_myremove1 = {
+      "_id": "remove1.1-veryoldrev",
+      "title": "myRemove1"
     };
-    o.doc_myremove1 = {"_id": "remove1", "title": "myRemove1",
-                       "_attachments":o.attmt_myremove1};
-    o.revisions = {"start":1,"ids":[o.very_old_rev.split('-'),[1]]}
-    o.old_rev = "2-"+generateRevisionHash(o.doc_myremove1, o.revisions);
 
-    localstorage.setItem(o.localpath+"/remove1."+o.old_rev, o.doc_myremove1);
-    localstorage.setItem(o.localpath+"/remove1."+o.old_rev+"/remove2", "xyz");
+    localstorage.setItem(o.localpath + "/remove1.1-veryoldrev",
+                         o.doc_myremove1);
 
-    o.doctree = {"children":[{
-        "rev": o.very_old_rev, "status": "available", "children": [{
-            "rev": o.old_rev, "status": "available", "children": []
+    o.doc_myremove1._id = "remove1.2-oldrev";
+    o.attachment_remove2 = {
+        "length": 3,
+        "digest": "md5-dontcare",
+        "content_type": "oh/yeah"
+    }
+    o.attachment_remove3 = {
+        "length": 5,
+        "digest": "md5-865f5cc7fbd7854902eae9d8211f178a",
+        "content_type": "he/ho"
+    }
+    o.doc_myremove1._attachments = {
+      "remove2": o.attachment_remove2,
+      "remove3": o.attachment_remove3
+    };
+
+    localstorage.setItem(o.localpath + "/remove1.2-oldrev",
+                         o.doc_myremove1);
+    localstorage.setItem(o.localpath + "/remove1.2-oldrev/remove2", "abc");
+    localstorage.setItem(o.localpath + "/remove1.2-oldrev/remove3", "defgh");
+
+    // add document tree
+    o.doctree = {
+      "children": [{
+        "rev": "1-veryoldrev", "status": "available", "children": [{
+          "rev": "2-oldrev", "status": "available", "children": []
         }]
-    },{
-        "rev": "1-rev2", "status": "available", "children": []
-    }]};
-    localstorage.setItem(o.localpath+"/remove1.revision_tree.json", o.doctree);
+      }]
+    };
+    localstorage.setItem(o.localpath + "/remove1.revision_tree.json",
+                         o.doctree);
 
-    // 3. remove non existing attachment with revision
-    o.spy(o, "status", 404,
-          "Remove NON-existing attachment (revision)");
-    o.jio.remove({"_id":"remove1.1-rev2/remove0","_rev":o.old_rev}, o.f);
+    // 3. remove inexistent attachment
+    o.spy(o, "status", 404, "Remove inexistent attachment -> 404 Not Found");
+    o.jio.remove({"_id": "remove1/remove0", "_rev": "2-oldrev"}, o.f);
     o.tick(o);
 
-    o.revisions = {"start": 2, "ids":[
-        o.old_rev.split('-')[1], o.very_old_rev.split('-')[1]
-    ]};
-    o.doc_myremove1 = {"_id":"remove1/remove2","_rev":o.old_rev};
-    o.rev = "3-"+generateRevisionHash(o.doc_myremove1, o.revisions);
-
-    // 4. remove existing attachment with revision
-    o.spy (o, "value", {"ok": true, "id": "remove1."+o.rev, "rev": o.rev},
-           "Remove existing attachment (revision)");
-    o.jio.remove({"_id":"remove1/remove2","_rev":o.old_rev}, o.f);
+    // 4. remove existing attachment
+    o.rev_hash = generateRevisionHash({
+      "_id": "remove1",
+      "_attachment": "remove2",
+    }, {"start": 2, "ids": ["oldrev", "veryoldrev"]});
+    o.spy (o, "value",
+           {"ok": true, "id": "remove1/remove2", "rev": "3-" + o.rev_hash},
+           "Remove existing attachment");
+    o.jio.remove({"_id":"remove1/remove2", "_rev": "2-oldrev"}, o.f);
     o.tick(o);
 
-    o.testtree = {"children":[{
-        "rev": o.very_old_rev, "status": "available", "children": [{
-            "rev": o.old_rev, "status": "available", "children": [{
-                "rev": o.rev, "status": "available", "children": []
-            }]
+    o.doctree = {
+      "children":[{
+        "rev": "1-veryoldrev", "status": "available", "children": [{
+          "rev": "2-oldrev", "status": "available", "children": [{
+            "rev": "3-" + o.rev_hash, "status": "available", "children": []
+          }]
         }]
-    },{
-        "rev": "1-rev2", "status": "available", "children": []
-    }]};
+      }]
+    };
 
     // 5. check if document tree has been updated correctly
     deepEqual(localstorage.getItem(
-        "jio/localstorage/urevrem/arevrem/remove1.revision_tree.json"
-    ),o.testtree, "Check document tree");
+      o.localpath + "/remove1.revision_tree.json"
+    ), o.doctree, "Check document tree");
 
-    // 6. check if attachment has been removed
+    // 6. check if the attachment still exists
     deepEqual(localstorage.getItem(
-        "jio/localstorage/urevrem/arevrem/remove1."+o.rev+"/remove2"
-    ), null, "Check attachment");
+      o.localpath + "/remove1.2-oldrev/remove2"
+    ), "abc", "Check attachment -> still exists");
 
     // 7. check if document is updated
     deepEqual(localstorage.getItem(
-        "jio/localstorage/urevrem/arevrem/remove1."+o.rev
-    ), {"_id": "remove1."+o.rev, "title":"myRemove1"}, "Check document");
+        o.localpath + "/remove1.3-" + o.rev_hash
+    ), {
+      "_id": "remove1.3-" + o.rev_hash,
+      "title":"myRemove1",
+      "_attachments": {"remove3": o.attachment_remove3}
+    }, "Check document");
 
-    // add another attachment
-    o.attmt_myremove2 = {
-        "remove3": {
-            "length": 3,
-            "digest": "md5-hello123"
-        },
-        "revpos":1
-    };
-    o.doc_myremove2 = {"_id": "remove1", "title": "myRemove2",
-                       "_attachments":o.attmt_myremove2};
-    o.revisions = {"start":1,"ids":["rev2"] };
-    o.second_old_rev = "2-"+generateRevisionHash(o.doc_myremove2, o.revisions);
-
-    localstorage.setItem(o.localpath+"/remove1."+o.second_old_rev,
-                         o.doc_myremove2);
-    localstorage.setItem(o.localpath+"/remove1."+o.second_old_rev+"/remove3",
-                         "stu");
-
-    o.doctree = {"children":[{
-        "rev": o.very_old_rev, "status": "available", "children": [{
-            "rev": o.old_rev, "status": "available", "children": [{
-                "rev": o.rev, "status": "available", "children":[]
-            }]
-        }]
-    },{
-        "rev": "1-rev2", "status": "available", "children": [{
-            "rev": o.second_old_rev, "status": "available", "children":[]
-        }]
-    }]};
-    localstorage.setItem(o.localpath+"/remove1.revision_tree.json", o.doctree);
-
-    // 8. remove non existing attachment without revision
-    o.spy (o,"status", 409,
-           "409 - Removing non-existing-attachment (no revision)");
-    o.jio.remove({"_id":"remove1/remove0"}, o.f);
+    // 8. remove document with wrong revision
+    o.spy(o, "status", 409, "Remove document with wrong revision " +
+          "-> 409 Conflict");
+    o.jio.remove({"_id":"remove1", "_rev": "1-a"}, o.f);
     o.tick(o);
 
-    o.revisions = {"start":2,"ids":[o.second_old_rev.split('-')[1],"rev2"]};
-    o.doc_myremove3 = {"_id":"remove1/remove3","_rev":o.second_old_rev};
-    o.second_rev = "3-"+generateRevisionHash(o.doc_myremove3, o.revisions);
-
-    // 9. remove existing attachment without revision
-    o.spy (o,"status", 409, "409 - Removing existing attachment (no revision)");
-    o.jio.remove({"_id":"remove1/remove3"}, o.f);
+    // 9. remove attachment wrong revision
+    o.spy(o, "status", 409, "Remove attachment with wrong revision " +
+          "-> 409 Conflict");
+    o.jio.remove({"_id":"remove1/remove2", "_rev": "1-a"}, o.f);
     o.tick(o);
 
-    // 10. remove wrong revision
-    o.spy (o,"status", 409, "409 - Removing document (false revision)");
-    o.jio.remove({"_id":"remove1","_rev":"1-rev2"}, o.f);
+    // 10. remove document
+    o.last_rev = "3-" + o.rev_hash;
+    o.rev_hash = generateRevisionHash(
+      {"_id": "remove1"},
+      {"start": 3, "ids": [o.rev_hash, "oldrev", "veryoldrev"]},
+      true
+    );
+    o.spy(o, "value", {"ok": true, "id": "remove1", "rev": "4-" + o.rev_hash},
+          "Remove document");
+    o.jio.remove({"_id":"remove1", "_rev": o.last_rev}, o.f);
     o.tick(o);
 
-    o.revisions = {"start": 3, "ids":[
-        o.rev.split('-')[1],
-        o.old_rev.split('-')[1],o.very_old_rev.split('-')[1]
-    ]};
-    o.doc_myremove4 = {"_id":"remove1","_rev":o.rev};
-    o.second_new_rev = "4-"+
-        generateRevisionHash(o.doc_myremove4, o.revisions, true);
-
-    // 11. remove document version with revision
-    o.spy (o, "value", {"ok": true, "id": "remove1", "rev":
-        o.second_new_rev},
-           "Remove document (with revision)");
-    o.jio.remove({"_id":"remove1", "_rev":o.rev}, o.f);
-    o.tick(o);
-
-    o.testtree["children"][0]["children"][0]["children"][0]["children"].push({
-        "rev": o.second_new_rev,
-        "status": "deleted",
-        "children": []
+    // 11. check document tree
+    o.doctree.children[0].children[0].children[0].children.unshift({
+      "rev": "4-" + o.rev_hash,
+      "status": "deleted",
+      "children": []
     });
-    o.testtree["children"][1]["children"].push({
-        "rev":o.second_old_rev,
-        "status":"available",
-        "children":[]
-    });
-
-    deepEqual(localstorage.getItem(
-        "jio/localstorage/urevrem/arevrem/remove1.revision_tree.json"
-    ), o.testtree, "Check document tree");
-
-    deepEqual(localstorage.getItem(
-        "jio/localstorage/urevrem/arevrem/remove1."+o.second_new_rev+"/remove2"
-    ), null, "Check attachment");
-
-    deepEqual(localstorage.getItem(
-        "jio/localstorage/urevrem/arevrem/remove1."+o.second_new_rev
-    ), null, "Check document");
-
-    // remove document without revision
-    o.spy (o,"status", 409, "409 - Removing document (no revision)");
-    o.jio.remove({"_id":"remove1"}, o.f);
-    o.tick(o);
+    deepEqual(localstorage.getItem(o.localpath + "/remove1.revision_tree.json"),
+              o.doctree, "Check document tree");
 
     o.jio.stop();
 });
@@ -2196,9 +2234,7 @@ test ("Scenario", function(){
 
 module ("JIO Replicate Revision Storage");
 
-  var testReplicateRevisionStorageGenerator = function (
-    sinon, jio_description, document_name_have_revision
-  ) {
+  var testReplicateRevisionStorage = function (sinon, jio_description) {
 
     var o = generateTools(sinon), leavesAction, generateLocalPath;
 
@@ -2285,223 +2321,223 @@ module ("JIO Replicate Revision Storage");
     }, o.f);
     o.tick(o);
 
-    // post a new document with id
-    o.doc = {"_id": "doc1", "title": "post new doc with id"};
-    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
-          "Post document (with id)");
-    o.jio.post(o.doc, o.f);
-    o.tick(o);
+    // // post a new document with id
+    // o.doc = {"_id": "doc1", "title": "post new doc with id"};
+    // o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
+    //       "Post document (with id)");
+    // o.jio.post(o.doc, o.f);
+    // o.tick(o);
 
-    //  /
-    //  |
-    // 1-1
+    // //  /
+    // //  |
+    // // 1-1
 
-    // check document
-    o.local_rev_hash = generateRevisionHash(o.doc, o.revision);
-    o.local_rev = "1-" + o.local_rev_hash;
-    o.specific_rev_hash = o.local_rev_hash;
-    o.specific_rev = o.local_rev;
-    o.leavesAction(function (storage_description, param) {
-      var suffix = "", doc = clone(o.doc);
-      if (param.revision) {
-        doc._id += "." + o.local_rev;
-        suffix = "." + o.local_rev;
-      }
-      deepEqual(
-        localstorage.getItem(generateLocalPath(storage_description) +
-                             "/doc1" + suffix),
-        doc, "Check document"
-      );
-    });
+    // // check document
+    // o.local_rev_hash = generateRevisionHash(o.doc, o.revision);
+    // o.local_rev = "1-" + o.local_rev_hash;
+    // o.specific_rev_hash = o.local_rev_hash;
+    // o.specific_rev = o.local_rev;
+    // o.leavesAction(function (storage_description, param) {
+    //   var suffix = "", doc = clone(o.doc);
+    //   if (param.revision) {
+    //     doc._id += "." + o.local_rev;
+    //     suffix = "." + o.local_rev;
+    //   }
+    //   deepEqual(
+    //     localstorage.getItem(generateLocalPath(storage_description) +
+    //                          "/doc1" + suffix),
+    //     doc, "Check document"
+    //   );
+    // });
 
-    // get the post document without revision
-    o.spy(o, "value", {
-      "_id": "doc1",
-      "title": "post new doc with id",
-      "_rev": "1-1",
-      "_revisions": {"start": 1, "ids": ["1"]},
-      "_revs_info": [{"rev": "1-1", "status": "available"}]
-    }, "Get the previous document (without revision)");
-    o.jio.get({"_id": "doc1"}, {
-      "conflicts": true,
-      "revs": true,
-      "revs_info": true
-    }, o.f);
-    o.tick(o);
+    // // get the post document without revision
+    // o.spy(o, "value", {
+    //   "_id": "doc1",
+    //   "title": "post new doc with id",
+    //   "_rev": "1-1",
+    //   "_revisions": {"start": 1, "ids": ["1"]},
+    //   "_revs_info": [{"rev": "1-1", "status": "available"}]
+    // }, "Get the previous document (without revision)");
+    // o.jio.get({"_id": "doc1"}, {
+    //   "conflicts": true,
+    //   "revs": true,
+    //   "revs_info": true
+    // }, o.f);
+    // o.tick(o);
 
-    // post same document without revision
-    o.doc = {"_id": "doc1", "title": "post same document without revision"};
-    o.rev = "1-2";
-    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
-          "Post same document (without revision)");
-    o.jio.post(o.doc, o.f);
-    o.tick(o);
+    // // post same document without revision
+    // o.doc = {"_id": "doc1", "title": "post same document without revision"};
+    // o.rev = "1-2";
+    // o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
+    //       "Post same document (without revision)");
+    // o.jio.post(o.doc, o.f);
+    // o.tick(o);
 
-    //    /
-    //   / \
-    // 1-1 1-2
+    // //    /
+    // //   / \
+    // // 1-1 1-2
 
-    // check document
-    o.local_rev = "1-" + generateRevisionHash(o.doc, o.revision);
-    o.leavesAction(function (storage_description, param) {
-      var suffix = "", doc = clone(o.doc);
-      if (param.revision) {
-        doc._id += "." + o.local_rev;
-        suffix = "." + o.local_rev;
-      }
-      deepEqual(
-        localstorage.getItem(generateLocalPath(storage_description) +
-                             "/doc1" + suffix),
-        doc, "Check document"
-      );
-    });
+    // // check document
+    // o.local_rev = "1-" + generateRevisionHash(o.doc, o.revision);
+    // o.leavesAction(function (storage_description, param) {
+    //   var suffix = "", doc = clone(o.doc);
+    //   if (param.revision) {
+    //     doc._id += "." + o.local_rev;
+    //     suffix = "." + o.local_rev;
+    //   }
+    //   deepEqual(
+    //     localstorage.getItem(generateLocalPath(storage_description) +
+    //                          "/doc1" + suffix),
+    //     doc, "Check document"
+    //   );
+    // });
 
-    // post a new revision
-    o.doc = {"_id": "doc1", "title": "post new revision", "_rev": o.rev};
-    o.rev = "2-3";
-    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
-          "Post document (with revision)");
-    o.jio.post(o.doc, o.f);
-    o.tick(o);
+    // // post a new revision
+    // o.doc = {"_id": "doc1", "title": "post new revision", "_rev": o.rev};
+    // o.rev = "2-3";
+    // o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
+    //       "Post document (with revision)");
+    // o.jio.post(o.doc, o.f);
+    // o.tick(o);
 
-    //    /
-    //   / \
-    // 1-1 1-2
-    //      |
-    //     2-3
+    // //    /
+    // //   / \
+    // // 1-1 1-2
+    // //      |
+    // //     2-3
 
-    // check document
-    o.revision.start += 1;
-    o.revision.ids.unshift(o.local_rev.split("-").slice(1).join("-"));
-    o.doc._rev = o.local_rev;
-    o.local_rev = "2-" + generateRevisionHash(o.doc, o.revision);
-    o.specific_rev_conflict = o.local_rev;
-    o.leavesAction(function (storage_description, param) {
-      var suffix = "", doc = clone(o.doc);
-      delete doc._rev;
-      if (param.revision) {
-        doc._id += "." + o.local_rev;
-        suffix = "." + o.local_rev;
-      }
-      deepEqual(
-        localstorage.getItem(generateLocalPath(storage_description) +
-                             "/doc1" + suffix),
-        doc, "Check document"
-      );
-    });
+    // // check document
+    // o.revision.start += 1;
+    // o.revision.ids.unshift(o.local_rev.split("-").slice(1).join("-"));
+    // o.doc._rev = o.local_rev;
+    // o.local_rev = "2-" + generateRevisionHash(o.doc, o.revision);
+    // o.specific_rev_conflict = o.local_rev;
+    // o.leavesAction(function (storage_description, param) {
+    //   var suffix = "", doc = clone(o.doc);
+    //   delete doc._rev;
+    //   if (param.revision) {
+    //     doc._id += "." + o.local_rev;
+    //     suffix = "." + o.local_rev;
+    //   }
+    //   deepEqual(
+    //     localstorage.getItem(generateLocalPath(storage_description) +
+    //                          "/doc1" + suffix),
+    //     doc, "Check document"
+    //   );
+    // });
 
-    // get the post document with revision
-    o.spy(o, "value", {
-      "_id": "doc1",
-      "title": "post same document without revision",
-      "_rev": "1-2",
-      "_revisions": {"start": 1, "ids": ["2"]},
-      "_revs_info": [{"rev": "1-2", "status": "available"}],
-      "_conflicts": ["1-1"]
-    }, "Get the previous document (with revision)");
-    o.jio.get({"_id": "doc1", "_rev": "1-2"}, {
-      "conflicts": true,
-      "revs": true,
-      "revs_info": true,
-    }, o.f);
-    o.tick(o);
+    // // get the post document with revision
+    // o.spy(o, "value", {
+    //   "_id": "doc1",
+    //   "title": "post same document without revision",
+    //   "_rev": "1-2",
+    //   "_revisions": {"start": 1, "ids": ["2"]},
+    //   "_revs_info": [{"rev": "1-2", "status": "available"}],
+    //   "_conflicts": ["1-1"]
+    // }, "Get the previous document (with revision)");
+    // o.jio.get({"_id": "doc1", "_rev": "1-2"}, {
+    //   "conflicts": true,
+    //   "revs": true,
+    //   "revs_info": true,
+    // }, o.f);
+    // o.tick(o);
 
-    // get the post document with specific revision
-    o.spy(o, "value", {
-      "_id": "doc1",
-      "title": "post new doc with id",
-      "_rev": o.specific_rev,
-      "_revisions": {"start": 1, "ids": [o.specific_rev_hash]},
-      "_revs_info": [{"rev": o.specific_rev, "status": "available"}],
-      "_conflicts": [o.specific_rev_conflict]
-    }, "Get a previous document (with local storage revision)");
-    o.jio.get({"_id": "doc1", "_rev": o.specific_rev}, {
-      "conflicts": true,
-      "revs": true,
-      "revs_info": true,
-    }, o.f);
-    o.tick(o);
+    // // get the post document with specific revision
+    // o.spy(o, "value", {
+    //   "_id": "doc1",
+    //   "title": "post new doc with id",
+    //   "_rev": o.specific_rev,
+    //   "_revisions": {"start": 1, "ids": [o.specific_rev_hash]},
+    //   "_revs_info": [{"rev": o.specific_rev, "status": "available"}],
+    //   "_conflicts": [o.specific_rev_conflict]
+    // }, "Get a previous document (with local storage revision)");
+    // o.jio.get({"_id": "doc1", "_rev": o.specific_rev}, {
+    //   "conflicts": true,
+    //   "revs": true,
+    //   "revs_info": true,
+    // }, o.f);
+    // o.tick(o);
 
-    // put document without id
-    o.spy(o, "status", 20, "Put document without id")
-    o.jio.put({}, o.f);
-    o.tick(o);
+    // // put document without id
+    // o.spy(o, "status", 20, "Put document without id")
+    // o.jio.put({}, o.f);
+    // o.tick(o);
 
-    // put document without rev
-    o.doc = {"_id": "doc1", "title": "put new document"};
-    o.rev = "1-4";
-    o.spy(o, "value", {"id": "doc1", "ok": true, "rev": o.rev},
-          "Put document without rev")
-    o.jio.put(o.doc, o.f);
-    o.tick(o);
+    // // put document without rev
+    // o.doc = {"_id": "doc1", "title": "put new document"};
+    // o.rev = "1-4";
+    // o.spy(o, "value", {"id": "doc1", "ok": true, "rev": o.rev},
+    //       "Put document without rev")
+    // o.jio.put(o.doc, o.f);
+    // o.tick(o);
 
-    //    __/__
-    //   /  |  \
-    // 1-1 1-2 1-4
-    //      |
-    //     2-3
+    // //    __/__
+    // //   /  |  \
+    // // 1-1 1-2 1-4
+    // //      |
+    // //     2-3
 
-    // put new revision
-    o.doc = {"_id": "doc1", "title": "put new revision", "_rev": "1-4"};
-    o.rev = "2-5";
-    o.spy(o, "value", {"id": "doc1", "ok": true, "rev": o.rev},
-          "Put document without rev")
-    o.jio.put(o.doc, o.f);
-    o.tick(o);
+    // // put new revision
+    // o.doc = {"_id": "doc1", "title": "put new revision", "_rev": "1-4"};
+    // o.rev = "2-5";
+    // o.spy(o, "value", {"id": "doc1", "ok": true, "rev": o.rev},
+    //       "Put document without rev")
+    // o.jio.put(o.doc, o.f);
+    // o.tick(o);
 
-    //    __/__
-    //   /  |  \
-    // 1-1 1-2 1-4
-    //      |   |
-    //     2-3 2-5
+    // //    __/__
+    // //   /  |  \
+    // // 1-1 1-2 1-4
+    // //      |   |
+    // //     2-3 2-5
 
-    // putAttachment to inexistent document
-    // putAttachment
-    // get document
-    // get attachment
-    // put document
-    // get document
-    // get attachment
-    // remove attachment
-    // get document
-    // get inexistent attachment
+    // // putAttachment to inexistent document
+    // // putAttachment
+    // // get document
+    // // get attachment
+    // // put document
+    // // get document
+    // // get attachment
+    // // remove attachment
+    // // get document
+    // // get inexistent attachment
 
-    // remove document and conflict
-    o.rev = "3-6";
-    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
-          "Remove document");
-    o.jio.remove({"_id": "doc1", "_rev": "2-5"}, o.f);
-    o.tick(o);
+    // // remove document and conflict
+    // o.rev = "3-6";
+    // o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
+    //       "Remove document");
+    // o.jio.remove({"_id": "doc1", "_rev": "2-5"}, o.f);
+    // o.tick(o);
 
-    // remove document and conflict
-    o.rev = "3-7";
-    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
-          "Remove document");
-    o.jio.remove({"_id": "doc1", "_rev": "2-3"}, o.f);
-    o.tick(o);
+    // // remove document and conflict
+    // o.rev = "3-7";
+    // o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
+    //       "Remove document");
+    // o.jio.remove({"_id": "doc1", "_rev": "2-3"}, o.f);
+    // o.tick(o);
 
-    // remove document
-    o.rev = "2-8";
-    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
-          "Remove document");
-    o.jio.remove({"_id": "doc1", "_rev": "1-1"}, o.f);
-    o.tick(o);
+    // // remove document
+    // o.rev = "2-8";
+    // o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
+    //       "Remove document");
+    // o.jio.remove({"_id": "doc1", "_rev": "1-1"}, o.f);
+    // o.tick(o);
 
-    // get inexistent document
-    o.spy(o, "status", 404, "Get inexistent document");
-    o.jio.get({"_id": "doc1"}, {
-      "conflicts": true,
-      "revs": true,
-      "revs_info": true
-    }, o.f);
-    o.tick(o);
+    // // get inexistent document
+    // o.spy(o, "status", 404, "Get inexistent document");
+    // o.jio.get({"_id": "doc1"}, {
+    //   "conflicts": true,
+    //   "revs": true,
+    //   "revs_info": true
+    // }, o.f);
+    // o.tick(o);
 
     o.jio.stop();
 
   };
 
   test ("[Revision + Local Storage] Scenario", function () {
-    testReplicateRevisionStorageGenerator(this, {
+    testReplicateRevisionStorage(this, {
       "type": "replicaterevision",
       "storage_list": [{
         "type": "revision",
@@ -2514,7 +2550,7 @@ module ("JIO Replicate Revision Storage");
     });
   });
   test("[Replicate Revision + Revision + Local Storage] Scenario", function () {
-    testReplicateRevisionStorageGenerator(this, {
+    testReplicateRevisionStorage(this, {
       "type": "replicaterevision",
       "storage_list": [{
         "type": "replicaterevision",
@@ -2530,27 +2566,27 @@ module ("JIO Replicate Revision Storage");
     });
   });
   test ("2x [Revision + Local Storage] Scenario", function () {
-    testReplicateRevisionStorageGenerator(this, {
+    testReplicateRevisionStorage(this, {
       "type": "replicaterevision",
       "storage_list": [{
         "type": "revision",
         "sub_storage": {
           "type": "local",
           "username": "ureprevlocloc1",
-          "application_name": "areprevloc1"
+          "application_name": "areprevlocloc1"
         }
       }, {
         "type": "revision",
         "sub_storage": {
           "type": "local",
           "username": "ureprevlocloc2",
-          "application_name": "areprevloc2"
+          "application_name": "areprevlocloc2"
         }
       }]
     });
   });
   test("2x [Replicate Rev + 2x [Rev + Local]] Scenario", function () {
-    testReplicateRevisionStorageGenerator(this, {
+    testReplicateRevisionStorage(this, {
       "type": "replicaterevision",
       "storage_list": [{
         "type": "replicaterevision",
@@ -2588,6 +2624,159 @@ module ("JIO Replicate Revision Storage");
         }]
       }]
     });
+  });
+
+  test("Synchronisation", function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "usyncreprevlocloc1",
+          "application_name": "asyncreprevlocloc1"
+        }
+      }, {
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "usyncreprevlocloc2",
+          "application_name": "asyncreprevlocloc2"
+        }
+      }]
+    });
+    o.localpath1 = "jio/localstorage/usyncreprevlocloc1/asyncreprevlocloc1";
+    o.localpath2 = "jio/localstorage/usyncreprevlocloc2/asyncreprevlocloc2";
+
+    // add documents to localstorage
+    o.doctree1_1 = {
+      "children": [{
+        "rev": "1-111",
+        "status": "available",
+        "children": [],
+      }]
+    };
+    o.doc1_1 = {"_id": "doc1.1-111", "title": "A"};
+    localstorage.setItem(o.localpath1 + "/doc1.revision_tree.json",
+                         o.doctree1_1);
+    localstorage.setItem(o.localpath2 + "/doc1.revision_tree.json",
+                         o.doctree1_1);
+    localstorage.setItem(o.localpath1 + "/" + o.doc1_1._id, o.doc1_1);
+    localstorage.setItem(o.localpath2 + "/" + o.doc1_1._id, o.doc1_1);
+
+    // no synchronisation
+    o.spy(o, "value", {"_id": "doc1", "_rev": "1-1", "title": "A"},
+          "Get document");
+    o.jio.get({"_id": "doc1"}, o.f);
+    o.tick(o);
+
+    // check documents from localstorage
+    deepEqual([
+      localstorage.getItem(o.localpath1 + "/doc1.revision_tree.json"),
+      localstorage.getItem(o.localpath2 + "/doc1.revision_tree.json"),
+    ], [o.doctree1_1, o.doctree1_1], "Check revision trees, no synchro");
+
+    // add documents to localstorage
+    o.doctree2_2 = clone(o.doctree1_1);
+    o.doctree2_2.children[0].children.push({
+      "rev": "2-222",
+      "status": "available",
+      "children": []
+    });
+    o.doc2_2 = {"_id": "doc1.2-222", "title": "B"};
+    localstorage.setItem(o.localpath1 + "/doc1.revision_tree.json",
+                         o.doctree2_2);
+    localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id, o.doc2_2);
+
+    // document synchronisation without conflict
+    o.spy(o, "value", {"_id": "doc1", "_rev": "1-2", "title": "B"},
+          "Get document");
+    o.jio.get({"_id": "doc1"}, o.f);
+    o.tick(o, 50000);
+
+    // check documents from localstorage
+    deepEqual([
+      localstorage.getItem(o.localpath1 + "/doc1.revision_tree.json"),
+      localstorage.getItem(o.localpath2 + "/doc1.revision_tree.json"),
+    ], [o.doctree2_2, o.doctree2_2], "Check revision trees, rev synchro");
+
+    // add documents to localstorage
+    o.doctree2_2.children[0].children.unshift({
+      "rev": "2-223",
+      "status": "available",
+      "children": []
+    });
+    o.doc2_2 = {"_id": "doc1.2-223", "title": "B"};
+    localstorage.setItem(o.localpath1 + "/doc1.revision_tree.json",
+                         o.doctree2_2);
+    localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id, o.doc2_2);
+
+    // document synchronisation with conflict
+    o.spy(o, "value", {"_id": "doc1", "_rev": "1-2", "title": "B"},
+          "Get document");
+    o.jio.get({"_id": "doc1"}, o.f);
+    o.tick(o, 50000);
+
+    // check documents from localstorage
+    deepEqual([
+      localstorage.getItem(o.localpath1 + "/doc1.revision_tree.json"),
+      localstorage.getItem(o.localpath2 + "/doc1.revision_tree.json"),
+    ], [o.doctree2_2, o.doctree2_2], "Check revision trees, rev synchro");
+
+////////////////////////////////////////////////////////////////////////////////
+
+    // // add documents to localstorage
+    // o.doctree2_2 = clone(o.doctree1_1);
+    // o.doctree2_2.children[0].children.push({
+    //   "rev": "2-222",
+    //   "status": "available",
+    //   "children": []
+    // });
+    // o.doc2_2 = {"_id": "doc1.2-222", "title": "B"};
+    // localstorage.setItem(o.localpath1 + "/doc1.revision_tree.json",
+    //                      o.doctree2_2);
+    // localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id, o.doc2_2);
+
+    // // document synchronisation without conflict
+    // o.spy(o, "value", {"_id": "doc1", "_rev": "1-2", "title": "B"},
+    //       "Get document");
+    // o.jio.get({"_id": "doc1"}, o.f);
+    // o.tick(o, 50000);
+
+    // // check documents from localstorage
+    // deepEqual([
+    //   localstorage.getItem(o.localpath1 + "/doc1.revision_tree.json"),
+    //   localstorage.getItem(o.localpath2 + "/doc1.revision_tree.json"),
+    // ], [o.doctree2_2, o.doctree2_2], "Check revision trees, rev synchro");
+
+    // // add documents to localstorage
+    // o.doctree2_2.children[0].children.unshift({
+    //   "rev": "2-223",
+    //   "status": "available",
+    //   "children": []
+    // });
+    // o.doc2_2 = {"_id": "doc1.2-223", "title": "B"};
+    // localstorage.setItem(o.localpath1 + "/doc1.revision_tree.json",
+    //                      o.doctree2_2);
+    // localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id, o.doc2_2);
+
+    // // document synchronisation with conflict
+    // o.spy(o, "value", {"_id": "doc1", "_rev": "1-2", "title": "B"},
+    //       "Get document");
+    // o.jio.get({"_id": "doc1"}, o.f);
+    // o.tick(o, 50000);
+
+    // // check documents from localstorage
+    // deepEqual([
+    //   localstorage.getItem(o.localpath1 + "/doc1.revision_tree.json"),
+    //   localstorage.getItem(o.localpath2 + "/doc1.revision_tree.json"),
+    // ], [o.doctree2_2, o.doctree2_2], "Check revision trees, rev synchro");
+
+    o.jio.stop();
+
   });
 /*
 module ("Jio DAVStorage");
