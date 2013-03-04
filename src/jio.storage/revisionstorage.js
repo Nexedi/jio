@@ -235,7 +235,6 @@ jIO.addStorageType("revision", function (spec, my) {
     delete doc._revs_info;
     string = JSON.stringify(doc) + JSON.stringify(revision_history) +
       JSON.stringify(deleted_flag ? true : false);
-    console.log(string);
     revision_history.start += 1;
     revision_history.ids.unshift(priv.hashCode(string));
     doc._revs = revision_history;
@@ -362,7 +361,6 @@ jIO.addStorageType("revision", function (spec, my) {
     priv.send("get", doc, option, callback);
   };
   priv.put = function (doc, option, callback) {
-    console.log(doc);
     priv.send("put", doc, option, callback);
   };
   priv.remove = function (doc, option, callback) {
@@ -401,7 +399,6 @@ jIO.addStorageType("revision", function (spec, my) {
   };
 
   priv.getAttachmentList = function (doc, option, callback) {
-    console.log("p getAttachmentList");
     var attachment_id, dealResults, state = "ok", result_list = [], count = 0;
     dealResults = function (attachment_id, attachment_meta) {
       return function (err, attachment) {
@@ -444,7 +441,6 @@ jIO.addStorageType("revision", function (spec, my) {
   };
 
   priv.putAttachmentList = function (doc, option, attachment_list, callback) {
-    console.log("p putAttachmentList");
     var i, dealResults, state = "ok", count = 0, attachment;
     attachment_list = attachment_list || [];
     dealResults = function (index) {
@@ -514,7 +510,6 @@ jIO.addStorageType("revision", function (spec, my) {
       doc._attachment = specific_parameter.attachment_id;
     }
     callback.begin = function () {
-      console.log("c begin");
       var check_error;
       doc._id = doc._id || priv.generateUuid();
       if (specific_parameter.revision_needed && !doc._rev) {
@@ -531,7 +526,6 @@ jIO.addStorageType("revision", function (spec, my) {
       priv.getRevisionTree(doc, option, callback.getRevisionTree);
     };
     callback.getRevisionTree = function (err, response) {
-      console.log("c getRevisionTree");
       var winner_info, previous_revision = doc._rev,
         generate_new_revision = doc._revs || doc._revs_info ? false : true;
       if (err) {
@@ -543,9 +537,7 @@ jIO.addStorageType("revision", function (spec, my) {
       doc_tree = response || priv.newDocTree();
       if (specific_parameter.get || specific_parameter.getAttachment) {
         if (!doc._rev) {
-          console.log(JSON.stringify(doc_tree));
           winner_info = priv.getWinnerRevsInfo(doc_tree);
-          console.log(winner_info);
           if (winner_info.length === 0) {
             return onEnd(priv.notFoundError(
               "Document not found",
@@ -594,7 +586,6 @@ jIO.addStorageType("revision", function (spec, my) {
         return priv.getDocument(prev_doc, option, callback.getDocument);
       }
       if (specific_parameter.remove || specific_parameter.removeAttachment) {
-        console.log("this one");
         return onEnd(priv.notFoundError(
           "Unable to remove an inexistent document",
           "missing"
@@ -603,7 +594,6 @@ jIO.addStorageType("revision", function (spec, my) {
       priv.putDocument(doc, option, callback.putDocument);
     };
     callback.getDocument = function (err, res_doc) {
-      console.log("c getDocument");
       var k, conflicts;
       if (err) {
         if (err.status === 404) {
@@ -654,13 +644,10 @@ jIO.addStorageType("revision", function (spec, my) {
       if (specific_parameter.remove) {
         priv.putDocumentTree(doc, option, doc_tree, callback.putDocumentTree);
       } else {
-        console.log("res_doc");
-        console.log(res_doc);
         priv.getAttachmentList(res_doc, option, callback.getAttachmentList);
       }
     };
     callback.getAttachmentList = function (err, res_list) {
-      console.log("c getAttachmentList");
       var i, attachment_found = false;
       if (err) {
         err.message = "Cannot get attachment";
@@ -702,7 +689,6 @@ jIO.addStorageType("revision", function (spec, my) {
       priv.putDocument(doc, option, callback.putDocument);
     };
     callback.putDocument = function (err, response) {
-      console.log("c putDocument");
       var i, attachment_found = false;
       if (err) {
         err.message = "Cannot post the document";
@@ -731,7 +717,6 @@ jIO.addStorageType("revision", function (spec, my) {
       );
     };
     callback.putAttachmentList = function (err, response) {
-      console.log("c putAttachmentList");
       if (err) {
         err.message = "Cannot copy attacments to the document";
         return onEnd(err, undefined);
@@ -739,7 +724,6 @@ jIO.addStorageType("revision", function (spec, my) {
       priv.putDocumentTree(doc, option, doc_tree, callback.putDocumentTree);
     };
     callback.putDocumentTree = function (err, response) {
-      console.log("c putDocumentTree");
       if (err) {
         err.message = "Cannot update the document history";
         return onEnd(err, undefined);
