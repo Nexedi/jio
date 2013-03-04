@@ -2670,7 +2670,7 @@ module ("JIO Replicate Revision Storage");
     // no synchronisation
     o.spy(o, "value", {"_id": "doc1", "_rev": "1-1", "title": "A"},
           "Get document");
-    o.jio.get({"_id": "doc1"}, o.f);
+    o.jio.get({"_id": "doc1"}, {"repair": true}, o.f);
     o.tick(o);
 
     // check documents from localstorage
@@ -2694,7 +2694,7 @@ module ("JIO Replicate Revision Storage");
     // document synchronisation without conflict
     o.spy(o, "value", {"_id": "doc1", "_rev": "1-2", "title": "B"},
           "Get document");
-    o.jio.get({"_id": "doc1"}, o.f);
+    o.jio.get({"_id": "doc1"}, {"repair": true}, o.f);
     o.tick(o, 50000);
 
     // check documents from localstorage
@@ -2715,9 +2715,9 @@ module ("JIO Replicate Revision Storage");
     localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id, o.doc2_2);
 
     // document synchronisation with conflict
-    o.spy(o, "value", {"_id": "doc1", "_rev": "1-2", "title": "B"},
+    o.spy(o, "value", {"_id": "doc1", "_rev": "1-3", "title": "B"},
           "Get document");
-    o.jio.get({"_id": "doc1"}, o.f);
+    o.jio.get({"_id": "doc1"}, {"repair": true}, o.f);
     o.tick(o, 50000);
 
     // check documents from localstorage
@@ -2725,55 +2725,6 @@ module ("JIO Replicate Revision Storage");
       localstorage.getItem(o.localpath1 + "/doc1.revision_tree.json"),
       localstorage.getItem(o.localpath2 + "/doc1.revision_tree.json"),
     ], [o.doctree2_2, o.doctree2_2], "Check revision trees, rev synchro");
-
-////////////////////////////////////////////////////////////////////////////////
-
-    // // add documents to localstorage
-    // o.doctree2_2 = clone(o.doctree1_1);
-    // o.doctree2_2.children[0].children.push({
-    //   "rev": "2-222",
-    //   "status": "available",
-    //   "children": []
-    // });
-    // o.doc2_2 = {"_id": "doc1.2-222", "title": "B"};
-    // localstorage.setItem(o.localpath1 + "/doc1.revision_tree.json",
-    //                      o.doctree2_2);
-    // localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id, o.doc2_2);
-
-    // // document synchronisation without conflict
-    // o.spy(o, "value", {"_id": "doc1", "_rev": "1-2", "title": "B"},
-    //       "Get document");
-    // o.jio.get({"_id": "doc1"}, o.f);
-    // o.tick(o, 50000);
-
-    // // check documents from localstorage
-    // deepEqual([
-    //   localstorage.getItem(o.localpath1 + "/doc1.revision_tree.json"),
-    //   localstorage.getItem(o.localpath2 + "/doc1.revision_tree.json"),
-    // ], [o.doctree2_2, o.doctree2_2], "Check revision trees, rev synchro");
-
-    // // add documents to localstorage
-    // o.doctree2_2.children[0].children.unshift({
-    //   "rev": "2-223",
-    //   "status": "available",
-    //   "children": []
-    // });
-    // o.doc2_2 = {"_id": "doc1.2-223", "title": "B"};
-    // localstorage.setItem(o.localpath1 + "/doc1.revision_tree.json",
-    //                      o.doctree2_2);
-    // localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id, o.doc2_2);
-
-    // // document synchronisation with conflict
-    // o.spy(o, "value", {"_id": "doc1", "_rev": "1-2", "title": "B"},
-    //       "Get document");
-    // o.jio.get({"_id": "doc1"}, o.f);
-    // o.tick(o, 50000);
-
-    // // check documents from localstorage
-    // deepEqual([
-    //   localstorage.getItem(o.localpath1 + "/doc1.revision_tree.json"),
-    //   localstorage.getItem(o.localpath2 + "/doc1.revision_tree.json"),
-    // ], [o.doctree2_2, o.doctree2_2], "Check revision trees, rev synchro");
 
     o.jio.stop();
 
