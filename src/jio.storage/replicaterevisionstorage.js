@@ -210,11 +210,9 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
   };
   priv.repair = function (doc, option, repair, callback) {
     var functions = {};
-    // console.log("priv.repair");
     callback = callback || priv.emptyFunction;
     option = option || {};
     functions.begin = function () {
-      // console.log("repair begin");
       functions.getAllDocuments(functions.newParam(
         doc,
         option,
@@ -222,7 +220,6 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       ));
     };
     functions.newParam = function (doc, option, repair) {
-      // console.log("repair new param");
       var param = {
         "doc": doc,
         "option": option,
@@ -254,7 +251,6 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       return param;
     };
     functions.getAllDocuments = function (param) {
-      // console.log("repair getAllDocument");
       var i, doc = priv.clone(param.doc), option = priv.clone(param.option);
       option.conflicts = true;
       option.revs = true;
@@ -266,18 +262,15 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       functions.finished_count += 1;
     };
     functions.dealResults = function (param) {
-      // console.log("repair dealResults");
       return function (method, index, err, response) {
         if (param.deal_result_state !== "ok") {
           // deal result is in a wrong state, exit
-          // console.log("repair dealResults wrong state");
           return;
         }
         if (err) {
           if (err.status !== 404) {
             // get document failed, exit
             param.deal_result_state = "error";
-            // console.log("repair dealResults error");
             callback({
               "status": 40,
               "statusText": "Check Failed",
@@ -295,19 +288,15 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
 
         // add the conflicting revision for other synchronizations
         functions.addConflicts(param, (response || {})._conflicts);
-
         if (param.responses.count !== param.responses.list.length) {
           // this is not the last response, wait for the next response
-          // console.log("repair dealResults not last");
           return;
         }
-        // console.log("repair dealResults last");
-        // this is now the last response
 
+        // this is now the last response
         functions.makeResponsesStats(param.responses);
         if (param.responses.stats_items.length === 1) {
           // the responses are equals!
-          // console.log("repair dealResults OK");
           callback(undefined, {
             "ok": true,
             "id": param.doc._id,
@@ -336,7 +325,6 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       };
     };
     functions.addConflicts = function (param, list) {
-      // console.log("repair addConflicts");
       var i;
       list = list || [];
       for (i = 0; i < list.length; i += 1) {
@@ -344,7 +332,6 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       }
     };
     functions.makeResponsesStats = function (responses) {
-      // console.log("repair makeResponseStats");
       var i, str_response;
       for (i = 0; i < responses.count; i += 1) {
         str_response = JSON.stringify(responses.list[i]);
@@ -359,7 +346,6 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       }
     };
     functions.synchronizeAllSubStorage = function (param) {
-      // console.log("repair synchronizeAllSubStorage");
       var i, j, len = param.responses.stats_items.length;
       for (i = 0; i < len; i += 1) {
         // browsing responses
@@ -381,7 +367,6 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       response,
       storage_list
     ) {
-      // console.log("repair synchronizeResponseToSubStorage");
       var i, new_doc;
       if (response === undefined) {
         // no response to sync
@@ -404,7 +389,6 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       }
     };
     functions.synchronizeConflicts = function (param) {
-      // console.log("repair synchronizeConflicts");
       var rev, new_doc, new_option;
       new_option = priv.clone(param.option);
       new_option.synchronize_conflict = false;
@@ -423,10 +407,8 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
     };
     functions.finished_count = 0;
     functions.finished = function () {
-      // console.log("repair finished " + functions.finished_count);
       functions.finished_count -= 1;
       if (functions.finished_count === 0) {
-      // console.log("repair ended");
         callback(undefined, {"ok": true, "id": doc._id});
       }
     };
