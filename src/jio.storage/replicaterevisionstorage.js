@@ -255,6 +255,7 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       option.conflicts = true;
       option.revs = true;
       option.revs_info = true;
+      option.repair = false;
       for (i = 0; i < priv.storage_list.length; i += 1) {
         // if the document is not loaded
         priv.send("get", i, doc, option, functions.dealResults(param));
@@ -626,9 +627,11 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
         }
       }
       that.success(response);
-      setTimeout(function () {
-        priv.repair({"_id": doc._id}, command.cloneOption(), true);
-      });
+      if (command.getOption("repair") === true) {
+        setTimeout(function () {
+          priv.repair({"_id": doc._id}, command.cloneOption(), true);
+        });
+      }
     };
     functions.error_count = 0;
     functions.error = function (err) {
