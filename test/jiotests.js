@@ -155,12 +155,12 @@ objectifyDocumentArray = function (array) {
 getLastJob = function (id) {
     return (localstorage.getItem("jio/job_array/"+id) || [undefined]).pop();
 },
-generateTools = function (sinon) {
+generateTools = function (test_namespace) {
     var o = {};
 
-    o.t = sinon;
+    o.t = test_namespace;
     o.server = o.t.sandbox.useFakeServer();
-    o.clock = o.t.sandbox.useFakeTimers();
+    o.clock = sinon.useFakeTimers();
     o.clock.tick(base_tick);
     o.spy = basicSpyFunction;
     o.tick = basicTickFunction;
