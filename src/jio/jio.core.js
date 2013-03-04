@@ -377,10 +377,10 @@ Object.defineProperty(that, "allDocs", {
  * Put an attachment to a document.
  * @method putAttachment
  * @param  {object} doc The document object. Contains at least:
- * - {string} id The document id: "doc_id/attchment_id"
- * - {string} data Base64 attachment data
- * - {string} mimetype The attachment mimetype
- * - {string} rev The attachment revision
+ * - {string} _id The document id: "doc_id/attchment_id"
+ * - {string} _data Base64 attachment data
+ * - {string} _mimetype The attachment mimetype
+ * - {string} _rev The attachment revision
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
  * - {boolean} revs Include revision history of the document.
