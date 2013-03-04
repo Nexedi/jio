@@ -189,20 +189,30 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
 
 ////////////////////////////////////////////////////////////////////////////////
   that.check = function (command) {
+    function callback(err, response) {
+      if (err) {
+        return that.error(err);
+      }
+      that.success(response);
+    }
     priv.check(
       command.cloneDoc(),
       command.cloneOption(),
-      that.success,
-      that.error
+      callback
     );
   };
   that.repair = function (command) {
+    function callback(err, response) {
+      if (err) {
+        return that.error(err);
+      }
+      that.success(response);
+    }
     priv.repair(
       command.cloneDoc(),
       command.cloneOption(),
       true,
-      that.success,
-      that.error
+      callback
     );
   };
   priv.check = function (doc, option, success, error) {
@@ -213,11 +223,33 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
     callback = callback || priv.emptyFunction;
     option = option || {};
     functions.begin = function () {
-      functions.getAllDocuments(functions.newParam(
-        doc,
-        option,
-        repair
-      ));
+    // };
+    // functions.repairAllSubStorages = function () {
+      var i;
+      for (i = 0; i < priv.storage_list.length; i += 1) {
+        priv.send(
+          repair ? "repair" : "check",
+          i,
+          doc,
+          option,
+          functions.repairAllSubStoragesCallback
+        );
+      }
+    };
+    functions.repair_sub_storages_count = 0;
+    functions.repairAllSubStoragesCallback = function (method,
+                                                       index, err, response) {
+      if (err) {
+        return that.error(err);
+      }
+      functions.repair_sub_storages_count += 1;
+      if (functions.repair_sub_storages_count === priv.storage_list.length) {
+        functions.getAllDocuments(functions.newParam(
+          doc,
+          option,
+          repair
+        ));
+      }
     };
     functions.newParam = function (doc, option, repair) {
       var param = {
@@ -255,7 +287,6 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       option.conflicts = true;
       option.revs = true;
       option.revs_info = true;
-      option.repair = false;
       for (i = 0; i < priv.storage_list.length; i += 1) {
         // if the document is not loaded
         priv.send("get", i, doc, option, functions.dealResults(param));
@@ -264,6 +295,7 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
     };
     functions.dealResults = function (param) {
       return function (method, index, err, response) {
+        var response_object = {};
         if (param.deal_result_state !== "ok") {
           // deal result is in a wrong state, exit
           return;
@@ -278,7 +310,7 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
               "error": "check_failed",
               "message": "An error occured on the sub storage",
               "reason": err.reason
-            });
+            }, undefined);
             return;
           }
         }
@@ -298,12 +330,14 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
         functions.makeResponsesStats(param.responses);
         if (param.responses.stats_items.length === 1) {
           // the responses are equals!
-          callback(undefined, {
-            "ok": true,
-            "id": param.doc._id,
-            "rev": (typeof param.responses.list[0] === "object" ?
-                    param.responses.list[0]._rev : undefined)
-          });
+          response_object.ok = true;
+          response_object.id = param.doc._id;
+          if (doc._rev) {
+            response_object.rev = doc._rev;
+            // "rev": (typeof param.responses.list[0] === "object" ?
+            //         param.responses.list[0]._rev : undefined)
+          }
+          callback(undefined, response_object);
           return;
         }
         // the responses are different
@@ -315,7 +349,7 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
             "error": "check_not_ok",
             "message": "Some documents are different in the sub storages",
             "reason": "Storage contents differ"
-          });
+          }, undefined);
           return;
         }
         // repair
@@ -408,9 +442,15 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
     };
     functions.finished_count = 0;
     functions.finished = function () {
+      var response_object = {};
       functions.finished_count -= 1;
       if (functions.finished_count === 0) {
-        callback(undefined, {"ok": true, "id": doc._id});
+        response_object.ok = true;
+        response_object.id = doc._id;
+        if (doc._rev) {
+          response_object.rev = doc._rev;
+        }
+        callback(undefined, response_object);
       }
     };
     functions.begin();
@@ -627,11 +667,6 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
         }
       }
       that.success(response);
-      if (command.getOption("repair") === true) {
-        setTimeout(function () {
-          priv.repair({"_id": doc._id}, command.cloneOption(), true);
-        });
-      }
     };
     functions.error_count = 0;
     functions.error = function (err) {
