@@ -2,6 +2,7 @@
 /*global postCommand: true, putCommand: true, getCommand: true,
          removeCommand: true, allDocsCommand: true,
          putAttachmentCommand: true, failStatus: true, doneStatus: true,
+         checkCommand: true, repairCommand: true,
          hex_md5: true */
 var command = function (spec, my) {
   var that = {},
@@ -16,7 +17,9 @@ var command = function (spec, my) {
     'get': getCommand,
     'remove': removeCommand,
     'allDocs': allDocsCommand,
-    'putAttachment': putAttachmentCommand
+    'putAttachment': putAttachmentCommand,
+    'check': checkCommand,
+    'repair': repairCommand
   };
   // creates the good command thanks to his label
   if (spec.label && priv.commandlist[spec.label]) {
