@@ -651,7 +651,6 @@ test ("Similar Jobs at the same time (Update)", function () {
     o.jio.put({"_id": "file", "content": "content"}, o.f2); // 2
     o.jio.put({"_id": "file", "content": "content"}, o.f3); // 3
     deepEqual(getLastJob(o.jio.getId()).id, 1, "Check job queue");
-    console.log(JSON.parse(JSON.stringify(localStorage)));
     o.tick(o, 1000, "f");
     o.tick(o, "f2");
     o.tick(o, "f3");
