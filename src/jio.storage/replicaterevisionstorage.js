@@ -20,13 +20,11 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
 
   priv.storage_list_key = "storage_list";
   priv.storage_list = spec[priv.storage_list_key];
-  my.env = my.env || spec.env || {};
   priv.emptyFunction = function () {};
 
   that.specToStore = function () {
     var o = {};
     o[priv.storage_list_key] = priv.storage_list;
-    o.env = my.env;
     return o;
   };
 
@@ -69,21 +67,6 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
   };
 
   /**
-   * Generates the next revision
-   * @method generateNextRevision
-   * @param  {number|string} previous_revision The previous revision
-   * @param  {string} docid The document id
-   * @return {string} The next revision
-   */
-  priv.generateNextRevision = function (previous_revision, docid) {
-    my.env[docid].id += 1;
-    if (typeof previous_revision === "string") {
-      previous_revision = parseInt(previous_revision.split("-")[0], 10);
-    }
-    return (previous_revision + 1) + "-" + my.env[docid].id.toString();
-  };
-
-  /**
    * Checks a revision format
    * @method checkRevisionFormat
    * @param  {string} revision The revision string
@@ -91,34 +74,6 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
    */
   priv.checkRevisionFormat = function (revision) {
     return (/^[0-9]+-[0-9a-zA-Z_]+$/.test(revision));
-  };
-
-  /**
-   * Initalize document environment object
-   * @method initEnv
-   * @param  {string} docid The document id
-   * @return {object} The reference to the environment
-   */
-  priv.initEnv = function (docid) {
-    my.env[docid] = {
-      "id": 0,
-      "distant_revisions": {},
-      "my_revisions": {},
-      "last_revisions": []
-    };
-    return my.env[docid];
-  };
-
-  priv.updateEnv = function (doc_env, doc_env_rev, index, doc_rev) {
-    doc_env.last_revisions[index] = doc_rev;
-    if (doc_rev !== undefined) {
-      if (!doc_env.my_revisions[doc_env_rev]) {
-        doc_env.my_revisions[doc_env_rev] = [];
-        doc_env.my_revisions[doc_env_rev].length = priv.storage_list.length;
-      }
-      doc_env.my_revisions[doc_env_rev][index] = doc_rev;
-      doc_env.distant_revisions[doc_rev] = doc_env_rev;
-    }
   };
 
   /**
@@ -187,7 +142,42 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
     }
   };
 
-////////////////////////////////////////////////////////////////////////////////
+  /**
+   * Use "send" method to all sub storages.
+   * Calling "callback" for each storage response.
+   * @method sendToAll
+   * @param  {string} method The request method
+   * @param  {object} doc The document object
+   * @param  {object} option The request option
+   * @param  {function} callback The callback. Parameters:
+   * - {string} The request method
+   * - {number} The storage index
+   * - {object} The error object
+   * - {object} The response object
+   */
+  priv.sendToAllFastestResponseOnly = function (method, doc, option, callback) {
+    var i, callbackWrapper, error_count, last_error;
+    error_count = 0;
+    callbackWrapper = function (method, index, err, response) {
+      if (err) {
+        error_count += 1;
+        last_error = err;
+        if (error_count === priv.storage_list.length) {
+          return callback(err, response);
+        }
+      }
+      callback(err, response);
+    };
+    for (i = 0; i < priv.storage_list.length; i += 1) {
+      priv.send(method, i, doc, option, callbackWrapper);
+    }
+  };
+
+  /**
+   * Checks if the sub storage are identical
+   * @method check
+   * @param  {object} command The JIO command
+   */
   that.check = function (command) {
     function callback(err, response) {
       if (err) {
@@ -201,6 +191,12 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       callback
     );
   };
+
+  /**
+   * Repair the sub storages to make them identical
+   * @method repair
+   * @param  {object} command The JIO command
+   */
   that.repair = function (command) {
     function callback(err, response) {
       if (err) {
@@ -215,9 +211,11 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       callback
     );
   };
+
   priv.check = function (doc, option, success, error) {
     priv.repair(doc, option, false, success, error);
   };
+
   priv.repair = function (doc, option, repair, callback) {
     var functions = {};
     callback = callback || priv.emptyFunction;
@@ -456,98 +454,35 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
     functions.begin();
   };
 
-////////////////////////////////////////////////////////////////////////////////
+  /**
+   * The generic method to use
+   * @method genericRequest
+   * @param  {object} command The JIO command
+   * @param  {string} method The method to use
+   */
+  that.genericRequest = function (command, method) {
+    var doc = command.cloneDoc();
+    doc._id = doc._id || priv.generateUuid();
+    priv.sendToAllFastestResponseOnly(
+      method,
+      doc,
+      command.cloneOption(),
+      function (err, response) {
+        if (err) {
+          return that.error(err);
+        }
+        that.success(response);
+      }
+    );
+  };
+
   /**
    * Post the document metadata to all sub storages
    * @method post
    * @param  {object} command The JIO command
    */
   that.post = function (command) {
-    var functions = {}, doc_env, revs_info, doc, my_rev;
-    functions.begin = function () {
-      doc = command.cloneDoc();
-
-      if (typeof doc._rev === "string" && !priv.checkRevisionFormat(doc._rev)) {
-        that.error({
-          "status": 31,
-          "statusText": "Wrong Revision Format",
-          "error": "wrong_revision_format",
-          "message": "The document previous revision does not match " +
-            "^[0-9]+-[0-9a-zA-Z]+$",
-          "reason": "Previous revision is wrong"
-        });
-        return;
-      }
-      if (typeof doc._id !== "string") {
-        doc._id = priv.generateUuid();
-      }
-      if (priv.post_allowed === undefined) {
-        priv.post_allowed = true;
-      }
-      doc_env = my.env[doc._id];
-      if (!doc_env || !doc_env.id) {
-        doc_env = priv.initEnv(doc._id);
-      }
-      my_rev = priv.generateNextRevision(doc._rev || 0, doc._id);
-      functions.sendDocument();
-    };
-    functions.sendDocument = function () {
-      var i, cloned_doc;
-      for (i = 0; i < priv.storage_list.length; i += 1) {
-        cloned_doc = priv.clone(doc);
-        if (typeof cloned_doc._rev === "string" &&
-            doc_env.my_revisions[cloned_doc._rev] !== undefined) {
-          cloned_doc._rev = doc_env.my_revisions[cloned_doc._rev][i];
-        }
-        priv.send(
-          doc_env.last_revisions[i] === "unique_" + i ||
-            priv.put_only ? "put" : "post",
-          i,
-          cloned_doc,
-          command.cloneOption(),
-          functions.checkSendResult
-        );
-      }
-    };
-    functions.checkSendResult = function (method, index, err, response) {
-      if (err) {
-        if (err.status === 409) {
-          if (method !== "put") {
-            functions.sendDocumentIndex(
-              "put",
-              index,
-              functions.checkSendResult
-            );
-            return;
-          }
-        }
-        priv.updateEnv(doc_env, my_rev, index, null);
-        functions.error(err);
-        return;
-      }
-      // success
-      priv.updateEnv(
-        doc_env,
-        my_rev,
-        index,
-        response.rev || "unique_" + index
-      );
-      functions.success({"ok": true, "id": doc._id, "rev": my_rev});
-    };
-    functions.success = function (response) {
-      // can be called once
-      that.success(response);
-      functions.success = priv.emptyFunction;
-    };
-    functions.error_count = 0;
-    functions.error = function (err) {
-      functions.error_count += 1;
-      if (functions.error_count === priv.storage_list.length) {
-        that.error(err);
-        functions.error = priv.emptyFunction;
-      }
-    };
-    functions.begin();
+    that.genericRequest(command, "put");
   };
 
   /**
@@ -556,8 +491,7 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.put = function (command) {
-    priv.put_only = true;
-    that.post(command);
+    that.genericRequest(command, "post");
   };
 
   /**
@@ -565,195 +499,44 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
    * @method putAttachment
    * @param  {object} command The JIO command
    */
-  // that.putAttachment = function (command) {
-
-  // };
+  that.putAttachment = function (command) {
+    that.genericRequest(command, "putAttachment");
+  };
 
   /**
-   * Get the document or attachment from all sub storages, get the fastest.
+   * Get the document from all sub storages, get the fastest.
    * @method get
    * @param  {object} command The JIO command
    */
   that.get = function (command) {
-    var functions = {}, doc_env, doc, my_rev, revs_array = [];
-    functions.begin = function () {
-      var i;
-      doc = command.cloneDoc();
-
-      doc_env = my.env[doc._id];
-      if (!doc_env || !doc_env.id) {
-        // document environment is not set
-        doc_env = priv.initEnv(doc._id);
-      }
-      // document environment is set now
-      revs_array.length = priv.storage_list.length;
-      my_rev = doc._rev;
-      if (my_rev) {
-        functions.update_env = false;
-      }
-      for (i = 0; i < priv.storage_list.length; i += 1) {
-        // request all sub storages
-        if (doc_env.my_revisions[my_rev]) {
-          // if my_rev exist, convert it to distant revision
-          doc._rev = doc_env.my_revisions[my_rev][i];
-        }
-        priv.send("get", i, doc, command.cloneOption(), functions.callback);
-      }
-    };
-    functions.update_env = true;
-    functions.callback = function (method, index, err, response) {
-      if (err) {
-        revs_array[index] = null;
-        functions.error(err);
-        return;
-      }
-      doc_env.last_revisions[index] = response._rev || "unique_" + index;
-      revs_array[index] = response._rev || "unique_" + index;
-      if (doc_env.distant_revisions[response._rev || "unique_" + index]) {
-        // the document revision is already known
-        if (functions.update_env === true) {
-          my_rev = doc_env.distant_revisions[response._rev ||
-                                             "unique_" + index];
-        }
-      } else {
-        // the document revision is unknown
-        if (functions.update_env === true) {
-          my_rev = priv.generateNextRevision(0, doc._id);
-          doc_env.my_revisions[my_rev] = revs_array;
-          doc_env.distant_revisions[response._rev || "unique_" + index] =
-            my_rev;
-        }
-        functions.update_env = false;
-      }
-      response._rev = my_rev;
-      functions.success(response);
-    };
-    functions.success = function (response) {
-      var i, start, tmp, tmp_object;
-      functions.success = priv.emptyFunction;
-      if (doc_env.my_revisions[my_rev]) {
-        // this was not a specific revision
-        // we can convert revisions recieved by the sub storage
-        if (response._conflicts) {
-          // convert conflicting revisions to replicate revisions
-          tmp_object = {};
-          for (i = 0; i < response._conflicts.length; i += 1) {
-            tmp_object[doc_env.distant_revisions[response._conflicts[i]] ||
-                       response._conflicts[i]] = true;
-          }
-          response._conflicts = priv.dictKeys2Array(tmp_object);
-        }
-        if (response._revisions) {
-          // convert revisions history to replicate revisions
-          tmp_object = {};
-          start = response._revisions.start;
-          for (i = 0; i < response._revisions.ids.length; i += 1, start -= 1) {
-            tmp = doc_env.distant_revisions[
-              start + "-" + response._revisions.ids[i]
-            ];
-            if (tmp) {
-              response._revisions.ids[i] = tmp.split("-").slice(1).join("-");
-            }
-          }
-        }
-        if (response._revs_info) {
-          // convert revs info to replicate revisions
-          for (i = 0; i < response._revs_info.length; i += 1) {
-            tmp = doc_env.distant_revisions[response._revs_info[i].rev];
-            if (tmp) {
-              response._revs_info[i].rev = tmp;
-            }
-          }
-        }
-      }
-      that.success(response);
-    };
-    functions.error_count = 0;
-    functions.error = function (err) {
-      functions.error_count += 1;
-      if (functions.error_count === priv.storage_list.length) {
-        that.error(err);
-        functions.error = priv.emptyFunction;
-      }
-    };
-    functions.begin();
+    that.genericRequest(command, "get");
   };
 
   /**
-   * Remove the document or attachment from all sub storages.
+   * Get the attachment from all sub storages, get the fastest.
+   * @method getAttachment
+   * @param  {object} command The JIO command
+   */
+  that.getAttachment = function (command) {
+    that.genericRequest(command, "getAttachment");
+  };
+
+  /**
+   * Remove the document from all sub storages.
    * @method remove
    * @param  {object} command The JIO command
    */
   that.remove = function (command) {
-    var functions = {}, doc_env, revs_info, doc, my_rev;
-    functions.begin = function () {
-      doc = command.cloneDoc();
+    that.genericRequest(command, "remove");
+  };
 
-      if (typeof doc._rev === "string" && !priv.checkRevisionFormat(doc._rev)) {
-        that.error({
-          "status": 31,
-          "statusText": "Wrong Revision Format",
-          "error": "wrong_revision_format",
-          "message": "The document previous revision does not match " +
-            "^[0-9]+-[0-9a-zA-Z]+$",
-          "reason": "Previous revision is wrong"
-        });
-        return;
-      }
-      doc_env = my.env[doc._id];
-      if (!doc_env || !doc_env.id) {
-        doc_env = priv.initEnv(doc._id);
-      }
-      my_rev = priv.generateNextRevision(doc._rev || 0, doc._id);
-      functions.sendDocument();
-    };
-    functions.sendDocument = function () {
-      var i, cloned_doc;
-      for (i = 0; i < priv.storage_list.length; i += 1) {
-        cloned_doc = priv.clone(doc);
-        if (typeof cloned_doc._rev === "string" &&
-            doc_env.my_revisions[cloned_doc._rev] !== undefined) {
-          cloned_doc._rev = doc_env.my_revisions[cloned_doc._rev][i];
-        }
-        priv.send(
-          "remove",
-          i,
-          cloned_doc,
-          command.cloneOption(),
-          functions.checkSendResult
-        );
-      }
-      that.end();
-    };
-    functions.checkSendResult = function (method, index, err, response) {
-      if (err) {
-        priv.updateEnv(doc_env, my_rev, index, null);
-        functions.error(err);
-        return;
-      }
-      // success
-      priv.updateEnv(
-        doc_env,
-        my_rev,
-        index,
-        response.rev || "unique_" + index
-      );
-      functions.success({"ok": true, "id": doc._id, "rev": my_rev});
-    };
-    functions.success = function (response) {
-      // can be called once
-      that.success(response);
-      functions.success = priv.emptyFunction;
-    };
-    functions.error_count = 0;
-    functions.error = function (err) {
-      functions.error_count += 1;
-      if (functions.error_count === priv.storage_list.length) {
-        that.error(err);
-        functions.error = priv.emptyFunction;
-      }
-    };
-    functions.begin();
+  /**
+   * Remove the attachment from all sub storages.
+   * @method remove
+   * @param  {object} command The JIO command
+   */
+  that.removeAttachment = function (command) {
+    that.genericRequest(command, "removeAttachment");
   };
 
   return that;

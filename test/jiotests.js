@@ -1639,13 +1639,15 @@ test("Put Attachment", function () {
 
     // putAttachment without doc id
     // error 20 -> document id required
-    o.spy(o, "status", 20, "PutAttachment without doc id");
+    o.spy(o, "status", 20, "PutAttachment without doc id" +
+          " -> 20 document id required");
     o.jio.putAttachment({}, o.f);
     o.tick(o);
 
     // putAttachment without attachment id
     // erorr 22 -> attachment id required
-    o.spy(o, "status", 22, "PutAttachment without attachment id");
+    o.spy(o, "status", 22, "PutAttachment without attachment id" +
+          " -> 22 attachment id required");
     o.jio.putAttachment({"_id": "putattmt1"}, o.f);
     o.tick(o);
 
@@ -1799,12 +1801,14 @@ test ("Get", function(){
     o.localpath = "jio/localstorage/urevget/arevget";
 
     // get inexistent document
-    o.spy(o, "status", 404, "Get inexistent document (winner)");
+    o.spy(o, "status", 404, "Get inexistent document (winner)" +
+          " -> 404 Not Found");
     o.jio.get({"_id": "get1"}, o.f);
     o.tick(o);
 
     // get inexistent attachment
-    o.spy(o, "status", 404, "Get inexistent attachment (winner)");
+    o.spy(o, "status", 404, "Get inexistent attachment (winner)" +
+          " -> 404 Not Found");
     o.jio.get({"_id": "get1/get2"}, o.f);
     o.tick(o);
 
@@ -1863,7 +1867,8 @@ test ("Get", function(){
     o.tick(o);
 
     // get inexistent specific document
-    o.spy(o, "status", 404, "Get document (inexistent specific revision)");
+    o.spy(o, "status", 404, "Get document (inexistent specific revision)" +
+          " -> 404 Not Found");
     o.jio.get({"_id": "get1", "_rev": "1-rev0"}, {
         "revs_info": true, "revs": true, "conflicts": true,
     }, o.f);
@@ -1902,7 +1907,8 @@ test ("Get", function(){
     o.tick(o);
 
     // get inexistent attachment specific rev
-    o.spy(o, "status", 404, "Get inexistent attachment (specific revision)");
+    o.spy(o, "status", 404, "Get inexistent attachment (specific revision)" +
+          " -> 404 Not Found");
     o.jio.get({"_id": "get1/get2", "_rev": "1-rev1"}, {
         "revs_info": true, "revs": true, "conflicts": true,
     }, o.f);
@@ -2084,8 +2090,6 @@ test ("Remove", function(){
 
     o.jio.stop();
 });
-
-module ( "Jio Revision Storage + Local Storage" );
 
 test ("Scenario", function(){
 
@@ -2288,15 +2292,15 @@ module ("JIO Replicate Revision Storage");
 
     // check document
     o.doc._id = o.uuid;
-    o.revision = {"start": 0, "ids": []};
-    o.rev = "1-1";
-    o.local_rev = "1-" + generateRevisionHash(o.doc, o.revision);
+    o.revisions = {"start": 0, "ids": []};
+    o.rev_hash = generateRevisionHash(o.doc, o.revisions);
+    o.rev = "1-" + o.rev_hash;
     o.leavesAction(function (storage_description, param) {
       var suffix = "", doc = clone(o.doc);
       if (param.revision) {
         deepEqual(o.response_rev, o.rev, "Check revision");
-        doc._id += "." + o.local_rev;
-        suffix = "." + o.local_rev;
+        doc._id += "." + o.rev;
+        suffix = "." + o.rev;
       }
       deepEqual(
         localstorage.getItem(generateLocalPath(storage_description) +
@@ -2309,10 +2313,10 @@ module ("JIO Replicate Revision Storage");
     o.spy(o, "value", {
       "_id": o.uuid,
       "title": "post document without id",
-      "_rev": "1-1",
-      "_revisions": {"start": 1, "ids": ["1"]},
-      "_revs_info": [{"rev": "1-1", "status": "available"}]
-    }, "Get the previous document (without revision)");
+      "_rev": o.rev,
+      "_revisions": {"start": 1, "ids": [o.rev_hash]},
+      "_revs_info": [{"rev": o.rev, "status": "available"}]
+    }, "Get the generated document, the winner");
     o.jio.get({"_id": o.uuid}, {
       "conflicts": true,
       "revs": true,
@@ -2322,25 +2326,25 @@ module ("JIO Replicate Revision Storage");
 
     // post a new document with id
     o.doc = {"_id": "doc1", "title": "post new doc with id"};
-    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
-          "Post document (with id)");
+    o.rev1_1_hash = generateRevisionHash(o.doc, o.revisions);
+    o.rev1_1 = "1-" + o.rev1_1_hash;
+    o.rev1_1_history = {"start": 1, "ids": [o.rev1_1_hash]};
+    o.rev1_1_revs_info = [{"rev": o.rev1_1, "status": "available"}];
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev1_1},
+          "Post new document with an id");
     o.jio.post(o.doc, o.f);
     o.tick(o);
 
-    // //  /
-    // //  |
-    // // 1-1
+    //  /
+    //  |
+    // 1-1
 
     // check document
-    o.local_rev_hash = generateRevisionHash(o.doc, o.revision);
-    o.local_rev = "1-" + o.local_rev_hash;
-    o.specific_rev_hash = o.local_rev_hash;
-    o.specific_rev = o.local_rev;
     o.leavesAction(function (storage_description, param) {
       var suffix = "", doc = clone(o.doc);
       if (param.revision) {
-        doc._id += "." + o.local_rev;
-        suffix = "." + o.local_rev;
+        doc._id += "." + o.rev1_1;
+        suffix = "." + o.rev1_1;
       }
       deepEqual(
         localstorage.getItem(generateLocalPath(storage_description) +
@@ -2353,9 +2357,9 @@ module ("JIO Replicate Revision Storage");
     o.spy(o, "value", {
       "_id": "doc1",
       "title": "post new doc with id",
-      "_rev": "1-1",
-      "_revisions": {"start": 1, "ids": ["1"]},
-      "_revs_info": [{"rev": "1-1", "status": "available"}]
+      "_rev": o.rev1_1,
+      "_revisions": {"start": 1, "ids": [o.rev1_1_hash]},
+      "_revs_info": [{"rev": o.rev1_1, "status": "available"}]
     }, "Get the previous document (without revision)");
     o.jio.get({"_id": "doc1"}, {
       "conflicts": true,
@@ -2366,8 +2370,11 @@ module ("JIO Replicate Revision Storage");
 
     // post same document without revision
     o.doc = {"_id": "doc1", "title": "post same document without revision"};
-    o.rev = "1-2";
-    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
+    o.rev1_2_hash = generateRevisionHash(o.doc, o.revisions);
+    o.rev1_2 = "1-" + o.rev1_2_hash;
+    o.rev1_2_history = {"start": 1, "ids": [o.rev1_2_hash]};
+    o.rev1_2_revs_info = [{"rev": o.rev1_2, "status": "available"}];
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev1_2},
           "Post same document (without revision)");
     o.jio.post(o.doc, o.f);
     o.tick(o);
@@ -2377,12 +2384,11 @@ module ("JIO Replicate Revision Storage");
     // 1-1 1-2
 
     // check document
-    o.local_rev = "1-" + generateRevisionHash(o.doc, o.revision);
     o.leavesAction(function (storage_description, param) {
       var suffix = "", doc = clone(o.doc);
       if (param.revision) {
-        doc._id += "." + o.local_rev;
-        suffix = "." + o.local_rev;
+        doc._id += "." + o.rev1_2;
+        suffix = "." + o.rev1_2;
       }
       deepEqual(
         localstorage.getItem(generateLocalPath(storage_description) +
@@ -2392,9 +2398,17 @@ module ("JIO Replicate Revision Storage");
     });
 
     // post a new revision
-    o.doc = {"_id": "doc1", "title": "post new revision", "_rev": o.rev};
-    o.rev = "2-3";
-    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
+    o.doc = {"_id": "doc1", "title": "post new revision", "_rev": o.rev1_2};
+    o.revisions.start += 1;
+    o.revisions.ids.unshift(o.rev1_2_hash);
+    o.rev2_3_hash = generateRevisionHash(o.doc, o.revisions);
+    o.rev2_3 = "2-" + o.rev2_3_hash;
+    o.rev2_3_history = clone(o.rev1_2_history);
+    o.rev2_3_history.start += 1;
+    o.rev2_3_history.ids.unshift(o.rev2_3_hash);
+    o.rev2_3_revs_info = clone(o.rev1_2_revs_info);
+    o.rev2_3_revs_info.unshift({"rev": o.rev2_3, "status": "available"});
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev2_3},
           "Post document (with revision)");
     o.jio.post(o.doc, o.f);
     o.tick(o);
@@ -2406,17 +2420,12 @@ module ("JIO Replicate Revision Storage");
     //     2-3
 
     // check document
-    o.revision.start += 1;
-    o.revision.ids.unshift(o.local_rev.split("-").slice(1).join("-"));
-    o.doc._rev = o.local_rev;
-    o.local_rev = "2-" + generateRevisionHash(o.doc, o.revision);
-    o.specific_rev_conflict = o.local_rev;
     o.leavesAction(function (storage_description, param) {
       var suffix = "", doc = clone(o.doc);
       delete doc._rev;
       if (param.revision) {
-        doc._id += "." + o.local_rev;
-        suffix = "." + o.local_rev;
+        doc._id += "." + o.rev2_3;
+        suffix = "." + o.rev2_3;
       }
       deepEqual(
         localstorage.getItem(generateLocalPath(storage_description) +
@@ -2429,28 +2438,12 @@ module ("JIO Replicate Revision Storage");
     o.spy(o, "value", {
       "_id": "doc1",
       "title": "post same document without revision",
-      "_rev": "1-2",
-      "_revisions": {"start": 1, "ids": ["2"]},
-      "_revs_info": [{"rev": "1-2", "status": "available"}],
-      "_conflicts": ["1-1"]
+      "_rev": o.rev1_2,
+      "_revisions": {"start": 1, "ids": [o.rev1_2_hash]},
+      "_revs_info": [{"rev": o.rev1_2, "status": "available"}],
+      "_conflicts": [o.rev1_1]
     }, "Get the previous document (with revision)");
-    o.jio.get({"_id": "doc1", "_rev": "1-2"}, {
-      "conflicts": true,
-      "revs": true,
-      "revs_info": true
-    }, o.f);
-    o.tick(o);
-
-    // get the post document with specific revision
-    o.spy(o, "value", {
-      "_id": "doc1",
-      "title": "post new doc with id",
-      "_rev": o.specific_rev,
-      "_revisions": {"start": 1, "ids": [o.specific_rev_hash]},
-      "_revs_info": [{"rev": o.specific_rev, "status": "available"}],
-      "_conflicts": [o.specific_rev_conflict]
-    }, "Get a previous document (with local storage revision)");
-    o.jio.get({"_id": "doc1", "_rev": o.specific_rev}, {
+    o.jio.get({"_id": "doc1", "_rev": o.rev1_2}, {
       "conflicts": true,
       "revs": true,
       "revs_info": true
@@ -2464,8 +2457,11 @@ module ("JIO Replicate Revision Storage");
 
     // put document without rev
     o.doc = {"_id": "doc1", "title": "put new document"};
-    o.rev = "1-4";
-    o.spy(o, "value", {"id": "doc1", "ok": true, "rev": o.rev},
+    o.rev1_4_hash = generateRevisionHash(o.doc, {"start": 0, "ids": []});
+    o.rev1_4 = "1-" + o.rev1_4_hash;
+    o.rev1_4_history = {"start": 1, "ids": [o.rev1_4_hash]};
+    o.rev1_4_revs_info = [{"rev": o.rev1_4, "status": "available"}];
+    o.spy(o, "value", {"id": "doc1", "ok": true, "rev": o.rev1_4},
           "Put document without rev")
     o.jio.put(o.doc, o.f);
     o.tick(o);
@@ -2477,10 +2473,14 @@ module ("JIO Replicate Revision Storage");
     //     2-3
 
     // put new revision
-    o.doc = {"_id": "doc1", "title": "put new revision", "_rev": "1-4"};
-    o.rev = "2-5";
-    o.spy(o, "value", {"id": "doc1", "ok": true, "rev": o.rev},
-          "Put document without rev")
+    o.doc = {"_id": "doc1", "title": "put new revision", "_rev": o.rev1_4};
+    o.rev2_5_hash = generateRevisionHash(o.doc, o.rev1_4_history);
+    o.rev2_5 = "2-" + o.rev2_5_hash
+    o.rev2_5_history = {"start": 2, "ids": [o.rev2_5_hash, o.rev1_4_hash]};
+    o.rev2_5_revs_info = clone(o.rev1_4_revs_info);
+    o.rev2_5_revs_info.unshift({"rev": o.rev2_5, "status": "available"});
+    o.spy(o, "value", {"id": "doc1", "ok": true, "rev": o.rev2_5},
+          "Put new revision")
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
@@ -2491,39 +2491,361 @@ module ("JIO Replicate Revision Storage");
     //     2-3 2-5
 
     // putAttachment to inexistent document
-    // putAttachment
-    // get document
-    // get attachment
-    // put document
-    // get document
-    // get attachment
-    // remove attachment
-    // get document
-    // get inexistent attachment
-
-    // remove document and conflict
-    o.rev = "3-6";
-    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
-          "Remove document");
-    o.jio.remove({"_id": "doc1", "_rev": "2-5"}, o.f);
+    o.doc = {
+      "_id": "doc2",
+      "_mimetype": "text/plain",
+      "_data": "doc 2 - attachment 1",
+      "_attachment": "attachment1"
+    };
+    o.rev_hash = generateRevisionHash(o.doc, {"start": 0, "ids": []});
+    o.rev = "1-" + o.rev_hash;
+    o.spy(o, "value", {"ok": true, "id": "doc2/attachment1", "rev": o.rev},
+          "Put an attachment to an inexistent document");
+    o.doc._id += "/" + o.doc._attachment;
+    delete o.doc._attachment;
+    o.jio.putAttachment(o.doc, o.f);
     o.tick(o);
 
-    // remove document and conflict
-    o.rev = "3-7";
-    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
-          "Remove document");
-    o.jio.remove({"_id": "doc1", "_rev": "2-3"}, o.f);
+    // putAttachment
+    o.doc = {
+      "_id": "doc1",
+      "_mimetype": "text/plain",
+      "_data": "doc 1 - attachment 1",
+      "_attachment": "attachment1",
+      "_rev": o.rev2_5
+    };
+    o.rev3_6_hash = generateRevisionHash(o.doc, o.rev2_5_history);
+    o.rev3_6 = "3-" + o.rev3_6_hash;
+    o.rev3_6_history = clone(o.rev2_5_history);
+    o.rev3_6_history.start += 1;
+    o.rev3_6_history.ids.unshift(o.rev3_6_hash);
+    o.rev3_6_revs_info = clone(o.rev2_5_revs_info);
+    o.rev3_6_revs_info.unshift({"rev": o.rev3_6, "status": "available"});
+    o.spy(o, "value", {"ok": true, "id": "doc1/attachment1", "rev": o.rev3_6},
+          "Put an attachment to the first document");
+    o.doc._id += "/" + o.doc._attachment;
+    delete o.doc._attachment;
+    o.jio.putAttachment(o.doc, o.f);
+    o.tick(o);
+
+    //    __/__
+    //   /  |  \
+    // 1-1 1-2 1-4
+    //      |   |
+    //     2-3 2-5
+    //          |
+    //        3-6+a1
+
+    // get document
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev3_6,
+      "_revisions": o.rev3_6_history,
+      "_revs_info": o.rev3_6_revs_info,
+      "_conflicts": [o.rev2_3, o.rev1_1],
+      "_attachments": {
+        "attachment1": {
+          "length": "doc 1 - attachment 1".length,
+          "content_type": "text/plain",
+          "digest": "md5-0505c1fb6aae02dd1695d33841726564"
+        }
+      }
+    };
+    o.spy(o, "value", o.doc, "Get document, the winner");
+    o.jio.get({"_id": "doc1"}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // get attachment
+    o.doc = {
+      "_id": "doc1",
+      "_attachment": "attachment1"
+    };
+    o.spy(o, "value", "doc 1 - attachment 1", "Get the winner's attachment");
+    o.doc._id += "/" + o.doc._attachment;
+    delete o.doc._attachment;
+    o.jio.get(o.doc, o.f);
+    o.tick(o);
+
+    // put document
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev3_6,
+      "title": "Put revision, attachment must be copied"
+    };
+    o.rev4_7_hash = generateRevisionHash(o.doc, o.rev3_6_history);
+    o.rev4_7 = "4-" + o.rev4_7_hash;
+    o.rev4_7_history = clone(o.rev3_6_history);
+    o.rev4_7_history.start += 1;
+    o.rev4_7_history.ids.unshift(o.rev4_7_hash);
+    o.rev4_7_revs_info = clone(o.rev3_6_revs_info);
+    o.rev4_7_revs_info.unshift({"rev": o.rev4_7, "status": "available"});
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev4_7},
+          "Update document, attachment should be copied");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    //    __/__
+    //   /  |  \
+    // 1-1 1-2 1-4
+    //      |   |
+    //     2-3 2-5
+    //          |
+    //        3-6+a1
+    //          |
+    //        4-7+a1
+
+    // get document, attachment must be copied
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev4_7,
+      "title": o.doc.title,
+      "_attachments": {
+        "attachment1": {
+          "length": "doc 1 - attachment 1".length,
+          "content_type": "text/plain",
+          "digest": "md5-0505c1fb6aae02dd1695d33841726564"
+        }
+      },
+      "_conflicts": [o.rev2_3, o.rev1_1],
+      "_revisions": o.rev4_7_history,
+      "_revs_info": o.rev4_7_revs_info
+    };
+    o.spy(o, "value", o.doc,
+          "Get the new winner document and its attachment metadata");
+    o.jio.get({"_id": "doc1"}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // get attachment
+    o.doc = {
+      "_id": "doc1",
+      "_attachment": "attachment1"
+    };
+    o.spy(o, "value", "doc 1 - attachment 1",
+          "Get the winner's attachment again");
+    o.doc._id += "/" + o.doc._attachment;
+    delete o.doc._attachment;
+    o.jio.get(o.doc, o.f);
+    o.tick(o);
+
+    // remove attachment
+    o.doc = {
+      "_id": "doc1",
+      "_attachment": "attachment1",
+      "_rev": o.rev4_7
+    };
+    o.rev5_8_hash = generateRevisionHash(o.doc, o.rev4_7_history);
+    o.rev5_8 = "5-" + o.rev5_8_hash;
+    o.rev5_8_history = clone(o.rev4_7_history);
+    o.rev5_8_history.start += 1;
+    o.rev5_8_history.ids.unshift(o.rev5_8_hash);
+    o.rev5_8_revs_info = clone(o.rev4_7_revs_info);
+    o.rev5_8_revs_info.unshift({"rev": o.rev5_8, "status": "available"});
+    o.spy(o, "value", {"ok": true, "id": "doc1/attachment1", "rev": o.rev5_8},
+          "Remove attachment");
+    o.doc._id += "/" + o.doc._attachment;
+    delete o.doc._attachment;
+    o.jio.remove(o.doc, o.f);
+    o.tick(o);
+
+
+    //    __/__
+    //   /  |  \
+    // 1-1 1-2 1-4
+    //      |   |
+    //     2-3 2-5
+    //          |
+    //        3-6+a1
+    //          |
+    //        4-7+a1
+    //          |
+    //         5-8
+
+    // get document to check attachment existence
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev5_8,
+      "title": "Put revision, attachment must be copied",
+      "_conflicts": [o.rev2_3, o.rev1_1],
+      "_revisions": o.rev5_8_history,
+      "_revs_info": o.rev5_8_revs_info
+    };
+    o.spy(o, "value", o.doc,
+          "Get the new winner document, no attachment must be provided");
+    o.jio.get({"_id": "doc1"}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // get specific document
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev4_7,
+      "title": o.doc.title,
+      "_attachments": {
+        "attachment1": {
+          "length": "doc 1 - attachment 1".length,
+          "content_type": "text/plain",
+          "digest": "md5-0505c1fb6aae02dd1695d33841726564"
+        }
+      },
+      "_conflicts": [o.rev2_3, o.rev1_1],
+      "_revisions": o.rev4_7_history,
+      "_revs_info": o.rev4_7_revs_info
+    };
+    o.spy(o, "value", o.doc,
+          "Get the new winner document and its attachment metadata");
+    o.jio.get({"_id": "doc1", "_rev": o.rev4_7}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // get inexistent attachment
+    o.spy(o, "status", 404, "Get inexistent winner attachment" +
+          " -> 404 Not Found");
+    o.jio.get({"_id": "doc1/attachment1"}, o.f);
+    o.tick(o);
+
+    // get specific attachment
+    o.doc = {
+      "_id": "doc1",
+      "_attachment": "attachment1",
+      "_rev": o.rev3_6
+    };
+    o.spy(o, "value", "doc 1 - attachment 1",
+          "Get a specific attachment");
+    o.doc._id += "/" + o.doc._attachment;
+    delete o.doc._attachment;
+    o.jio.get(o.doc, o.f);
+    o.tick(o);
+
+    // remove specific document and conflict
+    o.doc = {"_id": "doc1", "_rev": o.rev1_1};
+    // generate with deleted_flag
+    o.rev2_9_hash = generateRevisionHash(o.doc, o.rev1_1_history, true);
+    o.rev2_9 = "2-" + o.rev2_9_hash;
+    o.rev2_9_history = clone(o.rev1_1_history);
+    o.rev2_9_history.start += 1;
+    o.rev2_9_history.ids.unshift(o.rev2_9_hash);
+    o.rev2_9_revs_info = clone(o.rev1_1_revs_info);
+    o.rev2_9_revs_info.unshift({"rev": o.rev2_9, "status": "available"});
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev2_9},
+          "Remove specific document, and one conflict");
+    o.jio.remove(o.doc, o.f);
+    o.tick(o);
+
+    //    __/___
+    //   /   |  \
+    // 1-1  1-2 1-4
+    //  |    |   |
+    // D2-9 2-3 2-5
+    //           |
+    //         3-6+a1
+    //           |
+    //         4-7+a1
+    //           |
+    //          5-8
+
+    // remove specific document and conflict
+    o.doc = {"_id": "doc1", "_rev": o.rev2_3};
+    o.rev3_10_hash = generateRevisionHash(o.doc, o.rev2_3_history, true);
+    o.rev3_10 = "3-" + o.rev3_10_hash;
+    o.rev3_10_history = clone(o.rev2_3_history);
+    o.rev3_10_history.start += 1;
+    o.rev3_10_history.ids.unshift(o.rev3_10_hash);
+    o.rev3_10_revs_info = clone(o.rev2_3_revs_info);
+    o.rev3_10_revs_info.unshift({"rev": o.rev3_10, "status": "available"});
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev3_10},
+          "Remove specific document, and one conflict");
+    o.jio.remove(o.doc, o.f);
+    o.tick(o);
+
+    //    ___/____
+    //   /   |    \
+    // 1-1  1-2   1-4
+    //  |    |     |
+    // D2-9 2-3   2-5
+    //       |     |
+    //     D3-10 3-6+a1
+    //             |
+    //           4-7+a1
+    //             |
+    //            5-8
+
+    // get document no more conflict
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev5_8,
+      "title": "Put revision, attachment must be copied",
+      "_revisions": o.rev5_8_history,
+      "_revs_info": o.rev5_8_revs_info
+    };
+    o.spy(o, "value", o.doc,
+          "Get the new winner document, no more conflicts");
+    o.jio.get({"_id": "doc1"}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
     o.tick(o);
 
     // remove document
-    o.rev = "2-8";
-    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev},
-          "Remove document");
-    o.jio.remove({"_id": "doc1", "_rev": "1-1"}, o.f);
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev5_8
+    };
+    o.rev6_11_hash = generateRevisionHash(o.doc, o.rev5_8_history, true);
+    o.rev6_11 = "6-" + o.rev6_11_hash;
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev6_11},
+          "Remove the last document");
+    o.jio.remove(o.doc, o.f);
     o.tick(o);
 
+    //    ___/____
+    //   /   |    \
+    // 1-1  1-2   1-4
+    //  |    |     |
+    // D2-9 2-3   2-5
+    //       |     |
+    //     D3-10 3-6+a1
+    //             |
+    //           4-7+a1
+    //             |
+    //            5-8
+    //             |
+    //           D6-11
+
     // get inexistent document
-    o.spy(o, "status", 404, "Get inexistent document");
+    o.spy(o, "status", 404, "Get inexistent document -> 404 Not Found");
+    o.jio.get({"_id": "doc3"}, {
+      "conflicts": true,
+      "revs": true,
+      "revisions": true
+    }, o.f);
+    o.tick(o);
+
+    // get specific deleted document
+    o.spy(o, "status", 404, "Get deleted document -> 404 Not Found");
+    o.jio.get({"_id": "doc1", "rev": o.rev3_10}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // get specific deleted document
+    o.spy(o, "status", 404, "Get deleted document -> 404 Not Found");
     o.jio.get({"_id": "doc1"}, {
       "conflicts": true,
       "revs": true,
