@@ -660,7 +660,7 @@ jIO.addStorageType("revision", function (spec, my) {
           if (attachment_list[i] &&
               doc._attachment ===
               attachment_list[i]._attachment) {
-            return onEnd(attachment_list[i]._data);
+            return onEnd(undefined, attachment_list[i]._data);
           }
         }
         return onEnd(priv.notFoundError(
