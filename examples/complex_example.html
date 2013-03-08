@@ -86,45 +86,33 @@ var clearlog = function () {
   <br />
   <table border="1" style="width: 100%;">
     <tr>
-      <td style="width: 50%;">
+      <td colspan="1" style="width: 50%;">
         <label for="metadata">Metadata or document id:</label>
         <textarea id="metadata" rows="3" style="width: 98%;">{}</textarea>
       </td>
-      <td style="width: 50%;">
-        <label for="document_id">Document Id:</label>
-        <input type="text" id="document_id" value="" />
-        <label for="mimetype">Mime Type:</label>
-        <input type="text" id="mimetype" value="" /><br />
-        <label for="content">Content:</label>
-        <textarea id="content" rows="3" style="width: 98%;"></textarea><br />
-      </td>
-    </tr>
-    <tr>
-      <td colspan="2" style="text-align: center;">
+      <td colspan="1" style="text-align: center;">
         Options:<br />
-        <label for="prev_rev">Previous revision:</label>
-        <input type="text" id="prev_rev" value="" style="width: 40em;"/><br />
-        <label for="show_conflicts">Show Conflicts</label>
-        <input type="checkbox" id="show_conflicts" />,
-        <label for="show_revision_history">Show Revision History</label>
-        <input type="checkbox" id="show_revision_history" />,
-        <label for="show_revision_info">Show Revision Info</label>
-        <input type="checkbox" id="show_revision_info" />,<br />
+        <label for="show_conflicts">Get Conflicts</label>
+        <input type="checkbox" id="show_conflicts" /><br />
+        <label for="show_revision_history">Get Revision History</label>
+        <input type="checkbox" id="show_revision_history" /><br />
+        <label for="show_revision_info">Get Revision Info</label>
+        <input type="checkbox" id="show_revision_info" /><br />
         <label for="max_retry">Max Retry</label>
         <input type="number" id="max_retry" value="0" style="width:30px;"/>
         (0 = infinite)
       </td>
     </tr>
     <tr>
-      <td style="text-align: center;">
+      <td colspan="2" style="text-align: center;">
         <button onclick="post()">post</button>
         <button onclick="put()">put</button>
         <button onclick="get()">get</button>
         <button onclick="remove()">remove</button>
         <button onclick="allDocs()">allDocs</button>
-      </td>
-      <td style="text-align: center;">
-        <button onclick="putAttachment()">putAttachment</button>
+      <!-- </td> -->
+      <!-- <td style="text-align: center;"> -->
+        - <button onclick="putAttachment()">putAttachment</button>
       </td>
     </tr>
   </table>
@@ -233,50 +221,13 @@ var command = function (method) {
     opts.revs_info = $('#show_revision_info').attr('checked')?true:false;
     opts.max_retry = parseInt($('#max_retry').attr('value') || '0');
 
-    switch (method) {
-    case 'putAttachment':
-        doc.id = $('#document_id').attr('value');
-        doc.rev = $('#prev_rev').attr('value');
-        doc.data = $('#content').attr('value');
-        doc.mimetype = $('#mimetype').attr('value');
-        log ('attachment: '+ JSON.stringify (doc));
-        break;
-    case 'post':
-    case 'put':
-        doc = JSON.parse ($('#metadata').attr('value'));
-        log ('doc: ' + JSON.stringify (doc));
-        break;
-    case 'remove':
-        doc = JSON.parse ($('#metadata').attr('value'));
-        opts.rev = ($('#last_revision').attr('checked')?'last':undefined) ||
-            $('#prev_rev').attr('value') || undefined;
-        log ('doc: ' + JSON.stringify (doc));
-        break;
-    case 'get':
-        doc = $('#metadata').attr('value');
-        log ('docid: '+ doc)
-    case 'allDocs':
-        break;
-    }
-
+    doc = JSON.parse ($('#metadata').attr('value'));
+    log ('doc: ' + JSON.stringify (doc));
     log ('opts: ' + JSON.stringify (opts));
 
-    switch (method) {
-    case "putAttachment":
-    case 'remove':
-    case 'post':
-    case 'put':
-    case 'get':
-        my_jio[method](doc,opts,function (err,val) {
-            callback(err,val,begin_date);
-        });
-        break;
-    case 'allDocs':
-        my_jio[method](opts,function (err,val) {
-            callback(err,val,begin_date);
-        });
-        break;
-    }
+    my_jio[method](doc,opts,function (err,val) {
+        callback(err,val,begin_date);
+    });
 };
 var post = function () {
     command('post');
