@@ -144,14 +144,13 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
 
   /**
    * Use "send" method to all sub storages.
-   * Calling "callback" for each storage response.
-   * @method sendToAll
+   * Calling "callback" only with the first response
+   * @method sendToAllFastestResponseOnly
    * @param  {string} method The request method
    * @param  {object} doc The document object
    * @param  {object} option The request option
    * @param  {function} callback The callback. Parameters:
    * - {string} The request method
-   * - {number} The storage index
    * - {object} The error object
    * - {object} The response object
    */
@@ -163,14 +162,40 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
         error_count += 1;
         last_error = err;
         if (error_count === priv.storage_list.length) {
-          return callback(err, response);
+          return callback(method, err, response);
         }
       }
-      callback(err, response);
+      callback(method, err, response);
     };
     for (i = 0; i < priv.storage_list.length; i += 1) {
       priv.send(method, i, doc, option, callbackWrapper);
     }
+  };
+
+  /**
+   * Use "sendToAll" method, calling "callback" at the last response with
+   * the response list
+   * @method sendToAllGetResponseList
+   * @param  {string} method The request method
+   * @param  {object} doc The document object
+   * @param  {object} option The request option
+   * @return {function} callback The callback. Parameters:
+   * - {string} The request method
+   * - {object} The error object
+   * - {object} The response object
+   */
+  priv.sendToAllGetResponseList = function (method, doc, option, callback) {
+    var wrapper, callback_count = 0, response_list = [], error_list = [];
+    response_list.length = priv.storage_list.length;
+    wrapper = function (method, index, err, response) {
+      error_list[index] = err;
+      response_list[index] = response;
+      callback_count += 1;
+      if (callback_count === priv.storage_list.length) {
+        callback(error_list, response_list);
+      }
+    };
+    priv.sendToAll(method, doc, option, wrapper);
   };
 
   /**
@@ -251,7 +276,7 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
     };
     functions.newParam = function (doc, option, repair) {
       var param = {
-        "doc": doc,
+        "doc": doc, // the document to repair
         "option": option,
         "repair": repair,
         "responses": {
@@ -268,7 +293,11 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
           "stats_items": [
             // 0: [responseA, [0, 1]]
             // 1: [responseB, [2]]
-          ]
+          ],
+          "attachments": {
+            // attachmentA : {_id: attachmentA, _revs_info, _mimetype: ..}
+            // attachmentB : {_id: attachmentB, _revs_info, _mimetype: ..}
+          }
         },
         "conflicts": {
           // revC: true
@@ -351,10 +380,7 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
           return;
         }
         // repair
-        functions.synchronizeAllSubStorage(param);
-        if (param.option.synchronize_conflicts !== false) {
-          functions.synchronizeConflicts(param);
-        }
+        functions.getAttachments(param);
       };
     };
     functions.addConflicts = function (param, list) {
@@ -378,6 +404,60 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
         responses.stats[str_response].push(i);
       }
     };
+    functions.getAttachments = function (param) {
+      var response, parsed_response, attachment;
+      for (response in param.responses.stats) {
+        if (param.responses.stats.hasOwnProperty(response)) {
+          parsed_response = JSON.parse(response);
+          for (attachment in parsed_response._attachments) {
+            if ((parsed_response._attachments).hasOwnProperty(attachment)) {
+              functions.get_attachment_count += 1;
+              priv.send(
+                "get",
+                param.responses.stats[response][0],
+                {
+                  "_id": param.doc._id + "/" + attachment,
+                  "_rev": JSON.parse(response)._rev
+                },
+                param.option,
+                functions.getAttachmentsCallback(
+                  param,
+                  attachment,
+                  param.responses.stats[response]
+                )
+              );
+            }
+          }
+        }
+      }
+    };
+    functions.get_attachment_count = 0;
+    functions.getAttachmentsCallback = function (
+      param,
+      attachment_id,
+      index_list
+    ) {
+      return function (method, index, err, response) {
+        if (err) {
+          callback({
+            "status": 40,
+            "statusText": "Check Failed",
+            "error": "check_failed",
+            "message": "Unable to retreive attachments",
+            "reason": err.reason
+          }, undefined);
+          return;
+        }
+        functions.get_attachment_count -= 1;
+        param.responses.attachments[attachment_id] = response;
+        if (functions.get_attachment_count === 0) {
+          functions.synchronizeAllSubStorage(param);
+          if (param.option.synchronize_conflicts !== false) {
+            functions.synchronizeConflicts(param);
+          }
+        }
+      };
+    };
     functions.synchronizeAllSubStorage = function (param) {
       var i, j, len = param.responses.stats_items.length;
       for (i = 0; i < len; i += 1) {
@@ -400,26 +480,37 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       response,
       storage_list
     ) {
-      var i, new_doc;
+      var i, new_doc, attachment_to_put = [];
       if (response === undefined) {
         // no response to sync
         return;
       }
+      new_doc = JSON.parse(response);
+      new_doc._revs = new_doc._revisions;
+      delete new_doc._rev;
+      delete new_doc._revisions;
+      delete new_doc._conflicts;
+      for (i in new_doc._attachments) {
+        if (new_doc._attachments.hasOwnProperty(i)) {
+          attachment_to_put.push({
+            "_id": i,
+            "_mimetype": new_doc._attachments[i].content_type,
+            "_revs_info": new_doc._revs_info
+          });
+        }
+      }
       for (i = 0; i < storage_list.length; i += 1) {
-        new_doc = JSON.parse(response);
-        new_doc._revs = new_doc._revisions;
-        delete new_doc._rev;
-        delete new_doc._revisions;
-        delete new_doc._conflicts;
-        functions.finished_count += 1;
+        functions.finished_count += attachment_to_put.length || 1;
         priv.send(
           "put",
           storage_list[i],
           new_doc,
           param.option,
-          functions.finished
+          functions.putAttachments(param, attachment_to_put)
         );
       }
+      functions.finished_count += 1;
+      functions.finished();
     };
     functions.synchronizeConflicts = function (param) {
       var rev, new_doc, new_option;
@@ -437,6 +528,50 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
           ));
         }
       }
+    };
+    functions.putAttachments = function (param, attachment_to_put) {
+      return function (method, index, err, response) {
+        var i, attachment;
+        if (err) {
+          return callback({
+            "status": 40,
+            "statusText": "Check Failed",
+            "error": "check_failed",
+            "message": "Unable to copy attachments",
+            "reason": err.reason
+          }, undefined);
+        }
+        for (i = 0; i < attachment_to_put.length; i += 1) {
+          attachment = {
+            "_id": param.doc._id,
+            "_attachment": attachment_to_put[i]._id,
+            "_mimetype": attachment_to_put[i]._mimetype,
+            "_revs_info": attachment_to_put[i]._revs_info,
+            // "_revs_info": param.responses.list[index]._revs_info,
+            "_data": param.responses.attachments[attachment_to_put[i]._id]
+          };
+          attachment._id += "/" + attachment._attachment;
+          delete attachment._attachment;
+          priv.send(
+            "putAttachment",
+            index,
+            attachment,
+            option,
+            functions.putAttachmentCallback(param)
+          );
+        }
+        if (attachment_to_put.length === 0) {
+          functions.finished();
+        }
+      };
+    };
+    functions.putAttachmentCallback = function (param) {
+      return function (method, index, err, response) {
+        if (err) {
+          return callback(err, undefined);
+        }
+        functions.finished();
+      };
     };
     functions.finished_count = 0;
     functions.finished = function () {
@@ -467,7 +602,7 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
       method,
       doc,
       command.cloneOption(),
-      function (err, response) {
+      function (method, err, response) {
         if (err) {
           return that.error(err);
         }

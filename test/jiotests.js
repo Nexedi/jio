@@ -2966,39 +2966,45 @@ module ("JIO Replicate Revision Storage");
     o.jio = JIO.newJio({
       "type": "replicaterevision",
       "storage_list": [{
-        "type": "revision",
-        "sub_storage": {
-          "type": "local",
-          "username": "usyncreprevlocloc1",
-          "application_name": "1"
-        }
+        "type": "replicaterevision",
+        "storage_list": [{
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "usyncreprevlocloc1",
+            "application_name": "2"
+          }
+        }, {
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "usyncreprevlocloc2",
+            "application_name": "2"
+          }
+        }]
       }, {
-        "type": "revision",
-        "sub_storage": {
-          "type": "local",
-          "username": "usyncreprevlocloc2",
-          "application_name": "1"
-        }
-      }, {
-        "type": "revision",
-        "sub_storage": {
-          "type": "local",
-          "username": "usyncreprevlocloc3",
-          "application_name": "1"
-        }
-      }, {
-        "type": "revision",
-        "sub_storage": {
-          "type": "local",
-          "username": "usyncreprevlocloc4",
-          "application_name": "1"
-        }
+        "type": "replicaterevision",
+        "storage_list": [{
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "usyncreprevlocloc3",
+            "application_name": "2"
+          }
+        }, {
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "usyncreprevlocloc4",
+            "application_name": "2"
+          }
+        }]
       }]
     });
-    o.localpath1 = "jio/localstorage/usyncreprevlocloc1/1";
-    o.localpath2 = "jio/localstorage/usyncreprevlocloc2/1";
-    o.localpath3 = "jio/localstorage/usyncreprevlocloc3/1";
-    o.localpath4 = "jio/localstorage/usyncreprevlocloc4/1";
+    o.localpath1 = "jio/localstorage/usyncreprevlocloc1/2";
+    o.localpath2 = "jio/localstorage/usyncreprevlocloc2/2";
+    o.localpath3 = "jio/localstorage/usyncreprevlocloc3/2";
+    o.localpath4 = "jio/localstorage/usyncreprevlocloc4/2";
 
     // add documents to localstorage
     o.doctree1_1 = {
@@ -3062,10 +3068,21 @@ module ("JIO Replicate Revision Storage");
       "status": "available",
       "children": []
     });
-    o.doc2_2 = {"_id": "doc1.2-222", "title": "B"};
+    o.doc2_2 = {
+      "_id": "doc1.2-222",
+      "title": "B",
+      "_attachments": {
+        "haha": {
+          "length": 3,
+          "digest": "md5-900150983cd24fb0d6963f7d28e17f72",
+          "content_type": "text/plain"
+        }
+      }
+    };
     localstorage.setItem(o.localpath1 + "/doc1.revision_tree.json",
                          o.doctree2_2);
-    localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id, o.doc2_2);
+    localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id, o.doc2_2)
+    localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id + "/haha", "abc");
 
     // document synchronisation without conflict
     o.spy(o, "status", 41, "Check document");
@@ -3094,21 +3111,32 @@ module ("JIO Replicate Revision Storage");
       "Check revision tree 3, revision synchro done"
     );
     deepEqual(
+      localstorage.getItem(o.localpath3 + "/doc1.2-222"),
+      o.doc2_2,
+      "Check document 3"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath3 + "/doc1.2-222/haha"),
+      "abc",
+      "Check attachment 3"
+    );
+    deepEqual(
       localstorage.getItem(o.localpath4 + "/doc1.revision_tree.json"),
       o.doctree2_2,
       "Check revision tree 4, revision synchro done"
     );
 
     // add documents to localstorage
-    o.doctree2_2.children[0].children.unshift({
+    o.doctree2_3 = clone(o.doctree2_2);
+    o.doctree2_3.children[0].children.unshift({
       "rev": "2-223",
       "status": "available",
       "children": []
     });
-    o.doc2_2 = {"_id": "doc1.2-223", "title": "B"};
+    o.doc2_3 = {"_id": "doc1.2-223", "title": "C"};
     localstorage.setItem(o.localpath1 + "/doc1.revision_tree.json",
-                         o.doctree2_2);
-    localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id, o.doc2_2);
+                         o.doctree2_3);
+    localstorage.setItem(o.localpath1 + "/" + o.doc2_3._id, o.doc2_3);
 
     // document synchronisation with conflict
     o.spy(o, "status", 41, "Check document");
@@ -3121,10 +3149,31 @@ module ("JIO Replicate Revision Storage");
     o.tick(o, 50000);
 
     // check documents from localstorage
-    deepEqual([
+    deepEqual(
       localstorage.getItem(o.localpath1 + "/doc1.revision_tree.json"),
+      o.doctree2_3,
+      "Check revision tree 1, rev synchro"
+    );
+    deepEqual(
       localstorage.getItem(o.localpath2 + "/doc1.revision_tree.json"),
-    ], [o.doctree2_2, o.doctree2_2], "Check revision trees, rev synchro");
+      o.doctree2_3,
+      "Check revision tree 2, rev synchro"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath3 + "/doc1.revision_tree.json"),
+      o.doctree2_3,
+      "Check revision tree 3, rev synchro"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath3 + "/doc1.2-223"),
+      o.doc2_3,
+      "Check document 3"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath4 + "/doc1.revision_tree.json"),
+      o.doctree2_3,
+      "Check revision tree 4, rev synchro"
+    );
 
     o.jio.stop();
 
