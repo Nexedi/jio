@@ -3000,6 +3000,11 @@ module ("JIO Replicate Revision Storage");
     o.jio.check({"_id": "doc1"}, o.f);
     o.tick(o);
 
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": "1-111"},
+          "Check document with revision");
+    o.jio.check({"_id": "doc1", "_rev": "1-111"}, o.f);
+    o.tick(o);
+
     o.spy(o, "value", {"ok": true, "id": "doc1"},
           "Repair document");
     o.jio.repair({"_id": "doc1"}, o.f);
