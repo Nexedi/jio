@@ -9,20 +9,31 @@
  *     "sub_storage": <sub storage description>
  * }
  */
-jIO.addStorageType('revision', function (spec, my) {
+jIO.addStorageType("revision", function (spec, my) {
   "use strict";
-  var that, priv = {};
+  var that = {}, priv = {};
   spec = spec || {};
   that = my.basicStorage(spec, my);
+  // ATTRIBUTES //
+  priv.doc_tree_suffix = ".revision_tree.json";
+  priv.sub_storage = spec.sub_storage;
+  // METHODS //
+  /**
+   * Constructor
+   */
+  priv.RevisionStorage = function () {
+    // no init
+  };
 
-  priv.substorage_key = "sub_storage";
-  priv.doctree_suffix = ".revision_tree.json";
-  priv.substorage = spec[priv.substorage_key];
-
+  /**
+   * Description to store in order to be restored later
+   * @method specToStore
+   * @return {object} Descriptions to store
+   */
   that.specToStore = function () {
-    var o = {};
-    o[priv.substorage_key] = priv.substorage;
-    return o;
+    return {
+      "sub_storage": priv.sub_storage
+    };
   };
 
   /**
@@ -70,373 +81,49 @@ jIO.addStorageType('revision', function (spec, my) {
   };
 
   /**
-   * Returns an array version of a revision string
-   * @method revisionToArray
-   * @param  {string} revision The revision string
-   * @return {array} Array containing a revision number and a hash
-   */
-  priv.revisionToArray = function (revision) {
-    if (typeof revision === "string") {
-      return [parseInt(revision.split('-')[0], 10),
-        revision.split('-')[1]];
-    }
-    return revision;
-  };
-
-  /**
-   * Convert the revision history object to an array of revisions.
-   * @method revisionHistoryToArray
-   * @param  {object} revs The revision history
-   * @return {array} The revision array
-   */
-  priv.revisionHistoryToArray = function (revs) {
-    var i, start = revs.start, newlist = [];
-    for (i = 0; i < revs.ids.length; i += 1, start -= 1) {
-      newlist.push(start + "-" + revs.ids[i]);
-    }
-    return newlist;
-  };
-
-  /**
-   * Generates the next revision of [previous_revision]. [string] helps us
-   * to generate a hash code.
-   * @methode generateNextRev
-   * @param  {string} previous_revision The previous revision
-   * @param  {object} doc The document metadata
-   * @param  {object} revisions The revision history
-   * @param  {boolean} deleted_flag The deleted flag
-   * @return {array} 0:The next revision number and 1:the hash code
-   */
-  priv.generateNextRevision = function (previous_revision,
-    doc, revisions, deleted_flag) {
-    var string = JSON.stringify(doc) + JSON.stringify(revisions) +
-      JSON.stringify(deleted_flag ? true : false);
-    if (typeof previous_revision === "number") {
-      return [previous_revision + 1, priv.hashCode(string)];
-    }
-    previous_revision = priv.revisionToArray(previous_revision);
-    return [previous_revision[0] + 1, priv.hashCode(string)];
-  };
-
-  /**
    * Checks a revision format
-   * @method checkRevisionFormat
-   * @param  {string} revision The revision string
-   * @return {boolean} True if ok, else false
-   */
-  priv.checkRevisionFormat = function (revision) {
-    return (/^[0-9]+-[0-9a-zA-Z]+$/.test(revision));
-  };
-
-  /**
-   * Creates an empty document tree
-   * @method createDocumentTree
-   * @param  {array} children An array of children (optional)
-   * @return {object} The new document tree
-   */
-  priv.createDocumentTree = function (children) {
-    return {
-      "children": children || []
-    };
-  };
-
-  /**
-   * Creates a new document tree node
-   * @method createDocumentTreeNode
-   * @param  {string} revision The node revision
-   * @param  {string} status The node status
-   * @param  {array} children An array of children (optional)
-   * @return {object} The new document tree node
-   */
-  priv.createDocumentTreeNode = function (revision, status, children) {
-    return {
-      "rev": revision,
-      "status": status,
-      "children": children || []
-    };
-  };
-
-  /**
-   * Gets the specific revision from a document tree.
-   * @method getRevisionFromDocumentTree
-   * @param  {object} document_tree The document tree
-   * @param  {string} revision The specific revision
-   * @return {array} The good revs info array
-   */
-  priv.getRevisionFromDocumentTree = function (document_tree, revision) {
-    var result, search, revs_info = [];
-    result = [];
-    // search method fills "result" with the good revs info
-    search = function (document_tree) {
-      var i;
-      if (document_tree.rev !== undefined) {
-        // node is not root
-        revs_info.unshift({
-          "rev": document_tree.rev,
-          "status": document_tree.status
-        });
-        if (document_tree.rev === revision) {
-          result = revs_info;
-          return;
-        }
-      }
-      // This node has children
-      for (i = 0; i < document_tree.children.length; i += 1) {
-        // searching deeper to find the good rev
-        search(document_tree.children[i]);
-        if (result.length > 0) {
-          // The result is already found
-          return;
-        }
-        revs_info.shift();
-      }
-    };
-    search(document_tree);
-    return result;
-  };
-
-  /**
-   * Gets the winner revision from a document tree.
-   * The winner is the deeper revision on the left.
-   * @method getWinnerRevisionFromDocumentTree
-   * @param  {object} document_tree The document tree
-   * @return {array} The winner revs info array
-   */
-  priv.getWinnerRevisionFromDocumentTree = function (document_tree) {
-    var result, search, revs_info = [];
-    result = [];
-    // search method fills "result" with the winner revs info
-    search = function (document_tree, deep) {
-      var i;
-      if (document_tree.rev !== undefined) {
-        // node is not root
-        revs_info.unshift({
-          "rev": document_tree.rev,
-          "status": document_tree.status
-        });
-      }
-      if (document_tree.children.length === 0 && document_tree.status !==
-          "deleted") {
-        // This node is a leaf
-        if (result.length < deep) {
-          // The leaf is deeper than result
-          result = [];
-          for (i = 0; i < revs_info.length; i += 1) {
-            result.push(revs_info[i]);
-          }
-        }
-        return;
-      }
-      // This node has children
-      for (i = 0; i < document_tree.children.length; i += 1) {
-        // searching deeper to find the deeper leaf
-        search(document_tree.children[i], deep + 1);
-        revs_info.shift();
-      }
-    };
-    search(document_tree, 0);
-    return result;
-  };
-
-  /**
-   * Add a document revision branch to the document tree
-   * @method updateDocumentTree
-   * @param  {object} doctree The document tree object
-   * @param  {object|array} revs The revision history object or a revision array
-   * @param  {boolean} deleted The deleted flag
-   * @param  {array} The document revs_info
-   */
-  priv.updateDocumentTree = function (doctree, revs, deleted) {
-    var revs_info, doctree_iterator, flag, i, rev;
-    revs_info = [];
-    if (revs.ids) {
-      // revs is a revision history object
-      revs = priv.revisionHistoryToArray(revs);
-    } else {
-      // revs is an array of revisions
-      revs = priv.clone(revs);
-    }
-    doctree_iterator = doctree;
-    while (revs.length > 0) {
-      rev = revs.pop(0);
-      revs_info.unshift({
-        "rev": rev,
-        "status": "missing"
-      });
-      for (i = 0; i < doctree_iterator.children.length; i += 1) {
-        if (doctree_iterator.children[i].rev === rev) {
-          doctree_iterator = doctree_iterator.children[i];
-          revs_info[0].status = doctree_iterator.status;
-          rev = undefined;
-          break;
-        }
-      }
-      if (rev) {
-        doctree_iterator.children.unshift({
-          "rev": rev,
-          "status": "missing",
-          "children": []
-        });
-        doctree_iterator = doctree_iterator.children[0];
-      }
-    }
-    flag = deleted === true ? "deleted" : "available";
-    revs_info[0].status = flag;
-    doctree_iterator.status = flag;
-    return revs_info;
-  };
-
-  /**
-   * Add a document revision to the document tree
-   * @method postToDocumentTree
-   * @param  {object} doctree The document tree object
+   * @method checkDocumentRevisionFormat
    * @param  {object} doc The document object
-   * @param  {boolean} set_node_to_deleted Set the revision to deleted
-   * @return {array} The added document revs_info
+   * @return {object} null if ok, else error object
    */
-  priv.postToDocumentTree = function (doctree, doc, set_node_to_deleted) {
-    var i, revs_info, next_rev, next_rev_str, selectNode, selected_node,
-      flag;
-    flag = set_node_to_deleted === true ? "deleted" : "available";
-    revs_info = [];
-    selected_node = doctree;
-    selectNode = function (node) {
-      var i;
-      if (node.rev !== undefined) {
-        // node is not root
-        revs_info.unshift({
-          "rev": node.rev,
-          "status": node.status
-        });
-      }
-      if (node.rev === doc._rev) {
-        selected_node = node;
-        return "node_selected";
-      }
-      for (i = 0; i < node.children.length; i += 1) {
-        if (selectNode(node.children[i]) === "node_selected") {
-          return "node_selected";
-        }
-        revs_info.shift();
-      }
+  priv.checkDocumentRevisionFormat = function (doc) {
+    var send_error = function (message) {
+      return {
+        "status": 31,
+        "statusText": "Wrong Revision Format",
+        "error": "wrong_revision_format",
+        "message": message,
+        "reason": "Revision is wrong"
+      };
     };
     if (typeof doc._rev === "string") {
-      // document has a previous revision
-      if (selectNode(selected_node) !== "node_selected") {
-        // no node was selected, so add a node with a specific rev
-        revs_info.unshift({
-          "rev": doc._rev,
-          "status": "missing"
-        });
-        selected_node.children.unshift(priv.createDocumentTreeNode(
-          doc._rev,
-          "missing"
-        ));
-        selected_node = selected_node.children[0];
+      if (/^[0-9]+-[0-9a-zA-Z]+$/.test(doc._rev) === false) {
+        return send_error("The document revision does not match " +
+                          "^[0-9]+-[0-9a-zA-Z]+$");
       }
     }
-    next_rev = priv.generateNextRevision(
-      doc._rev || 0,
-      doc,
-      priv.revsInfoToHistory(revs_info),
-      set_node_to_deleted
-    );
-    next_rev_str = next_rev.join("-");
-    // don't add if the next rev already exists
-    for (i = 0; i < selected_node.children.length; i += 1) {
-      if (selected_node.children[i].rev === next_rev_str) {
-        revs_info.unshift({
-          "rev": next_rev_str,
-          "status": flag
-        });
-        if (selected_node.children[i].status !== flag) {
-          selected_node.children[i].status = flag;
-        }
-        return revs_info;
+    if (typeof doc._revs === "object") {
+      if (typeof doc._revs.start !== "number" ||
+          typeof doc._revs.ids !== "object" ||
+          typeof doc._revs.ids.length !== "number") {
+        return send_error("The document revision history is not well formated");
       }
     }
-    revs_info.unshift({
-      "rev": next_rev.join('-'),
-      "status": flag
-    });
-
-    selected_node.children.unshift(priv.createDocumentTreeNode(
-      next_rev.join('-'),
-      flag
-    ));
-
-    return revs_info;
+    if (typeof doc._revs_info === "object") {
+      if (typeof doc._revs_info.length !== "number") {
+        return send_error("The document revision information " +
+                          "is not well formated");
+      }
+    }
   };
 
   /**
-   * Gets an array of leaves revisions from document tree
-   * @method getLeavesFromDocumentTree
-   * @param  {object} document_tree The document tree
-   * @param  {string} except The revision to except
-   * @return {array} The array of leaves revisions
+   * Creates a new document tree
+   * @method newDocTree
+   * @return {object} The new document tree
    */
-  priv.getLeavesFromDocumentTree = function (document_tree, except) {
-    var result, search;
-    result = [];
-    // search method fills [result] with the winner revision
-    search = function (document_tree) {
-      var i;
-      if (except !== undefined && except === document_tree.rev) {
-        return;
-      }
-      if (document_tree.children.length === 0 && document_tree.status !==
-          "deleted") {
-        // This node is a leaf
-        result.push(document_tree.rev);
-        return;
-      }
-      // This node has children
-      for (i = 0; i < document_tree.children.length; i += 1) {
-        // searching deeper to find the deeper leaf
-        search(document_tree.children[i]);
-      }
-    };
-    search(document_tree);
-    return result;
-  };
-
-  /**
-   * Check if revision is a leaf
-   * @method isRevisionALeaf
-   * @param  {string} revision revision to check
-   * @param  {array} leaves all leaves on tree
-   * @return {boolean} true/false
-   */
-  priv.isRevisionALeaf = function (document_tree, revision) {
-    var result, search;
-    result = undefined;
-    // search method fills "result" with the good revs info
-    search = function (document_tree) {
-      var i;
-      if (document_tree.rev !== undefined) {
-        // node is not root
-        if (document_tree.rev === revision) {
-          if (document_tree.children.length === 0) {
-            // This node is a leaf
-            result = true;
-            return;
-          }
-          result = false;
-          return;
-        }
-      }
-      // This node has children
-      for (i = 0; i < document_tree.children.length; i += 1) {
-        // searching deeper to find the good rev
-        search(document_tree.children[i]);
-        if (result !== undefined) {
-          // The result is already found
-          return;
-        }
-      }
-    };
-    search(document_tree);
-    return result || false;
+  priv.newDocTree = function () {
+    return {"children": []};
   };
 
   /**
@@ -446,10 +133,11 @@ jIO.addStorageType('revision', function (spec, my) {
    * @return {object} The revisions history
    */
   priv.revsInfoToHistory = function (revs_info) {
-    var revisions = {
+    var i, revisions = {
       "start": 0,
       "ids": []
-    }, i;
+    };
+    revs_info = revs_info || [];
     if (revs_info.length > 0) {
       revisions.start = parseInt(revs_info[0].rev.split('-')[0], 10);
     }
@@ -460,20 +148,608 @@ jIO.addStorageType('revision', function (spec, my) {
   };
 
   /**
-   * Returns the revision of the revision position from a revs_info array.
-   * @method getRevisionFromPosition
-   * @param  {array} revs_info The revs_info array
-   * @param  {number} rev_pos The revision position number
-   * @return {string} The revision of the good position (empty string if fail)
+   * Convert the revision history object to an array of revisions.
+   * @method revisionHistoryToList
+   * @param  {object} revs The revision history
+   * @return {array} The revision array
    */
-  priv.getRevisionFromPosition = function (revs_info, rev_pos) {
-    var i;
-    for (i = revs_info.length - 1; i >= 0; i -= 1) {
-      if (priv.revisionToArray(revs_info[i].rev)[0] === rev_pos) {
-        return revs_info[i].rev;
+  priv.revisionHistoryToList = function (revs) {
+    var i, start = revs.start, new_list = [];
+    for (i = 0; i < revs.ids.length; i += 1, start -= 1) {
+      new_list.push(start + "-" + revs.ids[i]);
+    }
+    return new_list;
+  };
+
+  /**
+   * Convert revision list to revs info.
+   * @method revisionListToRevsInfo
+   * @param  {array} revision_list The revision list
+   * @param  {object} doc_tree The document tree
+   * @return {array} The document revs info
+   */
+  priv.revisionListToRevsInfo = function (revision_list, doc_tree) {
+    var revisionListToRevsInfoRec, revs_info = [], j;
+    for (j = 0; j < revision_list.length; j += 1) {
+      revs_info.push({"rev": revision_list[j], "status": "missing"});
+    }
+    revisionListToRevsInfoRec = function (index, doc_tree) {
+      var child, i;
+      if (index < 0) {
+        return;
+      }
+      for (i = 0; i < doc_tree.children.length; i += 1) {
+        child = doc_tree.children[i];
+        if (child.rev === revision_list[index]) {
+          revs_info[index].status = child.status;
+          revisionListToRevsInfoRec(index - 1, child);
+        }
+      }
+    };
+    revisionListToRevsInfoRec(revision_list.length - 1, doc_tree);
+    return revs_info;
+  };
+
+  /**
+   * Update a document metadata revision properties
+   * @method fillDocumentRevisionProperties
+   * @param  {object} doc The document object
+   * @param  {object} doc_tree The document tree
+   */
+  priv.fillDocumentRevisionProperties = function (doc, doc_tree) {
+    if (doc._revs_info) {
+      doc._revs = priv.revsInfoToHistory(doc._revs_info);
+    } else if (doc._revs) {
+      doc._revs_info = priv.revisionListToRevsInfo(
+        priv.revisionHistoryToList(doc._revs),
+        doc_tree
+      );
+    } else if (doc._rev) {
+      doc._revs_info = priv.getRevisionInfo(doc._rev, doc_tree);
+      doc._revs = priv.revsInfoToHistory(doc._revs_info);
+    } else {
+      doc._revs_info = [];
+      doc._revs = {"start": 0, "ids": []};
+    }
+    if (doc._revs.start > 0) {
+      doc._rev = doc._revs.start + "-" + doc._revs.ids[0];
+    } else {
+      delete doc._rev;
+    }
+  };
+
+  /**
+   * Generates the next revision of a document.
+   * @methode generateNextRevision
+   * @param  {object} doc The document metadata
+   * @param  {boolean} deleted_flag The deleted flag
+   * @return {array} 0:The next revision number and 1:the hash code
+   */
+  priv.generateNextRevision = function (doc, deleted_flag) {
+    var string, revision_history, revs_info, pseudo_revision;
+    doc = priv.clone(doc) || {};
+    revision_history = doc._revs;
+    revs_info = doc._revs_info;
+    delete doc._rev;
+    delete doc._revs;
+    delete doc._revs_info;
+    string = JSON.stringify(doc) + JSON.stringify(revision_history) +
+      JSON.stringify(deleted_flag ? true : false);
+    revision_history.start += 1;
+    revision_history.ids.unshift(priv.hashCode(string));
+    doc._revs = revision_history;
+    doc._rev = revision_history.start + "-" + revision_history.ids[0];
+    revs_info.unshift({
+      "rev": doc._rev,
+      "status": deleted_flag ? "deleted" : "available"
+    });
+    doc._revs_info = revs_info;
+    return doc;
+  };
+
+  /**
+   * Gets the revs info from the document tree
+   * @method getRevisionInfo
+   * @param  {string} revision The revision to search for
+   * @param  {object} doc_tree The document tree
+   * @return {array} The revs info
+   */
+  priv.getRevisionInfo = function (revision, doc_tree) {
+    var getRevisionInfoRec;
+    getRevisionInfoRec = function (doc_tree) {
+      var i, child, revs_info;
+      for (i = 0; i < doc_tree.children.length; i += 1) {
+        child = doc_tree.children[i];
+        if (child.rev === revision) {
+          return [{"rev": child.rev, "status": child.status}];
+        }
+        revs_info = getRevisionInfoRec(child);
+        if (revs_info.length > 0 || revision === undefined) {
+          revs_info.push({"rev": child.rev, "status": child.status});
+          return revs_info;
+        }
+      }
+      return [];
+    };
+    return getRevisionInfoRec(doc_tree);
+  };
+
+  priv.updateDocumentTree = function (doc, doc_tree) {
+    var revs_info, updateDocumentTreeRec, next_rev;
+    doc = priv.clone(doc);
+    revs_info = doc._revs_info;
+    updateDocumentTreeRec = function (doc_tree, revs_info) {
+      var i, child, info;
+      if (revs_info.length === 0) {
+        return;
+      }
+      info = revs_info.pop();
+      for (i = 0; i < doc_tree.children.length; i += 1) {
+        child = doc_tree.children[i];
+        if (child.rev === info.rev) {
+          return updateDocumentTreeRec(child, revs_info);
+        }
+      }
+      doc_tree.children.unshift({
+        "rev": info.rev,
+        "status": info.status,
+        "children": []
+      });
+      updateDocumentTreeRec(doc_tree.children[0], revs_info);
+    };
+    updateDocumentTreeRec(doc_tree, priv.clone(revs_info));
+  };
+
+  priv.send = function (method, doc, option, callback) {
+    that.addJob(
+      method,
+      priv.sub_storage,
+      doc,
+      option,
+      function (success) {
+        callback(undefined, success);
+      },
+      function (err) {
+        callback(err, undefined);
+      }
+    );
+  };
+
+  priv.getWinnerRevsInfo = function (doc_tree) {
+    var revs_info = [], getWinnerRevsInfoRec;
+    getWinnerRevsInfoRec = function (doc_tree, tmp_revs_info) {
+      var i;
+      if (doc_tree.rev) {
+        tmp_revs_info.unshift({"rev": doc_tree.rev, "status": doc_tree.status});
+      }
+      if (doc_tree.children.length === 0) {
+        if (revs_info.length < tmp_revs_info.length ||
+            (revs_info.length > 0 && revs_info[0].status === "deleted")) {
+          revs_info = priv.clone(tmp_revs_info);
+        }
+      }
+      for (i = 0; i < doc_tree.children.length; i += 1) {
+        getWinnerRevsInfoRec(doc_tree.children[i], tmp_revs_info);
+      }
+      tmp_revs_info.shift();
+    };
+    getWinnerRevsInfoRec(doc_tree, []);
+    return revs_info;
+  };
+
+  priv.getConflicts = function (revision, doc_tree) {
+    var conflicts = [], getConflictsRec;
+    getConflictsRec = function (doc_tree) {
+      var i;
+      if (doc_tree.rev === revision) {
+        return;
+      }
+      if (doc_tree.children.length === 0) {
+        if (doc_tree.status !== "deleted") {
+          conflicts.push(doc_tree.rev);
+        }
+      }
+      for (i = 0; i < doc_tree.children.length; i += 1) {
+        getConflictsRec(doc_tree.children[i]);
+      }
+    };
+    getConflictsRec(doc_tree);
+    return conflicts.length === 0 ? undefined : conflicts;
+  };
+
+  priv.get = function (doc, option, callback) {
+    priv.send("get", doc, option, callback);
+  };
+  priv.put = function (doc, option, callback) {
+    priv.send("put", doc, option, callback);
+  };
+  priv.remove = function (doc, option, callback) {
+    priv.send("remove", doc, option, callback);
+  };
+  priv.putAttachment = function (attachment, option, callback) {
+    priv.send("putAttachment", attachment, option, callback);
+  };
+
+  priv.getDocument = function (doc, option, callback) {
+    doc = priv.clone(doc);
+    doc._id = doc._id + "." + doc._rev;
+    delete doc._attachment;
+    delete doc._rev;
+    delete doc._revs;
+    delete doc._revs_info;
+    priv.get(doc, option, callback);
+  };
+  priv.getAttachment = priv.get;
+  priv.putDocument = function (doc, option, callback) {
+    doc = priv.clone(doc);
+    doc._id = doc._id + "." + doc._rev;
+    delete doc._attachment;
+    delete doc._data;
+    delete doc._mimetype;
+    delete doc._rev;
+    delete doc._revs;
+    delete doc._revs_info;
+    priv.put(doc, option, callback);
+  };
+
+  priv.getRevisionTree = function (doc, option, callback) {
+    doc = priv.clone(doc);
+    doc._id = doc._id + priv.doc_tree_suffix;
+    priv.get(doc, option, callback);
+  };
+
+  priv.getAttachmentList = function (doc, option, callback) {
+    var attachment_id, dealResults, state = "ok", result_list = [], count = 0;
+    dealResults = function (attachment_id, attachment_meta) {
+      return function (err, attachment) {
+        if (state !== "ok") {
+          return;
+        }
+        count -= 1;
+        if (err) {
+          if (err.status === 404) {
+            result_list.push(undefined);
+          } else {
+            state = "error";
+            return callback(err, undefined);
+          }
+        }
+        result_list.push({
+          "_attachment": attachment_id,
+          "_data": attachment,
+          "_mimetype": attachment_meta.content_type
+        });
+        if (count === 0) {
+          state = "finished";
+          callback(undefined, result_list);
+        }
+      };
+    };
+    for (attachment_id in doc._attachments) {
+      if (doc._attachments.hasOwnProperty(attachment_id)) {
+        count += 1;
+        priv.get(
+          {"_id": doc._id + "/" + attachment_id},
+          option,
+          dealResults(attachment_id, doc._attachments[attachment_id])
+        );
       }
     }
-    return '';
+    if (count === 0) {
+      callback(undefined, []);
+    }
+  };
+
+  priv.putAttachmentList = function (doc, option, attachment_list, callback) {
+    var i, dealResults, state = "ok", count = 0, attachment;
+    attachment_list = attachment_list || [];
+    dealResults = function (index) {
+      return function (err, response) {
+        if (state !== "ok") {
+          return;
+        }
+        count -= 1;
+        if (err) {
+          state = "error";
+          return callback(err, undefined);
+        }
+        if (count === 0) {
+          state = "finished";
+          callback(undefined, {"id": doc._id, "ok": true});
+        }
+      };
+    };
+    for (i = 0; i < attachment_list.length; i += 1) {
+      attachment = attachment_list[i];
+      if (attachment !== undefined) {
+        count += 1;
+        attachment._id = doc._id + "." + doc._rev + "/" +
+          attachment._attachment;
+        delete attachment._attachment;
+        priv.putAttachment(attachment, option, dealResults(i));
+      }
+    }
+    if (count === 0) {
+      return callback(undefined, {"id": doc._id, "ok": true});
+    }
+  };
+
+  priv.putDocumentTree = function (doc, option, doc_tree, callback) {
+    doc_tree = priv.clone(doc_tree);
+    doc_tree._id = doc._id + priv.doc_tree_suffix;
+    priv.put(doc_tree, option, callback);
+  };
+
+  priv.notFoundError = function (message, reason) {
+    return {
+      "status": 404,
+      "statusText": "Not Found",
+      "error": "not_found",
+      "message": message,
+      "reason": reason
+    };
+  };
+
+  priv.conflictError = function (message, reason) {
+    return {
+      "status": 409,
+      "statusText": "Conflict",
+      "error": "conflict",
+      "message": message,
+      "reason": reason
+    };
+  };
+
+  priv.revisionGenericRequest = function (doc, option,
+                                          specific_parameter, onEnd) {
+    var prev_doc, doc_tree, attachment_list, callback = {};
+    if (specific_parameter.doc_id) {
+      doc._id = specific_parameter.doc_id;
+    }
+    if (specific_parameter.attachment_id) {
+      doc._attachment = specific_parameter.attachment_id;
+    }
+    callback.begin = function () {
+      var check_error;
+      doc._id = doc._id || priv.generateUuid();
+      if (specific_parameter.revision_needed && !doc._rev) {
+        return onEnd(priv.conflictError(
+          "Document update conflict",
+          "No document revision was provided"
+        ), undefined);
+      }
+      // check revision format
+      check_error = priv.checkDocumentRevisionFormat(doc);
+      if (check_error !== undefined) {
+        return onEnd(check_error, undefined);
+      }
+      priv.getRevisionTree(doc, option, callback.getRevisionTree);
+    };
+    callback.getRevisionTree = function (err, response) {
+      var winner_info, previous_revision = doc._rev,
+        generate_new_revision = doc._revs || doc._revs_info ? false : true;
+      if (err) {
+        if (err.status !== 404) {
+          err.message = "Cannot get document revision tree";
+          return onEnd(err, undefined);
+        }
+      }
+      doc_tree = response || priv.newDocTree();
+      if (specific_parameter.get || specific_parameter.getAttachment) {
+        if (!doc._rev) {
+          winner_info = priv.getWinnerRevsInfo(doc_tree);
+          if (winner_info.length === 0) {
+            return onEnd(priv.notFoundError(
+              "Document not found",
+              "missing"
+            ), undefined);
+          }
+          if (winner_info[0].status === "deleted") {
+            return onEnd(priv.notFoundError(
+              "Document not found",
+              "deleted"
+            ), undefined);
+          }
+          doc._rev = winner_info[0].rev;
+        }
+        priv.fillDocumentRevisionProperties(doc, doc_tree);
+        return priv.getDocument(doc, option, callback.getDocument);
+      }
+      priv.fillDocumentRevisionProperties(doc, doc_tree);
+      if (generate_new_revision) {
+        if (previous_revision && doc._revs_info.length === 0) {
+          // the document history has changed, it means that the document
+          // revision was wrong. Add a pseudo history to the document
+          doc._rev = previous_revision;
+          doc._revs = {
+            "start": parseInt(previous_revision.split("-")[0], 10),
+            "ids": [previous_revision.split("-")[1]]
+          };
+          doc._revs_info = [{"rev": previous_revision, "status": "missing"}];
+        }
+        doc = priv.generateNextRevision(
+          doc,
+          specific_parameter.remove
+        );
+      }
+      if (doc._revs_info.length > 1) {
+        prev_doc = {
+          "_id": doc._id,
+          "_rev": doc._revs_info[1].rev
+        };
+        if (!generate_new_revision && specific_parameter.putAttachment) {
+          prev_doc._rev = doc._revs_info[0].rev;
+        }
+      }
+      // force revs_info status
+      doc._revs_info[0].status = (specific_parameter.remove ?
+                                  "deleted" : "available");
+      priv.updateDocumentTree(doc, doc_tree);
+      if (prev_doc) {
+        return priv.getDocument(prev_doc, option, callback.getDocument);
+      }
+      if (specific_parameter.remove || specific_parameter.removeAttachment) {
+        return onEnd(priv.notFoundError(
+          "Unable to remove an inexistent document",
+          "missing"
+        ), undefined);
+      }
+      priv.putDocument(doc, option, callback.putDocument);
+    };
+    callback.getDocument = function (err, res_doc) {
+      var k, conflicts;
+      if (err) {
+        if (err.status === 404) {
+          if (specific_parameter.remove ||
+              specific_parameter.removeAttachment) {
+            return onEnd(priv.conflictError(
+              "Document update conflict",
+              "Document is missing"
+            ), undefined);
+          }
+          if (specific_parameter.get) {
+            return onEnd(priv.notFoundError(
+              "Unable to find the document",
+              "missing"
+            ), undefined);
+          }
+          res_doc = {};
+        } else {
+          err.message = "Cannot get document";
+          return onEnd(err, undefined);
+        }
+      }
+      if (specific_parameter.get) {
+        res_doc._id = doc._id;
+        res_doc._rev = doc._rev;
+        if (option.conflicts === true) {
+          conflicts = priv.getConflicts(doc._rev, doc_tree);
+          if (conflicts) {
+            res_doc._conflicts = conflicts;
+          }
+        }
+        if (option.revs === true) {
+          res_doc._revisions = doc._revs;
+        }
+        if (option.revs_info === true) {
+          res_doc._revs_info = doc._revs_info;
+        }
+        return onEnd(undefined, res_doc);
+      }
+      if (specific_parameter.putAttachment ||
+          specific_parameter.removeAttachment) {
+        // copy metadata (not beginning by "_" to document
+        for (k in res_doc) {
+          if (res_doc.hasOwnProperty(k) && !k.match("^_")) {
+            doc[k] = res_doc[k];
+          }
+        }
+      }
+      if (specific_parameter.remove) {
+        priv.putDocumentTree(doc, option, doc_tree, callback.putDocumentTree);
+      } else {
+        priv.getAttachmentList(res_doc, option, callback.getAttachmentList);
+      }
+    };
+    callback.getAttachmentList = function (err, res_list) {
+      var i, attachment_found = false;
+      if (err) {
+        err.message = "Cannot get attachment";
+        return onEnd(err, undefined);
+      }
+      attachment_list = res_list || [];
+      if (specific_parameter.getAttachment) {
+        // getting specific attachment
+        for (i = 0; i < attachment_list.length; i += 1) {
+          if (attachment_list[i] &&
+              doc._attachment ===
+              attachment_list[i]._attachment) {
+            return onEnd(undefined, attachment_list[i]._data);
+          }
+        }
+        return onEnd(priv.notFoundError(
+          "Unable to get an inexistent attachment",
+          "missing"
+        ), undefined);
+      }
+      if (specific_parameter.remove_from_attachment_list) {
+        // removing specific attachment
+        for (i = 0; i < attachment_list.length; i += 1) {
+          if (attachment_list[i] &&
+              specific_parameter.remove_from_attachment_list._attachment ===
+              attachment_list[i]._attachment) {
+            attachment_found = true;
+            attachment_list[i] = undefined;
+            break;
+          }
+        }
+        if (!attachment_found) {
+          return onEnd(priv.notFoundError(
+            "Unable to remove an inexistent attachment",
+            "missing"
+          ), undefined);
+        }
+      }
+      priv.putDocument(doc, option, callback.putDocument);
+    };
+    callback.putDocument = function (err, response) {
+      var i, attachment_found = false;
+      if (err) {
+        err.message = "Cannot post the document";
+        return onEnd(err, undefined);
+      }
+      if (specific_parameter.add_to_attachment_list) {
+        // adding specific attachment
+        attachment_list = attachment_list || [];
+        for (i = 0; i < attachment_list.length; i += 1) {
+          if (attachment_list[i] &&
+              specific_parameter.add_to_attachment_list._attachment ===
+              attachment_list[i]._attachment) {
+            attachment_found = true;
+            attachment_list[i] = specific_parameter.add_to_attachment_list;
+            break;
+          }
+        }
+        if (!attachment_found) {
+          attachment_list.unshift(specific_parameter.add_to_attachment_list);
+        }
+      }
+      priv.putAttachmentList(
+        doc,
+        option,
+        attachment_list,
+        callback.putAttachmentList
+      );
+    };
+    callback.putAttachmentList = function (err, response) {
+      if (err) {
+        err.message = "Cannot copy attacments to the document";
+        return onEnd(err, undefined);
+      }
+      priv.putDocumentTree(doc, option, doc_tree, callback.putDocumentTree);
+    };
+    callback.putDocumentTree = function (err, response) {
+      if (err) {
+        err.message = "Cannot update the document history";
+        return onEnd(err, undefined);
+      }
+      onEnd(undefined, {
+        "ok": true,
+        "id": doc._id + (specific_parameter.putAttachment ||
+                         specific_parameter.removeAttachment ||
+                         specific_parameter.getAttachment ?
+                         "/" + doc._attachment : ""),
+        "rev": doc._rev
+      });
+      // if (option.keep_revision_history !== true) {
+      //   // priv.remove(prev_doc, option, function () {
+      //   //   - change "available" status to "deleted"
+      //   //   - remove attachments
+      //   //   - done, no callback
+      //   // });
+      // }
+    };
+    callback.begin();
   };
 
   /**
@@ -485,194 +761,21 @@ jIO.addStorageType('revision', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.post = function (command) {
-    var f = {}, doctree, revs_info, doc, docid, prev_doc;
-    doc = command.cloneDoc();
-    docid = command.getDocId();
-
-    if (typeof doc._rev === "string" && !priv.checkRevisionFormat(doc._rev)) {
-      that.error({
-        "status": 31,
-        "statusText": "Wrong Revision Format",
-        "error": "wrong_revision_format",
-        "message": "The document previous revision does not match " +
-          "^[0-9]+-[0-9a-zA-Z]+$",
-        "reason": "Previous revision is wrong"
-      });
-      return;
-    }
-    if (typeof docid !== "string") {
-      doc._id = priv.generateUuid();
-      docid = doc._id;
-    }
-    f.getDocumentTree = function () {
-      var option = command.cloneOption();
-      if (option.max_retry === 0) {
-        option.max_retry = 3;
-      }
-      that.addJob(
-        "get",
-        priv.substorage,
-        docid + priv.doctree_suffix,
-        option,
-        function (response) {
-          doctree = response;
-          f.updateRevsInfo();
-          f.getDocument();
-        },
-        function (err) {
-          switch (err.status) {
-          case 404:
-            doctree = priv.createDocumentTree();
-            f.updateRevsInfo();
-            f.getDocument();
-            break;
-          default:
-            err.message = "Cannot get document revision tree";
-            f.error(err);
-            break;
-          }
+    priv.revisionGenericRequest(
+      command.cloneDoc(),
+      command.cloneOption(),
+      {},
+      function (err, response) {
+        if (err) {
+          return that.error(err);
         }
-      );
-    };
-    f.getDocument = function () {
-      if (revs_info[1] === undefined) {
-        f.postDocument([]);
-      } else {
-        that.addJob(
-          "get",
-          priv.substorage,
-          command.getDocId() + "." + revs_info[1].rev,
-          command.getOption(),
-          function (response) {
-            var attachment_list = [], i;
-            prev_doc = response;
-            for (i in response._attachments) {
-              if (response._attachments.hasOwnProperty(i)) {
-                attachment_list.push({"id": i, "attachment": {
-                  "_id": command.getDocId() + "." + revs_info[0].rev + "/" + i,
-                  "_mimetype": response._attachments[i].content_type,
-                  "_data": undefined
-                }});
-              }
-            }
-            f.postDocument(attachment_list);
-          },
-          function (err) {
-            if (err.status === 404) {
-              f.postDocument([]);
-              return;
-            }
-            err.message = "Cannot retrieve document";
-            f.error(err);
-          }
-        );
+        that.success(response);
       }
-    };
-    f.updateRevsInfo = function () {
-      if (doc._revs) {
-        revs_info = priv.updateDocumentTree(doctree, doc._revs);
-      } else {
-        revs_info = priv.postToDocumentTree(doctree, doc);
-      }
-    };
-    f.postDocument = function (attachment_list) {
-      doc._id = docid + "." + revs_info[0].rev;
-      delete doc._rev;
-      delete doc._revs;
-      that.addJob(
-        "post",
-        priv.substorage,
-        doc,
-        command.cloneOption(),
-        function () {
-          var i;
-          if (attachment_list.length === 0) {
-            f.sendDocumentTree();
-          } else {
-            f.send_document_tree_count = attachment_list.length;
-            for (i = 0; i < attachment_list.length; i += 1) {
-              f.copyAttachment(attachment_list[i].id,
-                               attachment_list[i].attachment);
-            }
-          }
-        },
-        function (err) {
-          switch (err.status) {
-          case 409:
-            // file already exists
-            f.sendDocumentTree();
-            break;
-          default:
-            err.message = "Cannot upload document";
-            f.error(err);
-            break;
-          }
-        }
-      );
-    };
-    f.copyAttachment = function (attachmentid, attachment) {
-      that.addJob(
-        "get",
-        priv.substorage,
-        prev_doc._id + "/" + attachmentid,
-        command.cloneOption(),
-        function (response) {
-          attachment._data = response;
-          that.addJob(
-            "putAttachment",
-            priv.substorage,
-            attachment,
-            command.cloneOption(),
-            function (response) {
-              f.sendDocumentTree();
-            },
-            function (err) {
-              err.message = "Cannot copy previous attachment";
-              f.error(err);
-            }
-          );
-        },
-        function (err) {
-          err.message = "Cannot get previous attachment";
-          f.error(err);
-        }
-      );
-    };
-    f.send_document_tree_count = 0;
-    f.sendDocumentTree = function () {
-      f.send_document_tree_count -= 1;
-      if (f.send_document_tree_count > 0) {
-        return;
-      }
-      doctree._id = docid + priv.doctree_suffix;
-      that.addJob(
-        "put",
-        priv.substorage,
-        doctree,
-        command.cloneOption(),
-        function () {
-          that.success({
-            "ok": true,
-            "id": docid,
-            "rev": revs_info[0].rev
-          });
-        },
-        function (err) {
-          // xxx do we try to delete the posted document ?
-          err.message = "Cannot save document revision tree";
-          f.error(err);
-        }
-      );
-    };
-    f.error = function (err) {
-      f.error = function () {};
-      that.error(err);
-    };
-    f.getDocumentTree();
+    );
   };
 
   /**
-   * Update the document metadata and update a document tree.
+   * Put the document metadata and create or update a document tree.
    * Options:
    * - {boolean} keep_revision_history To keep the previous revisions
    *                                   (false by default) (NYI).
@@ -680,590 +783,123 @@ jIO.addStorageType('revision', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.put = function (command) {
-    that.post(command);
-  };
-
-  /**
-   * Create/Update the document attachment and update a document tree.
-   * Options:
-   * - {boolean} keep_revision_history To keep the previous revisions
-   *                                   (false by default) (NYI).
-   * @method putAttachment
-   * @param  {object} command The JIO command
-   */
-  that.putAttachment = function (command) {
-    var functions = {}, doc, doctree, revs_info, prev_doc;
-    doc = command.cloneDoc();
-    functions.begin = function () {
-      if (typeof doc._rev === "string" && !priv.checkRevisionFormat(doc._rev)) {
-        that.error({
-          "status": 31,
-          "statusText": "Wrong Revision Format",
-          "error": "wrong_revision_format",
-          "message": "The document previous revision does not match " +
-            "^[0-9]+-[0-9a-zA-Z]+$",
-          "reason": "Previous revision is wrong"
-        });
-        return;
-      }
-      functions.getDocumentTree();
-    };
-    functions.getDocumentTree = function () {
-      var option = command.cloneOption();
-      if (option.max_retry === 0) {
-        option.max_retry = 3;
-      }
-      that.addJob(
-        "get",
-        priv.substorage,
-        command.getDocId() + priv.doctree_suffix,
-        option,
-        function (response) {
-          doctree = response;
-          functions.updateRevsInfo();
-          functions.getDocument();
-        },
-        function (err) {
-          switch (err.status) {
-          case 404:
-            doctree = priv.createDocumentTree();
-            functions.updateRevsInfo();
-            functions.getDocument();
-            break;
-          default:
-            err.message = "Cannot get document revision tree";
-            that.error(err);
-            break;
-          }
+    priv.revisionGenericRequest(
+      command.cloneDoc(),
+      command.cloneOption(),
+      {},
+      function (err, response) {
+        if (err) {
+          return that.error(err);
         }
-      );
-    };
-    functions.updateRevsInfo = function () {
-      if (doc._revs) {
-        revs_info = priv.updateDocumentTree(doctree, doc._revs);
-      } else {
-        revs_info = priv.postToDocumentTree(doctree, doc);
-      }
-    };
-    functions.postEmptyDocument = function () {
-      that.addJob(
-        "post",
-        priv.substorage,
-        {"_id": command.getDocId() + "." + revs_info[0].rev},
-        command.getOption(),
-        function (response) {
-          doc._rev = response.rev;
-          functions.postAttachment();
-        },
-        function (err) {
-          err.message = "Cannot upload document";
-          that.error(err);
-        }
-      );
-    };
-    functions.getDocument = function () {
-      if (revs_info[1] === undefined) {
-        functions.postEmptyDocument();
-      } else {
-        that.addJob(
-          "get",
-          priv.substorage,
-          command.getDocId() + "." + revs_info[1].rev,
-          command.getOption(),
-          function (response) {
-            var attachment_list = [], i;
-            prev_doc = response;
-            for (i in response._attachments) {
-              if (response._attachments.hasOwnProperty(i)) {
-                attachment_list.push({"id": i, "attachment": {
-                  "_id": command.getDocId() + "." + revs_info[0].rev + "/" + i,
-                  "_mimetype": response._attachments[i].content_type,
-                  "_data": undefined
-                }});
-              }
-            }
-            functions.postDocument(attachment_list);
-          },
-          function (err) {
-            if (err.status === 404) {
-              functions.postDocument([]);
-              return;
-            }
-            err.message = "Cannot upload document";
-            that.error(err);
-          }
-        );
-      }
-    };
-    functions.postDocument = function (attachment_list) {
-      that.addJob(
-        "post",
-        priv.substorage,
-        command.getDocId() + "." + revs_info[0].rev,
-        command.getOption(),
-        function (response) {
-          var i;
-          if (attachment_list.length === 0) {
-            functions.postAttachment();
-          } else {
-            functions.post_attachment_count = attachment_list.length;
-            for (i = 0; i < attachment_list.length; i += 1) {
-              functions.copyAttachment(attachment_list[i].id,
-                                       attachment_list[i].attachment);
-            }
-          }
-        },
-        function (err) {
-          err.message = "Cannot upload document";
-          that.error(err);
-        }
-      );
-    };
-    functions.copyAttachment = function (attachmentid, attachment) {
-      that.addJob(
-        "get",
-        priv.substorage,
-        prev_doc._id + "/" + attachmentid,
-        command.cloneOption(),
-        function (response) {
-          attachment._data = response;
-          that.addJob(
-            "putAttachment",
-            priv.substorage,
-            attachment,
-            command.cloneOption(),
-            function (response) {
-              functions.postAttachment();
-            },
-            function (err) {
-              err.message = "Cannot copy previous attachment";
-              functions.error(err);
-            }
-          );
-        },
-        function (err) {
-          err.message = "Cannot copy previous attachment";
-          functions.error(err);
-        }
-      );
-    };
-    functions.post_attachment_count = 0;
-    functions.postAttachment = function () {
-      functions.post_attachment_count -= 1;
-      if (functions.post_attachment_count > 0) {
-        return;
-      }
-      that.addJob(
-        "putAttachment",
-        priv.substorage,
-        {
-          "_id": command.getDocId() + "." + revs_info[0].rev + "/" +
-            command.getAttachmentId(),
-          "_mimetype": command.getAttachmentMimeType(),
-          "_data": command.getAttachmentData()
-        },
-        command.cloneOption(),
-        function () {
-          functions.sendDocumentTree();
-        },
-        function (err) {
-          switch (err.status) {
-          case 409:
-            // file already exists
-            functions.sendDocumentTree();
-            break;
-          default:
-            err.message = "Cannot upload attachment";
-            functions.error(err);
-            break;
-          }
-        }
-      );
-    };
-    functions.sendDocumentTree = function () {
-      doctree._id = command.getDocId() + priv.doctree_suffix;
-      that.addJob(
-        "put",
-        priv.substorage,
-        doctree,
-        command.cloneOption(),
-        function () {
-          that.success({
-            "ok": true,
-            "id": command.getDocId() + "/" + command.getAttachmentId(),
-            "rev": revs_info[0].rev
-          });
-        },
-        function (err) {
-          // xxx do we try to delete the posted document ?
-          err.message = "Cannot save document revision tree";
-          functions.error(err);
-        }
-      );
-    };
-    functions.error = function (err) {
-      functions.error = function () {};
-      that.error(err);
-    };
-    functions.begin();
-  };
-
-  /**
-   * Get the document metadata or attachment.
-   * Options:
-   * - {boolean} revs Add simple revision history (false by default).
-   * - {boolean} revs_info Add revs info (false by default).
-   * - {boolean} conflicts Add conflict object (false by default).
-   * @method get
-   * @param  {object} command The JIO command
-   */
-  that.get = function (command) {
-    var f = {}, doctree, revs_info, prev_rev, option;
-    option = command.cloneOption();
-    if (option.max_retry === 0) {
-      option.max_retry = 3;
-    }
-    prev_rev = command.getDocInfo("_rev");
-    if (typeof prev_rev === "string") {
-      if (!priv.checkRevisionFormat(prev_rev)) {
-        that.error({
-          "status": 31,
-          "statusText": "Wrong Revision Format",
-          "error": "wrong_revision_format",
-          "message": "The document previous revision does not match " +
-            "[0-9]+-[0-9a-zA-Z]+",
-          "reason": "Previous revision is wrong"
-        });
-        return;
-      }
-    }
-    f.getDocumentTree = function () {
-      that.addJob(
-        "get",
-        priv.substorage,
-        {
-          "_id": command.getDocId() + priv.doctree_suffix,
-          "_rev": command.getDocInfo("_rev")
-        },
-        option,
-        function (response) {
-          doctree = response;
-          if (prev_rev === undefined) {
-            revs_info = priv.getWinnerRevisionFromDocumentTree(doctree);
-            if (revs_info.length > 0) {
-              prev_rev = revs_info[0].rev;
-            } else {
-              that.error({
-                "status": 404,
-                "statusText": "Not Found",
-                "error": "not_found",
-                "message": "Cannot find the document",
-                "reason": "Document is deleted"
-              });
-              return;
-            }
-          } else {
-            revs_info = priv.getRevisionFromDocumentTree(doctree, prev_rev);
-          }
-          f.getDocument(command.getDocId() + "." + prev_rev,
-            command.getAttachmentId());
-        },
-        function (err) {
-          switch (err.status) {
-          case 404:
-            that.error(err);
-            break;
-          default:
-            err.message = "Cannot get document revision tree";
-            that.error(err);
-            break;
-          }
-        }
-      );
-    };
-    f.getDocument = function (docid, attmtid) {
-      that.addJob(
-        "get",
-        priv.substorage,
-        {"_id": docid, "_rev": command.getDocInfo("_rev")},
-        option,
-        function (response) {
-          var attmt;
-          if (typeof response !== "string") {
-            if (attmtid !== undefined) {
-              if (response._attachments !== undefined) {
-                attmt = response._attachments[attmtid];
-                if (attmt !== undefined) {
-                  prev_rev = priv.getRevisionFromPosition(
-                    revs_info,
-                    attmt.revpos
-                  );
-                  f.getDocument(command.getDocId() + "." + prev_rev + "/" +
-                    attmtid);
-                  return;
-                }
-              }
-              that.error({
-                "status": 404,
-                "statusText": "Not Found",
-                "error": "not_found",
-                "message": "Cannot find the attachment",
-                "reason": "Attachment is missing"
-              });
-              return;
-            }
-            response._id = command.getDocId();
-            response._rev = prev_rev;
-            if (command.getOption("revs") === true) {
-              response._revisions = priv.revsInfoToHistory(revs_info);
-            }
-            if (command.getOption("revs_info") === true) {
-              response._revs_info = revs_info;
-            }
-            if (command.getOption("conflicts") === true) {
-              response._conflicts = priv.getLeavesFromDocumentTree(
-                doctree,
-                prev_rev
-              );
-              if (response._conflicts.length === 0) {
-                delete response._conflicts;
-              }
-            }
-          }
-          that.success(response);
-        },
-        function (err) {
-          that.error(err);
-        }
-      );
-    };
-    if (command.getAttachmentId() && prev_rev !== undefined) {
-      f.getDocument(command.getDocId() + "." + prev_rev +
-        "/" + command.getAttachmentId());
-    } else {
-      f.getDocumentTree();
-    }
-  };
-
-  /**
-   * Remove document or attachment.
-   * Options:
-   * - {boolean} keep_revision_history To keep the previous revisions
-   * @method remove
-   * @param  {object} command The JIO command
-   */
-  that.remove = function (command) {
-    var f = {}, del_rev, option, new_doc, revs_info;
-    option = command.cloneOption();
-    if (option.max_retry === 0) {
-      option.max_retry = 3;
-    }
-    del_rev = command.getDoc()._rev;
-
-    f.removeDocument = function (docid, doctree) {
-      if (command.getOption("keep_revision_history") !== true) {
-        if (command.getAttachmentId() === undefined) {
-          // update tree
-          revs_info = priv.postToDocumentTree(
-            doctree,
-            command.getDoc(),
-            true
-          );
-          // remove revision
-          that.addJob(
-            "remove",
-            priv.substorage,
-            docid,
-            option,
-            function () {
-              // put tree
-              doctree._id = command.getDocId() + priv.doctree_suffix;
-              that.addJob(
-                "put",
-                priv.substorage,
-                doctree,
-                command.cloneOption(),
-                function () {
-                  that.success({
-                    "ok": true,
-                    "id": command.getDocId(),
-                    "rev": revs_info[0].rev
-                  });
-                },
-                function () {
-                  that.error({
-                    "status": 409,
-                    "statusText": "Conflict",
-                    "error": "conflict",
-                    "message": "Document update conflict.",
-                    "reason": "Cannot update document tree"
-                  });
-                  return;
-                }
-              );
-            },
-            function () {
-              that.error({
-                "status": 404,
-                "statusText": "Not Found",
-                "error": "not_found",
-                "message": "File not found",
-                "reason": "Document was not found"
-              });
-              return;
-            }
-          );
-        } else {
-          // get previsous document
-          that.addJob(
-            "get",
-            priv.substorage,
-            command.getDocId() + "." + del_rev,
-            option,
-            function (response) {
-              // update tree
-              revs_info = priv.postToDocumentTree(doctree, command.getDoc());
-              new_doc = response;
-              delete new_doc._attachments;
-              new_doc._id = new_doc._id + "." + revs_info[0].rev;
-
-              // post new document version
-              that.addJob(
-                "post",
-                priv.substorage,
-                new_doc,
-                command.cloneOption(),
-                function () {
-                  // put tree
-                  doctree._id = command.getDocId() + priv.doctree_suffix;
-                  that.addJob(
-                    "put",
-                    priv.substorage,
-                    doctree,
-                    command.cloneOption(),
-                    function () {
-                      that.success({
-                        "ok": true,
-                        "id": new_doc._id,
-                        "rev": revs_info[0].rev
-                      });
-                    },
-                    function (err) {
-                      err.message =
-                        "Cannot save document revision tree";
-                      that.error(err);
-                    }
-                  );
-                },
-                function () {
-                  that.error({
-                    "status": 409,
-                    "statusText": "Conflict",
-                    "error": "conflict",
-                    "message": "Document update conflict.",
-                    "reason": "Cannot update document"
-                  });
-                  return;
-                }
-              );
-            },
-            function () {
-              that.error({
-                "status": 404,
-                "statusText": "Not Found",
-                "error": "not_found",
-                "message": "File not found",
-                "reason": "Document was not found"
-              });
-              return;
-            }
-          );
-        }
-      }
-    };
-    if (typeof del_rev === "string") {
-      if (!priv.checkRevisionFormat(del_rev)) {
-        that.error({
-          "status": 31,
-          "statusText": "Wrong Revision Format",
-          "error": "wrong_revision_format",
-          "message": "The document previous revision does not match " +
-            "[0-9]+-[0-9a-zA-Z]+",
-          "reason": "Previous revision is wrong"
-        });
-        return;
-      }
-    }
-
-    // get doctree
-    that.addJob(
-      "get",
-      priv.substorage,
-      command.getDocId() + priv.doctree_suffix,
-      option,
-      function (response) {
-        response._conflicts = priv.getLeavesFromDocumentTree(response);
-
-        if (del_rev === undefined) {
-          // no revision provided
-          that.error({
-            "status": 409,
-            "statusText": "Conflict",
-            "error": "conflict",
-            "message": "Document update conflict.",
-            "reason": "Cannot delete a document without revision"
-          });
-          return;
-        }
-        // revision provided
-        if (priv.isRevisionALeaf(response, del_rev) === true) {
-          if (typeof command.getAttachmentId() === "string") {
-            f.removeDocument(command.getDocId() + "." + del_rev +
-              "/" + command.getAttachmentId(), response);
-          } else {
-            f.removeDocument(command.getDocId() + "." + del_rev,
-              response);
-          }
-        } else {
-          that.error({
-            "status": 409,
-            "statusText": "Conflict",
-            "error": "conflict",
-            "message": "Document update conflict.",
-            "reason": "Trying to remove non-latest revision"
-          });
-          return;
-        }
-      },
-      function () {
-        that.error({
-          "status": 404,
-          "statusText": "Not Found",
-          "error": "not_found",
-          "message": "Document tree not found, please checkdocument ID",
-          "reason": "Incorrect document ID"
-        });
-        return;
+        that.success(response);
       }
     );
   };
 
-  /**
-   * Get all documents
-   * @method allDocs
-   * @param  {object} command The JIO command
-   */
-  that.allDocs = function () {
-    setTimeout(function () {
-      that.error({
-        "status": 405,
-        "statusText": "Method Not Allowed",
-        "error": "method_not_allowed",
-        "message": "Your are not allowed to use this command",
-        "reason": "LocalStorage forbids AllDocs command executions"
-      });
-    });
+
+  that.putAttachment = function (command) {
+    priv.revisionGenericRequest(
+      command.cloneDoc(),
+      command.cloneOption(),
+      {
+        "doc_id": command.getDocId(),
+        "attachment_id": command.getAttachmentId(),
+        "add_to_attachment_list": {
+          "_attachment": command.getAttachmentId(),
+          "_mimetype": command.getAttachmentMimeType(),
+          "_data": command.getAttachmentData()
+        },
+        "putAttachment": true
+      },
+      function (err, response) {
+        if (err) {
+          return that.error(err);
+        }
+        that.success(response);
+      }
+    );
   };
 
+  that.remove = function (command) {
+    if (command.getAttachmentId()) {
+      return that.removeAttachment(command);
+    }
+    priv.revisionGenericRequest(
+      command.cloneDoc(),
+      command.cloneOption(),
+      {
+        "revision_needed": true,
+        "remove": true
+      },
+      function (err, response) {
+        if (err) {
+          return that.error(err);
+        }
+        that.success(response);
+      }
+    );
+  };
+
+  that.removeAttachment = function (command) {
+    priv.revisionGenericRequest(
+      command.cloneDoc(),
+      command.cloneOption(),
+      {
+        "doc_id": command.getDocId(),
+        "attachment_id": command.getAttachmentId(),
+        "revision_needed": true,
+        "removeAttachment": true,
+        "remove_from_attachment_list": {
+          "_attachment": command.getAttachmentId()
+        }
+      },
+      function (err, response) {
+        if (err) {
+          return that.error(err);
+        }
+        that.success(response);
+      }
+    );
+  };
+
+  that.get = function (command) {
+    if (command.getAttachmentId()) {
+      return that.getAttachment(command);
+    }
+    priv.revisionGenericRequest(
+      command.cloneDoc(),
+      command.cloneOption(),
+      {
+        "get": true
+      },
+      function (err, response) {
+        if (err) {
+          return that.error(err);
+        }
+        that.success(response);
+      }
+    );
+  };
+
+  that.getAttachment = function (command) {
+    priv.revisionGenericRequest(
+      command.cloneDoc(),
+      command.cloneOption(),
+      {
+        "doc_id": command.getDocId(),
+        "attachment_id": command.getAttachmentId(),
+        "getAttachment": true
+      },
+      function (err, response) {
+        if (err) {
+          return that.error(err);
+        }
+        that.success(response);
+      }
+    );
+  };
+
+  // END //
+  priv.RevisionStorage();
   return that;
-});
+}); // end RevisionStorage

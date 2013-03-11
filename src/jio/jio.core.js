@@ -4,7 +4,7 @@
          storage_type_object: true, invalidStorageType: true, jobRules: true,
          job: true, postCommand: true, putCommand: true, getCommand:true,
          allDocsCommand: true, putAttachmentCommand: true,
-         removeCommand: true */
+         removeCommand: true, checkCommand: true, repairCommand: true */
 // Class jio
 var that = {}, priv = {}, jio_id_array_name = 'jio/id_array';
 spec = spec || {};
@@ -377,10 +377,10 @@ Object.defineProperty(that, "allDocs", {
  * Put an attachment to a document.
  * @method putAttachment
  * @param  {object} doc The document object. Contains at least:
- * - {string} id The document id: "doc_id/attchment_id"
- * - {string} data Base64 attachment data
- * - {string} mimetype The attachment mimetype
- * - {string} rev The attachment revision
+ * - {string} _id The document id: "doc_id/attchment_id"
+ * - {string} _data Base64 attachment data
+ * - {string} _mimetype The attachment mimetype
+ * - {string} _rev The attachment revision
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
  * - {boolean} revs Include revision history of the document.
@@ -402,6 +402,66 @@ Object.defineProperty(that, "putAttachment", {
     );
 
     priv.addJob(putAttachmentCommand, {
+      doc: doc,
+      options: param.options,
+      callbacks: {success: param.success, error: param.error}
+    });
+  }
+});
+
+/**
+ * Check a document.
+ * @method check
+ * @param  {object} doc The document object. Contains at least:
+ * - {string} _id The document id
+ * @param  {object} options (optional) Contains some options:
+ * - {number} max_retry The number max of retries, 0 = infinity.
+ * @param  {function} callback (optional) The callback(err,response).
+ * @param  {function} error (optional) The callback on error, if this
+ *     callback is given in parameter, "callback" is changed as "success",
+ *     called on success.
+ */
+Object.defineProperty(that, "check", {
+  configurable: false,
+  enumerable: false,
+  writable: false,
+  value: function (doc, options, success, callback) {
+    var param = priv.parametersToObject(
+      [options, success, callback],
+      {max_retry: 3}
+    );
+
+    priv.addJob(checkCommand, {
+      doc: doc,
+      options: param.options,
+      callbacks: {success: param.success, error: param.error}
+    });
+  }
+});
+
+/**
+ * Repair a document.
+ * @method repair
+ * @param  {object} doc The document object. Contains at least:
+ * - {string} _id The document id
+ * @param  {object} options (optional) Contains some options:
+ * - {number} max_retry The number max of retries, 0 = infinity.
+ * @param  {function} callback (optional) The callback(err,response).
+ * @param  {function} error (optional) The callback on error, if this
+ *     callback is given in parameter, "callback" is changed as "success",
+ *     called on success.
+ */
+Object.defineProperty(that, "repair", {
+  configurable: false,
+  enumerable: false,
+  writable: false,
+  value: function (doc, options, success, callback) {
+    var param = priv.parametersToObject(
+      [options, success, callback],
+      {max_retry: 3}
+    );
+
+    priv.addJob(repairCommand, {
       doc: doc,
       options: param.options,
       callbacks: {success: param.success, error: param.error}

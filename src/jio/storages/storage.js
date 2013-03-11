@@ -159,6 +159,18 @@ var storage = function (spec, my) {
     });
   };
 
+  that.check = function (command) {
+    setTimeout(function () {
+      that.success({"ok": true, "id": command.getDocId()});
+    });
+  };
+
+  that.repair = function (command) {
+    setTimeout(function () {
+      that.success({"ok": true, "id": command.getDocId()});
+    });
+  };
+
   that.success = function () {};
   that.retry   = function () {};
   that.error   = function () {};
