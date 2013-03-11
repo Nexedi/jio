@@ -633,7 +633,8 @@ jIO.addStorageType("revision", function (spec, my) {
         }
         return onEnd(undefined, res_doc);
       }
-      if (specific_parameter.removeAttachment) {
+      if (specific_parameter.putAttachment ||
+          specific_parameter.removeAttachment) {
         // copy metadata (not beginning by "_" to document
         for (k in res_doc) {
           if (res_doc.hasOwnProperty(k) && !k.match("^_")) {
