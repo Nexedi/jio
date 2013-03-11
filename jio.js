@@ -268,6 +268,18 @@ var storage = function (spec, my) {
     });
   };
 
+  that.check = function (command) {
+    setTimeout(function () {
+      that.success({"ok": true, "id": command.getDocId()});
+    });
+  };
+
+  that.repair = function (command) {
+    setTimeout(function () {
+      that.success({"ok": true, "id": command.getDocId()});
+    });
+  };
+
   that.success = function () {};
   that.retry   = function () {};
   that.error   = function () {};
@@ -323,10 +335,48 @@ var allDocsCommand = function (spec, my) {
 
   return that;
 };
+/*jslint indent: 2, maxlen: 80, sloppy: true */
+/*global command: true */
+var checkCommand = function (spec, my) {
+  var that = command(spec, my);
+  spec = spec || {};
+  my = my || {};
+
+  // Methods //
+  that.getLabel = function () {
+    return 'check';
+  };
+
+  that.validateState = function () {
+    if (!(typeof that.getDocId() === "string" && that.getDocId() !==
+        "")) {
+      that.error({
+        "status": 20,
+        "statusText": "Document Id Required",
+        "error": "document_id_required",
+        "message": "The document id is not provided",
+        "reason": "Document id is undefined"
+      });
+      return false;
+    }
+    return true;
+  };
+
+  that.executeOn = function (storage) {
+    storage.check(that);
+  };
+
+  that.canBeRestored = function () {
+    return false;
+  };
+
+  return that;
+};
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global postCommand: true, putCommand: true, getCommand: true,
          removeCommand: true, allDocsCommand: true,
          putAttachmentCommand: true, failStatus: true, doneStatus: true,
+         checkCommand: true, repairCommand: true,
          hex_md5: true */
 var command = function (spec, my) {
   var that = {},
@@ -341,7 +391,9 @@ var command = function (spec, my) {
     'get': getCommand,
     'remove': removeCommand,
     'allDocs': allDocsCommand,
-    'putAttachment': putAttachmentCommand
+    'putAttachment': putAttachmentCommand,
+    'check': checkCommand,
+    'repair': repairCommand
   };
   // creates the good command thanks to his label
   if (spec.label && priv.commandlist[spec.label]) {
@@ -873,6 +925,37 @@ var removeCommand = function (spec, my) {
     storage.remove(that);
   };
 
+  return that;
+};
+/*jslint indent: 2, maxlen: 80, sloppy: true */
+/*global command: true */
+var repairCommand = function (spec, my) {
+  var that = command(spec, my);
+  spec = spec || {};
+  my = my || {};
+
+  // Methods //
+  that.getLabel = function () {
+    return 'repair';
+  };
+
+  that.validateState = function () {
+    if (!(typeof that.getDocId() === "string" && that.getDocId() !==
+        "")) {
+      that.error({
+        "status": 20,
+        "statusText": "Document Id Required",
+        "error": "document_id_required",
+        "message": "The document id is not provided",
+        "reason": "Document id is undefined"
+      });
+      return false;
+    }
+    return true;
+  };
+  that.executeOn = function (storage) {
+    storage.repair(that);
+  };
   return that;
 };
 /*jslint indent: 2, maxlen: 80, sloppy: true */
@@ -2075,7 +2158,7 @@ var jobRules = (function () {
          storage_type_object: true, invalidStorageType: true, jobRules: true,
          job: true, postCommand: true, putCommand: true, getCommand:true,
          allDocsCommand: true, putAttachmentCommand: true,
-         removeCommand: true */
+         removeCommand: true, checkCommand: true, repairCommand: true */
 // Class jio
 var that = {}, priv = {}, jio_id_array_name = 'jio/id_array';
 spec = spec || {};
@@ -2448,10 +2531,10 @@ Object.defineProperty(that, "allDocs", {
  * Put an attachment to a document.
  * @method putAttachment
  * @param  {object} doc The document object. Contains at least:
- * - {string} id The document id: "doc_id/attchment_id"
- * - {string} data Base64 attachment data
- * - {string} mimetype The attachment mimetype
- * - {string} rev The attachment revision
+ * - {string} _id The document id: "doc_id/attchment_id"
+ * - {string} _data Base64 attachment data
+ * - {string} _mimetype The attachment mimetype
+ * - {string} _rev The attachment revision
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
  * - {boolean} revs Include revision history of the document.
@@ -2473,6 +2556,66 @@ Object.defineProperty(that, "putAttachment", {
     );
 
     priv.addJob(putAttachmentCommand, {
+      doc: doc,
+      options: param.options,
+      callbacks: {success: param.success, error: param.error}
+    });
+  }
+});
+
+/**
+ * Check a document.
+ * @method check
+ * @param  {object} doc The document object. Contains at least:
+ * - {string} _id The document id
+ * @param  {object} options (optional) Contains some options:
+ * - {number} max_retry The number max of retries, 0 = infinity.
+ * @param  {function} callback (optional) The callback(err,response).
+ * @param  {function} error (optional) The callback on error, if this
+ *     callback is given in parameter, "callback" is changed as "success",
+ *     called on success.
+ */
+Object.defineProperty(that, "check", {
+  configurable: false,
+  enumerable: false,
+  writable: false,
+  value: function (doc, options, success, callback) {
+    var param = priv.parametersToObject(
+      [options, success, callback],
+      {max_retry: 3}
+    );
+
+    priv.addJob(checkCommand, {
+      doc: doc,
+      options: param.options,
+      callbacks: {success: param.success, error: param.error}
+    });
+  }
+});
+
+/**
+ * Repair a document.
+ * @method repair
+ * @param  {object} doc The document object. Contains at least:
+ * - {string} _id The document id
+ * @param  {object} options (optional) Contains some options:
+ * - {number} max_retry The number max of retries, 0 = infinity.
+ * @param  {function} callback (optional) The callback(err,response).
+ * @param  {function} error (optional) The callback on error, if this
+ *     callback is given in parameter, "callback" is changed as "success",
+ *     called on success.
+ */
+Object.defineProperty(that, "repair", {
+  configurable: false,
+  enumerable: false,
+  writable: false,
+  value: function (doc, options, success, callback) {
+    var param = priv.parametersToObject(
+      [options, success, callback],
+      {max_retry: 3}
+    );
+
+    priv.addJob(repairCommand, {
       doc: doc,
       options: param.options,
       callbacks: {success: param.success, error: param.error}
