@@ -2959,52 +2959,18 @@ module ("JIO Replicate Revision Storage");
     });
   });
 
-  test("Storage Synchronisation (Replicate Revision Repair)", function () {
+  var replicateStorageSynchronisationGenerator = function (
+    that,
+    description,
+    index
+  ) {
+    var o = generateTools(that);
 
-    var o = generateTools(this);
-
-    o.jio = JIO.newJio({
-      "type": "replicaterevision",
-      "storage_list": [{
-        "type": "replicaterevision",
-        "storage_list": [{
-          "type": "revision",
-          "sub_storage": {
-            "type": "local",
-            "username": "usyncreprevlocloc1",
-            "application_name": "2"
-          }
-        }, {
-          "type": "revision",
-          "sub_storage": {
-            "type": "local",
-            "username": "usyncreprevlocloc2",
-            "application_name": "2"
-          }
-        }]
-      }, {
-        "type": "replicaterevision",
-        "storage_list": [{
-          "type": "revision",
-          "sub_storage": {
-            "type": "local",
-            "username": "usyncreprevlocloc3",
-            "application_name": "2"
-          }
-        }, {
-          "type": "revision",
-          "sub_storage": {
-            "type": "local",
-            "username": "usyncreprevlocloc4",
-            "application_name": "2"
-          }
-        }]
-      }]
-    });
-    o.localpath1 = "jio/localstorage/usyncreprevlocloc1/2";
-    o.localpath2 = "jio/localstorage/usyncreprevlocloc2/2";
-    o.localpath3 = "jio/localstorage/usyncreprevlocloc3/2";
-    o.localpath4 = "jio/localstorage/usyncreprevlocloc4/2";
+    o.jio = JIO.newJio(description);
+    o.localpath1 = "jio/localstorage/usyncreprevlocloc1/" + index;
+    o.localpath2 = "jio/localstorage/usyncreprevlocloc2/" + index;
+    o.localpath3 = "jio/localstorage/usyncreprevlocloc3/" + index;
+    o.localpath4 = "jio/localstorage/usyncreprevlocloc4/" + index;
 
     // add documents to localstorage
     o.doctree1_1 = {
@@ -3177,6 +3143,83 @@ module ("JIO Replicate Revision Storage");
 
     o.jio.stop();
 
+  };
+
+  test("Storage Synchronisation (Repair) 4x [Rev + Local]", function () {
+    replicateStorageSynchronisationGenerator(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "usyncreprevlocloc1",
+          "application_name": "1"
+        }
+      }, {
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "usyncreprevlocloc2",
+          "application_name": "1"
+        }
+      }, {
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "usyncreprevlocloc3",
+          "application_name": "1"
+        }
+      }, {
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "usyncreprevlocloc4",
+          "application_name": "1"
+        }
+      }]
+    }, "1");
+  });
+
+  test("Storage Synchronisation (Repair) 2x [Rep 2x [Rev + Local]]",
+       function () {
+    replicateStorageSynchronisationGenerator(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "replicaterevision",
+        "storage_list": [{
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "usyncreprevlocloc1",
+            "application_name": "2"
+          }
+        }, {
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "usyncreprevlocloc2",
+            "application_name": "2"
+          }
+        }]
+      }, {
+        "type": "replicaterevision",
+        "storage_list": [{
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "usyncreprevlocloc3",
+            "application_name": "2"
+          }
+        }, {
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "usyncreprevlocloc4",
+            "application_name": "2"
+          }
+        }]
+      }]
+    }, "2");
   });
 /*
 module ("Jio DAVStorage");
