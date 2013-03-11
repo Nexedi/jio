@@ -1687,6 +1687,15 @@ test("Put Attachment", function () {
         ),
         "", "Check attachment"
     );
+    // adding a metadata to the document
+    o.doc = localstorage.getItem(
+      "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
+    );
+    o.doc.title = "My Title";
+    localstorage.setItem(
+      "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev,
+      o.doc
+    );
 
     // update attachment
     o.prev_rev = o.rev;
@@ -1713,6 +1722,7 @@ test("Put Attachment", function () {
         ),
         {
             "_id": "doc1." + o.rev,
+            "title": "My Title",
             "_attachments": {
                 "attmt1": {
                     "length": 3,
@@ -1758,6 +1768,7 @@ test("Put Attachment", function () {
         ),
         {
             "_id": "doc1." + o.rev,
+            "title": "My Title",
             "_attachments": {
                 "attmt1": {
                     "length": 3,
@@ -2549,7 +2560,8 @@ module ("JIO Replicate Revision Storage");
           "content_type": "text/plain",
           "digest": "md5-0505c1fb6aae02dd1695d33841726564"
         }
-      }
+      },
+      "title": "put new revision"
     };
     o.spy(o, "value", o.doc, "Get document, the winner");
     o.jio.get({"_id": "doc1"}, {
