@@ -577,6 +577,9 @@ jIO.addStorageType("revision", function (spec, my) {
           "_id": doc._id,
           "_rev": doc._revs_info[1].rev
         };
+        if (!generate_new_revision && specific_parameter.putAttachment) {
+          prev_doc._rev = doc._revs_info[0].rev;
+        }
       }
       // force revs_info status
       doc._revs_info[0].status = (specific_parameter.remove ?
@@ -699,7 +702,8 @@ jIO.addStorageType("revision", function (spec, my) {
         // adding specific attachment
         attachment_list = attachment_list || [];
         for (i = 0; i < attachment_list.length; i += 1) {
-          if (specific_parameter.add_to_attachment_list._attachment ===
+          if (attachment_list[i] &&
+              specific_parameter.add_to_attachment_list._attachment ===
               attachment_list[i]._attachment) {
             attachment_found = true;
             attachment_list[i] = specific_parameter.add_to_attachment_list;
