@@ -372,10 +372,11 @@ test ("All requests ok", function () {
     o.tick(o);
 
     // put an attachment
-    o.spy(o, "value", {"ok": true, "id": "file/attmt"},
+    o.spy(o, "value", {"ok": true, "id": "file", "attachment": "attmt"},
           "Put attachment");
     o.jio.putAttachment({
-        "_id": "file/attmt",
+        "_id": "file",
+        "_attachment": "attmt",
         "_data": "0123456789",
         "_mimetype": "text/plain"
     }, o.f);
@@ -388,7 +389,7 @@ test ("All requests ok", function () {
 
     // get attachment
     o.spy(o, "value", "0123456789", "Get attachment");
-    o.jio.get({"_id": "file/attmt"}, o.f);
+    o.jio.getAttachment({"_id": "file", "_attachment": "attmt"}, o.f);
     o.tick(o);
 
     // remove document
@@ -397,8 +398,9 @@ test ("All requests ok", function () {
     o.tick(o);
 
     // remove attachment
-    o.spy(o, "value", {"ok": true, "id": "file/attmt"}, "Remove attachment");
-    o.jio.remove({"_id": "file/attmt"}, o.f);
+    o.spy(o, "value", {"ok": true, "id": "file", "attachment": "attmt"},
+          "Remove attachment");
+    o.jio.removeAttachment({"_id": "file", "_attachment": "attmt"}, o.f);
     o.tick(o);
 
     // alldocs
@@ -460,7 +462,8 @@ test ("All requests fail", function () {
     o.spy(o, "status", 0,
           "Put attachment");
     o.jio.putAttachment({
-        "_id": "file/attmt",
+        "_id": "file",
+        "_attachment": "attmt",
         "_data": "0123456789",
         "_mimetype": "text/plain"
     }, o.f);
@@ -473,7 +476,7 @@ test ("All requests fail", function () {
 
     // get attachment
     o.spy(o, "status", 0, "Get attachment");
-    o.jio.get({"_id": "file/attmt"}, o.f);
+    o.jio.get({"_id": "file", "_attachment": "attmt"}, o.f);
     o.tick(o);
 
     // remove document
@@ -483,7 +486,7 @@ test ("All requests fail", function () {
 
     // remove attachment
     o.spy(o, "status", 0, "Remove attachment");
-    o.jio.remove({"_id": "file/attmt"}, o.f);
+    o.jio.remove({"_id": "file", "_attachment": "attmt"}, o.f);
     o.tick(o);
 
     // alldocs
@@ -525,10 +528,11 @@ test ("All document not found", function () {
     o.tick(o);
 
     // put an attachment
-    o.spy(o, "value", {"ok": true, "id": "file/attmt"},
+    o.spy(o, "value", {"ok": true, "id": "file", "attachment": "attmt"},
           "Put attachment");
     o.jio.putAttachment({
-        "_id": "file/attmt",
+        "_id": "file",
+        "_attachment": "attmt",
         "_data": "0123456789",
         "_mimetype": "text/plain"
     }, o.f);
@@ -551,7 +555,7 @@ test ("All document not found", function () {
 
     // remove attachment
     o.spy(o, "status", 404, "Remove attachment");
-    o.jio.remove({"_id": "file/attmt"}, o.f);
+    o.jio.removeAttachment({"_id": "file", "_attachment": "attmt"}, o.f);
     o.tick(o);
 
     o.jio.stop();
@@ -587,10 +591,11 @@ test ("All document found", function () {
     o.tick(o);
 
     // put an attachment
-    o.spy(o, "value", {"ok": true, "id": "file/attmt"},
+    o.spy(o, "value", {"ok": true, "id": "file", "attachment": "attmt"},
           "Put attachment");
     o.jio.putAttachment({
-        "_id": "file/attmt",
+        "_id": "file",
+        "_attachment": "attmt",
         "_data": "0123456789",
         "_mimetype": "text/plain"
     }, o.f);
@@ -603,7 +608,7 @@ test ("All document found", function () {
 
     // get attachment
     o.spy(o, "value", "0123456789", "Get attachment");
-    o.jio.get({"_id": "file/attmt"}, o.f);
+    o.jio.getAttachment({"_id": "file", "_attachment": "attmt"}, o.f);
     o.tick(o);
 
     // remove document
@@ -612,8 +617,9 @@ test ("All document found", function () {
     o.tick(o);
 
     // remove attachment
-    o.spy(o, "value", {"ok": true, "id": "file/attmt"}, "Remove attachment");
-    o.jio.remove({"_id": "file/attmt"}, o.f);
+    o.spy(o, "value", {"ok": true, "id": "file", "attachment": "attmt"},
+          "Remove attachment");
+    o.jio.removeAttachment({"_id": "file", "_attachment": "attmt"}, o.f);
     o.tick(o);
 
     o.jio.stop();
@@ -864,7 +870,7 @@ test ("PutAttachment", function(){
     // putAttachment without document
     // error 404 -> not found
     o.spy(o, "status", 404, "PutAttachment without document");
-    o.jio.putAttachment({"_id": "putattmt1/putattmt2"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1", "_attachment": "putattmt2"}, o.f);
     o.tick(o);
 
     // adding a document
@@ -874,9 +880,10 @@ test ("PutAttachment", function(){
     });
 
     // putAttachment with document
-    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
+    o.spy(o, "value",
+          {"ok": true, "id": "putattmt1", "attachment": "putattmt2"},
           "PutAttachment with document, without data");
-    o.jio.putAttachment({"_id": "putattmt1/putattmt2"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1", "_attachment": "putattmt2"}, o.f);
     o.tick(o);
 
     // check document
@@ -904,9 +911,14 @@ test ("PutAttachment", function(){
     );
 
     // update attachment
-    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
+    o.spy(o, "value",
+          {"ok": true, "id": "putattmt1", "attachment": "putattmt2"},
           "Update Attachment, with data");
-    o.jio.putAttachment({"_id": "putattmt1/putattmt2", "_data": "abc"}, o.f);
+    o.jio.putAttachment({
+      "_id": "putattmt1",
+      "_attachment": "putattmt2",
+      "_data": "abc"
+    }, o.f);
     o.tick(o);
 
     // check document
@@ -953,7 +965,7 @@ test ("Get", function(){
 
     // get inexistent attachment
     o.spy(o, "status", 404, "Get inexistent attachment");
-    o.jio.get({"_id": "get1/get2"}, o.f);
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
     o.tick(o);
 
     // adding a document
@@ -970,7 +982,7 @@ test ("Get", function(){
 
     // get inexistent attachment (document exists)
     o.spy(o, "status", 404, "Get inexistent attachment (document exists)");
-    o.jio.get({"_id": "get1/get2"}, o.f);
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
     o.tick(o);
 
     // adding an attachment
@@ -986,7 +998,7 @@ test ("Get", function(){
 
     // get attachment
     o.spy(o, "value", "de", "Get attachment");
-    o.jio.get({"_id": "get1/get2"}, o.f);
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
     o.tick(o);
 
     o.jio.stop();
@@ -1008,16 +1020,30 @@ test ("Remove", function(){
     o.jio.remove({"_id": "remove1"}, o.f);
     o.tick(o);
 
-    // remove inexistent document/attachment
-    o.spy(o, "status", 404, "Remove inexistent document/attachment");
-    o.jio.remove({"_id": "remove1/remove2"}, o.f);
+    // remove inexistent attachment
+    o.spy(o, "status", 404, "Remove inexistent attachment");
+    o.jio.removeAttachment({"_id": "remove1", "_attachment": "remove2"}, o.f);
     o.tick(o);
 
-    // adding a document
+    // adding a document + attmt
     localstorage.setItem("jio/localstorage/uremove/aremove/remove1", {
         "_id": "remove1",
-        "title": "myRemove1"
+        "title": "myRemove1",
+        "_attachments": {
+            "remove2": {
+                "length": 4,
+                "digest": "md5-blahblah"
+            }
+        }
     });
+    localstorage.setItem(
+        "jio/localstorage/uremove/aremove/remove1/remove2", "fghi");
+
+    // remove attachment
+    o.spy(o, "value", {"ok": true, "id": "remove1", "attachment": "remove2"},
+          "Remove document");
+    o.jio.removeAttachment({"_id": "remove1", "_attachment": "remove2"}, o.f);
+    o.tick(o);
 
     // remove document
     o.spy(o, "value", {"ok": true, "id": "remove1"}, "Remove document");
@@ -1043,7 +1069,8 @@ test ("Remove", function(){
         "jio/localstorage/uremove/aremove/remove1/remove2", "fghi");
 
     // remove attachment
-    o.spy(o, "value", {"ok": true, "id": "remove1"}, "Remove document and attachment");
+    o.spy(o, "value", {"ok": true, "id": "remove1"},
+          "Remove document and attachment");
     o.jio.remove({"_id": "remove1"}, o.f);
     o.tick(o);
     ok(localstorage.getItem("jio/localstorage/uremove/aremove/remove1"
@@ -1656,9 +1683,10 @@ test("Put Attachment", function () {
     o.rev_hash = generateRevisionHash({"_id": "doc1", "_attachment": "attmt1"},
                                       o.revisions);
     o.rev = "1-" + o.rev_hash;
-    o.spy(o, "value", {"ok": true, "id": "doc1/attmt1", "rev": o.rev},
+    o.spy(o, "value",
+          {"ok": true, "id": "doc1", "attachment": "attmt1", "rev": o.rev},
           "PutAttachment without document, without data");
-    o.jio.putAttachment({"_id": "doc1/attmt1"}, o.f);
+    o.jio.putAttachment({"_id": "doc1", "_attachment": "attmt1"}, o.f);
     o.tick(o);
 
     // check document
@@ -1706,11 +1734,13 @@ test("Put Attachment", function () {
       "_attachment": "attmt1",
     }, o.revisions);
     o.rev = "2-" + o.rev_hash;
-    o.spy(o, "value", {"ok": true, "id": "doc1/attmt1", "rev": o.rev},
+    o.spy(o, "value",
+          {"ok": true, "id": "doc1", "attachment": "attmt1", "rev": o.rev},
           "Update Attachment, with data");
     o.jio.putAttachment({
-      "_id": "doc1/attmt1",
+      "_id": "doc1",
       "_data": "abc",
+      "_attachment": "attmt1",
       "_rev": o.prev_rev
     }, o.f);
     o.tick(o);
@@ -1752,11 +1782,13 @@ test("Put Attachment", function () {
       "_attachment": "attmt2",
     }, o.revisions);
     o.rev = "3-" + o.rev_hash;
-    o.spy(o, "value", {"ok": true, "id": "doc1/attmt2", "rev": o.rev},
+    o.spy(o, "value",
+          {"ok": true, "id": "doc1", "attachment": "attmt2", "rev": o.rev},
           "PutAttachment without document, without data");
     o.jio.putAttachment({
-      "_id": "doc1/attmt2",
+      "_id": "doc1",
       "_data": "def",
+      "_attachment": "attmt2",
       "_rev": o.prev_rev
     }, o.f);
     o.tick(o);
@@ -1820,7 +1852,7 @@ test ("Get", function(){
     // get inexistent attachment
     o.spy(o, "status", 404, "Get inexistent attachment (winner)" +
           " -> 404 Not Found");
-    o.jio.get({"_id": "get1/get2"}, o.f);
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
     o.tick(o);
 
     // adding a document
@@ -1914,21 +1946,33 @@ test ("Get", function(){
 
     // get attachment winner
     o.spy(o, "value", "abc", "Get attachment (winner)");
-    o.jio.get({"_id": "get1/get2"}, o.f);
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
     o.tick(o);
 
     // get inexistent attachment specific rev
     o.spy(o, "status", 404, "Get inexistent attachment (specific revision)" +
           " -> 404 Not Found");
-    o.jio.get({"_id": "get1/get2", "_rev": "1-rev1"}, {
-        "revs_info": true, "revs": true, "conflicts": true,
+    o.jio.getAttachment({
+      "_id": "get1",
+      "_attachment": "get2",
+      "_rev": "1-rev1"
+    }, {
+      "revs_info": true,
+      "revs": true,
+      "conflicts": true,
     }, o.f);
     o.tick(o);
 
     // get attachment specific rev
     o.spy(o, "value", "abc", "Get attachment (specific revision)");
-    o.jio.get({"_id": "get1/get2", "_rev": "2-rev3"}, {
-        "revs_info": true, "revs": true, "conflicts": true,
+    o.jio.getAttachment({
+      "_id": "get1",
+      "_attachment": "get2",
+      "_rev": "2-rev3"
+    }, {
+      "revs_info": true,
+      "revs": true,
+      "conflicts": true,
     }, o.f);
     o.tick(o);
 
@@ -1977,7 +2021,7 @@ test ("Remove", function(){
     // 2. remove attachment without revision
     o.spy(o, "status", 409, "Remove attachment without revision " +
           "-> 409 Conflict");
-    o.jio.remove({"_id":"remove1/remove2"}, o.f);
+    o.jio.removeAttachment({"_id":"remove1", "_attachment": "remove2"}, o.f);
     o.tick(o);
 
     // adding a document with attachments
@@ -2023,7 +2067,11 @@ test ("Remove", function(){
 
     // 3. remove inexistent attachment
     o.spy(o, "status", 404, "Remove inexistent attachment -> 404 Not Found");
-    o.jio.remove({"_id": "remove1/remove0", "_rev": "2-oldrev"}, o.f);
+    o.jio.removeAttachment({
+      "_id": "remove1",
+      "_attachment": "remove0",
+      "_rev": "2-oldrev"
+    }, o.f);
     o.tick(o);
 
     // 4. remove existing attachment
@@ -2031,10 +2079,17 @@ test ("Remove", function(){
       "_id": "remove1",
       "_attachment": "remove2",
     }, {"start": 2, "ids": ["oldrev", "veryoldrev"]});
-    o.spy (o, "value",
-           {"ok": true, "id": "remove1/remove2", "rev": "3-" + o.rev_hash},
-           "Remove existing attachment");
-    o.jio.remove({"_id":"remove1/remove2", "_rev": "2-oldrev"}, o.f);
+    o.spy (o, "value", {
+      "ok": true,
+      "id": "remove1",
+      "attachment": "remove2",
+      "rev": "3-" + o.rev_hash
+    }, "Remove existing attachment");
+    o.jio.removeAttachment({
+      "_id": "remove1",
+      "_attachment": "remove2",
+      "_rev": "2-oldrev"
+    }, o.f);
     o.tick(o);
 
     o.doctree = {
@@ -2075,7 +2130,11 @@ test ("Remove", function(){
     // 9. remove attachment wrong revision
     o.spy(o, "status", 409, "Remove attachment with wrong revision " +
           "-> 409 Conflict");
-    o.jio.remove({"_id":"remove1/remove2", "_rev": "1-a"}, o.f);
+    o.jio.removeAttachment({
+      "_id": "remove1",
+      "_attachment": "remove2",
+      "_rev": "1-a"
+    }, o.f);
     o.tick(o);
 
     // 10. remove document
@@ -2157,7 +2216,7 @@ test ("Scenario", function(){
     }, o.f);
     o.tick(o);
 
-    // MODFIY the 2nd version
+    // MODIFY the 2nd version
     o.doc_2 = {"_id": "sample1", "_rev": o.rev,
         "title":"mySample2_modified"};
     o.revisions_2 = {"start":1 , "ids":[o.hex]};
@@ -2168,7 +2227,7 @@ test ("Scenario", function(){
     o.jio2.put(o.doc_2, o.f);
     o.tick(o);
 
-    // MODFIY first version
+    // MODIFY first version
     o.doc_1 = {
         "_id": "sample1", "_rev": o.rev, "title": "mySample1_modified"
     };
@@ -2510,10 +2569,9 @@ module ("JIO Replicate Revision Storage");
     };
     o.rev_hash = generateRevisionHash(o.doc, {"start": 0, "ids": []});
     o.rev = "1-" + o.rev_hash;
-    o.spy(o, "value", {"ok": true, "id": "doc2/attachment1", "rev": o.rev},
+    o.spy(o, "value",
+          {"ok": true, "id": "doc2", "attachment": "attachment1", "rev": o.rev},
           "Put an attachment to an inexistent document");
-    o.doc._id += "/" + o.doc._attachment;
-    delete o.doc._attachment;
     o.jio.putAttachment(o.doc, o.f);
     o.tick(o);
 
@@ -2532,10 +2590,12 @@ module ("JIO Replicate Revision Storage");
     o.rev3_6_history.ids.unshift(o.rev3_6_hash);
     o.rev3_6_revs_info = clone(o.rev2_5_revs_info);
     o.rev3_6_revs_info.unshift({"rev": o.rev3_6, "status": "available"});
-    o.spy(o, "value", {"ok": true, "id": "doc1/attachment1", "rev": o.rev3_6},
-          "Put an attachment to the first document");
-    o.doc._id += "/" + o.doc._attachment;
-    delete o.doc._attachment;
+    o.spy(o, "value", {
+      "ok": true,
+      "id": "doc1",
+      "attachment": "attachment1",
+      "rev": o.rev3_6
+    }, "Put an attachment to the first document");
     o.jio.putAttachment(o.doc, o.f);
     o.tick(o);
 
@@ -2577,9 +2637,7 @@ module ("JIO Replicate Revision Storage");
       "_attachment": "attachment1"
     };
     o.spy(o, "value", "doc 1 - attachment 1", "Get the winner's attachment");
-    o.doc._id += "/" + o.doc._attachment;
-    delete o.doc._attachment;
-    o.jio.get(o.doc, o.f);
+    o.jio.getAttachment(o.doc, o.f);
     o.tick(o);
 
     // put document
@@ -2642,9 +2700,7 @@ module ("JIO Replicate Revision Storage");
     };
     o.spy(o, "value", "doc 1 - attachment 1",
           "Get the winner's attachment again");
-    o.doc._id += "/" + o.doc._attachment;
-    delete o.doc._attachment;
-    o.jio.get(o.doc, o.f);
+    o.jio.getAttachment(o.doc, o.f);
     o.tick(o);
 
     // remove attachment
@@ -2660,11 +2716,13 @@ module ("JIO Replicate Revision Storage");
     o.rev5_8_history.ids.unshift(o.rev5_8_hash);
     o.rev5_8_revs_info = clone(o.rev4_7_revs_info);
     o.rev5_8_revs_info.unshift({"rev": o.rev5_8, "status": "available"});
-    o.spy(o, "value", {"ok": true, "id": "doc1/attachment1", "rev": o.rev5_8},
-          "Remove attachment");
-    o.doc._id += "/" + o.doc._attachment;
-    delete o.doc._attachment;
-    o.jio.remove(o.doc, o.f);
+    o.spy(o, "value", {
+      "ok": true,
+      "id": "doc1",
+      "attachment": "attachment1",
+      "rev": o.rev5_8
+    }, "Remove attachment");
+    o.jio.removeAttachment(o.doc, o.f);
     o.tick(o);
 
 
@@ -2735,11 +2793,8 @@ module ("JIO Replicate Revision Storage");
       "_attachment": "attachment1",
       "_rev": o.rev3_6
     };
-    o.spy(o, "value", "doc 1 - attachment 1",
-          "Get a specific attachment");
-    o.doc._id += "/" + o.doc._attachment;
-    delete o.doc._attachment;
-    o.jio.get(o.doc, o.f);
+    o.spy(o, "value", "doc 1 - attachment 1", "Get a specific attachment");
+    o.jio.getAttachment(o.doc, o.f);
     o.tick(o);
 
     // remove specific document and conflict
@@ -4058,7 +4113,7 @@ test ("PutAttachment", function(){
     // putAttachment without document
     // error 404 -> not found
     o.spy(o, "status", 404, "PutAttachment without document");
-    o.jio.putAttachment({"_id": "putattmt1/putattmt2"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1", "_attachment": "putattmt2"}, o.f);
     o.tick(o);
 
     // putAttachment with document
@@ -4068,9 +4123,10 @@ test ("PutAttachment", function(){
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
-    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
+    o.spy(o, "value",
+          {"ok": true, "id": "putattmt1", "attachment": "putattmt2"},
           "PutAttachment with document, without data");
-    o.jio.putAttachment({"_id": "putattmt1/putattmt2"}, o.f);
+    o.jio.putAttachment({"_id": "putattmt1", "_attachment": "putattmt2"}, o.f);
     o.tick(o);
 
     // check document
@@ -4098,9 +4154,14 @@ test ("PutAttachment", function(){
     );
 
     // update attachment
-    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
+    o.spy(o, "value",
+          {"ok": true, "id": "putattmt1", "attachment": "putattmt2"},
           "Update Attachment, with data");
-    o.jio.putAttachment({"_id": "putattmt1/putattmt2", "_data": "abc"}, o.f);
+    o.jio.putAttachment({
+      "_id": "putattmt1",
+      "_attachment": "putattmt2",
+      "_data": "abc"
+    }, o.f);
     o.tick(o);
 
     // check document
@@ -4161,7 +4222,7 @@ test ("Get", function(){
 
     // get inexistent attachment
     o.spy(o, "status", 404, "Get inexistent attachment");
-    o.jio.get({"_id": "get1/get2"}, o.f);
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
     o.tick(o);
 
     // adding a document
@@ -4178,7 +4239,7 @@ test ("Get", function(){
 
     // get inexistent attachment (document exists)
     o.spy(o, "status", 404, "Get inexistent attachment (document exists)");
-    o.jio.get({"_id": "get1/get2"}, o.f);
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
     o.tick(o);
 
     // adding an attachment
@@ -4194,7 +4255,7 @@ test ("Get", function(){
 
     // get attachment
     o.spy(o, "value", "de", "Get attachment");
-    o.jio.get({"_id": "get1/get2"}, o.f);
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
     o.tick(o);
 
     o.jio.stop();
@@ -4230,8 +4291,8 @@ test ("Remove", function(){
     o.tick(o);
 
     // remove inexistent document/attachment
-    o.spy(o, "status", 404, "Remove inexistent document/attachment");
-    o.jio.remove({"_id": "remove1/remove2"}, o.f);
+    o.spy(o, "status", 404, "Remove inexistent attachment");
+    o.jio.removeAttachment({"_id": "remove1", "_attachment": "remove2"}, o.f);
     o.tick(o);
 
     // adding a document
@@ -4288,19 +4349,26 @@ test ("Remove", function(){
     o.tick(o);
 
     // adding an attachment
-    o.jio.putAttachment({"_id":"remove3/removeAtt", "_mimetype":"text/plain",
-      "_data":"hello"});
+    o.jio.putAttachment({
+      "_id": "remove3",
+      "_attachment": "removeAtt",
+      "_mimetype": "text/plain",
+      "_data": "hello"});
     o.tick(o);
 
     // add another attachment
-    o.jio.putAttachment({"_id":"remove3/removeAtt2", "_mimetype":"text/plain",
-      "_data":"hello2"});
+    o.jio.putAttachment({
+      "_id": "remove3",
+      "_attachment": "removeAtt2",
+      "_mimetype": "text/plain",
+      "_data": "hello2"});
     o.tick(o);
 
     // remove attachment
-    o.spy(o, "value", {"ok": true, "id": "remove3/removeAtt2"},
+    o.spy(o, "value", {"ok": true, "id": "remove3", "attachment": "removeAtt2"},
           "Remove one of multiple attachment");
-    o.jio.remove({"_id": "remove3/removeAtt2"}, o.f);
+    o.jio.removeAttachment({"_id": "remove3", "_attachment": "removeAtt2"},
+                           o.f);
     o.tick(o);
 
     // check index
@@ -4360,7 +4428,7 @@ test ("Remove", function(){
 
     // check attachment
     o.spy(o, "status", 404, "Check if attachment has been removed");
-    o.jio.get({"_id": "remove3/removeAtt"}, o.f);
+    o.jio.getAttachment({"_id": "remove3", "_attachment": "removeAtt"}, o.f);
     o.tick(o);
 
     // check document

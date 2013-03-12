@@ -203,58 +203,104 @@ jIO.addStorageType('local', function (spec, my) {
       localstorage.setItem(priv.localpath + "/" + command.getDocId(), doc);
       that.success({
         "ok": true,
-        "id": command.getDocId() + "/" + command.getAttachmentId()
+        "id": command.getDocId(),
+        "attachment": command.getAttachmentId()
       });
     });
   };
 
   /**
-   * Get a document or attachment
+   * Get a document
    * @method get
    * @param  {object} command The JIO command
    */
   that.get = function (command) {
     setTimeout(function () {
-      var doc;
-      if (typeof command.getAttachmentId() === "string") {
-        // seeking for an attachment
-        doc = localstorage.getItem(priv.localpath + "/" + command.getDocId() +
-          "/" + command.getAttachmentId());
-        if (doc !== null) {
-          that.success(doc);
-        } else {
-          that.error({
-            "status": 404,
-            "statusText": "Not Found",
-            "error": "not_found",
-            "message": "Cannot find the attachment",
-            "reason": "Attachment does not exist"
-          });
-        }
+      var doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
+      if (doc !== null) {
+        that.success(doc);
       } else {
-        // seeking for a document
-        doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
-        if (doc !== null) {
-          that.success(doc);
-        } else {
-          that.error({
-            "status": 404,
-            "statusText": "Not Found",
-            "error": "not_found",
-            "message": "Cannot find the document",
-            "reason": "Document does not exist"
-          });
-        }
+        that.error({
+          "status": 404,
+          "statusText": "Not Found",
+          "error": "not_found",
+          "message": "Cannot find the document",
+          "reason": "Document does not exist"
+        });
       }
     });
   };
 
   /**
-   * Remove a document or attachment
+   * Get a attachment
+   * @method getAttachment
+   * @param  {object} command The JIO command
+   */
+  that.getAttachment = function (command) {
+    setTimeout(function () {
+      var doc = localstorage.getItem(priv.localpath + "/" + command.getDocId() +
+                                     "/" + command.getAttachmentId());
+      if (doc !== null) {
+        that.success(doc);
+      } else {
+        that.error({
+          "status": 404,
+          "statusText": "Not Found",
+          "error": "not_found",
+          "message": "Cannot find the attachment",
+          "reason": "Attachment does not exist"
+        });
+      }
+    });
+  };
+
+  /**
+   * Remove a document
    * @method remove
    * @param  {object} command The JIO command
    */
   that.remove = function (command) {
+    setTimeout(function () {
+      var doc, i, attachment_list;
+      doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
+      attachment_list = [];
+      if (doc !== null && typeof doc === "object") {
+        if (typeof doc._attachments === "object") {
+          // prepare list of attachments
+          for (i in doc._attachments) {
+            if (doc._attachments.hasOwnProperty(i)) {
+              attachment_list.push(i);
+            }
+          }
+        }
+      } else {
+        return that.error({
+          "status": 404,
+          "statusText": "Not Found",
+          "error": "not_found",
+          "message": "Document not found",
+          "reason": "missing"
+        });
+      }
+      localstorage.removeItem(priv.localpath + "/" + command.getDocId());
+      // delete all attachments
+      for (i = 0; i < attachment_list.length; i += 1) {
+        localstorage.removeItem(priv.localpath + "/" + command.getDocId() +
+                                "/" + attachment_list[i]);
+      }
+      that.success({
+        "ok": true,
+        "id": command.getDocId()
+      });
+    });
+  };
+
+  /**
+   * Remove an attachment
+   * @method removeAttachment
+   * @param  {object} command The JIO command
+   */
+  that.removeAttachment = function (command) {
     setTimeout(function () {
       var doc, error, i, attachment_list;
       error = function (word) {
@@ -267,55 +313,29 @@ jIO.addStorageType('local', function (spec, my) {
         });
       };
       doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
-      if (typeof command.getAttachmentId() === "string") {
-        // remove attachment from document
-        if (doc !== null && typeof doc === "object" &&
-            typeof doc._attachments === "object") {
-          if (typeof doc._attachments[command.getAttachmentId()] ===
-              "object") {
-            delete doc._attachments[command.getAttachmentId()];
-            if (priv.objectIsEmpty(doc._attachments)) {
-              delete doc._attachments;
-            }
-            localstorage.setItem(priv.localpath + "/" + command.getDocId(),
-              doc);
-            localstorage.removeItem(priv.localpath + "/" + command.getDocId() +
-              "/" + command.getAttachmentId());
-            that.success({
-              "ok": true,
-              "id": command.getDocId() + "/" + command.getAttachmentId()
-            });
-          } else {
-            error("Attachment");
+      // remove attachment from document
+      if (doc !== null && typeof doc === "object" &&
+          typeof doc._attachments === "object") {
+        if (typeof doc._attachments[command.getAttachmentId()] ===
+            "object") {
+          delete doc._attachments[command.getAttachmentId()];
+          if (priv.objectIsEmpty(doc._attachments)) {
+            delete doc._attachments;
           }
+          localstorage.setItem(priv.localpath + "/" + command.getDocId(),
+                               doc);
+          localstorage.removeItem(priv.localpath + "/" + command.getDocId() +
+                                  "/" + command.getAttachmentId());
+          that.success({
+            "ok": true,
+            "id": command.getDocId(),
+            "attachment": command.getAttachmentId()
+          });
         } else {
-          error("Document");
+          error("Attachment");
         }
       } else {
-        // seeking for a document
-        attachment_list = [];
-        if (doc !== null && typeof doc === "object") {
-          if (typeof doc._attachments === "object") {
-            // prepare list of attachments
-            for (i in doc._attachments) {
-              if (doc._attachments.hasOwnProperty(i)) {
-                attachment_list.push(i);
-              }
-            }
-          }
-        } else {
-          return error("Document");
-        }
-        localstorage.removeItem(priv.localpath + "/" + command.getDocId());
-        // delete all attachments
-        for (i = 0; i < attachment_list.length; i += 1) {
-          localstorage.removeItem(priv.localpath + "/" + command.getDocId() +
-            "/" + attachment_list[i]);
-        }
-        that.success({
-          "ok": true,
-          "id": command.getDocId()
-        });
+        error("Document");
       }
     });
   };

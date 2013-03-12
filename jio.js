@@ -375,6 +375,7 @@ var checkCommand = function (spec, my) {
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global postCommand: true, putCommand: true, getCommand: true,
          removeCommand: true, allDocsCommand: true,
+         getAttachmentCommand: true, removeAttachmentCommand: true,
          putAttachmentCommand: true, failStatus: true, doneStatus: true,
          checkCommand: true, repairCommand: true,
          hex_md5: true */
@@ -391,7 +392,9 @@ var command = function (spec, my) {
     'get': getCommand,
     'remove': removeCommand,
     'allDocs': allDocsCommand,
+    'getAttachment': getAttachmentCommand,
     'putAttachment': putAttachmentCommand,
+    'removeAttachment': removeAttachmentCommand,
     'check': checkCommand,
     'repair': repairCommand
   };
@@ -409,7 +412,6 @@ var command = function (spec, my) {
       "_id": priv.doc.toString()
     };
   }
-  priv.docid = spec.docid || priv.doc._id;
   priv.option = spec.options || {};
   priv.callbacks = spec.callbacks || {};
   priv.success = [priv.callbacks.success || function () {}];
@@ -456,10 +458,7 @@ var command = function (spec, my) {
    * @return {string} The document id
    */
   that.getDocId = function () {
-    if (typeof priv.docid !== "string") {
-      return undefined;
-    }
-    return priv.docid.split('/')[0];
+    return priv.doc._id;
   };
 
   /**
@@ -468,19 +467,7 @@ var command = function (spec, my) {
    * @return {string} The attachment id
    */
   that.getAttachmentId = function () {
-    if (typeof priv.docid !== "string") {
-      return undefined;
-    }
-    return priv.docid.split('/')[1];
-  };
-
-  /**
-   * Returns the label of the command.
-   * @method getDoc
-   * @return {object} The document.
-   */
-  that.getDoc = function () {
-    return priv.doc;
+    return priv.doc._attachment;
   };
 
   /**
@@ -544,8 +531,8 @@ var command = function (spec, my) {
    * @param  {object} storage The storage.
    */
   that.validate = function (storage) {
-    if (typeof priv.docid === "string" &&
-        !priv.docid.match("^[^\/]+([\/][^\/]+)?$")) {
+    if (typeof priv.doc._id === "string" &&
+        !priv.doc._id.match("^[^\/]+([\/][^\/]+)?$")) {
       that.error({
         status: 21,
         statusText: 'Invalid Document Id',
@@ -708,6 +695,58 @@ var command = function (spec, my) {
 };
 /*jslint indent: 2, maxlen: 80, sloppy: true */
 /*global command: true */
+var getAttachmentCommand = function (spec, my) {
+  var that = command(spec, my);
+  spec = spec || {};
+  my = my || {};
+  // Attributes //
+  // Methods //
+  that.getLabel = function () {
+    return 'getAttachment';
+  };
+
+  that.executeOn = function (storage) {
+    storage.getAttachment(that);
+  };
+
+  that.validateState = function () {
+    if (!(typeof that.getDocId() === "string" && that.getDocId() !==
+          "")) {
+      that.error({
+        "status": 20,
+        "statusText": "Document Id Required",
+        "error": "document_id_required",
+        "message": "The document id is not provided",
+        "reason": "Document id is undefined"
+      });
+      return false;
+    }
+    if (typeof that.getAttachmentId() !== "string") {
+      that.error({
+        "status": 22,
+        "statusText": "Attachment Id Required",
+        "error": "attachment_id_required",
+        "message": "The attachment id must be set",
+        "reason": "Attachment id not set"
+      });
+      return false;
+    }
+    if (that.getAttachmentId() === "") {
+      that.error({
+        "status": 23,
+        "statusText": "Invalid Attachment Id",
+        "error": "invalid_attachment_id",
+        "message": "The attachment id must not be an empty string",
+        "reason": "Attachment id is empty"
+      });
+    }
+    return true;
+  };
+
+  return that;
+};
+/*jslint indent: 2, maxlen: 80, sloppy: true */
+/*global command: true */
 var getCommand = function (spec, my) {
   var that = command(spec, my);
 
@@ -730,18 +769,6 @@ var getCommand = function (spec, my) {
         "reason": "Document id is undefined"
       });
       return false;
-    }
-    if (typeof that.getAttachmentId() === "string") {
-      if (that.getAttachmentId() === "") {
-        that.error({
-          "status": 23,
-          "statusText": "Invalid Attachment Id",
-          "error": "invalid_attachment_id",
-          "message": "The attachment id must not be an empty string",
-          "reason": "Attachment id is empty"
-        });
-        return false;
-      }
     }
     return true;
   };
@@ -770,17 +797,6 @@ var postCommand = function (spec, my) {
   };
 
   that.validateState = function () {
-    if (that.getAttachmentId() !== undefined) {
-      that.error({
-        "status": 21,
-        "statusText": "Invalid Document Id",
-        "error": "invalid_document_id",
-        "message": "The document id contains '/' characters " +
-          "which are forbidden",
-        "reason": "Document id contains '/' character(s)"
-      });
-      return false;
-    }
     return true;
   };
   that.executeOn = function (storage) {
@@ -864,22 +880,63 @@ var putCommand = function (spec, my) {
       });
       return false;
     }
-    if (that.getAttachmentId() !== undefined) {
-      that.error({
-        "status": 21,
-        "statusText": "Invalid Document Id",
-        "error": "invalid_document_id",
-        "message": "The document id contains '/' characters " +
-          "which are forbidden",
-        "reason": "Document id contains '/' character(s)"
-      });
-      return false;
-    }
     return true;
   };
   that.executeOn = function (storage) {
     storage.put(that);
   };
+  return that;
+};
+/*jslint indent: 2, maxlen: 80, sloppy: true */
+/*global command: true */
+var removeAttachmentCommand = function (spec, my) {
+  var that = command(spec, my);
+  spec = spec || {};
+  my = my || {};
+  // Attributes //
+  // Methods //
+  that.getLabel = function () {
+    return 'removeAttachment';
+  };
+
+  that.executeOn = function (storage) {
+    storage.removeAttachment(that);
+  };
+
+  that.validateState = function () {
+    if (!(typeof that.getDocId() === "string" && that.getDocId() !==
+          "")) {
+      that.error({
+        "status": 20,
+        "statusText": "Document Id Required",
+        "error": "document_id_required",
+        "message": "The document id is not provided",
+        "reason": "Document id is undefined"
+      });
+      return false;
+    }
+    if (typeof that.getAttachmentId() !== "string") {
+      that.error({
+        "status": 22,
+        "statusText": "Attachment Id Required",
+        "error": "attachment_id_required",
+        "message": "The attachment id must be set",
+        "reason": "Attachment id not set"
+      });
+      return false;
+    }
+    if (that.getAttachmentId() === "") {
+      that.error({
+        "status": 23,
+        "statusText": "Invalid Attachment Id",
+        "error": "invalid_attachment_id",
+        "message": "The attachment id must not be an empty string",
+        "reason": "Attachment id is empty"
+      });
+    }
+    return true;
+  };
+
   return that;
 };
 /*jslint indent: 2, maxlen: 80, sloppy: true */
@@ -905,18 +962,6 @@ var removeCommand = function (spec, my) {
         "reason": "Document id is undefined"
       });
       return false;
-    }
-    if (typeof that.getAttachmentId() === "string") {
-      if (that.getAttachmentId() === "") {
-        that.error({
-          "status": 23,
-          "statusText": "Invalid Attachment Id",
-          "error": "invalid_attachment_id",
-          "message": "The attachment id must not be an empty string",
-          "reason": "Attachment id is empty"
-        });
-        return false;
-      }
     }
     return true;
   };
@@ -2158,6 +2203,7 @@ var jobRules = (function () {
          storage_type_object: true, invalidStorageType: true, jobRules: true,
          job: true, postCommand: true, putCommand: true, getCommand:true,
          allDocsCommand: true, putAttachmentCommand: true,
+         getAttachmentCommand: true, removeAttachmentCommand: true,
          removeCommand: true, checkCommand: true, repairCommand: true */
 // Class jio
 var that = {}, priv = {}, jio_id_array_name = 'jio/id_array';
@@ -2367,12 +2413,13 @@ priv.addJob = function (commandCreator, spec) {
  * Post a document.
  * @method post
  * @param  {object} doc The document object. Contains at least:
- * - {string} _id The document id (optional), "/" are forbidden
+ * - {string} _id The document id (optional)
+ * For revision managing: choose at most one of the following informations:
+ * - {string} _rev The revision we want to update
+ * - {string} _revs_info The revision information we want the document to have
+ * - {string} _revs The revision history we want the document to have
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
- * - {boolean} revs Include revision history of the document.
- * - {boolean} revs_info Retreive the revisions.
- * - {boolean} conflicts Retreive the conflict list.
  * @param  {function} callback (optional) The callback(err,response).
  * @param  {function} error (optional) The callback on error, if this
  *     callback is given in parameter, "callback" is changed as "success",
@@ -2400,12 +2447,13 @@ Object.defineProperty(that, "post", {
  * Put a document.
  * @method put
  * @param  {object} doc The document object. Contains at least:
- * - {string} _id The document id, "/" are forbidden
+ * - {string} _id The document id
+ * For revision managing: choose at most one of the following informations:
+ * - {string} _rev The revision we want to update
+ * - {string} _revs_info The revision information we want the document to have
+ * - {string} _revs The revision history we want the document to have
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
- * - {boolean} revs Include revision history of the document.
- * - {boolean} revs_info Retreive the revisions.
- * - {boolean} conflicts Retreive the conflict list.
  * @param  {function} callback (optional) The callback(err,response).
  * @param  {function} error (optional) The callback on error, if this
  *     callback is given in parameter, "callback" is changed as "success",
@@ -2433,10 +2481,12 @@ Object.defineProperty(that, "put", {
  * Get a document.
  * @method get
  * @param  {string} doc The document object. Contains at least:
- * - {string} _id The document id: "doc_id" or "doc_id/attachment_id"
+ * - {string} _id The document id
+ * For revision managing:
+ * - {string} _rev The revision we want to get. (optional)
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
- * - {string} rev The revision we want to get.
+ * For revision managing:
  * - {boolean} revs Include revision history of the document.
  * - {boolean} revs_info Include list of revisions, and their availability.
  * - {boolean} conflicts Include a list of conflicts.
@@ -2467,12 +2517,11 @@ Object.defineProperty(that, "get", {
  * Remove a document.
  * @method remove
  * @param  {object} doc The document object. Contains at least:
- * - {string} _id The document id: "doc_id" or "doc_id/attachment_id"
+ * - {string} _id The document id
+ * For revision managing:
+ * - {string} _rev The revision we want to remove
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
- * - {boolean} revs Include revision history of the document.
- * - {boolean} revs_info Include list of revisions, and their availability.
- * - {boolean} conflicts Include a list of conflicts.
  * @param  {function} callback (optional) The callback(err,response).
  * @param  {function} error (optional) The callback on error, if this
  *     callback is given in parameter, "callback" is changed as "success",
@@ -2502,9 +2551,6 @@ Object.defineProperty(that, "remove", {
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
  * - {boolean} include_docs Include document metadata
- * - {boolean} revs Include revision history of the document.
- * - {boolean} revs_info Include revisions.
- * - {boolean} conflicts Include conflicts.
  * @param  {function} callback (optional) The callback(err,response).
  * @param  {function} error (optional) The callback on error, if this
  *     callback is given in parameter, "callback" is changed as "success",
@@ -2528,18 +2574,50 @@ Object.defineProperty(that, "allDocs", {
 });
 
 /**
+ * Get an attachment from a document.
+ * @method gettAttachment
+ * @param  {object} doc The document object. Contains at least:
+ * - {string} _id The document id
+ * - {string} _attachment The attachment id
+ * For revision managing:
+ * - {string} _rev The document revision
+ * @param  {object} options (optional) Contains some options:
+ * - {number} max_retry The number max of retries, 0 = infinity.
+ * @param  {function} callback (optional) The callback(err,respons)
+ * @param  {function} error (optional) The callback on error, if this
+ *     callback is given in parameter, "callback" is changed as "success",
+ *     called on success.
+ */
+Object.defineProperty(that, "getAttachment", {
+  configurable: false,
+  enumerable: false,
+  writable: false,
+  value: function (doc, options, success, error) {
+    var param = priv.parametersToObject(
+      [options, success, error],
+      {max_retry: 3}
+    );
+
+    priv.addJob(getAttachmentCommand, {
+      doc: doc,
+      options: param.options,
+      callbacks: {success: param.success, error: param.error}
+    });
+  }
+});
+
+/**
  * Put an attachment to a document.
  * @method putAttachment
  * @param  {object} doc The document object. Contains at least:
- * - {string} _id The document id: "doc_id/attchment_id"
- * - {string} _data Base64 attachment data
+ * - {string} _id The document id
+ * - {string} _attachment The attachment id
+ * - {string} _data The attachment data
  * - {string} _mimetype The attachment mimetype
- * - {string} _rev The attachment revision
+ * For revision managing:
+ * - {string} _rev The document revision
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
- * - {boolean} revs Include revision history of the document.
- * - {boolean} revs_info Include revisions.
- * - {boolean} conflicts Include conflicts.
  * @param  {function} callback (optional) The callback(err,respons)
  * @param  {function} error (optional) The callback on error, if this
  *     callback is given in parameter, "callback" is changed as "success",
@@ -2556,6 +2634,39 @@ Object.defineProperty(that, "putAttachment", {
     );
 
     priv.addJob(putAttachmentCommand, {
+      doc: doc,
+      options: param.options,
+      callbacks: {success: param.success, error: param.error}
+    });
+  }
+});
+
+/**
+ * Put an attachment to a document.
+ * @method putAttachment
+ * @param  {object} doc The document object. Contains at least:
+ * - {string} _id The document id
+ * - {string} _attachment The attachment id
+ * For revision managing:
+ * - {string} _rev The document revision
+ * @param  {object} options (optional) Contains some options:
+ * - {number} max_retry The number max of retries, 0 = infinity.
+ * @param  {function} callback (optional) The callback(err,respons)
+ * @param  {function} error (optional) The callback on error, if this
+ *     callback is given in parameter, "callback" is changed as "success",
+ *     called on success.
+ */
+Object.defineProperty(that, "removeAttachment", {
+  configurable: false,
+  enumerable: false,
+  writable: false,
+  value: function (doc, options, success, error) {
+    var param = priv.parametersToObject(
+      [options, success, error],
+      {max_retry: 0}
+    );
+
+    priv.addJob(removeAttachmentCommand, {
       doc: doc,
       options: param.options,
       callbacks: {success: param.success, error: param.error}

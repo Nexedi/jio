@@ -413,10 +413,11 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
             if ((parsed_response._attachments).hasOwnProperty(attachment)) {
               functions.get_attachment_count += 1;
               priv.send(
-                "get",
+                "getAttachment",
                 param.responses.stats[response][0],
                 {
-                  "_id": param.doc._id + "/" + attachment,
+                  "_id": param.doc._id,
+                  "_attachment": attachment,
                   "_rev": JSON.parse(response)._rev
                 },
                 param.option,
@@ -550,8 +551,6 @@ jIO.addStorageType('replicaterevision', function (spec, my) {
             // "_revs_info": param.responses.list[index]._revs_info,
             "_data": param.responses.attachments[attachment_to_put[i]._id]
           };
-          attachment._id += "/" + attachment._attachment;
-          delete attachment._attachment;
           priv.send(
             "putAttachment",
             index,

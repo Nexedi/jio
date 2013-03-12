@@ -366,8 +366,14 @@ jIO.addStorageType("revision", function (spec, my) {
   priv.remove = function (doc, option, callback) {
     priv.send("remove", doc, option, callback);
   };
+  priv.getAttachment = function (attachment, option, callback) {
+    priv.send("getAttachment", attachment, option, callback);
+  };
   priv.putAttachment = function (attachment, option, callback) {
     priv.send("putAttachment", attachment, option, callback);
+  };
+  priv.removeAttachment = function (attachment, option, callback) {
+    priv.send("removeAttachment", attachment, option, callback);
   };
 
   priv.getDocument = function (doc, option, callback) {
@@ -379,7 +385,6 @@ jIO.addStorageType("revision", function (spec, my) {
     delete doc._revs_info;
     priv.get(doc, option, callback);
   };
-  priv.getAttachment = priv.get;
   priv.putDocument = function (doc, option, callback) {
     doc = priv.clone(doc);
     doc._id = doc._id + "." + doc._rev;
@@ -428,8 +433,8 @@ jIO.addStorageType("revision", function (spec, my) {
     for (attachment_id in doc._attachments) {
       if (doc._attachments.hasOwnProperty(attachment_id)) {
         count += 1;
-        priv.get(
-          {"_id": doc._id + "/" + attachment_id},
+        priv.getAttachment(
+          {"_id": doc._id, "_attachment": attachment_id},
           option,
           dealResults(attachment_id, doc._attachments[attachment_id])
         );
@@ -463,9 +468,7 @@ jIO.addStorageType("revision", function (spec, my) {
       attachment = attachment_list[i];
       if (attachment !== undefined) {
         count += 1;
-        attachment._id = doc._id + "." + doc._rev + "/" +
-          attachment._attachment;
-        delete attachment._attachment;
+        attachment._id = doc._id + "." + doc._rev;
         priv.putAttachment(attachment, option, dealResults(i));
       }
     }
@@ -729,18 +732,22 @@ jIO.addStorageType("revision", function (spec, my) {
       priv.putDocumentTree(doc, option, doc_tree, callback.putDocumentTree);
     };
     callback.putDocumentTree = function (err, response) {
+      var response_object;
       if (err) {
         err.message = "Cannot update the document history";
         return onEnd(err, undefined);
       }
-      onEnd(undefined, {
+      response_object = {
         "ok": true,
-        "id": doc._id + (specific_parameter.putAttachment ||
-                         specific_parameter.removeAttachment ||
-                         specific_parameter.getAttachment ?
-                         "/" + doc._attachment : ""),
+        "id": doc._id,
         "rev": doc._rev
-      });
+      };
+      if (specific_parameter.putAttachment ||
+          specific_parameter.removeAttachment ||
+          specific_parameter.getAttachment) {
+        response_object.attachment = doc._attachment;
+      }
+      onEnd(undefined, response_object);
       // if (option.keep_revision_history !== true) {
       //   // priv.remove(prev_doc, option, function () {
       //   //   - change "available" status to "deleted"

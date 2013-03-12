@@ -23,18 +23,6 @@ var getCommand = function (spec, my) {
       });
       return false;
     }
-    if (typeof that.getAttachmentId() === "string") {
-      if (that.getAttachmentId() === "") {
-        that.error({
-          "status": 23,
-          "statusText": "Invalid Attachment Id",
-          "error": "invalid_attachment_id",
-          "message": "The attachment id must not be an empty string",
-          "reason": "Attachment id is empty"
-        });
-        return false;
-      }
-    }
     return true;
   };
 

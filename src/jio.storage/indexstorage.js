@@ -569,22 +569,17 @@ jIO.addStorageType('indexed', function (spec, my) {
    * @param  {string} source The source of the function call
    */
   priv.postOrPut = function (command, source) {
-    var f = {}, indices, doc, docid;
+    var f = {}, indices, doc;
     doc = command.cloneDoc();
-    docid = command.getDocId();
-    if (typeof docid !== "string") {
+    if (typeof doc._id !== "string") {
       doc._id = priv.generateUuid();
-      docid = doc._id;
     }
     f.getIndices = function () {
       var option = command.cloneOption();
-      if (option.max_retry === 0) {
-        option.max_retry = 3;
-      }
       that.addJob(
         "get",
         priv.substorage,
-        priv.index_suffix,
+        {"_id": priv.index_suffix},
         option,
         function (response) {
           indices = response;
@@ -639,10 +634,10 @@ jIO.addStorageType('indexed', function (spec, my) {
           if (source !== 'PUTATTACHMENT') {
             f.sendIndices(index_update_method);
           } else {
-            docid = docid + '/' + command.getAttachmentId();
             that.success({
               "ok": true,
-              "id": docid
+              "id": doc._id,
+              "attachment": doc._attachment
             });
           }
         },
@@ -655,7 +650,7 @@ jIO.addStorageType('indexed', function (spec, my) {
             } else {
               that.success({
                 "ok": true,
-                "id": docid
+                "id": doc._id
               });
             }
             break;
@@ -677,7 +672,7 @@ jIO.addStorageType('indexed', function (spec, my) {
         function () {
           that.success({
             "ok": true,
-            "id": docid
+            "id": doc._id
           });
         },
         function (err) {
@@ -718,47 +713,47 @@ jIO.addStorageType('indexed', function (spec, my) {
   };
 
   /**
-   * Get the document metadata or attachment.
-   * Options:
-   * - {boolean} revs Add simple revision history (false by default).
-   * - {boolean} revs_info Add revs info (false by default).
-   * - {boolean} conflicts Add conflict object (false by default).
+   * Get the document metadata
    * @method get
    * @param  {object} command The JIO command
    */
   that.get = function (command) {
-    var option, docid;
-    option = command.cloneOption();
-    if (option.max_retry === 0) {
-      option.max_retry = 3;
-    }
-    if (command.getAttachmentId() !== undefined) {
-      docid = command.getDocId() + '/' + command.getAttachmentId();
-    } else {
-      docid = command.getDocId();
-    }
     that.addJob(
       "get",
       priv.substorage,
-      docid,
-      option,
+      command.cloneDoc(),
+      command.cloneOption(),
       function (response) {
         that.success(response);
       },
-      function () {
-        that.error({
-          "status": 404,
-          "statusText": "Not Found",
-          "error": "not_found",
-          "message": "Cannot find the attachment",
-          "reason": "Document/Attachment not found"
-        });
+      function (err) {
+        that.error(err);
       }
     );
   };
 
   /**
-   * Remove document or attachment - removing documents updates index!.
+   * Get the attachment.
+   * @method getAttachment
+   * @param  {object} command The JIO command
+   */
+  that.getAttachment = function (command) {
+    that.addJob(
+      "getAttachment",
+      priv.substorage,
+      command.cloneDoc(),
+      command.cloneOption(),
+      function (response) {
+        that.success(response);
+      },
+      function (err) {
+        that.error(err);
+      }
+    );
+  };
+
+  /**
+   * Remove document - removing documents updates index!.
    * @method remove
    * @param  {object} command The JIO command
    */
@@ -767,20 +762,12 @@ jIO.addStorageType('indexed', function (spec, my) {
 
     doc = command.cloneDoc();
     option = command.cloneOption();
-    if (option.max_retry === 0) {
-      option.max_retry = 3;
-    }
 
     f.removeDocument = function (type) {
-      if (type === 'doc') {
-        docid = command.getDocId();
-      } else {
-        docid = command.getDocId() + '/' + command.getAttachmentId();
-      }
       that.addJob(
         "remove",
         priv.substorage,
-        docid,
+        doc,
         option,
         function (response) {
           that.success(response);
@@ -800,7 +787,7 @@ jIO.addStorageType('indexed', function (spec, my) {
       that.addJob(
         "get",
         priv.substorage,
-        priv.index_suffix,
+        {"_id": priv.index_suffix},
         option,
         function (response) {
           // if deleting an attachment
@@ -841,6 +828,62 @@ jIO.addStorageType('indexed', function (spec, my) {
   };
 
   /**
+   * Remove document - removing documents updates index!.
+   * @method remove
+   * @param  {object} command The JIO command
+   */
+  that.removeAttachment = function (command) {
+    var f = {}, indices, doc, docid, option;
+    doc = command.cloneDoc();
+    option = command.cloneOption();
+    f.removeDocument = function (type) {
+      that.addJob(
+        "removeAttachment",
+        priv.substorage,
+        doc,
+        option,
+        that.success,
+        that.error
+      );
+    };
+    f.getIndices = function () {
+      that.addJob(
+        "get",
+        priv.substorage,
+        {"_id": priv.index_suffix},
+        option,
+        function (response) {
+          // if deleting an attachment
+          if (typeof command.getAttachmentId() === 'string') {
+            f.removeDocument('attachment');
+          } else {
+            indices = priv.cleanIndices(response, doc);
+            // store update index file
+            that.addJob(
+              "put",
+              priv.substorage,
+              indices,
+              command.cloneOption(),
+              function () {
+                // remove actual document
+                f.removeDocument('doc');
+              },
+              function (err) {
+                err.message = "Cannot save index file";
+                that.error(err);
+              }
+            );
+          }
+        },
+        function (err) {
+          that.error(err);
+        }
+      );
+    };
+    f.getIndices();
+  };
+
+  /**
    * Gets a document list from the substorage
    * Options:
    * - {boolean} include_docs Also retrieve the actual document content.
@@ -863,15 +906,12 @@ jIO.addStorageType('indexed', function (spec, my) {
     var f = {}, option, all_docs_response, query_object, query_syntax,
       query_response;
     option = command.cloneOption();
-    if (option.max_retry === 0) {
-      option.max_retry = 3;
-    }
 
     f.getIndices = function () {
       that.addJob(
         "get",
         priv.substorage,
-        priv.index_suffix,
+        {"_id": priv.index_suffix},
         option,
         function (response) {
           query_syntax = command.getOption('query');
@@ -887,31 +927,8 @@ jIO.addStorageType('indexed', function (spec, my) {
                 priv.substorage,
                 undefined,
                 option,
-                function (data) {
-                  that.success(data);
-                },
-                function (err) {
-                  switch (err.status) {
-                  case 405:
-                    that.error({
-                      "status": 405,
-                      "statusText": "Method Not Allowed",
-                      "error": "method_not_allowed",
-                      "message": "Method not allowed",
-                      "reason": "Could not run AllDocs on this storage"
-                    });
-                    break;
-                  default:
-                    that.error({
-                      "status": 404,
-                      "statusText": "Not Found",
-                      "error": "not_found",
-                      "message": "Could not run allDocs command",
-                      "reason": "There are no documents in the storage"
-                    });
-                    break;
-                  }
-                }
+                that.success,
+                that.error
               );
             } else {
               // we can use index, run query on index
@@ -927,16 +944,7 @@ jIO.addStorageType('indexed', function (spec, my) {
             that.success(all_docs_response);
           }
         },
-        function () {
-          that.error({
-            "status": 404,
-            "statusText": "Not Found",
-            "error": "not_found",
-            "message": "Document index not found",
-            "reason": "There are no documents in the storage"
-          });
-          return;
-        }
+        that.error
       );
     };
     f.getIndices();

@@ -1,6 +1,7 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global postCommand: true, putCommand: true, getCommand: true,
          removeCommand: true, allDocsCommand: true,
+         getAttachmentCommand: true, removeAttachmentCommand: true,
          putAttachmentCommand: true, failStatus: true, doneStatus: true,
          checkCommand: true, repairCommand: true,
          hex_md5: true */
@@ -17,7 +18,9 @@ var command = function (spec, my) {
     'get': getCommand,
     'remove': removeCommand,
     'allDocs': allDocsCommand,
+    'getAttachment': getAttachmentCommand,
     'putAttachment': putAttachmentCommand,
+    'removeAttachment': removeAttachmentCommand,
     'check': checkCommand,
     'repair': repairCommand
   };
@@ -35,7 +38,6 @@ var command = function (spec, my) {
       "_id": priv.doc.toString()
     };
   }
-  priv.docid = spec.docid || priv.doc._id;
   priv.option = spec.options || {};
   priv.callbacks = spec.callbacks || {};
   priv.success = [priv.callbacks.success || function () {}];
@@ -82,10 +84,7 @@ var command = function (spec, my) {
    * @return {string} The document id
    */
   that.getDocId = function () {
-    if (typeof priv.docid !== "string") {
-      return undefined;
-    }
-    return priv.docid.split('/')[0];
+    return priv.doc._id;
   };
 
   /**
@@ -94,19 +93,7 @@ var command = function (spec, my) {
    * @return {string} The attachment id
    */
   that.getAttachmentId = function () {
-    if (typeof priv.docid !== "string") {
-      return undefined;
-    }
-    return priv.docid.split('/')[1];
-  };
-
-  /**
-   * Returns the label of the command.
-   * @method getDoc
-   * @return {object} The document.
-   */
-  that.getDoc = function () {
-    return priv.doc;
+    return priv.doc._attachment;
   };
 
   /**
@@ -170,8 +157,8 @@ var command = function (spec, my) {
    * @param  {object} storage The storage.
    */
   that.validate = function (storage) {
-    if (typeof priv.docid === "string" &&
-        !priv.docid.match("^[^\/]+([\/][^\/]+)?$")) {
+    if (typeof priv.doc._id === "string" &&
+        !priv.doc._id.match("^[^\/]+([\/][^\/]+)?$")) {
       that.error({
         status: 21,
         statusText: 'Invalid Document Id',

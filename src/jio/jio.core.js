@@ -4,6 +4,7 @@
          storage_type_object: true, invalidStorageType: true, jobRules: true,
          job: true, postCommand: true, putCommand: true, getCommand:true,
          allDocsCommand: true, putAttachmentCommand: true,
+         getAttachmentCommand: true, removeAttachmentCommand: true,
          removeCommand: true, checkCommand: true, repairCommand: true */
 // Class jio
 var that = {}, priv = {}, jio_id_array_name = 'jio/id_array';
@@ -213,12 +214,13 @@ priv.addJob = function (commandCreator, spec) {
  * Post a document.
  * @method post
  * @param  {object} doc The document object. Contains at least:
- * - {string} _id The document id (optional), "/" are forbidden
+ * - {string} _id The document id (optional)
+ * For revision managing: choose at most one of the following informations:
+ * - {string} _rev The revision we want to update
+ * - {string} _revs_info The revision information we want the document to have
+ * - {string} _revs The revision history we want the document to have
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
- * - {boolean} revs Include revision history of the document.
- * - {boolean} revs_info Retreive the revisions.
- * - {boolean} conflicts Retreive the conflict list.
  * @param  {function} callback (optional) The callback(err,response).
  * @param  {function} error (optional) The callback on error, if this
  *     callback is given in parameter, "callback" is changed as "success",
@@ -246,12 +248,13 @@ Object.defineProperty(that, "post", {
  * Put a document.
  * @method put
  * @param  {object} doc The document object. Contains at least:
- * - {string} _id The document id, "/" are forbidden
+ * - {string} _id The document id
+ * For revision managing: choose at most one of the following informations:
+ * - {string} _rev The revision we want to update
+ * - {string} _revs_info The revision information we want the document to have
+ * - {string} _revs The revision history we want the document to have
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
- * - {boolean} revs Include revision history of the document.
- * - {boolean} revs_info Retreive the revisions.
- * - {boolean} conflicts Retreive the conflict list.
  * @param  {function} callback (optional) The callback(err,response).
  * @param  {function} error (optional) The callback on error, if this
  *     callback is given in parameter, "callback" is changed as "success",
@@ -279,10 +282,12 @@ Object.defineProperty(that, "put", {
  * Get a document.
  * @method get
  * @param  {string} doc The document object. Contains at least:
- * - {string} _id The document id: "doc_id" or "doc_id/attachment_id"
+ * - {string} _id The document id
+ * For revision managing:
+ * - {string} _rev The revision we want to get. (optional)
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
- * - {string} rev The revision we want to get.
+ * For revision managing:
  * - {boolean} revs Include revision history of the document.
  * - {boolean} revs_info Include list of revisions, and their availability.
  * - {boolean} conflicts Include a list of conflicts.
@@ -313,12 +318,11 @@ Object.defineProperty(that, "get", {
  * Remove a document.
  * @method remove
  * @param  {object} doc The document object. Contains at least:
- * - {string} _id The document id: "doc_id" or "doc_id/attachment_id"
+ * - {string} _id The document id
+ * For revision managing:
+ * - {string} _rev The revision we want to remove
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
- * - {boolean} revs Include revision history of the document.
- * - {boolean} revs_info Include list of revisions, and their availability.
- * - {boolean} conflicts Include a list of conflicts.
  * @param  {function} callback (optional) The callback(err,response).
  * @param  {function} error (optional) The callback on error, if this
  *     callback is given in parameter, "callback" is changed as "success",
@@ -348,9 +352,6 @@ Object.defineProperty(that, "remove", {
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
  * - {boolean} include_docs Include document metadata
- * - {boolean} revs Include revision history of the document.
- * - {boolean} revs_info Include revisions.
- * - {boolean} conflicts Include conflicts.
  * @param  {function} callback (optional) The callback(err,response).
  * @param  {function} error (optional) The callback on error, if this
  *     callback is given in parameter, "callback" is changed as "success",
@@ -374,18 +375,50 @@ Object.defineProperty(that, "allDocs", {
 });
 
 /**
+ * Get an attachment from a document.
+ * @method gettAttachment
+ * @param  {object} doc The document object. Contains at least:
+ * - {string} _id The document id
+ * - {string} _attachment The attachment id
+ * For revision managing:
+ * - {string} _rev The document revision
+ * @param  {object} options (optional) Contains some options:
+ * - {number} max_retry The number max of retries, 0 = infinity.
+ * @param  {function} callback (optional) The callback(err,respons)
+ * @param  {function} error (optional) The callback on error, if this
+ *     callback is given in parameter, "callback" is changed as "success",
+ *     called on success.
+ */
+Object.defineProperty(that, "getAttachment", {
+  configurable: false,
+  enumerable: false,
+  writable: false,
+  value: function (doc, options, success, error) {
+    var param = priv.parametersToObject(
+      [options, success, error],
+      {max_retry: 3}
+    );
+
+    priv.addJob(getAttachmentCommand, {
+      doc: doc,
+      options: param.options,
+      callbacks: {success: param.success, error: param.error}
+    });
+  }
+});
+
+/**
  * Put an attachment to a document.
  * @method putAttachment
  * @param  {object} doc The document object. Contains at least:
- * - {string} _id The document id: "doc_id/attchment_id"
- * - {string} _data Base64 attachment data
+ * - {string} _id The document id
+ * - {string} _attachment The attachment id
+ * - {string} _data The attachment data
  * - {string} _mimetype The attachment mimetype
- * - {string} _rev The attachment revision
+ * For revision managing:
+ * - {string} _rev The document revision
  * @param  {object} options (optional) Contains some options:
  * - {number} max_retry The number max of retries, 0 = infinity.
- * - {boolean} revs Include revision history of the document.
- * - {boolean} revs_info Include revisions.
- * - {boolean} conflicts Include conflicts.
  * @param  {function} callback (optional) The callback(err,respons)
  * @param  {function} error (optional) The callback on error, if this
  *     callback is given in parameter, "callback" is changed as "success",
@@ -402,6 +435,39 @@ Object.defineProperty(that, "putAttachment", {
     );
 
     priv.addJob(putAttachmentCommand, {
+      doc: doc,
+      options: param.options,
+      callbacks: {success: param.success, error: param.error}
+    });
+  }
+});
+
+/**
+ * Put an attachment to a document.
+ * @method putAttachment
+ * @param  {object} doc The document object. Contains at least:
+ * - {string} _id The document id
+ * - {string} _attachment The attachment id
+ * For revision managing:
+ * - {string} _rev The document revision
+ * @param  {object} options (optional) Contains some options:
+ * - {number} max_retry The number max of retries, 0 = infinity.
+ * @param  {function} callback (optional) The callback(err,respons)
+ * @param  {function} error (optional) The callback on error, if this
+ *     callback is given in parameter, "callback" is changed as "success",
+ *     called on success.
+ */
+Object.defineProperty(that, "removeAttachment", {
+  configurable: false,
+  enumerable: false,
+  writable: false,
+  value: function (doc, options, success, error) {
+    var param = priv.parametersToObject(
+      [options, success, error],
+      {max_retry: 0}
+    );
+
+    priv.addJob(removeAttachmentCommand, {
       doc: doc,
       options: param.options,
       callbacks: {success: param.success, error: param.error}

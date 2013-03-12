@@ -45,16 +45,14 @@
         setTimeout(function () {
           that.success({
             "ok": true,
-            "id": command.getDocId() + "/" + command.getAttachmentId()
+            "id": command.getDocId(),
+            "attachment": command.getAttachmentId()
           });
         }, 100); // 100 ms, for jiotests simple job waiting
       }; // end putAttachment
 
       that.get = function (command) {
         setTimeout(function () {
-          if (command.getAttachmentId()) {
-            return that.success('0123456789');
-          }
           that.success({
             "_id": command.getDocId(),
             "title": 'get_title'
@@ -62,33 +60,42 @@
         }, 100); // 100 ms, for jiotests simple job waiting
       }; // end get
 
+      that.getAttachment = function (command) {
+        setTimeout(function () {
+          that.success('0123456789');
+        }, 100); // 100 ms, for jiotests simple job waiting
+      }; // end putAttachment
+
       that.allDocs = function () {
         setTimeout(function () {
           that.error({
             "status": 405,
             "statusText": "Method Not Allowed",
             "error": "method_not_allowed",
-            "message": "Your are not allowed to use" + "this command",
-            "reason": "LocalStorage forbids AllDocs" + "command executions"
+            "message": "Your are not allowed to use this command",
+            "reason": "Dummystorage forbids AllDocs command executions"
           });
         });
       }; // end allDocs
 
       that.remove = function (command) {
         setTimeout(function () {
-          if (command.getAttachmentId()) {
-            that.success({
-              "ok": true,
-              "id": command.getDocId() + "/" + command.getAttachmentId()
-            });
-          } else {
-            that.success({
-              "ok": true,
-              "id": command.getDocId()
-            });
-          }
+          that.success({
+            "ok": true,
+            "id": command.getDocId()
+          });
         }, 100); // 100 ms, for jiotests simple job waiting
       }; // end remove
+
+      that.removeAttachment = function (command) {
+        setTimeout(function () {
+          that.success({
+            "ok": true,
+            "id": command.getDocId(),
+            "attachment": command.getAttachmentId()
+          });
+        }, 100); // 100 ms, for jiotests simple job waiting
+      }; // end putAttachment
 
       return that;
     },
@@ -130,6 +137,10 @@
           priv.error();
         }; // end get
 
+        that.getAttachment = function () {
+          priv.error();
+        };
+
         that.allDocs = function () {
           setTimeout(function () {
             that.error({
@@ -145,6 +156,11 @@
         that.remove = function () {
           priv.error();
         }; // end remove
+
+        that.removeAttachment = function () {
+          priv.error();
+        };
+
         return that;
       },
     // end Dummy Storage All Fail
@@ -177,7 +193,8 @@
           setTimeout(function () {
             that.success({
               "ok": true,
-              "id": command.getDocId() + "/" + command.getAttachmentId()
+              "id": command.getDocId(),
+              "attachment": command.getAttachmentId()
             });
           }, 100);
         }; // end put
@@ -193,28 +210,55 @@
             });
           }, 100);
         }; // end get
+
+        that.getAttachment = function (command) {
+          setTimeout(function () {
+            that.error({
+              "status": 404,
+              "statusText": "Not Found",
+              "error": "not_found",
+              "message": "Attachment not found",
+              "reason": "Document '" + command.getDocId() + "'does not exist"
+            });
+          }, 100);
+        }; // end get
+
         that.allDocs = function () {
           setTimeout(function () {
             that.error({
               "status": 405,
               "statusText": "Method Not Allowed",
               "error": "method_not_allowed",
-              "message": "Your are not allowed to use" + "this command",
-              "reason": "LocalStorage forbids AllDocs" + "command executions"
+              "message": "Your are not allowed to use this command",
+              "reason": "Dummystorage forbids AllDocs command executions"
             });
           });
         }; // end allDocs
+
         that.remove = function () {
           setTimeout(function () {
             that.error({
               "status": 404,
               "statusText": "Not Found",
               "error": "not_found",
-              "message": "Cannot remove an unexistant" + "document",
+              "message": "Cannot remove an inexistent document",
               "reason": "missing" // or deleted
             });
           }, 100);
         }; // end remove
+
+        that.removeAttachment = function () {
+          setTimeout(function () {
+            that.error({
+              "status": 404,
+              "statusText": "Not Found",
+              "error": "not_found",
+              "message": "Cannot remove an inexistent attachment",
+              "reason": "missing" // or deleted
+            });
+          }, 100);
+        }; // end remove
+
         return that;
       },
     // end Dummy Storage All Not Found
@@ -449,45 +493,50 @@
           setTimeout(function () {
             that.success({
               "ok": true,
-              "id": command.getDocId() + "/" + command.getAttachmentId()
+              "id": command.getDocId(),
+              "attachment": command.getAttachmentId()
             });
           }, 100);
-        }; // end put
+        }; // end putAttachment
         that.get = function (command) {
           setTimeout(function () {
-            if (command.getAttachmentId()) {
-              return that.success('0123456789');
-            }
             that.success({
               "_id": command.getDocId(),
               "title": 'get_title'
             });
           }, 100); // 100 ms, for jiotests simple job waiting
         }; // end get
+        that.getAttachment = function (command) {
+          setTimeout(function () {
+            that.success('0123456789');
+          }, 100); // 100 ms, for jiotests simple job waiting
+        }; // end getAttachment
         that.allDocs = function () {
           setTimeout(function () {
             that.error({
               "status": 405,
               "statusText": "Method Not Allowed",
               "error": "method_not_allowed",
-              "message": "Your are not allowed to use" + "this command",
-              "reason": "LocalStorage forbids AllDocs" + "command executions"
+              "message": "Your are not allowed to use this command",
+              "reason": "Dummystorage forbids AllDocs command executions"
             });
           });
         }; // end allDocs
         that.remove = function (command) {
           setTimeout(function () {
-            if (command.getAttachmentId()) {
-              that.success({
-                "ok": true,
-                "id": command.getDocId() + "/" + command.getAttachmentId()
-              });
-            } else {
-              that.success({
-                "ok": true,
-                "id": command.getDocId()
-              });
-            }
+            that.success({
+              "ok": true,
+              "id": command.getDocId()
+            });
+          }, 100); // 100 ms, for jiotests simple job waiting
+        }; // end remove
+        that.removeAttachment = function (command) {
+          setTimeout(function () {
+            that.success({
+              "ok": true,
+              "id": command.getDocId(),
+              "attachment": command.getAttachmentId()
+            });
           }, 100); // 100 ms, for jiotests simple job waiting
         }; // end remove
         return that;
