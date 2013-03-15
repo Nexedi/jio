@@ -310,8 +310,15 @@ jIO.addStorageType('indexed', function (spec, my) {
   priv.findBestIndexForQuery = function (syntax) {
     var i, j, k, l, n, p, o, element, key, block,
       search_ids, use_index = [], select_ids = {}, index, query_param,
-      // need to parse into object
+      current_query, current_query_size;
+
+    // try to parse into object
+    if (syntax.query !== undefined) {
       current_query = jIO.ComplexQueries.parse(syntax.query);
+    } else {
+      current_query = {};
+      current_query_size = 0;
+    }
 
     // loop indices
     for (i = 0; i < priv.indices.length; i += 1) {
@@ -321,34 +328,37 @@ jIO.addStorageType('indexed', function (spec, my) {
       index.reference = priv.indices[i];
       index.reference_size = index.reference.fields.length;
 
-      // rebuild search_ids for iteration
-      if (current_query.query_list === undefined) {
-        search_ids.push(current_query.id);
-      } else {
-        for (j = 0; j < current_query.query_list.length; j += 1) {
-          if (priv.getPositionInArray(current_query.query_list[j].id,
-              search_ids) === null) {
-            search_ids.push(current_query.query_list[j].id);
+      if (current_query_size !== 0) {
+        // rebuild search_ids for iteration
+        if (current_query.query_list === undefined) {
+          search_ids.push(current_query.id);
+        } else {
+          for (j = 0; j < current_query.query_list.length; j += 1) {
+            if (priv.getPositionInArray(current_query.query_list[j].id,
+                search_ids) === null) {
+              search_ids.push(current_query.query_list[j].id);
+            }
+          }
+        }
+
+        // loop search ids and find matches in index
+        for (k = 0; k < search_ids.length; k += 1) {
+          query_param = search_ids[0];
+          for (l = 0; l < index.reference_size; l += 1) {
+            if (query_param === index.reference.fields[l]) {
+              search_ids.splice(
+                priv.getPositionInArray(query_param, search_ids),
+                1
+              );
+            }
           }
         }
       }
+
       // rebuild select_ids
       for (o = 0; o < syntax.filter.select_list.length; o += 1) {
         element = syntax.filter.select_list[o];
         select_ids[element] = true;
-      }
-
-      // loop search ids and find matches in index
-      for (k = 0; k < search_ids.length; k += 1) {
-        query_param = search_ids[0];
-        for (l = 0; l < index.reference_size; l += 1) {
-          if (query_param === index.reference.fields[l]) {
-            search_ids.splice(
-              priv.getPositionInArray(query_param, search_ids),
-              1
-            );
-          }
-        }
       }
 
       // search_ids empty  = all needed search fields found on index
@@ -915,12 +925,9 @@ jIO.addStorageType('indexed', function (spec, my) {
         option,
         function (response) {
           query_syntax = command.getOption('query');
-
           if (query_syntax !== undefined) {
-
             // build complex query object
             query_object = priv.constructQueryObject(response, query_syntax);
-
             if (query_object.length === 0) {
               that.addJob(
                 "allDocs",

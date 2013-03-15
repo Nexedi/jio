@@ -1179,6 +1179,38 @@ test ("AllDocs", function(){
     }, o.f);
     o.tick(o);
 
+    // empty query returns all
+    o.thisShouldBeTheAnswer5 = [
+        {"title": "The Good, The Bad and The Ugly"},
+        {"title": "The Dark Knight"},
+        {"title": "Star Wars Episode V"},
+        {"title": "Shawshank Redemption"},
+        {"title": "Schindlers List"},
+        {"title": "Pulp Fiction"},
+        {"title": "One flew over the Cuckoo's Nest"},
+        {"title": "Lord of the Rings - Return of the King"},
+        {"title": "Lord Of the Rings - Fellowship of the Ring"},
+        {"title": "Inception"},
+        {"title": "Godfellas"},
+        {"title": "Godfather 2"},
+        {"title": "Godfather"},
+        {"title": "Fight Club"},
+        {"title": "12 Angry Men"}
+    ];
+    o.spy(o, "value", o.thisShouldBeTheAnswer5,
+      "allDocs (empty query in complex query)");
+
+    o.jio.allDocs({
+      "query":{
+        "filter": {
+            "sort_on":[['title','descending']],
+            "select_list":['title']
+        },
+        "wildcard_character":'%'
+      }
+    }, o.f);
+    o.tick(o);
+
     o.jio.stop();
 
 });
@@ -4687,6 +4719,38 @@ test ("AllDocs Complex Queries", function () {
             "limit":[0,5],
             "sort_on":[['year','descending']],
             "select_list":['director','year']
+        },
+        "wildcard_character":'%'
+      }
+    }, o.f);
+    o.tick(o);
+
+    // empty query returns all
+    o.thisShouldBeTheAnswer6 = [
+        {"title": "The Good, The Bad and The Ugly"},
+        {"title": "The Dark Knight"},
+        {"title": "Star Wars Episode V"},
+        {"title": "Shawshank Redemption"},
+        {"title": "Schindlers List"},
+        {"title": "Pulp Fiction"},
+        {"title": "One flew over the Cuckoo's Nest"},
+        {"title": "Lord of the Rings - Return of the King"},
+        {"title": "Lord Of the Rings - Fellowship of the Ring"},
+        {"title": "Inception"},
+        {"title": "Godfellas"},
+        {"title": "Godfather 2"},
+        {"title": "Godfather"},
+        {"title": "Fight Club"},
+        {"title": "12 Angry Men"}
+    ];
+    o.spy(o, "value", o.thisShouldBeTheAnswer6,
+      "allDocs (empty query in complex query)");
+
+    o.jio.allDocs({
+      "query":{
+        "filter": {
+            "sort_on":[['title','descending']],
+            "select_list":['title']
         },
         "wildcard_character":'%'
       }
