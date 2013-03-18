@@ -1118,6 +1118,16 @@ test ("AllDocs", function(){
       o.fakeDoc.title = o.titles[i];
       o.fakeDoc.year = o.years[i];
       o.fakeDoc.author = o.director[i];
+      if (i === 5) {
+        o.fakeDoc._attachments = {
+          "att": {
+            "digest": "md5-dontcare",
+            "content_type": "text/plain",
+            "length": 3
+          }
+        };
+        localstorage.setItem(o.localpath + "/doc_05/att", "abc");
+      }
       localstorage.setItem(o.localpath+"/doc_"+(i < 10 ? "0"+i : i), o.fakeDoc);
     }
 

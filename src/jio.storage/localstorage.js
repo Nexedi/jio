@@ -347,7 +347,7 @@ jIO.addStorageType('local', function (spec, my) {
    */
   that.allDocs = function (command) {
     var i, j, file, items = 0,
-      s = new RegExp(priv.localpath + '\\/.*$'),
+      s = new RegExp("^" + priv.localpath + "\\/[^/]+$"),
       all_doc_response = {},
       query_object = [], query_syntax, query_response = [];
 
