@@ -1,341 +1,641 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global toSend: true, jIO: true, jQuery: true, btoa: true */
+/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, vars: true */
+/*global
+    jIO: true,
+    $: true,
+    XMLHttpRequest: true,
+    Blob: true,
+    FormData: true,
+    window: true
+*/
+/**
+ * JIO XWiki Storage. Type = 'xwiki'.
+ * XWiki Document/Attachment storage.
+ */
+jIO.addStorageType('xwiki', function (spec, my) {
+
+  spec = spec || {};
+  var that, priv, xwikistorage;
+  that = my.basicStorage(spec, my);
+  priv = {};
 
   /**
-   * JIO XWiki based storage. Type = 'xwiki'.
-   * Edits XWiki documents as html using html editor.
-   * Test this code using the following inputs:
+   * Get the Space and Page components of a documkent ID.
    *
-{"type":"xwiki","username":"Admin","password":"admin","xwikiurl":"http://127.0.0
-.1:8080/xwiki","space":"OfficeJS"}
+   * @param id the document id.
+   * @return a map of { 'space':<Space>, 'page':<Page> }
    */
-
-(function ($) {
-
-  var newXWikiStorage = function (spec, my) {
-    var that, priv, escapeDocId, restoreDocId,
-      doWithFormToken, getDates, super_serialized;
-
-    /** The input configuration. */
-    spec = spec || {};
-
-    /** The "public" object which will have methods called on it. */
-    that = my.basicStorage(spec, my);
-
-    /** "private" fields. */
-    priv = {
-      username: spec.username || '',
-      password: spec.password || '',
-      xwikiurl: spec.xwikiurl || '',
-      space: spec.space || ''
+  var getParts = function (id) {
+    if (id.indexOf('/') === -1) {
+      return {
+        space: 'Main',
+        page: id
+      };
+    }
+    return {
+      space: id.substring(0, id.indexOf('/')),
+      page: id.substring(id.indexOf('/') + 1)
     };
+  };
 
-    //--------------------- Private Functions ---------------------//
-    /** Escape a document ID by URL escaping all '/' characters. */
-    escapeDocId = function (docId) {
-      // jslint: replaced "." with [\w\W]
-      return docId.replace(/[\w\W]html$/, '').split('/').join('%2F');
-    };
-
-    /** Restore a document id from the escaped form. */
-    restoreDocId = function (escapedDocId) {
-      return escapedDocId.split('%2F').join('/') + '.html';
-    };
-
-    /**
-     * Get the Anti-CSRF token and do something with it.
-     *
-     * @param docId document id of document which you have permission to edit.
-     * @param whatToDo function which is called with form token as parameter.
-     */
-    doWithFormToken = function (docId, whatToDo) {
-      var url = priv.xwikiurl + '/bin/edit/' + priv.space + '/' +
-        escapeDocId(docId) + '?editor=wiki&cachebuster=' + Date.now();
-      $.ajax({
-        url: url,
-        type: "GET",
-        async: true,
-        dataType: 'text',
-        headers: {
-          'Authorization': 'Basic ' + btoa(priv.username + ':' +
-            priv.password)
-        },
-        success: function (html) {
-          whatToDo($(html).find('input[name=form_token]').attr('value'));
+  /**
+   * Get the Anti-CSRF token and do something with it.
+   *
+   * @param andThen function which is called with (formToken, err)
+   *                as parameters.
+   */
+  var doWithFormToken = function (andThen) {
+    $.ajax({
+      url: priv.formTokenPath,
+      type: "GET",
+      async: true,
+      dataType: 'text',
+      success: function (html) {
+        // this is unreliable
+        //var token = $('meta[name=form_token]', html).attr("content");
+        var m = html.match(/<meta name="form_token" content="(\w*)"\/>/);
+        var token = (m && m[1]) || null;
+        if (!token) {
+          andThen(null, {
+            "status": 404,
+            "statusText": "Not Found",
+            "error": "err_form_token_not_found",
+            "message": "Anti-CSRF form token was not found in page",
+            "reason": "XWiki main page did not contain expected " +
+                      "Anti-CSRF form token"
+          });
+        } else {
+          andThen(token, null);
         }
-      });
-    };
+      },
+      error: function (jqxhr, err, cause) {
+        andThen(null, {
+          "status": jqxhr.status,
+          "statusText": jqxhr.statusText,
+          "error": err,
+          "message": "Could not get Anti-CSRF form token from [" +
+              priv.xwikiurl + "]",
+          "reason": cause
+        });
+      },
+    });
+  };
+
+  /**
+   * Get the REST read URL for a document.
+   *
+   * @param docId the id of the document.
+   * @return the REST URL for accessing this document.
+   */
+  var getDocRestURL = function (docId) {
+    var parts = getParts(docId);
+    return priv.xwikiurl + '/rest/wikis/'
+      + priv.wiki + '/spaces/' + parts.space + '/pages/' + parts.page;
+  };
+
+  /*
+   * Wrapper for the xwikistorage based on localstorage JiO store.
+   */
+  xwikistorage = {
     /**
-     * Get the creation and modification dates for a page.
+     * Get content of an XWikiDocument.
      *
-     * @param docId the ID of the document.
-     * @param callWhenDone callback, will be called when function finishes.
+     * @param docId the document ID.
+     * @param andThen a callback taking (doc, err), doc being the document
+     *                json object and err being the error if any.
      */
-    getDates = function (docId, callWhenDone) {
-    // http://127.0.0.1:8080/xwiki/rest/wikis/xwiki/
-    //  spaces/Main/pages/<pageName>
-      var map = {};
+    getItem: function (docId, andThen) {
       $.ajax({
-        url: priv.xwikiurl + '/rest/wikis/' + 'xwiki' + '/spaces/' + priv.space
-          + '/pages/' + escapeDocId(docId) + '?cachebuster=' + Date.now(),
+        url: getDocRestURL(docId),
         type: "GET",
         async: true,
         dataType: 'xml',
-        headers: {
-          'Authorization': 'Basic ' + btoa(priv.username + ':' +
-            priv.password)
-        },
         success: function (xmlData) {
-          $(xmlData).find('modified').each(function () {
-            map._last_modified = Date.parse($(this).text());
+          var out = {};
+          var xd = $(xmlData);
+          xd.find('modified').each(function () {
+            out._last_modified = Date.parse($(this).text());
           });
-          $(xmlData).find('created').each(function () {
-            map._creation_date = Date.parse($(this).text());
+          xd.find('created').each(function () {
+            out._creation_date = Date.parse($(this).text());
           });
-          callWhenDone();
+          xd.find('title').each(function () { out.title = $(this).text(); });
+          xd.find('parent').each(function () { out.parent = $(this).text(); });
+          xd.find('syntax').each(function () { out.syntax = $(this).text(); });
+          xd.find('content').each(function () {
+            out.content = $(this).text();
+          });
+          out._id = docId;
+
+          andThen(out, null);
+        },
+        error: function (jqxhr, err, cause) {
+          if (jqxhr.status === 404) {
+            andThen(null, null);
+            return;
+          }
+          andThen(null, {
+            "status": jqxhr.status,
+            "statusText": jqxhr.statusText,
+            "error": err,
+            "message": "Failed to get document [" + docId + "]",
+            "reason": cause
+          });
         }
       });
-      return map;
-    };
+    },
 
-    //--------------------- Public Functions ---------------------//
-    /** Get a serialized form of the module state. */
-    super_serialized = that.serialized;
-    that.serialized = function () {
-      var o = super_serialized(), key;
-      for (key in priv) {
-        if (priv.hasOwnProperty(key)) {
-          o[key] = priv[key];
-        }
-      }
-      return o;
-    };
-    /** Check that the storage module is properly setup. */
-    that.validateState = function () {
-      var key;
-      for (key in priv) {
-        if (priv.hasOwnProperty(key) && !priv[key]) {
-          return 'Must specify "' + key + '".';
-        }
-      }
-      return '';
-    };
-    /** Alias to put() */
-    that.post = function (command) {
-      that.put(command);
-    };
     /**
-     * Saves a document as an XWikiDocument.
+     * Get content of an XWikiAttachment.
      *
-     * @param command must contain document ID and document content.
+     * @param attachId the attachment ID.
+     * @param andThen a callback taking (attach, err), attach being the
+     *                attachment blob and err being the error if any.
      */
-    that.put = function (command) {
-      doWithFormToken(command.getDocId(), function (formToken) {
-        if (!formToken) {
-          throw new Error("missing form token");
+    getAttachment: function (docId, fileName, andThen) {
+      // need to do this manually, jquery doesn't support returning blobs.
+      var xhr = new XMLHttpRequest();
+      var parts = getParts(docId);
+      var url = priv.xwikiurl + '/bin/download/' + parts.space +
+          "/" + parts.page + "/" + fileName;
+      xhr.open('GET', url, true);
+      xhr.responseType = 'blob';
+
+      xhr.onload = function (e) {
+        if (xhr.status === 200) {
+          var contentType = xhr.getResponseHeader("Content-Type");
+          if (contentType.indexOf(';') > -1) {
+            contentType = contentType.substring(0, contentType.indexOf(';'));
+          }
+          var blob = new Blob([xhr.response], {type: contentType});
+          andThen(blob);
+        } else {
+          andThen(null, {
+            "status": xhr.status,
+            "statusText": xhr.statusText,
+            "error": "err_network_error",
+            "message": "Failed to get attachment ["
+                + docId + "/" + fileName + "]",
+            "reason": "Error getting data from network"
+          });
         }
+      };
+
+      xhr.send();
+    },
+
+    /**
+     * Store an XWikiDocument.
+     *
+     * @param id the document identifier.
+     * @param doc the document JSON object containing
+     *            "parent", "title", "content", and/or "syntax" keys.
+     * @param andThen a callback taking (err), err being the error if any.
+     */
+    setItem: function (id, doc, andThen) {
+      doWithFormToken(function (formToken, err) {
+        if (err) {
+          that.error(err);
+          return;
+        }
+        var parts = getParts(id);
         $.ajax({
-          url: priv.xwikiurl + '/bin/preview/' + priv.space + '/' +
-            escapeDocId(command.getDocId()),
+          url: priv.xwikiurl + "/bin/preview/" + parts.space + '/' + parts.page,
           type: "POST",
           async: true,
           dataType: 'text',
-          headers: {
-            'Authorization': 'Basic ' + btoa(priv.username + ':' +
-              priv.password)
-          },
           data: {
-            parent: '',
-            title: '',
+            parent: doc.parent || '',
+            title: doc.title || '',
             xredirect: '',
             language: 'en',
-            RequiresHTMLConversion: 'content',
-            content_syntax: 'xwiki/2.1',
-            content: command.getDocContent(),
+//            RequiresHTMLConversion: 'content',
+//            content_syntax: doc.syntax || 'xwiki/2.1',
+            content: doc.content || '',
             xeditaction: 'edit',
-            comment: 'Saved by OfficeJS',
+            comment: 'Saved by JiO',
             action_saveandcontinue: 'Save & Continue',
-            syntaxId: 'xwiki/2.1',
+            syntaxId: doc.syntax || 'xwiki/2.1',
             xhidden: 0,
             minorEdit: 0,
             ajax: true,
             form_token: formToken
           },
           success: function () {
-            that.success({
-              ok: true,
-              id: command.getDocId()
+            andThen(null);
+          },
+          error: function (jqxhr, err, cause) {
+            andThen({
+              "status": jqxhr.status,
+              "statusText": jqxhr.statusText,
+              "error": err,
+              "message": "Failed to store document [" + id + "]",
+              "reason": cause
             });
           }
         });
       });
-    }; // end put
-    /**
-     * Loads a document from the XWiki storage.
-     */
-    that.get = function (command) {
-      // /bin/view/Main/WebHomee?xpage=plain
-      /**
-       * Protocol specification:
-       * {
-       *     "_id": "somePage",
-       *     "content": "aoeu",
-       *     "_creation_date": 1348154789478,
-       *     "_last_modified": 1348154789478
-       * }
-       */
-      var doc,
-        pendingRequests = 2,
-        finishedRequest = function () {
-          pendingRequests -= 1;
-          if (pendingRequests < 1) {
-            that.success(doc);
-          }
-        };
-      doc = (function () {
-        var resultMap = getDates(command.getDocId(), finishedRequest);
-        $.ajax({
-          url: priv.xwikiurl + '/bin/get/' + priv.space + '/' +
-            escapeDocId(command.getDocId()) + '?xpage=plain&cachebuster=' +
-            Date.now(),
-          type: "GET",
-          async: true,
-          dataType: 'text',
-          headers: {
-            'Authorization': 'Basic ' + btoa(priv.username + ':' +
-              priv.password)
-          },
-          success: function (html) {
-            resultMap.content = html;
-            finishedRequest();
-          }
-        });
-        return resultMap;
-      }());
-      doc._id = command.getDocId();
-    }; // end get
+    },
 
     /**
-     * Gets a document list from the xwiki storage.
-     * It will retreive an array containing files meta data owned by
-     * the user.
-     * @method allDocs
+     * Store an XWikiAttachment.
+     *
+     * @param docId the ID of the document to attach to.
+     * @param fileName the attachment file name.
+     * @param mimeType the MIME type of the attachment content.
+     * @param content the attachment content.
+     * @param andThen a callback taking one parameter which is the error if any.
      */
-    that.allDocs = function (command) {
-      // http://127.0.0.1:8080/xwiki/rest/wikis/xwiki/spaces/Main/pages
-      $.ajax({
-        url: priv.xwikiurl + '/rest/wikis/' + 'xwiki' + '/spaces/' +
-          priv.space + '/pages?cachebuster=' + Date.now(),
-        type: "GET",
-        async: true,
-        dataType: 'xml',
-        headers: {
-          'Authorization': 'Basic ' + btoa(priv.username + ':' +
-            priv.password)
-        },
-        success: function (xmlData) {
-          /** Protocol definition:
-           *  {
-           *    "total_rows":2,
-           *    "rows":[{
-           *        "id":"b",
-           *        "key":"b",
-           *        "value":{
-           *          "content":"aoeu",
-           *          "_creation_date":1348154789478,
-           *          "_last_modified":1348154789478
-           *        }
-           *      },
-           *      {
-           *        "id":"oeau",
-           *        "key":"oeau",
-           *        "value"{
-           *          "content":"oeu",
-           *          "_creation_date":1348154834680,
-           *          "_last_modified":1348154834680
-           *        }
-           *      }
-           *    ]
-           *  }
-           */
-          var totalRows = 0,
-            data = [],
-            // The number of async calls which are waiting to return.
-            outstandingCalls = 0,
-            toSend;
-          $(xmlData).find('name').each(function () {
-            outstandingCalls += 1;
-            var id = restoreDocId($(this).text()),
-              entry = {
-                'id': id,
-                'key': id,
-                'value': getDates(id, function () {
-                  outstandingCalls -= 1;
-                  if (outstandingCalls < 1) {
-                    that.success(toSend);
-                  }
-                })
-              };
-            data[totalRows += 1] = entry;
-          });
-          toSend = {
-            'total_rows': totalRows,
-            'rows': data
-          };
-          /* TODO: Include the content if requested.
-                if (!command.getOption('metadata_only')) {
-                    getContent();
-                } else {
-                    that.success(toSend);
-                }
-                */
-        },
-        error: function (type) {
-          if (type.status === 404) {
-            type.message = 'Cannot find "' + command.getDocId() +
-              '"informations.';
-            type.reason = 'missing';
-            that.error(type);
-          } else {
-            type.reason = 'Cannot get "' + command.getDocId() +
-              '"informations';
-            type.message = type.reason + '.';
-            that.retry(type);
-          }
+    setAttachment: function (docId, fileName, mimeType, content, andThen) {
+      doWithFormToken(function (formToken, err) {
+        if (err) {
+          that.error(err);
+          return;
         }
+        var parts = getParts(docId);
+        var blob = (content.constructor === "function Blob() { [native code] }")
+            ? content : new Blob([content], {type: mimeType});
+        var fd = new FormData();
+        fd.append("filepath", blob, fileName);
+        fd.append("form_token", formToken);
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', priv.xwikiurl + "/bin/upload/" +
+                         parts.space + '/' + parts.page, true);
+        xhr.onload = function (e) {
+          if (xhr.status === 302 || xhr.status === 200) {
+            andThen(null);
+          } else {
+            andThen({
+              "status": xhr.status,
+              "statusText": xhr.statusText,
+              "error": "err_network_error",
+              "message": "Failed to store attachment ["
+                  + docId + "/" + fileName + "]",
+              "reason": "Error posting data"
+            });
+          }
+        };
+        xhr.send(fd);
       });
-    };
-    /**
-     * Removes a document from the XWiki storage.
-     */
-    that.remove = function (command) {
-    // http://127.0.0.1:8080/xwiki/bin/delete/Main/WebHomee?
-    // confirm=1&form_token= //r7x0oGBSk2EFm2fxVULfFA
-      doWithFormToken(command.getDocId(), function (formToken) {
+    },
+
+    removeItem: function (id, andThen) {
+      doWithFormToken(function (formToken, err) {
+        if (err) {
+          that.error(err);
+          return;
+        }
+        var parts = getParts(id);
         $.ajax({
-          url: priv.xwikiurl + '/bin/delete/' + priv.space + '/' +
-            escapeDocId(command.getDocId()),
+          url: priv.xwikiurl + "/bin/delete/" + parts.space + '/' + parts.page,
           type: "POST",
           async: true,
           dataType: 'text',
-          headers: {
-            'Authorization': 'Basic ' + btoa(priv.username + ':' +
-              priv.password)
-          },
           data: {
-            confirm: 1,
+            confirm: '1',
             form_token: formToken
           },
           success: function () {
-            that.success({
-              ok: true,
-              id: command.getDocId()
+            andThen(null);
+          },
+          error: function (jqxhr, err, cause) {
+            andThen({
+              "status": jqxhr.status,
+              "statusText": jqxhr.statusText,
+              "error": err,
+              "message": "Failed to delete document [" + id + "]",
+              "reason": cause
             });
           }
         });
       });
-    }; // end remove
-    return that;
+    },
+
+    removeAttachment: function (docId, fileName, andThen) {
+      var parts = getParts(docId);
+      doWithFormToken(function (formToken, err) {
+        if (err) {
+          that.error(err);
+          return;
+        }
+        $.ajax({
+          url: priv.xwikiurl + "/bin/delattachment/" + parts.space + '/' +
+              parts.page + '/' + fileName,
+          type: "POST",
+          async: true,
+          dataType: 'text',
+          data: {
+            ajax: '1',
+            form_token: formToken
+          },
+          success: function () {
+            andThen(null);
+          },
+          error: function (jqxhr, err, cause) {
+            andThen({
+              "status": jqxhr.status,
+              "statusText": jqxhr.statusText,
+              "error": err,
+              "message": "Failed to delete attachment ["
+                  + docId + '/' + fileName + "]",
+              "reason": cause
+            });
+          }
+        });
+      });
+    }
   };
-  jIO.addStorageType('xwiki', newXWikiStorage);
-}(jQuery));
+
+  // ==================== Tools ====================
+  /**
+   * Update [doc] the document object and remove [doc] keys
+   * which are not in [new_doc]. It only changes [doc] keys not starting
+   * with an underscore.
+   * ex: doc:     {key:value1,_key:value2} with
+   *     new_doc: {key:value3,_key:value4} updates
+   *     doc:     {key:value3,_key:value2}.
+   * @param  {object} doc The original document object.
+   * @param  {object} new_doc The new document object
+   */
+  priv.documentObjectUpdate = function (doc, new_doc) {
+    var k;
+    for (k in doc) {
+      if (doc.hasOwnProperty(k)) {
+        if (k[0] !== '_') {
+          delete doc[k];
+        }
+      }
+    }
+    for (k in new_doc) {
+      if (new_doc.hasOwnProperty(k)) {
+        if (k[0] !== '_') {
+          doc[k] = new_doc[k];
+        }
+      }
+    }
+  };
+
+  /**
+   * Checks if an object has no enumerable keys
+   * @method objectIsEmpty
+   * @param  {object} obj The object
+   * @return {boolean} true if empty, else false
+   */
+  priv.objectIsEmpty = function (obj) {
+    var k;
+    for (k in obj) {
+      if (obj.hasOwnProperty(k)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // ==================== attributes ====================
+  // the wiki to store stuff in
+  priv.wiki = spec.wiki || 'xwiki';
+
+  // unused
+  priv.username = spec.username;
+  priv.language = spec.language;
+
+  // URL location of the wiki, unused since
+  // XWiki doesn't currently allow cross-domain requests.
+  priv.xwikiurl = spec.xwikiurl ||
+     window.location.href.replace(/\/xwiki\/bin\//, '/xwiki\n').split('\n')[0];
+  // should be: s@/xwiki/bin/.*$@/xwiki@
+  // but jslint gets in the way.
+
+  // Which URL to load for getting the Anti-CSRF form token, used for testing.
+  priv.formTokenPath = spec.formTokenPath || priv.xwikiurl;
+
+
+  that.specToStore = function () {
+    return {
+      "username": priv.username,
+      "language": priv.language,
+      "xwikiurl": priv.xwikiurl,
+    };
+  };
+
+  // can't fo wrong since no parameters are required.
+  that.validateState = function () {
+    return '';
+  };
+
+  // ==================== commands ====================
+  /**
+   * Create a document in local storage.
+   * @method post
+   * @param  {object} command The JIO command
+   */
+  that.post = function (command) {
+    var docId = command.getDocId();
+    if (!(typeof docId === "string" && docId !== "")) {
+      setTimeout(function () {
+        that.error({
+          "status": 405,
+          "statusText": "Method Not Allowed",
+          "error": "method_not_allowed",
+          "message": "Cannot create document which id is undefined",
+          "reason": "Document id is undefined"
+        });
+      });
+      return;
+    }
+    xwikistorage.getItem(docId, function (doc, err) {
+      if (err) {
+        that.error(err);
+      } else if (doc === null) {
+        // the document does not exist
+        xwikistorage.setItem(command.getDocId(),
+                             command.cloneDoc(),
+                             function (err) {
+            if (err) {
+              that.error(err);
+            } else {
+              that.success({
+                "ok": true,
+                "id": command.getDocId()
+              });
+            }
+          });
+      } else {
+        // the document already exists
+        that.error({
+          "status": 409,
+          "statusText": "Conflicts",
+          "error": "conflicts",
+          "message": "Cannot create a new document",
+          "reason": "Document already exists (use 'put' to modify it)"
+        });
+      }
+    });
+  };
+
+  /**
+   * Create or update a document in local storage.
+   * @method put
+   * @param  {object} command The JIO command
+   */
+  that.put = function (command) {
+    xwikistorage.getItem(command.getDocId(), function (doc, err) {
+      if (err) {
+        that.error(err);
+      } else if (doc === null) {
+        doc = command.cloneDoc();
+      } else {
+        priv.documentObjectUpdate(doc, command.cloneDoc());
+      }
+      // write
+      xwikistorage.setItem(command.getDocId(), doc, function (err) {
+        if (err) {
+          that.error(err);
+        } else {
+          that.success({
+            "ok": true,
+            "id": command.getDocId()
+          });
+        }
+      });
+    });
+  };
+
+  /**
+   * Add an attachment to a document
+   * @method  putAttachment
+   * @param  {object} command The JIO command
+   */
+  that.putAttachment = function (command) {
+    xwikistorage.getItem(command.getDocId(), function (doc, err) {
+      if (err) {
+        that.error(err);
+      } else if (doc === null) {
+        //  the document does not exist
+        that.error({
+          "status": 404,
+          "statusText": "Not Found",
+          "error": "not_found",
+          "message": "Impossible to add attachment",
+          "reason": "Document not found"
+        });
+      } else {
+        // Document exists, upload attachment.
+        xwikistorage.setAttachment(command.getDocId(),
+                                   command.getAttachmentId(),
+                                   command.getAttachmentMimeType(),
+                                   command.getAttachmentData(),
+                                   function (err) {
+            if (err) {
+              that.error(err);
+            } else {
+              that.success({
+                "ok": true,
+                "id": command.getDocId() + "/" + command.getAttachmentId()
+              });
+            }
+          });
+      }
+    });
+  };
+
+  /**
+   * Get a document or attachment
+   * @method get
+   * @param  {object} command The JIO command
+   */
+  that.get = that.getAttachment = function (command) {
+    if (typeof command.getAttachmentId() === "string") {
+      // seeking for an attachment
+      xwikistorage.getAttachment(command.getDocId(),
+                                 command.getAttachmentId(),
+                                 function (attach, err) {
+          if (err) {
+            that.error(err);
+          } else if (attach !== null) {
+            that.success(attach);
+          } else {
+            that.error({
+              "status": 404,
+              "statusText": "Not Found",
+              "error": "not_found",
+              "message": "Cannot find the attachment",
+              "reason": "Attachment does not exist"
+            });
+          }
+        });
+    } else {
+      // seeking for a document
+      xwikistorage.getItem(command.getDocId(), function (doc, err) {
+        if (err) {
+          that.error(err);
+        } else if (doc !== null) {
+          that.success(doc);
+        } else {
+          that.error({
+            "status": 404,
+            "statusText": "Not Found",
+            "error": "not_found",
+            "message": "Cannot find the document",
+            "reason": "Document does not exist"
+          });
+        }
+      });
+    }
+  };
+
+  /**
+   * Remove a document or attachment
+   * @method remove
+   * @param  {object} command The JIO command
+   */
+  that.remove = that.removeAttachment = function (command) {
+    var notFoundError = function (word) {
+      that.error({
+        "status": 404,
+        "statusText": "Not Found",
+        "error": "not_found",
+        "message": word + " not found",
+        "reason": "missing"
+      });
+    };
+
+    var objId = command.getDocId();
+    var complete = function (err) {
+      if (err) {
+        that.error(err);
+      } else {
+        that.success({
+          "ok": true,
+          "id": objId
+        });
+      }
+    };
+    if (typeof command.getAttachmentId() === "string") {
+      objId += '/' + command.getAttachmentId();
+      xwikistorage.removeAttachment(command.getDocId(),
+                                    command.getAttachmentId(),
+                                    complete);
+    } else {
+      xwikistorage.removeItem(objId, complete);
+    }
+  };
+
+  /**
+   * Get all filenames belonging to a user from the document index
+   * @method allDocs
+   * @param  {object} command The JIO command
+   */
+  that.allDocs = function () {
+    setTimeout(function () {
+      that.error({
+        "status": 405,
+        "statusText": "Method Not Allowed",
+        "error": "method_not_allowed",
+        "message": "Your are not allowed to use this command",
+        "reason": "xwikistorage forbids AllDocs command executions"
+      });
+    });
+  };
+
+  return that;
+});
