@@ -995,10 +995,10 @@ jIO.addStorageType("revision", function (spec, my) {
         if (rows.revision_trees.hasOwnProperty(i)) {
           functions.finished += 1;
           if (rows.revision_trees[i].doc) {
-            setTimeout(functions.falseResponseGenerator(
+            functions.falseResponseGenerator(
               rows.revision_trees[i].doc,
               functions.fillResultGenerator(rows.revision_trees[i].id)
-            ));
+            );
           } else {
             priv.getRevisionTree(
               {"_id": rows.revision_trees[i].id},
