@@ -906,6 +906,116 @@ jIO.addStorageType("revision", function (spec, my) {
     );
   };
 
+  that.allDocs = function (command) {
+    var rows, result = {"total_rows": 0, "rows": []}, functions = {};
+    functions.finished = 0;
+    functions.falseResponseGenerator = function (response, callback) {
+      callback(undefined, response);
+    };
+    functions.fillResultGenerator = function (doc_id) {
+      return function (err, doc_tree) {
+        var document_revision, row, revs_info;
+        if (err) {
+          return that.error(err);
+        }
+        revs_info = priv.getWinnerRevsInfo(doc_tree);
+        document_revision =
+          rows.document_revisions[doc_id + "." + revs_info[0].rev]
+        if (document_revision) {
+          row = {
+            "id": doc_id,
+            "key": doc_id,
+            "value": {
+              "rev": revs_info[0].rev
+            }
+          };
+          if (document_revision.doc && command.getOption("include_docs")) {
+            document_revision.doc._id = doc_id;
+            document_revision.doc._rev = revs_info[0].rev;
+            row.doc = document_revision.doc;
+          }
+          result.rows.push(row);
+          result.total_rows += 1;
+        }
+        functions.success();
+      };
+    };
+    functions.success = function () {
+      functions.finished -= 1;
+      console.log("-1");
+      if (functions.finished === 0) {
+        console.log("end");
+        that.success(result);
+      }
+    };
+    priv.send("allDocs", null, command.cloneOption(), function (err, response) {
+      var i, j, row, selector, selected;
+      if (err) {
+        return that.error(err);
+      }
+      selector = /^(.*)\.revision_tree\.json$/;
+      rows = {
+        "revision_trees": {
+          // id.revision_tree.json: {
+          //   id: blabla
+          //   doc: {...}
+          // }
+        },
+        "document_revisions": {
+          // id.rev: {
+          //   id: blabla
+          //   rev: 1-1
+          //   doc: {...}
+          // }
+        }
+      };
+      while (response.rows.length > 0) {
+        // filling rows
+        row = response.rows.shift();
+        selected = selector.exec(row.id)
+        if (selected) {
+          // this is a revision tree
+          rows.revision_trees[row.id] = {
+            "id": selected[1]
+          };
+          if (row.doc) {
+            rows.revision_trees[row.id].doc = row.doc;
+          }
+        } else {
+          // this is a simple revision
+          rows.document_revisions[row.id] = {
+            "id": row.id.split(".").slice(0,-1),
+            "rev": row.id.split(".").slice(-1)
+          };
+          if (row.doc) {
+            rows.document_revisions[row.id].doc = row.doc;
+          }
+        }
+      }
+      console.log(priv.clone(rows));
+      functions.finished += 1;
+      for (i in rows.revision_trees) {
+        if (rows.revision_trees.hasOwnProperty(i)) {
+          functions.finished += 1;
+          console.log("+1");
+          if (rows.revision_trees[i].doc) {
+            setTimeout(functions.falseResponseGenerator(
+              rows.revision_trees[i].doc,
+              functions.fillResultGenerator(rows.revision_trees[i].id)
+            ));
+          } else {
+            priv.getRevisionTree(
+              {"_id": rows.revision_trees[i].id},
+              command.cloneOption(),
+              functions.fillResultGenerator(rows.revision_trees[i].id)
+            );
+          }
+        }
+      }
+      functions.success();
+    });
+  };
+
   // END //
   priv.RevisionStorage();
   return that;
