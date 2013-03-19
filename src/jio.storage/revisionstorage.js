@@ -942,9 +942,7 @@ jIO.addStorageType("revision", function (spec, my) {
     };
     functions.success = function () {
       functions.finished -= 1;
-      console.log("-1");
       if (functions.finished === 0) {
-        console.log("end");
         that.success(result);
       }
     };
@@ -992,12 +990,10 @@ jIO.addStorageType("revision", function (spec, my) {
           }
         }
       }
-      console.log(priv.clone(rows));
       functions.finished += 1;
       for (i in rows.revision_trees) {
         if (rows.revision_trees.hasOwnProperty(i)) {
           functions.finished += 1;
-          console.log("+1");
           if (rows.revision_trees[i].doc) {
             setTimeout(functions.falseResponseGenerator(
               rows.revision_trees[i].doc,
