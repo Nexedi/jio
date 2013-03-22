@@ -2957,7 +2957,7 @@ module ("JIO Replicate Revision Storage");
     o.rev2_9_history.start += 1;
     o.rev2_9_history.ids.unshift(o.rev2_9_hash);
     o.rev2_9_revs_info = clone(o.rev1_1_revs_info);
-    o.rev2_9_revs_info.unshift({"rev": o.rev2_9, "status": "available"});
+    o.rev2_9_revs_info.unshift({"rev": o.rev2_9, "status": "deleted"});
     o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev2_9},
           "Remove specific document, and one conflict");
     o.jio.remove(o.doc, o.f);
@@ -2983,7 +2983,7 @@ module ("JIO Replicate Revision Storage");
     o.rev3_10_history.start += 1;
     o.rev3_10_history.ids.unshift(o.rev3_10_hash);
     o.rev3_10_revs_info = clone(o.rev2_3_revs_info);
-    o.rev3_10_revs_info.unshift({"rev": o.rev3_10, "status": "available"});
+    o.rev3_10_revs_info.unshift({"rev": o.rev3_10, "status": "deleted"});
     o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev3_10},
           "Remove specific document, and one conflict");
     o.jio.remove(o.doc, o.f);
