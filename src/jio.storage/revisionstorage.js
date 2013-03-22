@@ -323,8 +323,11 @@ jIO.addStorageType("revision", function (spec, my) {
         tmp_revs_info.unshift({"rev": doc_tree.rev, "status": doc_tree.status});
       }
       if (doc_tree.children.length === 0) {
-        if (revs_info.length < tmp_revs_info.length ||
-            (revs_info.length > 0 && revs_info[0].status === "deleted")) {
+        if (revs_info.length === 0 ||
+            (revs_info[0].status !== "available" &&
+             tmp_revs_info[0].status === "available") ||
+            (tmp_revs_info[0].status === "available" &&
+             revs_info.length < tmp_revs_info.length)) {
           revs_info = priv.clone(tmp_revs_info);
         }
       }
