@@ -42,6 +42,26 @@ jIO.addStorageType('local', function (spec, my) {
 
   // ==================== Tools ====================
   /**
+   * Generate a new uuid
+   * @method generateUuid
+   * @return {string} The new uuid
+   */
+  priv.generateUuid = function () {
+    var S4 = function () {
+      /* 65536 */
+      var i, string = Math.floor(
+        Math.random() * 0x10000
+      ).toString(16);
+      for (i = string.length; i < 4; i += 1) {
+        string = '0' + string;
+      }
+      return string;
+    };
+    return S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() +
+      S4() + S4();
+  };
+
+  /**
    * Update [doc] the document object and remove [doc] keys
    * which are not in [new_doc]. It only changes [doc] keys not starting
    * with an underscore.
@@ -108,25 +128,18 @@ jIO.addStorageType('local', function (spec, my) {
    */
   that.post = function (command) {
     setTimeout(function () {
-      var doc = command.getDocId();
-      if (!(typeof doc === "string" && doc !== "")) {
-        that.error({
-          "status": 405,
-          "statusText": "Method Not Allowed",
-          "error": "method_not_allowed",
-          "message": "Cannot create document which id is undefined",
-          "reason": "Document id is undefined"
-        });
-        return;
+      var doc, doc_id = command.getDocId();
+      if (!doc_id) {
+        doc_id = priv.generateUuid();
       }
-      doc = localstorage.getItem(priv.localpath + "/" + doc);
+      doc = localstorage.getItem(priv.localpath + "/" + doc_id);
       if (doc === null) {
         // the document does not exist
-        localstorage.setItem(priv.localpath + "/" + command.getDocId(),
+        localstorage.setItem(priv.localpath + "/" + doc_id,
           command.cloneDoc());
         that.success({
           "ok": true,
-          "id": command.getDocId()
+          "id": doc_id
         });
       } else {
         // the document already exists

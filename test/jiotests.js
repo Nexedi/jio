@@ -768,8 +768,14 @@ test ("Post", function(){
     });
 
     // post without id
-    o.spy (o, "status", 405, "Post without id");
-    o.jio.post({}, o.f);
+    o.spy (o, "jobstatus", "done", "Post without id");
+    o.jio.post({}, function (err, response) {
+      var uuid;
+      o.f(err, response);
+      uuid = (err || response).id;
+      ok(isUuid(uuid), "Uuid should look like " +
+         "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + uuid);
+    });
     o.tick(o);
 
     // post non empty document
