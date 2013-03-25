@@ -250,6 +250,7 @@ var jobRules = (function () {
       "           putA                  "                                 "
       "           remove                "                               update
     get           get         same doc, same options                    update
+    getA          getA        same doc, same options                    update
     allDocs       allDocs     same doc, same options                    update
    */
 
@@ -299,6 +300,8 @@ var jobRules = (function () {
                      [that.sameDocumentId, that.sameRevision], that.update);
 
   that.addActionRule("get", "get",
+                     [that.sameDocument, that.sameOption], that.update);
+  that.addActionRule("getAttachment", "getAttachment",
                      [that.sameDocument, that.sameOption], that.update);
   that.addActionRule("allDocs", "allDocs",
                      [that.sameDocument, that.sameOption], that.update);
