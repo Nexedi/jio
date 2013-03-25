@@ -923,7 +923,7 @@ jIO.addStorageType("revision", function (spec, my) {
         }
         revs_info = priv.getWinnerRevsInfo(doc_tree);
         document_revision =
-          rows.document_revisions[doc_id + "." + revs_info[0].rev]
+          rows.document_revisions[doc_id + "." + revs_info[0].rev];
         if (document_revision) {
           row = {
             "id": doc_id,
@@ -954,7 +954,7 @@ jIO.addStorageType("revision", function (spec, my) {
       if (err) {
         return that.error(err);
       }
-      selector = /^(.*)\.revision_tree\.json$/;
+      selector = /\.revision_tree\.json$/;
       rows = {
         "revision_trees": {
           // id.revision_tree.json: {
@@ -973,11 +973,12 @@ jIO.addStorageType("revision", function (spec, my) {
       while (response.rows.length > 0) {
         // filling rows
         row = response.rows.shift();
-        selected = selector.exec(row.id)
+        selected = selector.exec(row.id);
         if (selected) {
+          selected = selected.input.substring(0, selected.index);
           // this is a revision tree
           rows.revision_trees[row.id] = {
-            "id": selected[1]
+            "id": selected
           };
           if (row.doc) {
             rows.revision_trees[row.id].doc = row.doc;
@@ -985,7 +986,7 @@ jIO.addStorageType("revision", function (spec, my) {
         } else {
           // this is a simple revision
           rows.document_revisions[row.id] = {
-            "id": row.id.split(".").slice(0,-1),
+            "id": row.id.split(".").slice(0, -1),
             "rev": row.id.split(".").slice(-1)
           };
           if (row.doc) {
