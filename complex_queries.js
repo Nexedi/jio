@@ -888,12 +888,16 @@ Object.defineProperty(scope.ComplexQueries,"query",{
         ////////////////////////////////////////////////////////////
         result_list = [], result_list_tmp = [], j;
         object_list = object_list || [];
-        for (j=0; j<object_list.length; ++j) {
-            if ( itemMatchesQuery (
-                object_list[j], scope.ComplexQueries.parse (query.query)
-            )) {
-                result_list.push(object_list[j]);
-            }
+        if (query.query === undefined) {
+            result_list = object_list;
+        } else {
+          for (j=0; j<object_list.length; ++j) {
+              if ( itemMatchesQuery (
+                  object_list[j], scope.ComplexQueries.parse (query.query)
+              )) {
+                  result_list.push(object_list[j]);
+              }
+          }
         }
         if (query.filter) {
             select(result_list,query.filter.select_list || []);
