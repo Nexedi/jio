@@ -1150,8 +1150,14 @@ test ("AllDocs", function(){
     };
     // alldocs
     o.spy(o, "value", o.allDocsResponse, "All docs");
-    o.jio.allDocs(o.f);
-    o.clock.tick(1000);
+    o.jio.allDocs(function (err, response) {
+      if (response && response.rows) {
+        response.rows.sort(function (a, b) {
+          return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
+        });
+      }
+      o.f(err, response);
+    });
     o.tick(o);
 
     // include docs
@@ -1169,7 +1175,14 @@ test ("AllDocs", function(){
 
     // alldocs
     o.spy(o, "value", o.allDocsResponse, "All docs (include docs)");
-    o.jio.allDocs({"include_docs":true}, o.f);
+    o.jio.allDocs({"include_docs":true}, function (err, response) {
+      if (response && response.rows) {
+        response.rows.sort(function (a, b) {
+          return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
+        });
+      }
+      o.f(err, response);
+    });
     o.tick(o);
 
     // complex queries
@@ -1224,7 +1237,14 @@ test ("AllDocs", function(){
         },
         "wildcard_character":'%'
       }
-    }, o.f);
+    }, function (err, response) {
+      if (response && response.rows) {
+        response.rows.sort(function (a, b) {
+          return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
+        });
+      }
+      o.f(err, response);
+    });
     o.tick(o);
 
     o.jio.stop();
@@ -2284,7 +2304,7 @@ test("allDocs", function () {
     o.jio.allDocs(function (err, response) {
       if (response && response.rows) {
         response.rows.sort(function (a, b) {
-          return a.id > b.id;
+          return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
         })
       }
       o.f(err, response);
@@ -2321,7 +2341,7 @@ test("allDocs", function () {
     o.jio.allDocs({"include_docs": true}, function (err, response) {
       if (response && response.rows) {
         response.rows.sort(function (a, b) {
-          return a.id > b.id;
+          return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
         })
       }
       o.f(err, response);
