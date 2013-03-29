@@ -2261,16 +2261,16 @@ test("allDocs", function () {
 
     o.rows = {
       "total_rows": 3, "rows": [{
-        "id": "no",
-        "key": "no",
-        "value": {
-          "rev": o.rev2
-        }
-      }, {
         "id": "maybe",
         "key": "maybe",
         "value": {
           "rev": o.rev3
+        }
+      }, {
+        "id": "no",
+        "key": "no",
+        "value": {
+          "rev": o.rev2
         }
       }, {
         "id": "yes",
@@ -2281,10 +2281,21 @@ test("allDocs", function () {
       }]
     };
     o.spy(o, "value", o.rows, "allDocs");
-    o.jio.allDocs(o.f);
+    o.jio.allDocs(function (err, response) {
+      if (response && response.rows) {
+        response.rows.sort(function (a, b) {
+          return a.id > b.id;
+        })
+      }
+      o.f(err, response);
+    });
     o.tick(o);
 
     o.rows.rows[0].doc = {
+      "_id": "maybe",
+      "_rev": o.rev3
+    };
+    o.rows.rows[1].doc = {
       "_id": "no",
       "_rev": o.rev2,
       "_attachments": {
@@ -2294,10 +2305,6 @@ test("allDocs", function () {
           "length": 7
         }
       },
-    };
-    o.rows.rows[1].doc = {
-      "_id": "maybe",
-      "_rev": o.rev3
     };
     o.rows.rows[2].doc = {
       "_id": "yes",
@@ -2310,9 +2317,15 @@ test("allDocs", function () {
         }
       },
     };
-    o.rows.rows.unshift(o.rows.rows.pop());
     o.spy(o, "value", o.rows, "allDocs + include docs");
-    o.jio.allDocs({"include_docs": true}, o.f);
+    o.jio.allDocs({"include_docs": true}, function (err, response) {
+      if (response && response.rows) {
+        response.rows.sort(function (a, b) {
+          return a.id > b.id;
+        })
+      }
+      o.f(err, response);
+    });
     o.tick(o);
 
     o.jio.stop();
