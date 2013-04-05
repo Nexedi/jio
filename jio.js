@@ -531,14 +531,13 @@ var command = function (spec, my) {
    * @param  {object} storage The storage.
    */
   that.validate = function (storage) {
-    if (typeof priv.doc._id === "string" &&
-        !priv.doc._id.match("^[^\/]+([\/][^\/]+)?$")) {
+    if (typeof priv.doc._id === "string" && priv.doc._id.match(" ")) {
       that.error({
-        status: 21,
-        statusText: 'Invalid Document Id',
-        error: 'invalid_document_id',
-        message: 'The document id must be like "abc" or "abc/def".',
-        reason: 'The document id is no like "abc" or "abc/def"'
+        "status": 21,
+        "statusText": "Invalid Document Id",
+        "error": "invalid_document_id",
+        "message": "The document id is invalid",
+        "reason": "The document id contains spaces"
       });
       return false;
     }
