@@ -157,6 +157,16 @@ var command = function (spec, my) {
    * @param  {object} storage The storage.
    */
   that.validate = function (storage) {
+    if (typeof priv.doc._id === "string" && priv.doc._id.match(" ")) {
+      that.error({
+        "status": 21,
+        "statusText": "Invalid Document Id",
+        "error": "invalid_document_id",
+        "message": "The document id is invalid",
+        "reason": "The document id contains spaces"
+      });
+      return false;
+    }
     if (!that.validateState()) {
       return false;
     }
