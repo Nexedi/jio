@@ -3,147 +3,259 @@
 * Released under the LGPL license.
 * http://www.gnu.org/licenses/lgpl.html
 */
+
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global jIO: true, $: true, btoa: true  */
-jIO.addStorageType('dav', function (spec, my) {
 
-  spec = spec || {};
-  var that, priv, super_serialized;
-  that = my.basicStorage(spec, my);
-  priv = {};
-  super_serialized = that.serialized;
+// JIO Dav Storage Description :
+// {
+//   type: "dav",
+//   url: {string}
+// }
 
-  priv.secureDocId = function (string) {
-    var split = string.split('/'),
-      i;
-    if (split[0] === '') {
-      split = split.slice(1);
+// {
+//   type: "dav",
+//   url: {string},
+//   auth_type: {string}, (optional)
+//     - "auto" (default) (not implemented)
+//     - "basic"
+//     - "digest" (not implemented)
+//   realm: {string}, (optional)
+//     - undefined (default) (not implemented)
+//     - "<string>" realm name (not implemented)
+//   username: {string},
+//   password: {string}  (optional)
+// }
+
+// {
+//   type: "dav",
+//   url: {string},
+//   encoded_login: {string}
+// }
+
+// {
+//   type: "dav",
+//   url: {string},
+//   secured_login: {string} (not implemented)
+// }
+
+// NOTE: to get the authentication type ->
+// curl --verbose  -X OPTION http://domain/
+// In the headers: "WWW-Authenticate: Basic realm="DAV-upload"
+
+// URL Characters convertion:
+// If I want to retrieve the file which id is -> http://100%.json
+// http://domain/collection/http://100%.json cannot be applied
+// - '/' is col separator,
+// - '%' is special char
+// - '.' document and attachment separator
+// http://100%.json will become
+// - http:%2F%2F100%25.json to avoid bad request ('/', '%' -> '%2F', '%25')
+// - http:%2F%2F100%25_.json to avoid ids conflicts ('.' -> '_.')
+// - http:%252F%252F100%2525_.json to avoid request bad interpretation
+//   ('%', '%25')
+// The file will be saved as http:%2F%2F100%25_.json
+
+jIO.addStorageType("dav", function (spec, my) {
+  var priv = {}, that = my.basicStorage(spec, my), dav = {};
+
+  // ATTRIBUTES //
+  priv.url = null;
+  priv.username = null;
+  priv.password = null;
+  priv.encoded_login = null;
+
+  // CONSTRUCTOR //
+  /**
+   * Init the dav storage connector thanks to the description
+   * @method __init__
+   * @param  {object} description The description object
+   */
+  priv.__init__ = function (description) {
+    priv.url = description.url || "";
+    priv.url = priv.removeSlashIfLast(priv.url);
+    // if (description.secured_login) {
+    //    not implemented
+    // } else
+    if (description.encoded_login) {
+      priv.encoded_login = description.encoded_login;
+    } else if (description.auth_type) {
+      if (description.auth_type === "basic") {
+        priv.encoded_login = "Basic " +
+          btoa((description.username || "") + ":" +
+               (description.password || ""));
+      }
+    } else {
+      priv.encoded_login = "";
     }
-    for (i = 0; i < split.length; i += 1) {
-      if (split[i] === '') {
-        return '';
+  };
+
+  // OVERRIDES //
+  that.specToStore = function () {
+    // TODO: secured password
+    // The encoded_login can be seen by anyone, we must find a way to secure it!
+    // secured_login = encrypt(encoded_login)
+    // encoded_login = decrypt(secured_login)
+    return {
+      "url": priv.url,
+      "encoded_login": priv.encoded_login
+    };
+  };
+
+  that.validateState = function () {
+    if (typeof priv.url !== "string" || priv.url === "") {
+      return "The webDav server URL is not provided";
+    }
+    if (priv.encoded_login === null) {
+      return "Impossible to create the authorization";
+    }
+    return "";
+  };
+
+  // TOOLS //
+  /**
+   * Generate a new uuid
+   * @method generateUuid
+   * @return {string} The new uuid
+   */
+  priv.generateUuid = function () {
+    var S4 = function () {
+      /* 65536 */
+      var i, string = Math.floor(
+        Math.random() * 0x10000
+      ).toString(16);
+      for (i = string.length; i < 4; i += 1) {
+        string = "0" + string;
+      }
+      return string;
+    };
+    return S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() +
+      S4() + S4();
+  };
+
+  // /**
+  //  * Clones an object in deep
+  //  * @method clone
+  //  * @param  {object} object The object to clone
+  //  * @return {object} The cloned object
+  //  */
+  // priv.clone = function (object) {
+  //   var tmp = JSON.stringify(object);
+  //   if (tmp === undefined) {
+  //     return undefined;
+  //   }
+  //   return JSON.parse(tmp);
+  // };
+
+  /**
+   * Replace substrings to another strings
+   * @method recursiveReplace
+   * @param  {string} string The string to do replacement
+   * @param  {array} list_of_replacement An array of couple
+   * ["substring to select", "selected substring replaced by this string"].
+   * @return {string} The replaced string
+   */
+  priv.recursiveReplace = function (string, list_of_replacement) {
+    var i, split_string = string.split(list_of_replacement[0][0]);
+    if (list_of_replacement[1]) {
+      for (i = 0; i < split_string.length; i += 1) {
+        split_string[i] = priv.recursiveReplace(
+          split_string[i],
+          list_of_replacement.slice(1)
+        );
       }
     }
-    return split.join('%2F');
-  };
-  priv.convertSlashes = function (string) {
-    return string.split('/').join('%2F');
-  };
-
-  priv.restoreSlashes = function (string) {
-    return string.split('%2F').join('/');
+    return split_string.join(list_of_replacement[0][1]);
   };
 
   /**
-   * Checks if an object has no enumerable keys
-   * @method objectIsEmpty
-   * @param  {object} obj The object
-   * @return {boolean} true if empty, else false
+   * Changes / to %2F, % to %25 and . to _.
+   * @method secureName
+   * @param  {string} name The name to secure
+   * @return {string} The secured name
    */
-  priv.objectIsEmpty = function (obj) {
-    var k;
-    for (k in obj) {
-      if (obj.hasOwnProperty(k)) {
-        return false;
-      }
+  priv.secureName = function (name) {
+    return priv.recursiveReplace(name, [["/", "%2F"], ["%", "%25"]]);
+  };
+
+  /**
+   * Restores the original name from a secured name
+   * @method restoreName
+   * @param  {string} secured_name The secured name to restore
+   * @return {string} The original name
+   */
+  priv.restoreName = function (secured_name) {
+    return priv.recursiveReplace(secured_name, [["%2F", "/"], ["%25", "%"]]);
+  };
+
+  /**
+   * Convert document id and attachment id to a file name
+   * @method idsToFileName
+   * @param  {string} doc_id The document id
+   * @param  {string} attachment_id The attachment id (optional)
+   * @return {string} The file name
+   */
+  priv.idsToFileName = function (doc_id, attachment_id) {
+    doc_id = priv.secureName(doc_id).split(".").join("_.");
+    if (typeof attachment_id === "string") {
+      attachment_id = priv.secureName(attachment_id).split(".").join("_.");
+      return doc_id + "." + attachment_id;
     }
-    return true;
-  };
-
-  priv.username = spec.username || '';
-  priv.secured_username = priv.convertSlashes(priv.username);
-  priv.password = spec.password || '';
-  priv.url = spec.url || '';
-
-  that.serialized = function () {
-    var o = super_serialized();
-    o.username = priv.username;
-    o.url = priv.url;
-    o.password = priv.password;
-    return o;
-  };
-
-  priv.newAsyncModule = function () {
-    var async = {};
-    async.call = function (obj, function_name, arglist) {
-      obj._wait = obj._wait || {};
-      if (obj._wait[function_name]) {
-        obj._wait[function_name] -= 1;
-        return function () {};
-      }
-      // ok if undef or 0
-      arglist = arglist || [];
-      return obj[function_name].apply(obj[function_name], arglist);
-    };
-    async.neverCall = function (obj, function_name) {
-      obj._wait = obj._wait || {};
-      obj._wait[function_name] = -1;
-    };
-    async.wait = function (obj, function_name, times) {
-      obj._wait = obj._wait || {};
-      obj._wait[function_name] = times;
-    };
-    async.end = function () {
-      async.call = function () {};
-    };
-    return async;
+    return doc_id;
   };
 
   /**
-   * Checks if a browser supports cors (cross domain ajax requests)
-   * @method checkCors
-   * @return {boolean} true if supported, else false
+   * Removes the last character if it is a "/". "/a/b/c/" become "/a/b/c"
+   * @method removeSlashIfLast
+   * @param  {string} string The string to modify
+   * @return {string} The modified string
    */
-  priv.checkCors = function () {
-    return $.support.cors;
+  priv.removeSlashIfLast = function (string) {
+    if (string[string.length - 1] === "/") {
+      return string.slice(0, -1);
+    }
+    return string;
   };
 
   /**
-   * Replaces last "." with "_." in document filenames
-   * @method underscoreFileExtenisons
-   * @param {string} url url to clean up
-   * @return {string} clean_url cleaned up URL
+   * Modify an ajax object to add default values
+   * @method makeAjaxObject
+   * @param  {string} file_name The file name to add to the url
+   * @param  {object} ajax_object The ajax object to override
+   * @return {object} A new ajax object with default values
    */
-  priv.underscoreFileExtenisons = function (url) {
-    var clean_url = url.replace(/,\s(\w+)$/, "_.$1");
-    return clean_url;
-  };
-
-  /**
-   * Replaces "_." with "." in document filenames
-   * @method restoreDots
-   * @param {string} url url to clean up
-   * @return {string} clean_url cleaned up URL
-   */
-  priv.restoreDots = function (url) {
-    var clean_url = url.replace(/_\./g, '.');
-    return clean_url;
+  priv.makeAjaxObject = function (file_name, method, ajax_object) {
+    ajax_object.type = method || ajax_object.type || "GET";
+    ajax_object.url = priv.url + "/" + priv.secureName(file_name) +
+      "?_=" + Date.now();
+    ajax_object.async = ajax_object.async === false ? false : true;
+    ajax_object.crossdomain = ajax_object.crossdomain === false ? false : true;
+    ajax_object.headers = ajax_object.headers || {};
+    ajax_object.headers.Authorization = ajax_object.headers.Authorization ||
+      priv.encoded_login;
+    return ajax_object;
   };
 
   /**
    * Runs all ajax requests for davStorage
    * @method ajax
-   * @param {object} ajax_object The request parameters
+   * @param  {string} doc_id The document id
+   * @param  {string} attachment_id The attachment id, can be undefined
+   * @param  {string} method The request method
+   * @param  {object} ajax_object The request parameters (optional)
    */
-  priv.ajax = function (ajax_object) {
-    $.ajax({
-      url: ajax_object.url,
-      type: ajax_object.type,
-      async: true,
-      dataType: ajax_object.dataType || null,
-      data: ajax_object.data || null,
-      crossdomain : true,
-      headers : {
-        Authorization: 'Basic ' + btoa(
-          priv.username + ':' + priv.password
-        ),
-        Depth: ajax_object.headers === undefined ? null :
-            ajax_object.headers.depth
-      },
-      // xhrFields: {withCredentials: 'true'},
-      success: ajax_object.success,
-      error: ajax_object.error
-    });
+  priv.ajax = function (doc_id, attachment_id, method, ajax_object) {
+    var new_ajax_object = JSON.parse(JSON.stringify(ajax_object) || "{}");
+    console.log(priv.makeAjaxObject(
+      priv.idsToFileName(doc_id, attachment_id),
+      method,
+      new_ajax_object
+    ));
+    return $.ajax(priv.makeAjaxObject(
+      priv.idsToFileName(doc_id, attachment_id),
+      method,
+      new_ajax_object
+    ));//.always(then || function () {});
   };
 
   /**
@@ -153,56 +265,122 @@ jIO.addStorageType('dav', function (spec, my) {
    * @return {object} error The error object
    */
   priv.createError = function (status, message, reason) {
-    var error = {};
-
+    var error = {
+      "status": status,
+      "message": message,
+      "reason": reason
+    };
     switch (status) {
     case 404:
-      error.status = status;
       error.statusText = "Not found";
-      error.error = "not_found";
-      error.message = message;
-      error.reason = reason;
       break;
-
     case 405:
-      error.status = status;
       error.statusText = "Method Not Allowed";
-      error.error = "method_not_allowed";
-      error.message = message;
-      error.reason = reason;
       break;
-
     case 409:
-      error.status = status;
       error.statusText = "Conflicts";
-      error.error = "conflicts";
-      error.message = message;
-      error.reason = reason;
+      break;
+    case 24:
+      error.statusText = "Broken Document";
       break;
     }
+    error.error = error.statusText.toLowerCase().split(" ").join("_");
     return error;
   };
 
   /**
-   * Check if method can be run on browser
-   * @method support
+   * Converts ajax error object to a JIO error object
+   * @method ajaxErrorToJioError
+   * @param  {object} ajax_error_object The ajax error object
+   * @param  {string} message The error message
+   * @param  {string} reason The error reason
+   * @return {object} The JIO error object
    */
-  priv.support = function (docid) {
-    // no docId
-    if (!(typeof docid === "string" && docid !== "")) {
-      that.error(priv.createError(405, "Can't create document without id",
-        "Document id is undefined"
-        ));
-      return true;
-    }
-    // no cross domain ajax
-    if (priv.checkCors === false) {
-      that.error(priv.createError(405,
-        "Browser does not support cross domain ajax", "CORS is undefined"
-        ));
-      return true;
-    }
+  priv.ajaxErrorToJioError = function (ajax_error_object, message, reason) {
+    var jio_error_object = {};
+    jio_error_object.status = ajax_error_object.status;
+    jio_error_object.statusText = ajax_error_object.statusText;
+    jio_error_object.error =
+      ajax_error_object.statusText.toLowerCase().split(" ").join("_");
+    jio_error_object.message = message;
+    jio_error_object.reason = reason;
+    return jio_error_object;
   };
+
+  /**
+   * Function that create an object containing jQuery like callbacks
+   * @method makeJQLikeCallback
+   * @return {object} jQuery like callback methods
+   */
+  priv.makeJQLikeCallback = function () {
+    var result = null, emptyFun = function () {}, jql = {
+      "respond": function () {
+        result = arguments;
+      },
+      "to_return": {
+        "always": function (func) {
+          if (result) {
+            func.apply(func, result);
+            jql.to_return.always = emptyFun;
+          } else {
+            jql.respond = func;
+          }
+          return jql.to_return;
+        },
+        "then": function (func) {
+          if (result) {
+            func(result[1]);
+            jql.to_return.then = emptyFun;
+          } else {
+            jql.respond = function (err, response) {
+              func(response);
+            };
+          }
+          return jql.to_return;
+        }
+      }
+    };
+    return jql;
+  };
+
+  // DAV REQUESTS //
+  /**
+   * Retrieve a document
+   * @method dav.getDocument
+   * @param  {string} doc_id The document id
+   * @param  {function} then The callback(err, response)
+   */
+  dav.getDocument = function (doc_id) {
+    var doc, jql = priv.makeJQLikeCallback();
+    priv.ajax(doc_id, undefined, "GET").always(function (one, state, three) {
+      if (state !== "success") {
+        jql.respond(priv.ajaxErrorToJioError(
+          one,
+          "Cannot retrieve document",
+          "Unknown error"
+        ), undefined);
+      } else {
+        try {
+          doc = JSON.parse(one);
+        } catch (e) {
+          return jql.respond(priv.createError(
+            24,
+            "Cannot parse document",
+            "Document is broken"
+          ), undefined);
+        }
+        // document health is good
+        jql.respond(undefined, doc);
+      }
+    });
+    return jql.to_return;
+  };
+
+  dav.putDocument = function (doc) {
+    // TODO
+  };
+
+  // JIO COMMANDS //
 
   // wedDav methods rfc4918 (short summary)
   // COPY     Reproduces single resources (files) and collections (directory
@@ -229,89 +407,54 @@ jIO.addStorageType('dav', function (spec, my) {
   // adding custom headers triggers preflight OPTIONS request!
   // http://remysharp.com/2011/04/21/getting-cors-working/
 
-
-  priv.putOrPost = function (command, type) {
-    var docid = command.getDocId(), secured_docid, url, ajax_object;
-
-    if (priv.support(docid)) {
-      return;
-    }
-
-    secured_docid = priv.secureDocId(command.getDocId());
-    url = priv.url + '/' + priv.underscoreFileExtenisons(secured_docid);
-
-    ajax_object = {
-      url: url + '?_=' + Date.now(),
-      type: "GET",
-      dataType: "text",
-      success: function () {
-        if (type === 'POST') {
-          // POST the document already exists
-          that.error(priv.createError(409,
-            "Cannot create a new document", "Document already exists"
-            ));
-          return;
-        }
-        ajax_object = {
-          url: url,
-          type: type,
-          data: JSON.stringify(command.getDoc()),
-          success: function () {
-            that.success({
-              ok: true,
-              id: command.getDocId()
-            });
-          },
-          error: function () {
-            that.error(priv.createError(409, "Cannot modify document",
-              "Error writing to remote storage"
-              ));
-          }
-        };
-        priv.ajax(ajax_object);
-      },
-      error: function (err) {
-        // Firefox returns 0 instead of 404 on CORS?
-        if (err.status === 404 || err.status === 0) {
-          ajax_object = {
-            url: url,
-            type: "PUT",
-            data: JSON.stringify(command.getDoc()),
-            success: function () {
-              that.success({
-                ok: true,
-                id: command.getDocId()
-              });
-            },
-            error: function () {
-              that.error(priv.createError(409,
-                "Cannot modify document", "Error writing to remote storage"
-                ));
-            }
-          };
-          priv.ajax(ajax_object);
-        } else {
-          // error accessing remote storage
-          that.error({
-            "status": err.status,
-            "statusText": err.statusText,
-            "error": "error",
-            "message": err.message,
-            "reason": "Failed to access remote storage"
-          });
-        }
-      }
-    };
-    priv.ajax(ajax_object);
-  };
-
   /**
    * Creates a new document
    * @method  post
    * @param  {object} command The JIO command
    */
   that.post = function (command) {
-    priv.putOrPost(command, 'POST');
+    var doc_id = command.getDocId() || priv.generateUuid();
+    priv.ajax(doc_id, undefined, "GET").always(function (one, state, three) {
+      if (state !== "success") {
+        if (one.status === 404) {
+          // the document does not already exist
+          // updating document
+          priv.ajax(doc_id, undefined, "PUT", {
+            "dataType": "text",
+            "data": JSON.stringify(command.cloneDoc())
+          }).always(function (one, state, three) {
+            if (state !== "success") {
+              // an error occured
+              that.retry(priv.ajaxErrorToJioError(
+                one,
+                "An error occured when trying to PUT data",
+                "Unknown"
+              ));
+            } else {
+              // document updated
+              that.success({
+                "ok": true,
+                "id": doc_id
+              });
+            }
+          });
+        } else {
+          // an error occured
+          that.retry(priv.ajaxErrorToJioError(
+            one,
+            "An error occured when trying to GET data",
+            "Unknown"
+          ));
+        }
+      } else {
+        // the document already exists
+        that.error(priv.createError(
+          405,
+          "Cannot create document",
+          "Document already exists"
+        ));
+      }
+    });
   };
 
   /**
@@ -320,7 +463,26 @@ jIO.addStorageType('dav', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.put = function (command) {
-    priv.putOrPost(command, 'PUT');
+    var doc_id = command.getDocId();
+    priv.ajax(doc_id, undefined, "PUT", {
+      "dataType": "text",
+      "data": JSON.stringify(command.cloneDoc())
+    }).always(function (one, state, three) {
+      if (state !== "success") {
+        // an error occured
+        that.retry(priv.ajaxErrorToJioError(
+          one,
+          "Cannot update document",
+          "Unknown error"
+        ));
+      } else {
+        // document updated
+        that.success({
+          "ok": true,
+          "id": doc_id
+        });
+      }
+    });
   };
 
   /**
@@ -329,149 +491,90 @@ jIO.addStorageType('dav', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.putAttachment = function (command) {
-    var docid = command.getDocId(),
-      doc,
-      url,
-      secured_docid,
-      secured_attachmentid,
-      attachment_url,
-      ajax_object;
-
-    priv.support(docid);
-
-    secured_docid = priv.secureDocId(docid);
-    url = priv.url + '/' + priv.underscoreFileExtenisons(secured_docid);
-
-    ajax_object = {
-      url: url + '?_=' + Date.now(),
-      type: 'GET',
-      dataType: 'text',
-      success: function (response) {
-        doc = JSON.parse(response);
-
-        // the document exists - update document
-        doc._attachments = doc._attachments || {};
-        doc._attachments[command.getAttachmentId()] = {
-          "content_type": command.getAttachmentMimeType(),
-          "digest": "md5-" + command.md5SumAttachmentData(),
-          "length": command.getAttachmentLength()
-        };
-        // put updated document data
-        ajax_object = {
-          url: url + '?_=' + Date.now(),
-          type: 'PUT',
-          data: JSON.stringify(doc),
-          success: function () {
-            secured_attachmentid = priv.secureDocId(command.getAttachmentId());
-            attachment_url = url + '.' +
-              priv.underscoreFileExtenisons(secured_attachmentid);
-            ajax_object = {
-              url: attachment_url + '?_=' + Date.now(),
-              type: 'PUT',
-              data: JSON.stringify(command.getDoc()),
-              success: function () {
-                that.success({
-                  ok: true,
-                  id: command.getDocId() + '/' + command.getAttachmentId()
-                });
-              },
-              error: function () {
-                that.error(priv.createError(409,
-                  "Cannot modify document", "Error when saving attachment"
-                  ));
-                return;
-              }
-            };
-            priv.ajax(ajax_object);
-          },
-          error: function () {
-            that.error(priv.createError(409,
-              "Cannot modify document", "Error writing to remote storage"
-              ));
-            return;
-          }
-        };
-        priv.ajax(ajax_object);
-      },
-      error: function () {
-        //  the document does not exist
-        that.error(priv.createError(404,
-          "Impossible to add attachment", "Document not found"
+    var doc = null, doc_id = command.getDocId(), attachment_id, tmp;
+    attachment_id = command.getAttachmentId();
+    priv.ajax(doc_id, undefined, "GET").always(function (one, state, three) {
+      if (state !== "success") {
+        // document not found or error
+        tmp = that.retry;
+        if (one.status === 404) {
+          tmp = that.error;
+        }
+        tmp(priv.ajaxErrorToJioError(
+          one,
+          "Cannot update document",
+          "Unknown error"
+        ));
+      } else {
+        try {
+          doc = JSON.parse(one);
+        } catch (e) {
+          return that.error(priv.createError(
+            24,
+            "Cannot upload attachment",
+            "Document is broken"
           ));
-        return;
+        }
+        // document health is good
+        doc._attachments = doc._attachments || {};
+        doc._attachments[attachment_id] = {
+          "length": command.getAttachmentLength(),
+          "digest": "md5-" + command.md5SumAttachmentData(),
+          "content_type": command.getAttachmentMimeType()
+        };
+        // put the attachment
+        priv.ajax(doc_id, attachment_id, "PUT", {
+          "dataType": "text",
+          "data": command.getAttachmentData()
+        }).always(function (one, state, three) {
+          if (state !== "success") {
+            // an error occured
+            that.retry(priv.ajaxErrorToJioError(
+              one,
+              "An error occured when trying to PUT data",
+              "Unknown"
+            ));
+          } else {
+            // update the document
+            priv.ajax(doc_id, undefined, "PUT", {
+              "dataType": "text",
+              "data": JSON.stringify(doc)
+            }).always(function (one, state, three) {
+              if (state !== "success") {
+                that.retry(priv.ajaxErrorToJioError(
+                  one,
+                  "An error occured when trying to PUT data",
+                  "Unknown"
+                ));
+              } else {
+                that.success({
+                  "ok": true,
+                  "id": doc_id,
+                  "attachment": attachment_id
+                });
+              }
+            });
+          }
+        });
       }
-    };
-    // see if the underlying document exists
-    priv.ajax(ajax_object);
+    });
   };
 
   /**
-   * Get a document or attachment from distant storage
-   * Options:
-   * - {boolean} revs Add simple revision history (false by default).
-   * - {boolean} revs_info Add revs info (false by default).
-   * - {boolean} conflicts Add conflict object (false by default).
+   * Get a document
    * @method  get
    * @param  {object} command The JIO command
    */
   that.get = function (command) {
-    var docid = command.getDocId(),
-      doc,
-      url,
-      secured_docid,
-      secured_attachmentid,
-      attachment_url,
-      ajax_object;
-
-    if (priv.support(docid)) {
-      return;
-    }
-
-    secured_docid = priv.secureDocId(command.getDocId());
-    url = priv.url + '/' + priv.underscoreFileExtenisons(secured_docid);
-
-    if (typeof command.getAttachmentId() === "string") {
-      secured_attachmentid = priv.secureDocId(command.getAttachmentId());
-      attachment_url = url + '.' + priv.underscoreFileExtenisons(
-        secured_attachmentid
-      );
-      // get attachment
-      ajax_object = {
-        url: attachment_url + '?_=' + Date.now(),
-        type: "GET",
-        dataType: "text",
-        success: function (response) {
-          doc = JSON.parse(response);
-          that.success(doc);
-        },
-        error: function () {
-          that.error(priv.createError(404,
-            "Cannot find the attachment", "Attachment does not exist"
-            ));
+    dav.getDocument(command.getDocId()).always(function (err, response) {
+      if (err) {
+        if (err.status === 404) {
+          return that.error(err);
         }
-      };
-      priv.ajax(ajax_object);
-    } else {
-      // get document
-      ajax_object = {
-        url: url + '?_=' + Date.now(),
-        type: "GET",
-        dataType: "text",
-        success: function (response) {
-          // metadata_only should not be handled by jIO, as it is a
-          // webDav only option, shouldn't it?
-          // ditto for content_only
-          doc = JSON.parse(response);
-          that.success(doc);
-        },
-        error: function () {
-          that.error(priv.createError(404,
-            "Cannot find the document", "Document does not exist"
-            ));
-        }
-      };
-      priv.ajax(ajax_object);
-    }
+        return that.retry(err);
+      }
+      return that.success(response);
+    });
   };
 
   /**
@@ -479,7 +582,7 @@ jIO.addStorageType('dav', function (spec, my) {
    * @method remove
    * @param  {object} command The JIO command
    */
-  that.remove = function (command) {
+  that._remove = function (command) {
     var docid = command.getDocId(), doc, url,
       secured_docid, secured_attachmentid, attachment_url,
       attachment_list = [], i, j, k = 1, deleteAttachment, ajax_object;
@@ -666,7 +769,7 @@ jIO.addStorageType('dav', function (spec, my) {
   //  },{...}
   // ]
   //}
-  that.allDocs = function (command) {
+  that._allDocs = function (command) {
     var rows = [], url,
       am = priv.newAsyncModule(),
       o = {},
@@ -762,5 +865,6 @@ jIO.addStorageType('dav', function (spec, my) {
     am.call(o, 'getDocumentList');
   };
 
+  priv.__init__(spec);
   return that;
 });

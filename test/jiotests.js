@@ -164,7 +164,6 @@ generateTools = function (test_namespace) {
     var o = {};
 
     o.t = test_namespace;
-    o.server = o.t.sandbox.useFakeServer();
     o.clock = sinon.useFakeTimers();
     o.clock.tick(base_tick);
     o.spy = basicSpyFunction;
@@ -3471,7 +3470,7 @@ module ("JIO Replicate Revision Storage");
       }]
     }, "2");
   });
-/*
+
 module ("Jio DAVStorage");
 
 test ("Post", function () {
@@ -3479,32 +3478,97 @@ test ("Post", function () {
     var o = generateTools(this);
 
     o.jio = JIO.newJio({
-        "type": "dav",
-        "username": "davpost",
-        "password": "checkpwd",
-        "url": "https://ca-davstorage:8080"
+      "type": "dav",
+      "url": "https://ca-davstorage:8080",
+      "auth_type": "basic",
+      "username": "admin",
+      "password": "pwd"
     });
 
     // post without id
-    o.spy (o, "status", 405, "Post without id");
-    o.jio.post({}, o.f);
-    o.clock.tick(5000);
-
-    // post non empty document
-    o.addFakeServerResponse("dav", "PUT", "myFile", 201, "HTML RESPONSE");
-    o.spy(o, "value", {"id": "myFile", "ok": true},
-          "Create = POST non empty document");
-    o.jio.post({"_id": "myFile", "title": "hello there"}, o.f);
-    o.clock.tick(5000);
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/[0-9a-fA-F]{4}/,
+      [
+        404,
+        {"Content-Type": "text/html"},
+        "<h1>Document not found</h1>"
+      ]
+    );
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/[0-9a-fA-F]{4}/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>Document updated!</h1>"
+      ]
+    );
+    o.spy(o, "jobstatus", "done", "Post without id");
+    o.jio.post({}, {"max_retry": 1}, function (err, response) {
+      o.f.apply(arguments);
+      if (response) {
+        ok(isUuid(response.id), "Uuid should look like " +
+         "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + response.id);
+      }
+    });
+    o.clock.tick(1000);
     o.server.respond();
+    o.tick(o);
+    o.server.restore();
 
-    // post but document already exists (post = error!, put = ok)
-    o.answer = JSON.stringify({"_id": "myFile", "title": "hello there"});
-    o.addFakeServerResponse("dav", "GET", "myFile", 200, o.answer);
-    o.spy (o, "status", 409, "Post but document already exists");
-    o.jio.post({"_id": "myFile", "title": "hello again"}, o.f);
-    o.clock.tick(5000);
+    // post document with id
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        404,
+        {"Content-Type": "text/html"},
+        "<h1>Document not found</h1>"
+      ]
+    );
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>Document updated!</h1>"
+      ]
+    );
+    o.spy(o, "value", {"id": "http://100%.json", "ok": true},
+          "Create document with an id");
+    o.jio.post({
+      "_id": "http://100%.json",
+      "title": "Hello There"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
     o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // post already existant file
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        '{"_id":"doc1","title":"Hello There"}'
+      ]
+    );
+    o.spy(o, "status", 405, "Update document previous -> 405");
+    o.jio.post({
+      "_id": "http://100%.json",
+      "title": "Hello There Again"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
 
     o.jio.stop();
 });
@@ -3514,36 +3578,61 @@ test ("Put", function(){
     var o = generateTools(this);
 
     o.jio = JIO.newJio({
-        "type": "dav",
-        "username": "davput",
-        "password": "checkpwd",
-        "url": "https://ca-davstorage:8080"
+      "type": "dav",
+      "url": "https://ca-davstorage:8080",
+      "auth_type": "basic",
+      "username": "admin",
+      "password": "pwd"
     });
 
-    // put without id => id required
-    o.spy (o, "status", 20, "Put without id");
+    // put without id => 20 Id Required
+    o.spy (o, "status", 20, "Put without id -> 20");
     o.jio.put({}, o.f);
-    o.clock.tick(5000);
+    o.tick(o);
 
     // put non empty document
-    o.addFakeServerResponse("dav", "PUT", "put1", 201, "HTML RESPONSE");
-    o.spy (o, "value", {"ok": true, "id": "put1"},
-           "Create = PUT non empty document");
-    o.jio.put({"_id": "put1", "title": "myPut1"}, o.f);
-    o.clock.tick(5000);
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>OK1</h1>"
+      ]
+    );
+    o.spy (o, "value", {"ok": true, "id": "http://100%.json"},
+           "Create document");
+    o.jio.put({
+      "_id": "http://100%.json",
+      "title": "Hi There"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
     o.server.respond();
-    //console.log( o.server );
-    //console.log( o.server.requests[0].requestHeaders );
-    //console.log( o.server.requests[0].responseHeaders );
+    o.tick(o);
+    o.server.restore();
 
-    // put but document already exists = update
-    o.answer = JSON.stringify({"_id": "put1", "title": "myPut1"});
-    o.addFakeServerResponse("dav", "GET", "put1", 200, o.answer);
-    o.addFakeServerResponse("dav", "PUT", "put1", 201, "HTML RESPONSE");
-    o.spy (o, "value", {"ok": true, "id": "put1"}, "Updated the document");
-    o.jio.put({"_id": "put1", "title": "myPut2abcdedg"}, o.f);
-    o.clock.tick(5000);
+    // update document
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>OK!</h1>"
+      ]
+    );
+    o.spy (o, "value", {"ok": true, "id": "http://100%.json"},
+           "Update document");
+    o.jio.put({
+      "_id": "http://100%.json",
+      "title": "Hi There Again"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
     o.server.respond();
+    o.tick(o);
+    o.server.restore();
 
     o.jio.stop();
 });
@@ -3553,52 +3642,88 @@ test ("PutAttachment", function(){
     var o = generateTools(this);
 
     o.jio = JIO.newJio({
-        "type": "dav",
-        "username": "davputattm",
-        "password": "checkpwd",
-        "url": "https://ca-davstorage:8080"
+      "type": "dav",
+      "url": "https://ca-davstorage:8080",
+      "auth_type": "basic",
+      "username": "admin",
+      "password": "pwd"
     });
 
-    // putAttachment without doc id => id required
-    o.spy(o, "status", 20, "PutAttachment without doc id");
-    o.jio.putAttachment({}, o.f);
-    o.clock.tick(5000);
+    // putAttachment without document id => 20 Id Required
+    o.spy(o, "status", 20, "PutAttachment without doc id -> 20");
+    o.jio.putAttachment({"_attachment": "body.html"}, o.f);
+    o.tick(o);
 
-    // putAttachment without attachment id => attachment id required
-    o.spy(o, "status", 22, "PutAttachment without attachment id");
-    o.jio.putAttachment({"id": "putattmt1"}, o.f);
-    o.clock.tick(5000);
+    // putAttachment without attachment id => 22 Attachment Id Required
+    o.spy(o, "status", 22, "PutAttachment without attachment id -> 22");
+    o.jio.putAttachment({"_id": "http://100%.json"}, o.f);
+    o.tick(o);
 
-    // putAttachment without underlying document => not found
-    o.addFakeServerResponse("dav", "GET", "putattmtx", 22, "HTML RESPONSE");
-    o.spy(o, "status", 22, "PutAttachment without document");
-    o.jio.putAttachment({"id": "putattmtx.putattmt2"}, o.f);
-    o.clock.tick(5000);
+    // putAttachment without underlying document => 404 Not Found
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        404,
+        {"Content-Type": "text/html"},
+        "<h1>Not Found</h1>"
+      ]
+    );
+    o.spy(o, "status", 404, "PutAttachment without document -> 404");
+    o.jio.putAttachment({
+      "_id": "http://100%.json",
+      "_attachment": "putattmt2"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
     o.server.respond();
+    o.tick(o);
+    o.server.restore();
 
-    // putAttachment with document without data
-    o.answer = JSON.stringify({"_id": "putattmt1", "title": "myPutAttm1"});
-    o.addFakeServerResponse("dav", "GET", "putattmt1", 200, o.answer);
-    o.addFakeServerResponse("dav", "PUT", "putattmt1", 201, "HTML RESPONSE");
-    o.addFakeServerResponse("dav", "PUT", "putattmt1.putattmt2", 201,"HTML"+
-      + "RESPONSE");
-    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
-          "PutAttachment with document, without data");
-    o.jio.putAttachment({"id": "putattmt1/putattmt2"}, o.f);
-    o.clock.tick(5000);
+    // upload attachment
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        '{"_id":"http://100%.json","title":"Hi There!"}'
+      ]
+    );
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json.body_\.html/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>OK!</h1>"
+      ]
+    );
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>OK!</h1>"
+      ]
+    );
+    o.spy(o, "value", {
+      "ok": true,
+      "id": "http://100%.json",
+      "attachment": "body.html"
+    }, "Upload attachment");
+    o.jio.putAttachment({
+      "_id": "http://100%.json",
+      "_attachment": "body.html",
+      "_mimetype": "text/html",
+      "_data": "<h1>Hi There!!</h1><p>How are you?</p>"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
     o.server.respond();
-
-    // update attachment
-    o.answer = JSON.stringify({"_id": "putattmt1", "title": "myPutAttm1"});
-    o.addFakeServerResponse("dav", "GET", "putattmt1", 200, o.answer);
-    o.addFakeServerResponse("dav", "PUT", "putattmt1", 201, "HTML RESPONSE");
-    o.addFakeServerResponse("dav", "PUT", "putattmt1.putattmt2", 201,"HTML"+
-      "RESPONSE");
-    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
-          "Update Attachment, with data");
-    o.jio.putAttachment({"id": "putattmt1/putattmt2", "data": "abc"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
+    o.tick(o);
+    o.server.restore();
 
     o.jio.stop();
 });
@@ -3608,53 +3733,53 @@ test ("Get", function(){
     var o = generateTools(this);
 
     o.jio = JIO.newJio({
-        "type": "dav",
-        "username": "davget",
-        "password": "checkpwd",
-        "url": "https://ca-davstorage:8080"
+      "type": "dav",
+      "url": "https://ca-davstorage:8080",
+      "auth_type": "basic",
+      "username": "admin",
+      "password": "pwd"
     });
 
     // get inexistent document
-    o.addFakeServerResponse("dav", "GET", "get1", 404, "HTML RESPONSE");
-    o.spy(o, "status", 404, "Get non existing document");
-    o.jio.get("get1", o.f);
-    o.clock.tick(5000);
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        404,
+        {"Content-Type": "text/html"},
+        "<h1>Not Found</h1>"
+      ]
+    );
+    o.spy(o, "status", 404, "Get non existing document -> 404");
+    o.jio.get({"_id": "http://100%.json"}, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
     o.server.respond();
-
-    // get inexistent attachment
-    o.addFakeServerResponse("dav", "GET", "get1.get2", 404, "HTML RESPONSE");
-    o.spy(o, "status", 404, "Get non existing attachment");
-    o.jio.get("get1/get2", o.f);
-    o.clock.tick(5000);
-    o.server.respond();
+    o.tick(o);
+    o.server.restore();
 
     // get document
-    o.answer = JSON.stringify({"_id": "get3", "title": "some title"});
-    o.addFakeServerResponse("dav", "GET", "get3", 200, o.answer);
-    o.spy(o, "value", {"_id": "get3", "title": "some title"}, "Get document");
-    o.jio.get("get3", o.f);
-    o.clock.tick(5000);
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        '{"_id":"http://100%.json","title":"Hi There!"}'
+      ]
+    );
+    o.spy(o, "value", {"_id": "http://100%.json", "title": "Hi There!"},
+          "Get document");
+    o.jio.get({"_id": "http://100%.json"}, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
     o.server.respond();
-
-    // get inexistent attachment (document exists)
-    o.addFakeServerResponse("dav", "GET", "get3.getx", 404, "HTML RESPONSE");
-    o.spy(o, "status", 404, "Get non existing attachment (doc exists)");
-    o.jio.get("get3/getx", o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-
-    // get attachment
-    o.answer = JSON.stringify({"_id": "get4", "title": "some attachment"});
-    o.addFakeServerResponse("dav", "GET", "get3.get4", 200, o.answer);
-    o.spy(o, "value", {"_id": "get4", "title": "some attachment"},
-      "Get attachment");
-    o.jio.get("get3/get4", o.f);
-    o.clock.tick(5000);
-    o.server.respond();
+    o.tick(o);
+    o.server.restore();
 
     o.jio.stop();
 });
-
+/*
 test ("Remove", function(){
 
     var o = generateTools(this);
