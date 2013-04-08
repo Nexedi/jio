@@ -3634,21 +3634,6 @@ test ("Put", function(){
     o.tick(o);
     o.server.restore();
 
-    o.jio.stop();
-});
-
-test ("PutAttachment", function(){
-
-    var o = generateTools(this);
-
-    o.jio = JIO.newJio({
-      "type": "dav",
-      "url": "https://ca-davstorage:8080",
-      "auth_type": "basic",
-      "username": "admin",
-      "password": "pwd"
-    });
-
     // putAttachment without document id => 20 Id Required
     o.spy(o, "status", 20, "PutAttachment without doc id -> 20");
     o.jio.putAttachment({"_attachment": "body.html"}, o.f);
@@ -3777,97 +3762,241 @@ test ("Get", function(){
     o.tick(o);
     o.server.restore();
 
+    // get inexistent attachment
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json\.body_\.html/,
+      [
+        404,
+        {"Content-Type": "text/html"},
+        "<h1>Not Found</h1>"
+      ]
+    );
+    o.spy(o, "status", 404, "Get inexistent attachment -> 404");
+    o.jio.getAttachment({
+      "_id": "http://100%.json",
+      "_attachment": "body.html"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // get attachment
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json\.body_\.html/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        "My Attachment Content"
+      ]
+    );
+    o.spy(o, "value", "My Attachment Content", "Get attachment");
+    o.jio.getAttachment({
+      "_id": "http://100%.json",
+      "_attachment": "body.html"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
     o.jio.stop();
 });
-/*
+
 test ("Remove", function(){
 
     var o = generateTools(this);
 
     o.jio = JIO.newJio({
-        "type": "dav",
-        "username": "davremove",
-        "password": "checkpwd",
-        "url": "https://ca-davstorage:8080"
+      "type": "dav",
+      "url": "https://ca-davstorage:8080",
+      "auth_type": "basic",
+      "username": "admin",
+      "password": "pwd"
     });
 
     // remove inexistent document
-    o.addFakeServerResponse("dav", "GET", "remove1", 404, "HTML RESPONSE");
-    o.spy(o, "status", 404, "Remove non existening document");
-    o.jio.remove({"_id": "remove1"}, o.f);
-    o.clock.tick(5000);
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        404,
+        {"Content-Type": "text/html"},
+        "<h1>Not Found</h1>"
+      ]
+    );
+    o.spy(o, "status", 404, "Remove inexistent document -> 404");
+    o.jio.remove({"_id": "http://100%.json"}, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
     o.server.respond();
-
-    // remove inexistent document/attachment
-    o.addFakeServerResponse("dav", "GET", "remove1.remove2", 404, "HTML" +
-      "RESPONSE");
-    o.spy(o, "status", 404, "Remove inexistent document/attachment");
-    o.jio.remove({"_id": "remove1/remove2"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
+    o.tick(o);
+    o.server.restore();
 
     // remove document
-    o.answer = JSON.stringify({"_id": "remove3", "title": "some doc"});
-    o.addFakeServerResponse("dav", "GET", "remove3", 200, o.answer);
-    o.addFakeServerResponse("dav", "DELETE", "remove3", 200, "HTML RESPONSE");
-    o.spy(o, "value", {"ok": true, "id": "remove3"}, "Remove document");
-    o.jio.remove({"_id": "remove3"}, o.f);
-    o.clock.tick(5000);
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "{My corrupted document}"
+      ]
+    );
+    o.server.respondWith(
+      "DELETE",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        "<h1>Deleted</h1>"
+      ]
+    );
+    o.spy(o, "value", {"ok": true, "id": "http://100%.json"},
+          "Remove document");
+    o.jio.remove({"_id": "http://100%.json"}, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
     o.server.respond();
+    o.tick(o);
+    o.server.restore();
 
-    o.answer = JSON.stringify({
-      "_id": "remove4",
-      "title": "some doc",
-      "_attachments": {
-            "remove5": {
-                "length": 4,
-                "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
-            }
-      }
-    });
+    // remove inexistent attachment
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        "{}"
+      ]
+    );
+    o.spy(o, "status", 404, "Remove inexistent attachment -> 404");
+    o.jio.removeAttachment({
+      "_id": "http://100%.json",
+      "_attachment": "body.html"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    // o.server.respond();
+    // o.server.respond();
+    o.server.restore();
+
     // remove attachment
-    o.addFakeServerResponse("dav", "GET", "remove4", 200, o.answer);
-    o.addFakeServerResponse("dav", "PUT", "remove4", 201, "HTML RESPONSE");
-    o.addFakeServerResponse("dav", "DELETE", "remove4.remove5", 200, "HTML"+
-      "RESPONSE");
-    o.spy(o, "value", {"ok": true, "id": "remove4/remove5"},
-          "Remove attachment");
-    o.jio.remove({"_id": "remove4/remove5"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-
-    o.answer = JSON.stringify({
-      "_id": "remove6",
-      "title": "some other doc",
-      "_attachments": {
-            "remove7": {
-                "length": 4,
-                "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
-            },
-            "remove8": {
-                "length": 4,
-                "digest": "md5-e41d8cd98f00b204e9800998ecf8427e"
-            },
-            "remove9": {
-                "length": 4,
-                "digest": "md5-f41d8cd98f00b204e9800998ecf8427e"
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        JSON.stringify({
+          "_attachments": {
+            "body.html": {
+              "length": 32,
+              "digest": "md5-dontcare",
+              "content_type": "text/html"
             }
-      }
-    });
-    // remove document with multiple attachments
-    o.addFakeServerResponse("dav", "GET", "remove6", 200, o.answer);
-    o.addFakeServerResponse("dav", "DELETE", "remove6.remove7", 200, "HTML"+
-      "RESPONSE");
-    o.addFakeServerResponse("dav", "DELETE", "remove6.remove8", 200, "HTML"+
-      "RESPONSE");
-    o.addFakeServerResponse("dav", "DELETE", "remove6.remove9", 200, "HTML"+
-      "RESPONSE");
-    o.addFakeServerResponse("dav", "DELETE", "remove6", 200, "HTML RESPONSE");
-    o.spy(o, "value", {"ok": true, "id": "remove6"},
-          "Remove document with multiple attachments");
-    o.jio.remove({"_id": "remove6"}, o.f);
-    o.clock.tick(5000);
+          }
+        })
+      ]
+    );
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>OK</h1>"
+      ]
+    );
+    o.server.respondWith(
+      "DELETE",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json.body_\.html/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>OK</h1>"
+      ]
+    );
+    o.spy(o, "value", {
+      "ok": true,
+      "id": "http://100%.json",
+      "attachment": "body.html"
+    }, "Remove attachment");
+    o.jio.removeAttachment({
+      "_id": "http://100%.json",
+      "_attachment": "body.html"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
     o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // remove document with multiple attachments
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        JSON.stringify({
+          "_attachments": {
+            "body.html": {
+              "length": 32,
+              "digest": "md5-dontcare",
+              "content_type": "text/html"
+            },
+            "other": {
+              "length": 3,
+              "digest": "md5-dontcare-again",
+              "content_type": "text/plain"
+            }
+          }
+        })
+      ]
+    );
+    o.server.respondWith(
+      "DELETE",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        "<h1>Deleted</h1>"
+      ]
+    );
+    o.server.respondWith(
+      "DELETE",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json\.body_\.html/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        "<h1>Deleted</h1>"
+      ]
+    );
+    o.server.respondWith(
+      "DELETE",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json\.other/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        "<h1>Deleted</h1>"
+      ]
+    );
+    o.spy(o, "value", {"ok": true, "id": "http://100%.json"},
+          "Remove document containing multiple attachments");
+    o.jio.remove({"_id": "http://100%.json"}, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
 
     o.jio.stop();
 });
@@ -3876,47 +4005,96 @@ test ("AllDocs", function () {
 
   // need to make server requests before activating fakeServer
   var davlist = getXML('responsexml/davlist'),
-    o = generateTools(this);
+  o = generateTools(this);
 
-    o.jio = JIO.newJio({
-        "type": "dav",
-        "username": "davall",
-        "password": "checkpwd",
-        "url": "https://ca-davstorage:8080"
-    });
+  o.jio = JIO.newJio({
+    "type": "dav",
+    "url": "https://ca-davstorage:8080",
+    "auth_type": "basic",
+    "username": "admin",
+    "password": "pwd"
+  });
 
-  // get allDocs, no content
-  o.addFakeServerResponse("dav", "PROPFIND", "", 200, davlist);
-  o.thisShouldBeTheAnswer = {
-      "rows": [
-        {"id": "alldocs1", "key": "alldocs1", "value": {}},
-        {"id": "alldocs2", "key": "alldocs2", "value": {}}
-      ],
-      "total_rows": 2
-  }
-  o.spy(o, "value", o.thisShouldBeTheAnswer, "allDocs (no content)");
+  // get all documents
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "PROPFIND",
+      /https:\/\/ca-davstorage:8080\//,
+    [
+      200,
+      {"Content-Type": "text/xml"},
+      davlist
+    ]
+  );
+  o.spy(o, "value", {
+    "rows": [
+      {"id": "http://100%.json", "key": "http://100%.json", "value": {}},
+      {"id": "ISBN:1038729410372", "key": "ISBN:1038729410372", "value": {}}
+    ],
+    "total_rows": 2
+  }, "allDocs");
   o.jio.allDocs(o.f);
-  o.clock.tick(5000);
+  o.clock.tick(1000);
   o.server.respond();
+  o.tick(o);
+  o.server.restore();
 
-  // allDocs with option include
-  o.all1 = {"_id": "allDocs1", "title": "a doc title"};
-  o.all2 = {"_id": "allDocs2", "title": "another doc title"};
-  o.thisShouldBeTheAnswer = {
-      "rows": [
-        {"id": "alldocs1", "key": "alldocs1", "value": {}, "doc": o.all1},
-        {"id": "alldocs2", "key": "alldocs2", "value": {}, "doc": o.all2}
-      ],
-      "total_rows": 2
-  }
-  o.addFakeServerResponse("dav", "GET", "alldocs1", 200,
-    JSON.stringify(o.all1));
-  o.addFakeServerResponse("dav", "GET", "alldocs2", 200,
-    JSON.stringify(o.all2));
-  o.spy(o, "value", o.thisShouldBeTheAnswer, "allDocs (include_docs)");
-  o.jio.allDocs({"include_docs":true}, o.f);
-  o.clock.tick(5000);
+  // allDocs with option include_docs
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "PROPFIND",
+      /https:\/\/ca-davstorage:8080\//,
+    [
+      200,
+      {"Content-Type": "text/xml"},
+      davlist
+    ]
+  );
+  o.doc1 = {"_id": "http://100%.json", "_attachments": {
+    "body.html": {
+      "length": 32,
+      "digest": "md5-doncare",
+      "content_type": "text/html"
+    }
+  }};
+  o.doc2 = {"_id": "ISBN:1038729410372", "title": "Book Title"};
+  o.server.respondWith(
+    "GET",
+      /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+    [
+      200,
+      {"Content-Type": "text/plain"},
+      JSON.stringify(o.doc1)
+    ]
+  );
+  o.server.respondWith(
+    "GET",
+      /https:\/\/ca-davstorage:8080\/ISBN:1038729410372/,
+    [
+      200,
+      {"Content-Type": "text/plain"},
+      JSON.stringify(o.doc2)
+    ]
+  );
+  o.spy(o, "value", {
+    "rows": [{
+      "id": "http://100%.json",
+      "key": "http://100%.json",
+      "value": {},
+      "doc": o.doc1
+    }, {
+      "id": "ISBN:1038729410372",
+      "key": "ISBN:1038729410372",
+      "value": {},
+      "doc": o.doc2
+    }],
+    "total_rows": 2
+  }, "allDocs (include_docs)");
+  o.jio.allDocs({"include_docs": true}, o.f);
+  o.clock.tick(1000);
   o.server.respond();
+  o.tick(o);
+  o.server.restore();
 
   o.jio.stop();
 });

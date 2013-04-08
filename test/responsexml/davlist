@@ -25,7 +25,7 @@
     </D:propstat>
   </D:response>
   <D:response xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/">
-    <D:href>/some/path/alldocs1</D:href>
+    <D:href>/some/path/http:%252F%252F100%2525_.json</D:href>
     <D:propstat>
       <D:prop>
         <lp1:resourcetype/>
@@ -50,7 +50,32 @@
     </D:propstat>
   </D:response>
   <D:response xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/">
-    <D:href>/some/path/alldocs2</D:href>
+    <D:href>/some/path/ISBN:1038729410372</D:href>
+    <D:propstat>
+      <D:prop>
+        <lp1:resourcetype/>
+        <lp1:creationdate>2012-05-01T17:41:13Z</lp1:creationdate>
+        <lp1:getcontentlength>223</lp1:getcontentlength>
+        <lp1:getlastmodified>Wed, 02 May 2012 10:48:33 GMT</lp1:getlastmodified>
+        <lp1:getetag>"c9-4bf0d1aeb9e43"</lp1:getetag>
+        <lp2:executable>F</lp2:executable>
+        <D:supportedlock>
+          <D:lockentry>
+            <D:lockscope><D:exclusive/></D:lockscope>
+            <D:locktype><D:write/></D:locktype>
+          </D:lockentry>
+          <D:lockentry>
+            <D:lockscope><D:shared/></D:lockscope>
+            <D:locktype><D:write/></D:locktype>
+          </D:lockentry>
+        </D:supportedlock>
+        <D:lockdiscovery/>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/">
+    <D:href>/some/path/http:%252F%252F100%2525_.json.body_.html</D:href>
     <D:propstat>
       <D:prop>
         <lp1:resourcetype/>
@@ -75,4 +100,3 @@
     </D:propstat>
   </D:response>
 </D:multistatus>
-

@@ -205,6 +205,34 @@ jIO.addStorageType("dav", function (spec, my) {
   };
 
   /**
+   * Convert a file name to a document id (and attachment id if there)
+   * @method fileNameToIds
+   * @param  {string} file_name The file name to convert
+   * @return {array} ["document id", "attachment id"] or ["document id"]
+   */
+  priv.fileNameToIds = function (file_name) {
+    var separator_index = -1, split = file_name.split(".");
+    split.slice(0, -1).forEach(function (file_name_part, index) {
+      if (file_name_part.slice(-1) !== "_") {
+        separator_index = index;
+      }
+    });
+    if (separator_index === -1) {
+      return [priv.restoreName(priv.restoreName(
+        file_name
+      ).split("_.").join("."))];
+    }
+    return [
+      priv.restoreName(priv.restoreName(
+        split.slice(0, separator_index + 1).join(".")
+      ).split("_.").join(".")),
+      priv.restoreName(priv.restoreName(
+        split.slice(separator_index + 1).join(".")
+      ).split("_.").join("."))
+    ];
+  };
+
+  /**
    * Removes the last character if it is a "/". "/a/b/c/" become "/a/b/c"
    * @method removeSlashIfLast
    * @param  {string} string The string to modify
@@ -246,13 +274,8 @@ jIO.addStorageType("dav", function (spec, my) {
    */
   priv.ajax = function (doc_id, attachment_id, method, ajax_object) {
     var new_ajax_object = JSON.parse(JSON.stringify(ajax_object) || "{}");
-    console.log(priv.makeAjaxObject(
-      priv.idsToFileName(doc_id, attachment_id),
-      method,
-      new_ajax_object
-    ));
     return $.ajax(priv.makeAjaxObject(
-      priv.idsToFileName(doc_id, attachment_id),
+      priv.idsToFileName(doc_id || '', attachment_id),
       method,
       new_ajax_object
     ));//.always(then || function () {});
@@ -281,7 +304,7 @@ jIO.addStorageType("dav", function (spec, my) {
       error.statusText = "Conflicts";
       break;
     case 24:
-      error.statusText = "Broken Document";
+      error.statusText = "Corrupted Document";
       break;
     }
     error.error = error.statusText.toLowerCase().split(" ").join("_");
@@ -345,39 +368,229 @@ jIO.addStorageType("dav", function (spec, my) {
 
   // DAV REQUESTS //
   /**
-   * Retrieve a document
+   * Retrieve a document file
    * @method dav.getDocument
    * @param  {string} doc_id The document id
-   * @param  {function} then The callback(err, response)
    */
   dav.getDocument = function (doc_id) {
-    var doc, jql = priv.makeJQLikeCallback();
+    var doc, jql = priv.makeJQLikeCallback(), error = null;
     priv.ajax(doc_id, undefined, "GET").always(function (one, state, three) {
       if (state !== "success") {
-        jql.respond(priv.ajaxErrorToJioError(
+        error = priv.ajaxErrorToJioError(
           one,
           "Cannot retrieve document",
-          "Unknown error"
-        ), undefined);
-      } else {
-        try {
-          doc = JSON.parse(one);
-        } catch (e) {
-          return jql.respond(priv.createError(
-            24,
-            "Cannot parse document",
-            "Document is broken"
-          ), undefined);
+          "Unknown"
+        );
+        if (one.status === 404) {
+          error.reason = "Not Found";
         }
-        // document health is good
-        jql.respond(undefined, doc);
+        return jql.respond(error, undefined);
       }
+      try {
+        doc = JSON.parse(one);
+      } catch (e) {
+        return jql.respond(priv.createError(
+          24,
+          "Cannot parse document",
+          "Document is corrupted"
+        ), undefined);
+      }
+      // document health is good
+      return jql.respond(undefined, doc);
     });
     return jql.to_return;
   };
 
+  /**
+   * Retrieve an attachment file
+   * @method dav.getAttachment
+   * @param  {string} doc_id The document id
+   * @param  {string} attachment_id The attachment id
+   */
+  dav.getAttachment = function (doc_id, attachment_id) {
+    var jql = priv.makeJQLikeCallback(), error = null;
+    priv.ajax(
+      doc_id,
+      attachment_id,
+      "GET"
+    ).always(function (one, state, three) {
+      if (state !== "success") {
+        error = priv.ajaxErrorToJioError(
+          one,
+          "Cannot retrieve attachment",
+          "Unknown"
+        );
+        if (one.status === 404) {
+          error.reason = "Not Found";
+        }
+        return jql.respond(error, undefined);
+      }
+      return jql.respond(undefined, one);
+    });
+    return jql.to_return;
+  };
+
+  /**
+   * Uploads a document file
+   * @method dav.putDocument
+   * @param  {object} doc The document object
+   */
   dav.putDocument = function (doc) {
-    // TODO
+    var jql = priv.makeJQLikeCallback();
+    priv.ajax(doc._id, undefined, "PUT", {
+      "dataType": "text",
+      "data": JSON.stringify(doc)
+    }).always(function (one, state, three) {
+      if (state !== "success") {
+        return jql.respond(priv.ajaxErrorToJioError(
+          one,
+          "Cannot upload document",
+          "Unknown"
+        ), undefined);
+      }
+      jql.respond(undefined, {"ok": true, "id": doc._id});
+    });
+    return jql.to_return;
+  };
+
+  /**
+   * Uploads an attachment file
+   * @method dav.putAttachment
+   * @param  {string} doc_id The document id
+   * @param  {string} attachment_id The attachment id
+   * @param  {string} data The attachment data
+   */
+  dav.putAttachment = function (doc_id, attachment_id, data) {
+    var jql = priv.makeJQLikeCallback();
+    priv.ajax(doc_id, attachment_id, "PUT", {
+      "dataType": "text",
+      "data": data
+    }).always(function (one, state, three) {
+      if (state !== "success") {
+        return jql.respond(priv.ajaxErrorToJioError(
+          one,
+          "Cannot upload attachment",
+          "Unknown"
+        ), undefined);
+      }
+      return jql.respond(undefined, {
+        "ok": true,
+        "id": doc_id,
+        "attachment": attachment_id
+      });
+    });
+    return jql.to_return;
+  };
+
+  /**
+   * Deletes a document file
+   * @method dav.removeDocument
+   * @param  {string} doc_id The document id
+   */
+  dav.removeDocument = function (doc_id) {
+    var jql = priv.makeJQLikeCallback(), error = null;
+    priv.ajax(
+      doc_id,
+      undefined,
+      "DELETE"
+    ).always(function (one, state, three) {
+      if (state !== "success") {
+        error = priv.ajaxErrorToJioError(
+          one,
+          "Cannot delete document",
+          "Unknown"
+        );
+        if (one.status === 404) {
+          error.reason = "Not Found";
+        }
+        return jql.respond(error, undefined);
+      }
+      jql.respond(undefined, {"ok": true, "id": doc_id});
+    });
+    return jql.to_return;
+  };
+
+  /**
+   * Deletes an attachment file
+   * @method dav.removeAttachment
+   * @param  {string} doc_id The document id
+   * @param  {string} attachment_id The attachment id
+   */
+  dav.removeAttachment = function (doc_id, attachment_id) {
+    var jql = priv.makeJQLikeCallback(), error = null;
+    priv.ajax(
+      doc_id,
+      attachment_id,
+      "DELETE"
+    ).always(function (one, state, three) {
+      if (state !== "success") {
+        error = priv.ajaxErrorToJioError(
+          one,
+          "Cannot delete attachment",
+          "Unknown"
+        );
+        if (one.status === 404) {
+          error.reason = "Not Found";
+        }
+        return jql.respond(error, undefined);
+      }
+      jql.respond(undefined, {"ok": true, "id": doc_id});
+    });
+    return jql.to_return;
+  };
+
+  /**
+   * Get a list of document file
+   * @method dav.allDocs
+   */
+  dav.allDocs = function () {
+    var jql = priv.makeJQLikeCallback(), rows = [];
+    priv.ajax(undefined, undefined, "PROPFIND", {
+      "dataType": "xml",
+      "headers": {"Depth": 1}
+    }).always(function (one, state, three) {
+      var response, len;
+      if (state !== "success") {
+        return jql.respond(priv.ajaxErrorToJioError(
+          one,
+          "Cannot get the document list",
+          "Unknown"
+        ), undefined);
+      }
+      response = $(one).find("D\\:response, response");
+      len = response.length;
+      if (len === 1) {
+        return jql.respond({"total_rows": 0, "rows": []});
+      }
+      response.each(function (i, data) {
+        var row;
+        if (i > 0) { // exclude parent folder
+          row = {
+            "id": "",
+            "key": "",
+            "value": {}
+          };
+          $(data).find("D\\:href, href").each(function () {
+            row.id = $(this).text().split('/').slice(-1)[0];
+            row.id = priv.fileNameToIds(row.id);
+            if (row.id.length !== 1) {
+              row = undefined;
+            } else {
+              row.id = row.id[0];
+              row.key = row.id;
+            }
+          });
+          if (row !== undefined) {
+            rows.push(row);
+          }
+        }
+      });
+      jql.respond(undefined, {
+        "total_rows": rows.length,
+        "rows": rows
+      });
+    });
+    return jql.to_return;
   };
 
   // JIO COMMANDS //
@@ -414,46 +627,32 @@ jIO.addStorageType("dav", function (spec, my) {
    */
   that.post = function (command) {
     var doc_id = command.getDocId() || priv.generateUuid();
-    priv.ajax(doc_id, undefined, "GET").always(function (one, state, three) {
-      if (state !== "success") {
-        if (one.status === 404) {
+    dav.getDocument(doc_id).always(function (err, response) {
+      if (err) {
+        if (err.status === 404) {
           // the document does not already exist
           // updating document
-          priv.ajax(doc_id, undefined, "PUT", {
-            "dataType": "text",
-            "data": JSON.stringify(command.cloneDoc())
-          }).always(function (one, state, three) {
-            if (state !== "success") {
-              // an error occured
-              that.retry(priv.ajaxErrorToJioError(
-                one,
-                "An error occured when trying to PUT data",
-                "Unknown"
-              ));
-            } else {
-              // document updated
-              that.success({
-                "ok": true,
-                "id": doc_id
-              });
+          var doc = command.cloneDoc();
+          doc._id = doc_id;
+          return dav.putDocument(doc).always(function (err, response) {
+            if (err) {
+              return that.retry(err);
             }
+            return that.success(response);
           });
-        } else {
-          // an error occured
-          that.retry(priv.ajaxErrorToJioError(
-            one,
-            "An error occured when trying to GET data",
-            "Unknown"
-          ));
         }
-      } else {
-        // the document already exists
-        that.error(priv.createError(
-          405,
-          "Cannot create document",
-          "Document already exists"
-        ));
+        if (err.status === 24) {
+          return that.error(err);
+        }
+        // an error occured
+        return that.retry(err);
       }
+      // the document already exists
+      return that.error(priv.createError(
+        405,
+        "Cannot create document",
+        "Document already exists"
+      ));
     });
   };
 
@@ -463,25 +662,13 @@ jIO.addStorageType("dav", function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.put = function (command) {
-    var doc_id = command.getDocId();
-    priv.ajax(doc_id, undefined, "PUT", {
-      "dataType": "text",
-      "data": JSON.stringify(command.cloneDoc())
-    }).always(function (one, state, three) {
-      if (state !== "success") {
+    dav.putDocument(command.cloneDoc()).always(function (err, response) {
+      if (err) {
         // an error occured
-        that.retry(priv.ajaxErrorToJioError(
-          one,
-          "Cannot update document",
-          "Unknown error"
-        ));
-      } else {
-        // document updated
-        that.success({
-          "ok": true,
-          "id": doc_id
-        });
+        return that.retry(err);
       }
+      // document updated
+      return that.success(response);
     });
   };
 
@@ -493,70 +680,42 @@ jIO.addStorageType("dav", function (spec, my) {
   that.putAttachment = function (command) {
     var doc = null, doc_id = command.getDocId(), attachment_id, tmp;
     attachment_id = command.getAttachmentId();
-    priv.ajax(doc_id, undefined, "GET").always(function (one, state, three) {
-      if (state !== "success") {
+    dav.getDocument(doc_id).always(function (err, response) {
+      if (err) {
         // document not found or error
         tmp = that.retry;
-        if (one.status === 404) {
+        if (err.status === 404 ||
+            err.status === 24) {
           tmp = that.error;
         }
-        tmp(priv.ajaxErrorToJioError(
-          one,
-          "Cannot update document",
-          "Unknown error"
-        ));
-      } else {
-        try {
-          doc = JSON.parse(one);
-        } catch (e) {
-          return that.error(priv.createError(
-            24,
-            "Cannot upload attachment",
-            "Document is broken"
-          ));
-        }
-        // document health is good
-        doc._attachments = doc._attachments || {};
-        doc._attachments[attachment_id] = {
-          "length": command.getAttachmentLength(),
-          "digest": "md5-" + command.md5SumAttachmentData(),
-          "content_type": command.getAttachmentMimeType()
-        };
-        // put the attachment
-        priv.ajax(doc_id, attachment_id, "PUT", {
-          "dataType": "text",
-          "data": command.getAttachmentData()
-        }).always(function (one, state, three) {
-          if (state !== "success") {
-            // an error occured
-            that.retry(priv.ajaxErrorToJioError(
-              one,
-              "An error occured when trying to PUT data",
-              "Unknown"
-            ));
-          } else {
-            // update the document
-            priv.ajax(doc_id, undefined, "PUT", {
-              "dataType": "text",
-              "data": JSON.stringify(doc)
-            }).always(function (one, state, three) {
-              if (state !== "success") {
-                that.retry(priv.ajaxErrorToJioError(
-                  one,
-                  "An error occured when trying to PUT data",
-                  "Unknown"
-                ));
-              } else {
-                that.success({
-                  "ok": true,
-                  "id": doc_id,
-                  "attachment": attachment_id
-                });
-              }
-            });
-          }
-        });
+        return tmp(err);
       }
+      doc = response;
+      doc._attachments = doc._attachments || {};
+      doc._attachments[attachment_id] = {
+        "length": command.getAttachmentLength(),
+        "digest": "md5-" + command.md5SumAttachmentData(),
+        "content_type": command.getAttachmentMimeType()
+      };
+      // put the attachment
+      dav.putAttachment(
+        doc_id,
+        attachment_id,
+        command.getAttachmentData()
+      ).always(function (err, response) {
+        if (err) {
+          // an error occured
+          return that.retry(err);
+        }
+        // update the document
+        dav.putDocument(doc).always(function (err, response) {
+          if (err) {
+            return that.retry(err);
+          }
+          response.attachment = attachment_id;
+          return that.success(response);
+        });
+      });
     });
   };
 
@@ -568,6 +727,27 @@ jIO.addStorageType("dav", function (spec, my) {
   that.get = function (command) {
     dav.getDocument(command.getDocId()).always(function (err, response) {
       if (err) {
+        if (err.status === 404 ||
+            err.status === 24) {
+          return that.error(err);
+        }
+        return that.retry(err);
+      }
+      return that.success(response);
+    });
+  };
+
+  /**
+   * Get an attachment
+   * @method  getAttachment
+   * @param  {object} command The JIO command
+   */
+  that.getAttachment = function (command) {
+    dav.getAttachment(
+      command.getDocId(),
+      command.getAttachmentId()
+    ).always(function (err, response) {
+      if (err) {
         if (err.status === 404) {
           return that.error(err);
         }
@@ -578,176 +758,100 @@ jIO.addStorageType("dav", function (spec, my) {
   };
 
   /**
-   * Remove a document or attachment
+   * Remove a document
    * @method remove
    * @param  {object} command The JIO command
    */
-  that._remove = function (command) {
-    var docid = command.getDocId(), doc, url,
-      secured_docid, secured_attachmentid, attachment_url,
-      attachment_list = [], i, j, k = 1, deleteAttachment, ajax_object;
-
-    if (priv.support(docid)) {
-      return;
-    }
-
-    secured_docid = priv.secureDocId(command.getDocId());
-    url = priv.url + '/' + priv.underscoreFileExtenisons(secured_docid);
-
-    // remove attachment
-    if (typeof command.getAttachmentId() === "string") {
-      secured_attachmentid = priv.secureDocId(command.getAttachmentId());
-      attachment_url = url + '.' + priv.underscoreFileExtenisons(
-        secured_attachmentid
-      );
-      ajax_object = {
-        url: attachment_url + '?_=' + Date.now(),
-        type: "DELETE",
-        success: function () {
-          // retrieve underlying document
-          ajax_object = {
-            url: url + '?_=' + Date.now(),
-            type: "GET",
-            dataType: "text",
-            success: function (response) {
-              // underlying document
-              doc = JSON.parse(response);
-
-              // update doc._attachments
-              if (typeof doc._attachments === "object") {
-                if (typeof doc._attachments[command.getAttachmentId()] ===
-                    "object") {
-                  delete doc._attachments[command.getAttachmentId()];
-                  if (priv.objectIsEmpty(doc._attachments)) {
-                    delete doc._attachments;
-                  }
-                  // PUT back to server
-                  ajax_object = {
-                    url: url + '?_=' + Date.now(),
-                    type: 'PUT',
-                    data: JSON.stringify(doc),
-                    success: function () {
-                      that.success({
-                        "ok": true,
-                        "id": command.getDocId() + '/' +
-                          command.getAttachmentId()
-                      });
-                    },
-                    error: function () {
-                      that.error(priv.createError(409,
-                        "Cannot modify document", "Error saving attachment"
-                        ));
-                    }
-                  };
-                  priv.ajax(ajax_object);
-                } else {
-                  // sure this if-else is needed?
-                  that.error(priv.createError(404,
-                    "Cannot find document", "Error updating attachment"
-                    ));
-                }
-              } else {
-                // no attachments, we are done
-                that.success({
-                  "ok": true,
-                  "id": command.getDocId() + '/' + command.getAttachmentId()
-                });
-              }
-            },
-            error: function () {
-              that.error(priv.createError(404,
-                "Cannot find the document", "Document does not exist"
-                ));
-            }
-          };
-          priv.ajax(ajax_object);
-        },
-        error: function () {
-          that.error(priv.createError(404,
-            "Cannot find the attachment", "Error removing attachment"
-            ));
+  that.remove = function (command) {
+    var doc_id = command.getDocId(), count = 0, end;
+    end = function () {
+      count -= 1;
+      if (count === 0) {
+        that.success({"ok": true, "id": doc_id});
+      }
+    };
+    dav.getDocument(doc_id).always(function (err, response) {
+      var attachment_id = null;
+      if (err) {
+        if (err.status === 404) {
+          return that.error(err);
         }
-      };
-      priv.ajax(ajax_object);
-    // remove document incl. all attachments
-    } else {
-      ajax_object = {
-        url: url + '?_=' + Date.now(),
-        type: 'GET',
-        dataType: 'text',
-        success: function (response) {
-          var x;
-          doc = JSON.parse(response);
-          // prepare attachment loop
-          if (typeof doc._attachments === "object") {
-            // prepare list of attachments
-            for (x in doc._attachments) {
-              if (doc._attachments.hasOwnProperty(x)) {
-                attachment_list.push(x);
-              }
-            }
+        if (err.status !== 24) { // 24 -> corrupted document
+          return that.retry(err);
+        }
+        response = {};
+      }
+      count += 2;
+      dav.removeDocument(doc_id).always(function (err, response) {
+        if (err) {
+          if (err.status === 404) {
+            return that.error(err);
           }
-          // delete document
-          ajax_object = {
-            url: url + '?_=' + Date.now(),
-            type: 'DELETE',
-            success: function () {
-              j = attachment_list.length;
-              // no attachments, done
-              if (j === 0) {
-                that.success({
-                  "ok": true,
-                  "id": command.getDocId()
-                });
-              } else {
-                deleteAttachment = function (attachment_url, j, k) {
-                  ajax_object = {
-                    url: attachment_url + '?_=' + Date.now(),
-                    type: 'DELETE',
-                    success: function () {
-                      // all deleted, return response, need k as async couter
-                      if (j === k) {
-                        that.success({
-                          "ok": true,
-                          "id": command.getDocId()
-                        });
-                      } else {
-                        k += 1;
-                      }
-                    },
-                    error: function () {
-                      that.error(priv.createError(404,
-                        "Cannot find attachment", "Error removing attachment"
-                        ));
-                    }
-                  };
-                  priv.ajax(ajax_object);
-                };
-                for (i = 0; i < j; i += 1) {
-                  secured_attachmentid = priv.secureDocId(attachment_list[i]);
-                  attachment_url = url + '.' + priv.underscoreFileExtenisons(
-                    secured_attachmentid
-                  );
-                  deleteAttachment(attachment_url, j, k);
-                }
-              }
-            },
-            error: function () {
-              that.error(priv.createError(404,
-                "Cannot find the document", "Error removing document"
-                ));
-            }
-          };
-          priv.ajax(ajax_object);
-        },
-        error: function () {
-          that.error(priv.createError(404,
-            "Cannot find the document", "Document does not exist"
-            ));
+          return that.retry(err);
         }
-      };
-      priv.ajax(ajax_object);
-    }
+        return end();
+      });
+      for (attachment_id in response._attachments) {
+        if (response._attachments.hasOwnProperty(attachment_id)) {
+          count += 1;
+          dav.removeAttachment(
+            doc_id,
+            attachment_id
+          ).always(end);
+        }
+      }
+      end();
+    });
+  };
+
+  /**
+   * Remove an attachment
+   * @method removeAttachment
+   * @param  {object} command The JIO command
+   */
+  that.removeAttachment = function (command) {
+    var doc_id = command.getDocId(), doc, attachment_id;
+    attachment_id = command.getAttachmentId();
+    dav.getDocument(doc_id).always(function (err, response) {
+      var still_has_attachments;
+      if (err) {
+        if (err.status === 404 ||
+            err.status === 24) {
+          return that.error(err);
+        }
+        return that.retry(err);
+      }
+      doc = response;
+      if (typeof (doc._attachments || {})[attachment_id] !== "object") {
+        return that.error(priv.createError(
+          404,
+          "Cannot remove attachment",
+          "Not Found"
+        ));
+      }
+      delete doc._attachments[attachment_id];
+      // check if there is still attachments
+      for (still_has_attachments in doc._attachments) {
+        if (doc._attachments.hasOwnProperty(still_has_attachments)) {
+          break;
+        }
+      }
+      if (still_has_attachments === undefined) {
+        delete doc._attachments;
+      }
+      doc._id = doc_id;
+      dav.putDocument(doc).always(function (err, response) {
+        if (err) {
+          return that.retry(err);
+        }
+        dav.removeAttachment(
+          doc_id,
+          attachment_id
+        ).always(function (err, response) {
+          that.success({"ok": true, "id": doc_id, "attachment": attachment_id});
+        });
+      });
+    });
   };
 
   /**
@@ -757,112 +861,41 @@ jIO.addStorageType("dav", function (spec, my) {
    * @method allDocs
    * @param  {object} command The JIO command
    */
-  //{
-  // "total_rows": 4,
-  // "rows": [
-  //    {
-  //    "id": "otherdoc",
-  //    "key": "otherdoc",
-  //    "value": {
-  //      "rev": "1-3753476B70A49EA4D8C9039E7B04254C"
-  //    }
-  //  },{...}
-  // ]
-  //}
-  that._allDocs = function (command) {
-    var rows = [], url,
-      am = priv.newAsyncModule(),
-      o = {},
-      ajax_object;
-
-    o.getContent = function (file) {
-      var docid = priv.secureDocId(file.id),
-        url = priv.url + '/' + docid;
-      ajax_object = {
-        url: url + '?_=' + Date.now(),
-        type: 'GET',
-        dataType: 'text',
-        success: function (content) {
-          file.doc = JSON.parse(content);
-          rows.push(file);
-          am.call(o, 'success');
-        },
-        error: function (type) {
-          that.error(priv.createError(404,
-            "Cannot find the document", "Can't get document from storage"
-            ));
-          am.call(o, 'error', [type]);
-        }
-      };
-      priv.ajax(ajax_object);
+  that.allDocs = function (command) {
+    var count = 0, end, rows;
+    end = function () {
+      count -= 1;
+      if (count === 0) {
+        that.success(rows);
+      }
     };
-    o.getDocumentList = function () {
-      url = priv.url + '/';
-      ajax_object = {
-        url: url + '?_=' + Date.now(),
-        type: "PROPFIND",
-        dataType: "xml",
-        headers : { depth: '1' },
-        success: function (xml) {
-          var response = $(xml).find('D\\:response, response'),
-            len = response.length;
-
-          if (len === 1) {
-            return am.call(o, 'success');
-          }
-          am.wait(o, 'success', len - 2);
-          response.each(function (i, data) {
-            if (i > 0) { // exclude parent folder
-              var file = {
-                value: {}
-              };
-              $(data).find('D\\:href, href').each(function () {
-                var split = $(this).text().split('/');
-                file.id = split[split.length - 1];
-                file.id = priv.restoreSlashes(file.id);
-                file.key = file.id;
-              });
-              if (command.getOption('include_docs')) {
-                am.call(o, 'getContent', [file]);
-              } else {
-                rows.push(file);
-                am.call(o, 'success');
+    dav.allDocs().always(function (err, response) {
+      if (err) {
+        return that.retry(err);
+      }
+      if (command.getOption("include_docs") === true) {
+        count += 1;
+        rows = response;
+        rows.rows.forEach(function (row) {
+          count += 1;
+          dav.getDocument(
+            row.id
+          ).always(function (err, response) {
+            if (err) {
+              if (err.status === 404 || err.status === 24) {
+                return that.error(err);
               }
+              return that.retry(err);
             }
+            row.doc = response;
+            end();
           });
-        },
-        error: function (type) {
-          that.error(priv.createError(404,
-            "Cannot find the document", "Can't get document list"
-            ));
-          am.call(o, 'retry', [type]);
-        }
-      };
-      priv.ajax(ajax_object);
-    };
-    o.retry = function (error) {
-      am.neverCall(o, 'retry');
-      am.neverCall(o, 'success');
-      am.neverCall(o, 'error');
-      that.retry(error);
-    };
-    o.error = function (error) {
-      am.neverCall(o, 'retry');
-      am.neverCall(o, 'success');
-      am.neverCall(o, 'error');
-      that.error(error);
-    };
-    o.success = function () {
-      am.neverCall(o, 'retry');
-      am.neverCall(o, 'success');
-      am.neverCall(o, 'error');
-      that.success({
-        total_rows: rows.length,
-        rows: rows
-      });
-    };
-    // first get the XML list
-    am.call(o, 'getDocumentList');
+        });
+        end();
+      } else {
+        that.success(response);
+      }
+    });
   };
 
   priv.__init__(spec);
