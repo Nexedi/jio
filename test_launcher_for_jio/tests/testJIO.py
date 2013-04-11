@@ -1,6 +1,5 @@
 from unittest import TestCase
 import subprocess
-import os
 
 class JIOTest(TestCase):
 
@@ -14,10 +13,11 @@ class JIOTest(TestCase):
     """
     Launch jio test without requirejs
     """
+    root_directory = __file__[0:-len("parts/jio/test_launcher_for_jio/tests/testJIO.py")]
     command = ["%s %s %s; exit 0" % (
-          os.path.expanduser('~/bin/phantomjs'),
-          os.path.expanduser('~/parts/jio/test/run-qunit.js'),
-          os.path.expanduser('~/parts/jio/test/jiotests_withoutrequirejs.html'))]
+          '%s/bin/phantomjs' % root_directory,
+          '%s/parts/jio/test/run-qunit.js' % root_directory,
+          '%s/parts/jio/test/jiotests_withoutrequirejs.html' % root_directory)]
     print command
     result = subprocess.check_output(
        command,
