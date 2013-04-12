@@ -1,9 +1,9 @@
-# Javascript Input/Output
+## Javascript Input/Output
 
 **jIO is a client-side JavaScript library to manage documents across multiple
   storages.**
 
-## Getting Started
+### Getting Started
 
 To set up jIO include jio.js, dependencies and the connectors for the storages
 you want to use in your page header (note that more dependencies may be required
@@ -26,7 +26,7 @@ Then create your jIO instance like this:
       "application_name": "your_application_name"
     });
 
-## Documents and Methods
+### Documents and Methods
 
 Documents are JSON strings that contain _meta-data_ (properties, like a filename)
 and _attachments_ (optional content, for example a base64 encoded image).
@@ -101,7 +101,7 @@ each method, please refer to the documentation):
       // }
     });
 
-## Example
+### Example
 
 This is an example of how to store a video file with one attachment in local
 storage . Note that attachments should best be added inside one of the available
@@ -139,7 +139,7 @@ document callback methods (success & error or callback)
       }
     });
 
-## Storage Locations
+### Storage Locations
 
 jIO allows to build "storage trees" consisting of connectors to multiple
 storages (webDav, xWiki, S3, localStorage) and use type-storages to add features
@@ -248,7 +248,7 @@ Replicate Revision Storage (replicate documents across multiple storages)
 
 For more information on the specific storages including guidelines on how to create your own connector, please also refer to the documentation.
 
-## Complex Queries
+### Complex Queries
 
 jIO includes a complex-queries manager, which can be run on top of the allDocs()
 method to query documents in the storage tree. A sample query would look like
