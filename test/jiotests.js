@@ -6280,7 +6280,7 @@ test ('Get revision List', function () {
     o.jio.stop();
 });
 */
-
+/*
 ;(function() {
 // These tests will only run if we are running the suite inside of XWiki.
 module ('Jio XWikiStorage');
@@ -6570,7 +6570,7 @@ test ("AllDocs", function () {
 
   o.jio.stop();
 });
-*/
+*\/
 
 var nThen = function(next) {
     var funcs = [];
@@ -6667,7 +6667,7 @@ test ("XWiki Live Server setup", function () {
         /*o.jio.allDocs({"include_docs":true},
           function(s){console.log(s);},
           function ( e ) {console.log(e);
-        }, o.f);*/
+        }, o.f);*\/
 
     }).nThen(function(waitFor) {
 
@@ -6714,7 +6714,7 @@ test ("XWiki Live Server setup", function () {
 })(); // Live XWiki
 
 })(); // xwiki
-
+*/
 
 };                              // end thisfun
 
