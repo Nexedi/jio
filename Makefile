@@ -14,7 +14,7 @@ PARSER_OUT  = $(QUERIES_DIR)/parser.js
 ## js/cc using rhino
 #JSCC_CMD    = rhino ~/modules/jscc/jscc.js -t ~/modules/jscc/driver_web.js_
 # sh -c 'cd ; npm install jscc-node'
-JSCC_CMD   	= nodejs ~/node_modules/jscc-node/jscc.js -t ~/node_modules/jscc-node/driver_node.js_
+JSCC_CMD   	= node ~/node_modules/jscc-node/jscc.js -t ~/node_modules/jscc-node/driver_node.js_
 # sh -c 'cd ; npm install jslint'
 LINT_CMD	= $(shell which jslint || echo node ~/node_modules/jslint/bin/jslint.js) --terse
 # sh -c 'cd ; npm install uglify-js'
