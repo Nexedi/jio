@@ -116,8 +116,8 @@ jIO.addStorageType("erp5", function (spec, my) {
    */
   priv.makeAjaxObject = function (json, method, ajax_object) {
     ajax_object.type = "POST";
-    ajax_object.dataType = "text";
-    ajax_object.data = JSON.stringify(json);
+    ajax_object.dataType = "json";
+    ajax_object.data = [{"name": "doc", "value": JSON.stringify(json)}];
     ajax_object.url = priv.url + "/JIO_" + method +
       "?_=" + Date.now();
     ajax_object.async = ajax_object.async === false ? false : true;
@@ -222,11 +222,17 @@ jIO.addStorageType("erp5", function (spec, my) {
    * @method erp5.genericRequest
    * @param  {object} doc The document object
    * @param  {string} method The ERP5 request method
-   * @param  {boolean} parse Parse the data received if true
    */
-  erp5.genericRequest = function (json, method, parse) {
+  erp5.genericRequest = function (json, method) {
     var jql = priv.makeJQLikeCallback(), error = null;
     priv.ajax(json, method).always(function (one, state, three) {
+      if (state === "parsererror") {
+        return jql.respond(priv.createError(
+          24,
+          "Cannot parse data",
+          "Corrupted data"
+        ), undefined);
+      }
       if (state !== "success") {
         error = priv.ajaxErrorToJioError(
           one,
@@ -238,21 +244,10 @@ jIO.addStorageType("erp5", function (spec, my) {
         }
         return jql.respond(error, undefined);
       }
-      if (parse) {
-        try {
-          one = JSON.parse(one);
-        } catch (e) {
-          return jql.respond(priv.createError(
-            24,
-            "Cannot parse data",
-            "Corrupted data"
-          ), undefined);
-        }
+      if (one.err !== null) {
+        return jql.respond(one.err, undefined);
       }
-      if (typeof one.status === "number" && typeof one.error === "string") {
-        return jql.respond(one, undefined);
-      }
-      return jql.respond(undefined, one);
+      return jql.respond(undefined, one.response);
     });
     return jql.to_return;
   };
@@ -267,8 +262,7 @@ jIO.addStorageType("erp5", function (spec, my) {
   priv.genericCommand = function (json, method) {
     erp5.genericRequest(
       json,
-      method,
-      method !== "getAttachment" // parse received data if not getAttachment
+      method
     ).always(function (err, response) {
       if (err) {
         return that.error(err);
