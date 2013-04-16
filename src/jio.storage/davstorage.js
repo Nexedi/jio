@@ -214,6 +214,11 @@ jIO.addStorageType("dav", function (spec, my) {
     var separator_index = -1, split = file_name.split(".");
     split.slice(0, -1).forEach(function (file_name_part, index) {
       if (file_name_part.slice(-1) !== "_") {
+        if (separator_index !== -1) {
+          separator_index = new TypeError("Corrupted file name");
+          separator_index.status = 24;
+          throw separator_index;
+        }
         separator_index = index;
       }
     });
@@ -572,7 +577,15 @@ jIO.addStorageType("dav", function (spec, my) {
           };
           $(data).find("D\\:href, href").each(function () {
             row.id = $(this).text().split('/').slice(-1)[0];
-            row.id = priv.fileNameToIds(row.id);
+            try {
+              row.id = priv.fileNameToIds(row.id);
+            } catch (e) {
+              if (e.name === "TypeError" && e.status === 24) {
+                return;
+              } else {
+                throw e;
+              }
+            }
             if (row.id.length !== 1) {
               row = undefined;
             } else {
