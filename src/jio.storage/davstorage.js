@@ -47,6 +47,7 @@
 // If I want to retrieve the file which id is -> http://100%.json
 // http://domain/collection/http://100%.json cannot be applied
 // - '/' is col separator,
+// - '?' is url/parameter separator
 // - '%' is special char
 // - '.' document and attachment separator
 // http://100%.json will become
@@ -170,13 +171,18 @@ jIO.addStorageType("dav", function (spec, my) {
   };
 
   /**
-   * Changes / to %2F, % to %25 and . to _.
+   * Changes spaces to %20, / to %2f, % to %25 and ? to %3f
    * @method secureName
    * @param  {string} name The name to secure
    * @return {string} The secured name
    */
   priv.secureName = function (name) {
-    return priv.recursiveReplace(name, [["/", "%2F"], ["%", "%25"]]);
+    return priv.recursiveReplace(name, [
+      [" ", "%20"],
+      ["/", "%2F"],
+      ["%", "%25"],
+      ["?", "%3F"]
+    ]);
   };
 
   /**
@@ -186,7 +192,12 @@ jIO.addStorageType("dav", function (spec, my) {
    * @return {string} The original name
    */
   priv.restoreName = function (secured_name) {
-    return priv.recursiveReplace(secured_name, [["%2F", "/"], ["%25", "%"]]);
+    return priv.recursiveReplace(secured_name, [
+      ["%20", " "],
+      ["%2F", "/"],
+      ["%25", "%"],
+      ["%3F", "?"]
+    ]);
   };
 
   /**
