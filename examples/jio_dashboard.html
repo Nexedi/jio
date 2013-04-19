@@ -2,43 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>jIO Complex Example</title>
+  <title>jIO Dashboard</title>
 </head>
 <body>
   <script type="text/javascript">
     <!--
-var logcolor = 'cyan';
+var log_color = 'cyan';
 var logGetColor = function () {
-    if (logcolor === 'white') {
-        logcolor = 'cyan';
-    } else {
-        logcolor = 'white';
-    }
-    return logcolor;
+  if (log_color === 'white') {
+    log_color = 'cyan';
+  } else {
+    log_color = 'white';
+  }
+  return log_color;
 };
 var log = function (o) {
-    var node = document.createElement ('div');
-    node.setAttribute('style','background-color:'+logGetColor()+';');
-    if (typeof o === 'string') {
-        node.textContent = o;
-    } else {
-        node.textContent = JSON.stringify (o);
-    }
-    document.getElementById('log').appendChild(node);
+  var node = document.createElement('div');
+  node.setAttribute('style', 'background-color:'+logGetColor()+';');
+  if (typeof o === 'string') {
+    node.textContent = o;
+  } else {
+    node.textContent = JSON.stringify(o);
+  }
+  document.getElementById('log').appendChild(node);
 };
 var error = function (o) {
-    var node = document.createElement ('div');
-    node.setAttribute('style','background-color:'+logGetColor()+
-                      ';color:red;font-weight:bold');
-    if (typeof o === 'string') {
-        node.textContent = o;
-    } else {
-        node.textContent = JSON.stringify (o);
-    }
-    document.getElementById('log').appendChild(node);
+  var node = document.createElement('div');
+  node.setAttribute('style', 'background-color:'+logGetColor()+
+                    ';color:red;font-weight:bold');
+  if (typeof o === 'string') {
+    node.textContent = o;
+  } else {
+    node.textContent = JSON.stringify(o);
+  }
+  document.getElementById('log').appendChild(node);
 };
 var clearlog = function () {
-    document.getElementById('log').innerHTML = '';
+  document.getElementById('log').innerHTML = '';
 };
         //-->
   </script>
@@ -62,10 +62,10 @@ var clearlog = function () {
         <input type="password" id="cryptpassword" value="pwd" placeholder="password" /><br />
       </th>
       <th>
-        <input type="text" id="davuser" value="" placeholder="username" /><br />
-        <input type="text" id="davapp" value="" placeholder="application_name" /><br />
-        <input type="password" id="davpassword" value="" placeholder="password" /><br />
-        <input type="text" id="davurl" value="" placeholder="url" /><br />
+        <input type="text" id="davurl" value="http://dav.com/uploads" placeholder="url" /><br />
+        <input type="text" id="davauthtype" value="basic" placeholder="auth_type" disabled /> <br />
+        <input type="text" id="davuser" value="davuser" placeholder="username" /><br />
+        <input type="password" id="davpassword" value="pwd" placeholder="password" /><br />
       </th>
       <th>
         <input type="text" id="revisionuser" value="localuser" placeholder="username" /><br />
@@ -92,6 +92,8 @@ var clearlog = function () {
       </td>
       <td colspan="1" style="text-align: center;">
         Options:<br />
+        <label for="include_docs">Include Docs</label>
+        <input type="checkbox" id="include_docs" /><br />
         <label for="show_conflicts">Get Conflicts</label>
         <input type="checkbox" id="show_conflicts" /><br />
         <label for="show_revision_history">Get Revision History</label>
@@ -110,9 +112,11 @@ var clearlog = function () {
         <button onclick="get()">get</button>
         <button onclick="remove()">remove</button>
         <button onclick="allDocs()">allDocs</button>
-      <!-- </td> -->
-      <!-- <td style="text-align: center;"> -->
+        <!-- </td> -->
+        <!-- <td style="text-align: center;"> -->
         - <button onclick="putAttachment()">putAttachment</button>
+        <button onclick="getAttachment()">getAttachment</button>
+        <button onclick="removeAttachment()">removeAttachment</button>
       </td>
     </tr>
   </table>
@@ -132,6 +136,8 @@ var clearlog = function () {
   <script type="text/javascript" src="../lib/jquery/jquery.min.js"></script>
   <script type="text/javascript" src="../src/jio.storage/davstorage.js">
   </script>
+  <script type="text/javascript" src="../src/jio.storage/erp5storage.js">
+  </script>
   <script type="text/javascript" src="../lib/jsSha2/sha2.js"></script>
   <script type="text/javascript" src="../src/jio.storage/revisionstorage.js">
   </script>
@@ -140,111 +146,120 @@ var clearlog = function () {
     <!--
 var my_jio = null;
 var newLocalJio = function () {
-    var localuser, localapp;
-    localuser = $('#localuser').attr('value');
-    localapp = $('#localapp').attr('value');
-    var spec = {type: 'local', username: localuser, application_name: localapp};
-    if (my_jio) { log('closing older jio'); my_jio.close(); }
-    log ('local storage description object: ' + JSON.stringify (spec));
-    my_jio = jIO.newJio(spec);
+  var localuser, localapp;
+  localuser = $('#localuser').attr('value');
+  localapp = $('#localapp').attr('value');
+  var spec = {type: 'local', username: localuser, application_name: localapp};
+  if (my_jio) { log('closing older jio'); my_jio.close(); }
+  log('local storage description object: ' + JSON.stringify(spec));
+  my_jio = jIO.newJio(spec);
 };
 var newCryptJio = function () {
-    var user, app, pwd;
-    user = $('#cryptuser').attr('value');
-    app = $('#cryptapp').attr('value');
-    pwd = $('#cryptpassword').attr('value');
-    var spec = {type: 'crypt', username: user, password: pwd, storage:{
-        type: 'local', username: user, application_name: app
-    }};
-    if (my_jio) { log('closing older jio'); my_jio.close(); }
-    log ('crypt storage description object: ' + JSON.stringify (spec));
-    my_jio = jIO.newJio(spec);
+  var user, app, pwd;
+  user = $('#cryptuser').attr('value');
+  app = $('#cryptapp').attr('value');
+  pwd = $('#cryptpassword').attr('value');
+  var spec = {type: 'crypt', username: user, password: pwd, storage:{
+    type: 'local', username: user, application_name: app
+  }};
+  if (my_jio) { log('closing older jio'); my_jio.close(); }
+  log('crypt storage description object: ' + JSON.stringify(spec));
+  my_jio = jIO.newJio(spec);
 };
 var newDavJio = function () {
-    var user, app, pwd, url;
-    user = $('#davuser').attr('value');
-    app = $('#davapp').attr('value');
-    pwd = $('#davpassword').attr('value');
-    url = $('#davurl').attr('value');
-    var spec = {
-        type: 'dav', username: user, application_name: app,
-        password: pwd, url: url
-    };
-    if (my_jio) { log('closing older jio'); my_jio.close(); }
-    log ('dav storage description object: ' + JSON.stringify (spec));
-    my_jio = jIO.newJio(spec);
+  var user, app, pwd, url;
+  user = $('#davuser').attr('value');
+  pwd = $('#davpassword').attr('value');
+  url = $('#davurl').attr('value');
+  var spec = {
+    "type": "dav",
+    "url": url,
+    "auth_type": "basic",
+    "username": user,
+    "password": pwd
+  };
+  if (my_jio) { log('closing older jio'); my_jio.close(); }
+  log('dav storage description object: ' + JSON.stringify(spec));
+  my_jio = jIO.newJio(spec);
 };
 var newRevisionJio = function () {
-    var user, app;
-    user = $('#revisionuser').attr('value');
-    app = $('#revisionapp').attr('value');
-    var spec = {
-        type: 'revision', sub_storage: {
-            type: 'local', username: user, application_name: app
-        }
-    };
-    if (my_jio) { log('closing older jio'); my_jio.close(); }
-    log ('revision storage description object: '+JSON.stringify (spec));
-    my_jio = jIO.newJio(spec);
+  var user, app;
+  user = $('#revisionuser').attr('value');
+  app = $('#revisionapp').attr('value');
+  var spec = {
+    type: 'revision', sub_storage: {
+      type: 'local', username: user, application_name: app
+    }
+  };
+  if (my_jio) { log('closing older jio'); my_jio.close(); }
+  log('revision storage description object: '+JSON.stringify(spec));
+  my_jio = jIO.newJio(spec);
 };
 var newCustomJio = function () {
-    var spec = JSON.parse ($('#customstorage').attr('value'));
-    if (my_jio) { log('closing older jio'); my_jio.close(); }
-    log ('custom storage description object: '+JSON.stringify (spec));
-    my_jio = jIO.newJio(spec);
+  var spec = JSON.parse ($('#customstorage').attr('value'));
+  if (my_jio) { log('closing older jio'); my_jio.close(); }
+  log('custom storage description object: '+JSON.stringify(spec));
+  my_jio = jIO.newJio(spec);
 };
 var printLocalStorage = function () {
-    var i;
-    log ('LOCALSTORAGE');
-    for (i in localStorage) {
-        log ('- '+ i +': '+localStorage[i]);
-    }
-    log ('------------------------------');
+  var i;
+  log('LOCALSTORAGE');
+  for (i in localStorage) {
+    log('- '+ i +': '+localStorage[i]);
+  }
+  log('------------------------------');
 };
-var callback = function (err,val,begin_date) {
-    log ('time : ' + (Date.now() - begin_date));
-    if (err) {
-        return error ('return :' + JSON.stringify (err));
-    }
-    log ('return : ' + JSON.stringify (val));
+var callback = function (err, val, begin_date) {
+  log('time : ' + (Date.now() - begin_date));
+  if (err) {
+    return error('return :' + JSON.stringify(err));
+  }
+  log('return : ' + JSON.stringify(val));
 };
 var command = function (method) {
-    var begin_date = Date.now(), doc = {}, opts = {};
-    log (method);
-    if (!my_jio) {
-        return error ('no jio set');
-    }
+  var begin_date = Date.now(), doc = {}, opts = {};
+  log(method);
+  if (!my_jio) {
+    return error('no jio set');
+  }
 
-    opts.conflicts = $('#show_conflicts').attr('checked')?true:false;
-    opts.revs = $('#show_revision_history').attr('checked')?true:false;
-    opts.revs_info = $('#show_revision_info').attr('checked')?true:false;
-    opts.max_retry = parseInt($('#max_retry').attr('value') || '0');
+  opts.include_docs = $('#include_docs').attr('checked') ? true : false;
+  opts.conflicts = $('#show_conflicts').attr('checked') ? true : false;
+  opts.revs = $('#show_revision_history').attr('checked') ? true : false;
+  opts.revs_info = $('#show_revision_info').attr('checked') ? true : false;
+  opts.max_retry = parseInt($('#max_retry').attr('value') || '0');
 
-    doc = JSON.parse ($('#metadata').attr('value'));
-    log ('doc: ' + JSON.stringify (doc));
-    log ('opts: ' + JSON.stringify (opts));
+  doc = JSON.parse($('#metadata').attr('value'));
+  log('doc: ' + JSON.stringify(doc));
+  log('opts: ' + JSON.stringify(opts));
 
-    my_jio[method](doc,opts,function (err,val) {
-        callback(err,val,begin_date);
-    });
+  my_jio[method](doc, opts, function (err, val) {
+    callback(err, val, begin_date);
+  });
 };
 var post = function () {
-    command('post');
+  command('post');
 };
 var put = function () {
-    command('put');
+  command('put');
 };
 var get = function () {
-    command('get');
+  command('get');
 };
 var remove = function () {
-    command('remove');
+  command('remove');
 };
 var allDocs = function () {
-    command('allDocs');
+  command('allDocs');
 };
 var putAttachment = function () {
-    command('putAttachment');
+  command('putAttachment');
+};
+var getAttachment = function () {
+  command('getAttachment');
+};
+var removeAttachment = function () {
+  command('removeAttachment');
 };
         //-->
   </script>
