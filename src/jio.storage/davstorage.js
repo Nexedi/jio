@@ -4,7 +4,7 @@
 * http://www.gnu.org/licenses/lgpl.html
 */
 
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*jslint indent: 2, maxlen: 80, nomen: true */
 /*global jIO: true, $: true, btoa: true  */
 
 // JIO Dav Storage Description :
@@ -57,6 +57,7 @@
 // The file will be saved as http:%2F%2F100%25_.json
 
 jIO.addStorageType("dav", function (spec, my) {
+  "use strict";
   var priv = {}, that = my.basicStorage(spec, my), dav = {};
 
   // ATTRIBUTES //
