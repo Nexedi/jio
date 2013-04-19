@@ -582,9 +582,8 @@ jIO.addStorageType("dav", function (spec, my) {
             } catch (e) {
               if (e.name === "TypeError" && e.status === 24) {
                 return;
-              } else {
-                throw e;
               }
+              throw e;
             }
             if (row.id.length !== 1) {
               row = undefined;
