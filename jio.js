@@ -2119,25 +2119,33 @@ var jobRules = (function () {
 
     post          post        same doc                                  update
       "             "         same docid, same rev                      wait
-      "           put         same doc                                  update
-      "             "         same docid, same rev                      wait
-      "           putA                  "                               wait
+      "           put                   "                                 "
+      "           putA                  "                                 "
       "           remove                "                                 "
-    put           post        same doc                                  update
-      "             "         same docid, same rev                      wait
+      "           removeA               "                                 "
+    put           post        same docid, same rev                      wait
       "           put         same doc                                  update
       "             "         same docid, same rev                      wait
       "           putA                  "                                 "
       "           remove                "                                 "
+      "           removeA               "                                 "
     putA          post        same docid, same rev                      wait
       "           put                   "                                 "
       "           putA        same doc                                  update
       "             "         same docid, same rev, same attmt          wait
       "           remove      same docid, same rev                        "
+      "           removeA     same docid, same rev, same attmt            "
     remove        post        same docid, same rev                      wait
       "           put                   "                                 "
       "           putA                  "                                 "
       "           remove                "                               update
+      "           removeA               "                               wait
+    removeA       post        same docid, same rev                      wait
+      "           put                   "                                 "
+      "           putA        same docid, same rev, same attmt            "
+      "           remove      same docid, same rev                        "
+      "           removeA     same doc                                  update
+      "           removeA     same docid, same rev, same attmt          wait
     get           get         same doc, same options                    update
     getA          getA        same doc, same options                    update
     allDocs       allDocs     same doc, same options                    update
@@ -2146,15 +2154,15 @@ var jobRules = (function () {
   that.addActionRule("post", "post", [that.sameDocument], that.update);
   that.addActionRule("post", "post",
                      [that.sameDocumentId, that.sameRevision], that.wait);
-  that.addActionRule("post", "put", [that.sameDocument], that.update);
   that.addActionRule("post", "put",
                      [that.sameDocumentId, that.sameRevision], that.wait);
   that.addActionRule("post", "putAttachment",
                      [that.sameDocumentId, that.sameRevision], that.wait);
   that.addActionRule("post", "remove",
                      [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("post", "removeAttachment",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
 
-  that.addActionRule("put", "post", [that.sameDocument], that.update);
   that.addActionRule("put", "post",
                      [that.sameDocumentId, that.sameRevision], that.wait);
   that.addActionRule("put", "put", [that.sameDocument], that.update);
@@ -2163,6 +2171,8 @@ var jobRules = (function () {
   that.addActionRule("put", "putAttachment",
                      [that.sameDocumentId, that.sameRevision], that.wait);
   that.addActionRule("put", "remove",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("put", "removeAttachment",
                      [that.sameDocumentId, that.sameRevision], that.wait);
 
   that.addActionRule("putAttachment", "post",
@@ -2178,6 +2188,11 @@ var jobRules = (function () {
   ], that.wait);
   that.addActionRule("putAttachment", "remove",
                      [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("putAttachment", "removeAttachment", [
+    that.sameDocumentId,
+    that.sameRevision,
+    that.sameAttachmentId
+  ], that.wait);
 
   that.addActionRule("remove", "post",
                      [that.sameDocumentId, that.sameRevision], that.wait);
@@ -2187,6 +2202,27 @@ var jobRules = (function () {
                      [that.sameDocumentId, that.sameRevision], that.wait);
   that.addActionRule("remove", "remove",
                      [that.sameDocumentId, that.sameRevision], that.update);
+  that.addActionRule("remove", "removeAttachment",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+
+  that.addActionRule("removeAttachment", "post",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("removeAttachment", "put",
+                     [that.sameDocumentId, that.sameRevision], that.wait);
+  that.addActionRule("removeAttachment", "putAttachment", [
+    that.sameDocumentId,
+    that.sameRevision,
+    that.sameAttachmentId
+  ], that.wait);
+  that.addActionRule("removeAttachment", "remove",
+                     [that.sameDocumentId, that.sameRevision], that.update);
+  that.addActionRule("removeAttachment", "removeAttachment",
+                     [that.sameDocument], that.update);
+  that.addActionRule("removeAttachment", "removeAttachment", [
+    that.sameDocumentId,
+    that.sameRevision,
+    that.sameAttachmentId
+  ], that.wait);
 
   that.addActionRule("get", "get",
                      [that.sameDocument, that.sameOption], that.update);
