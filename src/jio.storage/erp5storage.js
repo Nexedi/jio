@@ -1,48 +1,45 @@
 /*
-* Copyright 2013, Nexedi SA
-* Released under the LGPL license.
-* http://www.gnu.org/licenses/lgpl.html
-*/
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global jIO: true, $: true, btoa: true  */
+ * Copyright 2013, Nexedi SA
+ * Released under the LGPL license.
+ * http://www.gnu.org/licenses/lgpl.html
+ */
+/*jslint indent: 2, maxlen: 80, nomen: true */
+/*global jIO: true, $: true */
 
 // JIO Erp5 Storage Description :
 // {
-//   type: "erp5",
+//   type: "erp5"
 //   url: {string}
-// }
-
-// {
-//   type: "erp5",
-//   url: {string},
-//   auth_type: {string}, (optional)
-//     - "auto" (default) (not implemented)
-//     - "basic"
+//   mode: {string} (optional)
+//   - "normal" (default)
+//   - "erp5_only"
+//
+// with
+//
+//   auth_type: {string} (optional)
+//     - "none" (default)
+//     - "basic" (not implemented)
 //     - "digest" (not implemented)
-//   realm: {string}, (optional)
-//     - undefined (default) (not implemented)
-//     - "<string>" realm name (not implemented)
-//   username: {string},
-//   password: {string}  (optional)
-// }
-
-// {
-//   type: "erp5",
-//   url: {string},
-//   encoded_login: {string}
-// }
-
-// {
-//   type: "erp5",
-//   url: {string},
+//   username: {string}
+//   password: {string} (optional)
+//   - no password (default)
+//
+// or
+//
+//   encoded_login: {string} (not implemented)
+//
+// or
+//
 //   secured_login: {string} (not implemented)
 // }
-
 jIO.addStorageType("erp5", function (spec, my) {
+  "use strict";
   var priv = {}, that = my.basicStorage(spec, my), erp5 = {};
 
   // ATTRIBUTES //
   priv.url = null;
+  priv.mode = "normal";
+  priv.auth_type = "none";
   priv.encoded_login = null;
 
   // CONSTRUCTOR //
@@ -54,19 +51,21 @@ jIO.addStorageType("erp5", function (spec, my) {
   priv.__init__ = function (description) {
     priv.url = description.url || "";
     priv.url = priv.removeSlashIfLast(priv.url);
-    // if (description.secured_login) {
-    //    not implemented
-    // } else
+    if (description.mode === "erp5_only") {
+      priv.mode = "erp5_only";
+    }
     if (description.encoded_login) {
       priv.encoded_login = description.encoded_login;
-    } else if (description.auth_type) {
-      if (description.auth_type === "basic") {
-        priv.encoded_login = "Basic " +
-          btoa((description.username || "") + ":" +
-               (description.password || ""));
-      }
     } else {
-      priv.encoded_login = "";
+      if (description.username) {
+        priv.encoded_login =
+          "__ac_name=" + priv.convertToUrlParameter(description.username) +
+          "&" + (typeof description.password === "string" ?
+                 "__ac_password=" +
+                 priv.convertToUrlParameter(description.password) + "&" : "");
+      } else {
+        priv.encoded_login = "";
+      }
     }
   };
 
@@ -78,6 +77,7 @@ jIO.addStorageType("erp5", function (spec, my) {
     // encoded_login = decrypt(secured_login)
     return {
       "url": priv.url,
+      "mode": priv.mode,
       "encoded_login": priv.encoded_login
     };
   };
@@ -93,6 +93,37 @@ jIO.addStorageType("erp5", function (spec, my) {
   };
 
   // TOOLS //
+  /**
+   * Replace substrings to another strings
+   * @method recursiveReplace
+   * @param  {string} string The string to do replacement
+   * @param  {array} list_of_replacement An array of couple
+   * ["substring to select", "selected substring replaced by this string"].
+   * @return {string} The replaced string
+   */
+  priv.recursiveReplace = function (string, list_of_replacement) {
+    var i, split_string = string.split(list_of_replacement[0][0]);
+    if (list_of_replacement[1]) {
+      for (i = 0; i < split_string.length; i += 1) {
+        split_string[i] = priv.recursiveReplace(
+          split_string[i],
+          list_of_replacement.slice(1)
+        );
+      }
+    }
+    return split_string.join(list_of_replacement[0][1]);
+  };
+
+  /**
+   * Changes & to %26
+   * @method convertToUrlParameter
+   * @param  {string} parameter The parameter to convert
+   * @return {string} The converted parameter
+   */
+  priv.convertToUrlParameter = function (parameter) {
+    return priv.recursiveReplace(parameter, [[" ", "%20"], ["&", "%26"]]);
+  };
+
   /**
    * Removes the last character if it is a "/". "/a/b/c/" become "/a/b/c"
    * @method removeSlashIfLast
@@ -110,23 +141,24 @@ jIO.addStorageType("erp5", function (spec, my) {
    * Modify an ajax object to add default values
    * @method makeAjaxObject
    * @param  {object} json The JSON object
+   * @param  {object} option The option object
    * @param  {string} method The erp5 request method
    * @param  {object} ajax_object The ajax object to override
    * @return {object} A new ajax object with default values
    */
-  priv.makeAjaxObject = function (json, method, ajax_object) {
+  priv.makeAjaxObject = function (json, option, method, ajax_object) {
     ajax_object.type = "POST";
     ajax_object.dataType = "json";
-    ajax_object.data = [{"name": "doc", "value": JSON.stringify(json)}];
+    ajax_object.data = [
+      {"name": "doc", "value": JSON.stringify(json)},
+      {"name": "option", "value": JSON.stringify(option)},
+      {"name": "mode", "value": priv.mode}
+    ];
     ajax_object.url = priv.url + "/JIO_" + method +
-      "?_=" + Date.now();
+      "?" + priv.encoded_login + "_=" + Date.now();
     ajax_object.async = ajax_object.async === false ? false : true;
     ajax_object.crossdomain = ajax_object.crossdomain === false ? false : true;
     ajax_object.headers = ajax_object.headers || {};
-    if (ajax_object.headers.Authorization || priv.encoded_login) {
-      ajax_object.headers.Authorization = ajax_object.headers.Authorization ||
-        priv.encoded_login;
-    }
     return ajax_object;
   };
 
@@ -134,11 +166,12 @@ jIO.addStorageType("erp5", function (spec, my) {
    * Runs all ajax requests for erp5Storage
    * @method ajax
    * @param  {object} json The JSON object
+   * @param  {object} option The option object
    * @param  {string} method The erp5 request method
    * @param  {object} ajax_object The request parameters (optional)
    */
-  priv.ajax = function (json, method, ajax_object) {
-    return $.ajax(priv.makeAjaxObject(json, method, ajax_object || {}));
+  priv.ajax = function (json, option, method, ajax_object) {
+    return $.ajax(priv.makeAjaxObject(json, option, method, ajax_object || {}));
     //.always(then || function () {});
   };
 
@@ -221,11 +254,12 @@ jIO.addStorageType("erp5", function (spec, my) {
    * Sends a request to ERP5
    * @method erp5.genericRequest
    * @param  {object} doc The document object
+   * @param  {object} option The option object
    * @param  {string} method The ERP5 request method
    */
-  erp5.genericRequest = function (json, method) {
+  erp5.genericRequest = function (json, option, method) {
     var jql = priv.makeJQLikeCallback(), error = null;
-    priv.ajax(json, method).always(function (one, state, three) {
+    priv.ajax(json, option, method).always(function (one, state, three) {
       if (state === "parsererror") {
         return jql.respond(priv.createError(
           24,
@@ -256,12 +290,13 @@ jIO.addStorageType("erp5", function (spec, my) {
   /**
    * The ERP5 storage generic command
    * @method genericCommand
-   * @param  {object} json The json to send
+   * @param  {object} command The JIO command object
    * @param  {string} method The ERP5 request method
    */
-  priv.genericCommand = function (json, method) {
+  priv.genericCommand = function (command, method) {
     erp5.genericRequest(
-      json,
+      command.cloneDoc(),
+      command.cloneOption(),
       method
     ).always(function (err, response) {
       if (err) {
@@ -277,7 +312,7 @@ jIO.addStorageType("erp5", function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.post = function (command) {
-    priv.genericCommand(command.cloneDoc(), "post");
+    priv.genericCommand(command, "post");
   };
 
   /**
@@ -286,7 +321,7 @@ jIO.addStorageType("erp5", function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.put = function (command) {
-    priv.genericCommand(command.cloneDoc(), "put");
+    priv.genericCommand(command, "put");
   };
 
   /**
@@ -295,7 +330,7 @@ jIO.addStorageType("erp5", function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.putAttachment = function (command) {
-    priv.genericCommand(command.cloneDoc(), "putAttachment");
+    priv.genericCommand(command, "putAttachment");
   };
 
   /**
@@ -304,7 +339,7 @@ jIO.addStorageType("erp5", function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.get = function (command) {
-    priv.genericCommand(command.cloneDoc(), "get");
+    priv.genericCommand(command, "get");
   };
 
   /**
@@ -313,7 +348,7 @@ jIO.addStorageType("erp5", function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.getAttachment = function (command) {
-    priv.genericCommand(command.cloneDoc(), "getAttachment");
+    priv.genericCommand(command, "getAttachment");
   };
 
   /**
@@ -322,7 +357,7 @@ jIO.addStorageType("erp5", function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.remove = function (command) {
-    priv.genericCommand(command.cloneDoc(), "remove");
+    priv.genericCommand(command, "remove");
   };
 
   /**
@@ -331,7 +366,7 @@ jIO.addStorageType("erp5", function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.removeAttachment = function (command) {
-    priv.genericCommand(command.cloneDoc(), "removeAttachment");
+    priv.genericCommand(command, "removeAttachment");
   };
 
   /**
@@ -342,10 +377,7 @@ jIO.addStorageType("erp5", function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.allDocs = function (command) {
-    priv.genericCommand({
-      "query": command.getOption("query"),
-      "include_docs": command.getOption("include_docs")
-    }, "allDocs");
+    priv.genericCommand(command, "allDocs");
   };
 
   /**
@@ -354,7 +386,7 @@ jIO.addStorageType("erp5", function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.check = function (command) {
-    priv.genericCommand(command.cloneDoc(), "check");
+    priv.genericCommand(command, "check");
   };
 
   /**
@@ -363,7 +395,7 @@ jIO.addStorageType("erp5", function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.repair = function (command) {
-    priv.genericCommand(command.cloneDoc(), "repair");
+    priv.genericCommand(command, "repair");
   };
 
   priv.__init__(spec);
