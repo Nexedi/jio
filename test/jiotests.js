@@ -6280,9 +6280,8 @@ test ('Get revision List', function () {
     o.jio.stop();
 });
 */
-/*
+
 ;(function() {
-// These tests will only run if we are running the suite inside of XWiki.
 module ('Jio XWikiStorage');
 var setUp = function(that, liveTest) {
     var o = generateTools(that);
@@ -6343,10 +6342,11 @@ test ("Post", function () {
     o.assertReqs(3, "put -> 1 request to get csrf token, 1 to get doc and 1 to post data");
 
     // post but document already exists (post = error!, put = ok)
-    o.answer = JSON.stringify({"_id": "myFile", "title": "hello there"});
-    o.addFakeServerResponse("xwiki", "GET", "myFile", 200, o.answer);
+    o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<page xmlns="http://www.xwiki.org"><title>hello there</title></page>';
+    o.addFakeServerResponse("xwiki", "GET", "myFile2", 200, o.answer);
     o.spy (o, "status", 409, "Post but document already exists");
-    o.jio.post({"_id": "myFile", "title": "hello again"}, o.f);
+    o.jio.post({"_id": "myFile2", "title": "hello again"}, o.f);
     o.clock.tick(5000);
     o.server.respond();
     o.assertReqs(1, "post w/ existing doc -> 1 request to get doc then fail");
@@ -6374,14 +6374,15 @@ test ("Put", function(){
     o.assertReqs(3, "put normal doc -> 1 req to get doc, 1 for csrf token, 1 to post");
 
     // put but document already exists = update
-    o.answer = JSON.stringify({"_id": "put1", "title": "myPut1"});
-    o.addFakeServerResponse("xwiki", "GET", "put1", 200, o.answer);
-    o.addFakeServerResponse("xwiki", "POST", "put1", 201, "HTML RESPONSE");
-    o.spy (o, "value", {"ok": true, "id": "put1"}, "Updated the document");
-    o.jio.put({"_id": "put1", "title": "myPut2abcdedg"}, o.f);
+    o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<page xmlns="http://www.xwiki.org"><title>mtPut1</title></page>';
+    o.addFakeServerResponse("xwiki", "GET", "put2", 200, o.answer);
+    o.addFakeServerResponse("xwiki", "POST", "put2", 201, "HTML RESPONSE");
+    o.spy (o, "value", {"ok": true, "id": "put2"}, "Updated the document");
+    o.jio.put({"_id": "put2", "title": "myPut2abcdedg"}, o.f);
     o.clock.tick(5000);
     o.server.respond();
-    o.assertReqs(3, "put normal doc -> 1 req to get doc, 1 for csrf token, 1 to post");
+    o.assertReqs(3, "put update doc -> 1 req to get doc, 1 for csrf token, 1 to post");
 
     o.jio.stop();
 });
@@ -6411,7 +6412,8 @@ test ("PutAttachment", function(){
     o.assertReqs(1, "put attach w/o existing document -> 1 request to get doc");
 
     // putAttachment with document without data
-    o.answer = JSON.stringify({"_id": "putattmt1", "title": "myPutAttm1"});
+    o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<page xmlns="http://www.xwiki.org"><title>myPutAttm</title></page>';
     o.addFakeServerResponse("xwiki", "GET", "putattmt1", 200, o.answer);
     o.addFakeServerResponse("xwiki", "POST", "putattmt1/putattmt2", 201,"HTML"+
       + "RESPONSE");
@@ -6496,7 +6498,8 @@ test ("Remove", function(){
     o.assertReqs(2, "remove nonexistant attach -> 1 request for csrf and 1 for doc");
 
     // remove document
-    o.answer = JSON.stringify({"_id": "remove3", "title": "some doc"});
+    //o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    //    '<page xmlns="http://www.xwiki.org"><title>some doc</title></page>';
     //o.addFakeServerResponse("xwiki", "GET", "remove3", 200, o.answer);
     o.addFakeServerResponse("xwiki", "POST", "bin/delete/Main/remove3",
                             200, "HTML RESPONSE");
@@ -6570,7 +6573,7 @@ test ("AllDocs", function () {
 
   o.jio.stop();
 });
-*\/
+*/
 
 var nThen = function(next) {
     var funcs = [];
@@ -6610,6 +6613,7 @@ var nThen = function(next) {
 
 
 if (window.location.href.match(/xwiki\/bin\/view/)) (function() {
+// This test will only be run if we are inside of a live XWiki instance.
 test ("XWiki Live Server setup", function () {
 
     var o = setUp(this);
@@ -6667,7 +6671,7 @@ test ("XWiki Live Server setup", function () {
         /*o.jio.allDocs({"include_docs":true},
           function(s){console.log(s);},
           function ( e ) {console.log(e);
-        }, o.f);*\/
+        }, o.f);*/
 
     }).nThen(function(waitFor) {
 
@@ -6714,7 +6718,7 @@ test ("XWiki Live Server setup", function () {
 })(); // Live XWiki
 
 })(); // xwiki
-*/
+
 
 };                              // end thisfun
 

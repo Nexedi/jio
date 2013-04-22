@@ -1,4 +1,10 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, vars: true */
+/*jslint indent: 2,
+    maxlen: 80,
+    sloppy: true,
+    nomen: true,
+    vars: true,
+    plusplus: true
+*/
 /*global
     jIO: true,
     $: true,
@@ -92,6 +98,28 @@ jIO.addStorageType('xwiki', function (spec, my) {
       + priv.wiki + '/spaces/' + parts.space + '/pages/' + parts.page;
   };
 
+  /**
+   * Make an HTML5 Blob object.
+   * Equivilant to the `new Blob()` constructor.
+   * Will fall back on deprecated BlobBuilder if necessary.
+   */
+  var makeBlob = function (contentArray, options) {
+    var i, bb, BB;
+    try {
+      // use the constructor if possible.
+      return new Blob(contentArray, options);
+    } catch (err) {
+      // fall back on the blob builder.
+      BB = (window.MozBlobBuilder || window.WebKitBlobBuilder
+        || window.BlobBuilder);
+      bb = new BB();
+      for (i = 0; i < contentArray.length; i++) {
+        bb.append(contentArray[i]);
+      }
+      return bb.getBlob(options ? options.type : undefined);
+    }
+  };
+
   /*
    * Wrapper for the xwikistorage based on localstorage JiO store.
    */
@@ -104,14 +132,11 @@ jIO.addStorageType('xwiki', function (spec, my) {
      *                json object and err being the error if any.
      */
     getItem: function (docId, andThen) {
-      $.ajax({
-        url: getDocRestURL(docId),
-        type: "GET",
-        async: true,
-        dataType: 'xml',
-        success: function (xmlData) {
-          var out = {};
-          var xd = $(xmlData);
+
+      var success = function (jqxhr) {
+        var out = {};
+        try {
+          var xd = $(jqxhr.responseText);
           xd.find('modified').each(function () {
             out._last_modified = Date.parse($(this).text());
           });
@@ -125,21 +150,42 @@ jIO.addStorageType('xwiki', function (spec, my) {
             out.content = $(this).text();
           });
           out._id = docId;
-
           andThen(out, null);
-        },
-        error: function (jqxhr, err, cause) {
+        } catch (err) {
+          andThen(null, {
+            status: 500,
+            statusText: "internal error",
+            error: err,
+            message: err.message,
+            reason: ""
+          });
+        }
+      };
+
+      $.ajax({
+        url: getDocRestURL(docId),
+        type: "GET",
+        async: true,
+        dataType: 'xml',
+
+        // Use complete instead of success and error because phantomjs
+        // sometimes causes error to be called with html return code 200.
+        complete: function (jqxhr) {
           if (jqxhr.status === 404) {
             andThen(null, null);
             return;
           }
-          andThen(null, {
-            "status": jqxhr.status,
-            "statusText": jqxhr.statusText,
-            "error": err,
-            "message": "Failed to get document [" + docId + "]",
-            "reason": cause
-          });
+          if (jqxhr.status !== 200) {
+            andThen(null, {
+              "status": jqxhr.status,
+              "statusText": jqxhr.statusText,
+              "error": "",
+              "message": "Failed to get document [" + docId + "]",
+              "reason": ""
+            });
+            return;
+          }
+          success(jqxhr);
         }
       });
     },
@@ -166,8 +212,11 @@ jIO.addStorageType('xwiki', function (spec, my) {
           if (contentType.indexOf(';') > -1) {
             contentType = contentType.substring(0, contentType.indexOf(';'));
           }
-          var blob = new Blob([xhr.response], {type: contentType});
-          andThen(blob);
+          if (priv.useBlobs) {
+            andThen(makeBlob([xhr.response], {type: contentType}));
+          } else {
+            andThen(xhr.response);
+          }
         } else {
           andThen(null, {
             "status": xhr.status,
@@ -253,7 +302,7 @@ jIO.addStorageType('xwiki', function (spec, my) {
         }
         var parts = getParts(docId);
         var blob = (content.constructor === "function Blob() { [native code] }")
-            ? content : new Blob([content], {type: mimeType});
+            ? content : makeBlob([content], {type: mimeType});
         var fd = new FormData();
         fd.append("filepath", blob, fileName);
         fd.append("form_token", formToken);
@@ -407,6 +456,10 @@ jIO.addStorageType('xwiki', function (spec, my) {
 
   // Which URL to load for getting the Anti-CSRF form token, used for testing.
   priv.formTokenPath = spec.formTokenPath || priv.xwikiurl;
+
+  // If true then Blob objects will be returned by
+  // getAttachment() rather than strings.
+  priv.useBlobs = spec.useBlobs || false;
 
 
   that.specToStore = function () {
