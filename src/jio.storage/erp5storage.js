@@ -281,7 +281,14 @@ jIO.addStorageType("erp5", function (spec, my) {
       if (one.err !== null) {
         return jql.respond(one.err, undefined);
       }
-      return jql.respond(undefined, one.response);
+      if (one.response !== null) {
+        return jql.respond(undefined, one.response);
+      }
+      return jql.respond(priv.createError(
+        24,
+        "Cannot parse data",
+        "Corrupted data"
+      ), undefined);
     });
     return jql.to_return;
   };
