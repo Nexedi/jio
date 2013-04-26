@@ -11,7 +11,7 @@
 //   type: "erp5"
 //   url: {string}
 //   mode: {string} (optional)
-//   - "normal" (default)
+//   - "generic" (default)
 //   - "erp5_only"
 //
 // with
@@ -38,7 +38,7 @@ jIO.addStorageType("erp5", function (spec, my) {
 
   // ATTRIBUTES //
   priv.url = null;
-  priv.mode = "normal";
+  priv.mode = "generic";
   priv.auth_type = "none";
   priv.encoded_login = null;
 
