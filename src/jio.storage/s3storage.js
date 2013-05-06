@@ -4,6 +4,7 @@
 /*global XHRwrapper: true */
 /*global FormData: true */
 /*global $: true */
+/*jslint vars: true */ 
 /**
  * JIO S3 Storage. Type = "s3".
  * Amazon S3 "database" storage.
