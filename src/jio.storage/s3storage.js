@@ -1,4 +1,5 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+"use strict";
+/*jslint indent: 2, maxlen: 80, nomen: true */
 /*global jIO: true, btoa: true, b64_hmac_sha1: true */
 /**
  * JIO S3 Storage. Type = "s3".
@@ -286,7 +287,13 @@ jIO.addStorageType("s3", function (spec, my) {
     return Signature;
   };
 
-  function xhr_onreadystatechange(docId, command, obj, http, jio, isAttachment, callback) {
+  function xhr_onreadystatechange(docId,
+    command,
+    obj,
+    http,
+    jio,
+    isAttachment,
+    callback) {
     obj.onreadystatechange = function () {
       if (obj.readyState === 4) {
         if (this.status === 204 || this.status === 201 || this.status === 200) {
@@ -315,7 +322,7 @@ jIO.addStorageType("s3", function (spec, my) {
                 delete response._attachments;
                 that.success(JSON.stringify(response));
               } else {
-                if (isAttachment === true){
+                if (isAttachment === true) {
                   that.success(this.responseText);
                 } else {
                   that.success(JSON.parse(this.responseText));
@@ -327,18 +334,18 @@ jIO.addStorageType("s3", function (spec, my) {
             break;
           case 'DELETE':
             if (jio === true) {
-              if (isAttachment === false){
-              that.success({
-                ok: true,
-                id: command.getDocId()
-              });
-            } else {
-              that.success({
-                ok: true,
-                id: command.getDocId(),
-                attachment: command.getAttachmentId()
-              });
-            }
+              if (isAttachment === false) {
+                that.success({
+                  ok: true,
+                  id: command.getDocId()
+                });
+              } else {
+                that.success({
+                  ok: true,
+                  id: command.getDocId(),
+                  attachment: command.getAttachmentId()
+                });
+              }
             } else {
               callback(this.responseText);
             }
@@ -396,7 +403,7 @@ jIO.addStorageType("s3", function (spec, my) {
   }
 
   priv.updateMeta = function (doc, docid, attachid, action, data) {
-      doc._attachments = doc._attachments || {};
+    doc._attachments = doc._attachments || {};
     switch (action) {
     case "add":
       doc._attachments[attachid] = data;
@@ -404,7 +411,8 @@ jIO.addStorageType("s3", function (spec, my) {
       doc = JSON.stringify(doc);
       break;
     case "remove":
-      if (typeof doc._attachments !== 'undefined') {
+      //if (typeof doc._attachments !== 'undefined') {
+      if (doc._attachments !== 'undefined') {
         delete doc._attachments[attachid];
       }
       doc = JSON.stringify(doc);
@@ -417,7 +425,6 @@ jIO.addStorageType("s3", function (spec, my) {
       doc = JSON.stringify(doc);
       break;
     }
-    
     return doc;
   };
 
@@ -471,7 +478,8 @@ jIO.addStorageType("s3", function (spec, my) {
                       is_attachment,
                       callback) {
 
-    var docFile = priv.secureName(priv.idsToFileName(docId, attachId || undefined));
+    var docFile = priv.secureName(priv.idsToFileName(docId,
+      attachId || undefined));
 
     var requestUTC = new Date().toUTCString();
 
@@ -488,7 +496,7 @@ jIO.addStorageType("s3", function (spec, my) {
 
     var Signature = b64_hmac_sha1(priv.password, StringToSign);
 
-    var xhr;
+    var xhr, XMLHttpRequest;
     xhr = new XMLHttpRequest();
 
     xhr.open(http, url, true);
@@ -501,7 +509,13 @@ jIO.addStorageType("s3", function (spec, my) {
     xhr.setRequestHeader("Content-Type", mime);
     xhr.responseType = 'text';
 
-    xhr_onreadystatechange(docId, command, xhr, http, jio, is_attachment, callback);
+    xhr_onreadystatechange(docId,
+      command,
+      xhr,
+      http,
+      jio,
+      is_attachment,
+      callback);
 
     if (http === 'PUT') {
       xhr.send(data);
@@ -531,7 +545,8 @@ jIO.addStorageType("s3", function (spec, my) {
       //conflicts due to the multipart enctype
       doc = JSON.stringify(doc);
       var http_response = '';
-      var fd = new FormData();
+      var fd, FormData;
+      fd = new FormData();
       //virtually builds the form fields
       //filename
       fd.append('key', doc_id);
@@ -557,7 +572,8 @@ jIO.addStorageType("s3", function (spec, my) {
       fd.append('signature', Signature);
       //uploaded content !!may must be a string rather than an object
       fd.append('file', doc);
-      var xhr = new XMLHttpRequest();
+      var xhr, XMLHttpRequest;
+      xhr = new XMLHttpRequest();
       xhr_onreadystatechange(doc_id, command, xhr, 'POST', true, false, '');
       xhr.open('POST', 'https://' + priv.server + '.s3.amazonaws.com/', true);
       xhr.send(fd);
@@ -573,10 +589,9 @@ jIO.addStorageType("s3", function (spec, my) {
       function (response) {
         if (response === '404') {
           postDocument();
-        }
+        } else {
         //si ce n'est pas une 404,
         //alors on renvoit une erreur 405
-        else {
           return that.error(priv.createError(
             409,
             "Cannot create document",
@@ -692,17 +707,15 @@ jIO.addStorageType("s3", function (spec, my) {
       //XHRwrapper(command,'PUT','text/plain; charset=UTF-8',true);
       XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
         function (reponse) {
-          if (reponse === '404'){
+          if (reponse === '404') {
             return that.error(priv.createError(
               404,
               "Cannot find document",
               "Document does not exist"
             ));
           }
-          else {  
-            mon_document = reponse;
-            putDocument();
-          }
+          mon_document = reponse;
+          putDocument();
         }
         );
     }
@@ -719,23 +732,7 @@ jIO.addStorageType("s3", function (spec, my) {
     var docId = command.getDocId();
     var mime = 'text/plain; charset=UTF-8';
 
-    XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
-      function (response) {
-        console.log(response);
-        var attachKeys = (JSON.parse(response))['_attachments'];
-
-        for (keys in attachKeys) {
-          XHRwrapper(command, docId, keys, 'DELETE', mime, '', false, false,
-            function (response){
-              //console.log('this key got deleted : ' + keys);
-            }
-            );
-        } 
-        deleteDocument();
-      }
-    );
-
-    function deleteDocument(){ 
+    function deleteDocument() {
       XHRwrapper(command, docId, '', 'DELETE', mime, '', true, false,
         function (reponse) {
           that.success({
@@ -747,6 +744,22 @@ jIO.addStorageType("s3", function (spec, my) {
         }
         );
     }
+
+    XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
+      function (response) {
+        console.log(response);
+        var attachKeys = (JSON.parse(response))._attachments;
+        var keys;
+        for (keys in attachKeys) {
+          XHRwrapper(command, docId, keys, 'DELETE', mime, '', false, false,
+            function (response) {
+              //console.log('this key got deleted : ' + keys);
+            }
+            );
+        }
+        deleteDocument();
+      }
+      );
   };
 
   that.removeAttachment = function (command) {
@@ -806,6 +819,7 @@ jIO.addStorageType("s3", function (spec, my) {
     var mime = 'text/plain; charset=UTF-8';
 
     function makeJSON() {
+      var $;
       var keys = $(mon_document).find('Key');
       var resultTable = [];
       var counter = 0;
@@ -898,7 +912,7 @@ jIO.addStorageType("s3", function (spec, my) {
         }
       } else {
         for (i; i >= 0; i--) {
-          var docId = resultTable[i];
+          docId = resultTable[i];
           allDocResponse.rows[i] = {
             "id": priv.fileNameToIds(docId) + '',
             "key": docId,
