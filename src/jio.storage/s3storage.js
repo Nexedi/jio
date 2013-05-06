@@ -4,7 +4,7 @@
 /*global XHRwrapper: true */
 /*global FormData: true */
 /*global $: true */
-/*jslint vars: true */ 
+/*jslint vars: true */
 /**
  * JIO S3 Storage. Type = "s3".
  * Amazon S3 "database" storage.
@@ -760,24 +760,27 @@ jIO.addStorageType("s3", function (spec, my) {
         );
     }
 
+    function myCallback(response) {
+    }
+
     that.XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
       function (response) {
         console.log(response);
         var attachKeys = (JSON.parse(response))._attachments;
         var keys;
         for (keys in attachKeys) {
-          that.XHRwrapper(command,
-            docId,
-            keys,
-            'DELETE',
-            mime,
-            '',
-            false,
-            false,
-            function (response) {
-              //console.log('this key got deleted : ' + keys);
-            }
-            );
+          if (attachKeys.hasOwnProperty(keys)) {
+            that.XHRwrapper(command,
+              docId,
+              keys,
+              'DELETE',
+              mime,
+              '',
+              false,
+              false,
+              myCallback
+              );
+          }
         }
         deleteDocument();
       }
@@ -878,10 +881,24 @@ jIO.addStorageType("s3", function (spec, my) {
         };
       };
 
+      var errCallback = function (err) {
+          if (err.status === 404) {
+            //status
+            //statustext "Not Found"
+            //error
+            //reason "reason"
+            //message "did not work"
+            err.error = "not_found";
+            that.error(err);
+          } else {
+            return that.retry(err);
+          }
+        };
+
       var i = resultTable.length - 1;
       var keyId;
       if (command.getOption("include_docs") === true) {
-        for (i; i >= 0; i--) {
+        for (i; i >= 0; i -= 1) {
           keyId = resultTable[i];
           var Signature = that.encodeAuthorization(keyId);
           var callURL = priv.url + keyId;
@@ -914,24 +931,12 @@ jIO.addStorageType("s3", function (spec, my) {
               //'x-amz-security-token' : ,
             },
             success : dealCallback(i, countB, allDocResponse),
-            error : function (err) {
-              if (err.status === 404) {
-                //status
-                //statustext "Not Found"
-                //error
-                //reason "reason"
-                //message "did not work"
-                err.error = "not_found";
-                that.error(err);
-              } else {
-                return that.retry(err);
-              }
-            }
+            error : errCallback(this)
           });
           countB += 1;
         }
       } else {
-        for (i; i >= 0; i--) {
+        for (i; i >= 0; i -= 1) {
           keyId = resultTable[i];
           allDocResponse.rows[i] = {
             "id": priv.fileNameToIds(keyId).join(),
