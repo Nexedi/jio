@@ -1,18 +1,12 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global jIO: true, btoa: true, b64_hmac_sha1: true */
-/*global XMLHttpRequest: true */
-/*global XHRwrapper: true */
-/*global FormData: true */
-/*global $: true */
-/*jslint vars: true */
+/*global XMLHttpRequest: true, XHRwrapper: true, FormData: true, $: true*/
 /**
  * JIO S3 Storage. Type = "s3".
  * Amazon S3 "database" storage.
  */
 jIO.addStorageType("s3", function (spec, my) {
-  var evt;
-
-  var that, priv = {};
+  var evt, that, priv = {};
   spec = spec || {};
   that = my.basicStorage(spec, my);
 
@@ -48,8 +42,7 @@ jIO.addStorageType("s3", function (spec, my) {
   **/
 
   priv.secureDocId = function (string) {
-    var split = string.split('/'),
-      i;
+    var split = string.split('/'), i;
     if (split[0] === '') {
       split = split.slice(1);
     }
@@ -263,8 +256,8 @@ jIO.addStorageType("s3", function (spec, my) {
   that.encodePolicy = function (form) {
     //generates the policy
     //enables the choice for the http response code
-    var http_code = '';
-    var s3_policy = {
+    var http_code, s3_policy, Signature = '';
+    s3_policy = {
       "expiration": "2020-01-01T00:00:00Z",
       "conditions": [
         {"bucket": priv.server },
@@ -282,7 +275,7 @@ jIO.addStorageType("s3", function (spec, my) {
     priv.b64_policy = btoa(JSON.stringify(s3_policy));
     //generates the signature value using the policy and the secret access key
     //use of sha1.js to generate the signature
-    var Signature = that.signature(priv.b64_policy);
+    Signature = that.signature(priv.b64_policy);
 
   };
 
@@ -299,6 +292,7 @@ jIO.addStorageType("s3", function (spec, my) {
     isAttachment,
     callback) {
     obj.onreadystatechange = function () {
+      var response, err = '';
       if (obj.readyState === 4) {
         if (this.status === 204 || this.status === 201 || this.status === 200) {
           switch (http) {
@@ -321,7 +315,7 @@ jIO.addStorageType("s3", function (spec, my) {
           case 'GET':
             if (jio === true) {
               if (typeof this.responseText !== 'string') {
-                var response = JSON.parse(this.responseText);
+                response = JSON.parse(this.responseText);
                 response._attachments = response._attachments || {};
                 delete response._attachments;
                 that.success(JSON.stringify(response));
@@ -356,7 +350,7 @@ jIO.addStorageType("s3", function (spec, my) {
             break;
           }
         } else {
-          var err = this;
+          err = this;
           if (this.status === 405) {
               //status
               //statustext "Not Found"
@@ -456,10 +450,11 @@ jIO.addStorageType("s3", function (spec, my) {
   };
 
   that.encodeAuthorization = function (key, mime) {
-  //GET oriented method
-    var requestUTC = new Date().toUTCString();
-    var httpVerb = "GET";
-    var StringToSign = priv.buildStringToSign(
+    //GET oriented method
+    var requestUTC, httpVerb, StringToSign, Signature;
+    requestUTC = new Date().toUTCString();
+    httpVerb = "GET";
+    StringToSign = priv.buildStringToSign(
       httpVerb,
       '',
       'application/json',
@@ -467,7 +462,7 @@ jIO.addStorageType("s3", function (spec, my) {
       'x-amz-date:' + requestUTC,
       '/' + priv.server + '/' + key
     );
-    var Signature = b64_hmac_sha1(priv.password, StringToSign);
+    Signature = b64_hmac_sha1(priv.password, StringToSign);
     return Signature;
   };
 
@@ -481,12 +476,13 @@ jIO.addStorageType("s3", function (spec, my) {
                       is_attachment,
                       callback) {
 
-    var docFile = priv.secureName(priv.idsToFileName(docId,
+    var docFile, requestUTC, StringToSign, url, Signature, xhr;
+    docFile = priv.secureName(priv.idsToFileName(docId,
       attachId || undefined));
 
-    var requestUTC = new Date().toUTCString();
+    requestUTC = new Date().toUTCString();
 
-    var StringToSign = priv.buildStringToSign(
+    StringToSign = priv.buildStringToSign(
       http,
       '',
       mime,
@@ -495,11 +491,9 @@ jIO.addStorageType("s3", function (spec, my) {
       '/' + priv.server + '/' + docFile
     );
 
-    var url = 'http://s3.amazonaws.com/' + priv.server + '/' + docFile;
+    url = 'http://s3.amazonaws.com/' + priv.server + '/' + docFile;
 
-    var Signature = b64_hmac_sha1(priv.password, StringToSign);
-
-    var xhr;
+    Signature = b64_hmac_sha1(priv.password, StringToSign);
     xhr = new XMLHttpRequest();
 
     xhr.open(http, url, true);
@@ -538,17 +532,18 @@ jIO.addStorageType("s3", function (spec, my) {
     //as S3 encoding key are directly inserted within the FormData(), 
     //use of XHRwrapper function ain't pertinent
 
-    var doc, doc_id;
+    var doc, doc_id, mime;
     doc = command.cloneDoc();
     doc_id = command.getDocId();
 
     function postDocument() {
+      var http_response, fd, Signature, xhr;
       doc_id = priv.secureName(priv.idsToFileName(doc_id));
       //Meant to deep-serialize in order to avoid 
       //conflicts due to the multipart enctype
       doc = JSON.stringify(doc);
-      var http_response = '';
-      var fd = new FormData();
+      http_response = '';
+      fd = new FormData();
       //virtually builds the form fields
       //filename
       fd.append('key', doc_id);
@@ -570,11 +565,11 @@ jIO.addStorageType("s3", function (spec, my) {
       //priv.b64_policy = that.encodePolicy(fd);
       fd.append('policy', priv.b64_policy);
       //signature through the base64.hmac.sha1(secret key, policy) method
-      var Signature = b64_hmac_sha1(priv.password, priv.b64_policy);
+      Signature = b64_hmac_sha1(priv.password, priv.b64_policy);
       fd.append('signature', Signature);
       //uploaded content !!may must be a string rather than an object
       fd.append('file', doc);
-      var xhr = new XMLHttpRequest();
+      xhr = new XMLHttpRequest();
       xhr_onreadystatechange(doc_id, command, xhr, 'POST', true, false, '');
       xhr.open('POST', 'https://' + priv.server + '.s3.amazonaws.com/', true);
       xhr.send(fd);
@@ -585,7 +580,8 @@ jIO.addStorageType("s3", function (spec, my) {
         + ((Math.random() * 10).toString().split('.'))[1];
       doc._id = doc_id;
     }
-    var mime = 'text/plain; charset=UTF-8';
+
+    mime = 'text/plain; charset=UTF-8';
     that.XHRwrapper(command, doc_id, '', 'GET', mime, '', false, false,
       function (response) {
         if (response === '404') {
@@ -610,18 +606,20 @@ jIO.addStorageType("s3", function (spec, my) {
   **/
 
   that.get = function (command) {
-    var docId = command.getDocId();
-    var attachId = command.getAttachmentId() || '';
-    var isJIO = true;
-    var mime = 'text/plain; charset=UTF-8';
+    var docId, attachId, isJIO, mime;
+    docId = command.getDocId();
+    attachId = command.getAttachmentId() || '';
+    isJIO = true;
+    mime = 'text/plain; charset=UTF-8';
     that.XHRwrapper(command, docId, attachId, 'GET', mime, '', isJIO, false);
   };
 
   that.getAttachment = function (command) {
-    var docId = command.getDocId();
-    var attachId = command.getAttachmentId();
-    var isJIO = true;
-    var mime = 'text/plain; charset=UTF-8';
+    var docId, attachId, isJIO, mime;
+    docId = command.getDocId();
+    attachId = command.getAttachmentId();
+    isJIO = true;
+    mime = 'text/plain; charset=UTF-8';
     that.XHRwrapper(command, docId, attachId, 'GET', mime, '', isJIO, true);
   };
 
@@ -632,15 +630,16 @@ jIO.addStorageType("s3", function (spec, my) {
    **/
 
   that.put = function (command) {
-    var doc = command.cloneDoc();
-    var docId = command.getDocId();
-    var mime = 'text/plain; charset=UTF-8';
+    var doc, docId, mime;
+    doc = command.cloneDoc();
+    docId = command.getDocId();
+    mime = 'text/plain; charset=UTF-8';
     //pas d'attachment dans un put simple
     function putDocument() {
-      var attachId = '';
-      var data  = JSON.stringify(doc);
-      var isJIO = true;
-      var mime = 'text/plain; charset=UTF-8';
+      var attachId, data, isJIO;
+      attachId = '';
+      data  = JSON.stringify(doc);
+      isJIO = true;
       that.XHRwrapper(command,
         docId,
         attachId,
@@ -663,16 +662,22 @@ jIO.addStorageType("s3", function (spec, my) {
   };
 
   that.putAttachment = function (command) {
-    var mon_document = null;
-    var docId = command.getDocId();
-    var attachId = command.getAttachmentId() || '';
-    var mime = 'text/plain; charset=UTF-8';
-    //récupération des variables de l'attachement
-    var attachment_id,
+    var mon_document,
+      docId,
+      attachId,
+      mime,
+      attachment_id,
       attachment_data,
       attachment_md5,
       attachment_mimetype,
       attachment_length;
+
+    mon_document = null;
+    docId = command.getDocId();
+    attachId = command.getAttachmentId() || '';
+    mime = 'text/plain; charset=UTF-8';
+    //récupération des variables de l'attachement
+
     attachment_id = command.getAttachmentId();
     attachment_data = command.getAttachmentData();
     attachment_md5 = command.md5SumAttachmentData();
@@ -701,15 +706,16 @@ jIO.addStorageType("s3", function (spec, my) {
     }
 
     function putDocument() {
-      var attachment_obj = {
+      var attachment_obj, data, doc;
+      attachment_obj = {
         //"revpos": 3, // optional
         "digest": attachment_md5,
         "content_type": attachment_mimetype,
         "length": attachment_length
       };
-      var data = JSON.parse(mon_document);
+      data = JSON.parse(mon_document);
 
-      var doc = priv.updateMeta(data, docId, attachId, "add", attachment_obj);
+      doc = priv.updateMeta(data, docId, attachId, "add", attachment_obj);
 
       that.XHRwrapper(command, docId, '', 'PUT', mime, doc, false, false,
         function (reponse) {
@@ -744,8 +750,9 @@ jIO.addStorageType("s3", function (spec, my) {
    */
 
   that.remove = function (command) {
-    var docId = command.getDocId();
-    var mime = 'text/plain; charset=UTF-8';
+    var docId, mime;
+    docId = command.getDocId();
+    mime = 'text/plain; charset=UTF-8';
 
     function deleteDocument() {
       that.XHRwrapper(command, docId, '', 'DELETE', mime, '', true, false,
@@ -765,9 +772,8 @@ jIO.addStorageType("s3", function (spec, my) {
 
     that.XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
       function (response) {
-        console.log(response);
-        var attachKeys = (JSON.parse(response))._attachments;
-        var keys;
+        var attachKeys, keys;
+        attachKeys = (JSON.parse(response))._attachments;
         for (keys in attachKeys) {
           if (attachKeys.hasOwnProperty(keys)) {
             that.XHRwrapper(command,
@@ -788,16 +794,21 @@ jIO.addStorageType("s3", function (spec, my) {
   };
 
   that.removeAttachment = function (command) {
-    var mon_document = null;
-    var docId = command.getDocId();
-    var attachId = command.getAttachmentId() || '';
-    var mime = 'text/plain; charset=UTF-8';
-    //récupération des variables de l'attachement
-    var attachment_id,
+    var mon_document,
+      docId,
+      attachId,
+      mime,
+      attachment_id,
       attachment_data,
       attachment_md5,
       attachment_mimetype,
       attachment_length;
+
+    mon_document = null;
+    docId = command.getDocId();
+    attachId = command.getAttachmentId() || '';
+    mime = 'text/plain; charset=UTF-8';
+    //récupération des variables de l'attachement
 
     attachment_id = command.getAttachmentId();
     attachment_data = command.getAttachmentData();
@@ -813,8 +824,9 @@ jIO.addStorageType("s3", function (spec, my) {
     }
 
     function putDocument() {
-      var data = JSON.parse(mon_document);
-      var doc = priv.updateMeta(data, docId, attachId, "remove", '');
+      var data, doc;
+      data = JSON.parse(mon_document);
+      doc = priv.updateMeta(data, docId, attachId, "remove", '');
       that.XHRwrapper(command, docId, '', 'PUT', mime, doc,
         false, false, function (reponse) {
           removeAttachment();
@@ -840,17 +852,34 @@ jIO.addStorageType("s3", function (spec, my) {
   **/
 
   that.allDocs = function (command) {
-    var mon_document = null;
-    var mime = 'text/plain; charset=UTF-8';
+    var mon_document, mime;
+    mon_document = null;
+    mime = 'text/plain; charset=UTF-8';
 
     function makeJSON() {
-      var keys = $(mon_document).find('Key');
-      var resultTable = [];
-      var counter = 0;
+      var keys,
+        resultTable,
+        counter,
+        allDocResponse,
+        count,
+        countB,
+        dealCallback,
+        errCallback,
+        i,
+        keyId,
+        Signature,
+        callURL,
+        requestUTC,
+        parse,
+        checkCounter;
+      keys = $(mon_document).find('Key');
+      resultTable = [];
+      counter = 0;
       keys.each(function (index) {
-        var that = $(this);
-        var filename = that.context.textContent;
-        var docId = priv.idsToFileName(priv.fileNameToIds(filename)[0]);
+        var that, filename, docId;
+        that = $(this);
+        filename = that.context.textContent;
+        docId = priv.idsToFileName(priv.fileNameToIds(filename)[0]);
         if (counter === 0) {
           counter += 1;
           resultTable.push(docId);
@@ -860,7 +889,7 @@ jIO.addStorageType("s3", function (spec, my) {
         }
       });
 
-      var allDocResponse = {
+      allDocResponse = {
         // document content will be added to response
         "total_rows": resultTable.length,
         "offset": 0,
@@ -868,9 +897,9 @@ jIO.addStorageType("s3", function (spec, my) {
       };
 
       //needed to save the index within the $.ajax.success() callback
-      var count = resultTable.length - 1;
-      var countB = 0;
-      var dealCallback = function (i, countB, allDoc) {
+      count = resultTable.length - 1;
+      countB = 0;
+      dealCallback = function (i, countB, allDoc) {
         return function (doc, statustext, response) {
           allDoc.rows[i].doc = response.responseText;
           if (count === 0) {
@@ -881,35 +910,34 @@ jIO.addStorageType("s3", function (spec, my) {
         };
       };
 
-      var errCallback = function (err) {
-          if (err.status === 404) {
-            //status
-            //statustext "Not Found"
-            //error
-            //reason "reason"
-            //message "did not work"
-            err.error = "not_found";
-            that.error(err);
-          } else {
-            return that.retry(err);
-          }
-        };
+      errCallback = function (err) {
+        if (err.status === 404) {
+          //status
+          //statustext "Not Found"
+          //error
+          //reason "reason"
+          //message "did not work"
+          err.error = "not_found";
+          that.error(err);
+        } else {
+          return that.retry(err);
+        }
+      };
 
-      var i = resultTable.length - 1;
-      var keyId;
+      i = resultTable.length - 1;
       if (command.getOption("include_docs") === true) {
         for (i; i >= 0; i -= 1) {
           keyId = resultTable[i];
-          var Signature = that.encodeAuthorization(keyId);
-          var callURL = priv.url + keyId;
-          var requestUTC = new Date().toUTCString();
-          var parse = true;
+          Signature = that.encodeAuthorization(keyId);
+          callURL = priv.url + keyId;
+          requestUTC = new Date().toUTCString();
+          parse = true;
           allDocResponse.rows[i] = {
             "id": priv.fileNameToIds(keyId).join(),
             "key": keyId,
             "value": {}
           };
-          var checkCounter = i;
+          checkCounter = i;
 
           $.ajax({
             contentType : '',
