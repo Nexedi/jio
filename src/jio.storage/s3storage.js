@@ -210,9 +210,9 @@ jIO.addStorageType("s3", function (spec, my) {
     if (typeof priv.password === "string" && priv.password === '') {
       return 'Need at least one parameter "password".';
     }
-    if (typeof priv.url === "string" && priv.url === '') {
-      return 'Need at least one parameter "url".';
-    }
+    //if (typeof priv.url === "string" && priv.url === '') {
+      //return 'Need at least one parameter "url".';
+    //}
     if (typeof priv.server === "string" && priv.server === '') {
       return 'Need at least one parameter "server".';
     }
@@ -929,7 +929,7 @@ jIO.addStorageType("s3", function (spec, my) {
         for (i; i >= 0; i -= 1) {
           keyId = resultTable[i];
           Signature = that.encodeAuthorization(keyId);
-          callURL = priv.url + keyId;
+          callURL = 'http://' + priv.server + '.s3.amazonaws.com/' + keyId;
           requestUTC = new Date().toUTCString();
           parse = true;
           allDocResponse.rows[i] = {
