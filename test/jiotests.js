@@ -6619,6 +6619,7 @@ test ("XWiki Live Server setup", function () {
     var o = setUp(this);
     o.jio.stop();
     this.sandbox.restore();
+    o.server.restore();
     o.jio.start();
     QUnit.stop();
 
@@ -6678,11 +6679,7 @@ test ("XWiki Live Server setup", function () {
         // get Attachment
         o.jio.getAttachment({"_id":"one.json", "_attachment":"att.txt"}, waitFor(function(err, ret) {
             ok(!err);
-            var fr = new FileReader();
-            fr.onload = waitFor(function(dat) {
-                ok(dat.target.result == "there2");
-            });
-            fr.readAsText(ret);
+            ok(ret == "there2");
         }));
 
     }).nThen(function(waitFor) {
