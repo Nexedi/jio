@@ -15,8 +15,6 @@ jIO.addStorageType("s3", function (spec, my) {
   priv.AWSIdentifier = spec.AWSIdentifier || '';
   priv.password = spec.password || '';
   priv.server = spec.server || ''; /*|| jiobucket ||*/
-  priv.url = spec.url || ''; /*||> https://s3-eu-west-1.amazonaws.com <||*/
-
   priv.acl = spec.acl || '';
 
   /*||> "private,
@@ -194,7 +192,6 @@ jIO.addStorageType("s3", function (spec, my) {
     return {
       "username": priv.username,
       "password": priv.password,
-      "url": priv.url,
       "server": priv.server,
       "acl": priv.acl
     };
@@ -210,9 +207,6 @@ jIO.addStorageType("s3", function (spec, my) {
     if (typeof priv.password === "string" && priv.password === '') {
       return 'Need at least one parameter "password".';
     }
-    //if (typeof priv.url === "string" && priv.url === '') {
-      //return 'Need at least one parameter "url".';
-    //}
     if (typeof priv.server === "string" && priv.server === '') {
       return 'Need at least one parameter "server".';
     }
@@ -957,7 +951,6 @@ jIO.addStorageType("s3", function (spec, my) {
                 + priv.AWSIdentifier
                 + ":"
                 + Signature,
-              //'Host' : priv.url,
               'x-amz-date' : requestUTC,
               'Content-Type' : 'application/json'
               //'Content-MD5' : ''
