@@ -10,15 +10,36 @@ var ComplexQuery = newClass(Query, function (spec) {
    */
   this.operator = spec.operator || "AND";
 
-  this.query_list = todo;
+  this.query_list = spec.query_list || [];
 
-  /**
-   * Filter the item list only if all the sub queries match this item according
-   * to the logical operator.
-   * See {{#crossLink "Query/exec:method"}}{{/crossLink}}
-   */
-  this.exec = function (item_list, option) {
+  // XXX
+  this.match = function () {
     todo
+  };
+
+  // XXX
+  this.toString = function () {
+    var str_list = ["("];
+    this.query_list.forEach(function (query) {
+      str_list.push(query.toString());
+      str_list.push(this.operator);
+    });
+    str_list.pop(); // remove last operator
+    str_list.push(")");
+    retrun str_list.join(" ");
+  };
+
+  // XXX
+  this.serialized = function () {
+    var s = {
+      "type": "complex",
+      "operator": this.operator,
+      "query_list": []
+    };
+    this.query_list.forEach(function (query) {
+      s.query_list.push(query.serialized());
+    });
+    return s;
   };
 
   // XXX

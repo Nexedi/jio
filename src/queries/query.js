@@ -5,9 +5,18 @@
  * @class Query
  * @constructor
  */
-var Query = newClass(function() {
+var Query = newClass(function(spec) {
+
   /**
-   * Creates a new item list with matching item only
+   * The wildcard character used to extend comparison action
+   *
+   * @property wildcard_character
+   * @type String
+   */
+  this.wildcard_character = spec.wildcard_character || "%";
+
+  /**
+   * Filter the item list with matching item only
    *
    * @method exec
    * @param  {Array} item_list The list of object
@@ -18,9 +27,29 @@ var Query = newClass(function() {
    *                                     and "ascending" or "descending"
    * @param  {Array} [option.limit=undefined] Couple of integer, first is an
    *                                          index and second is the length.
-   * @return {Array} The new item list
    */
-  this.exec = function (item_list, option) {};
+  this.exec = function (item_list, option) {
+    var i;
+    for (i = 0; i < item_list.length;) {
+      if (!this.match(item, option.wildcard_character)) {
+        item_list.splice(i, 1);
+      } else {
+        i += 1;
+      }
+    }
+    if (option.sort_on) {
+      Query.sortOn(option.sort_on, item_list);
+    }
+    if (option.limit) {
+      new_item_list = item_list.slice(
+        option.limit[0],
+        option.limit[1] + option.limit[0] + 1
+      );
+    }
+    if (option.select_list) {
+      Query.filterListSelect(option.select_list, item_list);
+    }
+  };
 
   /**
    * Test if an item matches this query

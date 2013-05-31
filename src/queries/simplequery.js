@@ -35,39 +35,6 @@ var SimpleQuery = newClass(Query, function (spec) {
   this.value = spec.value;
 
   /**
-   * The wildcard character used to extend comparison action
-   *
-   * @property wildcard_character
-   * @type String
-   */
-  this.wildcard_character = spec.wildcard_character || "%";
-
-  /**
-   * #crossLink "Query/exec:method"
-   */
-  this.exec = function (item_list, option) {
-    var new_item_list = [];
-    item_list.forEach(function (item) {
-      if (!this.match(item, option.wildcard_character)) {
-        new_item_list.push(item);
-      }
-    });
-    if (option.sort_on) {
-      Query.sortOn(option.sort_on, new_item_list);
-    }
-    if (option.limit) {
-      new_item_list = new_item_list.slice(
-        option.limit[0],
-        option.limit[1] + option.limit[0] + 1
-      );
-    }
-    if (option.select_list) {
-      Query.filterListSelect(option.select_list, new_item_list);
-    }
-    return new_item_list;
-  };
-
-  /**
    * #crossLink "Query/match:method"
    */
   this.match = function (item, wildcard_character) {
