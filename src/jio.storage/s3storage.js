@@ -872,9 +872,12 @@ jIO.addStorageType("s3", function (spec, my) {
         requestUTC,
         parse,
         checkCounter;
+
       keys = $(mon_document).find('Key');
+
       resultTable = [];
       counter = 0;
+
       keys.each(function (index) {
         var that, filename, docId;
         that = $(this);
@@ -899,6 +902,7 @@ jIO.addStorageType("s3", function (spec, my) {
       //needed to save the index within the $.ajax.success() callback
       count = resultTable.length - 1;
       countB = 0;
+
       dealCallback = function (i, countB, allDoc) {
         return function (doc, statustext, response) {
           allDoc.rows[i].doc = response.responseText;
@@ -925,13 +929,16 @@ jIO.addStorageType("s3", function (spec, my) {
       };
 
       i = resultTable.length - 1;
+
       if (command.getOption("include_docs") === true) {
+
         for (i; i >= 0; i -= 1) {
           keyId = resultTable[i];
           Signature = that.encodeAuthorization(keyId);
           callURL = 'http://' + priv.server + '.s3.amazonaws.com/' + keyId;
           requestUTC = new Date().toUTCString();
           parse = true;
+
           allDocResponse.rows[i] = {
             "id": priv.fileNameToIds(keyId).join(),
             "key": keyId,
@@ -980,6 +987,7 @@ jIO.addStorageType("s3", function (spec, my) {
       //XHRwrapper(command,'PUT','text/plain; charset=UTF-8',true);
       that.XHRwrapper(command, '', '', 'GET', mime, '', false, false,
         function (reponse) {
+          console.log(reponse);
           mon_document = reponse;
           makeJSON();
         }
@@ -991,46 +999,3 @@ jIO.addStorageType("s3", function (spec, my) {
   };
   return that;
 });
-
-  /*
-  // It is not possible to attach listeners to xhr level 2 events 
-  // AND validate the Qunit tests through sinon.js
-  // therefore, below methods are deprecated
-
-  var S3specifics = {};
-  
-  S3specifics.uploadProgress = function(evt){
-    if (evt.lengthComputable) {
-      var percentComplete = Math.round(evt.loaded * 100 / evt.total);
-      console.log(percentComplete.toString() + '%');
-    } else {
-      console.log('Unable to compute.');
-    }
-  };
-  
-  S3specifics.uploadComplete = function(evt){
-    var evt_txt = evt.target.responseText;
-    var parser = new DOMParser();
-    var xmlDoc = parser.parseFromString(evt_txt, "text/xml");
-    var responseURL = $(xmlDoc.getElementsByTagName('Location'))[0].text();
-    console.log(responseURL);
-  };
-  
-  S3specifics.uploadFailed = function(evt){
-          var evt_txt = evt.target.responseText;
-          console.log("Erreur lors de la tentative d'upload : " + evt_txt);
-  };
-  
-  S3specifics.uploadCanceled = function(evt){
-    console.log("Upload annulé par l'utilisateur ou le navigateur.");
-  };
-
-  S3specifics.onReadyStateChange = function(req, those, that) {
-    if (req.readyState === 4 && those.status === 200){
-      that.success({
-        ok: true,
-        id: command.getDocId()
-      });
-    }
-  }; 
-  */

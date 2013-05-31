@@ -7127,7 +7127,7 @@ test ("AllDocs", function(){
         );
 
     o.server.respondWith("GET",
-    "https://jiobucket.s3.amazonaws.com/documentONE",
+    "http://jiobucket.s3.amazonaws.com/documentONE",
           [
         200,
         {"Content-Type": "text/html"},
@@ -7148,8 +7148,11 @@ test ("AllDocs", function(){
       ]
     );
 
+    console.log(o);
+
     o.spy(o, "jobstatus", "done", "AllDocs with include docs");
     o.jio.allDocs({"include_docs": true},o.f);
+    console.log(o.f);
     o.clock.tick(5000);
     o.server.respond();
     o.tick(o);
