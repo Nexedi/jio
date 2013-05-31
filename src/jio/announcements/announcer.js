@@ -1,34 +1,36 @@
-var announcer = (function(spec, my) {
-    var that = {};
-    spec = spec || {};
-    my = my || {};
-    // Attributes //
-    var announcement_o = {};
-    // Methods //
-    that.register = function(name) {
-        if(!announcement_o[name]) {
-            announcement_o[name] = announcement();
-        }
-    };
+/*jslint indent: 2, maxlen: 80, sloppy: true */
+/*global announcement: true */
+var announcer = (function (spec, my) {
+  var that = {},
+    announcement_o = {};
+  spec = spec || {};
+  my = my || {};
 
-    that.unregister = function(name) {
-        if (announcement_o[name]) {
-            delete announcement_o[name];
-        }
-    };
+  // Methods //
+  that.register = function (name) {
+    if (!announcement_o[name]) {
+      announcement_o[name] = announcement();
+    }
+  };
 
-    that.at = function(name) {
-        return announcement_o[name];
-    };
+  that.unregister = function (name) {
+    if (announcement_o[name]) {
+      delete announcement_o[name];
+    }
+  };
 
-    that.on = function(name, callback) {
-        that.register(name);
-        that.at(name).add(callback);
-    };
+  that.at = function (name) {
+    return announcement_o[name];
+  };
 
-    that.trigger = function(name, args) {
-        that.at(name).trigger(args);
-    };
+  that.on = function (name, callback) {
+    that.register(name);
+    that.at(name).add(callback);
+  };
 
-    return that;
+  that.trigger = function (name, args) {
+    that.at(name).trigger(args);
+  };
+
+  return that;
 }());

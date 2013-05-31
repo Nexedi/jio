@@ -1,279 +1,407 @@
+/*
+* Copyright 2013, Nexedi SA
+* Released under the LGPL license.
+* http://www.gnu.org/licenses/lgpl.html
+*/
+/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*global jIO: true, localStorage: true, setTimeout: true */
 /**
  * JIO Local Storage. Type = 'local'.
- * It is a database located in the browser local storage.
+ * Local browser "database" storage.
  */
-var newLocalStorage = function ( spec, my ) {
-    spec = spec || {};
-    var that = my.basicStorage( spec, my ), priv = {};
+jIO.addStorageType('local', function (spec, my) {
 
-    priv.secureDocId = function (string) {
-        var split = string.split('/'), i;
-        if (split[0] === '') {
-            split = split.slice(1);
+  spec = spec || {};
+  var that, priv, localstorage;
+  that = my.basicStorage(spec, my);
+  priv = {};
+
+  /*
+   * Wrapper for the localStorage used to simplify instion of any kind of
+   * values
+   */
+  localstorage = {
+    getItem: function (item) {
+      var value = localStorage.getItem(item);
+      return value === null ? null : JSON.parse(value);
+    },
+    setItem: function (item, value) {
+      return localStorage.setItem(item, JSON.stringify(value));
+    },
+    removeItem: function (item) {
+      return localStorage.removeItem(item);
+    }
+  };
+
+  // attributes
+  priv.username = spec.username || '';
+  priv.application_name = spec.application_name || 'untitled';
+
+  priv.localpath = 'jio/localstorage/' + priv.username + '/' +
+    priv.application_name;
+
+  // ==================== Tools ====================
+  /**
+   * Generate a new uuid
+   * @method generateUuid
+   * @return {string} The new uuid
+   */
+  priv.generateUuid = function () {
+    var S4 = function () {
+      /* 65536 */
+      var i, string = Math.floor(
+        Math.random() * 0x10000
+      ).toString(16);
+      for (i = string.length; i < 4; i += 1) {
+        string = '0' + string;
+      }
+      return string;
+    };
+    return S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() +
+      S4() + S4();
+  };
+
+  /**
+   * Update [doc] the document object and remove [doc] keys
+   * which are not in [new_doc]. It only changes [doc] keys not starting
+   * with an underscore.
+   * ex: doc:     {key:value1,_key:value2} with
+   *     new_doc: {key:value3,_key:value4} updates
+   *     doc:     {key:value3,_key:value2}.
+   * @param  {object} doc The original document object.
+   * @param  {object} new_doc The new document object
+   */
+  priv.documentObjectUpdate = function (doc, new_doc) {
+    var k;
+    for (k in doc) {
+      if (doc.hasOwnProperty(k)) {
+        if (k[0] !== '_') {
+          delete doc[k];
         }
-        for (i = 0; i < split.length; i+= 1) {
-            if (split[i] === '') { return ''; }
+      }
+    }
+    for (k in new_doc) {
+      if (new_doc.hasOwnProperty(k)) {
+        if (k[0] !== '_') {
+          doc[k] = new_doc[k];
         }
-        return split.join('%2F');
-    };
-    priv.convertSlashes = function (string) {
-        return string.split('/').join('%2F');
-    };
+      }
+    }
+  };
 
-    priv.restoreSlashes = function (string) {
-        return string.split('%2F').join('/');
-    };
-
-    priv.username = spec.username || '';
-    priv.secured_username = priv.convertSlashes(priv.username);
-    priv.applicationname = spec.applicationname || 'untitled';
-    priv.secured_applicationname = priv.convertSlashes(priv.applicationname);
-
-    var storage_user_array_name = 'jio/local_user_array';
-    var storage_file_array_name = 'jio/local_file_name_array/' +
-        priv.secured_username + '/' + priv.secured_applicationname;
-
-    var super_serialized = that.serialized;
-    that.serialized = function() {
-        var o = super_serialized();
-        o.applicationname = priv.applicationname;
-        o.username = priv.username;
-        return o;
-    };
-
-    that.validateState = function() {
-        if (priv.secured_username) {
-            return '';
-        }
-        return 'Need at least one parameter: "username".';
-    };
-
-    /**
-     * Returns a list of users.
-     * @method getUserArray
-     * @return {array} The list of users.
-     */
-    priv.getUserArray = function () {
-        return LocalOrCookieStorage.getItem(
-            storage_user_array_name) || [];
-    };
-
-    /**
-     * Adds a user to the user list.
-     * @method addUser
-     * @param  {string} user_name The user name.
-     */
-    priv.addUser = function (user_name) {
-        var user_array = priv.getUserArray();
-        user_array.push(user_name);
-        LocalOrCookieStorage.setItem(storage_user_array_name,
-                                     user_array);
-    };
-
-    /**
-     * checks if a user exists in the user array.
-     * @method userExists
-     * @param  {string} user_name The user name
-     * @return {boolean} true if exist, else false
-     */
-    priv.userExists = function (user_name) {
-        var user_array = priv.getUserArray(), i, l;
-        for (i = 0, l = user_array.length; i < l; i += 1) {
-            if (user_array[i] === user_name) {
-                return true;
-            }
-        }
+  /**
+   * Checks if an object has no enumerable keys
+   * @method objectIsEmpty
+   * @param  {object} obj The object
+   * @return {boolean} true if empty, else false
+   */
+  priv.objectIsEmpty = function (obj) {
+    var k;
+    for (k in obj) {
+      if (obj.hasOwnProperty(k)) {
         return false;
-    };
+      }
+    }
+    return true;
+  };
 
-    /**
-     * Returns the file names of all existing files owned by the user.
-     * @method getFileNameArray
-     * @return {array} All the existing file paths.
-     */
-    priv.getFileNameArray = function () {
-        return LocalOrCookieStorage.getItem(
-            storage_file_array_name) || [];
+  // ===================== overrides ======================
+  that.specToStore = function () {
+    return {
+      "application_name": priv.application_name,
+      "username": priv.username
     };
+  };
 
-    /**
-     * Adds a file name to the local file name array.
-     * @method addFileName
-     * @param  {string} file_name The new file name.
-     */
-    priv.addFileName = function (file_name) {
-        var file_name_array = priv.getFileNameArray();
-        file_name_array.push(file_name);
-        LocalOrCookieStorage.setItem(storage_file_array_name,
-                                     file_name_array);
-    };
+  that.validateState = function () {
+    if (typeof priv.username === "string" && priv.username !== '') {
+      return '';
+    }
+    return 'Need at least one parameter: "username".';
+  };
 
-    /**
-     * Removes a file name from the local file name array.
-     * @method removeFileName
-     * @param  {string} file_name The file name to remove.
-     */
-    priv.removeFileName = function (file_name) {
-        var i, l, array = priv.getFileNameArray(), new_array = [];
-        for (i = 0, l = array.length; i < l; i+= 1) {
-            if (array[i] !== file_name) {
-                new_array.push(array[i]);
+  // ==================== commands ====================
+  /**
+   * Create a document in local storage.
+   * @method post
+   * @param  {object} command The JIO command
+   */
+  that.post = function (command) {
+    setTimeout(function () {
+      var doc, doc_id = command.getDocId();
+      if (!doc_id) {
+        doc_id = priv.generateUuid();
+      }
+      doc = localstorage.getItem(priv.localpath + "/" + doc_id);
+      if (doc === null) {
+        // the document does not exist
+        localstorage.setItem(priv.localpath + "/" + doc_id,
+          command.cloneDoc());
+        that.success({
+          "ok": true,
+          "id": doc_id
+        });
+      } else {
+        // the document already exists
+        that.error({
+          "status": 409,
+          "statusText": "Conflicts",
+          "error": "conflicts",
+          "message": "Cannot create a new document",
+          "reason": "Document already exists"
+        });
+      }
+    });
+  };
+
+  /**
+   * Create or update a document in local storage.
+   * @method put
+   * @param  {object} command The JIO command
+   */
+  that.put = function (command) {
+    setTimeout(function () {
+      var doc;
+      doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
+      if (doc === null) {
+        //  the document does not exist
+        doc = command.cloneDoc();
+      } else {
+        // the document already exists
+        priv.documentObjectUpdate(doc, command.cloneDoc());
+      }
+      // write
+      localstorage.setItem(priv.localpath + "/" + command.getDocId(), doc);
+      that.success({
+        "ok": true,
+        "id": command.getDocId()
+      });
+    });
+  };
+
+  /**
+   * Add an attachment to a document
+   * @method  putAttachment
+   * @param  {object} command The JIO command
+   */
+  that.putAttachment = function (command) {
+    setTimeout(function () {
+      var doc;
+      doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
+      if (doc === null) {
+        //  the document does not exist
+        that.error({
+          "status": 404,
+          "statusText": "Not Found",
+          "error": "not_found",
+          "message": "Impossible to add attachment",
+          "reason": "Document not found"
+        });
+        return;
+      }
+
+      // the document already exists
+      doc._attachments = doc._attachments || {};
+      doc._attachments[command.getAttachmentId()] = {
+        "content_type": command.getAttachmentMimeType(),
+        "digest": "md5-" + command.md5SumAttachmentData(),
+        "length": command.getAttachmentLength()
+      };
+
+      // upload data
+      localstorage.setItem(priv.localpath + "/" + command.getDocId() + "/" +
+        command.getAttachmentId(),
+        command.getAttachmentData());
+      // write document
+      localstorage.setItem(priv.localpath + "/" + command.getDocId(), doc);
+      that.success({
+        "ok": true,
+        "id": command.getDocId(),
+        "attachment": command.getAttachmentId()
+      });
+    });
+  };
+
+  /**
+   * Get a document
+   * @method get
+   * @param  {object} command The JIO command
+   */
+  that.get = function (command) {
+    setTimeout(function () {
+      var doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
+      if (doc !== null) {
+        that.success(doc);
+      } else {
+        that.error({
+          "status": 404,
+          "statusText": "Not Found",
+          "error": "not_found",
+          "message": "Cannot find the document",
+          "reason": "Document does not exist"
+        });
+      }
+    });
+  };
+
+  /**
+   * Get a attachment
+   * @method getAttachment
+   * @param  {object} command The JIO command
+   */
+  that.getAttachment = function (command) {
+    setTimeout(function () {
+      var doc = localstorage.getItem(priv.localpath + "/" + command.getDocId() +
+                                     "/" + command.getAttachmentId());
+      if (doc !== null) {
+        that.success(doc);
+      } else {
+        that.error({
+          "status": 404,
+          "statusText": "Not Found",
+          "error": "not_found",
+          "message": "Cannot find the attachment",
+          "reason": "Attachment does not exist"
+        });
+      }
+    });
+  };
+
+  /**
+   * Remove a document
+   * @method remove
+   * @param  {object} command The JIO command
+   */
+  that.remove = function (command) {
+    setTimeout(function () {
+      var doc, i, attachment_list;
+      doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
+      attachment_list = [];
+      if (doc !== null && typeof doc === "object") {
+        if (typeof doc._attachments === "object") {
+          // prepare list of attachments
+          for (i in doc._attachments) {
+            if (doc._attachments.hasOwnProperty(i)) {
+              attachment_list.push(i);
             }
+          }
         }
-        LocalOrCookieStorage.setItem(storage_file_array_name,
-                                     new_array);
-    };
+      } else {
+        return that.error({
+          "status": 404,
+          "statusText": "Not Found",
+          "error": "not_found",
+          "message": "Document not found",
+          "reason": "missing"
+        });
+      }
+      localstorage.removeItem(priv.localpath + "/" + command.getDocId());
+      // delete all attachments
+      for (i = 0; i < attachment_list.length; i += 1) {
+        localstorage.removeItem(priv.localpath + "/" + command.getDocId() +
+                                "/" + attachment_list[i]);
+      }
+      that.success({
+        "ok": true,
+        "id": command.getDocId()
+      });
+    });
+  };
 
-    priv.checkSecuredDocId = function (secured_docid,docid,method) {
-        if (!secured_docid) {
-            that.error({
-                status:403,statusText:'Method Not Allowed',
-                error:'method_not_allowed',
-                message:'Cannot '+method+' "'+docid+
-                    '", file name is incorrect.',
-                reason:'Cannot '+method+' "'+docid+
-                    '", file name is incorrect'
-            });
-            return false;
+  /**
+   * Remove an attachment
+   * @method removeAttachment
+   * @param  {object} command The JIO command
+   */
+  that.removeAttachment = function (command) {
+    setTimeout(function () {
+      var doc, error, i, attachment_list;
+      error = function (word) {
+        that.error({
+          "status": 404,
+          "statusText": "Not Found",
+          "error": "not_found",
+          "message": word + " not found",
+          "reason": "missing"
+        });
+      };
+      doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
+      // remove attachment from document
+      if (doc !== null && typeof doc === "object" &&
+          typeof doc._attachments === "object") {
+        if (typeof doc._attachments[command.getAttachmentId()] ===
+            "object") {
+          delete doc._attachments[command.getAttachmentId()];
+          if (priv.objectIsEmpty(doc._attachments)) {
+            delete doc._attachments;
+          }
+          localstorage.setItem(priv.localpath + "/" + command.getDocId(),
+                               doc);
+          localstorage.removeItem(priv.localpath + "/" + command.getDocId() +
+                                  "/" + command.getAttachmentId());
+          that.success({
+            "ok": true,
+            "id": command.getDocId(),
+            "attachment": command.getAttachmentId()
+          });
+        } else {
+          error("Attachment");
         }
-        return true;
-    };
+      } else {
+        error("Document");
+      }
+    });
+  };
 
-    that.post = function (command) {
-        that.put(command);
-    };
+  /**
+   * Get all filenames belonging to a user from the document index
+   * @method allDocs
+   * @param  {object} command The JIO command
+   */
+  that.allDocs = function (command) {
+    var i, j, file, items = 0,
+      s = new RegExp("^" + priv.localpath + "\\/[^/]+$"),
+      all_doc_response = {},
+      query_object = [], query_syntax, query_response = [];
 
-    /**
-     * Saves a document in the local storage.
-     * It will store the file in 'jio/local/USR/APP/FILE_NAME'.
-     * @method put
-     */
-    that.put = function (command) {
-        // wait a little in order to simulate asynchronous saving
-        setTimeout (function () {
-            var secured_docid = priv.secureDocId(command.getDocId()),
-            doc = null, path =
-                'jio/local/'+priv.secured_username+'/'+
-                priv.secured_applicationname+'/'+
-                secured_docid;
+    query_syntax = command.getOption('query');
+    if (query_syntax === undefined) {
+      all_doc_response.rows = [];
 
-            if (!priv.checkSecuredDocId(
-                secured_docid,command.getDocId(),'put')) {return;}
-            // reading
-            doc = LocalOrCookieStorage.getItem(path);
-            if (!doc) {
-                // create document
-                doc = {
-                    _id: command.getDocId(),
-                    content: command.getDocContent(),
-                    _creation_date: Date.now(),
-                    _last_modified: Date.now()
-                };
-                if (!priv.userExists(priv.secured_username)) {
-                    priv.addUser (priv.secured_username);
-                }
-                priv.addFileName(secured_docid);
-            } else {
-                // overwriting
-                doc.content = command.getDocContent();
-                doc._last_modified = Date.now();
+      for (i in localStorage) {
+        if (localStorage.hasOwnProperty(i)) {
+          // filter non-documents
+          if (s.test(i)) {
+            items += 1;
+            j = i.split('/').slice(-1)[0];
+
+            file = { value: {} };
+            file.id = j;
+            file.key = j;
+            if (command.getOption('include_docs')) {
+              file.doc = JSON.parse(localStorage.getItem(i));
             }
-            LocalOrCookieStorage.setItem(path, doc);
-            that.success ({ok:true,id:command.getDocId()});
-        });
-    }; // end put
+            all_doc_response.rows.push(file);
+          }
+        }
+      }
+      all_doc_response.total_rows = items;
+      that.success(all_doc_response);
+    } else {
+      // create complex query object from returned results
+      for (i in localStorage) {
+        if (localStorage.hasOwnProperty(i)) {
+          if (s.test(i)) {
+            items += 1;
+            j = i.split('/').slice(-1)[0];
+            query_object.push(localstorage.getItem(i));
+          }
+        }
+      }
+      query_response = jIO.ComplexQueries.query(query_syntax, query_object);
+      that.success(query_response);
+    }
+  };
 
-    /**
-     * Loads a document from the local storage.
-     * It will load file in 'jio/local/USR/APP/FILE_NAME'.
-     * You can add an 'options' object to the job, it can contain:
-     * - metadata_only {boolean} default false, retrieve the file metadata
-     *   only if true.
-     * @method get
-     */
-    that.get = function (command) {
-
-        setTimeout(function () {
-            var secured_docid = priv.secureDocId(command.getDocId()),
-            doc = null;
-
-            if (!priv.checkSecuredDocId(
-                secured_docid,command.getDocId(),'get')) {return;}
-            doc = LocalOrCookieStorage.getItem(
-                'jio/local/'+priv.secured_username+'/'+
-                    priv.secured_applicationname+'/'+secured_docid);
-            if (!doc) {
-                that.error ({status:404,statusText:'Not Found.',
-                             error:'not_found',
-                             message:'Document "'+ command.getDocId() +
-                             '" not found.',
-                             reason:'missing'});
-            } else {
-                if (command.getOption('metadata_only')) {
-                    delete doc.content;
-                }
-                that.success (doc);
-            }
-        });
-    }; // end get
-
-    /**
-     * Gets a document list from the local storage.
-     * It will retreive an array containing files meta data owned by
-     * the user.
-     * @method allDocs
-     */
-    that.allDocs = function (command) {
-
-        setTimeout(function () {
-            var new_array = [], array = [], i, l, k = 'key',
-            path = 'jio/local/'+priv.secured_username+'/'+
-                priv.secured_applicationname, file_object = {};
-
-            array = priv.getFileNameArray();
-            for (i = 0, l = array.length; i < l; i += 1) {
-                file_object =
-                    LocalOrCookieStorage.getItem(path+'/'+array[i]);
-                if (file_object) {
-                    if (command.getOption('metadata_only')) {
-                        new_array.push ({
-                            id:file_object._id,key:file_object._id,value:{
-                                _creation_date:file_object._creation_date,
-                                _last_modified:file_object._last_modified}});
-                    } else {
-                        new_array.push ({
-                            id:file_object._id,key:file_object._id,value:{
-                                content:file_object.content,
-                                _creation_date:file_object._creation_date,
-                                _last_modified:file_object._last_modified}});
-                    }
-                }
-            }
-            that.success ({total_rows:new_array.length,rows:new_array});
-        });
-    }; // end allDocs
-
-    /**
-     * Removes a document from the local storage.
-     * It will also remove the path from the local file array.
-     * @method remove
-     */
-    that.remove = function (command) {
-        setTimeout (function () {
-            var secured_docid = priv.secureDocId(command.getDocId()),
-            path = 'jio/local/'+
-                priv.secured_username+'/'+
-                priv.secured_applicationname+'/'+
-                secured_docid;
-            if (!priv.checkSecuredDocId(
-                secured_docid,command.getDocId(),'remove')) {return;}
-            // deleting
-            LocalOrCookieStorage.deleteItem(path);
-            priv.removeFileName(secured_docid);
-            that.success ({ok:true,id:command.getDocId()});
-        });
-    }; // end remove
-
-    return that;
-};
-jIO.addStorageType('local', newLocalStorage);
+  return that;
+});

@@ -1,0 +1,261 @@
+<html>
+<head>
+  <title></title>
+  <script type="text/javascript" src="lib/md5/md5.js"></script>
+  <script type="text/javascript" src="jio.js"></script>
+  <script type="text/javascript" src="lib/jquery/jquery.min.js"></script>
+  <script type="text/javascript" src="lib/jsSha1/sha1.js"></script>
+  <script type="text/javascript" src="src/jio.storage/s3storage.js"></script>
+</head>
+<body>
+
+  <div class="put form ajaxWITH">
+    <h2>JIO-S3 PUT form</h2>
+    <form id="s3AJAXUP" action="https://s3.amazonaws.com/jiobucket/" method="post" enctype="multipart/form-data">
+      <div class="text_holder">
+        <p>Give a name to your attachment :</p>
+        <input type="text">
+        <p>Below text will be uploaded as an attachment to my_2nd_document :</p>
+        <textarea name="text_area">Contenu de l'attachement</textarea>
+      </div>
+      <div class="submit">Put the attachment</div>
+    </form>
+  </div>
+
+  <div class="ALLDOCS">
+    <h2>All docs</h2>
+    <div class="button">
+      Get all the docs
+    </div>
+    <div class="content"></div>
+  </div>
+
+<style type="text/css" media="screen">
+  .button {cursor: pointer;margin:4px;}
+  .text-holder {width:100%;clear:both;float:left;width:140px;}
+  .text-holder > input {float:left}
+  .text-holder > textarea {clear:both;float:left;margin:10px;font-size:10px;}
+  div.submit, .ALLDOCS .button {background:silver;border-radius: 3px;color:black;width:150px;height:auto;box-shadow:0px 0px 1px 1px black;cursor:pointer;margin:4px;padding:2px;}
+</style>
+
+
+<script>
+
+var alldocsDATA = '';
+
+$(document).ready(function(){
+
+  //mise en cache des éléments DOM
+  var alldocsAREA = $('.ALLDOCS');
+  var alldocsButton = alldocsAREA.find('.button');
+  var alldocsContent = alldocsAREA.find('.content');
+  var metaAREA = $('.META');
+  var metaContent = metaAREA.find('.content');
+  var outputAREA = $('.OUTPUT');
+  var outputContent = outputAREA.find('.content');
+
+  //mise en cache des éléments DOM
+  var jioform = $('#s3AJAXUP');
+  var submitButton = $('div.submit');
+  var textTitle = jioform.find('input[type="text"]').val();
+  var textContent  = jioform.find('textarea').val();
+
+  //Initiation JIO
+  var jio_instance = jIO.newJio({
+    "type":"s3",
+    "AWSIdentifier":"AKIAJLNYGVLTV66RHPEQ",
+    "password":"/YHoa5r2X6EUHfvP31jdYx6t75h81pAjIZ4Mt94y",
+    "server":"jiobucket",
+    "url":"https://jiobucket.s3.amazonaws.com"
+  });
+
+  //jio_instance.get({"_id": "my_1st_document", "title": "myDoc1"}, function(err, response){
+    //console.log("GET response :"+ response);
+  //});
+//
+ //jio_instance.getAttachment({"_id": "my_1st_document","_attachment": "1er_attachment"}, function(err, response){
+    //console.log("GET Attachment response :"+ response);
+  //});
+//
+  //jio_instance.put({"_id": "my_6th_document", "title": "myDoc6"}, function(err, response){
+    //console.log('PUT response : '+JSON.stringify(response));
+  //});
+//
+
+//
+  jio_instance.post({"_id": 'documentONE', "title": "doc1"}, function(err, response){
+    console.log('POST response :'+ JSON.stringify(response));
+    //removeWrapper();
+  });
+
+    jio_instance.putAttachment({
+        "_id": "documentONE",
+        "_attachment": '1st_Attachment_manual',
+        "_data": "Ceci est le contenu de l'attachment",
+        "_mimetype": "text/plain"
+      }, function(err, response){
+    console.log("PUT Attachment response :"+ JSON.stringify(response));
+    //removeAttachmentWrapper();
+  });
+
+
+
+//
+  //function removeWrapper(){
+    //jio_instance.remove({"_id":"my_5th_document","title":"myDoc5"}, function(err,response){
+      //console.log('REMOVE response : '+ response);
+    //});
+  //};
+//
+  //function removeAttachmentWrapper(){
+        //jio_instance.removeAttachment({
+        //"_id": "my_1st_document",
+        //"_attachment": '99rd_Attachment_manual'
+      //}, function(err,response){
+        //console.log(response);
+    //});
+  //};
+
+
+    //jio_instance.remove({"_id":"documentONE","title":"doc1"}, function(err,response){
+      //console.log('REMOVE response : '+ response);
+    //});
+
+  //Sera utile plus tard
+  jioform.on('change',function(){
+    textTitle = jioform.find('input[type="text"]').val();
+    textContent  = jioform.find('textarea').val();
+  });
+
+  //Ajout de l'attachment
+  submitButton.on('click',function(){
+    //console.log("putAttachment");
+    if (textTitle == ''){
+      alert("Veuillez donner un titre pour l'attachment.");
+    }
+    else {
+      jio_instance.putAttachment({
+        "_id": "documentONE",
+        "_attachment": textTitle,
+        "_data": textContent,
+        "_mimetype": "text/plain"
+      }, function (err, response) {
+        console.log('Put Attachment response :'+JSON.stringify(response));
+      });
+    }
+  });
+
+  alldocsButton.on('click',function(){
+    //console.log("alldocs");
+    jio_instance.allDocs({"include_docs": true},function (err, response){
+
+      console.log(JSON.stringify(response));
+      console.log(response);
+
+      var doc_keys = $(response.rows);
+
+      //console.log(doc_keys.length);
+
+      doc_keys.each(function(index){
+              var that = $(this);
+              var filename = that[0]["id"];
+              //console.log(filename);
+
+              var DOCAttachment = that[0]["doc"]["_attachments"];
+
+              //console.log(DOCAttachment);
+
+              if (DOCAttachment == undefined){
+                //n'a pas d'attachment
+                alldocsContent.append('<a alt="click to remove" title="click to remove" href="#" rel="'+filename+'">'+filename+'</a><br>');
+
+              }
+              else {
+                for ( property in that[0]["doc"]) {
+                  //console.log( property ); // Outputs: foo, fiz or fiz, foo
+                }
+
+                var names = '';
+                names += '<a alt="click to remove" title="click to remove" href="#" rel="'+filename+'">'+filename+'</a><br>';
+                for(var key in DOCAttachment) {
+                  if(DOCAttachment.hasOwnProperty(key)) {
+                    
+                    //names += '<a alt="click to remove" title="click to remove" type="attachment" href="#" rel="'+filename+'/'+key+'">'+filename+'/'+key+'</a><br>';
+                  }
+                }
+               // console.log(names.join(', ')); //a, b
+                //console.log(names);
+                alldocsContent.append(names);
+                //console.log(DOCAttachment);
+              }
+
+              //alldocsContent.append('<a alt="click to remove" title="click to remove" href="#" rel="'+filename+'">'+filename+'</a><br>');
+
+      });
+      alldocsContent.html(JSON.stringify(response));
+      //addRemove();
+    });
+  });
+
+
+  function addRemove(){
+    var linksToRemove = alldocsContent.find('a');
+    //console.log(linksToRemove);
+    linksToRemove.on('click',function(){
+      var that = $(this);
+      console.log(that.attr('type'));
+      if (that.attr('type') !== 'attachment'){
+        var docID = that.text();
+        jio_instance.remove({"_id": docID},function(err, response){
+          console.log(err);
+          console.log(response);
+        });
+      }
+      else {
+        var docID = that.text();
+        var splitDoc = docID.split('/');
+        jio_instance.removeAttachment({"_id": splitDoc[0], "_attachment": splitDoc[1]},function(err, response){
+          console.log(err);
+          console.log(response);
+        });
+      }
+    })
+  };
+
+
+
+
+
+
+  //function addRemove(){
+    //var linksToRemove = alldocsContent.find('a');
+    ////console.log(linksToRemove);
+    //linksToRemove.on('click',function(){
+      //var that = $(this);
+      //console.log(that.attr('type'));
+      //if (that.attr('type') == 'attachment'){
+        //var docID = that.text();
+        //jio_instance.remove({"_id": docID},function(){});
+      //}
+      //else {
+        //var docID = that.text();
+        //jio_instance.removeAttachment({"_id": "my_document", "_attachment": "its_attachment"},function(){});
+      //}
+//
+    //})
+  //};
+
+
+
+  /*fin document ready*/
+});
+
+
+
+
+
+
+
+</script>
+</body>
+</html>

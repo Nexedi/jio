@@ -1,24 +1,14 @@
 (function () { var thisfun = function(loader) {
-    var JIO = loader.JIO,
-    LocalOrCookieStorage = loader.LocalOrCookieStorage,
-    sjcl = loader.sjcl,
-    Base64 = loader.Base64,
-    $ = loader.jQuery;
+    var JIO = loader.JIO;
 
-//// clear jio localstorage
-(function () {
-    var k, storageObject = LocalOrCookieStorage.getAll();
-    for (k in storageObject) {
-        var splitk = k.split('/');
-        if ( splitk[0] === 'jio' ) {
-            LocalOrCookieStorage.deleteItem(k);
-        }
+// localStorage cleanup
+var k;
+for (k in localStorage) {
+    if (/^jio\//.test(k)) {
+        localStorage.removeItem(k);
     }
-    var d = document.createElement ('div');
-    d.setAttribute('id','log');
-    document.querySelector ('body').appendChild(d);
-}());
-//// end clear jio localstorage
+}
+delete k;
 
 //// Tools
 var empty_fun = function (){},
@@ -34,10 +24,61 @@ contains = function (array,content) {
     }
     return false;
 },
+clone = function (obj) {
+  var tmp = JSON.stringify(obj);
+  if (tmp !== undefined) {
+    return JSON.parse(tmp);
+  }
+  return tmp;
+},
+// generates a revision hash from document metadata, revision history
+// and the deleted_flag
+generateRevisionHash = function (doc, revisions, deleted_flag) {
+  var string;
+  doc = clone(doc);
+  delete doc._rev;
+  delete doc._revs;
+  delete doc._revs_info;
+  string = JSON.stringify(doc) + JSON.stringify(revisions) +
+    JSON.stringify(deleted_flag? true: false);
+  return hex_sha256(string);
+},
+// localStorage wrapper
+localstorage = {
+    clear: function () {
+        return localStorage.clear();
+    },
+    getItem: function (item) {
+        var value = localStorage.getItem(item);
+        return value === null? null: JSON.parse(value);
+    },
+    setItem: function (item,value) {
+        return localStorage.setItem(item,JSON.stringify (value));
+    },
+    removeItem: function (item) {
+        return localStorage.removeItem(item);
+    }
+},
+cleanUpLocalStorage = function(){
+    var k, storageObject = localstorage.getAll();
+    for (k in storageObject) {
+        var splitk = k.split('/');
+        if ( splitk[0] === 'jio' ) {
+            localstorage.removeItem(k);
+        }
+    }
+    var d = document.createElement ('div');
+    d.setAttribute('id','log');
+    document.querySelector ('body').appendChild(d);
+    // remove everything
+    localStorage.clear();
+},
 base_tick = 30000,
-basic_test_function_generator = function(o,res,value,message) {
+basicTestFunctionGenerator = function(o,res,value,message) {
+
     return function(err,val) {
         var jobstatus = (err?'fail':'done');
+
         switch (res) {
         case 'status':
             err = err || {}; val = err.status;
@@ -49,160 +90,199 @@ basic_test_function_generator = function(o,res,value,message) {
             val = err || val;
             break;
         default:
-            return;
+            ok(false, "Unknown case " + res);
         }
         deepEqual (val,value,message);
     };
 },
-basic_spy_function = function(o,res,value,message,fun) {
-    fun = fun || 'f';
-    o[fun] = basic_test_function_generator(o,res,value,message);
-    o.t.spy(o,fun);
+
+/**
+ * Prepare a specific test for jio and create a spy.
+ * It creates a function [function_name] in [obj] which can be use as a
+ * jio callback. To prepare the test, we need to know what kind of return
+ * value you want -> [result_type]:
+ * - "status": [value] is compared with err.status, the error code
+ * - "jobstatus": [value] check if the request is "fail" or "done"
+ * - "value": [value] is compared to the response
+ * @method basicSpyFunction
+ * @param  {object} obj The object to work with
+ * @param  {string} result_type The result type
+ * @param  {object} value The value to be compared
+ * @param  {string} message The test message
+ * @param  {string} function_name The callback name
+ */
+basicSpyFunction = function(obj, result_type, value, message, function_name) {
+    function_name = function_name || 'f';
+    obj[function_name] =
+        basicTestFunctionGenerator(obj, result_type, value, message);
+    obj.t.spy(obj, function_name);
 },
-basic_tick_function = function (o) {
+
+/**
+ * Advances in time and execute the test previously prepared.
+ * The default function to test is "f" in [obj].
+ * @method basicTickFunction
+ * @param  {object} obj The object to work with
+ * @param  {number} tick The time to advance in ms (optional)
+ * @param  {function_name} function_name The callback to test (optional)
+ */
+basicTickFunction = function (obj) {
     var tick, fun, i = 1;
-    tick = 1000;
-    fun = fun || 'f';
+    tick = 10000;
+    fun = "f";
+
     if (typeof arguments[i] === 'number') {
         tick = arguments[i]; i++;
     }
     if (typeof arguments[i] === 'string') {
         fun = arguments[i]; i++;
     }
-    o.clock.tick(tick);
-    if (!o[fun].calledOnce) {
-        if (o[fun].called) {
-            ok(false, 'too much results (o.' + fun +')');
+    obj.clock.tick(tick);
+    if (!obj[fun].calledOnce) {
+        if (obj[fun].called) {
+            ok(false, 'too much results (obj.' + fun +')');
         } else {
-            ok(false, 'no response (o.' + fun +')');
+            ok(false, 'no response (obj.' + fun +')');
         }
     }
 },
-// debug function to show custumized log at the bottom of the page
-my_log = function (html_string) {
-    document.querySelector ('div#log').innerHTML += html_string + '<hr/>';
-},
 getXML = function (url) {
-    var tmp = '';
-    $.ajax({'url':url,async:false,
-            dataType:'text',success:function(xml){tmp=xml;}});
-    return tmp;
+  var xml = $.ajax({url:url, async:false});
+  return xml.responseText;
 },
 objectifyDocumentArray = function (array) {
     var obj = {}, k;
     for (k = 0; k < array.length; k += 1) {
-        obj[array[k].id] = array[k];
+        obj[array[k]._id] = array[k];
     }
     return obj;
 },
-addFileToLocalStorage = function (user,appid,file) {
-    var i, l, found = false, filenamearray,
-    userarray = LocalOrCookieStorage.getItem('jio/local_user_array') || [];
-    for (i = 0, l = userarray.length; i < l; i+= 1) {
-        if (userarray[i] === user) { found = true; }
-    }
-    if (!found) {
-        userarray.push(user);
-        LocalOrCookieStorage.setItem('jio/local_user_array',userarray);
-        LocalOrCookieStorage.setItem(
-            'jio/local_file_name_array/'+user+'/'+appid,[file._id]);
-    } else {
-        filenamearray =
-            LocalOrCookieStorage.getItem(
-                'jio/local_file_name_array/'+user+'/'+appid) || [];
-        filenamearray.push(file._id);
-        LocalOrCookieStorage.setItem(
-            'jio/local_file_name_array/'+user+'/'+appid,
-            filenamearray);
-        LocalOrCookieStorage.setItem(
-            'jio/local/'+user+'/'+appid+'/'+file._id,
-            file);
-    }
-    LocalOrCookieStorage.setItem(
-        'jio/local/'+user+'/'+appid+'/'+file._id,
-        file);
+getLastJob = function (id) {
+    return (localstorage.getItem("jio/job_array/"+id) || [undefined]).pop();
 },
-removeFileFromLocalStorage = function (user,appid,file) {
-    var i, l, newarray = [],
-    filenamearray =
-        LocalOrCookieStorage.getItem(
-            'jio/local_file_name_array/'+user+'/'+appid) || [];
-    for (i = 0, l = filenamearray.length; i < l; i+= 1) {
-        if (filenamearray[i] !== file._id) {
-            newarray.push(filenamearray[i]);
+generateTools = function (test_namespace) {
+    var o = {};
+
+    o.t = test_namespace;
+    o.server = o.t.sandbox.server;
+    o.clock = o.t.sandbox.clock;
+    o.clock.tick(base_tick);
+    o.spy = basicSpyFunction;
+    o.tick = basicTickFunction;
+
+    // test methods
+    o.testLastJobLabel = function (label, mess) {
+        var lastjob = getLastJob(o.jio.getId());
+        if (lastjob) {
+            deepEqual(lastjob.command.label, label, mess);
+        } else {
+            deepEqual("No job on the queue", "Job with label: "+label, mess);
         }
-    }
-    LocalOrCookieStorage.setItem('jio/local_file_name_array/'+user+'/'+appid,
-                                 newarray);
-    LocalOrCookieStorage.deleteItem(
-        'jio/local/'+user+'/'+appid+'/'+file._id);
-},
-makeRevsAccordingToRevsInfo = function (revs,revs_info) {
-    var i, j;
-    for (i = 0; i < revs.start; i+= 1) {
-        for (j = 0; j < revs_info.length; j+= 1) {
-            var id = revs_info[j].rev.split('-'); id.shift(); id = id.join('-');
-            if (revs.ids[i] === id) {
-                revs.ids[i] = revs_info[j].rev.split('-')[0];
+    };
+    o.testLastJobId = function (id, mess) {
+        var lastjob = getLastJob(o.jio.getId());
+        if (lastjob) {
+            deepEqual(lastjob.id, id, mess);
+        } else {
+            deepEqual("No job on the queue", "Job with id: "+id, mess);
+        }
+    };
+    o.testLastJobWaitForTime = function (mess) {
+        var lastjob = getLastJob(o.jio.getId());
+        if (lastjob) {
+            ok(lastjob.status.waitfortime > 0, mess);
+        } else {
+            deepEqual("No job on the queue", "Job waiting for time", mess);
+        }
+    };
+    o.testLastJobWaitForJob = function (job_id_array, mess) {
+        var lastjob = getLastJob(o.jio.getId());
+        if (lastjob) {
+            deepEqual(lastjob.status.waitforjob, job_id_array, mess);
+        } else {
+            deepEqual(
+                "No job on the queue",
+                "Job waiting for: " + JSON.stringify (job_id_array),
+                mess
+            );
+        }
+    };
+    // wait method
+    // NOTED: not sure I understood this correctly
+    o.waitUntilAJobExists = function (timeout) {
+        var cpt = 0, job = false;
+        while (true) {
+            if (getLastJob(o.jio.getId()) !== undefined) {
+                job = true;
                 break;
             }
+            if (cpt >= timeout) {
+                break;
+            }
+            o.clock.tick(25);
+            cpt += 25;
         }
-    }
-},
-checkRev = function (rev) {
-    if (typeof rev === 'string') {
-        if (rev.split('-').length > 1 &&
-            parseInt(rev.split('-')[0],10) > 0) {
-            return rev;
+        ok(job, "Waited until job was created");
+    };
+    o.waitUntilLastJobIs = function (state) {
+        while (true) {
+            if (getLastJob(o.jio.getId()) === undefined) {
+                ok(false, "No job have state: " + state);
+                break;
+            }
+            if (getLastJob(o.jio.getId()).status.label === state) {
+                break;
+            }
+            o.clock.tick(25);
         }
-    }
-    return 'ERROR: not a good revision!';
+    };
+    o.constructFakeServerUrl = function(type, path) {
+      switch (type) {
+        case "dav":
+          return 'https:\\/\\/ca-davstorage:8080\\/' + path + '(\\?.*|$)';
+        default:
+          return path;
+      }
+    };
+    o.addFakeServerResponse = function (type, method, path, status, response) {
+      var url = new RegExp(o.constructFakeServerUrl(type, path) );
+      o.server.respondWith(method, url,
+        [status, { "Content-Type": 'application/xml' }, response]
+      );
+    };
+    o.sortArrayById = function(field, reverse, primer){
+      var key = function (x) {return primer ? primer(x[field]) : x[field]};
+
+      return function (a,b) {
+        var A = key(a), B = key(b);
+        return ( (A < B) ? -1 : ((A > B) ? 1 : 0) ) * [-1,1][+!!reverse];
+      }
+    };
+    return o;
 },
-checkConflictRow = function (row) {
-    var fun;
-    if (typeof row === 'object') {
-        if (row.value && typeof row.value._solveConflict === 'function') {
-            fun = row.value._solveConflict;
-            row.value._solveConflict = 'function';
-        }
-    }
-    return fun;
-},
-getHashFromRev = function (rev) {
-    var id = rev;
-    if (typeof id === 'string') {
-        id = id.split('-');
-        id.shift(); id = id.join('-');
-    }
-    return id;
-},
-revs_infoContains = function (revs_info, rev) {
-    var i;
-    if (typeof revs_info !== 'object') {
-        return undefined;
-    }
-    for (i = 0; i < revs_info.length || 0; i+= 1) {
-        if (revs_info[i].rev && revs_info[i].rev === rev) {
-            return true;
-        }
-    }
-    return false;
-};
 //// end tools
 
+//// test function
+isUuid = function (uuid) {
+    var x = "[0-9a-fA-F]{4}";
+    if (typeof uuid !== "string" ) {
+        return false;
+    }
+    return uuid.match("^"+x+x+"-"+x+"-"+x+"-"+x+"-"+x+x+x+"$") === null?
+        false: true;
+};
 //// QUnit Tests ////
-
 module ('Jio Global tests');
 
 test ( "Jio simple methods", function () {
-    var clock = this.sandbox.useFakeTimers(); clock.tick(base_tick);
     // Test Jio simple methods
     // It checks if we can create several instance of jio at the same
     // time. Checks if they don't overlap informations, if they are
     // started and stopped correctly and if they are ready when they
     // have to be ready.
 
-    var o = {};
+    var o = generateTools(this);
+
     o.jio = JIO.newJio();
     ok ( o.jio, 'a new jio -> 1');
 
@@ -245,685 +325,3837 @@ test ( "Jio simple methods", function () {
 //     o.jio.stop();
 // });
 
-module ( 'Jio Dummy Storages' );
+module ( "Jio Dummy Storages" );
 
-test ('All tests', function () {
-    // Tests all dummy storages from jio.dummystorages.js
-    // It is simple tests, but they will be used by replicate storage later
-    // for sync operation.
+test ("All requests ok", function () {
+    // Tests the request methods and the response with dummy storages
 
-    var o = {}; o.t = this; o.clock = o.t.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.spy = basic_spy_function;
-    o.tick = basic_tick_function;
+    var o = generateTools(this);
+
     // All Ok Dummy Storage
-    o.jio = JIO.newJio({'type':'dummyallok'});
-    // save
-    o.spy(o,'value',{ok:true,id:'file'},'dummyallok saving');
-    o.jio.put({_id:'file',content:'content'},o.f);
-    o.tick(o);
-    // load
-    o.spy(o,'value',{_id:'file',content:'content',_last_modified:15000,
-                     _creation_date:10000},'dummyallok loading');
-    o.jio.get('file',o.f);
-    o.tick(o);
-    // remove
-    o.spy(o,'value',{ok:true,id:"file"},'dummyallok removing');
-    o.jio.remove({_id:'file'},o.f);
-    o.tick(o);
-    // get list
-    o.spy (o,'value',{
-        total_rows:2,
-        rows:[{
-            id:'file',key:'file',
-            value:{
-                content:'filecontent',
-                _last_modified:15000,
-                _creation_date:10000
-            }
-        },{
-            id:'memo',key:'memo',
-            value:{
-                content:'memocontent',
-                _last_modified:25000,
-                _creation_date:20000
-            }
-        }]
-    },'dummyallok getting list');
-    o.jio.allDocs({metadata_only:false},o.f);
-    o.tick(o);
-    o.jio.stop();
+    o.jio = JIO.newJio({"type": "dummyallok"});
 
-
-    o.jio = JIO.newJio({'type':'dummyallok'});
-    // save
-    o.spy(o,'value',{ok:true,id:'file'},'dummyallok saving1','f');
-    o.spy(o,'value',{ok:true,id:'file2'},'dummyallok saving2','f2');
-    o.spy(o,'value',{ok:true,id:'file3'},'dummyallok saving3','f3');
-    o.jio.put({_id:'file',content:'content'},o.f);
-    o.jio.put({_id:'file2',content:'content2'},o.f2);
-    o.jio.put({_id:'file3',content:'content3'},o.f3);
-    o.tick(o, 1000, 'f');
-    o.tick(o, 'f2');
-    o.tick(o, 'f3');
-    o.jio.stop();
-
-
-    // All Fail Dummy Storage
-    o.jio = JIO.newJio({'type':'dummyallfail'});
-    // save
-    o.spy (o,'status',0,'dummyallfail saving');
-    o.jio.put({_id:'file',content:'content'},o.f);
+    // post empty document, some storage can create there own id (like couchdb
+    // generates uuid). In this case, the dummy storage write an undefined id.
+    o.spy(o, "value", {"ok": true, "id": undefined},
+          "Post document with empty id");
+    o.jio.post({}, o.f);
     o.tick(o);
-    // load
-    o.spy (o,'status',0,'dummyallfail loading');
-    o.jio.get('file',o.f);
+
+    // post non empty document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Post non empty document");
+    o.jio.post({"_id": "file", "title": "myFile"}, o.f);
     o.tick(o);
-    // remove
-    o.spy (o,'status',0,'dummyallfail removing');
-    o.jio.remove({_id:'file'},o.f);
+
+    // put without id
+    // error 20 -> document id required
+    o.spy(o, "status", 20, "Put document with empty id");
+    o.jio.put({}, o.f);
     o.tick(o);
-    // get list
-    o.spy (o,'status',0,'dummyallfail getting list');
+
+    // put non empty document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Put non empty document");
+    o.jio.put({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put an attachment without attachment id
+    // error 22 -> attachment id required
+    o.spy(o, "status", 22,
+          "Put attachment without id");
+    o.jio.putAttachment({
+        "_id": "file",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // put an attachment
+    o.spy(o, "value", {"ok": true, "id": "file", "attachment": "attmt"},
+          "Put attachment");
+    o.jio.putAttachment({
+        "_id": "file",
+        "_attachment": "attmt",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // get document
+    o.spy(o, "value", {"_id": "file", "title": "get_title"}, "Get document");
+    o.jio.get({"_id": "file"}, o.f);
+    o.tick(o);
+
+    // get attachment
+    o.spy(o, "value", "0123456789", "Get attachment");
+    o.jio.getAttachment({"_id": "file", "_attachment": "attmt"}, o.f);
+    o.tick(o);
+
+    // remove document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Remove document");
+    o.jio.remove({"_id": "file"}, o.f);
+    o.tick(o);
+
+    // remove attachment
+    o.spy(o, "value", {"ok": true, "id": "file", "attachment": "attmt"},
+          "Remove attachment");
+    o.jio.removeAttachment({"_id": "file", "_attachment": "attmt"}, o.f);
+    o.tick(o);
+
+    // alldocs
+    // error 405 -> Method not allowed
+    o.spy(o, "status", 405, "AllDocs fail");
     o.jio.allDocs(o.f);
     o.tick(o);
-    o.jio.stop();
 
-    // All Not Found Dummy Storage
-    o.jio = JIO.newJio({'type':'dummyallnotfound'});
-    // save
-    o.spy(o,'value',{ok:true,id:'file'},'dummyallnotfound saving');
-    o.jio.put({_id:'file',content:'content'},o.f);
-    o.tick(o);
-    // load
-    o.spy(o,'status',404,'dummyallnotfound loading')
-    o.jio.get('file',o.f);
-    o.tick(o);
-    // remove
-    o.spy(o,'value',{ok:true,id:'file'},'dummyallnotfound removing');
-    o.jio.remove({_id:'file'},o.f);
-    o.tick(o);
-    // get list
-    o.spy(o,'status',404,'dummyallnotfound getting list');
-    o.jio.allDocs (o.f);
-    o.tick(o);
     o.jio.stop();
 });
 
-module ( 'Jio Job Managing' );
+test ("All requests fail", function () {
+    // Tests the request methods and the err object with dummy storages
 
-test ('Simple Job Elimination', function () {
-    var clock = this.sandbox.useFakeTimers(); clock.tick(base_tick);
-    var o = {}, id = 0;
-    o.f1 = this.spy(); o.f2 = this.spy();
+    var o = generateTools(this);
 
-    o.jio = JIO.newJio({type:'dummyallok',applicationname:'jiotests'});
-    id = o.jio.getId();
-    o.jio.put({_id:'file',content:'content'},
-              {max_retry:1},o.f1);
-    ok(LocalOrCookieStorage.getItem('jio/job_array/'+id)[0],
-       'job creation');
-    o.jio.remove({_id:'file'},{max_retry:1},o.f2);
-    o.tmp = LocalOrCookieStorage.getItem('jio/job_array/'+id)[0];
-    deepEqual(o.tmp.command.label,'remove','job elimination');
+    // All Ok Dummy Storage
+    o.jio = JIO.newJio({"type": "dummyallfail"});
+
+    // post empty document
+    // error 0 -> unknown
+    o.spy(o, "status", 0, "Post document with empty id");
+    o.jio.post({}, o.f);
+    o.tick(o);
+
+    // test if the job still exists
+    if (getLastJob(o.jio.getId()) !== undefined) {
+        ok(false, "The job is not removed from the job queue");
+    }
+
+    // post non empty document
+    o.spy(o, "status", 0, "Post non empty document");
+    o.jio.post({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put without id
+    // error 20 -> document id required
+    o.spy(o, "status", 20, "Put document with empty id");
+    o.jio.put({}, o.f);
+    o.tick(o);
+
+    // put non empty document
+    o.spy(o, "status", 0, "Put non empty document");
+    o.jio.put({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put an attachment without attachment id
+    // error 22 -> attachment id required
+    o.spy(o, "status", 22,
+          "Put attachment without id");
+    o.jio.putAttachment({
+        "_id": "file",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // put an attachment
+    o.spy(o, "status", 0,
+          "Put attachment");
+    o.jio.putAttachment({
+        "_id": "file",
+        "_attachment": "attmt",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // get document
+    o.spy(o, "status", 0, "Get document");
+    o.jio.get({"_id": "file"}, o.f);
+    o.tick(o);
+
+    // get attachment
+    o.spy(o, "status", 0, "Get attachment");
+    o.jio.get({"_id": "file", "_attachment": "attmt"}, o.f);
+    o.tick(o);
+
+    // remove document
+    o.spy(o, "status", 0, "Remove document");
+    o.jio.remove({"_id": "file"}, o.f);
+    o.tick(o);
+
+    // remove attachment
+    o.spy(o, "status", 0, "Remove attachment");
+    o.jio.remove({"_id": "file", "_attachment": "attmt"}, o.f);
+    o.tick(o);
+
+    // alldocs
+    // error 405 -> Method not allowed
+    o.spy(o, "status", 405, "AllDocs fail");
+    o.jio.allDocs(o.f);
+    o.tick(o);
+
     o.jio.stop();
 });
 
-test ('Simple Job Replacement', function () {
-    // Test if the second job write over the first one
+test ("All document not found", function () {
+    // Tests the request methods without document
 
-    var o = {};
-    o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.id = 0;
-    o.f1 = function (err,val) {
-        if (err) {
-            o.err = err;
-        } else {
-            o.err = {status:'done'};
-        }
-    };
-    this.spy(o,'f1');
-    o.f2 = this.spy();
+    var o = generateTools(this);
 
-    o.jio = JIO.newJio({type:'dummyallok',applicationname:'jiotests'});
-    o.id = o.jio.getId();
-    o.jio.put({_id:'file',content:'content'},o.f1);
-    o.clock.tick(10);
-    o.jio.put({_id:'file',content:'content'},o.f2);
-    deepEqual(LocalOrCookieStorage.getItem(
-        'jio/job_array/'+o.id)[0].date,base_tick + 10,
-              'The first job date have to be equal to the second job date.');
-    o.clock.tick(1000);
-    deepEqual([o.f1.calledOnce,o.err.status],[true,12],
-       'callback for the first save request -> result fail');
-    ok(o.f2.calledOnce,'second callback is called once');
+    // All Ok Dummy Storage
+    o.jio = JIO.newJio({"type": "dummyallnotfound"});
+
+    // post document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Post document");
+    o.jio.post({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Put document");
+    o.jio.put({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put an attachment without attachment id
+    // error 22 -> attachment id required
+    o.spy(o, "status", 22,
+          "Put attachment without id");
+    o.jio.putAttachment({
+        "_id": "file",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // put an attachment
+    o.spy(o, "value", {"ok": true, "id": "file", "attachment": "attmt"},
+          "Put attachment");
+    o.jio.putAttachment({
+        "_id": "file",
+        "_attachment": "attmt",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // get document
+    o.spy(o, "status", 404, "Get document");
+    o.jio.get({"_id": "file"}, o.f);
+    o.tick(o);
+
+    // get attachment
+    o.spy(o, "status", 404, "Get attachment");
+    o.jio.get({"_id": "file/attmt"}, o.f);
+    o.tick(o);
+
+    // remove document
+    o.spy(o, "status", 404, "Remove document");
+    o.jio.remove({"_id": "file"}, o.f);
+    o.tick(o);
+
+    // remove attachment
+    o.spy(o, "status", 404, "Remove attachment");
+    o.jio.removeAttachment({"_id": "file", "_attachment": "attmt"}, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+});
+
+test ("All document found", function () {
+    // Tests the request methods with document
+
+    var o = generateTools(this);
+
+    // All Ok Dummy Storage
+    o.jio = JIO.newJio({"type": "dummyallfound"});
+
+    // post non empty document
+    o.spy(o, "status", 409, "Post document");
+    o.jio.post({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put non empty document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Put non empty document");
+    o.jio.put({"_id": "file", "title": "myFile"}, o.f);
+    o.tick(o);
+
+    // put an attachment without attachment id
+    // error 22 -> attachment id required
+    o.spy(o, "status", 22,
+          "Put attachment without id");
+    o.jio.putAttachment({
+        "_id": "file",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // put an attachment
+    o.spy(o, "value", {"ok": true, "id": "file", "attachment": "attmt"},
+          "Put attachment");
+    o.jio.putAttachment({
+        "_id": "file",
+        "_attachment": "attmt",
+        "_data": "0123456789",
+        "_mimetype": "text/plain"
+    }, o.f);
+    o.tick(o);
+
+    // get document
+    o.spy(o, "value", {"_id": "file", "title": "get_title"}, "Get document");
+    o.jio.get({"_id": "file"}, o.f);
+    o.tick(o);
+
+    // get attachment
+    o.spy(o, "value", "0123456789", "Get attachment");
+    o.jio.getAttachment({"_id": "file", "_attachment": "attmt"}, o.f);
+    o.tick(o);
+
+    // remove document
+    o.spy(o, "value", {"ok": true, "id": "file"}, "Remove document");
+    o.jio.remove({"_id": "file"}, o.f);
+    o.tick(o);
+
+    // remove attachment
+    o.spy(o, "value", {"ok": true, "id": "file", "attachment": "attmt"},
+          "Remove attachment");
+    o.jio.removeAttachment({"_id": "file", "_attachment": "attmt"}, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+});
+
+module ( "Jio Job Managing" );
+
+test ("Several Jobs at the same time", function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({"type":"dummyallok"});
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job1", "f");
+    o.spy(o, "value", {"ok": true, "id": "file2"}, "job2", "f2");
+    o.spy(o, "value", {"ok": true, "id": "file3"}, "job3", "f3");
+    o.jio.put({"_id": "file",  "content": "content"}, o.f);
+    o.jio.put({"_id": "file2", "content": "content2"}, o.f2);
+    o.jio.put({"_id": "file3", "content": "content3"}, o.f3);
+    o.tick(o, 1000, "f");
+    o.tick(o, "f2");
+    o.tick(o, "f3");
     o.jio.stop();
 
-    o.jio = JIO.newJio({type:'dummyallok',applicationname:'jiotests'});
-    o.ok1 = 0;
-    o.jio.get('file1',function (err,val) {
-        deepEqual (err || val,
-                   {_id:'file1',content:'content',
-                    _creation_date:10000,_last_modified:15000},
-                   'First load');
-        o.ok1 ++;
+});
+
+test ("Similar Jobs at the same time (Update)", function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({"type":"dummyallok"});
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job1 ok", "f");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job2 ok", "f2");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job3 ok", "f3");
+    o.jio.put({"_id": "file", "content": "content"}, o.f); // 1
+    o.jio.put({"_id": "file", "content": "content"}, o.f2); // 2
+    o.jio.put({"_id": "file", "content": "content"}, o.f3); // 3
+    deepEqual(getLastJob(o.jio.getId()).id, 1, "Check job queue");
+    o.tick(o, 1000, "f");
+    o.tick(o, "f2");
+    o.tick(o, "f3");
+
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job4 ok", "f");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job5 ok", "f2");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job6 ok", "f3");
+    o.jio.put({"_id": "file", "content": "content"}, o.f); // 4
+    o.jio.remove({"_id": "file", "content": "content"}, o.f2); // 5
+    o.jio.put({"_id": "file", "content": "content"}, o.f3); // 6
+    deepEqual(getLastJob(o.jio.getId()).id, 5, "Check job queue");
+    o.tick(o, 1000, "f");
+    o.tick(o, "f2");
+    o.tick(o, "f3");
+
+    o.jio.stop();
+
+});
+
+test ("One document aim jobs at the same time (Wait for job(s))" , function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({"type":"dummyallok"});
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job1", "f");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job2", "f2");
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job3", "f3");
+
+    o.jio.put({"_id": "file", "content": "content"}, o.f);
+    o.testLastJobWaitForJob(undefined, "job1 is not waiting for someone");
+
+    o.jio.remove({"_id": "file", "content": "content"}, o.f2);
+    o.testLastJobWaitForJob([1], "job2 is waiting");
+
+    o.jio.put({"_id": "file"}, o.f3);
+    o.testLastJobWaitForJob([1, 2], "job3 is waiting");
+
+    o.tick(o, 1000, "f");
+    o.tick(o, "f2");
+    o.tick(o, "f3");
+    o.jio.stop();
+
+});
+
+test ("Server will be available soon (Wait for time)" , function () {
+
+    var o = generateTools(this);
+    o.max_retry = 3;
+
+    o.jio = JIO.newJio({"type":"dummyall3tries"});
+    o.spy(o, "value", {"ok": true, "id": "file"}, "job1", "f");
+
+    o.jio.put({"_id": "file", "content": "content"},
+              {"max_retry": o.max_retry}, o.f);
+    for (o.i = 0; o.i < o.max_retry - 1; o.i += 1) {
+        o.waitUntilLastJobIs("on going");
+        o.waitUntilLastJobIs("wait");
+        o.testLastJobWaitForTime("job1 is waiting for time");
+    }
+
+    o.tick(o, 1000, "f");
+    o.jio.stop();
+
+});
+
+module ( "Jio Restore");
+
+test ("Restore old Jio", function() {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "dummyall3tries",
+        "application_name": "jiotests"
     });
-    o.ok2 = 0;
-    o.jio.get('file2',function (err,val) {
-        deepEqual (err || val,
-                   {_id:'file2',content:'content',
-                    _creation_date:10000,_last_modified:15000},
-                   'Second load must not replace the first one');
-        o.ok2 ++;
-    });
-    o.clock.tick(1000);
-    if (o.ok1 !== 1) {
-        ok (false,'no response / too much response');
-    }
-    if (o.ok2 !== 1) {
-        ok (false,'no response / too much response');
-    }
-    o.jio.stop();
-});
 
-test ('Simple Job Waiting', function () {
-    // Test if the second job doesn't erase the first on going one
+    o.jio_id = o.jio.getId();
 
-    var o = {};
-    o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.id = 0;
-    o.f = function (err,val) {
-        deepEqual(err || val,{ok:true,id:'file'},'job 1 result');
-    };
-    o.f3 = o.f; this.spy(o,'f3');
-    o.f4 = o.f; this.spy(o,'f4');
-    o.checkCallback = function (fun_name,message) {
-        if (!o[fun_name].calledOnce) {
-            if (o[fun_name].called) {
-                ok(false, 'too much response');
-            } else {
-                ok(false, 'no response');
-            }
-        } else {
-            ok(true,message);
-        }
-    };
-
-    o.jio = JIO.newJio({type:'dummyallok',applicationname:'jiotests'});
-    o.id = o.jio.getId();
-    o.jio.put({_id:'file',content:'content'},o.f3);
-    o.clock.tick(200);
-    o.jio.put({_id:'file',content:'content1'},o.f4);
-
-    o.tmp0 = LocalOrCookieStorage.getItem('jio/job_array/'+o.id)[0];
-    o.tmp1 = LocalOrCookieStorage.getItem('jio/job_array/'+o.id)[1];
-
-    ok(o.tmp0 && o.tmp0.id === 1,'job 1 exists');
-    deepEqual(o.tmp0.status.label,'on going','job 1 is on going');
-    ok(o.tmp1 && o.tmp1.id === 2,'job 2 exists');
-    deepEqual(o.tmp1.status.label,'wait','job 2 waiting');
-    deepEqual(o.tmp1.status.waitforjob,[1],
-              'job 2 must wait for the first to end');
-
-    o.clock.tick(1000);
-    o.checkCallback('f3','first request passed');
-    o.checkCallback('f4','restore waiting job');
-
-    o.jio.stop();
-});
-
-test ('Simple Time Waiting' , function () {
-    // Test if the job that have fail wait until a certain moment to restart.
-    // It will use the dummyall3tries, which will work after the 3rd try.
-
-    var o = {}, clock = this.sandbox.useFakeTimers(), id = 0;
-    clock.tick(base_tick);
-    o.f = function (err,val) {
-        if (err) {
-            o.res = err;
-        } else {
-            o.res = val;
-        }
-    };
-    this.spy(o,'f');
-    o.jio = JIO.newJio({type:'dummyall3tries',applicationname:'jiotests'});
-    o.jio.put({_id:'file',content:'content'},{max_retry:3},o.f);
-    clock.tick(10000);
-    if (!o.f.calledOnce) {
-        if (o.f.called) {
-            ok(false,'callback called too much times.');
-        } else {
-            ok(false,'no response.');
-        }
-    }
-    deepEqual(o.res,{ok:true,id:'file'},'job done.');
-    o.jio.stop();
-});
-
-module ( 'Jio Restore');
-
-test ('Restore old Jio', function() {
-    var o = {};
-    o.clock = this.sandbox.useFakeTimers();
-    o.f = function() {
-        ok(false,'must never be called!');
-    };
-    this.spy(o,'f');
-    o.jio = JIO.newJio({type:'dummyall3tries',applicationname:'jiotests'});
-    o.id = o.jio.getId();
-    ok(true,'create jio, id = ' + o.id);
-    o.jio.put({_id:'file',content:'content'},{max_retry:3},o.f);
-    o.clock.tick(1000);
+    o.jio.put({"_id": "file", "title": "myFile"}, {"max_retry":3}, o.f);
+    o.waitUntilLastJobIs("initial"); // "on going" or "wait" should work
+    // xxx also test with o.waitUntilLastJobIs("on going") ?
     o.jio.close();
-    o.jio = JIO.newJio({type:'dummyallok',applicationname:'jiotests'});
-    o.clock.tick(11000);        // 10 sec
-    deepEqual(LocalOrCookieStorage.getItem('jio/job_array/'+o.id),null,
-              'job array list must be empty');
-    o.tmp1 = LocalOrCookieStorage.getItem('jio/job_array/'+o.jio.getId());
-    if (o.tmp1.length > 0) {
-        deepEqual([o.tmp1[0].command.label,o.tmp1[0].command.doc._id,
-                   o.tmp1[0].command.doc.content],
-                  ['put','file','content'],
-                  'job which id is id = ' +o.jio.getId()+', restored the jio');
-    } else {
-        ok (false, 'The recovered job must exists');
+
+    o.jio = JIO.newJio({
+        "type": "dummyallok",
+        "application_name": "jiotests"
+    });
+    o.waitUntilAJobExists(30000); // timeout 30 sec
+
+    o.testLastJobLabel("put", "Job restored");
+    o.clock.tick(2000);
+    ok(getLastJob(o.jio.getId()) === undefined, "Job executed");
+    o.clock.tick(1000);
+
+    o.jio.stop();
+
+});
+
+module ( "Jio LocalStorage" );
+
+test ("Post", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "upost",
+        "application_name": "apost"
+    });
+
+    // post without id
+    o.spy (o, "jobstatus", "done", "Post without id");
+    o.jio.post({}, function (err, response) {
+      var uuid;
+      o.f(err, response);
+      uuid = (err || response).id;
+      ok(isUuid(uuid), "Uuid should look like " +
+         "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + uuid);
+    });
+    o.tick(o);
+
+    // post non empty document
+    o.spy (o, "value", {"ok": true, "id": "post1"}, "Post");
+    o.jio.post({"_id": "post1", "title": "myPost1"}, o.f);
+    o.tick(o);
+
+    deepEqual(
+        localstorage.getItem("jio/localstorage/upost/apost/post1"),
+        {
+            "_id": "post1",
+            "title": "myPost1"
+        },
+        "Check document"
+    );
+
+    // post but document already exists
+    o.spy (o, "status", 409, "Post but document already exists");
+    o.jio.post({"_id": "post1", "title": "myPost2"}, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+});
+
+
+test ("Put", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "uput",
+        "application_name": "aput"
+    });
+
+    // put without id
+    // error 20 -> document id required
+    o.spy (o, "status", 20, "Put without id");
+    o.jio.put({}, o.f);
+    o.tick(o);
+
+    // put non empty document
+    o.spy (o, "value", {"ok": true, "id": "put1"}, "Creates a document");
+    o.jio.put({"_id": "put1", "title": "myPut1"}, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem("jio/localstorage/uput/aput/put1"),
+        {
+            "_id": "put1",
+            "title": "myPut1"
+        },
+        "Check document"
+    );
+
+    // put but document already exists
+    o.spy (o, "value", {"ok": true, "id": "put1"}, "Update the document");
+    o.jio.put({"_id": "put1", "title": "myPut2"}, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem("jio/localstorage/uput/aput/put1"),
+        {
+            "_id": "put1",
+            "title": "myPut2"
+        },
+        "Check document"
+    );
+
+    o.jio.stop();
+
+});
+
+test ("PutAttachment", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "uputattmt",
+        "application_name": "aputattmt"
+    });
+
+    // putAttachment without doc id
+    // error 20 -> document id required
+    o.spy(o, "status", 20, "PutAttachment without doc id");
+    o.jio.putAttachment({}, o.f);
+    o.tick(o);
+
+    // putAttachment without attachment id
+    // error 22 -> attachment id required
+    o.spy(o, "status", 22, "PutAttachment without attachment id");
+    o.jio.putAttachment({"_id": "putattmt1"}, o.f);
+    o.tick(o);
+
+    // putAttachment without document
+    // error 404 -> not found
+    o.spy(o, "status", 404, "PutAttachment without document");
+    o.jio.putAttachment({"_id": "putattmt1", "_attachment": "putattmt2"}, o.f);
+    o.tick(o);
+
+    // adding a document
+    localstorage.setItem("jio/localstorage/uputattmt/aputattmt/putattmt1", {
+        "_id": "putattmt1",
+        "title": "myPutAttmt1"
+    });
+
+    // putAttachment with document
+    o.spy(o, "value",
+          {"ok": true, "id": "putattmt1", "attachment": "putattmt2"},
+          "PutAttachment with document, without data");
+    o.jio.putAttachment({"_id": "putattmt1", "_attachment": "putattmt2"}, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem("jio/localstorage/uputattmt/aputattmt/putattmt1"),
+        {
+            "_id": "putattmt1",
+            "title": "myPutAttmt1",
+            "_attachments": {
+                "putattmt2": {
+                    "length": 0,
+                    // md5("")
+                    "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
+                }
+            }
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/uputattmt/aputattmt/putattmt1/putattmt2"),
+        "", "Check attachment"
+    );
+
+    // update attachment
+    o.spy(o, "value",
+          {"ok": true, "id": "putattmt1", "attachment": "putattmt2"},
+          "Update Attachment, with data");
+    o.jio.putAttachment({
+      "_id": "putattmt1",
+      "_attachment": "putattmt2",
+      "_data": "abc"
+    }, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem("jio/localstorage/uputattmt/aputattmt/putattmt1"),
+        {
+            "_id": "putattmt1",
+            "title": "myPutAttmt1",
+            "_attachments": {
+                "putattmt2": {
+                    "length": 3,
+                    // md5("abc")
+                    "digest": "md5-900150983cd24fb0d6963f7d28e17f72"
+                }
+            }
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/uputattmt/aputattmt/putattmt1/putattmt2"),
+        "abc", "Check attachment"
+    );
+
+    o.jio.stop();
+});
+
+test ("Get", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "uget",
+        "application_name": "aget"
+    });
+
+    // get inexistent document
+    o.spy(o, "status", 404, "Get inexistent document");
+    o.jio.get({"_id": "get1"}, o.f);
+    o.tick(o);
+
+    // get inexistent attachment
+    o.spy(o, "status", 404, "Get inexistent attachment");
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
+    o.tick(o);
+
+    // adding a document
+    o.doc_get1 = {
+        "_id": "get1",
+        "title": "myGet1"
+    };
+    localstorage.setItem("jio/localstorage/uget/aget/get1", o.doc_get1);
+
+    // get document
+    o.spy(o, "value", o.doc_get1, "Get document");
+    o.jio.get({"_id": "get1"}, o.f);
+    o.tick(o);
+
+    // get inexistent attachment (document exists)
+    o.spy(o, "status", 404, "Get inexistent attachment (document exists)");
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
+    o.tick(o);
+
+    // adding an attachment
+    o.doc_get1["_attachments"] = {
+        "get2": {
+            "length": 2,
+            // md5("de")
+            "digest": "md5-5f02f0889301fd7be1ac972c11bf3e7d"
+        }
+    };
+    localstorage.setItem("jio/localstorage/uget/aget/get1", o.doc_get1);
+    localstorage.setItem("jio/localstorage/uget/aget/get1/get2", "de");
+
+    // get attachment
+    o.spy(o, "value", "de", "Get attachment");
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+
+});
+
+test ("Remove", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "uremove",
+        "application_name": "aremove"
+    });
+
+    // remove inexistent document
+    o.spy(o, "status", 404, "Remove inexistent document");
+    o.jio.remove({"_id": "remove1"}, o.f);
+    o.tick(o);
+
+    // remove inexistent attachment
+    o.spy(o, "status", 404, "Remove inexistent attachment");
+    o.jio.removeAttachment({"_id": "remove1", "_attachment": "remove2"}, o.f);
+    o.tick(o);
+
+    // adding a document + attmt
+    localstorage.setItem("jio/localstorage/uremove/aremove/remove1", {
+        "_id": "remove1",
+        "title": "myRemove1",
+        "_attachments": {
+            "remove2": {
+                "length": 4,
+                "digest": "md5-blahblah"
+            }
+        }
+    });
+    localstorage.setItem(
+        "jio/localstorage/uremove/aremove/remove1/remove2", "fghi");
+
+    // remove attachment
+    o.spy(o, "value", {"ok": true, "id": "remove1", "attachment": "remove2"},
+          "Remove document");
+    o.jio.removeAttachment({"_id": "remove1", "_attachment": "remove2"}, o.f);
+    o.tick(o);
+
+    // remove document
+    o.spy(o, "value", {"ok": true, "id": "remove1"}, "Remove document");
+    o.jio.remove({"_id": "remove1"}, o.f);
+    o.tick(o);
+
+    // check document
+    ok(localstorage.getItem("jio/localstorage/uremove/aremove/remove1")===null,
+       "Check document is removed");
+
+    // adding a document + attmt
+    localstorage.setItem("jio/localstorage/uremove/aremove/remove1", {
+        "_id": "remove1",
+        "title": "myRemove1",
+        "_attachments": {
+            "remove2": {
+                "length": 4,
+                "digest": "md5-blahblah"
+            }
+        }
+    });
+    localstorage.setItem(
+        "jio/localstorage/uremove/aremove/remove1/remove2", "fghi");
+
+    // remove attachment
+    o.spy(o, "value", {"ok": true, "id": "remove1"},
+          "Remove document and attachment");
+    o.jio.remove({"_id": "remove1"}, o.f);
+    o.tick(o);
+    ok(localstorage.getItem("jio/localstorage/uremove/aremove/remove1"
+       )===null, "Check document is removed");
+    ok(localstorage.getItem("jio/localstorage/uremove/aremove/remove1/remove2"
+      )===null, "Check attachment is removed");
+
+    o.jio.stop();
+
+});
+
+
+test ("AllDocs", function(){
+
+    var o = generateTools(this), i, m = 15;
+
+    o.jio = JIO.newJio({
+        "type": "local",
+        "username": "ualldocs",
+        "application_name": "aalldocs"
+    });
+    o.localpath = "jio/localstorage/ualldocs/aalldocs";
+
+    // sample data
+    o.titles = ["Shawshank Redemption", "Godfather", "Godfather 2",
+      "Pulp Fiction", "The Good, The Bad and The Ugly", "12 Angry Men",
+      "The Dark Knight", "Schindlers List",
+      "Lord of the Rings - Return of the King", "Fight Club",
+      "Star Wars Episode V", "Lord Of the Rings - Fellowship of the Ring",
+      "One flew over the Cuckoo's Nest", "Inception", "Godfellas"
+    ];
+    o.years = [1994,1972,1974,1994,1966,1957,2008,1993,2003,1999,1980,2001,
+      1975,2010,1990
+    ];
+    o.director = ["Frank Darabont", "Francis Ford Coppola",
+      "Francis Ford Coppola", "Quentin Tarantino", "Sergio Leone",
+      "Sidney Lumet", "Christopher Nolan", "Steven Spielberg",
+      "Peter Jackson", "David Fincher", "Irvin Kershner", "Peter Jackson",
+      "Milos Forman", "Christopher Nolan", " Martin Scorsese"
+    ]
+
+    for (i = 0; i < m; i += 1) {
+      o.fakeDoc = {};
+      o.fakeDoc._id = "doc_"+(i < 10 ? "0"+i : i);
+      o.fakeDoc.title = o.titles[i];
+      o.fakeDoc.year = o.years[i];
+      o.fakeDoc.author = o.director[i];
+      if (i === 5) {
+        o.fakeDoc._attachments = {
+          "att": {
+            "digest": "md5-dontcare",
+            "content_type": "text/plain",
+            "length": 3
+          }
+        };
+        localstorage.setItem(o.localpath + "/doc_05/att", "abc");
+      }
+      localstorage.setItem(o.localpath+"/doc_"+(i < 10 ? "0"+i : i), o.fakeDoc);
     }
-    o.jio.stop();
-});
 
-module ( 'Jio LocalStorage' );
-
-test ('Document save', function () {
-    // Test if LocalStorage can save documents.
-    // We launch a saving to localstorage and we check if the file is
-    // realy saved. Then save again and check if
-
-    var o = {}; o.t = this; o.clock = o.t.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.spy = basic_spy_function;
-    o.tick = function (o, tick, value, fun) {
-        basic_tick_function(o,tick,fun);
-        o.tmp =
-            LocalOrCookieStorage.getItem ('jio/local/MrSaveName/jiotests/file');
-        if (o.tmp) {
-            o.tmp.lmcd = (o.tmp._last_modified === o.tmp._creation_date);
-            delete o.tmp._last_modified;
-            delete o.tmp._creation_date;
-            deepEqual (o.tmp,{_id:'file',content:'content',lmcd:value},
-                       'check saved document');
-        } else {
-            ok (false, 'document is not saved!');
-        }
+    // response
+    o.allDocsResponse = {};
+    o.allDocsResponse.rows = [];
+    o.allDocsResponse.total_rows = 15;
+    for (i = 0; i < m; i += 1) {
+      o.allDocsResponse.rows.push({
+        "id": "doc_"+(i < 10 ? "0"+i : i),
+        "key": "doc_"+(i < 10 ? "0"+i : i),
+        "value": {}
+      });
     };
-
-    o.jio = JIO.newJio({type:'local',username:'MrSaveName',
-                        applicationname:'jiotests'});
-    // save and check document existence
-    o.spy (o,'value',{ok:true,id:'file'},'saving document');
-    o.jio.put({_id:'file',content:'content'},o.f);
-    o.tick(o,null,true);
-
-    o.spy (o,'value',{ok:true,id:'file'},'saving document');
-    o.jio.put({_id:'file',content:'content'},o.f);
-    o.tick(o,null,false);
-
-    o.jio.stop();
-});
-
-test ('Document load', function () {
-    // Test if LocalStorage can load documents.
-    // We launch a loading from localstorage and we check if the file is
-    // realy loaded.
-
-    var o = {}; o.clock = this.sandbox.useFakeTimers(); o.t = this;
-    o.clock.tick(base_tick);
-    o.spy = basic_spy_function;
-    o.tick = basic_tick_function;
-
-    o.jio = JIO.newJio({type:'local',username:'MrLoadName',
-                        applicationname:'jiotests'});
-    // save and check document existence
-    o.doc = {_id:'file',content:'content',
-             _last_modified:1234,_creation_date:1000};
-
-    o.spy(o,'status',404,'loading document failure');
-    o.jio.get('file',o.f);
+    // alldocs
+    o.spy(o, "value", o.allDocsResponse, "All docs");
+    o.jio.allDocs(function (err, response) {
+      if (response && response.rows) {
+        response.rows.sort(function (a, b) {
+          return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
+        });
+      }
+      o.f(err, response);
+    });
     o.tick(o);
 
-    addFileToLocalStorage('MrLoadName','jiotests',o.doc);
-    o.spy(o,'value',o.doc,'loading document success');
-    o.jio.get('file',o.f);
+    // include docs
+    o.allDocsResponse = {};
+    o.allDocsResponse.rows = [];
+    o.allDocsResponse.total_rows = 15;
+    for (i = 0; i < m; i += 1) {
+      o.allDocsResponse.rows.push({
+        "id": "doc_"+(i < 10 ? "0"+i : i),
+        "key": "doc_"+(i < 10 ? "0"+i : i),
+        "value": {},
+        "doc": localstorage.getItem(o.localpath+"/doc_"+(i < 10 ? "0"+i : i))
+      });
+    };
+
+    // alldocs
+    o.spy(o, "value", o.allDocsResponse, "All docs (include docs)");
+    o.jio.allDocs({"include_docs":true}, function (err, response) {
+      if (response && response.rows) {
+        response.rows.sort(function (a, b) {
+          return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
+        });
+      }
+      o.f(err, response);
+    });
+    o.tick(o);
+
+    // complex queries
+    o.thisShouldBeTheAnswer4 = [
+        {"title": "Inception", "year": 2010},
+        {"title": "The Dark Knight", "year": 2008},
+        {"title": "Lord of the Rings - Return of the King", "year": 2003},
+        {"title": "Lord Of the Rings - Fellowship of the Ring", "year": 2001},
+        {"title": "Fight Club", "year": 1999}
+    ];
+    o.spy(o, "value", o.thisShouldBeTheAnswer4,
+      "allDocs (complex queries year >= 1980, all query options)");
+    o.jio.allDocs({
+      "query":{
+        "query":'(year: >= "1980")',
+        "filter": {
+            "limit":[0,5],
+            "sort_on":[['year','descending']],
+            "select_list":['title','year']
+        },
+        "wildcard_character":'%'
+      }
+    }, o.f);
+    o.tick(o);
+
+    // empty query returns all
+    o.thisShouldBeTheAnswer5 = [
+        {"title": "The Good, The Bad and The Ugly"},
+        {"title": "The Dark Knight"},
+        {"title": "Star Wars Episode V"},
+        {"title": "Shawshank Redemption"},
+        {"title": "Schindlers List"},
+        {"title": "Pulp Fiction"},
+        {"title": "One flew over the Cuckoo's Nest"},
+        {"title": "Lord of the Rings - Return of the King"},
+        {"title": "Lord Of the Rings - Fellowship of the Ring"},
+        {"title": "Inception"},
+        {"title": "Godfellas"},
+        {"title": "Godfather 2"},
+        {"title": "Godfather"},
+        {"title": "Fight Club"},
+        {"title": "12 Angry Men"}
+    ];
+    o.spy(o, "value", o.thisShouldBeTheAnswer5,
+      "allDocs (empty query in complex query)");
+
+    o.jio.allDocs({
+      "query":{
+        "filter": {
+            "sort_on":[['title','descending']],
+            "select_list":['title']
+        },
+        "wildcard_character":'%'
+      }
+    }, function (err, response) {
+      if (response && response.rows) {
+        response.rows.sort(function (a, b) {
+          return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
+        });
+      }
+      o.f(err, response);
+    });
+    o.tick(o);
+
+    o.jio.stop();
+
+});
+
+module ( "Jio Revision Storage + Local Storage" );
+
+test ("Post", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "revision",
+        "sub_storage": {
+            "type": "local",
+            "username": "urevpost",
+            "application_name": "arevpost"
+        }
+    });
+    o.localpath = "jio/localstorage/urevpost/arevpost";
+
+    // post without id
+    o.revisions = {"start": 0, "ids": []};
+    o.spy (o, "status", undefined, "Post without id");
+    o.jio.post({}, function (err, response) {
+        o.f.apply(arguments);
+        o.uuid = (err || response).id;
+        ok(isUuid(o.uuid), "Uuid should look like " +
+           "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + o.uuid);
+    });
+    o.tick(o);
+    o.rev = "1-"+generateRevisionHash({"_id": o.uuid}, o.revisions);
+
+    // check document
+    deepEqual(
+        localstorage.getItem(o.localpath + "/" + o.uuid + "." + o.rev),
+        {"_id": o.uuid + "." + o.rev},
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree = {
+        "_id": o.uuid + ".revision_tree.json",
+        "children": [{
+            "rev": o.rev, "status": "available", "children": []
+        }]
+    };
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/" + o.uuid + ".revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    // post non empty document
+    o.doc = {"_id": "post1", "title": "myPost1"};
+    o.rev = "1-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {"ok": true, "id": "post1", "rev": o.rev}, "Post");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc["_id"] = "post1."+o.rev;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/post1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree._id = "post1.revision_tree.json";
+    o.doc_tree.children[0] = {
+        "rev": o.rev, "status": "available", "children": []
+    };
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/post1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    // post and document already exists
+    o.doc = {"_id": "post1", "title": "myPost2"};
+    o.rev = "1-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {
+        "ok": true, "id": "post1", "rev": o.rev
+    }, "Post and document already exists");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc["_id"] = "post1."+o.rev;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/post1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree._id = "post1.revision_tree.json";
+    o.doc_tree.children.unshift({
+        "rev": o.rev, "status": "available", "children": []
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/post1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    // post + revision
+    o.doc = {"_id": "post1", "_rev": o.rev, "title": "myPost2"};
+    o.revisions = {"start": 1, "ids": [o.rev.split('-')[1]]};
+    o.rev = "2-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {"ok": true, "id": "post1", "rev": o.rev},
+           "Post + revision");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // // keep_revision_history
+    // ok (false, "keep_revision_history Option Not Implemented");
+
+    // check document
+    o.doc["_id"] = "post1."+o.rev;
+    delete o.doc._rev;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/post1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree._id = "post1.revision_tree.json";
+    o.doc_tree.children[0].children.unshift({
+        "rev": o.rev, "status": "available", "children": []
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/post1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    // add attachment
+    o.doc._attachments = {
+      "attachment_test": {
+        "length": 35,
+        "digest": "A",
+        "content_type": "oh/yeah"
+      }
+    };
+    localstorage.setItem(o.localpath + "/post1." + o.rev, o.doc);
+    localstorage.setItem(o.localpath + "/post1." + o.rev + "/attachment_test",
+                         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+    // post + attachment copy
+    o.doc = {"_id": "post1", "_rev": o.rev, "title": "myPost2"};
+    o.revisions = {
+      "start": 2,
+      "ids": [o.rev.split('-')[1], o.revisions.ids[0]]
+    };
+    o.rev = "3-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {"ok": true, "id": "post1", "rev": o.rev},
+           "Post + attachment copy");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // check attachment
+    deepEqual(
+      localstorage.getItem(o.localpath + "/post1." + o.rev +
+                           "/attachment_test"),
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "Check Attachment"
+    );
+
+    // check document tree
+    o.doc_tree._id = "post1.revision_tree.json";
+    o.doc_tree.children[0].children[0].children.unshift({
+      "rev": o.rev, "status": "available", "children": []
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/post1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    // post + wrong revision
+    o.doc = {"_id": "post1", "_rev": "3-wr3", "title": "myPost3"};
+    o.revisions = {"start": 3, "ids": ["wr3"]};
+    o.rev = "4-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy(o, "value", {"id": "post1", "ok": true, "rev": o.rev},
+          "Postt + wrong revision");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem(o.localpath + "/post1.3-wr3"),
+        null,
+        "Check document"
+    );
+
+    // check document
+    o.doc._id = "post1." + o.rev;
+    delete o.doc._rev;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/post1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree._id = "post1.revision_tree.json";
+    o.doc_tree.children.unshift({
+      "rev": "3-wr3", "status": "missing", "children": [{
+        "rev": o.rev, "status": "available", "children": []
+      }]
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/post1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    o.jio.stop();
+});
+
+test ("Put", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "revision",
+        "sub_storage": {
+            "type": "local",
+            "username": "urevput",
+            "application_name": "arevput"
+        }
+    });
+    o.localpath = "jio/localstorage/urevput/arevput";
+
+    // put without id
+    // error 20 -> document id required
+    o.spy (o, "status", 20, "Put without id");
+    o.jio.put({}, o.f);
+    o.tick(o);
+
+    // put non empty document
+    o.doc = {"_id": "put1", "title": "myPut1"};
+    o.revisions = {"start": 0, "ids": []};
+    o.rev = "1-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {"ok": true, "id": "put1", "rev": o.rev},
+           "Creates a document");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc._id = "put1." + o.rev;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/put1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree = {
+        "_id": "put1.revision_tree.json",
+        "children": [{
+            "rev": o.rev, "status": "available", "children": []
+        }]
+    };
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/put1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    // put without rev and document already exists
+    o.doc = {"_id": "put1", "title": "myPut2"};
+    o.rev = "1-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {"ok": true, "id": "put1", "rev": o.rev},
+           "Put same document without revision");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    o.doc_tree.children.unshift({
+        "rev": o.rev, "status": "available", "children": []
+    });
+
+    // put + revision
+    o.doc = {"_id": "put1", "_rev": o.rev, "title": "myPut2"};
+    o.revisions = {"start": 1, "ids": [o.rev.split('-')[1]]};
+    o.rev = "2-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {"id": "put1", "ok": true, "rev": o.rev},
+           "Put + revision");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc._id = "put1." + o.rev;
+    delete o.doc._rev;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/put1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree.children[0].children.unshift({
+        "rev": o.rev, "status": "available", "children": []
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/put1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    // put + wrong revision
+    o.doc = {"_id": "put1", "_rev": "3-wr3", "title": "myPut3"};
+    o.revisions = {"start": 3, "ids": ["wr3"]};
+    o.rev = "4-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {"id": "put1", "ok": true, "rev": o.rev},
+           "Put + wrong revision");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc._id = "put1." + o.rev;
+    delete o.doc._rev;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/put1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree.children.unshift({
+      "rev": "3-wr3",
+      "status": "missing",
+      "children": [{
+        "rev": o.rev,
+        "status": "available",
+        "children": []
+      }]
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/put1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    // put + revision history
+    o.doc = {
+      "_id": "put1",
+      //"_revs": ["3-rh3", "2-rh2", "1-rh1"], // same as below
+      "_revs": {"start": 3, "ids": ["rh3", "rh2", "rh1"]},
+      "title": "myPut3"
+    };
+    o.spy (o, "value", {"id": "put1", "ok": true, "rev": "3-rh3"},
+           "Put + revision history");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc._id = "put1.3-rh3";
+    delete o.doc._revs;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/put1.3-rh3"),
+        o.doc,
+        "Check document"
+    );
+
+    // check document tree
+    o.doc_tree.children.unshift({
+      "rev": "1-rh1",
+      "status": "missing",
+      "children": [{
+        "rev": "2-rh2",
+        "status": "missing",
+        "children": [{
+          "rev": "3-rh3",
+          "status": "available",
+          "children": []
+        }]
+      }]
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/put1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    // add attachment
+    o.doc._attachments = {
+      "att1": {
+        "length": 1,
+        "content_type": "text/plain",
+        "digest": "md5-0cc175b9c0f1b6a831c399e269772661"
+      },
+      "att2": {
+        "length": 2,
+        "content_type": "dont/care",
+        "digest": "md5-5360af35bde9ebd8f01f492dc059593c"
+      }
+    };
+    localstorage.setItem(o.localpath + "/put1.3-rh3", o.doc);
+    localstorage.setItem(o.localpath + "/put1.3-rh3/att1", "a");
+    localstorage.setItem(o.localpath + "/put1.3-rh3/att2", "bc");
+
+    // put + revision with attachment
+    o.attachments = o.doc._attachments;
+    o.doc = {"_id": "put1", "_rev": "3-rh3", "title": "myPut4"};
+    o.revisions = {"start": 3, "ids": ["rh3","rh2","rh1"]};
+    o.rev = "4-"+generateRevisionHash(o.doc, o.revisions);
+    o.spy (o, "value", {"id": "put1", "ok": true, "rev": o.rev},
+           "Put + revision (document contains attachments)");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check document
+    o.doc._id = "put1." + o.rev;
+    o.doc._attachments = o.attachments;
+    delete o.doc._rev;
+    deepEqual(
+        localstorage.getItem(o.localpath + "/put1." + o.rev),
+        o.doc,
+        "Check document"
+    );
+
+    // check attachments
+    deepEqual(
+        localstorage.getItem(o.localpath + "/put1." + o.rev + "/att1"),
+        "a",
+        "Check Attachment"
+    );
+    deepEqual(
+        localstorage.getItem(o.localpath + "/put1." + o.rev + "/att2"),
+        "bc",
+        "Check Attachment"
+    );
+
+    // check document tree
+    o.doc_tree.children[0].children[0].children[0].children.unshift({
+        "rev": o.rev, "status": "available", "children": []
+    });
+    deepEqual(
+        localstorage.getItem(
+            o.localpath + "/put1.revision_tree.json"
+        ),
+        o.doc_tree,
+        "Check document tree"
+    );
+
+    o.jio.stop();
+
+});
+
+test("Put Attachment", function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+      "type": "revision",
+      "sub_storage": {
+        "type": "local",
+        "username": "urevputattmt",
+        "application_name": "arevputattmt"
+      }
+    });
+
+    // putAttachment without doc id
+    // error 20 -> document id required
+    o.spy(o, "status", 20, "PutAttachment without doc id" +
+          " -> 20 document id required");
+    o.jio.putAttachment({}, o.f);
+    o.tick(o);
+
+    // putAttachment without attachment id
+    // erorr 22 -> attachment id required
+    o.spy(o, "status", 22, "PutAttachment without attachment id" +
+          " -> 22 attachment id required");
+    o.jio.putAttachment({"_id": "putattmt1"}, o.f);
+    o.tick(o);
+
+    // putAttachment without document
+    o.revisions = {"start": 0, "ids": []}
+    o.rev_hash = generateRevisionHash({"_id": "doc1", "_attachment": "attmt1"},
+                                      o.revisions);
+    o.rev = "1-" + o.rev_hash;
+    o.spy(o, "value",
+          {"ok": true, "id": "doc1", "attachment": "attmt1", "rev": o.rev},
+          "PutAttachment without document, without data");
+    o.jio.putAttachment({"_id": "doc1", "_attachment": "attmt1"}, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem(
+          "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
+        ),
+        {
+            "_id": "doc1." + o.rev,
+            "_attachments": {
+                "attmt1": {
+                    "length": 0,
+                    // md5("")
+                    "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
+                }
+            }
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
+            + "/attmt1"
+        ),
+        "", "Check attachment"
+    );
+    // adding a metadata to the document
+    o.doc = localstorage.getItem(
+      "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
+    );
+    o.doc.title = "My Title";
+    localstorage.setItem(
+      "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev,
+      o.doc
+    );
+
+    // update attachment
+    o.prev_rev = o.rev;
+    o.revisions = {"start": 1, "ids": [o.rev_hash]}
+    o.rev_hash = generateRevisionHash({
+      "_id": "doc1",
+      "_data": "abc",
+      "_attachment": "attmt1",
+    }, o.revisions);
+    o.rev = "2-" + o.rev_hash;
+    o.spy(o, "value",
+          {"ok": true, "id": "doc1", "attachment": "attmt1", "rev": o.rev},
+          "Update Attachment, with data");
+    o.jio.putAttachment({
+      "_id": "doc1",
+      "_data": "abc",
+      "_attachment": "attmt1",
+      "_rev": o.prev_rev
+    }, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem(
+          "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
+        ),
+        {
+            "_id": "doc1." + o.rev,
+            "title": "My Title",
+            "_attachments": {
+                "attmt1": {
+                    "length": 3,
+                    // md5("abc")
+                    "digest": "md5-900150983cd24fb0d6963f7d28e17f72"
+                }
+            }
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev +
+            "/attmt1"
+        ),
+        "abc", "Check attachment"
+    );
+
+    // putAttachment new attachment
+    o.prev_rev = o.rev;
+    o.revisions = {"start": 2, "ids": [o.rev_hash, o.revisions.ids[0]]}
+    o.rev_hash = generateRevisionHash({
+      "_id": "doc1",
+      "_data": "def",
+      "_attachment": "attmt2",
+    }, o.revisions);
+    o.rev = "3-" + o.rev_hash;
+    o.spy(o, "value",
+          {"ok": true, "id": "doc1", "attachment": "attmt2", "rev": o.rev},
+          "PutAttachment without document, without data");
+    o.jio.putAttachment({
+      "_id": "doc1",
+      "_data": "def",
+      "_attachment": "attmt2",
+      "_rev": o.prev_rev
+    }, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem(
+          "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
+        ),
+        {
+            "_id": "doc1." + o.rev,
+            "title": "My Title",
+            "_attachments": {
+                "attmt1": {
+                    "length": 3,
+                    "digest": "md5-900150983cd24fb0d6963f7d28e17f72"
+                },
+                "attmt2": {
+                    "length": 3,
+                    // md5("def")
+                    "digest": "md5-4ed9407630eb1000c0f6b63842defa7d"
+                }
+            }
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev +
+            "/attmt2"
+        ),
+        "def", "Check attachment"
+    );
+
+    o.jio.stop();
+
+});
+
+test ("Get", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "revision",
+        "sub_storage": {
+            "type": "local",
+            "username": "urevget",
+            "application_name": "arevget"
+        }
+    });
+    o.localpath = "jio/localstorage/urevget/arevget";
+
+    // get inexistent document
+    o.spy(o, "status", 404, "Get inexistent document (winner)" +
+          " -> 404 Not Found");
+    o.jio.get({"_id": "get1"}, o.f);
+    o.tick(o);
+
+    // get inexistent attachment
+    o.spy(o, "status", 404, "Get inexistent attachment (winner)" +
+          " -> 404 Not Found");
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
+    o.tick(o);
+
+    // adding a document
+    o.doctree = {"children":[{
+        "rev": "1-rev1", "status": "available", "children": []
+    }]};
+    o.doc_myget1 = {"_id": "get1.1-rev1", "title": "myGet1"};
+    localstorage.setItem(o.localpath+"/get1.revision_tree.json", o.doctree);
+    localstorage.setItem(o.localpath+"/get1.1-rev1", o.doc_myget1);
+
+    // get document
+    o.doc_myget1_cloned = clone(o.doc_myget1);
+    o.doc_myget1_cloned._id = "get1";
+    o.doc_myget1_cloned._rev = "1-rev1";
+    o.doc_myget1_cloned._revisions = {"start": 1, "ids": ["rev1"]};
+    o.doc_myget1_cloned._revs_info = [{
+        "rev": "1-rev1", "status": "available"
+    }];
+    o.spy(o, "value", o.doc_myget1_cloned, "Get document (winner)");
+    o.jio.get({"_id": "get1"},
+              {"revs_info": true, "revs": true, "conflicts": true},
+              o.f);
+    o.tick(o);
+
+    // adding two documents
+    o.doctree = {"children":[{
+        "rev": "1-rev1", "status": "available", "children": []
+    },{
+        "rev": "1-rev2", "status": "available", "children": [{
+            "rev": "2-rev3", "status": "available", "children": []
+        }]
+    }]};
+    o.doc_myget2 = {"_id": "get1.1-rev2", "title": "myGet2"};
+    o.doc_myget3 = {"_id": "get1.2-rev3", "title": "myGet3"};
+    localstorage.setItem(o.localpath+"/get1.revision_tree.json", o.doctree);
+    localstorage.setItem(o.localpath+"/get1.1-rev2", o.doc_myget2);
+    localstorage.setItem(o.localpath+"/get1.2-rev3", o.doc_myget3);
+
+    // get document
+    o.doc_myget3_cloned = clone(o.doc_myget3);
+    o.doc_myget3_cloned._id = "get1";
+    o.doc_myget3_cloned["_rev"] = "2-rev3";
+    o.doc_myget3_cloned["_revisions"] = {"start": 2, "ids": ["rev3","rev2"]};
+    o.doc_myget3_cloned["_revs_info"] = [{
+        "rev": "2-rev3", "status": "available"
+    },{
+        "rev": "1-rev2", "status": "available"
+    }];
+    o.doc_myget3_cloned["_conflicts"] = ["1-rev1"];
+    o.spy(o, "value", o.doc_myget3_cloned,
+          "Get document (winner, after posting another one)");
+    o.jio.get({"_id": "get1"},
+              {"revs_info": true, "revs": true, "conflicts": true},
+              o.f);
+    o.tick(o);
+
+    // get inexistent specific document
+    o.spy(o, "status", 404, "Get document (inexistent specific revision)" +
+          " -> 404 Not Found");
+    o.jio.get({"_id": "get1", "_rev": "1-rev0"}, {
+        "revs_info": true, "revs": true, "conflicts": true,
+    }, o.f);
+    o.tick(o);
+
+    // get specific document
+    o.doc_myget2_cloned = clone(o.doc_myget2);
+    o.doc_myget2_cloned._id = "get1";
+    o.doc_myget2_cloned["_rev"] = "1-rev2";
+    o.doc_myget2_cloned["_revisions"] = {"start": 1, "ids": ["rev2"]};
+    o.doc_myget2_cloned["_revs_info"] = [{
+        "rev": "1-rev2", "status": "available"
+    }];
+    o.doc_myget2_cloned["_conflicts"] = ["1-rev1"];
+    o.spy(o, "value", o.doc_myget2_cloned, "Get document (specific revision)");
+    o.jio.get({"_id": "get1", "_rev": "1-rev2"}, {
+        "revs_info": true, "revs": true, "conflicts": true,
+    }, o.f);
+    o.tick(o);
+
+    // adding an attachment
+    o.attmt_myget3 = {
+        "get2": {
+            "length": 3,
+            "digest": "md5-dontcare",
+            "content_type": "oh/yeah"
+        }
+    };
+    o.doc_myget3._attachments = o.attmt_myget3;
+    localstorage.setItem(o.localpath+"/get1.2-rev3", o.doc_myget3);
+    localstorage.setItem(o.localpath+"/get1.2-rev3/get2", "abc");
+
+    // get attachment winner
+    o.spy(o, "value", "abc", "Get attachment (winner)");
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
+    o.tick(o);
+
+    // get inexistent attachment specific rev
+    o.spy(o, "status", 404, "Get inexistent attachment (specific revision)" +
+          " -> 404 Not Found");
+    o.jio.getAttachment({
+      "_id": "get1",
+      "_attachment": "get2",
+      "_rev": "1-rev1"
+    }, {
+      "revs_info": true,
+      "revs": true,
+      "conflicts": true,
+    }, o.f);
+    o.tick(o);
+
+    // get attachment specific rev
+    o.spy(o, "value", "abc", "Get attachment (specific revision)");
+    o.jio.getAttachment({
+      "_id": "get1",
+      "_attachment": "get2",
+      "_rev": "2-rev3"
+    }, {
+      "revs_info": true,
+      "revs": true,
+      "conflicts": true,
+    }, o.f);
+    o.tick(o);
+
+    // get document with attachment (specific revision)
+    delete o.doc_myget2_cloned._attachments;
+    o.spy(o, "value", o.doc_myget2_cloned,
+          "Get document which have an attachment (specific revision)");
+    o.jio.get({"_id": "get1", "_rev": "1-rev2"}, {
+        "revs_info": true, "revs": true, "conflicts": true,
+    }, o.f);
+    o.tick(o);
+
+    // get document with attachment (winner)
+    o.doc_myget3_cloned._attachments = o.attmt_myget3;
+    o.spy(o, "value", o.doc_myget3_cloned,
+          "Get document which have an attachment (winner)");
+    o.jio.get({"_id": "get1"},
+              {"revs_info": true, "revs": true, "conflicts": true},
+              o.f);
+    o.tick(o);
+
+    o.jio.stop();
+
+});
+
+test ("Remove", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "revision",
+        "sub_storage": {
+            "type": "local",
+            "username": "urevrem",
+            "application_name": "arevrem"
+        }
+    });
+    o.localpath = "jio/localstorage/urevrem/arevrem";
+
+    // 1. remove document without revision
+    o.spy(o, "status", 409, "Remove document without revision " +
+          "-> 409 Conflict");
+    o.jio.remove({"_id":"remove1"}, o.f);
+    o.tick(o);
+
+    // 2. remove attachment without revision
+    o.spy(o, "status", 409, "Remove attachment without revision " +
+          "-> 409 Conflict");
+    o.jio.removeAttachment({"_id":"remove1", "_attachment": "remove2"}, o.f);
+    o.tick(o);
+
+    // adding a document with attachments
+    o.doc_myremove1 = {
+      "_id": "remove1.1-veryoldrev",
+      "title": "myRemove1"
+    };
+
+    localstorage.setItem(o.localpath + "/remove1.1-veryoldrev",
+                         o.doc_myremove1);
+
+    o.doc_myremove1._id = "remove1.2-oldrev";
+    o.attachment_remove2 = {
+        "length": 3,
+        "digest": "md5-dontcare",
+        "content_type": "oh/yeah"
+    }
+    o.attachment_remove3 = {
+        "length": 5,
+        "digest": "md5-865f5cc7fbd7854902eae9d8211f178a",
+        "content_type": "he/ho"
+    }
+    o.doc_myremove1._attachments = {
+      "remove2": o.attachment_remove2,
+      "remove3": o.attachment_remove3
+    };
+
+    localstorage.setItem(o.localpath + "/remove1.2-oldrev",
+                         o.doc_myremove1);
+    localstorage.setItem(o.localpath + "/remove1.2-oldrev/remove2", "abc");
+    localstorage.setItem(o.localpath + "/remove1.2-oldrev/remove3", "defgh");
+
+    // add document tree
+    o.doctree = {
+      "children": [{
+        "rev": "1-veryoldrev", "status": "available", "children": [{
+          "rev": "2-oldrev", "status": "available", "children": []
+        }]
+      }]
+    };
+    localstorage.setItem(o.localpath + "/remove1.revision_tree.json",
+                         o.doctree);
+
+    // 3. remove inexistent attachment
+    o.spy(o, "status", 404, "Remove inexistent attachment -> 404 Not Found");
+    o.jio.removeAttachment({
+      "_id": "remove1",
+      "_attachment": "remove0",
+      "_rev": "2-oldrev"
+    }, o.f);
+    o.tick(o);
+
+    // 4. remove existing attachment
+    o.rev_hash = generateRevisionHash({
+      "_id": "remove1",
+      "_attachment": "remove2",
+    }, {"start": 2, "ids": ["oldrev", "veryoldrev"]});
+    o.spy (o, "value", {
+      "ok": true,
+      "id": "remove1",
+      "attachment": "remove2",
+      "rev": "3-" + o.rev_hash
+    }, "Remove existing attachment");
+    o.jio.removeAttachment({
+      "_id": "remove1",
+      "_attachment": "remove2",
+      "_rev": "2-oldrev"
+    }, o.f);
+    o.tick(o);
+
+    o.doctree = {
+      "children":[{
+        "rev": "1-veryoldrev", "status": "available", "children": [{
+          "rev": "2-oldrev", "status": "available", "children": [{
+            "rev": "3-" + o.rev_hash, "status": "available", "children": []
+          }]
+        }]
+      }]
+    };
+
+    // 5. check if document tree has been updated correctly
+    deepEqual(localstorage.getItem(
+      o.localpath + "/remove1.revision_tree.json"
+    ), o.doctree, "Check document tree");
+
+    // 6. check if the attachment still exists
+    deepEqual(localstorage.getItem(
+      o.localpath + "/remove1.2-oldrev/remove2"
+    ), "abc", "Check attachment -> still exists");
+
+    // 7. check if document is updated
+    deepEqual(localstorage.getItem(
+        o.localpath + "/remove1.3-" + o.rev_hash
+    ), {
+      "_id": "remove1.3-" + o.rev_hash,
+      "title":"myRemove1",
+      "_attachments": {"remove3": o.attachment_remove3}
+    }, "Check document");
+
+    // 8. remove document with wrong revision
+    o.spy(o, "status", 409, "Remove document with wrong revision " +
+          "-> 409 Conflict");
+    o.jio.remove({"_id":"remove1", "_rev": "1-a"}, o.f);
+    o.tick(o);
+
+    // 9. remove attachment wrong revision
+    o.spy(o, "status", 409, "Remove attachment with wrong revision " +
+          "-> 409 Conflict");
+    o.jio.removeAttachment({
+      "_id": "remove1",
+      "_attachment": "remove2",
+      "_rev": "1-a"
+    }, o.f);
+    o.tick(o);
+
+    // 10. remove document
+    o.last_rev = "3-" + o.rev_hash;
+    o.rev_hash = generateRevisionHash(
+      {"_id": "remove1"},
+      {"start": 3, "ids": [o.rev_hash, "oldrev", "veryoldrev"]},
+      true
+    );
+    o.spy(o, "value", {"ok": true, "id": "remove1", "rev": "4-" + o.rev_hash},
+          "Remove document");
+    o.jio.remove({"_id":"remove1", "_rev": o.last_rev}, o.f);
+    o.tick(o);
+
+    // 11. check document tree
+    o.doctree.children[0].children[0].children[0].children.unshift({
+      "rev": "4-" + o.rev_hash,
+      "status": "deleted",
+      "children": []
+    });
+    deepEqual(localstorage.getItem(o.localpath + "/remove1.revision_tree.json"),
+              o.doctree, "Check document tree");
+
+    o.jio.stop();
+});
+
+test("allDocs", function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "revision",
+        "sub_storage": {
+            "type": "local",
+            "username": "urevad1",
+            "application_name": "arevad1"
+        }
+    });
+    o.localpath = "jio/localstorage/urevad1/arevad1";
+
+    // adding 3 documents
+    o.jio.put({"_id": "yes"}, function (err, response) {
+      o.rev1 = (response || {}).rev;
+    });
+    o.jio.put({"_id": "no"}, function (err, response) {
+      o.rev2 = (response || {}).rev;
+    });
+    o.jio.put({"_id": "maybe"}, function (err, response) {
+      o.rev3 = (response || {}).rev;
+    });
+    o.clock.tick(1000);
+
+    // adding conflicts
+    o.jio.put({"_id": "maybe"});
+
+    // adding 2 attachments
+    o.jio.putAttachment({
+      "_id": "yes",
+      "_attachment": "blue",
+      "_mimetype": "text/plain",
+      "_rev": o.rev1,
+      "_data": "sky"
+    }, function (err, response) {
+      o.rev1 = (response || {}).rev;
+    });
+    o.jio.putAttachment({
+      "_id": "no",
+      "_attachment": "Heeeee!",
+      "_mimetype": "text/plain",
+      "_rev": o.rev2,
+      "_data": "Hooooo!"
+    }, function (err, response) {
+      o.rev2 = (response || {}).rev;
+    });
+    o.clock.tick(1000);
+
+    o.rows = {
+      "total_rows": 3, "rows": [{
+        "id": "maybe",
+        "key": "maybe",
+        "value": {
+          "rev": o.rev3
+        }
+      }, {
+        "id": "no",
+        "key": "no",
+        "value": {
+          "rev": o.rev2
+        }
+      }, {
+        "id": "yes",
+        "key": "yes",
+        "value": {
+          "rev": o.rev1
+        }
+      }]
+    };
+    o.spy(o, "value", o.rows, "allDocs");
+    o.jio.allDocs(function (err, response) {
+      if (response && response.rows) {
+        response.rows.sort(function (a, b) {
+          return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
+        })
+      }
+      o.f(err, response);
+    });
+    o.tick(o);
+
+    o.rows.rows[0].doc = {
+      "_id": "maybe",
+      "_rev": o.rev3
+    };
+    o.rows.rows[1].doc = {
+      "_id": "no",
+      "_rev": o.rev2,
+      "_attachments": {
+        "Heeeee!": {
+          "content_type": "text/plain",
+          "digest": "md5-2686969b0bc0fd9bc186146a1ecb09a7",
+          "length": 7
+        }
+      },
+    };
+    o.rows.rows[2].doc = {
+      "_id": "yes",
+      "_rev": o.rev1,
+      "_attachments": {
+        "blue": {
+          "content_type": "text/plain",
+          "digest": "md5-900bc885d7553375aec470198a9514f3",
+          "length":  3
+        }
+      },
+    };
+    o.spy(o, "value", o.rows, "allDocs + include docs");
+    o.jio.allDocs({"include_docs": true}, function (err, response) {
+      if (response && response.rows) {
+        response.rows.sort(function (a, b) {
+          return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
+        })
+      }
+      o.f(err, response);
+    });
     o.tick(o);
 
     o.jio.stop();
 });
 
-test ('Get document list', function () {
-    // Test if LocalStorage can get a list of documents.
-    // We create 2 documents inside localStorage to check them.
+test ("Scenario", function(){
 
-    var o = {}; o.clock = this.sandbox.useFakeTimers(); o.t = this;
-    o.clock.tick(base_tick);
-    o.mytest = function (value){
-        o.f = function (err,val) {
-            if (val) {
-                deepEqual (objectifyDocumentArray(val.rows),
-                           objectifyDocumentArray(value),'getting list');
-            } else {
-                deepEqual (err,value,'getting list');
-            }
-        };
-        o.t.spy(o,'f');
-        o.jio.allDocs(o.f);
-        o.clock.tick(1000);
-        if (!o.f.calledOnce) {
-            if (o.f.called) {
-                ok(false, 'too much results');
-            } else {
-                ok(false, 'no response');
-            }
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+        "type": "revision",
+        "sub_storage": {
+            "type": "local",
+            "username": "usam1",
+            "application_name": "asam1"
         }
+    });
+    o.localpath = "jio/localstorage/usam1/asam1";
+
+    // new application
+    ok ( o.jio, "I open my application with revision and localstorage");
+
+    // put non empty document A-1
+    o.doc = {"_id": "sample1", "title": "mySample1"};
+    o.revisions = {"start": 0, "ids": []};
+    o.hex = generateRevisionHash(o.doc, o.revisions);
+    o.rev = "1-"+o.hex;
+
+    o.spy (o, "value", {"ok": true, "id": "sample1", "rev": o.rev},
+           "Then, I create a new document (no attachment), my application "+
+           "keep the revision in memory");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // open new tab (JIO)
+    o.jio2 = JIO.newJio({
+        "type": "revision",
+        "sub_storage": {
+            "type": "local",
+            "username": "usam1",
+            "application_name": "asam1"
+        }
+    });
+    o.localpath = "jio/localstorage/usam1/asam1";
+
+    // Create a new JIO in a new tab
+    ok (o.jio2, "Now, I am opening a new tab, with the same application"+
+        " and the same storage tree");
+
+    // Get the document from the first storage
+    o.doc._rev = o.rev;
+    o.doc._revisions = {"ids":[o.hex], "start":1 };
+    o.doc._revs_info = [{"rev": o.rev, "status": "available"}];
+    o.spy(o, "value", o.doc, "And, on this new tab, I load the document,"+
+        "and my application keep the revision in memory");
+    o.jio2.get({"_id": "sample1", "_rev": o.rev}, {
+        "revs_info": true, "revs": true, "conflicts": true,
+    }, o.f);
+    o.tick(o);
+
+    // MODIFY the 2nd version
+    o.doc_2 = {"_id": "sample1", "_rev": o.rev,
+        "title":"mySample2_modified"};
+    o.revisions_2 = {"start":1 , "ids":[o.hex]};
+    o.hex_2 = generateRevisionHash(o.doc_2, o.revisions_2)
+    o.rev_2 = "2-"+o.hex_2;
+    o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_2},
+           "So, I can modify and update it");
+    o.jio2.put(o.doc_2, o.f);
+    o.tick(o);
+
+    // MODIFY first version
+    o.doc_1 = {
+        "_id": "sample1", "_rev": o.rev, "title": "mySample1_modified"
     };
-    o.jio = JIO.newJio({type:'local',username:'MrListName',
-                        applicationname:'jiotests'});
-    o.doc1 = {_id:'file',content:'content',
-              _last_modified:1,_creation_date:0};
-    o.doc2 = {_id:'memo',content:'test',
-              _last_modified:5,_creation_date:2};
-    addFileToLocalStorage ('MrListName','jiotests',o.doc1);
-    addFileToLocalStorage ('MrListName','jiotests',o.doc2);
-    o.mytest ([{
-        id:o.doc2._id,key:o.doc2._id,
-        value:{
-            _creation_date:o.doc2._creation_date,
-            _last_modified:o.doc2._last_modified
+    o.revisions_1 = {"start": 1, "ids":[o.rev.split('-')[1]
+    ]};
+    o.hex_1 = generateRevisionHash(o.doc_1, o.revisions_1);
+    o.rev_1 = "2-"+o.hex_1;
+    o.spy (o, "value", {"id":"sample1", "ok":true, "rev": o.rev_1},
+           "Back to the first tab, I update the document.");
+    o.jio.put(o.doc_1, o.f);
+    o.tick(o);
+
+    // Close 1st tab
+    o.jio.close();
+
+    // Close 2nd tab
+    o.jio2.close();
+    ok ( o.jio2, "I close tab both tabs");
+
+    // Reopen JIO
+    o.jio = JIO.newJio({
+        "type": "revision",
+        "sub_storage": {
+            "type": "local",
+            "username": "usam1",
+            "application_name": "asam1"
         }
-    },{
-        id:o.doc1._id,key:o.doc1._id,
-        value:{
-            _last_modified:o.doc1._last_modified,
-            _creation_date:o.doc1._creation_date
+    });
+    o.localpath = "jio/localstorage/usam1/asam1";
+    ok ( o.jio, "Later, I open my application again");
+
+    // GET document without revision = winner & conflict!
+    o.mydocSample3 = {"_id": "sample1", "title": "mySample1_modified",
+                      "_rev": o.rev_1};
+    o.mydocSample3._conflicts = [o.rev_2]
+    o.mydocSample3._revs_info = [{"rev": o.rev_1, "status": "available"},{
+        "rev":o.rev,"status":"available"
+        }];
+    o.mydocSample3._revisions = {"ids":[o.hex_1, o.hex], "start":2 };
+    o.spy(o, "value", o.mydocSample3,
+          "I load the same document as before, and a popup shows that "+
+          "there is a conflict");
+    o.jio.get({"_id": "sample1"},
+              {"revs_info": true, "revs": true, "conflicts": true,
+        }, o.f);
+    o.tick(o);
+
+    // REMOVE one of the two conflicting versions
+    o.revisions = {"start": 2, "ids":[
+        o.rev_1.split('-')[1],o.rev.split('-')[1]
+    ]};
+    o.doc_myremove3 = {"_id": "sample1", "_rev": o.rev_1};
+    o.rev_3 = "3-"+generateRevisionHash(o.doc_myremove3, o.revisions,true);
+
+    o.spy (o, "value", {"ok": true, "id": "sample1", "rev": o.rev_3},
+           "I choose one of the document and close the application.");
+    o.jio.remove({"_id":"sample1", "_rev":o.rev_1}, o.f);
+    o.tick(o);
+
+    // check to see if conflict still exists
+    o.mydocSample4 = {"_id": "sample1", "title": "mySample2_modified",
+                      "_rev": o.rev_2};
+    o.mydocSample4._revs_info = [{"rev": o.rev_2, "status": "available"},{
+        "rev":o.rev,"status":"available"
+        }];
+    o.mydocSample4._revisions = {"ids":[o.hex_2, o.hex], "start":2 };
+
+    o.spy(o, "value", o.mydocSample4, "Test if conflict still exists");
+    o.jio.get({"_id": "sample1"}, {"revs_info": true, "revs": true,
+              "conflicts": true,}, o.f);
+    o.tick(o);
+
+    // END
+    o.jio.stop();
+
+});
+
+module ("JIO Replicate Revision Storage");
+
+  var testReplicateRevisionStorage = function (sinon, jio_description) {
+
+    var o = generateTools(sinon), leavesAction, generateLocalPath;
+
+    o.jio = JIO.newJio(jio_description);
+
+    generateLocalPath = function (storage_description) {
+      return "jio/localstorage/" + storage_description.username + "/" +
+        storage_description.application_name;
+    };
+
+    leavesAction = function (action, storage_description, param) {
+      var i;
+      if (param === undefined) {
+        param = {};
+      } else {
+        param = clone(param);
+      }
+      if (storage_description.storage_list !== undefined) {
+        // it is the replicate revision storage tree
+        for (i = 0; i < storage_description.storage_list.length; i += 1) {
+          leavesAction(action, storage_description.storage_list[i], param);
         }
-    }]);
+      } else if (storage_description.sub_storage !== undefined) {
+        // it is the revision storage tree
+        param.revision = true;
+        leavesAction(action, storage_description.sub_storage, param);
+      } else {
+        // it is the storage tree leaf
+        param[storage_description.type] = true;
+        action(storage_description, param);
+      }
+    };
+    o.leavesAction = function (action) {
+      leavesAction(action, jio_description);
+    };
+
+    // post a new document without id
+    o.doc = {"title": "post document without id"};
+    o.spy(o, "status", undefined, "Post document (without id)");
+    o.jio.post(o.doc, function (err, response) {
+      o.f.apply(arguments);
+      o.response_rev = (err || response).rev;
+      if (isUuid((err || response).id)) {
+        ok(true, "Uuid format");
+        o.uuid = (err || response).id;
+      } else {
+        deepEqual((err || response).id,
+                  "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "Uuid format");
+      }
+    });
+    o.tick(o);
+
+    // check document
+    o.doc._id = o.uuid;
+    o.revisions = {"start": 0, "ids": []};
+    o.rev_hash = generateRevisionHash(o.doc, o.revisions);
+    o.rev = "1-" + o.rev_hash;
+    o.leavesAction(function (storage_description, param) {
+      var suffix = "", doc = clone(o.doc);
+      if (param.revision) {
+        deepEqual(o.response_rev, o.rev, "Check revision");
+        doc._id += "." + o.rev;
+        suffix = "." + o.rev;
+      }
+      deepEqual(
+        localstorage.getItem(generateLocalPath(storage_description) +
+                             "/" + o.uuid + suffix),
+        doc, "Check document"
+      );
+    });
+
+    // get the post document without revision
+    o.spy(o, "value", {
+      "_id": o.uuid,
+      "title": "post document without id",
+      "_rev": o.rev,
+      "_revisions": {"start": 1, "ids": [o.rev_hash]},
+      "_revs_info": [{"rev": o.rev, "status": "available"}]
+    }, "Get the generated document, the winner");
+    o.jio.get({"_id": o.uuid}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // post a new document with id
+    o.doc = {"_id": "doc1", "title": "post new doc with id"};
+    o.rev1_1_hash = generateRevisionHash(o.doc, o.revisions);
+    o.rev1_1 = "1-" + o.rev1_1_hash;
+    o.rev1_1_history = {"start": 1, "ids": [o.rev1_1_hash]};
+    o.rev1_1_revs_info = [{"rev": o.rev1_1, "status": "available"}];
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev1_1},
+          "Post new document with an id");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    //  /
+    //  |
+    // 1-1
+
+    // check document
+    o.leavesAction(function (storage_description, param) {
+      var suffix = "", doc = clone(o.doc);
+      if (param.revision) {
+        doc._id += "." + o.rev1_1;
+        suffix = "." + o.rev1_1;
+      }
+      deepEqual(
+        localstorage.getItem(generateLocalPath(storage_description) +
+                             "/doc1" + suffix),
+        doc, "Check document"
+      );
+    });
+
+    // get the post document without revision
+    o.spy(o, "value", {
+      "_id": "doc1",
+      "title": "post new doc with id",
+      "_rev": o.rev1_1,
+      "_revisions": {"start": 1, "ids": [o.rev1_1_hash]},
+      "_revs_info": [{"rev": o.rev1_1, "status": "available"}]
+    }, "Get the previous document (without revision)");
+    o.jio.get({"_id": "doc1"}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // post same document without revision
+    o.doc = {"_id": "doc1", "title": "post same document without revision"};
+    o.rev1_2_hash = generateRevisionHash(o.doc, o.revisions);
+    o.rev1_2 = "1-" + o.rev1_2_hash;
+    o.rev1_2_history = {"start": 1, "ids": [o.rev1_2_hash]};
+    o.rev1_2_revs_info = [{"rev": o.rev1_2, "status": "available"}];
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev1_2},
+          "Post same document (without revision)");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    //    /
+    //   / \
+    // 1-1 1-2
+
+    // check document
+    o.leavesAction(function (storage_description, param) {
+      var suffix = "", doc = clone(o.doc);
+      if (param.revision) {
+        doc._id += "." + o.rev1_2;
+        suffix = "." + o.rev1_2;
+      }
+      deepEqual(
+        localstorage.getItem(generateLocalPath(storage_description) +
+                             "/doc1" + suffix),
+        doc, "Check document"
+      );
+    });
+
+    // post a new revision
+    o.doc = {"_id": "doc1", "title": "post new revision", "_rev": o.rev1_2};
+    o.revisions.start += 1;
+    o.revisions.ids.unshift(o.rev1_2_hash);
+    o.rev2_3_hash = generateRevisionHash(o.doc, o.revisions);
+    o.rev2_3 = "2-" + o.rev2_3_hash;
+    o.rev2_3_history = clone(o.rev1_2_history);
+    o.rev2_3_history.start += 1;
+    o.rev2_3_history.ids.unshift(o.rev2_3_hash);
+    o.rev2_3_revs_info = clone(o.rev1_2_revs_info);
+    o.rev2_3_revs_info.unshift({"rev": o.rev2_3, "status": "available"});
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev2_3},
+          "Post document (with revision)");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    //    /
+    //   / \
+    // 1-1 1-2
+    //      |
+    //     2-3
+
+    // check document
+    o.leavesAction(function (storage_description, param) {
+      var suffix = "", doc = clone(o.doc);
+      delete doc._rev;
+      if (param.revision) {
+        doc._id += "." + o.rev2_3;
+        suffix = "." + o.rev2_3;
+      }
+      deepEqual(
+        localstorage.getItem(generateLocalPath(storage_description) +
+                             "/doc1" + suffix),
+        doc, "Check document"
+      );
+    });
+
+    // get the post document with revision
+    o.spy(o, "value", {
+      "_id": "doc1",
+      "title": "post same document without revision",
+      "_rev": o.rev1_2,
+      "_revisions": {"start": 1, "ids": [o.rev1_2_hash]},
+      "_revs_info": [{"rev": o.rev1_2, "status": "available"}],
+      "_conflicts": [o.rev1_1]
+    }, "Get the previous document (with revision)");
+    o.jio.get({"_id": "doc1", "_rev": o.rev1_2}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // put document without id
+    o.spy(o, "status", 20, "Put document without id")
+    o.jio.put({}, o.f);
+    o.tick(o);
+
+    // put document without rev
+    o.doc = {"_id": "doc1", "title": "put new document"};
+    o.rev1_4_hash = generateRevisionHash(o.doc, {"start": 0, "ids": []});
+    o.rev1_4 = "1-" + o.rev1_4_hash;
+    o.rev1_4_history = {"start": 1, "ids": [o.rev1_4_hash]};
+    o.rev1_4_revs_info = [{"rev": o.rev1_4, "status": "available"}];
+    o.spy(o, "value", {"id": "doc1", "ok": true, "rev": o.rev1_4},
+          "Put document without rev")
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    //    __/__
+    //   /  |  \
+    // 1-1 1-2 1-4
+    //      |
+    //     2-3
+
+    // put new revision
+    o.doc = {"_id": "doc1", "title": "put new revision", "_rev": o.rev1_4};
+    o.rev2_5_hash = generateRevisionHash(o.doc, o.rev1_4_history);
+    o.rev2_5 = "2-" + o.rev2_5_hash
+    o.rev2_5_history = {"start": 2, "ids": [o.rev2_5_hash, o.rev1_4_hash]};
+    o.rev2_5_revs_info = clone(o.rev1_4_revs_info);
+    o.rev2_5_revs_info.unshift({"rev": o.rev2_5, "status": "available"});
+    o.spy(o, "value", {"id": "doc1", "ok": true, "rev": o.rev2_5},
+          "Put new revision")
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    //    __/__
+    //   /  |  \
+    // 1-1 1-2 1-4
+    //      |   |
+    //     2-3 2-5
+
+    // putAttachment to inexistent document
+    o.doc = {
+      "_id": "doc2",
+      "_mimetype": "text/plain",
+      "_data": "doc 2 - attachment 1",
+      "_attachment": "attachment1"
+    };
+    o.rev_hash = generateRevisionHash(o.doc, {"start": 0, "ids": []});
+    o.rev = "1-" + o.rev_hash;
+    o.spy(o, "value",
+          {"ok": true, "id": "doc2", "attachment": "attachment1", "rev": o.rev},
+          "Put an attachment to an inexistent document");
+    o.jio.putAttachment(o.doc, o.f);
+    o.tick(o);
+
+    // putAttachment
+    o.doc = {
+      "_id": "doc1",
+      "_mimetype": "text/plain",
+      "_data": "doc 1 - attachment 1",
+      "_attachment": "attachment1",
+      "_rev": o.rev2_5
+    };
+    o.rev3_6_hash = generateRevisionHash(o.doc, o.rev2_5_history);
+    o.rev3_6 = "3-" + o.rev3_6_hash;
+    o.rev3_6_history = clone(o.rev2_5_history);
+    o.rev3_6_history.start += 1;
+    o.rev3_6_history.ids.unshift(o.rev3_6_hash);
+    o.rev3_6_revs_info = clone(o.rev2_5_revs_info);
+    o.rev3_6_revs_info.unshift({"rev": o.rev3_6, "status": "available"});
+    o.spy(o, "value", {
+      "ok": true,
+      "id": "doc1",
+      "attachment": "attachment1",
+      "rev": o.rev3_6
+    }, "Put an attachment to the first document");
+    o.jio.putAttachment(o.doc, o.f);
+    o.tick(o);
+
+    //    __/__
+    //   /  |  \
+    // 1-1 1-2 1-4
+    //      |   |
+    //     2-3 2-5
+    //          |
+    //        3-6+a1
+
+    // get document
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev3_6,
+      "_revisions": o.rev3_6_history,
+      "_revs_info": o.rev3_6_revs_info,
+      "_conflicts": [o.rev2_3, o.rev1_1],
+      "_attachments": {
+        "attachment1": {
+          "length": "doc 1 - attachment 1".length,
+          "content_type": "text/plain",
+          "digest": "md5-0505c1fb6aae02dd1695d33841726564"
+        }
+      },
+      "title": "put new revision"
+    };
+    o.spy(o, "value", o.doc, "Get document, the winner");
+    o.jio.get({"_id": "doc1"}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // get attachment
+    o.doc = {
+      "_id": "doc1",
+      "_attachment": "attachment1"
+    };
+    o.spy(o, "value", "doc 1 - attachment 1", "Get the winner's attachment");
+    o.jio.getAttachment(o.doc, o.f);
+    o.tick(o);
+
+    // put document
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev3_6,
+      "title": "Put revision, attachment must be copied"
+    };
+    o.rev4_7_hash = generateRevisionHash(o.doc, o.rev3_6_history);
+    o.rev4_7 = "4-" + o.rev4_7_hash;
+    o.rev4_7_history = clone(o.rev3_6_history);
+    o.rev4_7_history.start += 1;
+    o.rev4_7_history.ids.unshift(o.rev4_7_hash);
+    o.rev4_7_revs_info = clone(o.rev3_6_revs_info);
+    o.rev4_7_revs_info.unshift({"rev": o.rev4_7, "status": "available"});
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev4_7},
+          "Update document, attachment should be copied");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    //    __/__
+    //   /  |  \
+    // 1-1 1-2 1-4
+    //      |   |
+    //     2-3 2-5
+    //          |
+    //        3-6+a1
+    //          |
+    //        4-7+a1
+
+    // get document, attachment must be copied
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev4_7,
+      "title": o.doc.title,
+      "_attachments": {
+        "attachment1": {
+          "length": "doc 1 - attachment 1".length,
+          "content_type": "text/plain",
+          "digest": "md5-0505c1fb6aae02dd1695d33841726564"
+        }
+      },
+      "_conflicts": [o.rev2_3, o.rev1_1],
+      "_revisions": o.rev4_7_history,
+      "_revs_info": o.rev4_7_revs_info
+    };
+    o.spy(o, "value", o.doc,
+          "Get the new winner document and its attachment metadata");
+    o.jio.get({"_id": "doc1"}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // get attachment
+    o.doc = {
+      "_id": "doc1",
+      "_attachment": "attachment1"
+    };
+    o.spy(o, "value", "doc 1 - attachment 1",
+          "Get the winner's attachment again");
+    o.jio.getAttachment(o.doc, o.f);
+    o.tick(o);
+
+    // remove attachment
+    o.doc = {
+      "_id": "doc1",
+      "_attachment": "attachment1",
+      "_rev": o.rev4_7
+    };
+    o.rev5_8_hash = generateRevisionHash(o.doc, o.rev4_7_history);
+    o.rev5_8 = "5-" + o.rev5_8_hash;
+    o.rev5_8_history = clone(o.rev4_7_history);
+    o.rev5_8_history.start += 1;
+    o.rev5_8_history.ids.unshift(o.rev5_8_hash);
+    o.rev5_8_revs_info = clone(o.rev4_7_revs_info);
+    o.rev5_8_revs_info.unshift({"rev": o.rev5_8, "status": "available"});
+    o.spy(o, "value", {
+      "ok": true,
+      "id": "doc1",
+      "attachment": "attachment1",
+      "rev": o.rev5_8
+    }, "Remove attachment");
+    o.jio.removeAttachment(o.doc, o.f);
+    o.tick(o);
+
+
+    //    __/__
+    //   /  |  \
+    // 1-1 1-2 1-4
+    //      |   |
+    //     2-3 2-5
+    //          |
+    //        3-6+a1
+    //          |
+    //        4-7+a1
+    //          |
+    //         5-8
+
+    // get document to check attachment existence
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev5_8,
+      "title": "Put revision, attachment must be copied",
+      "_conflicts": [o.rev2_3, o.rev1_1],
+      "_revisions": o.rev5_8_history,
+      "_revs_info": o.rev5_8_revs_info
+    };
+    o.spy(o, "value", o.doc,
+          "Get the new winner document, no attachment must be provided");
+    o.jio.get({"_id": "doc1"}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // get specific document
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev4_7,
+      "title": o.doc.title,
+      "_attachments": {
+        "attachment1": {
+          "length": "doc 1 - attachment 1".length,
+          "content_type": "text/plain",
+          "digest": "md5-0505c1fb6aae02dd1695d33841726564"
+        }
+      },
+      "_conflicts": [o.rev2_3, o.rev1_1],
+      "_revisions": o.rev4_7_history,
+      "_revs_info": o.rev4_7_revs_info
+    };
+    o.spy(o, "value", o.doc,
+          "Get the new winner document and its attachment metadata");
+    o.jio.get({"_id": "doc1", "_rev": o.rev4_7}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // get inexistent attachment
+    o.spy(o, "status", 404, "Get inexistent winner attachment" +
+          " -> 404 Not Found");
+    o.jio.get({"_id": "doc1/attachment1"}, o.f);
+    o.tick(o);
+
+    // get specific attachment
+    o.doc = {
+      "_id": "doc1",
+      "_attachment": "attachment1",
+      "_rev": o.rev3_6
+    };
+    o.spy(o, "value", "doc 1 - attachment 1", "Get a specific attachment");
+    o.jio.getAttachment(o.doc, o.f);
+    o.tick(o);
+
+    // remove specific document and conflict
+    o.doc = {"_id": "doc1", "_rev": o.rev1_1};
+    // generate with deleted_flag
+    o.rev2_9_hash = generateRevisionHash(o.doc, o.rev1_1_history, true);
+    o.rev2_9 = "2-" + o.rev2_9_hash;
+    o.rev2_9_history = clone(o.rev1_1_history);
+    o.rev2_9_history.start += 1;
+    o.rev2_9_history.ids.unshift(o.rev2_9_hash);
+    o.rev2_9_revs_info = clone(o.rev1_1_revs_info);
+    o.rev2_9_revs_info.unshift({"rev": o.rev2_9, "status": "deleted"});
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev2_9},
+          "Remove specific document, and one conflict");
+    o.jio.remove(o.doc, o.f);
+    o.tick(o);
+
+    //    __/___
+    //   /   |  \
+    // 1-1  1-2 1-4
+    //  |    |   |
+    // D2-9 2-3 2-5
+    //           |
+    //         3-6+a1
+    //           |
+    //         4-7+a1
+    //           |
+    //          5-8
+
+    // remove specific document and conflict
+    o.doc = {"_id": "doc1", "_rev": o.rev2_3};
+    o.rev3_10_hash = generateRevisionHash(o.doc, o.rev2_3_history, true);
+    o.rev3_10 = "3-" + o.rev3_10_hash;
+    o.rev3_10_history = clone(o.rev2_3_history);
+    o.rev3_10_history.start += 1;
+    o.rev3_10_history.ids.unshift(o.rev3_10_hash);
+    o.rev3_10_revs_info = clone(o.rev2_3_revs_info);
+    o.rev3_10_revs_info.unshift({"rev": o.rev3_10, "status": "deleted"});
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev3_10},
+          "Remove specific document, and one conflict");
+    o.jio.remove(o.doc, o.f);
+    o.tick(o);
+
+    //    ___/____
+    //   /   |    \
+    // 1-1  1-2   1-4
+    //  |    |     |
+    // D2-9 2-3   2-5
+    //       |     |
+    //     D3-10 3-6+a1
+    //             |
+    //           4-7+a1
+    //             |
+    //            5-8
+
+    // get document no more conflict
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev5_8,
+      "title": "Put revision, attachment must be copied",
+      "_revisions": o.rev5_8_history,
+      "_revs_info": o.rev5_8_revs_info
+    };
+    o.spy(o, "value", o.doc,
+          "Get the new winner document, no more conflicts");
+    o.jio.get({"_id": "doc1"}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // remove document
+    o.doc = {
+      "_id": "doc1",
+      "_rev": o.rev5_8
+    };
+    o.rev6_11_hash = generateRevisionHash(o.doc, o.rev5_8_history, true);
+    o.rev6_11 = "6-" + o.rev6_11_hash;
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": o.rev6_11},
+          "Remove the last document");
+    o.jio.remove(o.doc, o.f);
+    o.tick(o);
+
+    //    ___/____
+    //   /   |    \
+    // 1-1  1-2   1-4
+    //  |    |     |
+    // D2-9 2-3   2-5
+    //       |     |
+    //     D3-10 3-6+a1
+    //             |
+    //           4-7+a1
+    //             |
+    //            5-8
+    //             |
+    //           D6-11
+
+    // get inexistent document
+    o.spy(o, "status", 404, "Get inexistent document -> 404 Not Found");
+    o.jio.get({"_id": "doc3"}, {
+      "conflicts": true,
+      "revs": true,
+      "revisions": true
+    }, o.f);
+    o.tick(o);
+
+    // get specific deleted document
+    o.spy(o, "status", 404, "Get deleted document -> 404 Not Found");
+    o.jio.get({"_id": "doc1", "rev": o.rev3_10}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    // get specific deleted document
+    o.spy(o, "status", 404, "Get deleted document -> 404 Not Found");
+    o.jio.get({"_id": "doc1"}, {
+      "conflicts": true,
+      "revs": true,
+      "revs_info": true
+    }, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+
+  };
+
+  test ("[Revision + Local Storage] Scenario", function () {
+    testReplicateRevisionStorage(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "ureprevloc",
+          "application_name": "areprevloc"
+        }
+      }]
+    });
+  });
+  test("[Replicate Revision + Revision + Local Storage] Scenario", function () {
+    testReplicateRevisionStorage(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "replicaterevision",
+        "storage_list": [{
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "urepreprevloc",
+            "application_name": "arepreprevloc"
+          }
+        }]
+      }]
+    });
+  });
+  test ("2x [Revision + Local Storage] Scenario", function () {
+    testReplicateRevisionStorage(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "ureprevlocloc1",
+          "application_name": "areprevlocloc1"
+        }
+      }, {
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "ureprevlocloc2",
+          "application_name": "areprevlocloc2"
+        }
+      }]
+    });
+  });
+  test("2x [Replicate Rev + 2x [Rev + Local]] Scenario", function () {
+    testReplicateRevisionStorage(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "replicaterevision",
+        "storage_list": [{
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "urepreprevloc1",
+            "application_name": "arepreprevloc1"
+          }
+        }, {
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "urepreprevloc2",
+            "application_name": "arepreprevloc2"
+          }
+        }]
+      }, {
+        "type": "replicaterevision",
+        "storage_list": [{
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "urepreprevloc3",
+            "application_name": "arepreprevloc3"
+          }
+        }, {
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "urepreprevloc4",
+            "application_name": "arepreprevloc4"
+          }
+        }]
+      }]
+    });
+  });
+
+  var replicateStorageSynchronisationGenerator = function (
+    that,
+    description,
+    index
+  ) {
+    var o = generateTools(that);
+
+    o.jio = JIO.newJio(description);
+    o.localpath1 = "jio/localstorage/usyncreprevlocloc1/" + index;
+    o.localpath2 = "jio/localstorage/usyncreprevlocloc2/" + index;
+    o.localpath3 = "jio/localstorage/usyncreprevlocloc3/" + index;
+    o.localpath4 = "jio/localstorage/usyncreprevlocloc4/" + index;
+
+    // add documents to localstorage
+    o.doctree1_1 = {
+      "children": [{
+        "rev": "1-111",
+        "status": "available",
+        "children": [],
+      }]
+    };
+    o.doc1_1 = {"_id": "doc1.1-111", "title": "A"};
+    localstorage.setItem(o.localpath1 + "/doc1.revision_tree.json",
+                         o.doctree1_1);
+    localstorage.setItem(o.localpath2 + "/doc1.revision_tree.json",
+                         o.doctree1_1);
+    localstorage.setItem(o.localpath3 + "/doc1.revision_tree.json",
+                         o.doctree1_1);
+    localstorage.setItem(o.localpath4 + "/doc1.revision_tree.json",
+                         o.doctree1_1);
+    localstorage.setItem(o.localpath1 + "/" + o.doc1_1._id, o.doc1_1);
+    localstorage.setItem(o.localpath2 + "/" + o.doc1_1._id, o.doc1_1);
+    localstorage.setItem(o.localpath3 + "/" + o.doc1_1._id, o.doc1_1);
+    localstorage.setItem(o.localpath4 + "/" + o.doc1_1._id, o.doc1_1);
+
+    // no synchronisation
+    o.spy(o, "value", {"ok": true, "id": "doc1"},
+          "Check document");
+    o.jio.check({"_id": "doc1"}, o.f);
+    o.tick(o);
+
+    o.spy(o, "value", {"ok": true, "id": "doc1", "rev": "1-111"},
+          "Check document with revision");
+    o.jio.check({"_id": "doc1", "_rev": "1-111"}, o.f);
+    o.tick(o);
+
+    o.spy(o, "value", {"ok": true, "id": "doc1"},
+          "Repair document");
+    o.jio.repair({"_id": "doc1"}, o.f);
+    o.tick(o);
+
+    // check documents from localstorage
+    deepEqual(
+      localstorage.getItem(o.localpath1 + "/doc1.revision_tree.json"),
+      o.doctree1_1,
+      "Check revision tree 1, no synchro done"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath2 + "/doc1.revision_tree.json"),
+      o.doctree1_1,
+      "Check revision tree 2, no synchro done"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath3 + "/doc1.revision_tree.json"),
+      o.doctree1_1,
+      "Check revision tree 3, no synchro done"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath4 + "/doc1.revision_tree.json"),
+      o.doctree1_1,
+      "Check revision tree 4, no synchro done"
+    );
+
+    // add documents to localstorage
+    o.doctree2_2 = clone(o.doctree1_1);
+    o.doctree2_2.children[0].children.push({
+      "rev": "2-222",
+      "status": "available",
+      "children": []
+    });
+    o.doc2_2 = {
+      "_id": "doc1.2-222",
+      "title": "B",
+      "_attachments": {
+        "haha": {
+          "length": 3,
+          "digest": "md5-900150983cd24fb0d6963f7d28e17f72",
+          "content_type": "text/plain"
+        }
+      }
+    };
+    localstorage.setItem(o.localpath1 + "/doc1.revision_tree.json",
+                         o.doctree2_2);
+    localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id, o.doc2_2)
+    localstorage.setItem(o.localpath1 + "/" + o.doc2_2._id + "/haha", "abc");
+
+    // document synchronisation without conflict
+    o.spy(o, "status", 41, "Check document");
+    o.jio.check({"_id": "doc1"}, o.f);
+    o.tick(o, 50000);
+
+    o.spy(o, "value", {"ok": true, "id": "doc1"},
+          "Repair document");
+    o.jio.repair({"_id": "doc1"}, o.f);
+    o.tick(o, 50000);
+
+    // check documents from localstorage
+    deepEqual(
+      localstorage.getItem(o.localpath1 + "/doc1.revision_tree.json"),
+      o.doctree2_2,
+      "Check revision tree 1, no synchro done"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath2 + "/doc1.revision_tree.json"),
+      o.doctree2_2,
+      "Check revision tree 2, revision synchro done"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath3 + "/doc1.revision_tree.json"),
+      o.doctree2_2,
+      "Check revision tree 3, revision synchro done"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath3 + "/doc1.2-222"),
+      o.doc2_2,
+      "Check document 3"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath3 + "/doc1.2-222/haha"),
+      "abc",
+      "Check attachment 3"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath4 + "/doc1.revision_tree.json"),
+      o.doctree2_2,
+      "Check revision tree 4, revision synchro done"
+    );
+
+    // add documents to localstorage
+    o.doctree2_3 = clone(o.doctree2_2);
+    o.doctree2_3.children[0].children.unshift({
+      "rev": "2-223",
+      "status": "available",
+      "children": []
+    });
+    o.doc2_3 = {"_id": "doc1.2-223", "title": "C"};
+    localstorage.setItem(o.localpath1 + "/doc1.revision_tree.json",
+                         o.doctree2_3);
+    localstorage.setItem(o.localpath1 + "/" + o.doc2_3._id, o.doc2_3);
+
+    // document synchronisation with conflict
+    o.spy(o, "status", 41, "Check document");
+    o.jio.check({"_id": "doc1"}, o.f);
+    o.tick(o, 50000);
+
+    o.spy(o, "value", {"ok": true, "id": "doc1"},
+          "Repair document");
+    o.jio.repair({"_id": "doc1"}, o.f);
+    o.tick(o, 50000);
+
+    // check documents from localstorage
+    deepEqual(
+      localstorage.getItem(o.localpath1 + "/doc1.revision_tree.json"),
+      o.doctree2_3,
+      "Check revision tree 1, rev synchro"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath2 + "/doc1.revision_tree.json"),
+      o.doctree2_3,
+      "Check revision tree 2, rev synchro"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath3 + "/doc1.revision_tree.json"),
+      o.doctree2_3,
+      "Check revision tree 3, rev synchro"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath3 + "/doc1.2-223"),
+      o.doc2_3,
+      "Check document 3"
+    );
+    deepEqual(
+      localstorage.getItem(o.localpath4 + "/doc1.revision_tree.json"),
+      o.doctree2_3,
+      "Check revision tree 4, rev synchro"
+    );
+
+    o.jio.stop();
+
+  };
+
+  test("Storage Synchronisation (Repair) 4x [Rev + Local]", function () {
+    replicateStorageSynchronisationGenerator(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "usyncreprevlocloc1",
+          "application_name": "1"
+        }
+      }, {
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "usyncreprevlocloc2",
+          "application_name": "1"
+        }
+      }, {
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "usyncreprevlocloc3",
+          "application_name": "1"
+        }
+      }, {
+        "type": "revision",
+        "sub_storage": {
+          "type": "local",
+          "username": "usyncreprevlocloc4",
+          "application_name": "1"
+        }
+      }]
+    }, "1");
+  });
+
+  test("Storage Synchronisation (Repair) 2x [Rep 2x [Rev + Local]]",
+       function () {
+    replicateStorageSynchronisationGenerator(this, {
+      "type": "replicaterevision",
+      "storage_list": [{
+        "type": "replicaterevision",
+        "storage_list": [{
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "usyncreprevlocloc1",
+            "application_name": "2"
+          }
+        }, {
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "usyncreprevlocloc2",
+            "application_name": "2"
+          }
+        }]
+      }, {
+        "type": "replicaterevision",
+        "storage_list": [{
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "usyncreprevlocloc3",
+            "application_name": "2"
+          }
+        }, {
+          "type": "revision",
+          "sub_storage": {
+            "type": "local",
+            "username": "usyncreprevlocloc4",
+            "application_name": "2"
+          }
+        }]
+      }]
+    }, "2");
+  });
+
+module ("Jio DAVStorage");
+
+test ("Post", function () {
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+      "type": "dav",
+      "url": "https://ca-davstorage:8080",
+      "auth_type": "basic",
+      "username": "admin",
+      "password": "pwd"
+    });
+
+    // post without id
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/[0-9a-fA-F]{4}/,
+      [
+        404,
+        {"Content-Type": "text/html"},
+        "<h1>Document not found</h1>"
+      ]
+    );
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/[0-9a-fA-F]{4}/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>Document updated!</h1>"
+      ]
+    );
+    o.spy(o, "jobstatus", "done", "Post without id");
+    o.jio.post({}, {"max_retry": 1}, function (err, response) {
+      o.f.apply(arguments);
+      if (response) {
+        ok(isUuid(response.id), "Uuid should look like " +
+         "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + response.id);
+      }
+    });
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // post document with id
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        404,
+        {"Content-Type": "text/html"},
+        "<h1>Document not found</h1>"
+      ]
+    );
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>Document updated!</h1>"
+      ]
+    );
+    o.spy(o, "value", {"id": "http://100%.json", "ok": true},
+          "Create document with an id");
+    o.jio.post({
+      "_id": "http://100%.json",
+      "title": "Hello There"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // post already existant file
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        '{"_id":"doc1","title":"Hello There"}'
+      ]
+    );
+    o.spy(o, "status", 405, "Update document previous -> 405");
+    o.jio.post({
+      "_id": "http://100%.json",
+      "title": "Hello There Again"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
 
     o.jio.stop();
 });
 
-test ('Document remove', function () {
-    // Test if LocalStorage can remove documents.
-    // We launch a remove from localstorage and we check if the file is
-    // realy removed.
+test ("Put", function(){
 
-    var o = {}; o.clock = this.sandbox.useFakeTimers(); o.t = this;
-    o.clock.tick(base_tick);
-    o.spy = basic_spy_function;
-    o.tick = function () {
-        basic_tick_function.apply(basic_tick_function,arguments);
-        // check if the file is still there
-        o.tmp = LocalOrCookieStorage.getItem (
-            'jio/local/MrRemoveName/jiotests/file');
-        ok (!o.tmp, 'check no content');
-    };
+    var o = generateTools(this);
 
-    o.jio = JIO.newJio({type:'local',username:'MrRemoveName',
-                        applicationname:'jiotests'});
-    // test removing a file
-    o.spy (o,'value',{ok:true,id:'file'},'removing document');
-    addFileToLocalStorage ('MrRemoveName','jiotests',{_id:'file'});
-    o.jio.remove({_id:'file'},o.f);
-    o.tick (o);
+    o.jio = JIO.newJio({
+      "type": "dav",
+      "url": "https://ca-davstorage:8080",
+      "auth_type": "basic",
+      "username": "admin",
+      "password": "pwd"
+    });
+
+    // put without id => 20 Id Required
+    o.spy (o, "status", 20, "Put without id -> 20");
+    o.jio.put({}, o.f);
+    o.tick(o);
+
+    // put non empty document
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>OK1</h1>"
+      ]
+    );
+    o.spy (o, "value", {"ok": true, "id": "http://100%.json"},
+           "Create document");
+    o.jio.put({
+      "_id": "http://100%.json",
+      "title": "Hi There"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // update document
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>OK!</h1>"
+      ]
+    );
+    o.spy (o, "value", {"ok": true, "id": "http://100%.json"},
+           "Update document");
+    o.jio.put({
+      "_id": "http://100%.json",
+      "title": "Hi There Again"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // putAttachment without document id => 20 Id Required
+    o.spy(o, "status", 20, "PutAttachment without doc id -> 20");
+    o.jio.putAttachment({"_attachment": "body.html"}, o.f);
+    o.tick(o);
+
+    // putAttachment without attachment id => 22 Attachment Id Required
+    o.spy(o, "status", 22, "PutAttachment without attachment id -> 22");
+    o.jio.putAttachment({"_id": "http://100%.json"}, o.f);
+    o.tick(o);
+
+    // putAttachment without underlying document => 404 Not Found
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        404,
+        {"Content-Type": "text/html"},
+        "<h1>Not Found</h1>"
+      ]
+    );
+    o.spy(o, "status", 404, "PutAttachment without document -> 404");
+    o.jio.putAttachment({
+      "_id": "http://100%.json",
+      "_attachment": "putattmt2"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // upload attachment
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        '{"_id":"http://100%.json","title":"Hi There!"}'
+      ]
+    );
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json.body_\.html/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>OK!</h1>"
+      ]
+    );
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>OK!</h1>"
+      ]
+    );
+    o.spy(o, "value", {
+      "ok": true,
+      "id": "http://100%.json",
+      "attachment": "body.html"
+    }, "Upload attachment");
+    o.jio.putAttachment({
+      "_id": "http://100%.json",
+      "_attachment": "body.html",
+      "_mimetype": "text/html",
+      "_data": "<h1>Hi There!!</h1><p>How are you?</p>"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
 
     o.jio.stop();
 });
 
-module ('Jio DAVStorage');
+test ("Get", function(){
 
-test ('Document load', function () {
-    // Test if DavStorage can load documents.
+    var o = generateTools(this);
 
-    var o = {};
-    o.davload = getXML('responsexml/davload'),
-    o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.t = this;
-    o.mytest = function (message,doc,errprop,errget) {
-        var server = o.t.sandbox.useFakeServer();
-        server.respondWith (
-            "PROPFIND",
-                /https:\/\/ca-davstorage:8080\/davload\/jiotests\/file(\?.*|$)/,
-            [errprop,{'Content-Type':'text/xml; charset="utf-8"'},
-             o.davload]);
-        server.respondWith (
-            "GET",
-                /https:\/\/ca-davstorage:8080\/davload\/jiotests\/file(\?.*|$)/,
-            [errget,{},'content']);
-        o.f = function (err,val) {
-            if (err) {
-                err = err.status;
-            }
-            deepEqual (err || val,doc,message);
-        };
-        o.t.spy(o,'f');
-        o.jio.get('file',{max_retry:1},o.f);
-        o.clock.tick(1000);
-        server.respond();
-        if (!o.f.calledOnce) {
-            if (o.f.called) {
-                ok(false, 'too much results');
-            } else {
-                ok(false, 'no response');
-            }
-        }
-    };
-    o.jio = JIO.newJio({type:'dav',username:'davload',
-                        password:'checkpwd',
-                        url:'https://ca-davstorage:8080',
-                        applicationname:'jiotests'});
-    // note: http errno:
-    //     200 OK
-    //     201 Created
-    //     204 No Content
-    //     207 Multi Status
-    //     403 Forbidden
-    //     404 Not Found
-    // load an inexistant document.
-    o.mytest ('load inexistant document',404,404,404);
-    // load a document.
-    o.mytest ('load document',{_id:'file',content:'content',
-                               _last_modified:1335953199000,
-                               _creation_date:1335953202000},207,200);
+    o.jio = JIO.newJio({
+      "type": "dav",
+      "url": "https://ca-davstorage:8080",
+      "auth_type": "basic",
+      "username": "admin",
+      "password": "pwd"
+    });
+
+    // get inexistent document
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        404,
+        {"Content-Type": "text/html"},
+        "<h1>Not Found</h1>"
+      ]
+    );
+    o.spy(o, "status", 404, "Get non existing document -> 404");
+    o.jio.get({"_id": "http://100%.json"}, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // get document
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        '{"_id":"http://100%.json","title":"Hi There!"}'
+      ]
+    );
+    o.spy(o, "value", {"_id": "http://100%.json", "title": "Hi There!"},
+          "Get document");
+    o.jio.get({"_id": "http://100%.json"}, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // get inexistent attachment
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json\.body_\.html/,
+      [
+        404,
+        {"Content-Type": "text/html"},
+        "<h1>Not Found</h1>"
+      ]
+    );
+    o.spy(o, "status", 404, "Get inexistent attachment -> 404");
+    o.jio.getAttachment({
+      "_id": "http://100%.json",
+      "_attachment": "body.html"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // get attachment
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json\.body_\.html/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        "My Attachment Content"
+      ]
+    );
+    o.spy(o, "value", "My Attachment Content", "Get attachment");
+    o.jio.getAttachment({
+      "_id": "http://100%.json",
+      "_attachment": "body.html"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
     o.jio.stop();
 });
 
-test ('Document save', function () {
-    // Test if DavStorage can save documents.
+test ("Remove", function(){
 
-    var o = {};
-    o.davsave = getXML('responsexml/davsave');
-    o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.t = this;
-    o.mytest = function (message,value,errnoput,errnoprop) {
-        var server = o.t.sandbox.useFakeServer();
-        server.respondWith (
-            // lastmodified = 7000, creationdate = 5000
-            "PROPFIND",
-                /https:\/\/ca-davstorage:8080\/davsave\/jiotests\/file(\?.*|$)/,
-            [errnoprop,{'Content-Type':'text/xml; charset="utf-8"'},
-             o.davsave]);
-        server.respondWith (
-            "PUT",
-                /https:\/\/ca-davstorage:8080\/davsave\/jiotests\/file(\?.*|$)/,
-            [errnoput, {'Content-Type':'x-www-form-urlencoded'},
-             'content']);
-        server.respondWith (
-            "GET",
-                /https:\/\/ca-davstorage:8080\/davsave\/jiotests\/file(\?.*|$)/,
-            [errnoprop===207?200:errnoprop,{},'content']);
-        // server.respondWith ("MKCOL","https://ca-davstorage:8080/dav",
-        //                     [200,{},'']);
-        // server.respondWith ("MKCOL","https://ca-davstorage:8080/dav/davsave",
-        //                     [200,{},'']);
-        // server.respondWith ("MKCOL",
-        //                    "https://ca-davstorage:8080/dav/davsave/jiotests",
-        //                     [200,{},'']);
-        o.f = basic_test_function_generator(o,'value',value,message);
-        o.t.spy(o,'f');
-        o.jio.put({_id:'file',content:'content'},o.f);
-        o.clock.tick(1000);
-        server.respond();
-        if (!o.f.calledOnce) {
-            if (o.f.called) {
-                ok(false, 'too much results');
-            } else {
-                ok(false, 'no response');
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+      "type": "dav",
+      "url": "https://ca-davstorage:8080",
+      "auth_type": "basic",
+      "username": "admin",
+      "password": "pwd"
+    });
+
+    // remove inexistent document
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        404,
+        {"Content-Type": "text/html"},
+        "<h1>Not Found</h1>"
+      ]
+    );
+    o.spy(o, "status", 404, "Remove inexistent document -> 404");
+    o.jio.remove({"_id": "http://100%.json"}, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // remove document
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "{My corrupted document}"
+      ]
+    );
+    o.server.respondWith(
+      "DELETE",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        "<h1>Deleted</h1>"
+      ]
+    );
+    o.spy(o, "value", {"ok": true, "id": "http://100%.json"},
+          "Remove document");
+    o.jio.remove({"_id": "http://100%.json"}, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // remove inexistent attachment
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        "{}"
+      ]
+    );
+    o.spy(o, "status", 404, "Remove inexistent attachment -> 404");
+    o.jio.removeAttachment({
+      "_id": "http://100%.json",
+      "_attachment": "body.html"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    // o.server.respond();
+    // o.server.respond();
+    o.server.restore();
+
+    // remove attachment
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        JSON.stringify({
+          "_attachments": {
+            "body.html": {
+              "length": 32,
+              "digest": "md5-dontcare",
+              "content_type": "text/html"
             }
-        }
-    };
-    o.jio = JIO.newJio({type:'dav',username:'davsave',
-                        password:'checkpwd',
-                        url:'https://ca-davstorage:8080',
-                        applicationname:'jiotests'});
-    // note: http errno:
-    //     200 OK
-    //     201 Created
-    //     204 No Content
-    //     207 Multi Status
-    //     403 Forbidden
-    //     404 Not Found
-    // // the path does not exist, we want to create it, and save the file.
-    // mytest('create path if not exists, and create document',
-    //        true,201,404);
-    // the document does not exist, we want to create it
-    o.mytest('create document',{ok:true,id:'file'},201,404);
-    o.clock.tick(8000);
-    // the document already exists, we want to overwrite it
-    o.mytest('overwrite document',{ok:true,id:'file'},204,207);
+          }
+        })
+      ]
+    );
+    o.server.respondWith(
+      "PUT",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>OK</h1>"
+      ]
+    );
+    o.server.respondWith(
+      "DELETE",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json.body_\.html/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        "<h1>OK</h1>"
+      ]
+    );
+    o.spy(o, "value", {
+      "ok": true,
+      "id": "http://100%.json",
+      "attachment": "body.html"
+    }, "Remove attachment");
+    o.jio.removeAttachment({
+      "_id": "http://100%.json",
+      "_attachment": "body.html"
+    }, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
+    // remove document with multiple attachments
+    o.server = sinon.fakeServer.create();
+    o.server.respondWith(
+      "GET",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/html"},
+        JSON.stringify({
+          "_attachments": {
+            "body.html": {
+              "length": 32,
+              "digest": "md5-dontcare",
+              "content_type": "text/html"
+            },
+            "other": {
+              "length": 3,
+              "digest": "md5-dontcare-again",
+              "content_type": "text/plain"
+            }
+          }
+        })
+      ]
+    );
+    o.server.respondWith(
+      "DELETE",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        "<h1>Deleted</h1>"
+      ]
+    );
+    o.server.respondWith(
+      "DELETE",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json\.body_\.html/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        "<h1>Deleted</h1>"
+      ]
+    );
+    o.server.respondWith(
+      "DELETE",
+        /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json\.other/,
+      [
+        200,
+        {"Content-Type": "text/plain"},
+        "<h1>Deleted</h1>"
+      ]
+    );
+    o.spy(o, "value", {"ok": true, "id": "http://100%.json"},
+          "Remove document containing multiple attachments");
+    o.jio.remove({"_id": "http://100%.json"}, {"max_retry": 1}, o.f);
+    o.clock.tick(1000);
+    o.server.respond();
+    o.tick(o);
+    o.server.restore();
+
     o.jio.stop();
 });
 
-test ('Get Document List', function () {
-    // Test if DavStorage can get a list a document.
+test ("AllDocs", function () {
 
-    var o = {};
-    o.davlist = getXML('responsexml/davlist');
-    o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.t = this;
-    o.mytest = function (message,metadata_only,value,errnoprop) {
-        var server = o.t.sandbox.useFakeServer();
-        server.respondWith (
-            "PROPFIND",
-                /https:\/\/ca-davstorage:8080\/davlist\/jiotests\/(\?.*|$)/,
-            [errnoprop,{'Content-Type':'text/xml; charset="utf-8"'},
-             o.davlist]);
-        server.respondWith (
-            "GET",
-                /https:\/\/ca-davstorage:8080\/davlist\/jiotests\/file(\?.*|$)/,
-            [200,{},'content']);
-        server.respondWith (
-            "GET",
-                /https:\/\/ca-davstorage:8080\/davlist\/jiotests\/memo(\?.*|$)/,
-            [200,{},'content2']);
-        o.f = function (err,val) {
-            if (err) {
-                result = undefined;
-            } else {
-                deepEqual (objectifyDocumentArray(val.rows),
-                           objectifyDocumentArray(value),message);
-                return;
-            }
-            deepEqual (result, value, message);
-        };
-        o.t.spy(o,'f');
-        o.jio.allDocs({metadata_only:metadata_only},o.f);
-        o.clock.tick(1000);
-        server.respond();
-        if (!o.f.calledOnce) {
-            if (o.f.called) {
-                ok(false, 'too much results');
-            } else {
-                ok(false, 'no response');
-            }
-        }
-    };
-    o.jio = JIO.newJio({type:'dav',username:'davlist',
-                        password:'checkpwd',
-                        url:'https://ca-davstorage:8080',
-                        applicationname:'jiotests'});
-    o.mytest('fail to get list',true,undefined,404);
-    o.mytest('getting list',true,[{
-        id:'file',key:'file',
-        value:{
-            _creation_date:1335962911000,
-            _last_modified:1335962907000
-        }
-    },{
-        id:'memo',key:'memo',
-        value:{
-            _creation_date:1335894073000,
-            _last_modified:1335955713000
-        }
-    }],207);
-    o.mytest('getting list',false,[{
-        id:'file',key:'file',
-        value:{
-            content:'content',
-            _creation_date:1335962911000,
-            _last_modified:1335962907000
-        }
-    },{
-        id:'memo',key:'memo',
-        value:{
-            content:'content2',
-            _creation_date:1335894073000,
-            _last_modified:1335955713000
-        }
-    }],207);
-    o.jio.stop();
+  // need to make server requests before activating fakeServer
+  var davlist = getXML('responsexml/davlist'),
+  o = generateTools(this);
+
+  o.jio = JIO.newJio({
+    "type": "dav",
+    "url": "https://ca-davstorage:8080",
+    "auth_type": "basic",
+    "username": "admin",
+    "password": "pwd"
+  });
+
+  // get all documents
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "PROPFIND",
+      /https:\/\/ca-davstorage:8080\//,
+    [
+      200,
+      {"Content-Type": "text/xml"},
+      davlist
+    ]
+  );
+  o.spy(o, "value", {
+    "rows": [
+      {"id": "http://100%.json", "key": "http://100%.json", "value": {}},
+      {"id": "ISBN:1038729410372", "key": "ISBN:1038729410372", "value": {}}
+    ],
+    "total_rows": 2
+  }, "allDocs");
+  o.jio.allDocs(o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  // allDocs with option include_docs
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "PROPFIND",
+      /https:\/\/ca-davstorage:8080\//,
+    [
+      200,
+      {"Content-Type": "text/xml"},
+      davlist
+    ]
+  );
+  o.doc1 = {"_id": "http://100%.json", "_attachments": {
+    "body.html": {
+      "length": 32,
+      "digest": "md5-doncare",
+      "content_type": "text/html"
+    }
+  }};
+  o.doc2 = {"_id": "ISBN:1038729410372", "title": "Book Title"};
+  o.server.respondWith(
+    "GET",
+      /https:\/\/ca-davstorage:8080\/http:%252F%252F100%2525_\.json/,
+    [
+      200,
+      {"Content-Type": "text/plain"},
+      JSON.stringify(o.doc1)
+    ]
+  );
+  o.server.respondWith(
+    "GET",
+      /https:\/\/ca-davstorage:8080\/ISBN:1038729410372/,
+    [
+      200,
+      {"Content-Type": "text/plain"},
+      JSON.stringify(o.doc2)
+    ]
+  );
+  o.spy(o, "value", {
+    "rows": [{
+      "id": "http://100%.json",
+      "key": "http://100%.json",
+      "value": {},
+      "doc": o.doc1
+    }, {
+      "id": "ISBN:1038729410372",
+      "key": "ISBN:1038729410372",
+      "value": {},
+      "doc": o.doc2
+    }],
+    "total_rows": 2
+  }, "allDocs (include_docs)");
+  o.jio.allDocs({"include_docs": true}, o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  o.jio.stop();
 });
 
-test ('Remove document', function () {
-    // Test if DavStorage can remove documents.
+// NOTES: this test is for a live webDav server on localstorage
+// see the documentation how to setup an apache2 webDav-server
+// tests cannot be run subsequently, so only do one test at a time
+/*
+test ("webDav Live Server setup", function () {
 
-    var o = {}; o.clock = this.sandbox.useFakeTimers(); o.t = this;
-    o.clock.tick(base_tick);
-    o.mytest = function (message,value,errnodel) {
-        var server = o.t.sandbox.useFakeServer();
-        server.respondWith (
-            "DELETE",
-                /https:\/\/ca-davstorage:8080\/davremove\/jiotests\/file(\?.*|$)/,
-            [errnodel,{},'']);
-        o.f = function (err,val) {
-            if (err) {
-                err = err.status;
-            }
-            deepEqual (err || val,value,message);
-        };
-        o.t.spy(o,'f');
-        o.jio.remove({_id:'file'},o.f);
-        o.clock.tick(1000);
-        server.respond();
-        if (!o.f.calledOnce) {
-            if (o.f.called) {
-                ok(false, 'too much results');
-            } else {
-                ok(false, 'no response');
-            }
-        }
-    };
-    o.jio = JIO.newJio({type:'dav',username:'davremove',
-                        password:'checkpwd',
-                        url:'https://ca-davstorage:8080',
-                        applicationname:'jiotests'});
+    var o = generateTools(this);
 
-    o.mytest('remove document',{ok:true,id:'file'},204);
-    o.mytest('remove an already removed document',404,404);
+    // turn off fakeserver - otherwise no requests will be made
+    o.server.restore();
+
+    o.jio = JIO.newJio({
+        "type": "dav",
+        "username": "davlive",
+        "password": "checkpwd",
+        "url": "http://127.0.1.1/dav"
+    });
+
+    // not used, check console for responses
+    // o.spy(o, "value", {"id": "_id_", "ok": true}, "Live Webdav");
+
+    // post a new document
+    o.jio.post({"_id": "one.json", "title": "hello"}), o.f);
+    o.clock.tick(5000);
+
+    // modify document
+    o.jio.put({"_id": "one.json", "title": "hello modified"}), o.f);
+    o.clock.tick(5000);
+
+    // add attachment
+    o.jio.putAttachment({
+      "id": "one.json/att.txt",
+      "mimetype": "text/plain",
+      "content":"there2"
+    }, o.f);
+
+    // test allDocs
+    o.jio.allDocs({"include_docs":true},
+      function(s){console.log(s);},
+      function ( e ) {console.log(e);
+    }, o.f);
+    o.clock.tick(5000);
+
+    // get Attachment
+    o.jio.get("one.json/att.txt", o.f);
+    o.clock.tick(5000);
+
+    // remove Attachment
+    o.jio.remove("one.json/att.txt", o.f.);
+    o.clock.tick(5000);
+
+    // remove Document
+    o.jio.remove("one.json", o.f.);
+    o.clock.tick(5000);
     o.jio.stop();
 });
-
+*/
+/*
 module ('Jio ReplicateStorage');
 
 test ('Document load', function () {
@@ -1081,130 +4313,913 @@ test ('Remove document', function () {
     o.mytest('DummyStorageAllOK,3tries: remove document.',{ok:true,id:'file'});
     o.jio.stop();
 });
+*/
+module ("Jio IndexStorage");
 
-module ('Jio IndexedStorage');
+test ("Post", function () {
 
-test ('Document load', function () {
-    var o = {}; o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.jio = JIO.newJio({type:'indexed',storage:{type:'dummyall3tries'}});
-    // loading must take long time with dummyall3tries
-    o.f = this.spy();
-    o.jio.get('memo',{max_retry:3,metadata_only:true},o.f);
-    o.clock.tick(1000);
-    ok(!o.f.called,'Callback must not be called');
-    // wait long time too retreive list
-    o.clock.tick(1000);
+    var o = generateTools(this);
 
-    // now we can test if the document metadata are loaded faster.
-    o.doc = {_id:'memo',_last_modified:25000,_creation_date:20000};
-    o.f2 = function (err,val) {
-        deepEqual (err||val,o.doc,'Document metadata retrieved');
-    };
-    this.spy(o,'f2');
-    o.jio.get('memo',{max_retry:3,metadata_only:true},o.f2);
-    o.clock.tick(1000);
-    if (!o.f2.calledOnce) {
-        if (o.f2.called) {
-            ok (false, 'too much results');
-        } else {
-            ok (false, 'no response');
+    o.jio = JIO.newJio({
+        "type": "indexed",
+        "indices": [
+            {"name":"indexA", "fields":["findMeA"]},
+            {"name":"indexAB", "fields":["findMeA","findMeB"]}
+        ],
+        "field_types": {
+          "findMeA": "string",
+          "findMeB": "string"
+        },
+        "sub_storage": {
+          "type": "local",
+          "username": "ipost",
+          "application_name": "ipost"
         }
-    }
+    });
 
-    // test a simple document loading
-    o.doc2 = {_id:'file',_last_modified:17000,
-              _creation_date:11000,content:'content file'};
-    o.f3 = function (err,val) {
-        deepEqual (err||val,o.doc2,'Simple document loading');
+    // post without id
+    o.spy (o, "status", undefined, "Post without id");
+    o.jio.post({}, o.f);
+    o.tick(o);
+
+    // post non empty document
+    o.doc = {"_id": "some_id", "title": "myPost1",
+      "findMeA":"keyword_abc", "findMeB":"keyword_def"
     };
-    this.spy(o,'f3');
-    o.jio.get('file',{max_retry:3},o.f3);
-    o.clock.tick(2000);
-    if (!o.f3.calledOnce) {
-        ok (false, 'no response / too much results');
-    }
-    o.jio.stop();
-});
+    o.spy (o, "value", {"ok": true, "id": "some_id"}, "Post document");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
 
-test ('Document save', function () {
-    var o = {}; o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.jio = JIO.newJio({type:'indexed',
-                        storage:{type:'dummyall3tries',
-                                 username:'indexsave'}});
-    o.f = function (err,val) {
-        if (err) {
-            err = err.status;
+    // check document
+    o.fakeIndex = {
+      "_id": "ipost_indices.json",
+      "indexAB": {
+        "findMeA": {
+          "keyword_abc":["some_id"]
+        },
+        "findMeB": {
+          "keyword_def":["some_id"]
         }
-        deepEqual (err || val,{ok:true,id:'file'},'document save');
-    };
-    this.spy(o,'f');
-    o.jio.put({_id:'file',content:'content'},{max_retry:3},o.f);
-    o.clock.tick(2000);
-    if (!o.f.calledOnce){
-        ok (false, 'no response / too much results');
-    }
-    o.jio.stop();
-});
-
-test ('Get document list', function () {
-    var o = {}; o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.jio = JIO.newJio({type:'indexed',
-                        storage:{type:'dummyall3tries',
-                                 username:'indexgetlist'}});
-    o.doc1 = {id:'file',key:'file',value:{
-        _last_modified:15000,_creation_date:10000}};
-    o.doc2 = {id:'memo',key:'memo',value:{
-        _last_modified:25000,_creation_date:20000}};
-    // getting list must take long time with dummyall3tries
-    o.f = this.spy();
-    o.jio.allDocs({max_retry:3},o.f);
-    o.clock.tick(1000);
-    ok(!o.f.called,'Callback must not be called');
-    // wail long time too retreive list
-    o.clock.tick(1000);
-    // now we can test if the document list is loaded faster
-    o.f2 = function (err,val) {
-        deepEqual (err || objectifyDocumentArray(val.rows),
-                   objectifyDocumentArray([o.doc1,o.doc2]),'get document list');
-    };
-    this.spy(o,'f2');
-    o.jio.allDocs({max_retry:3},o.f2);
-    o.clock.tick(1000)
-    if (!o.f2.calledOnce) {
-        ok (false, 'no response / too much results');
-    }
-});
-
-test ('Remove document', function () {
-    var o = {}; o.clock = this.sandbox.useFakeTimers();
-    o.clock.tick(base_tick);
-    o.secondstorage = {type:'dummyall3tries',username:'indexremove'}
-    o.storage_file_object_name = 'jio/indexed_file_object/'+
-        JSON.stringify (o.secondstorage);
-
-    o.jio = JIO.newJio({type:'indexed',storage:o.secondstorage});
-    o.f = function (err,val) {
-        if (err) {
-            err = err.status;
+      },
+      "indexA": {
+        "findMeA": {
+          "keyword_abc":["some_id"]
         }
-        deepEqual (err || val,{ok:true,id:'file'},'document remove');
+      }
     };
-    this.spy(o,'f');
-    o.jio.remove({_id:'file'},{max_retry:3},o.f);
-    o.clock.tick(2000);
-    if (!o.f.calledOnce){
-        ok (false, 'no response / too much results');
-    }
+    o.jio.get({"_id": "ipost_indices.json"}, function (err, response) {
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
 
-    o.tmp = LocalOrCookieStorage.getItem(o.storage_file_object_name) || {};
-    ok (!o.tmp.file,'File does not exists anymore');
+    // post with escapable characters
+    o.doc = {"_id": "other_id", "title": "myPost2",
+      "findMeA":"keyword_*§$%&/()=?", "findMeB":"keyword_|ð@ł¶đæðſæðæſ³"
+    };
+    o.spy (o, "value", {"ok": true, "id": "other_id"},
+           "Post with escapable characters");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
+
+    // post and document already exists
+    o.doc = {"_id": "some_id", "title": "myPost3",
+      "findMeA":"keyword_ghi", "findMeB":"keyword_jkl"
+    }
+    o.spy (o, "status", 409, "Post and document already exists");
+    o.jio.post(o.doc, o.f);
+    o.tick(o);
 
     o.jio.stop();
 });
 
+test ("Put", function(){
+
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+          "type": "indexed",
+          "indices": [
+              {"name":"indexA", "fields":["author"]},
+              {"name":"indexAB", "fields":["author","year"]}
+          ],
+          "field_types": {
+            "author": "string",
+            "year": "number"
+          },
+          "sub_storage": {
+            "type": "local",
+            "username": "iput",
+            "application_name": "iput"
+          }
+      });
+
+    // put without id
+    // error 20 -> document id required
+    o.spy (o, "status", 20, "Put without id");
+    o.jio.put({}, o.f);
+    o.tick(o);
+
+    // put non empty document
+    o.doc = {"_id": "put1", "title": "myPut1", "author":"John Doe"};
+    o.spy (o, "value", {"ok": true, "id": "put1"}, "Put-create document");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check index file
+    o.fakeIndex = {
+      "indexA": {
+        "author": {
+          "John Doe": ["put1"]
+        }
+      },
+      "indexAB": {
+        "author": {
+          "John Doe": ["put1"]
+        },
+        "year": {}
+      },
+      "_id": "iput_indices.json"
+    };
+    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
+
+    // modify document - modify keyword on index!
+    o.doc = {"_id": "put1", "title": "myPuttter1", "author":"Jane Doe"};
+    o.spy (o, "value", {"ok": true, "id": "put1"}, "Modify existing document");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check index file
+    o.fakeIndex = {
+      "indexA": {
+        "author": {
+          "Jane Doe": ["put1"]
+          }
+      },
+      "indexAB": {
+        "author": {
+          "Jane Doe": ["put1"]
+          },
+        "year": {}
+      },
+      "_id": "iput_indices.json"
+    };
+    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
+
+    // add new document with same keyword!
+    o.doc = {"_id": "new_doc", "title": "myPut2", "author":"Jane Doe"};
+    o.spy (o, "value", {"ok": true, "id": "new_doc"},
+      "Add new document with same keyword");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check index file
+    o.fakeIndex = {
+      "indexA": {
+        "author": {
+          "Jane Doe": ["put1", "new_doc"]
+          }
+        },
+      "indexAB": {
+        "author": {
+          "Jane Doe": ["put1", "new_doc"]
+          },
+        "year": {}
+        },
+      "_id": "iput_indices.json"
+    };
+    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
+
+    // add second keyword to index file
+    o.doc = {"_id": "put1", "title": "myPut2", "author":"Jane Doe",
+      "year":"1912"};
+    o.spy (o, "value", {"ok": true, "id": "put1"},
+      "add second keyword to index file");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check index file
+    o.fakeIndex = {
+      "indexA": {
+        "author": {
+          "Jane Doe": ["put1"]
+          }
+        },
+      "indexAB": {
+        "author": {
+          "Jane Doe": ["put1"]
+          },
+        "year": {
+          "1912": ["put1"]
+          }
+        },
+      "_id": "iput_indices.json"
+    };
+    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
+
+    // remove a keyword from an existing document
+    o.doc = {"_id": "new_doc", "title": "myPut2"};
+    o.spy (o, "value", {"ok": true, "id": "new_doc"},
+      "Remove keyword from existing document");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    // check index file
+    o.fakeIndex = {
+      "indexA": {
+        "author": {
+          "Jane Doe": ["put1"]
+        }
+      },
+      "indexAB": {
+        "author": {
+          "Jane Doe": ["put1"]
+        },
+        "year": {
+          "1912": ["put1"]
+        }
+      },
+      "_id": "iput_indices.json"
+    };
+    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
+
+    o.jio.stop();
+});
+
+test ("PutAttachment", function(){
+
+    // not sure these need to be run, because the index does not change
+    // and only small modifications have been made to handle putAttachment
+    // tests are from localStorage putAttachment
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+          "type": "indexed",
+          "indices": [
+              {"name":"indexA", "fields":["author"]},
+              {"name":"indexAB", "fields":["author","year"]}
+          ],
+          "field_types": {
+            "author": "string",
+            "year": "number"
+          },
+          "sub_storage": {
+            "type": "local",
+            "username": "iputatt",
+            "application_name": "iputatt"
+          }
+      });
+
+    // putAttachment without doc id
+    // error 20 -> document id required
+    o.spy(o, "status", 20, "PutAttachment without doc id");
+    o.jio.putAttachment({}, o.f);
+    o.tick(o);
+
+    // putAttachment without attachment id
+    // error 22 -> attachment id required
+    o.spy(o, "status", 22, "PutAttachment without attachment id");
+    o.jio.putAttachment({"_id": "putattmt1"}, o.f);
+    o.tick(o);
+
+    // putAttachment without document
+    // error 404 -> not found
+    o.spy(o, "status", 404, "PutAttachment without document");
+    o.jio.putAttachment({"_id": "putattmt1", "_attachment": "putattmt2"}, o.f);
+    o.tick(o);
+
+    // putAttachment with document
+    o.doc = {"_id": "putattmt1","title": "myPutAttmt1"};
+    o.spy (o, "value", {"ok": true, "id": "putattmt1"},
+      "Put underlying document");
+    o.jio.put(o.doc, o.f);
+    o.tick(o);
+
+    o.spy(o, "value",
+          {"ok": true, "id": "putattmt1", "attachment": "putattmt2"},
+          "PutAttachment with document, without data");
+    o.jio.putAttachment({"_id": "putattmt1", "_attachment": "putattmt2"}, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem("jio/localstorage/iputatt/iputatt/putattmt1"),
+        {
+            "_id": "putattmt1",
+            "title": "myPutAttmt1",
+            "_attachments": {
+                "putattmt2": {
+                    "length": 0,
+                    // md5("")
+                    "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
+                }
+            }
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/iputatt/iputatt/putattmt1/putattmt2"),
+        "", "Check attachment"
+    );
+
+    // update attachment
+    o.spy(o, "value",
+          {"ok": true, "id": "putattmt1", "attachment": "putattmt2"},
+          "Update Attachment, with data");
+    o.jio.putAttachment({
+      "_id": "putattmt1",
+      "_attachment": "putattmt2",
+      "_data": "abc"
+    }, o.f);
+    o.tick(o);
+
+    // check document
+    deepEqual(
+        localstorage.getItem("jio/localstorage/iputatt/iputatt/putattmt1"),
+        {
+            "_id": "putattmt1",
+            "title": "myPutAttmt1",
+            "_attachments": {
+                "putattmt2": {
+                    "length": 3,
+                    // md5("abc")
+                    "digest": "md5-900150983cd24fb0d6963f7d28e17f72"
+                }
+            }
+        },
+        "Check document"
+    );
+
+    // check attachment
+    deepEqual(
+        localstorage.getItem(
+            "jio/localstorage/iputatt/iputatt/putattmt1/putattmt2"),
+        "abc", "Check attachment"
+    );
+
+    o.jio.stop();
+});
+
+test ("Get", function(){
+
+    // not sure these need to be run, because the index does not change
+    // and only small modifications have been made to handle putAttachment
+    // tests are from localStorage putAttachment
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+          "type": "indexed",
+          "indices": [
+              {"name":"indexA", "fields":["author"]},
+              {"name":"indexAB", "fields":["author","year"]}
+          ],
+          "field_types": {
+            "author": "string",
+            "year": "number"
+          },
+          "sub_storage": {
+            "type": "local",
+            "username": "iget",
+            "application_name": "iget"
+          }
+      });
+
+    // get inexistent document
+    o.spy(o, "status", 404, "Get inexistent document");
+    o.jio.get({"_id": "get1"}, o.f);
+    o.tick(o);
+
+    // get inexistent attachment
+    o.spy(o, "status", 404, "Get inexistent attachment");
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
+    o.tick(o);
+
+    // adding a document
+    o.doc_get1 = {
+        "_id": "get1",
+        "title": "myGet1"
+    };
+    localstorage.setItem("jio/localstorage/iget/iget/get1", o.doc_get1);
+
+    // get document
+    o.spy(o, "value", o.doc_get1, "Get document");
+    o.jio.get({"_id": "get1"}, o.f);
+    o.tick(o);
+
+    // get inexistent attachment (document exists)
+    o.spy(o, "status", 404, "Get inexistent attachment (document exists)");
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
+    o.tick(o);
+
+    // adding an attachment
+    o.doc_get1["_attachments"] = {
+        "get2": {
+            "length": 2,
+            // md5("de")
+            "digest": "md5-5f02f0889301fd7be1ac972c11bf3e7d"
+        }
+    };
+    localstorage.setItem("jio/localstorage/iget/iget/get1", o.doc_get1);
+    localstorage.setItem("jio/localstorage/iget/iget/get1/get2", "de");
+
+    // get attachment
+    o.spy(o, "value", "de", "Get attachment");
+    o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+});
+
+test ("Remove", function(){
+
+    // not sure these need to be run, because the index does not change
+    // and only small modifications have been made to handle putAttachment
+    // tests are from localStorage putAttachment
+    var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+      "type": "indexed",
+      "indices": [
+          {"name":"indexA", "fields":["author"]},
+          {"name":"indexAB", "fields":["author","year"]}
+      ],
+      "field_types": {
+            "author": "string",
+            "year": "number"
+      },
+      "sub_storage": {
+        "type": "local",
+        "username": "irem",
+        "application_name": "irem"
+      }
+    });
+
+    // remove inexistent document
+    o.spy(o, "status", 404, "Remove inexistent document");
+    o.jio.remove({"_id": "remove1"}, o.f);
+    o.tick(o);
+
+    // remove inexistent document/attachment
+    o.spy(o, "status", 404, "Remove inexistent attachment");
+    o.jio.removeAttachment({"_id": "remove1", "_attachment": "remove2"}, o.f);
+    o.tick(o);
+
+    // adding a document
+    o.jio.put({"_id": "remove1", "title": "myRemove1",
+      "author": "Mr. President", "year": "2525"
+    });
+    o.tick(o);
+
+    // adding a 2nd document with same keywords
+    o.jio.put({"_id": "removeAlso", "title": "myRemove2",
+      "author": "Martin Mustermann", "year": "2525"
+    });
+    o.tick(o);
+
+    // remove document
+    o.spy(o, "value", {"ok": true, "id": "remove1"}, "Remove document");
+    o.jio.remove({"_id": "remove1"}, o.f);
+    o.tick(o);
+
+    // check index
+    o.fakeIndex = {
+      "_id": "irem_indices.json",
+      "indexA": {
+         "author": {
+           "Martin Mustermann": ["removeAlso"]
+          }
+        },
+      "indexAB": {
+        "year": {
+          "2525": ["removeAlso"]
+        },
+        "author": {
+          "Martin Mustermann": ["removeAlso"]
+          }
+        }
+    };
+    o.jio.get({"_id": "irem_indices.json"},function(err, response){
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
+
+    // check document
+    o.spy(o, "status", 404, "Check if document has been removed");
+    o.jio.get({"_id": "remove1"}, o.f);
+    o.tick(o);
+
+    // adding a new document
+    o.jio.put({"_id": "remove3",
+        "title": "myRemove1",
+        "author": "Mrs Sunshine",
+        "year": "1234"
+    });
+    o.tick(o);
+
+    // adding an attachment
+    o.jio.putAttachment({
+      "_id": "remove3",
+      "_attachment": "removeAtt",
+      "_mimetype": "text/plain",
+      "_data": "hello"});
+    o.tick(o);
+
+    // add another attachment
+    o.jio.putAttachment({
+      "_id": "remove3",
+      "_attachment": "removeAtt2",
+      "_mimetype": "text/plain",
+      "_data": "hello2"});
+    o.tick(o);
+
+    // remove attachment
+    o.spy(o, "value", {"ok": true, "id": "remove3", "attachment": "removeAtt2"},
+          "Remove one of multiple attachment");
+    o.jio.removeAttachment({"_id": "remove3", "_attachment": "removeAtt2"},
+                           o.f);
+    o.tick(o);
+
+    // check index
+    o.fakeIndex = {
+      "_id": "irem_indices.json",
+      "indexA": {
+        "author":{
+          "Martin Mustermann": ["removeAlso"],
+          "Mrs Sunshine": ["remove3"]
+        }
+      },
+      "indexAB": {
+        "year": {
+          "1234": ["remove3"],
+          "2525": ["removeAlso"]
+        },
+        "author": {
+          "Martin Mustermann": ["removeAlso"],
+          "Mrs Sunshine": ["remove3"]
+        }
+      }
+    };
+    o.jio.get({"_id": "irem_indices.json"}, function (err, response) {
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
+
+    // remove document and attachment together
+    o.spy(o, "value", {"ok": true, "id": "remove3"},
+          "Remove one document and attachment together");
+    o.jio.remove({"_id": "remove3"}, o.f);
+    o.tick(o);
+
+    // check index
+    o.fakeIndex = {
+      "_id": "irem_indices.json",
+      "indexA": {
+        "author": {
+          "Martin Mustermann": ["removeAlso"]
+        }
+      },
+      "indexAB": {
+        "year": {
+          "2525": ["removeAlso"]
+        },
+        "author": {
+          "Martin Mustermann": ["removeAlso"]
+        }
+      }
+    };
+    o.jio.get({"_id": "irem_indices.json"}, function (err, response) {
+       o.actualIndex = response;
+       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+    });
+    o.tick(o);
+
+    // check attachment
+    o.spy(o, "status", 404, "Check if attachment has been removed");
+    o.jio.getAttachment({"_id": "remove3", "_attachment": "removeAtt"}, o.f);
+    o.tick(o);
+
+    // check document
+    o.spy(o, "status", 404, "Check if document has been removed");
+    o.jio.get({"_id": "remove3"}, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+});
+
+test ("AllDocs", function () {
+
+  var o = generateTools(this);
+
+    o.jio = JIO.newJio({
+      "type": "indexed",
+      "indices": [
+          {"name":"indexA", "fields":["author"]},
+          {"name":"indexAB", "fields":["author","year"]}
+      ],
+      "field_types": {
+        "author": "string",
+        "year": "number"
+      },
+      "sub_storage": {
+        "type": "local",
+        "username": "iall",
+        "application_name": "iall"
+      }
+    });
+
+  // adding documents
+  o.all1 = { "_id": "dragon.doc",
+    "title": "some title", "author": "Dr. No", "year": "1968"
+  };
+  o.spy (o, "value", {"ok": true, "id": "dragon.doc"}, "Put 1");
+  o.jio.put(o.all1, o.f);
+  o.tick(o);
+  o.all2 = {"_id": "timemachine",
+    "title": "hello world", "author": "Dr. Who", "year": "1968"
+  }
+  o.spy (o, "value", {"ok": true, "id": "timemachine"}, "Put 2");
+  o.jio.put(o.all2, o.f);
+  o.tick(o);
+  o.all3 = {"_id": "rocket.ppt",
+    "title": "sunshine.", "author": "Dr. Snuggles", "year": "1985"
+  }
+  o.spy (o, "value", {"ok": true, "id": "rocket.ppt"}, "Put 3");
+  o.jio.put(o.all3, o.f);
+  o.tick(o);
+  o.all4 = {"_id": "stick.jpg",
+    "title": "clouds", "author": "Dr. House", "year": "2005"
+  }
+  o.spy (o, "value", {"ok": true, "id": "stick.jpg"}, "Put 4");
+  o.jio.put(o.all4, o.f);
+  o.tick(o);
+
+  // check index
+  o.fakeIndex = {
+    "_id": "iall_indices.json",
+    "indexA": {
+      "author": {
+        "Dr. No": ["dragon.doc"],
+        "Dr. Who": ["timemachine"],
+        "Dr. Snuggles": ["rocket.ppt"],
+        "Dr. House":["stick.jpg"]
+      }
+    },
+    "indexAB": {
+      "author": {
+        "Dr. No": ["dragon.doc"],
+        "Dr. Who": ["timemachine"],
+        "Dr. Snuggles": ["rocket.ppt"],
+        "Dr. House":["stick.jpg"]
+      },
+      "year": {
+        "1968": ["dragon.doc", "timemachine"],
+        "1985": ["rocket.ppt"],
+        "2005":["stick.jpg"]
+      }
+    }
+  };
+  o.jio.get({"_id": "iall_indices.json"}, function (err, response) {
+      o.actualIndex = response;
+      deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
+  });
+  o.tick(o);
+
+  o.thisShouldBeTheAnswer = {
+    "rows": [
+      {"id": "dragon.doc", "key": "dragon.doc", "value": {} },
+      {"id": "timemachine", "key": "timemachine", "value": {} },
+      {"id": "rocket.ppt", "key": "rocket.ppt", "value": {} },
+      {"id": "stick.jpg", "key": "stick.jpg", "value": {} }
+    ],
+    "total_rows": 4
+  }
+  o.spy(o, "value", o.thisShouldBeTheAnswer, "allDocs (served by index)");
+  o.jio.allDocs(o.f);
+  o.tick(o);
+
+  o.thisShouldBeTheAnswer2 = {
+    "rows": [
+      {"id": "dragon.doc", "key": "dragon.doc", "value": {}, "doc": o.all1 },
+      {"id": "timemachine", "key": "timemachine", "value": {}, "doc": o.all2 },
+      {"id": "rocket.ppt", "key": "rocket.ppt", "value": {}, "doc": o.all3 },
+      {"id": "stick.jpg", "key": "stick.jpg", "value": {}, "doc": o.all4 }
+    ],
+    "total_rows": 4
+  }
+  o.spy(o, "value", o.thisShouldBeTheAnswer2, "allDocs (include_docs)");
+  o.jio.allDocs({"include_docs":true}, o.f);
+  o.tick(o);
+
+  o.jio.stop();
+});
+
+test ("AllDocs Complex Queries", function () {
+
+  var o = generateTools(this), i, m = 15;
+
+    o.jio = JIO.newJio({
+      "type": "indexed",
+      "indices": [
+          {"name":"indexA", "fields":["director"]},
+          {"name":"indexAB", "fields":["title","year"]}
+          //,
+          //{"name":"indexABC", "fields":["title","year","director"]}
+      ],
+      "field_types": {
+        "director": "string",
+        "title": "string",
+        "year": "number"
+      },
+      "sub_storage": {
+        "type": "local",
+        "username": "icomplex",
+        "application_name": "acomplex"
+      }
+    });
+    o.localpath = "jio/localstorage/icomplex/acomplex";
+
+    // sample data
+    o.titles = ["Shawshank Redemption", "Godfather", "Godfather 2",
+      "Pulp Fiction", "The Good, The Bad and The Ugly", "12 Angry Men",
+      "The Dark Knight", "Schindlers List",
+      "Lord of the Rings - Return of the King", "Fight Club",
+      "Star Wars Episode V", "Lord Of the Rings - Fellowship of the Ring",
+      "One flew over the Cuckoo's Nest", "Inception", "Godfellas"
+    ];
+    o.years = [1994,1972,1974,1994,1966,1957,2008,1993,2003,1999,1980,2001,
+      1975,2010,1990
+    ];
+    o.director = ["Frank Darabont", "Francis Ford Coppola",
+      "Francis Ford Coppola", "Quentin Tarantino", "Sergio Leone",
+      "Sidney Lumet", "Christopher Nolan", "Steven Spielberg",
+      "Peter Jackson", "David Fincher", "Irvin Kershner", "Peter Jackson",
+      "Milos Forman", "Christopher Nolan", " Martin Scorsese"
+    ]
+
+    for (i = 0; i < m; i += 1) {
+      o.fakeDoc = {};
+      o.fakeDoc._id = ""+i;
+      o.fakeDoc.title = o.titles[i];
+      o.fakeDoc.year = o.years[i];
+      o.fakeDoc.director = o.director[i];
+      o.jio.put(o.fakeDoc);
+      o.clock.tick(1000);
+    }
+
+    // response
+    o.allDocsResponse = {};
+    o.allDocsResponse.rows = [];
+    o.allDocsResponse.total_rows = 15;
+    for (i = 0; i < m; i += 1) {
+      o.allDocsResponse.rows.push({
+        "id": ""+i,
+        "key": ""+i,
+        "value": {}
+      });
+    };
+
+    // alldocs
+    o.jio.allDocs(function (e, r) {
+      var x = r.rows.sort(o.sortArrayById('id', true, parseInt));
+      deepEqual(
+        {"total_rows":r.total_rows,"rows":x}, o.allDocsResponse,
+          "AllDocs response generated from index"
+      );
+    });
+    o.clock.tick(1000);
+
+    // include docs
+    o.allDocsResponse2 = {};
+    o.allDocsResponse2.rows = [];
+    o.allDocsResponse2.total_rows = 15;
+    for (i = 0; i < m; i += 1) {
+      o.allDocsResponse2.rows.push({
+        "id": ""+i,
+        "key": ""+i,
+        "value": {},
+        "doc": localstorage.getItem(o.localpath+"/"+i)
+      });
+    };
+
+    // alldocs
+    o.jio.allDocs({"include_docs":true}, function(e,r) {
+      var x = r.rows.sort(o.sortArrayById('id', true, parseInt));
+      deepEqual(
+        {"total_rows":r.total_rows,"rows":x}, o.allDocsResponse2,
+          "AllDocs response generated from index (include docs)"
+      );
+    });
+    o.clock.tick(1000);
+
+    // complex queries
+    o.thisShouldBeTheAnswer4 = [
+        {"title": "Inception", "year": 2010},
+        {"title": "The Dark Knight", "year": 2008},
+        {"title": "Lord of the Rings - Return of the King", "year": 2003},
+        {"title": "Lord Of the Rings - Fellowship of the Ring", "year": 2001},
+        {"title": "Fight Club", "year": 1999}
+    ];
+    o.spy(o, "value", o.thisShouldBeTheAnswer4,
+      "allDocs (complex queries year >= 1980, index used to do query)");
+    o.jio.allDocs({
+      "query":{
+        // "query":'(year: >= "1980" AND year: < "2000")',
+        "query":'(year: >= "1980")',
+        "filter": {
+            "limit":[0,5],
+            "sort_on":[['year','descending']],
+            "select_list":['title','year']
+        },
+        "wildcard_character":'%'
+      }
+    }, o.f);
+    o.tick(o);
+
+    // complex queries
+    o.thisShouldBeTheAnswer5 = [
+        {"director": "Christopher Nolan", "year": 2010},
+        {"director": "Christopher Nolan", "year": 2008},
+        {"director": "Peter Jackson", "year": 2003},
+        {"director": "Peter Jackson", "year": 2001},
+        {"director": "David Fincher", "year": 1999}
+    ];
+
+    o.spy(o, "value", o.thisShouldBeTheAnswer5,
+      "allDocs (complex queries year >= 1980, can't use index)");
+    o.jio.allDocs({
+      "query":{
+        // "query":'(year: >= "1980" AND year: < "2000")',
+        "query":'(year: >= "1980")',
+        "filter": {
+            "limit":[0,5],
+            "sort_on":[['year','descending']],
+            "select_list":['director','year']
+        },
+        "wildcard_character":'%'
+      }
+    }, o.f);
+    o.tick(o);
+
+    // empty query returns all
+    o.thisShouldBeTheAnswer6 = [
+        {"title": "The Good, The Bad and The Ugly"},
+        {"title": "The Dark Knight"},
+        {"title": "Star Wars Episode V"},
+        {"title": "Shawshank Redemption"},
+        {"title": "Schindlers List"},
+        {"title": "Pulp Fiction"},
+        {"title": "One flew over the Cuckoo's Nest"},
+        {"title": "Lord of the Rings - Return of the King"},
+        {"title": "Lord Of the Rings - Fellowship of the Ring"},
+        {"title": "Inception"},
+        {"title": "Godfellas"},
+        {"title": "Godfather 2"},
+        {"title": "Godfather"},
+        {"title": "Fight Club"},
+        {"title": "12 Angry Men"}
+    ];
+    o.spy(o, "value", o.thisShouldBeTheAnswer6,
+      "allDocs (empty query in complex query)");
+
+    o.jio.allDocs({
+      "query":{
+        "filter": {
+            "sort_on":[['title','descending']],
+            "select_list":['title']
+        },
+        "wildcard_character":'%'
+      }
+    }, o.f);
+    o.tick(o);
+
+    o.jio.stop();
+});
+/*
 module ('Jio CryptedStorage');
 
 test ('Document save' , function () {
@@ -1215,7 +5230,7 @@ test ('Document save' , function () {
                       password:'mypwd',
                       storage:{type:'local',
                                username:'cryptsavelocal',
-                               applicationname:'jiotests'}});
+                               application_name:'jiotests'}});
     o.f = function (err,val) {
         if (err) {
             err = err.status;
@@ -1250,7 +5265,7 @@ test ('Document load' , function () {
                       password:'mypwd',
                       storage:{type:'local',
                                username:'cryptloadlocal',
-                               applicationname:'jiotests'}});
+                               application_name:'jiotests'}});
     o.f = function (err,val) {
         deepEqual (err || val,{
             _id:'testload',content:'contentoftest',
@@ -1280,7 +5295,7 @@ test ('Get Document List', function () {
                       password:'mypwd',
                       storage:{type:'local',
                                username:'cryptgetlistlocal',
-                               applicationname:'jiotests'}});
+                               application_name:'jiotests'}});
     o.f = function (err,val) {
         deepEqual (err || objectifyDocumentArray(val.rows),
                    objectifyDocumentArray(o.doc_list),'Getting list');
@@ -1335,7 +5350,7 @@ test ('Remove document', function () {
                       password:'mypwd',
                       storage:{type:'local',
                                username:'cryptremovelocal',
-                               applicationname:'jiotests'}});
+                               application_name:'jiotests'}});
     o.f = function (err,val) {
         deepEqual (err || val,{ok:true,id:'file'},'Document remove');
     };
@@ -1381,7 +5396,7 @@ test ('Simple methods', function () {
                         username:'methods',
                         storage:{type:'local',
                                  username:'conflictmethods',
-                                 applicationname:'jiotests'}});
+                                 application_name:'jiotests'}});
     // PUT
     o.spy({ok:true,id:'file.doc',rev:'1'},'saving "file.doc".');
     o.jio.put({_id:'file.doc',content:'content1'},function (err,val) {
@@ -1554,12 +5569,12 @@ test ('Revision Conflict', function() {
         ok (!LocalOrCookieStorage.getItem(o.localNamespace + string),
             message || '"' + string + '" does not exists.');
     };
-    o.secondstorage_spec = {type:'local',
+    o.sub_storage_spec = {type:'local',
                             username:'revisionconflict',
-                            applicationname:'jiotests'}
+                            application_name:'jiotests'}
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
-                        storage:o.secondstorage_spec});
+                        storage:o.sub_storage_spec});
     // create a new file
     o.spy(o,'value',
           {ok:true,id:'file.doc',rev:'1',conflicts:{total_rows:0,rows:[]},
@@ -1718,12 +5733,12 @@ test ('Conflict in a conflict solving', function () {
         ok (!LocalOrCookieStorage.getItem(o.localNamespace + string),
             message || '"' + string + '" does not exists.');
     };
-    o.secondstorage_spec = {type:'local',
+    o.sub_storage_spec = {type:'local',
                             username:'conflictconflict',
-                            applicationname:'jiotests'}
+                            application_name:'jiotests'}
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
-                        storage:o.secondstorage_spec});
+                        storage:o.sub_storage_spec});
     // create a new file
     o.test_message = 'new file "file.doc", revision: "0".'
     o.f = o.t.spy();
@@ -1905,12 +5920,12 @@ test ('Remove revision conflict', function () {
         ok (!LocalOrCookieStorage.getItem(o.localNamespace + string),
             message || '"' + string + '" does not exists.');
     };
-    o.secondstorage_spec = {type:'local',
+    o.sub_storage_spec = {type:'local',
                             username:'removeconflict',
-                            applicationname:'jiotests'}
+                            application_name:'jiotests'}
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
-                        storage:o.secondstorage_spec});
+                        storage:o.sub_storage_spec});
 
     o.test_message = 'new file "file.doc", revision: "0".';
     o.f = o.t.spy();
@@ -2135,12 +6150,12 @@ test ('Load Revisions', function () {
     o.clock.tick (base_tick);
     o.spy = basic_spy_function;
     o.tick = basic_tick_function;
-    o.secondstorage_spec = {type:'local',
+    o.sub_storage_spec = {type:'local',
                             username:'loadrevisions',
-                            applicationname:'jiotests'}
+                            application_name:'jiotests'}
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
-                        storage:o.secondstorage_spec});
+                        storage:o.sub_storage_spec});
     o.spy(o,'status',404,'load file rev:1,','f'); // 12 === Replaced
     o.spy(o,'status',404,'load file rev:2','g');
     o.spy(o,'status',404,'and load file rev:3 at the same time','h');
@@ -2156,13 +6171,13 @@ test ('Get revision List', function () {
     o.clock.tick (base_tick);
     o.spy = basic_spy_function;
     o.tick = basic_tick_function;
-    o.secondstorage_spec = {type:'local',
+    o.sub_storage_spec = {type:'local',
                             username:'getrevisionlist',
-                            applicationname:'jiotests'}
+                            application_name:'jiotests'}
     o.rev = {};
     //////////////////////////////////////////////////////////////////////
     o.jio = JIO.newJio({type:'conflictmanager',
-                        storage:o.secondstorage_spec});
+                        storage:o.sub_storage_spec});
     o.spy(o,'value',{total_rows:0,rows:[]},'Get revision list');
     o.jio.allDocs(o.f);
     o.tick(o);
@@ -2264,6 +6279,446 @@ test ('Get revision List', function () {
 
     o.jio.stop();
 });
+*/
+
+;(function() {
+module ('Jio XWikiStorage');
+var setUp = function(that, liveTest) {
+    var o = generateTools(that);
+    o.server = sinon.fakeServer.create();
+    o.jio = JIO.newJio({type:'xwiki',formTokenPath:'form_token'});
+    o.addFakeServerResponse("xwiki", "GET", "form_token", 200,
+                            '<meta name="form_token" content="OMGHAX"/>');
+    o._addFakeServerResponse = o.addFakeServerResponse;
+    o.expectedRequests = [];
+    o.addFakeServerResponse = function(a,b,c,d,e) {
+        o._addFakeServerResponse(a,b,c,d,e);
+        o.expectedRequests.push([b,c]);
+    };
+    o.assertReqs = function(count, message) {
+        o.requests = (o.requests || 0) + count;
+        ok(o.server.requests.length === o.requests,
+           message + "[expected [" + count + "] got [" +
+              (o.server.requests.length - (o.requests - count)) + "]]");
+        for (var i = 1; i <= count; i++) {
+            var req = o.server.requests[o.server.requests.length - i];
+            if (!req) {
+                break;
+            }
+            for (var j = o.expectedRequests.length - 1; j >= 0; --j) {
+                var expected = o.expectedRequests[j];
+                if (req.method === expected[0] &&
+                    req.url.indexOf(expected[1]) !== 0)
+                {
+                    o.expectedRequests.splice(j, 1);
+                }
+            }
+        }
+        var ex = o.expectedRequests.pop();
+        if (ex) {
+            ok(0, "expected [" +  ex[0] + "] request for [" + ex[1] + "]");
+        }
+    };
+    return o;
+};
+
+test ("Post", function () {
+
+    var o = setUp(this);
+
+    // post without id
+    o.spy (o, "status", 405, "Post without id");
+    o.jio.post({}, o.f);
+    o.clock.tick(5000);
+    o.assertReqs(0, "no id -> no request");
+
+    // post non empty document
+    o.addFakeServerResponse("xwiki", "POST", "myFile", 201, "HTML RESPONSE");
+    o.spy(o, "value", {"id": "myFile", "ok": true},
+          "Create = POST non empty document");
+    o.jio.post({"_id": "myFile", "title": "hello there"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(3, "put -> 1 request to get csrf token, 1 to get doc and 1 to post data");
+
+    // post but document already exists (post = error!, put = ok)
+    o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<page xmlns="http://www.xwiki.org"><title>hello there</title></page>';
+    o.addFakeServerResponse("xwiki", "GET", "myFile2", 200, o.answer);
+    o.spy (o, "status", 409, "Post but document already exists");
+    o.jio.post({"_id": "myFile2", "title": "hello again"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(1, "post w/ existing doc -> 1 request to get doc then fail");
+
+    o.jio.stop();
+});
+
+test ("Put", function(){
+
+    var o = setUp(this);
+
+    // put without id => id required
+    o.spy (o, "status", 20, "Put without id");
+    o.jio.put({}, o.f);
+    o.clock.tick(5000);
+    o.assertReqs(0, "put w/o id -> 0 requests");
+
+    // put non empty document
+    o.addFakeServerResponse("xwiki", "POST", "put1", 201, "HTML RESPONSE");
+    o.spy (o, "value", {"ok": true, "id": "put1"},
+           "Create = PUT non empty document");
+    o.jio.put({"_id": "put1", "title": "myPut1"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(3, "put normal doc -> 1 req to get doc, 1 for csrf token, 1 to post");
+
+    // put but document already exists = update
+    o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<page xmlns="http://www.xwiki.org"><title>mtPut1</title></page>';
+    o.addFakeServerResponse("xwiki", "GET", "put2", 200, o.answer);
+    o.addFakeServerResponse("xwiki", "POST", "put2", 201, "HTML RESPONSE");
+    o.spy (o, "value", {"ok": true, "id": "put2"}, "Updated the document");
+    o.jio.put({"_id": "put2", "title": "myPut2abcdedg"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(3, "put update doc -> 1 req to get doc, 1 for csrf token, 1 to post");
+
+    o.jio.stop();
+});
+
+test ("PutAttachment", function(){
+
+    var o = setUp(this);
+
+    // putAttachment without doc id => id required
+    o.spy(o, "status", 20, "PutAttachment without doc id");
+    o.jio.putAttachment({}, o.f);
+    o.clock.tick(5000);
+    o.assertReqs(0, "put attach w/o doc id -> 0 requests");
+
+    // putAttachment without attachment id => attachment id required
+    o.spy(o, "status", 22, "PutAttachment without attachment id");
+    o.jio.putAttachment({"_id": "putattmt1"}, o.f);
+    o.clock.tick(5000);
+    o.assertReqs(0, "put attach w/o attach id -> 0 requests");
+
+    // putAttachment without underlying document => not found
+    o.addFakeServerResponse("xwiki", "GET", "putattmtx", 404, "HTML RESPONSE");
+    o.spy(o, "status", 404, "PutAttachment without document");
+    o.jio.putAttachment({"_id": "putattmtx", "_attachment": "putattmt2"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(1, "put attach w/o existing document -> 1 request to get doc");
+
+    // putAttachment with document without data
+    o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<page xmlns="http://www.xwiki.org"><title>myPutAttm</title></page>';
+    o.addFakeServerResponse("xwiki", "GET", "putattmt1", 200, o.answer);
+    o.addFakeServerResponse("xwiki", "POST", "putattmt1/putattmt2", 201,"HTML"+
+      + "RESPONSE");
+    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
+          "PutAttachment with document, without data");
+    o.jio.putAttachment({"_id": "putattmt1", "_attachment": "putattmt2"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(3, "put attach -> 1 request to get document, 1 to put " +
+                    "attach, 1 to get csrf token");
+
+    o.jio.stop();
+});
+
+test ("Get", function(){
+
+    var o = setUp(this);
+
+    // get inexistent document
+    o.spy(o, "status", 404, "Get non existing document");
+    o.jio.get("get1", o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(1, "try to get nonexistent doc -> 1 request");
+
+    // get inexistent attachment
+    o.spy(o, "status", 404, "Get non existing attachment");
+    o.jio.get("get1/get2", o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(1, "try to get nonexistent attach -> 1 request");
+
+    // get document
+    o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<page xmlns="http://www.xwiki.org"><title>some title</title></page>';
+    o.addFakeServerResponse("xwiki", "GET", "get3", 200, o.answer);
+    o.spy(o, "value", {"_id": "get3", "title": "some title"}, "Get document");
+    o.jio.get("get3", o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(1, "get document -> 1 request");
+
+    // get inexistent attachment (document exists)
+    o.spy(o, "status", 404, "Get non existing attachment (doc exists)");
+    o.jio.get({"_id": "get3", "_attachment": "getx"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(1, "get nonexistant attachment -> 1 request");
+
+    // get attachment
+    o.answer = JSON.stringify({"_id": "get4", "title": "some attachment"});
+    o.addFakeServerResponse("xwiki", "GET", "get3/get4", 200, o.answer);
+    o.spy(o, "value", {"_id": "get4", "title": "some attachment"},
+      "Get attachment");
+    o.jio.get({"_id": "get3", "_attachment": "get4"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(1, "get attachment -> 1 request");
+
+    o.jio.stop();
+});
+
+test ("Remove", function(){
+
+    var o = setUp(this);
+
+    // remove inexistent document
+    o.addFakeServerResponse("xwiki", "GET", "remove1", 404, "HTML RESPONSE");
+    o.spy(o, "status", 404, "Remove non existening document");
+    o.jio.remove({"_id": "remove1"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(2, "remove nonexistent doc -> 1 request for csrf and 1 for doc");
+
+    // remove inexistent document/attachment
+    o.addFakeServerResponse("xwiki", "GET", "remove1/remove2", 404, "HTML" +
+      "RESPONSE");
+    o.spy(o, "status", 404, "Remove inexistent document/attachment");
+    o.jio.removeAttachment({"_id": "remove1", "_attachment": "remove2"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(2, "remove nonexistant attach -> 1 request for csrf and 1 for doc");
+
+    // remove document
+    //o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    //    '<page xmlns="http://www.xwiki.org"><title>some doc</title></page>';
+    //o.addFakeServerResponse("xwiki", "GET", "remove3", 200, o.answer);
+    o.addFakeServerResponse("xwiki", "POST", "bin/delete/Main/remove3",
+                            200, "HTML RESPONSE");
+    o.spy(o, "value", {"ok": true, "id": "remove3"}, "Remove document");
+    o.jio.remove({"_id": "remove3"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(2, "remove document -> 1 request for csrf and 1 for deleting doc");
+
+    o.answer = JSON.stringify({
+      "_id": "remove4",
+      "title": "some doc",
+      "_attachments": {
+            "remove5": {
+                "length": 4,
+                "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
+            }
+      }
+    });
+    // remove attachment
+    o.addFakeServerResponse("xwiki", "POST", "delattachment/Main/remove4/remove5",
+                            200, "HTML RESPONSE");
+    o.spy(o, "value", {"ok": true, "id": "remove4/remove5"},
+          "Remove attachment");
+    o.jio.removeAttachment({"_id": "remove4", "_attachment": "remove5"}, o.f);
+    o.clock.tick(5000);
+    o.server.respond();
+    o.assertReqs(2, "remove attach -> 1 request for csrf and 1 for deletion");
+
+    o.jio.stop();
+});
+/*
+test ("AllDocs", function () {
+
+  // need to make server requests before activating fakeServer
+  var davlist = getXML('responsexml/davlist'),
+    o = setUp(this);
+
+  // get allDocs, no content
+  addFakeServerResponse("xwiki", "PROPFIND", "", 200, davlist);
+  o.thisShouldBeTheAnswer = {
+      "rows": [
+        {"id": "alldocs1", "key": "alldocs1", "value": {}},
+        {"id": "alldocs2", "key": "alldocs2", "value": {}}
+      ],
+      "total_rows": 2
+  }
+  o.spy(o, "value", o.thisShouldBeTheAnswer, "allDocs (no content)");
+  o.jio.allDocs(o.f);
+  o.clock.tick(5000);
+  respond();
+
+  // allDocs with option include
+  o.all1 = {"_id": "allDocs1", "title": "a doc title"};
+  o.all2 = {"_id": "allDocs2", "title": "another doc title"};
+  o.thisShouldBeTheAnswer = {
+      "rows": [
+        {"id": "alldocs1", "key": "alldocs1", "value": {}, "doc": o.all1},
+        {"id": "alldocs2", "key": "alldocs2", "value": {}, "doc": o.all2}
+      ],
+      "total_rows": 2
+  }
+  addFakeServerResponse("xwiki", "GET", "alldocs1", 200,
+    JSON.stringify(o.all1));
+  addFakeServerResponse("xwiki", "GET", "alldocs2", 200,
+    JSON.stringify(o.all2));
+  o.spy(o, "value", o.thisShouldBeTheAnswer, "allDocs (include_docs)");
+  o.jio.allDocs({"include_docs":true}, o.f);
+  o.clock.tick(5000);
+  respond();
+
+  o.jio.stop();
+});
+*/
+
+var nThen = function(next) {
+    var funcs = [];
+    var calls = 0;
+    var waitFor = function(func) {
+        calls++;
+        return function() {
+            if (func) {
+                func.apply(null, arguments);
+            }
+            calls = (calls || 1) - 1;
+            while (!calls && funcs.length) {
+                funcs.shift()(waitFor);
+            }
+        };
+    };
+    next(waitFor);
+    var ret = {
+        nThen: function(next) {
+            funcs.push(next);
+            return ret;
+        },
+        orTimeout: function(func, milliseconds) {
+            var cto;
+            var timeout = setTimeout(function() {
+                while (funcs.shift() !== cto) ;
+                func(waitFor);
+                calls = (calls || 1) - 1;
+                while (!calls && funcs.length) { console.log("call"); funcs.shift()(waitFor); }
+            }, milliseconds);
+            funcs.push(cto = function() { clearTimeout(timeout); });
+            return ret;
+        }
+    };
+    return ret;
+};
+
+
+if (window.location.href.match(/xwiki\/bin\/view/)) (function() {
+// This test will only be run if we are inside of a live XWiki instance.
+test ("XWiki Live Server setup", function () {
+
+    var o = setUp(this);
+    o.jio.stop();
+    this.sandbox.restore();
+    o.jio.start();
+    QUnit.stop();
+
+    nThen(function(waitFor) {
+
+        // Remove the document if it exists.
+        o.jio.remove({"_id": "one.json"}, waitFor());
+
+    }).nThen(function(waitFor) {
+
+        // post a new document
+        o.spy(o, "value", {"id": "one.json", "ok": true}, "Live post document");
+        o.jio.post({"_id": "one.json", "title": "hello"}, waitFor(o.f));
+
+    }).nThen(function(waitFor) {
+
+        o.jio.get("one.json", waitFor(function(err, ret) {
+            ok(!err);
+            ok(ret._id == "one.json");
+            ok(ret.title == "hello");
+        }));
+
+    }).nThen(function(waitFor) {
+
+        // modify document
+        o.spy(o, "value", {"id": "one.json", "ok": true}, "Live modify document");
+        o.jio.put({"_id": "one.json", "title": "hello modified"}, waitFor(o.f));
+
+    }).nThen(function(waitFor) {
+
+        o.jio.get("one.json", waitFor(function(err, ret) {
+            ok(!err);
+            ok(ret.title == "hello modified");
+        }));
+
+    }).nThen(function(waitFor) {
+
+        // add attachment
+        o.spy(o, "value", {"id": "one.json/att.txt", "ok": true}, "Put attachment");
+        o.jio.putAttachment({
+          "_id": "one.json",
+          "_attachment": "att.txt",
+          "_mimetype": "text/plain",
+          "_data": "there2"
+        }, waitFor(o.f));
+
+    }).nThen(function(waitFor) {
+
+        // test allDocs
+        /*o.jio.allDocs({"include_docs":true},
+          function(s){console.log(s);},
+          function ( e ) {console.log(e);
+        }, o.f);*/
+
+    }).nThen(function(waitFor) {
+
+        // get Attachment
+        o.jio.getAttachment({"_id":"one.json", "_attachment":"att.txt"}, waitFor(function(err, ret) {
+            ok(!err);
+            var fr = new FileReader();
+            fr.onload = waitFor(function(dat) {
+                ok(dat.target.result == "there2");
+            });
+            fr.readAsText(ret);
+        }));
+
+    }).nThen(function(waitFor) {
+
+        // remove Attachment
+        o.spy(o, "value", {"id": "one.json/att.txt", "ok": true}, "Remove attachment");
+        o.jio.removeAttachment({"_id":"one.json","_attachment":"att.txt"}, waitFor(o.f));
+
+    }).nThen(function(waitFor) {
+
+        // remove Document
+        o.spy(o, "value", {"id": "one.json", "ok": true}, "Remove document");
+        o.jio.remove("one.json", waitFor(o.f));
+
+    }).nThen(function(waitFor) {
+
+        //console.log("success");
+
+    }).orTimeout(function() {
+
+        //console.log("failed");
+        ok(0);
+
+    }, 15000).nThen(function() {
+
+        //console.log("complete");
+        o.jio.stop();
+        QUnit.start();
+
+    });
+
+});
+})(); // Live XWiki
+
+})(); // xwiki
+
 
 };                              // end thisfun
 
@@ -2272,12 +6727,9 @@ if (window.requirejs) {
         paths: {
             jiotestsloader: './jiotests.loader',
 
-            LocalOrCookieStorage: './testlocalorcookiestorage',
             jQueryAPI: '../lib/jquery/jquery',
             jQuery: '../js/jquery.requirejs_module',
             JIO: '../src/jio',
-            Base64API: '../lib/base64/base64',
-            Base64: '../js/base64.requirejs_module',
             JIODummyStorages: '../src/jio.dummystorages',
             JIOStorages: '../src/jio.storage',
             SJCLAPI:'../lib/sjcl/sjcl.min',
@@ -2286,11 +6738,7 @@ if (window.requirejs) {
     });
     require(['jiotestsloader'],thisfun);
 } else {
-    thisfun ({LocalOrCookieStorage:LocalOrCookieStorage,
-              JIO:jIO,
-              sjcl:sjcl,
-              Base64:Base64,
-              jQuery:jQuery});
+    thisfun ({JIO:jIO});
 }
 
 }());

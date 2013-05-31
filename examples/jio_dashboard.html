@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>jIO Dashboard</title>
+</head>
+<body>
+  <script type="text/javascript">
+    <!--
+var log_color = 'cyan';
+var logGetColor = function () {
+  if (log_color === 'white') {
+    log_color = 'cyan';
+  } else {
+    log_color = 'white';
+  }
+  return log_color;
+};
+var log = function (o) {
+  var node = document.createElement('div');
+  node.setAttribute('style', 'background-color:'+logGetColor()+';');
+  if (typeof o === 'string') {
+    node.textContent = o;
+  } else {
+    node.textContent = JSON.stringify(o);
+  }
+  document.getElementById('log').appendChild(node);
+};
+var error = function (o) {
+  var node = document.createElement('div');
+  node.setAttribute('style', 'background-color:'+logGetColor()+
+                    ';color:red;font-weight:bold');
+  if (typeof o === 'string') {
+    node.textContent = o;
+  } else {
+    node.textContent = JSON.stringify(o);
+  }
+  document.getElementById('log').appendChild(node);
+};
+var clearlog = function () {
+  document.getElementById('log').innerHTML = '';
+};
+        //-->
+  </script>
+  <table border="1" style="width: 100%;">
+    <tr style="font-style:italic;">
+      <th>simple storage</th><th>multi storage</th><th>distant storage</th>
+      <th>revision managing</th><th>custom storage description</th>
+    </tr>
+    <tr>
+      <th>local</th><th>crypt & local</th><th>dav</th>
+      <th>revision & local</th><th>custom</th>
+    </tr>
+    <tr>
+      <th>
+        <input type="text" id="localuser" value="localuser" placeholder="username" /><br />
+        <input type="text" id="localapp" value="localapp" placeholder="application_name" /><br />
+      </th>
+      <th>
+        <input type="text" id="cryptuser" value="cryptuser" placeholder="username" /><br />
+        <input type="text" id="cryptapp" value="cryptapp" placeholder="application_name" /><br />
+        <input type="password" id="cryptpassword" value="pwd" placeholder="password" /><br />
+      </th>
+      <th>
+        <input type="text" id="davurl" value="http://dav.com/uploads" placeholder="url" /><br />
+        <input type="text" id="davauthtype" value="basic" placeholder="auth_type" disabled /> <br />
+        <input type="text" id="davuser" value="davuser" placeholder="username" /><br />
+        <input type="password" id="davpassword" value="pwd" placeholder="password" /><br />
+      </th>
+      <th>
+        <input type="text" id="revisionuser" value="localuser" placeholder="username" /><br />
+        <input type="text" id="revisionapp" value="localapp" placeholder="application_name" /><br />
+      </th>
+      <th style="width:100%;">
+        <textarea id="customstorage" style="width:98%;">{&quot;type&quot;:&quot;local&quot;,&quot;username&quot;:&quot;customuser&quot;,&quot;application_name&quot;:&quot;customapp&quot;,&quot;customkey&quot;:&quot;customvalue&quot;}</textarea>
+      </th>
+    </tr>
+    <tr>
+      <th><button onclick="newLocalJio()">Create New jIO</button></th>
+      <th><button onclick="newCryptJio()">Create New jIO</button></th>
+      <th><button onclick="newDavJio()">Create New jIO</button></th>
+      <th><button onclick="newRevisionJio()">Create New jIO</button></th>
+      <th><button onclick="newCustomJio()">Create New jIO</button></th>
+    </tr>
+  </table>
+  <br />
+  <table border="1" style="width: 100%;">
+    <tr>
+      <td colspan="1" style="width: 50%;">
+        <label for="metadata">Metadata or document id:</label>
+        <textarea id="metadata" rows="3" style="width: 98%;">{}</textarea>
+      </td>
+      <td colspan="1" style="text-align: center;">
+        Options:<br />
+        <label for="include_docs">Include Docs</label>
+        <input type="checkbox" id="include_docs" /><br />
+        <label for="show_conflicts">Get Conflicts</label>
+        <input type="checkbox" id="show_conflicts" /><br />
+        <label for="show_revision_history">Get Revision History</label>
+        <input type="checkbox" id="show_revision_history" /><br />
+        <label for="show_revision_info">Get Revision Info</label>
+        <input type="checkbox" id="show_revision_info" /><br />
+        <label for="max_retry">Max Retry</label>
+        <input type="number" id="max_retry" value="0" style="width:30px;"/>
+        (0 = infinite)
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="text-align: center;">
+        <button onclick="post()">post</button>
+        <button onclick="put()">put</button>
+        <button onclick="get()">get</button>
+        <button onclick="remove()">remove</button>
+        <button onclick="allDocs()">allDocs</button>
+        <!-- </td> -->
+        <!-- <td style="text-align: center;"> -->
+        - <button onclick="putAttachment()">putAttachment</button>
+        <button onclick="getAttachment()">getAttachment</button>
+        <button onclick="removeAttachment()">removeAttachment</button>
+      </td>
+    </tr>
+  </table>
+  <br />
+  <div style="text-align: center;">
+    <button onclick="printLocalStorage()">print localStorage</button>
+    <button onclick="localStorage.clear()">clear localStorage</button><br />
+    <button onclick="clearlog()">Clear Log</button>
+  </div>
+  <hr />
+  <div id="log">
+  </div>
+  <script type="text/javascript" src="../lib/md5/md5.js"></script>
+  <script type="text/javascript" src="../jio.js"></script>
+  <script type="text/javascript" src="../src/jio.storage/localstorage.js">
+  </script>
+  <script type="text/javascript" src="../lib/jquery/jquery.min.js"></script>
+  <script type="text/javascript" src="../src/jio.storage/davstorage.js">
+  </script>
+  <script type="text/javascript" src="../src/jio.storage/erp5storage.js">
+  </script>
+  <script type="text/javascript" src="../lib/jsSha2/sha2.js"></script>
+  <script type="text/javascript" src="../src/jio.storage/revisionstorage.js">
+  </script>
+  <script type="text/javascript" src="../lib/sjcl/sjcl.min.js"></script>
+  <script type="text/javascript">
+    <!--
+var my_jio = null;
+var newLocalJio = function () {
+  var localuser, localapp;
+  localuser = $('#localuser').attr('value');
+  localapp = $('#localapp').attr('value');
+  var spec = {type: 'local', username: localuser, application_name: localapp};
+  if (my_jio) { log('closing older jio'); my_jio.close(); }
+  log('local storage description object: ' + JSON.stringify(spec));
+  my_jio = jIO.newJio(spec);
+};
+var newCryptJio = function () {
+  var user, app, pwd;
+  user = $('#cryptuser').attr('value');
+  app = $('#cryptapp').attr('value');
+  pwd = $('#cryptpassword').attr('value');
+  var spec = {type: 'crypt', username: user, password: pwd, storage:{
+    type: 'local', username: user, application_name: app
+  }};
+  if (my_jio) { log('closing older jio'); my_jio.close(); }
+  log('crypt storage description object: ' + JSON.stringify(spec));
+  my_jio = jIO.newJio(spec);
+};
+var newDavJio = function () {
+  var user, app, pwd, url;
+  user = $('#davuser').attr('value');
+  pwd = $('#davpassword').attr('value');
+  url = $('#davurl').attr('value');
+  var spec = {
+    "type": "dav",
+    "url": url,
+    "auth_type": "basic",
+    "username": user,
+    "password": pwd
+  };
+  if (my_jio) { log('closing older jio'); my_jio.close(); }
+  log('dav storage description object: ' + JSON.stringify(spec));
+  my_jio = jIO.newJio(spec);
+};
+var newRevisionJio = function () {
+  var user, app;
+  user = $('#revisionuser').attr('value');
+  app = $('#revisionapp').attr('value');
+  var spec = {
+    type: 'revision', sub_storage: {
+      type: 'local', username: user, application_name: app
+    }
+  };
+  if (my_jio) { log('closing older jio'); my_jio.close(); }
+  log('revision storage description object: '+JSON.stringify(spec));
+  my_jio = jIO.newJio(spec);
+};
+var newCustomJio = function () {
+  var spec = JSON.parse ($('#customstorage').attr('value'));
+  if (my_jio) { log('closing older jio'); my_jio.close(); }
+  log('custom storage description object: '+JSON.stringify(spec));
+  my_jio = jIO.newJio(spec);
+};
+var printLocalStorage = function () {
+  var i;
+  log('LOCALSTORAGE');
+  for (i in localStorage) {
+    log('- '+ i +': '+localStorage[i]);
+  }
+  log('------------------------------');
+};
+var callback = function (err, val, begin_date) {
+  log('time : ' + (Date.now() - begin_date));
+  if (err) {
+    return error('return :' + JSON.stringify(err));
+  }
+  log('return : ' + JSON.stringify(val));
+};
+var command = function (method) {
+  var begin_date = Date.now(), doc = {}, opts = {};
+  log(method);
+  if (!my_jio) {
+    return error('no jio set');
+  }
+
+  opts.include_docs = $('#include_docs').attr('checked') ? true : false;
+  opts.conflicts = $('#show_conflicts').attr('checked') ? true : false;
+  opts.revs = $('#show_revision_history').attr('checked') ? true : false;
+  opts.revs_info = $('#show_revision_info').attr('checked') ? true : false;
+  opts.max_retry = parseInt($('#max_retry').attr('value') || '0');
+
+  doc = JSON.parse($('#metadata').attr('value'));
+  log('doc: ' + JSON.stringify(doc));
+  log('opts: ' + JSON.stringify(opts));
+
+  my_jio[method](doc, opts, function (err, val) {
+    callback(err, val, begin_date);
+  });
+};
+var post = function () {
+  command('post');
+};
+var put = function () {
+  command('put');
+};
+var get = function () {
+  command('get');
+};
+var remove = function () {
+  command('remove');
+};
+var allDocs = function () {
+  command('allDocs');
+};
+var putAttachment = function () {
+  command('putAttachment');
+};
+var getAttachment = function () {
+  command('getAttachment');
+};
+var removeAttachment = function () {
+  command('removeAttachment');
+};
+        //-->
+  </script>
+</body>
+</html>
