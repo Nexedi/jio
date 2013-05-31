@@ -1,5 +1,7 @@
-Object.defineProperty(scope.ComplexQueries, "parse", {
-  configurable: false,
-  enumerable: false,
-  writable: false,
-  value: function (string) {
+/**
+ * Parse a text request to a json query tree
+ * @method parseStringToObject
+ * @param  {String} string The string to parse
+ * @return {Object} The json query tree
+ */
+function parseStringToObject(string) {
