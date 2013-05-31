@@ -13,6 +13,11 @@ var Query = newClass(function() {
    * @param  {Array} item_list The list of object
    * @param  {Object} [option={}] Some operation option
    * @param  {String} [option.wildcard_character="%"] The wildcard character
+   * @param  {Array} [option.select_list=undefined] A object keys to retrieve
+   * @param  {Array} [option.sort_on=[]] Couples of object keys
+   *                                     and "ascending" or "descending"
+   * @param  {Array} [option.limit=undefined] Couple of integer, first is an
+   *                                          index and second is the length.
    * @return {Array} The new item list
    */
   this.exec = function (item_list, option) {};
