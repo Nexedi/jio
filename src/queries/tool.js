@@ -12,6 +12,11 @@
  * @param  {Boolean} [option.secure_methods=false] Make methods not configurable
  *                                                 and not writable
  * @param  {Boolean} [option.hide_methods=false] Make methods not enumerable
+ * @param  {Boolean} [option.secure_static_methods=true] Make static methods not
+ *                                                       configurable and not
+ *                                                       writable
+ * @param  {Boolean} [option.hide_static_methods=false] Make static methods not
+ *                                                      enumerable
  * @param  {Object} [option.static_methods={}] Object of static methods
  * @param  {Function} constructor The new class constructor
  * @return {Class} The new class
@@ -32,7 +37,7 @@ function newClass() {
     }
   }
 
-  function postCreate(that) {
+  function postObjectCreation(that) {
     // modify the object according to 'option'
     var key;
     if (option) {
@@ -51,6 +56,26 @@ function newClass() {
     }
   }
 
+  function postClassCreation(that) {
+    // modify the object according to 'option'
+    var key;
+    if (option) {
+      for (key in that) {
+        if (that.hasOwnProperty(key)) {
+          if (typeof that[key] === "function") {
+            Object.defineProperty(that, key, {
+              configurable: option.secure_static_methods === false ?
+                true : false,
+              enumerable: option.hide_static_methods ? false : true,
+              writable: option.secure_static_methods === false ? true : false,
+              value: that[key]
+            });
+          }
+        }
+      }
+    }
+  }
+
   new_class = function (spec, my) {
     var i;
     spec = spec || {};
@@ -59,7 +84,7 @@ function newClass() {
     for (i = 0; i < constructors.length; i += 1) {
       constructors[i].apply(this, [spec, my]);
     }
-    postCreate(this);
+    postObjectCreation(this);
     return this;
   };
   option = option || {};
@@ -69,7 +94,7 @@ function newClass() {
       new_class[j] = option.static_methods[j];
     }
   }
-  postCreate(new_class);
+  postClassCreation(new_class);
   return new_class;
 }
 
