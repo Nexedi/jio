@@ -1,3 +1,7 @@
+/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*global newClass: true, Query: true, convertSearchTextToRegExp: true,
+         query_class_dict: true, _export: true */
+
 /**
  * The SimpleQuery inherits from Query, and compares one metadata value
  *
@@ -38,7 +42,7 @@ var SimpleQuery = newClass(Query, function (spec) {
    * #crossLink "Query/match:method"
    */
   this.match = function (item, wildcard_character) {
-    this[this.operator](item[this.key], this.value, wildcard_character);
+    return this[this.operator](item[this.key], this.value, wildcard_character);
   };
 
   /**
@@ -61,7 +65,15 @@ var SimpleQuery = newClass(Query, function (spec) {
     };
   };
 
-  // XXX
+  /**
+   * Comparison operator, test if this query value matches the item value
+   *
+   * @method =
+   * @param  {String} object_value The value to compare
+   * @param  {String} comparison_value The comparison value
+   * @param  {String} wildcard_character The wildcard_character
+   * @return {Boolean} true if match, false otherwise
+   */
   this["="] = function (object_value, comparison_value,
                         wildcard_character) {
     return convertSearchTextToRegExp(
@@ -70,31 +82,70 @@ var SimpleQuery = newClass(Query, function (spec) {
     ).test(object_value.toString());
   };
 
-  // XXX
+  /**
+   * Comparison operator, test if this query value does not match the item value
+   *
+   * @method !=
+   * @param  {String} object_value The value to compare
+   * @param  {String} comparison_value The comparison value
+   * @param  {String} wildcard_character The wildcard_character
+   * @return {Boolean} true if not match, false otherwise
+   */
   this["!="] = function (object_value, comparison_value,
-                                          wildcard_character) {
+                         wildcard_character) {
     return !convertSearchTextToRegExp(
       comparison_value.toString(),
       wildcard_character || this.wildcard_character
     ).test(object_value.toString());
   };
 
-  // XXX
+  /**
+   * Comparison operator, test if this query value is lower than the item value
+   *
+   * @method <
+   * @param  {Number, String} object_value The value to compare
+   * @param  {Number, String} comparison_value The comparison value
+   * @return {Boolean} true if lower, false otherwise
+   */
   this["<"] = function (object_value, comparison_value) {
     return object_value < comparison_value;
   };
 
-  // XXX
+  /**
+   * Comparison operator, test if this query value is equal or lower than the
+   * item value
+   *
+   * @method <=
+   * @param  {Number, String} object_value The value to compare
+   * @param  {Number, String} comparison_value The comparison value
+   * @return {Boolean} true if equal or lower, false otherwise
+   */
   this["<="] = function (object_value, comparison_value) {
     return object_value <= comparison_value;
   };
 
-  // XXX
+  /**
+   * Comparison operator, test if this query value is greater than the item
+   * value
+   *
+   * @method >
+   * @param  {Number, String} object_value The value to compare
+   * @param  {Number, String} comparison_value The comparison value
+   * @return {Boolean} true if greater, false otherwise
+   */
   this[">"] = function (object_value, comparison_value) {
     return object_value > comparison_value;
   };
 
-  // XXX
+  /**
+   * Comparison operator, test if this query value is equal or greater than the
+   * item value
+   *
+   * @method >=
+   * @param  {Number, String} object_value The value to compare
+   * @param  {Number, String} comparison_value The comparison value
+   * @return {Boolean} true if equal or greater, false otherwise
+   */
   this[">="] = function (object_value, comparison_value) {
     return object_value >= comparison_value;
   };

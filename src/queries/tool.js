@@ -1,21 +1,18 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global _export: true */
 
-#!/usr/bin/env node
-
-// keywords: js, javascript, new class creator, generator
-
 /**
  * Create a class, manage inheritance, static methods,
  * protected attributes and can hide methods or/and secure methods
  *
  * @method newClass
- * @param  {Class} Class Classes to inherit from (0..n)
+ * @param  {Class} Class Classes to inherit from (0..n). The last class
+ *                       parameter will inherit from the previous one, and so on
  * @param  {Object} option Class option (0..n)
  * @param  {Boolean} [option.secure_methods=false] Make methods not configurable
  *                                                 and not writable
  * @param  {Boolean} [option.hide_methods=false] Make methods not enumerable
- * @param  {Object} [option.static_methods={}] Add static methods
+ * @param  {Object} [option.static_methods={}] Object of static methods
  * @param  {Function} constructor The new class constructor
  * @return {Class} The new class
  */
@@ -29,7 +26,7 @@ function newClass() {
       option = option || {};
       for (k in arguments[j]) {
         if (arguments[j].hasOwnProperty(k)) {
-          option[j] = arguments[j][k];
+          option[k] = arguments[j][k];
         }
       }
     }
@@ -65,7 +62,9 @@ function newClass() {
     postCreate(this);
     return this;
   };
-  for (j in (option.static_methods || {})) {
+  option = option || {};
+  option.static_methods = option.static_methods || {};
+  for (j in option.static_methods) {
     if (option.static_methods.hasOwnProperty(j)) {
       new_class[j] = option.static_methods[j];
     }
@@ -76,16 +75,16 @@ function newClass() {
 
 /**
  * Escapes regexp special chars from a string.
- * @method regexpEscapeString
+ * @method stringEscapeRegexpCharacters
  * @param  {String} string The string to escape
  * @return {String} The escaped string
  */
-function regexpEscapeString(string) {
+function stringEscapeRegexpCharacters(string) {
   if (typeof string === "string") {
     return string.replace(/([\\\.\$\[\]\(\)\{\}\^\?\*\+\-])/g, "\\$1");
   }
 }
-_export("regexpEscapeString", regexpEscapeString);
+_export("stringEscapeRegexpCharacters", stringEscapeRegexpCharacters);
 
 /**
  * Convert a search text to a regexp.
@@ -95,8 +94,8 @@ _export("regexpEscapeString", regexpEscapeString);
  * @return {RegExp} The search text regexp
  */
 function convertSearchTextToRegExp(string, wildcard_character) {
-  return new RegExp("^" + regexpEscapeString(string).replace(
-    regexpEscapeString(wildcard_character),
+  return new RegExp("^" + stringEscapeRegexpCharacters(string).replace(
+    stringEscapeRegexpCharacters(wildcard_character),
     '.*'
   ) + "$");
 }
@@ -105,11 +104,11 @@ _export("convertSearchTextToRegExp", convertSearchTextToRegExp);
 // XXX
 function sortFunction(key, way) {
   if (way === 'descending') {
-    return function (a,b) {
+    return function (a, b) {
       return a[key] < b[key] ? 1 : a[key] > b[key] ? -1 : 0;
     };
   }
-  return function (a,b) {
+  return function (a, b) {
     return a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0;
   };
 }

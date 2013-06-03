@@ -1,4 +1,2 @@
   return result;
-}
-
-}; // parseStringToQuery
+} // parseStringToObject
