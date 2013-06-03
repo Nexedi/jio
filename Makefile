@@ -26,7 +26,7 @@ build: concat uglify
 # The order is important!
 CONCAT_JIO_NAMES = intro exceptions jio.intro storages/* commands/* jobs/status/* jobs/job announcements/announcement activityUpdater announcements/announcer jobs/jobIdHandler jobs/jobManager jobs/jobRules jio.core jio.outro jioNamespace outro
 CONCAT_STORAGE_NAMES = *
-CONCAT_QUERIES_NAMES = begin parser-begin parser parser-end serializer query end
+CONCAT_QUERIES_NAMES = begin parser-begin parser parser-end tool queryfactory query simplequery complexquery end
 LINT_NAMES  = exceptions storages/* commands/* jobs/status/* jobs/* announcements/* activityUpdater jio.core jioNamespace
 
 CONCAT_QUERIES_FILES = $(CONCAT_QUERIES_NAMES:%=$(QUERIES_DIR)/%.js)
