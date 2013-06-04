@@ -695,6 +695,19 @@ test ("One document aim jobs at the same time (Wait for job(s))" , function () {
     o.tick(o, 1000, "f");
     o.tick(o, "f2");
     o.tick(o, "f3");
+
+    o.spy(o, "value", {"ok": true, "id": "lol"}, "Chaining callbacks");
+    o.jio.removeAttachment({
+      "_id": "lol",
+      "_attachment": "hu"
+    }, function (err, response) {
+      if (err) {
+        return;
+      }
+      o.jio.remove({"_id": "lol"}, o.f);
+    });
+    o.tick(o, 10000);
+
     o.jio.stop();
 
 });

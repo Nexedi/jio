@@ -2215,7 +2215,7 @@ var jobRules = (function () {
     that.sameAttachmentId
   ], that.wait);
   that.addActionRule("removeAttachment", "remove",
-                     [that.sameDocumentId, that.sameRevision], that.update);
+                     [that.sameDocumentId, that.sameRevision], that.wait);
   that.addActionRule("removeAttachment", "removeAttachment",
                      [that.sameDocument], that.update);
   that.addActionRule("removeAttachment", "removeAttachment", [
