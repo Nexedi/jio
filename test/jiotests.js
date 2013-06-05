@@ -1161,7 +1161,7 @@ test ("AllDocs", function(){
     // include docs
     o.allDocsResponse = {};
     o.allDocsResponse.rows = [];
-    o.allDocsResponse.total_rows = 15;
+    o.allDocsResponse.total_rows = m;
     for (i = 0; i < m; i += 1) {
       o.allDocsResponse.rows.push({
         "id": "doc_"+(i < 10 ? "0"+i : i),
@@ -1173,7 +1173,7 @@ test ("AllDocs", function(){
 
     // alldocs
     o.spy(o, "value", o.allDocsResponse, "All docs (include docs)");
-    o.jio.allDocs({"include_docs":true}, function (err, response) {
+    o.jio.allDocs({"include_docs": true}, function (err, response) {
       if (response && response.rows) {
         response.rows.sort(function (a, b) {
           return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
@@ -1184,65 +1184,56 @@ test ("AllDocs", function(){
     o.tick(o);
 
     // complex queries
-    o.thisShouldBeTheAnswer4 = [
-        {"title": "Inception", "year": 2010},
-        {"title": "The Dark Knight", "year": 2008},
-        {"title": "Lord of the Rings - Return of the King", "year": 2003},
-        {"title": "Lord Of the Rings - Fellowship of the Ring", "year": 2001},
-        {"title": "Fight Club", "year": 1999}
-    ];
+    o.thisShouldBeTheAnswer4 = {"total_rows": 0, "rows": []};
+    o.allDocsResponse.rows.forEach(function (row) {
+      var new_row;
+      if (row.doc.year >= 1980) {
+        new_row = JSON.parse(JSON.stringify(row));
+        new_row.value.title = row.doc.title;
+        new_row.value.year = row.doc.year;
+        delete new_row.doc;
+        o.thisShouldBeTheAnswer4.rows.push(new_row);
+        o.thisShouldBeTheAnswer4.total_rows += 1;
+      }
+    });
+    o.thisShouldBeTheAnswer4.rows.sort(function (a, b) {
+      return a.value.year > b.value.year ? -1 :
+        a.value.year < b.value.year ? 1 : 0;
+    });
+    o.thisShouldBeTheAnswer4.total_rows = 5;
+    o.thisShouldBeTheAnswer4.rows.length = 5;
+
     o.spy(o, "value", o.thisShouldBeTheAnswer4,
       "allDocs (complex queries year >= 1980, all query options)");
     o.jio.allDocs({
-      "query":{
-        "query":'(year: >= "1980")',
-        "filter": {
-            "limit":[0,5],
-            "sort_on":[['year','descending']],
-            "select_list":['title','year']
-        },
-        "wildcard_character":'%'
-      }
+      "query": '(year: >= "1980")',
+      "limit": [0,5],
+      "sort_on": [["year", "descending"]],
+      "select_list": ["title", "year"]
     }, o.f);
     o.tick(o);
 
     // empty query returns all
-    o.thisShouldBeTheAnswer5 = [
-        {"title": "The Good, The Bad and The Ugly"},
-        {"title": "The Dark Knight"},
-        {"title": "Star Wars Episode V"},
-        {"title": "Shawshank Redemption"},
-        {"title": "Schindlers List"},
-        {"title": "Pulp Fiction"},
-        {"title": "One flew over the Cuckoo's Nest"},
-        {"title": "Lord of the Rings - Return of the King"},
-        {"title": "Lord Of the Rings - Fellowship of the Ring"},
-        {"title": "Inception"},
-        {"title": "Godfellas"},
-        {"title": "Godfather 2"},
-        {"title": "Godfather"},
-        {"title": "Fight Club"},
-        {"title": "12 Angry Men"}
-    ];
+    o.thisShouldBeTheAnswer5 = {"total_rows": 0, "rows": []};
+    o.allDocsResponse.rows.forEach(function (row) {
+      var new_row = JSON.parse(JSON.stringify(row));
+      new_row.value.title = row.doc.title;
+      o.thisShouldBeTheAnswer5.rows.push(new_row);
+      o.thisShouldBeTheAnswer5.total_rows += 1;
+    });
+    o.thisShouldBeTheAnswer5.rows.sort(function (a, b) {
+      return a.value.title > b.value.title ? -1 :
+        a.value.title < b.value.title ? 1 : 0;
+    });
+
     o.spy(o, "value", o.thisShouldBeTheAnswer5,
       "allDocs (empty query in complex query)");
 
     o.jio.allDocs({
-      "query":{
-        "filter": {
-            "sort_on":[['title','descending']],
-            "select_list":['title']
-        },
-        "wildcard_character":'%'
-      }
-    }, function (err, response) {
-      if (response && response.rows) {
-        response.rows.sort(function (a, b) {
-          return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
-        });
-      }
-      o.f(err, response);
-    });
+      "sort_on": [["title", "descending"]],
+      "select_list": ["title"],
+      "include_docs": true
+    }, o.f);
     o.tick(o);
 
     o.jio.stop();

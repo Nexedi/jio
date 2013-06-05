@@ -3,8 +3,11 @@
 * Released under the LGPL license.
 * http://www.gnu.org/licenses/lgpl.html
 */
+
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global jIO: true, localStorage: true, setTimeout: true */
+/*global jIO: true, localStorage: true, setTimeout: true,
+         complex_queries: true */
+
 /**
  * JIO Local Storage. Type = 'local'.
  * Local browser "database" storage.
@@ -359,47 +362,65 @@ jIO.addStorageType('local', function (spec, my) {
    * @param  {object} command The JIO command
    */
   that.allDocs = function (command) {
-    var i, j, file, items = 0,
-      s = new RegExp("^" + priv.localpath + "\\/[^/]+$"),
-      all_doc_response = {},
-      query_object = [], query_syntax, query_response = [];
-
-    query_syntax = command.getOption('query');
-    if (query_syntax === undefined) {
-      all_doc_response.rows = [];
-
+    var i, row, path_re, rows = [], document_list = [], option, document_object;
+    path_re = new RegExp(
+      "^" + complex_queries.stringEscapeRegexpCharacters(priv.localpath) +
+        "/[^/]+$"
+    );
+    option = command.cloneOption();
+    if (typeof complex_queries !== "object" ||
+        option.query === undefined && option.sort_on === undefined &&
+        option.select_list === undefined && option.include_docs === undefined) {
+      rows = [];
       for (i in localStorage) {
         if (localStorage.hasOwnProperty(i)) {
           // filter non-documents
-          if (s.test(i)) {
-            items += 1;
-            j = i.split('/').slice(-1)[0];
-
-            file = { value: {} };
-            file.id = j;
-            file.key = j;
+          if (path_re.test(i)) {
+            row = { value: {} };
+            row.id = i.split('/').slice(-1)[0];
+            row.key = row.id;
             if (command.getOption('include_docs')) {
-              file.doc = JSON.parse(localStorage.getItem(i));
+              row.doc = JSON.parse(localStorage.getItem(i));
             }
-            all_doc_response.rows.push(file);
+            rows.push(row);
           }
         }
       }
-      all_doc_response.total_rows = items;
-      that.success(all_doc_response);
+      that.success({"rows": rows, "total_rows": rows.length});
     } else {
       // create complex query object from returned results
       for (i in localStorage) {
         if (localStorage.hasOwnProperty(i)) {
-          if (s.test(i)) {
-            items += 1;
-            j = i.split('/').slice(-1)[0];
-            query_object.push(localstorage.getItem(i));
+          if (path_re.test(i)) {
+            document_list.push(localstorage.getItem(i));
           }
         }
       }
-      query_response = jIO.ComplexQueries.query(query_syntax, query_object);
-      that.success(query_response);
+      option.select_list = option.select_list || [];
+      option.select_list.push("_id");
+      if (option.include_docs === true) {
+        document_object = {};
+        document_list.forEach(function (meta) {
+          document_object[meta._id] = meta;
+        });
+      }
+      complex_queries.QueryFactory.create(option.query || "").
+        exec(document_list, option);
+      document_list = document_list.map(function (value) {
+        var o = {
+          "id": value._id,
+          "key": value._id
+        };
+        if (option.include_docs === true) {
+          o.doc = document_object[value._id];
+          delete document_object[value._id];
+        }
+        delete value._id;
+        o.value = value;
+        return o;
+      });
+      that.success({"total_rows": document_list.length,
+                    "rows": document_list});
     }
   };
 
