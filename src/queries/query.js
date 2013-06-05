@@ -50,9 +50,7 @@ var Query = newClass(function (spec) {
         item_list.splice(option.limit[1]);
       }
     }
-    if (option.select_list) {
-      Query.filterListSelect(option.select_list, item_list);
-    }
+    Query.filterListSelect(option.select_list || [], item_list);
   };
 
   /**
@@ -62,7 +60,9 @@ var Query = newClass(function (spec) {
    * @param  {Object} item The object to test
    * @return {Boolean} true if match, false otherwise
    */
-  this.match = null; // function (item, wildcard_character) {};
+  this.match = function (item, wildcard_character) {
+    return true;
+  };
 
 
   /**
@@ -71,7 +71,9 @@ var Query = newClass(function (spec) {
    * @method toString
    * @return {String} The string version of this query
    */
-  this.toString = null; // function () {};
+  this.toString = function () {
+    return "";
+  };
 
   /**
    * Convert this query to an jsonable object in order to be remake thanks to
@@ -80,7 +82,9 @@ var Query = newClass(function (spec) {
    * @method serialized
    * @return {Object} The jsonable object
    */
-  this.serialized = null; // function () {};
+  this.serialized = function () {
+    return undefined;
+  };
 
 }, {"static_methods": {
 
