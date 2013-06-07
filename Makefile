@@ -56,6 +56,10 @@ uglify:
 lint:
 	$(LINT_CMD) $(LINT_FILES)
 
+phantom:
+	~/node_modules/phantomjs/bin/phantomjs test/run-qunit.js test/jiotests_withoutrequirejs.html | awk 'BEGIN {print "<!DOCTYPE html><html>"} /^<head>$$/, /^<\/body>$$/ {print} END {print "</html>"}' | sed -e 's,^ *<\(/\|\)script.*>$$,,g' > test/unit_test_result.html
+	grep '^  <title>✔ ' test/unit_test_result.html > /dev/null
+
 .phony: clean
 clean:
 	find -name '*~' -delete
