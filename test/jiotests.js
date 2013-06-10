@@ -4325,56 +4325,62 @@ test ("Post", function () {
     var o = generateTools(this);
 
     o.jio = JIO.newJio({
-        "type": "indexed",
-        "indices": [
-            {"name":"indexA", "fields":["findMeA"]},
-            {"name":"indexAB", "fields":["findMeA","findMeB"]}
-        ],
-        "field_types": {
-          "findMeA": "string",
-          "findMeB": "string"
-        },
-        "sub_storage": {
-          "type": "local",
-          "username": "ipost",
-          "application_name": "ipost"
-        }
+      "type": "indexed",
+      "indices": [
+        {"id": "A", "index": ["title"]},
+        {"id": "B", "index": ["title", "year"]}
+      ],
+      "sub_storage": {
+        "type": "local",
+        "username": "ipost",
+        "application_name": "ipost"
+      }
     });
 
     // post without id
-    o.spy (o, "status", undefined, "Post without id");
-    o.jio.post({}, o.f);
+    o.spy (o, "jobstatus", "done", "Post without id");
+    o.jio.post({}, function (err, response) {
+      o.id = (response || {}).id;
+      o.f(err, response);
+    });
     o.tick(o);
 
     // post non empty document
-    o.doc = {"_id": "some_id", "title": "myPost1",
-      "findMeA":"keyword_abc", "findMeB":"keyword_def"
-    };
+    o.doc = {"_id": "some_id", "title": "My Title",
+             "year": 2000, "hey": "def"};
     o.spy (o, "value", {"ok": true, "id": "some_id"}, "Post document");
     o.jio.post(o.doc, o.f);
     o.tick(o);
 
     // check document
-    o.fakeIndex = {
-      "_id": "ipost_indices.json",
-      "indexAB": {
-        "findMeA": {
-          "keyword_abc":["some_id"]
-        },
-        "findMeB": {
-          "keyword_def":["some_id"]
-        }
+    o.fakeIndexA = {
+      "_id": "A",
+      "indexing": ["title"],
+      "free": [],
+      "location": {
+        "some_id": 0
       },
-      "indexA": {
-        "findMeA": {
-          "keyword_abc":["some_id"]
-        }
-      }
+      "database": [
+        {"_id": "some_id", "title": "My Title"}
+      ]
     };
-    o.jio.get({"_id": "ipost_indices.json"}, function (err, response) {
-       o.actualIndex = response;
-       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
-    });
+    o.spy(o, "value", o.fakeIndexA, "Check index file");
+    o.jio.get({"_id": "A"}, o.f);
+    o.tick(o);
+
+    o.fakeIndexB = {
+      "_id": "B",
+      "indexing": ["title", "year"],
+      "free": [],
+      "location": {
+        "some_id": 0
+      },
+      "database": [
+        {"_id": "some_id", "title": "My Title", "year": 2000}
+      ]
+    };
+    o.spy(o, "value", o.fakeIndexB, "Check index file");
+    o.jio.get({"_id": "B"}, o.f);
     o.tick(o);
 
     // post with escapable characters
@@ -4402,21 +4408,17 @@ test ("Put", function(){
     var o = generateTools(this);
 
     o.jio = JIO.newJio({
-          "type": "indexed",
-          "indices": [
-              {"name":"indexA", "fields":["author"]},
-              {"name":"indexAB", "fields":["author","year"]}
-          ],
-          "field_types": {
-            "author": "string",
-            "year": "number"
-          },
-          "sub_storage": {
-            "type": "local",
-            "username": "iput",
-            "application_name": "iput"
-          }
-      });
+      "type": "indexed",
+      "indices": [
+        {"id": "A", "index": ["author"]},
+        {"id": "B", "index": ["year"]}
+      ],
+      "sub_storage": {
+        "type": "local",
+        "username": "iput",
+        "application_name": "iput"
+      }
+    });
 
     // put without id
     // error 20 -> document id required
@@ -4425,146 +4427,94 @@ test ("Put", function(){
     o.tick(o);
 
     // put non empty document
-    o.doc = {"_id": "put1", "title": "myPut1", "author":"John Doe"};
+    o.doc = {"_id": "put1", "title": "myPut1", "author": "John Doe"};
     o.spy (o, "value", {"ok": true, "id": "put1"}, "Put-create document");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
     // check index file
-    o.fakeIndex = {
-      "indexA": {
-        "author": {
-          "John Doe": ["put1"]
-        }
+    o.fakeIndexA = {
+      "_id": "A",
+      "indexing": ["author"],
+      "free": [],
+      "location": {
+        "put1": 0
       },
-      "indexAB": {
-        "author": {
-          "John Doe": ["put1"]
-        },
-        "year": {}
-      },
-      "_id": "iput_indices.json"
+      "database": [{"_id": "put1", "author": "John Doe"}]
     };
-    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
-       o.actualIndex = response;
-       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
-    });
+    o.spy(o, "value", o.fakeIndexA, "Check index file");
+    o.jio.get({"_id": "A"}, o.f);
+    o.tick(o);
+
+    o.fakeIndexB = {
+      "_id": "B",
+      "indexing": ["year"],
+      "free": [],
+      "location": {},
+      "database": []
+    };
+    o.spy(o, "value", o.fakeIndexB, "Check index file");
+    o.jio.get({"_id": "B"}, o.f);
     o.tick(o);
 
     // modify document - modify keyword on index!
-    o.doc = {"_id": "put1", "title": "myPuttter1", "author":"Jane Doe"};
+    o.doc = {"_id": "put1", "title": "myPuttter1", "author": "Jane Doe"};
     o.spy (o, "value", {"ok": true, "id": "put1"}, "Modify existing document");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
     // check index file
-    o.fakeIndex = {
-      "indexA": {
-        "author": {
-          "Jane Doe": ["put1"]
-          }
-      },
-      "indexAB": {
-        "author": {
-          "Jane Doe": ["put1"]
-          },
-        "year": {}
-      },
-      "_id": "iput_indices.json"
-    };
-    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
-       o.actualIndex = response;
-       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
-    });
+    o.fakeIndexA.database[0].author = "Jane Doe";
+    o.spy(o, "value", o.fakeIndexA, "Check index file");
+    o.jio.get({"_id": "A"}, o.f);
     o.tick(o);
 
     // add new document with same keyword!
-    o.doc = {"_id": "new_doc", "title": "myPut2", "author":"Jane Doe"};
+    o.doc = {"_id": "new_doc", "title": "myPut2", "author": "Jane Doe"};
     o.spy (o, "value", {"ok": true, "id": "new_doc"},
-      "Add new document with same keyword");
+           "Add new document with same keyword");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
     // check index file
-    o.fakeIndex = {
-      "indexA": {
-        "author": {
-          "Jane Doe": ["put1", "new_doc"]
-          }
-        },
-      "indexAB": {
-        "author": {
-          "Jane Doe": ["put1", "new_doc"]
-          },
-        "year": {}
-        },
-      "_id": "iput_indices.json"
-    };
-    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
-       o.actualIndex = response;
-       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
-    });
+    o.fakeIndexA.location.new_doc = 1;
+    o.fakeIndexA.database.push({"_id": "new_doc", "author": "Jane Doe"});
+    o.spy(o, "value", o.fakeIndexA, "Check index file");
+    o.jio.get({"_id": "A"}, o.f);
     o.tick(o);
 
     // add second keyword to index file
-    o.doc = {"_id": "put1", "title": "myPut2", "author":"Jane Doe",
-      "year":"1912"};
+    o.doc = {"_id": "put1", "title": "myPut2", "author": "Jane Doe",
+             "year":"1912"};
     o.spy (o, "value", {"ok": true, "id": "put1"},
-      "add second keyword to index file");
+           "add second keyword to index file");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
     // check index file
-    o.fakeIndex = {
-      "indexA": {
-        "author": {
-          "Jane Doe": ["put1"]
-          }
-        },
-      "indexAB": {
-        "author": {
-          "Jane Doe": ["put1"]
-          },
-        "year": {
-          "1912": ["put1"]
-          }
-        },
-      "_id": "iput_indices.json"
-    };
-    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
-       o.actualIndex = response;
-       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
-    });
+    o.spy(o, "value", o.fakeIndexA, "Check index file");
+    o.jio.get({"_id": "A"}, o.f);
+    o.tick(o);
+
+    o.fakeIndexB.location.put1 = 0;
+    o.fakeIndexB.database.push({"_id": "put1", "year": "1912"});
+    o.spy(o, "value", o.fakeIndexB, "Check index file");
+    o.jio.get({"_id": "B"}, o.f);
     o.tick(o);
 
     // remove a keyword from an existing document
     o.doc = {"_id": "new_doc", "title": "myPut2"};
     o.spy (o, "value", {"ok": true, "id": "new_doc"},
-      "Remove keyword from existing document");
+           "Remove keyword from existing document");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
     // check index file
-    o.fakeIndex = {
-      "indexA": {
-        "author": {
-          "Jane Doe": ["put1"]
-        }
-      },
-      "indexAB": {
-        "author": {
-          "Jane Doe": ["put1"]
-        },
-        "year": {
-          "1912": ["put1"]
-        }
-      },
-      "_id": "iput_indices.json"
-    };
-    o.jio.get({"_id": "iput_indices.json"}, function (err, response) {
-       o.actualIndex = response;
-       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
-    });
+    delete o.fakeIndexA.location.new_doc;
+    o.fakeIndexA.database[1] = null;
+    o.fakeIndexA.free.push(1);
+    o.spy(o, "value", o.fakeIndexA, "Check index file");
+    o.jio.get({"_id": "A"}, o.f);
     o.tick(o);
 
     o.jio.stop();
@@ -4578,21 +4528,17 @@ test ("PutAttachment", function(){
     var o = generateTools(this);
 
     o.jio = JIO.newJio({
-          "type": "indexed",
-          "indices": [
-              {"name":"indexA", "fields":["author"]},
-              {"name":"indexAB", "fields":["author","year"]}
-          ],
-          "field_types": {
-            "author": "string",
-            "year": "number"
-          },
-          "sub_storage": {
-            "type": "local",
-            "username": "iputatt",
-            "application_name": "iputatt"
-          }
-      });
+      "type": "indexed",
+      "indices": [
+        {"id": "A", "index": ["author"]},
+        {"id": "B", "index": ["year"]}
+      ],
+      "sub_storage": {
+        "type": "local",
+        "username": "iputatt",
+        "application_name": "iputatt"
+      }
+    });
 
     // putAttachment without doc id
     // error 20 -> document id required
@@ -4615,7 +4561,7 @@ test ("PutAttachment", function(){
     // putAttachment with document
     o.doc = {"_id": "putattmt1","title": "myPutAttmt1"};
     o.spy (o, "value", {"ok": true, "id": "putattmt1"},
-      "Put underlying document");
+           "Put underlying document");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
@@ -4695,21 +4641,17 @@ test ("Get", function(){
     var o = generateTools(this);
 
     o.jio = JIO.newJio({
-          "type": "indexed",
-          "indices": [
-              {"name":"indexA", "fields":["author"]},
-              {"name":"indexAB", "fields":["author","year"]}
-          ],
-          "field_types": {
-            "author": "string",
-            "year": "number"
-          },
-          "sub_storage": {
-            "type": "local",
-            "username": "iget",
-            "application_name": "iget"
-          }
-      });
+      "type": "indexed",
+      "indices": [
+        {"id": "A", "index": ["author"]},
+        {"id": "B", "index": ["year"]}
+      ],
+      "sub_storage": {
+        "type": "local",
+        "username": "iget",
+        "application_name": "iget"
+      }
+    });
 
     // get inexistent document
     o.spy(o, "status", 404, "Get inexistent document");
@@ -4767,13 +4709,9 @@ test ("Remove", function(){
     o.jio = JIO.newJio({
       "type": "indexed",
       "indices": [
-          {"name":"indexA", "fields":["author"]},
-          {"name":"indexAB", "fields":["author","year"]}
+        {"id": "A", "index": ["author"]},
+        {"id": "B", "index": ["year"]}
       ],
-      "field_types": {
-            "author": "string",
-            "year": "number"
-      },
       "sub_storage": {
         "type": "local",
         "username": "irem",
@@ -4809,26 +4747,30 @@ test ("Remove", function(){
     o.tick(o);
 
     // check index
-    o.fakeIndex = {
-      "_id": "irem_indices.json",
-      "indexA": {
-         "author": {
-           "Martin Mustermann": ["removeAlso"]
-          }
-        },
-      "indexAB": {
-        "year": {
-          "2525": ["removeAlso"]
-        },
-        "author": {
-          "Martin Mustermann": ["removeAlso"]
-          }
-        }
+    o.fakeIndexA = {
+      "_id": "A",
+      "indexing": ["author"],
+      "free": [0],
+      "location": {
+        "removeAlso": 1
+      },
+      "database": [null, {"_id": "removeAlso", "author": "Martin Mustermann"}]
     };
-    o.jio.get({"_id": "irem_indices.json"},function(err, response){
-       o.actualIndex = response;
-       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
-    });
+    o.spy(o, "value", o.fakeIndexA, "Check index file");
+    o.jio.get({"_id": "A"}, o.f);
+    o.tick(o);
+
+    o.fakeIndexB = {
+      "_id": "B",
+      "indexing": ["year"],
+      "free": [0],
+      "location": {
+        "removeAlso": 1
+      },
+      "database": [null, {"_id": "removeAlso", "year": "2525"}]
+    };
+    o.spy(o, "value", o.fakeIndexB, "Check index file");
+    o.jio.get({"_id": "B"}, o.f);
     o.tick(o);
 
     // check document
@@ -4868,29 +4810,18 @@ test ("Remove", function(){
     o.tick(o);
 
     // check index
-    o.fakeIndex = {
-      "_id": "irem_indices.json",
-      "indexA": {
-        "author":{
-          "Martin Mustermann": ["removeAlso"],
-          "Mrs Sunshine": ["remove3"]
-        }
-      },
-      "indexAB": {
-        "year": {
-          "1234": ["remove3"],
-          "2525": ["removeAlso"]
-        },
-        "author": {
-          "Martin Mustermann": ["removeAlso"],
-          "Mrs Sunshine": ["remove3"]
-        }
-      }
-    };
-    o.jio.get({"_id": "irem_indices.json"}, function (err, response) {
-       o.actualIndex = response;
-       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
-    });
+    o.fakeIndexA.free = [];
+    o.fakeIndexA.location.remove3 = 0;
+    o.fakeIndexA.database[0] = {"_id": "remove3", "author": "Mrs Sunshine"};
+    o.spy(o, "value", o.fakeIndexA, "Check index file");
+    o.jio.get({"_id": "A"}, o.f);
+    o.tick(o);
+
+    o.fakeIndexB.free = [];
+    o.fakeIndexB.location.remove3 = 0;
+    o.fakeIndexB.database[0] = {"_id": "remove3", "year": "1234"};
+    o.spy(o, "value", o.fakeIndexB, "Check index file");
+    o.jio.get({"_id": "B"}, o.f);
     o.tick(o);
 
     // remove document and attachment together
@@ -4900,26 +4831,18 @@ test ("Remove", function(){
     o.tick(o);
 
     // check index
-    o.fakeIndex = {
-      "_id": "irem_indices.json",
-      "indexA": {
-        "author": {
-          "Martin Mustermann": ["removeAlso"]
-        }
-      },
-      "indexAB": {
-        "year": {
-          "2525": ["removeAlso"]
-        },
-        "author": {
-          "Martin Mustermann": ["removeAlso"]
-        }
-      }
-    };
-    o.jio.get({"_id": "irem_indices.json"}, function (err, response) {
-       o.actualIndex = response;
-       deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
-    });
+    o.fakeIndexA.free = [0];
+    delete o.fakeIndexA.location.remove3;
+    o.fakeIndexA.database[0] = null;
+    o.spy(o, "value", o.fakeIndexA, "Check index file");
+    o.jio.get({"_id": "A"}, o.f);
+    o.tick(o);
+
+    o.fakeIndexB.free = [0];
+    delete o.fakeIndexB.location.remove3;
+    o.fakeIndexB.database[0] = null;
+    o.spy(o, "value", o.fakeIndexB, "Check index file");
+    o.jio.get({"_id": "B"}, o.f);
     o.tick(o);
 
     // check attachment
@@ -4939,22 +4862,18 @@ test ("AllDocs", function () {
 
   var o = generateTools(this);
 
-    o.jio = JIO.newJio({
-      "type": "indexed",
-      "indices": [
-          {"name":"indexA", "fields":["author"]},
-          {"name":"indexAB", "fields":["author","year"]}
-      ],
-      "field_types": {
-        "author": "string",
-        "year": "number"
-      },
-      "sub_storage": {
-        "type": "local",
-        "username": "iall",
-        "application_name": "iall"
-      }
-    });
+  o.jio = JIO.newJio({
+    "type": "indexed",
+    "indices": [
+      {"id": "A", "index": ["author"]},
+      {"id": "B", "index": ["year"]}
+    ],
+    "sub_storage": {
+      "type": "local",
+      "username": "iall",
+      "application_name": "iall"
+    }
+  });
 
   // adding documents
   o.all1 = { "_id": "dragon.doc",
@@ -4983,34 +4902,25 @@ test ("AllDocs", function () {
   o.tick(o);
 
   // check index
-  o.fakeIndex = {
-    "_id": "iall_indices.json",
-    "indexA": {
-      "author": {
-        "Dr. No": ["dragon.doc"],
-        "Dr. Who": ["timemachine"],
-        "Dr. Snuggles": ["rocket.ppt"],
-        "Dr. House":["stick.jpg"]
-      }
+  o.fakeIndexA = {
+    "_id": "A",
+    "indexing": ["author"],
+    "free": [],
+    "location": {
+      "dragon.doc": 0,
+      "timemachine": 1,
+      "rocket.ppt": 2,
+      "stick.jpg": 3
     },
-    "indexAB": {
-      "author": {
-        "Dr. No": ["dragon.doc"],
-        "Dr. Who": ["timemachine"],
-        "Dr. Snuggles": ["rocket.ppt"],
-        "Dr. House":["stick.jpg"]
-      },
-      "year": {
-        "1968": ["dragon.doc", "timemachine"],
-        "1985": ["rocket.ppt"],
-        "2005":["stick.jpg"]
-      }
-    }
+    "database": [
+      {"_id": "dragon.doc", "author": "Dr. No"},
+      {"_id": "timemachine", "author": "Dr. Who"},
+      {"_id": "rocket.ppt", "author": "Dr. Snuggles"},
+      {"_id": "stick.jpg", "author": "Dr. House"}
+    ]
   };
-  o.jio.get({"_id": "iall_indices.json"}, function (err, response) {
-      o.actualIndex = response;
-      deepEqual(o.actualIndex, o.fakeIndex, "Check index file");
-  });
+  o.spy(o, "value", o.fakeIndexA, "Check index file");
+  o.jio.get({"_id": "A"}, o.f);
   o.tick(o);
 
   o.thisShouldBeTheAnswer = {
@@ -5026,19 +4936,6 @@ test ("AllDocs", function () {
   o.jio.allDocs(o.f);
   o.tick(o);
 
-  o.thisShouldBeTheAnswer2 = {
-    "rows": [
-      {"id": "dragon.doc", "key": "dragon.doc", "value": {}, "doc": o.all1 },
-      {"id": "timemachine", "key": "timemachine", "value": {}, "doc": o.all2 },
-      {"id": "rocket.ppt", "key": "rocket.ppt", "value": {}, "doc": o.all3 },
-      {"id": "stick.jpg", "key": "stick.jpg", "value": {}, "doc": o.all4 }
-    ],
-    "total_rows": 4
-  }
-  o.spy(o, "value", o.thisShouldBeTheAnswer2, "allDocs (include_docs)");
-  o.jio.allDocs({"include_docs":true}, o.f);
-  o.tick(o);
-
   o.jio.stop();
 });
 
@@ -5049,16 +4946,11 @@ test ("AllDocs Complex Queries", function () {
     o.jio = JIO.newJio({
       "type": "indexed",
       "indices": [
-          {"name":"indexA", "fields":["director"]},
-          {"name":"indexAB", "fields":["title","year"]}
+        {"id":"A", "index": ["director"]},
+        {"id":"B", "index": ["title", "year"]}
           //,
           //{"name":"indexABC", "fields":["title","year","director"]}
       ],
-      "field_types": {
-        "director": "string",
-        "title": "string",
-        "year": "number"
-      },
       "sub_storage": {
         "type": "local",
         "username": "icomplex",
@@ -5083,7 +4975,7 @@ test ("AllDocs Complex Queries", function () {
       "Sidney Lumet", "Christopher Nolan", "Steven Spielberg",
       "Peter Jackson", "David Fincher", "Irvin Kershner", "Peter Jackson",
       "Milos Forman", "Christopher Nolan", " Martin Scorsese"
-    ]
+    ];
 
     for (i = 0; i < m; i += 1) {
       o.fakeDoc = {};
@@ -5094,6 +4986,7 @@ test ("AllDocs Complex Queries", function () {
       o.jio.put(o.fakeDoc);
       o.clock.tick(1000);
     }
+    // o.clock.tick(1000);
 
     // response
     o.allDocsResponse = {};
@@ -5103,121 +4996,88 @@ test ("AllDocs Complex Queries", function () {
       o.allDocsResponse.rows.push({
         "id": ""+i,
         "key": ""+i,
-        "value": {}
-      });
-    };
-
-    // alldocs
-    o.jio.allDocs(function (e, r) {
-      var x = r.rows.sort(o.sortArrayById('id', true, parseInt));
-      deepEqual(
-        {"total_rows":r.total_rows,"rows":x}, o.allDocsResponse,
-          "AllDocs response generated from index"
-      );
-    });
-    o.clock.tick(1000);
-
-    // include docs
-    o.allDocsResponse2 = {};
-    o.allDocsResponse2.rows = [];
-    o.allDocsResponse2.total_rows = 15;
-    for (i = 0; i < m; i += 1) {
-      o.allDocsResponse2.rows.push({
-        "id": ""+i,
-        "key": ""+i,
         "value": {},
-        "doc": localstorage.getItem(o.localpath+"/"+i)
+        "doc": {
+          "_id": ""+i,
+          "title": o.titles[i],
+          "year": o.years[i],
+          "director": o.director[i]
+        }
       });
-    };
+    }
+
+    o.response = JSON.parse(JSON.stringify(o.allDocsResponse));
+    for (i = 0; i < o.response.rows.length; i += 1) {
+      delete o.response.rows[i].doc;
+    }
 
     // alldocs
-    o.jio.allDocs({"include_docs":true}, function(e,r) {
-      var x = r.rows.sort(o.sortArrayById('id', true, parseInt));
-      deepEqual(
-        {"total_rows":r.total_rows,"rows":x}, o.allDocsResponse2,
-          "AllDocs response generated from index (include docs)"
-      );
-    });
-    o.clock.tick(1000);
+    o.spy(o, "value", o.response, "AllDocs response generated from index");
+    o.jio.allDocs(o.f);
+    o.tick(o, 1000);
 
     // complex queries
-    o.thisShouldBeTheAnswer4 = [
-        {"title": "Inception", "year": 2010},
-        {"title": "The Dark Knight", "year": 2008},
-        {"title": "Lord of the Rings - Return of the King", "year": 2003},
-        {"title": "Lord Of the Rings - Fellowship of the Ring", "year": 2001},
-        {"title": "Fight Club", "year": 1999}
-    ];
-    o.spy(o, "value", o.thisShouldBeTheAnswer4,
+    o.response = JSON.parse(JSON.stringify(o.allDocsResponse));
+    i = 0;
+    while (i < o.response.rows.length) {
+      if (o.response.rows[i].year < 1980) {
+        o.response.rows.splice(i, 1);
+      } else {
+        o.response.rows[i].value = {
+          "year": o.response.rows[i].doc.year,
+          "title": o.response.rows[i].doc.title
+        }
+        delete o.response.rows[i].doc;
+        i += 1;
+      }
+    }
+    o.response.rows.sort(function (a, b) {
+      return a.value.year > b.value.year ? -1 :
+        a.value.year < b.value.year ? 1 : 0;
+    });
+    o.response.rows.length = 5;
+    o.response.total_rows = 5;
+    o.spy(o, "value", o.response,
       "allDocs (complex queries year >= 1980, index used to do query)");
     o.jio.allDocs({
-      "query":{
-        // "query":'(year: >= "1980" AND year: < "2000")',
-        "query":'(year: >= "1980")',
-        "filter": {
-            "limit":[0,5],
-            "sort_on":[['year','descending']],
-            "select_list":['title','year']
-        },
-        "wildcard_character":'%'
-      }
+      // "query":'(year: >= "1980" AND year: < "2000")',
+      "query": '(year: >= "1980")',
+      "limit": [0, 5],
+      "sort_on": [['year', 'descending']],
+      "select_list": ['title', 'year']
     }, o.f);
     o.tick(o);
 
     // complex queries
-    o.thisShouldBeTheAnswer5 = [
-        {"director": "Christopher Nolan", "year": 2010},
-        {"director": "Christopher Nolan", "year": 2008},
-        {"director": "Peter Jackson", "year": 2003},
-        {"director": "Peter Jackson", "year": 2001},
-        {"director": "David Fincher", "year": 1999}
-    ];
-
-    o.spy(o, "value", o.thisShouldBeTheAnswer5,
+    o.spy(o, "value", {"total_rows": 0, "rows": []},
       "allDocs (complex queries year >= 1980, can't use index)");
     o.jio.allDocs({
-      "query":{
-        // "query":'(year: >= "1980" AND year: < "2000")',
-        "query":'(year: >= "1980")',
-        "filter": {
-            "limit":[0,5],
-            "sort_on":[['year','descending']],
-            "select_list":['director','year']
-        },
-        "wildcard_character":'%'
-      }
+      // "query":'(year: >= "1980" AND year: < "2000")',
+      "query": '(year: >= "1980")',
+      "limit": [0, 5],
+      "sort_on": [['year','descending']],
+      "select_list": ['director', 'year']
     }, o.f);
     o.tick(o);
 
     // empty query returns all
-    o.thisShouldBeTheAnswer6 = [
-        {"title": "The Good, The Bad and The Ugly"},
-        {"title": "The Dark Knight"},
-        {"title": "Star Wars Episode V"},
-        {"title": "Shawshank Redemption"},
-        {"title": "Schindlers List"},
-        {"title": "Pulp Fiction"},
-        {"title": "One flew over the Cuckoo's Nest"},
-        {"title": "Lord of the Rings - Return of the King"},
-        {"title": "Lord Of the Rings - Fellowship of the Ring"},
-        {"title": "Inception"},
-        {"title": "Godfellas"},
-        {"title": "Godfather 2"},
-        {"title": "Godfather"},
-        {"title": "Fight Club"},
-        {"title": "12 Angry Men"}
-    ];
-    o.spy(o, "value", o.thisShouldBeTheAnswer6,
+    o.response = JSON.parse(JSON.stringify(o.allDocsResponse));
+    i = 0;
+    while (i < o.response.rows.length) {
+      o.response.rows[i].value.title =
+        o.response.rows[i].doc.title;
+      delete o.response.rows[i].doc;
+      i += 1;
+    }
+    o.response.rows.sort(function (a, b) {
+      return a.value.title > b.value.title ? -1 :
+        a.value.title < b.value.title ? 1 : 0;
+    });
+    o.spy(o, "value", o.response,
       "allDocs (empty query in complex query)");
-
     o.jio.allDocs({
-      "query":{
-        "filter": {
-            "sort_on":[['title','descending']],
-            "select_list":['title']
-        },
-        "wildcard_character":'%'
-      }
+      "sort_on":[['title','descending']],
+      "select_list":['title']
     }, o.f);
     o.tick(o);
 

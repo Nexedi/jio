@@ -1,89 +1,153 @@
 /*
-* Copyright 2013, Nexedi SA
-* Released under the LGPL license.
-* http://www.gnu.org/licenses/lgpl.html
-*/
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global jIO: true, localStorage: true, setTimeout: true */
+ * Copyright 2013, Nexedi SA
+ * Released under the LGPL license.
+ * http://www.gnu.org/licenses/lgpl.html
+ */
+
+/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, regexp: true */
+/*global jIO: true, localStorage: true, define: true, complex_queries: true */
+
 /**
  * JIO Index Storage.
  * Manages indexes for specified storages.
  * Description:
  * {
- *     "type": "index",
- *     "indices": [
- *        {"indexA",["field_A"]},
- *        {"indexAB",["field_A","field_B"]}
- *     ],
- *     "field_types": {
- *        "field_A": "dateTime",
- *        "field_B": "string"
- *      },
- *     "storage": [
- *         <sub storage description>,
- *         ...
- *     ]
+ *   "type": "index",
+ *   "indices": [{
+ *     "id": "index_title_subject.json", // doc id where to store indices
+ *     "index": ["title", "subject"] // metadata to index
+ *     "sub_storage": <sub storage where to store index>
+ *                    (default equal to parent sub_storage field)
+ *   }, {
+ *     "id": "index_year.json",
+ *     "index": "year"
+ *     ...
+ *   }],
+ *   "sub_storage": <sub storage description>
  * }
- * Index file will contain
+ *
+ * Sent document metadata will be:
+ * index_titre_subject.json
  * {
- *   "_id": "app-name_indices.json",
- *   "indexA":
- *      "fieldA": {
- *        "keyword_abc": ["some_id","some_other_id",...]
- *      }
+ *   "_id": "index_title_subject.json",
+ *   "indexing": ["title", "subject"],
+ *   "free": [0],
+ *   "location": {
+ *     "foo": 1,
+ *     "bar": 2,
+ *     ...
  *   },
- *   "indexAB": {
- *     "fieldA": {
- *       "keyword_abc": ["some_id"]
- *      },
- *     "fieldB": {
- *       "keyword_def": ["some_id"]
-*      }
- *   }
+ *   "database": [
+ *     {},
+ *     {"_id": "foo", "title": "...", "subject": ...},
+ *     {"_id": "bar", "title": "...", "subject": ...},
+ *     ...
+ *   ]
  * }
- * NOTES:
- * It may be difficult to "un-sort" multi-field indices, like
- * indexAB, because all keywords will be listed regrardless
- * of underlying field, so an index on author and year would produce
- * two entries per record like:
- * 
- * "William Shakespeare":["id_Romeo_and_Juliet", "id_Othello"],
- * "1591":["id_Romeo_and_Juliet"],
- * "1603":["id_Othello"]
- * 
- * So for direct lookups, this should be convient, but for other types
- * of queries, it depends
+ *
+ * index_year.json
+ * {
+ *   "_id": "index_year.json",
+ *   "indexing": ["year"],
+ *   "free": [1],
+ *   "location": {
+ *     "foo": 0,
+ *     "bar": 2,
+ *     ...
+ *   },
+ *   "database": [
+ *     {"_id": "foo", "year": "..."},
+ *     {},
+ *     {"_id": "bar", "year": "..."},
+ *     ...
+ *   ]
+ * }
+ *
+ * A put document will be indexed to the free location if exist, else it will be
+ * indexed at the end of the database. The document id will be indexed, also, in
+ * 'location' to quickly replace metadata.
+ *
+ * Only one or two loops are executed:
+ * - one to filter retrieved document list (no query -> no loop)
+ * - one to format the result to a JIO response
  */
-jIO.addStorageType('indexed', function (spec, my) {
-
+(function () {
   "use strict";
-  var that, priv = {};
 
-  spec = spec || {};
-  that = my.basicStorage(spec, my);
-
-  priv.indices = spec.indices;
-  priv.field_types = spec.field_types;
-  priv.substorage_key = "sub_storage";
-  priv.substorage = spec[priv.substorage_key];
-  priv.index_indicator = spec.sub_storage.application_name || "index";
-  priv.index_suffix = priv.index_indicator + "_indices.json";
-
-  my.env = my.env || spec.env || {};
-
-  that.specToStore = function () {
-    var o = {};
-    o[priv.substorage_key] = priv.substorage;
-    o.env = my.env;
-    return o;
+  var error_dict = {
+    "Corrupted Index": {
+      "status": 24,
+      "statusText": "Corrupt",
+      "error": "corrupt",
+      "reason": "corrupted index database"
+    },
+    "Corrupted Metadata": {
+      "status": 24,
+      "statusText": "Corrupt",
+      "error": "corrupt",
+      "reason": "corrupted document"
+    },
+    "Not Found": {
+      "status": 404,
+      "statusText": "Not Found",
+      "error": "not_found",
+      "reason": "missing document"
+    },
+    "Conflict": {
+      "status": 409,
+      "statusText": "Conflicts",
+      "error": "conflicts",
+      "reason": "already exist"
+    }
   };
+
+  /**
+   * Generate a JIO Error Object
+   *
+   * @method generateErrorObject
+   * @param  {String} name The error name
+   * @param  {String} message The error message
+   * @param  {String} [reason] The error reason
+   * @return {Object} A jIO error object
+   */
+  function generateErrorObject(name, message, reason) {
+    if (!error_dict[name]) {
+      return {
+        "status": 0,
+        "statusText": "Unknown",
+        "error": "unknown",
+        "message": message,
+        "reason": reason || "unknown"
+      };
+    }
+    return {
+      "status": error_dict[name].status,
+      "statusText": error_dict[name].statusText,
+      "error": error_dict[name].error,
+      "message": message,
+      "reason": reason || error_dict[name].reason
+    };
+  }
+
+  /**
+   * Get the real type of an object
+   * @method type
+   * @param  {Any} value The value to check
+   * @return {String} The value type
+   */
+  function type(value) {
+    // returns "String", "Object", "Array", "RegExp", ...
+    return (/^\[object ([a-zA-Z]+)\]$/).exec(
+      Object.prototype.toString.call(value)
+    )[1];
+  }
 
   /**
    * Generate a new uuid
    * @method generateUuid
    * @return {string} The new uuid
    */
-  priv.generateUuid = function () {
+  function generateUuid() {
     var S4 = function () {
       var i, string = Math.floor(
         Math.random() * 0x10000 /* 65536 */
@@ -98,863 +162,541 @@ jIO.addStorageType('indexed', function (spec, my) {
       S4() + "-" +
       S4() + "-" +
       S4() + S4() + S4();
-  };
+  }
 
   /**
-  * Get number of elements in object
-  * @method getObjectSize
-  * @param  {object} obj The object to check
-  * @return {number} size The amount of elements in the object
-  */
-  priv.getObjectSize = function (obj) {
-    var size = 0, key;
-    for (key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        size += 1;
-      }
-    }
-    return size;
-  };
-
-  /**
-   * Creates an empty indices array
-   * @method createEmptyIndexArray
-   * @param  {array} indices An array of indices (optional)
-   * @return {object} The new index array
+   * A JSON Index manipulator
+   *
+   * @class JSONIndex
+   * @constructor
    */
-  priv.createEmptyIndexArray = function (indices) {
-    var i, k, j = priv.indices.length, new_index,
-      new_index_object = {}, new_index_name, new_index_fields;
+  function JSONIndex(spec) {
+    var that = this;
+    spec = spec || {};
 
-    if (indices === undefined) {
-      for (i = 0; i < j; i += 1) {
-        new_index = priv.indices[i];
-        new_index_name = new_index.name;
-        new_index_fields = new_index.fields;
-        new_index_object[new_index_name] = {};
+    /**
+     * The document id
+     *
+     * @property _id
+     * @type String
+     */
+    that._id = spec._id;
 
-        // loop index fields and add objects to hold value/id pairs
-        for (k = 0; k < new_index_fields.length; k += 1) {
-          new_index_object[new_index_name][new_index_fields[k]] = {};
-        }
+    /**
+     * The array with metadata key to index
+     *
+     * @property _indexing
+     * @type Array
+     */
+    that._indexing = spec.indexing || [];
+
+    /**
+     * The array of free location index
+     *
+     * @property _free
+     * @type Array
+     * @default []
+     */
+    that._free = spec.free || [];
+
+    /**
+     * The dictionnary document id -> database index
+     *
+     * @property _location
+     * @type Object
+     * @default {}
+     */
+    that._location = spec.location || {};
+
+    /**
+     * The database array containing document metadata
+     *
+     * @property _database
+     * @type Array
+     * @default []
+     */
+    that._database = spec.database || [];
+
+    /**
+     * Adds a metadata object in the database, replace if already exist
+     *
+     * @method put
+     * @param  {Object} meta The metadata to add
+     * @return {Boolean} true if added, false otherwise
+     */
+    that.put = function (meta) {
+      var underscored_meta_re = /^_.*$/, k, needed_meta = {}, ok = false;
+      if (typeof meta._id !== "string" && meta._id !== "") {
+        throw new TypeError("Corrupted Metadata");
       }
-    }
-    return new_index_object;
-  };
-
-  /**
-   * Determine if a key/value pair exists in an object by VALUE
-   * @method searchObjectByValue
-   * @param  {object} indexToSearch The index to search
-   * @param  {string} docid The document id to find
-   * @param  {string} passback The value that should be returned
-   * @return {boolean} true/false
-   */
-  priv.searchIndexByValue = function (indexToSearch, docid, passback) {
-    var key, obj, prop;
-
-    for (key in indexToSearch) {
-      if (indexToSearch.hasOwnProperty(key)) {
-        obj = indexToSearch[key];
-        for (prop in obj) {
-          if (obj[prop] === docid) {
-            return passback === "bool" ? true : key;
+      for (k in meta) {
+        if (meta.hasOwnProperty(k)) {
+          if (underscored_meta_re.test(k)) {
+            needed_meta[k] = meta[k];
+          } else if (that._indexing_object[k]) {
+            needed_meta[k] = meta[k];
+            ok = true;
           }
         }
       }
-    }
-    return false;
-  };
-
-  /**
-   * Get element position in array
-   * @method getPositionInArray
-   * @param  {object} indices The index file
-   * @param  {object} indices The index file
-   * @returns {number} i Position of element in array
-   */
-  priv.getPositionInArray = function (element, array) {
-    var i, l = array.length;
-    for (i = 0; i < l; i += 1) {
-      if (array[i] === element) {
-        return i;
-      }
-    }
-    return null;
-  };
-
-  /**
-   * Find id in indices
-   * @method isDocidInIndex
-   * @param  {object} indices The file containing the indeces
-   * @param  {object} doc The document which should be added to the index
-   * @return {boolean} true/false
-   */
-  priv.isDocidInIndex = function (indices, doc) {
-    var index, i, j, label, l = priv.indices.length;
-
-    // loop indices
-    for (i = 0; i < l; i += 1) {
-      index = {};
-      index.reference = priv.indices[i];
-      index.reference_size = index.reference.fields.length;
-      index.current = indices[index.reference.name];
-
-      for (j = 0; j < index.reference_size; j += 1) {
-        label = index.reference.fields[j];
-        index.current_size = priv.getObjectSize(index.current[label]);
-
-        // check for existing entries to remove (put-update)
-        if (index.current_size > 0) {
-          if (priv.searchIndexByValue(index.current[label], doc._id, "bool")) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  };
-
-  /**
-   * Clean up indexes when removing a file
-   * @method cleanIndices
-   * @param  {object} indices The file containing the indeces
-   * @param  {object} doc The document which should be added to the index
-   * @return {object} indices The cleaned up file
-   */
-  priv.cleanIndices = function (indices, doc) {
-    var i, j, k, index, key, label, l = priv.indices.length;
-
-    // loop indices (indexA, indexAB...)
-    for (i = 0; i < l; i += 1) {
-      index = {};
-      index.reference = priv.indices[i];
-      index.reference_size = index.reference.fields.length;
-      index.current = indices[index.reference.name];
-
-      // loop index fields
-      for (j = 0; j < index.reference_size; j += 1) {
-        label = index.reference.fields[j];
-        index.current_size = priv.getObjectSize(index.current[label]);
-
-        // loop field entries
-        for (k = 0; k < index.current_size; k += 1) {
-          key = priv.searchIndexByValue(index.current[label], doc._id, "key");
-          index.result_array = index.current[label][key];
-          if (!!key) {
-            // if there is more than one docid in the result array,
-            // just remove this one and not the whole array
-            if (index.result_array.length > 1) {
-              index.result_array.splice(k, 1);
-            } else {
-              delete index.current[label][key];
-            }
-          }
-        }
-      }
-    }
-    return indices;
-  };
-  /**
-   * Adds entries to indices
-   * @method createEmptyIndexArray
-   * @param  {object} indices The file containing the indeces
-   * @param  {object} doc The document which should be added to the index
-   */
-  priv.updateIndices = function (indices, doc) {
-    var i, j, index, value, label, key, l = priv.indices.length;
-
-    // loop indices
-    for (i = 0; i < l; i += 1) {
-      index = {};
-      index.reference = priv.indices[i];
-      index.reference_size = index.reference.fields.length;
-      index.current = indices[index.reference.name];
-
-      // build array of values to create entries in index
-      for (j = 0; j < index.reference_size; j += 1) {
-        label = index.reference.fields[j];
-        value = doc[label];
-        if (value !== undefined) {
-          index.current_size = priv.getObjectSize(index.current[label]);
-
-          // check for existing entries to remove (put-update)
-          if (index.current_size > 0) {
-            key = priv.searchIndexByValue(
-              index.current[label],
-              doc._id,
-              "key"
-            );
-            if (!!key) {
-              delete index.current[label][key];
-            }
-          }
-          if (index.current[label][value] === undefined) {
-            index.current[label][value] = [];
-          }
-          // add a new entry
-          index.current[label][value].push(doc._id);
-        }
-      }
-    }
-    return indices;
-  };
-
-  /**
-   * Check available indices to find the best one.
-   * TODOS: NOT NICE, redo
-   * @method findBestIndexForQuery
-   * @param  {object} syntax of query
-   * @returns {object} response The query object constructed from Index file
-   */
-  priv.findBestIndexForQuery = function (syntax) {
-    var i, j, k, l, n, p, o, element, key, block,
-      search_ids, use_index = [], select_ids = {}, index, query_param,
-      current_query, current_query_size;
-
-    // try to parse into object
-    if (syntax.query !== undefined) {
-      current_query = jIO.ComplexQueries.parse(syntax.query);
-    } else {
-      current_query = {};
-      current_query_size = 0;
-    }
-
-    // loop indices
-    for (i = 0; i < priv.indices.length; i += 1) {
-      search_ids = [];
-      block = false;
-      index = {};
-      index.reference = priv.indices[i];
-      index.reference_size = index.reference.fields.length;
-
-      if (current_query_size !== 0) {
-        // rebuild search_ids for iteration
-        if (current_query.query_list === undefined) {
-          search_ids.push(current_query.id);
+      if (ok) {
+        if (typeof that._location[meta._id] === "number") {
+          that._database[that._location[meta._id]] = needed_meta;
+        } else if (that._free.length > 0) {
+          k = that._free.shift();
+          that._database[k] = needed_meta;
+          that._location[meta._id] = k;
         } else {
-          for (j = 0; j < current_query.query_list.length; j += 1) {
-            if (priv.getPositionInArray(current_query.query_list[j].id,
-                search_ids) === null) {
-              search_ids.push(current_query.query_list[j].id);
-            }
-          }
+          that._database.push(needed_meta);
+          that._location[meta._id] = that._database.length - 1;
         }
+        return true;
+      }
+      if (typeof that._location[meta._id] === "number") {
+        that.remove(meta);
+      }
+      return false;
+    };
 
-        // loop search ids and find matches in index
-        for (k = 0; k < search_ids.length; k += 1) {
-          query_param = search_ids[0];
-          for (l = 0; l < index.reference_size; l += 1) {
-            if (query_param === index.reference.fields[l]) {
-              search_ids.splice(
-                priv.getPositionInArray(query_param, search_ids),
-                1
-              );
-            }
+    /**
+     * Removes a metadata object from the database if exist
+     *
+     * @method remove
+     * @param  {Object} meta The metadata to remove
+     */
+    that.remove = function (meta) {
+      if (typeof meta._id !== "string") {
+        throw new TypeError("Corrupted Metadata");
+      }
+      if (typeof that._location[meta._id] !== "number") {
+        throw new ReferenceError("Not Found");
+      }
+      that._database[that._location[meta._id]] = null;
+      that._free.push(that._location[meta._id]);
+      delete that._location[meta._id];
+    };
+
+    /**
+     * Checks if the index document is correct
+     *
+     * @method check
+     */
+    that.check = function () {
+      var id, database_meta;
+      if (typeof that._id !== "string" ||
+          that._id === "" ||
+          type(that._free) !== "Array" ||
+          type(that._indexing) !== "Array" ||
+          type(that._location) !== "Object" ||
+          type(that._database) !== "Array" ||
+          that._indexing.length === 0) {
+        throw new TypeError("Corrupted Index");
+      }
+      for (id in that._location) {
+        if (that._location.hasOwnProperty(id)) {
+          database_meta = that._database[that._location[id]];
+          if (type(database_meta) !== "Object" ||
+              database_meta._id !== id) {
+            throw new TypeError("Corrupted Index");
           }
         }
       }
+    };
 
-      // rebuild select_ids
-      for (o = 0; o < syntax.filter.select_list.length; o += 1) {
-        element = syntax.filter.select_list[o];
-        select_ids[element] = true;
+    /**
+     * Recreates database indices and remove free space
+     *
+     * @method repair
+     */
+    that.repair = function () {
+      var i = 0, meta;
+      that._free = [];
+      that._location = {};
+      if (type(that._database) !== "Array") {
+        that._database = [];
       }
-
-      // search_ids empty  = all needed search fields found on index
-      if (search_ids.length === 0) {
-        p = priv.getObjectSize(select_ids);
-        if (p === 0) {
-          use_index.push({
-            "name": index.reference.name,
-            "search": true,
-            "results": false
-          });
+      while (i < that._database.length) {
+        meta = that._database[i];
+        if (type(meta) === "Object" &&
+            typeof meta._id === "string" && meta._id !== "" &&
+            !that._location[meta._id]) {
+          that._location[meta._id] = i;
+          i += 1;
         } else {
-          for (n = 0; n < index.reference_size; n += 1) {
-            delete select_ids[index.reference.fields[n]];
-          }
-          for (key in select_ids) {
-            if (select_ids.hasOwnProperty(key)) {
-              use_index.push({
-                "name": index.reference.name,
-                "search": true,
-                "results": false
-              });
-              block = true;
-            }
-          }
-          if (block === false) {
-            use_index.push({
-              "name": index.reference.name,
-              "search": true,
-              "results": true
-            });
-          }
+          that._database.splice(i, 1);
         }
       }
-    }
-    return use_index;
-  };
+    };
 
-  /**
-   * Converts the indices file into an object usable by complex queries
-   * @method constructQueryObject
-   * @param  {object} indices The index file
-   * @returns {object} response The query object constructed from Index file
-   */
-  priv.constructQueryObject = function (indices, query_syntax) {
-    var j, k, l, m, n, use_index, index,
-      index_name, field_names, field, key, element,
-      query_index, query_object = [], field_name,
-      entry;
-
-    // returns index-to-use|can-do-query|can-do-query-and-results
-    use_index = priv.findBestIndexForQuery(query_syntax);
-
-    if (use_index.length > 0) {
-      for (j = 0; j < use_index.length; j += 1) {
-        index = use_index[j];
-
-        // NOTED: the index could be used to:
-        // (a) get all document ids matching query
-        // (b) get all document ids and results (= run complex query on index)
-        // right now, only (b) is supported, because the complex query is
-        // a single step process. If it was possible to first get the 
-        // relevant document ids, then get the results, the index could be
-        // used to do the first step plus use GET on the returned documents
-        if (index.search && index.results) {
-          index_name = use_index[j].name;
-          query_index = indices[index_name];
-
-          // get fieldnames from this index
-          for (k = 0; k < priv.indices.length; k += 1) {
-            if (priv.indices[k].name === use_index[j].name) {
-              field_names = priv.indices[k].fields;
-            }
-          }
-          for (l = 0; l < field_names.length; l += 1) {
-            field_name = field_names[l];
-            // loop entries for this field name
-            field = query_index[field_name];
-            for (key in field) {
-              if (field.hasOwnProperty(key)) {
-                element = field[key];
-                // key can be "string" or "number" right now
-                if (priv.field_types[field_name] === "number") {
-                  key = +key;
-                }
-                for (m = 0; m < element.length; m += 1) {
-                  if (priv.searchIndexByValue(
-                      query_object,
-                      element[m],
-                      "bool"
-                    )) {
-                    // loop object
-                    for (n = 0; n < query_object.length; n += 1) {
-                      entry = query_object[n];
-                      if (entry.id === element[m]) {
-                        entry[field_name] = key;
-                      }
-                    }
-                  } else {
-                    entry = {};
-                    entry.id = element[m];
-                    entry[field_name] = key;
-                    query_object.push(entry);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    return query_object;
-  };
-  /**
-   * Build the alldocs response from the index file (overriding substorage)
-   * @method allDocsResponseFromIndex
-   * @param  {object} command The JIO command
-   * @param  {boolean} include_docs Whether to also supply the document
-   * @param  {object} option The options set for this method
-   * @returns {object} response The allDocs response
-   */
-  priv.allDocsResponseFromIndex = function (indices, include_docs, option) {
-    var i, j, k, m, n = 0, l = priv.indices.length,
-      index, key, obj, prop, found, file, label,
-      unique_count = 0, unique_docids = [], all_doc_response = {},
-      success = function (content) {
-        file = { value: {} };
-        file.id = unique_docids[n];
-        file.key = unique_docids[n];
-        file.doc = content;
-        all_doc_response.rows.push(file);
-        // async counter, must be in callback
-        n += 1;
-        if (n === unique_count) {
-          that.success(all_doc_response);
-        }
-      },
-      error = function () {
-        that.error({
-          "status": 404,
-          "statusText": "Not Found",
-          "error": "not_found",
-          "message": "Cannot find the document",
-          "reason": "Cannot get a document from substorage"
-        });
-        return;
+    /**
+     * Returns the serialized version of this object (not cloned)
+     *
+     * @method serialized
+     * @return {Object} The serialized version
+     */
+    that.serialized = function () {
+      return {
+        "_id": that._id,
+        "indexing": that._indexing,
+        "free": that._free,
+        "location": that._location,
+        "database": that._database
       };
+    };
 
-    // loop indices
-    for (i = 0; i < l; i += 1) {
-      index = {};
-      index.reference = priv.indices[i];
-      index.reference_size = index.reference.fields.length;
-      index.current = indices[index.reference.name];
+    that.check();
+    that._indexing_object = {};
+    that._indexing.forEach(function (meta_key) {
+      that._indexing_object[meta_key] = true;
+    });
+  }
 
-      // a lot of loops, not sure this is the fastest way
-      // loop index fields
-      for (j = 0; j < index.reference_size; j += 1) {
-        label = index.reference.fields[j];
-        index.current_field = index.current[label];
-        index.current_size = priv.getObjectSize(index.current_field);
+  /**
+   * The JIO index storage constructor
+   */
+  function indexStorage(spec, my) {
+    var that, priv = {};
 
-        // loop field id array
-        for (j = 0; j < index.current_size; j += 1) {
-          for (key in index.current_field) {
-            if (index.current_field.hasOwnProperty(key)) {
-              obj = index.current_field[key];
-              for (prop in obj) {
-                if (obj.hasOwnProperty(prop)) {
-                  for (k = 0; k < unique_docids.length; k += 1) {
-                    if (obj[prop] === unique_docids[k]) {
-                      found = true;
-                      break;
-                    }
-                  }
-                  if (!found) {
-                    unique_docids.push(obj[prop]);
-                    unique_count += 1;
-                  }
-                }
-              }
-            }
+    that = my.basicStorage(spec, my);
+
+    priv.indices = spec.indices;
+    priv.sub_storage = spec.sub_storage;
+
+    // Overrides
+
+    that.specToStore = function () {
+      return {
+        "indices": priv.indices,
+        "sub_storage": priv.sub_storage
+      };
+    };
+
+    /**
+     * Return the similarity percentage (1 >= p >= 0) between two index lists.
+     *
+     * @method similarityPercentage
+     * @param  {Array} list_a An index list
+     * @param  {Array} list_b Another index list
+     * @return {Number} The similarity percentage
+     */
+    priv.similarityPercentage = function (list_a, list_b) {
+      var ai, bi, count = 0;
+      for (ai = 0; ai < list_a.length; ai += 1) {
+        for (bi = 0; bi < list_b.length; bi += 1) {
+          if (list_a[ai] === list_b[bi]) {
+            count += 1;
           }
         }
       }
-    }
+      return count / (list_a.length > list_b.length ?
+                      list_a.length : list_b.length);
+    };
 
-    // construct allDocs response
-    all_doc_response.total_rows = unique_count;
-    all_doc_response.rows = [];
-    for (m = 0; m < unique_count; m += 1) {
-      // include_docs
-      if (include_docs) {
+    /**
+     * Select the good index to use according to a select list.
+     *
+     * @method selectIndex
+     * @param  {Array} select_list An array of strings
+     * @return {Number} The index index
+     */
+    priv.selectIndex = function (select_list) {
+      var i, tmp, selector = {"index": 0, "similarity": 0};
+      for (i = 0; i < priv.indices.length; i += 1) {
+        tmp = priv.similarityPercentage(select_list,
+                                        priv.indices[i].index);
+        if (tmp > selector.similarity) {
+          selector.index = i;
+          selector.similarity = tmp;
+        }
+      }
+      return selector.index;
+    };
+
+    /**
+     * Get a database
+     *
+     * @method getIndexDatabase
+     * @param  {Object} option The command option
+     * @param  {Number} number The location in priv.indices
+     * @param  {Function} callback The callback
+     */
+    priv.getIndexDatabase = function (option, number, callback) {
+      that.addJob(
+        "get",
+        priv.indices[number].sub_storage || priv.sub_storage,
+        {"_id": priv.indices[number].id},
+        option,
+        function (response) {
+          callback(new JSONIndex(response));
+        },
+        function (err) {
+          if (err.status === 404) {
+            callback(new JSONIndex({
+              "_id": priv.indices[number].id,
+              "indexing": priv.indices[number].index
+            }));
+            return;
+          }
+          err.message = "Unable to get index database.";
+          that.error(err);
+        }
+      );
+    };
+
+    /**
+     * Gets a list containing all the databases set in the storage description.
+     *
+     * @method getIndexDatabaseList
+     * @param  {Object} option The command option
+     * @param  {Function} callback The result callback(database_list)
+     */
+    priv.getIndexDatabaseList = function (option, callback) {
+      var i, count = 0, callbacks = {}, response_list = [];
+      callbacks.error = function (index) {
+        return function (err) {
+          if (err.status === 404) {
+            response_list[index] = new JSONIndex({
+              "_id": priv.indices[index].id,
+              "indexing": priv.indices[index].index
+            });
+            count += 1;
+            if (count === priv.indices.length) {
+              callback(response_list);
+            }
+            return;
+          }
+          err.message = "Unable to get index database.";
+          that.error(err);
+        };
+      };
+      callbacks.success = function (index) {
+        return function (response) {
+          response_list[index] = new JSONIndex(response);
+          count += 1;
+          if (count === priv.indices.length) {
+            callback(response_list);
+          }
+        };
+      };
+      for (i = 0; i < priv.indices.length; i += 1) {
         that.addJob(
           "get",
-          priv.substorage,
-          unique_docids[m],
+          priv.indices[i].sub_storage || priv.sub_storage,
+          {"_id": priv.indices[i].id},
           option,
-          success,
-          error
+          callbacks.success(i),
+          callbacks.error(i)
         );
-      } else {
-        file = { value: {} };
-        file.id = unique_docids[m];
-        file.key = unique_docids[m];
-        all_doc_response.rows.push(file);
-        if (m === (unique_count - 1)) {
-          return all_doc_response;
-        }
       }
-    }
-  };
+    };
 
-  /**
-   * Post document to substorage and create/update index file(s)
-   * @method post
-   * @param  {object} command The JIO command
-   * @param  {string} source The source of the function call
-   */
-  priv.postOrPut = function (command, source) {
-    var f = {}, indices, doc;
-    doc = command.cloneDoc();
-    if (typeof doc._id !== "string") {
-      doc._id = priv.generateUuid();
-    }
-    f.getIndices = function () {
-      var option = command.cloneOption();
-      that.addJob(
-        "get",
-        priv.substorage,
-        {"_id": priv.index_suffix},
-        option,
-        function (response) {
-          indices = response;
-          f.postDocument("put");
-        },
-        function (err) {
-          switch (err.status) {
-          case 404:
-            if (source !== 'PUTATTACHMENT') {
-              indices = priv.createEmptyIndexArray();
-              f.postDocument("post");
-            } else {
-              that.error({
-                "status": 404,
-                "statusText": "Not Found",
-                "error": "not found",
-                "message": "Document not found",
-                "reason": "Document not found"
-              });
-              return;
-            }
-            break;
-          default:
-            err.message = "Cannot retrieve index array";
-            that.error(err);
-            break;
-          }
+    /**
+     * Saves all the databases to the remote(s).
+     *
+     * @method storeIndexDatabaseList
+     * @param  {Array} database_list The database list
+     * @param  {Object} option The command option
+     * @param  {Function} callback The result callback(err, response)
+     */
+    priv.storeIndexDatabaseList = function (database_list, option, callback) {
+      var i, count = 0, onResponse, onError;
+      onResponse = function (response) {
+        count += 1;
+        if (count === priv.indices.length) {
+          callback({"ok": true});
         }
-      );
-    };
-    f.postDocument = function (index_update_method) {
-      if (priv.isDocidInIndex(indices, doc) && source === 'POST') {
-        // POST the document already exists
-        that.error({
-          "status": 409,
-          "statusText": "Conflicts",
-          "error": "conflicts",
-          "message": "Cannot create a new document",
-          "reason": "Document already exists"
-        });
-        return;
+      };
+      onError = function (err) {
+        err.message = "Unable to store index database.";
+        that.error(err);
+      };
+      for (i = 0; i < priv.indices.length; i += 1) {
+        that.addJob(
+          "put",
+          priv.indices[i].sub_storage || priv.sub_storage,
+          database_list[i].serialized(),
+          option,
+          onResponse,
+          onError
+        );
       }
-      if (source !== 'PUTATTACHMENT') {
-        indices = priv.updateIndices(indices, doc);
-      }
-      that.addJob(
-        source === 'PUTATTACHMENT' ? "putAttachment" : "post",
-        priv.substorage,
-        doc,
-        command.cloneOption(),
-        function () {
-          if (source !== 'PUTATTACHMENT') {
-            f.sendIndices(index_update_method);
-          } else {
-            that.success({
-              "ok": true,
-              "id": doc._id,
-              "attachment": doc._attachment
-            });
-          }
-        },
-        function (err) {
-          switch (err.status) {
-          case 409:
-            // file already exists
-            if (source !== 'PUTATTACHMENT') {
-              f.sendIndices(index_update_method);
-            } else {
-              that.success({
-                "ok": true,
-                "id": doc._id
-              });
-            }
-            break;
-          default:
-            err.message = "Cannot upload document";
-            that.error(err);
-            break;
-          }
-        }
-      );
     };
-    f.sendIndices = function (method) {
-      indices._id = priv.index_suffix;
+
+    /**
+     * A generic request method which delegates the request to the sub storage.
+     * On response, it will index the document from the request and update all
+     * the databases.
+     *
+     * @method genericRequest
+     * @param  {Command} command The JIO command
+     * @param  {Function} method The request method
+     */
+    priv.genericRequest = function (command, method) {
+      var doc = command.cloneDoc(), option = command.cloneOption();
       that.addJob(
         method,
-        priv.substorage,
-        indices,
-        command.cloneOption(),
-        function () {
-          that.success({
-            "ok": true,
-            "id": doc._id
-          });
-        },
-        function (err) {
-          // xxx do we try to delete the posted document ?
-          err.message = "Cannot save index file";
-          that.error(err);
-        }
-      );
-    };
-    f.getIndices();
-  };
-
-  /**
-   * Update the document metadata and update the index
-   * @method put
-   * @param  {object} command The JIO command
-   */
-  that.post = function (command) {
-    priv.postOrPut(command, 'POST');
-  };
-
-  /**
-   * Update the document metadata and update the index
-   * @method put
-   * @param  {object} command The JIO command
-   */
-  that.put = function (command) {
-    priv.postOrPut(command, 'PUT');
-  };
-
-  /**
-   * Add an attachment to a document (no index modification)
-   * @method putAttachment
-   * @param  {object} command The JIO command
-   */
-  that.putAttachment = function (command) {
-    priv.postOrPut(command, 'PUTATTACHMENT');
-  };
-
-  /**
-   * Get the document metadata
-   * @method get
-   * @param  {object} command The JIO command
-   */
-  that.get = function (command) {
-    that.addJob(
-      "get",
-      priv.substorage,
-      command.cloneDoc(),
-      command.cloneOption(),
-      function (response) {
-        that.success(response);
-      },
-      function (err) {
-        that.error(err);
-      }
-    );
-  };
-
-  /**
-   * Get the attachment.
-   * @method getAttachment
-   * @param  {object} command The JIO command
-   */
-  that.getAttachment = function (command) {
-    that.addJob(
-      "getAttachment",
-      priv.substorage,
-      command.cloneDoc(),
-      command.cloneOption(),
-      function (response) {
-        that.success(response);
-      },
-      function (err) {
-        that.error(err);
-      }
-    );
-  };
-
-  /**
-   * Remove document - removing documents updates index!.
-   * @method remove
-   * @param  {object} command The JIO command
-   */
-  that.remove = function (command) {
-    var f = {}, indices, doc, docid, option;
-
-    doc = command.cloneDoc();
-    option = command.cloneOption();
-
-    f.removeDocument = function (type) {
-      that.addJob(
-        "remove",
-        priv.substorage,
+        priv.sub_storage,
         doc,
         option,
         function (response) {
-          that.success(response);
-        },
-        function () {
-          that.error({
-            "status": 409,
-            "statusText": "Conflict",
-            "error": "conflict",
-            "message": "Document Update Conflict",
-            "reason": "Could not delete document or attachment"
-          });
-        }
-      );
-    };
-    f.getIndices = function () {
-      that.addJob(
-        "get",
-        priv.substorage,
-        {"_id": priv.index_suffix},
-        option,
-        function (response) {
-          // if deleting an attachment
-          if (typeof command.getAttachmentId() === 'string') {
-            f.removeDocument('attachment');
-          } else {
-            indices = priv.cleanIndices(response, doc);
-            // store update index file
-            that.addJob(
-              "put",
-              priv.substorage,
-              indices,
-              command.cloneOption(),
-              function () {
-                // remove actual document
-                f.removeDocument('doc');
-              },
-              function (err) {
-                err.message = "Cannot save index file";
-                that.error(err);
+          switch (method) {
+          case "post":
+          case "put":
+          case "remove":
+            doc._id = response.id;
+            priv.getIndexDatabaseList(option, function (database_list) {
+              var i;
+              switch (method) {
+              case "post":
+              case "put":
+                for (i = 0; i < database_list.length; i += 1) {
+                  database_list[i].put(doc);
+                }
+                break;
+              case "remove":
+                for (i = 0; i < database_list.length; i += 1) {
+                  database_list[i].remove(doc);
+                }
+                break;
+              default:
+                break;
               }
-            );
-          }
-        },
-        function () {
-          that.error({
-            "status": 404,
-            "statusText": "Not Found",
-            "error": "not_found",
-            "message": "Document index not found, please check document ID",
-            "reason": "Incorrect document ID"
-          });
-          return;
-        }
-      );
-    };
-    f.getIndices();
-  };
-
-  /**
-   * Remove document - removing documents updates index!.
-   * @method remove
-   * @param  {object} command The JIO command
-   */
-  that.removeAttachment = function (command) {
-    var f = {}, indices, doc, docid, option;
-    doc = command.cloneDoc();
-    option = command.cloneOption();
-    f.removeDocument = function (type) {
-      that.addJob(
-        "removeAttachment",
-        priv.substorage,
-        doc,
-        option,
-        that.success,
-        that.error
-      );
-    };
-    f.getIndices = function () {
-      that.addJob(
-        "get",
-        priv.substorage,
-        {"_id": priv.index_suffix},
-        option,
-        function (response) {
-          // if deleting an attachment
-          if (typeof command.getAttachmentId() === 'string') {
-            f.removeDocument('attachment');
-          } else {
-            indices = priv.cleanIndices(response, doc);
-            // store update index file
-            that.addJob(
-              "put",
-              priv.substorage,
-              indices,
-              command.cloneOption(),
-              function () {
-                // remove actual document
-                f.removeDocument('doc');
-              },
-              function (err) {
-                err.message = "Cannot save index file";
-                that.error(err);
-              }
-            );
+              priv.storeIndexDatabaseList(database_list, option, function () {
+                that.success({"ok": true, "id": doc._id});
+              });
+            });
+            break;
+          default:
+            that.success(response);
+            break;
           }
         },
         function (err) {
-          that.error(err);
+          return that.error(err);
         }
       );
     };
-    f.getIndices();
-  };
 
-  /**
-   * Gets a document list from the substorage
-   * Options:
-   * - {boolean} include_docs Also retrieve the actual document content.
-   * @method allDocs
-   * @param  {object} command The JIO command
-   */
-  //{
-  // "total_rows": 4,
-  // "rows": [
-  //    {
-  //    "id": "otherdoc",
-  //    "key": "otherdoc",
-  //    "value": {
-  //      "rev": "1-3753476B70A49EA4D8C9039E7B04254C"
-  //    }
-  //  },{...}
-  // ]
-  //}
-  that.allDocs = function (command) {
-    var f = {}, option, all_docs_response, query_object, query_syntax,
-      query_response;
-    option = command.cloneOption();
-
-    f.getIndices = function () {
-      that.addJob(
-        "get",
-        priv.substorage,
-        {"_id": priv.index_suffix},
-        option,
-        function (response) {
-          query_syntax = command.getOption('query');
-          if (query_syntax !== undefined) {
-            // build complex query object
-            query_object = priv.constructQueryObject(response, query_syntax);
-            if (query_object.length === 0) {
-              that.addJob(
-                "allDocs",
-                priv.substorage,
-                undefined,
-                option,
-                that.success,
-                that.error
-              );
-            } else {
-              // we can use index, run query on index
-              query_response =
-                jIO.ComplexQueries.query(query_syntax, query_object);
-              that.success(query_response);
-            }
-          } else if (command.getOption('include_docs')) {
-            priv.allDocsResponseFromIndex(response, true, option);
-          } else {
-            all_docs_response =
-              priv.allDocsResponseFromIndex(response, false, option);
-            that.success(all_docs_response);
-          }
-        },
-        that.error
-      );
+    /**
+     * Post the document metadata and update the index
+     * @method post
+     * @param  {object} command The JIO command
+     */
+    that.post = function (command) {
+      priv.genericRequest(command, 'post');
     };
-    f.getIndices();
-  };
-  return that;
-});
+
+    /**
+     * Update the document metadata and update the index
+     * @method put
+     * @param  {object} command The JIO command
+     */
+    that.put = function (command) {
+      priv.genericRequest(command, 'put');
+    };
+
+    /**
+     * Add an attachment to a document (no index modification)
+     * @method putAttachment
+     * @param  {object} command The JIO command
+     */
+    that.putAttachment = function (command) {
+      priv.genericRequest(command, 'putAttachment');
+    };
+
+    /**
+     * Get the document metadata
+     * @method get
+     * @param  {object} command The JIO command
+     */
+    that.get = function (command) {
+      priv.genericRequest(command, 'get');
+    };
+
+    /**
+     * Get the attachment.
+     * @method getAttachment
+     * @param  {object} command The JIO command
+     */
+    that.getAttachment = function (command) {
+      priv.genericRequest(command, 'getAttachment');
+    };
+
+    /**
+     * Remove document - removing documents updates index!.
+     * @method remove
+     * @param  {object} command The JIO command
+     */
+    that.remove = function (command) {
+      priv.genericRequest(command, 'remove');
+    };
+
+    /**
+     * Remove attachment
+     * @method removeAttachment
+     * @param  {object} command The JIO command
+     */
+    that.removeAttachment = function (command) {
+      priv.genericRequest(command, 'removeAttachment');
+    };
+
+    /**
+     * Gets a document list from the substorage
+     * Options:
+     * - {boolean} include_docs Also retrieve the actual document content.
+     * @method allDocs
+     * @param  {object} command The JIO command
+     */
+    that.allDocs = function (command) {
+      var option = command.cloneOption(),
+        index = priv.selectIndex(option.select_list || []);
+      // Include docs option is ignored, if you want to get all the document,
+      // don't use index storage!
+
+      option.select_list = option.select_list || [];
+      option.select_list.push("_id");
+      priv.getIndexDatabase(option, index, function (db) {
+        var i, id;
+        db = db._database;
+        complex_queries.QueryFactory.create(option.query || '').
+          exec(db, option);
+        for (i = 0; i < db.length; i += 1) {
+          id = db[i]._id;
+          delete db[i]._id;
+          db[i] = {
+            "id": id,
+            "key": id,
+            "value": db[i],
+          };
+        }
+        that.success({"total_rows": db.length, "rows": db});
+      });
+    };
+
+    // that.repair = function (command) {
+    //   todo: repair
+    //   easy but don't have time
+    //   if _id is an index id, then repair the index by doing an
+    //   allDocs and recreating the database from scratch. end.
+    // };
+
+    return that;
+  }
+
+
+  if (typeof exports === "object") {
+    // nodejs export module
+    Object.defineProperty(exports, "indexStorage", {
+      configurable: false,
+      enumerable: true,
+      writable: false,
+      value: indexStorage
+    });
+  } else if (typeof define === "function" && define.amd) {
+    // requirejs export
+    define(indexStorage);
+  } else {
+    // classical browser and web workers JIO export
+    jIO.addStorageType("indexed", indexStorage);
+  }
+}());
