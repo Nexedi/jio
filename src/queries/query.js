@@ -96,13 +96,19 @@ var Query = newClass(function (spec) {
    * @param  {Array} list The item list to filter
    */
   "filterListSelect": function (select_option, list) {
-    list.forEach(function (item, index) {
-      var new_item = {};
-      select_option.forEach(function (key) {
-        new_item[key] = item[key];
-      });
-      list[index] = new_item;
-    });
+    var i, j, new_item;
+    for (i = 0; i < list.length; i += 1) {
+      new_item = {};
+      for (j = 0; j < select_option.length; j += 1) {
+        new_item[select_option[j]] = list[i][select_option[j]];
+      }
+      for (j in new_item) {
+        if (new_item.hasOwnProperty(j)) {
+          list[i] = new_item;
+          break;
+        }
+      }
+    }
   },
 
   /**
