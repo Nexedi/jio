@@ -369,8 +369,9 @@ jIO.addStorageType('local', function (spec, my) {
     );
     option = command.cloneOption();
     if (typeof complex_queries !== "object" ||
-        option.query === undefined && option.sort_on === undefined &&
-        option.select_list === undefined && option.include_docs === undefined) {
+        (option.query === undefined && option.sort_on === undefined &&
+         option.select_list === undefined &&
+         option.include_docs === undefined)) {
       rows = [];
       for (i in localStorage) {
         if (localStorage.hasOwnProperty(i)) {
