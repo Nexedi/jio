@@ -4517,6 +4517,11 @@ test ("Put", function(){
     o.jio.get({"_id": "A"}, o.f);
     o.tick(o);
 
+    ok(false,
+       "If we run several put at the same time, only one document is indexed.");
+    // there is several put job on the same index, so the job must wait for
+    // the previous one. But nothing change, event after thousands of seconds.
+
     o.jio.stop();
 });
 
