@@ -6,6 +6,7 @@
  * The SimpleQuery inherits from Query, and compares one metadata value
  *
  * @class SimpleQuery
+ * @extends Query
  * @param  {Object} [spec={}] The specifications
  * @param  {String} [spec.operator="="] The compare method to use
  * @param  {String} spec.key The metadata key
@@ -16,16 +17,17 @@ var SimpleQuery = newClass(Query, function (spec) {
   /**
    * Operator to use to compare object values
    *
-   * @property operator
+   * @attribute operator
    * @type String
    * @default "="
+   * @optional
    */
   this.operator = spec.operator || "=";
 
   /**
    * Key of the object which refers to the value to compare
    *
-   * @property key
+   * @attribute key
    * @type String
    */
   this.key = spec.key;
@@ -33,7 +35,7 @@ var SimpleQuery = newClass(Query, function (spec) {
   /**
    * Value is used to do the comparison with the object value
    *
-   * @property value
+   * @attribute value
    * @type String
    */
   this.value = spec.value;

@@ -14,8 +14,10 @@ var Query = newClass(function (spec) {
   /**
    * The wildcard character used to extend comparison action
    *
-   * @property wildcard_character
+   * @attribute wildcard_character
    * @type String
+   * @default "%"
+   * @optional
    */
   this.wildcard_character = spec.wildcard_character || "%";
 
@@ -24,13 +26,13 @@ var Query = newClass(function (spec) {
    *
    * @method exec
    * @param  {Array} item_list The list of object
-   * @param  {Object} [option={}] Some operation option
+   * @param  {Object} [option] Some operation option
    * @param  {String} [option.wildcard_character="%"] The wildcard character
-   * @param  {Array} [option.select_list=undefined] A object keys to retrieve
-   * @param  {Array} [option.sort_on=[]] Couples of object keys
-   *                                     and "ascending" or "descending"
-   * @param  {Array} [option.limit=undefined] Couple of integer, first is an
-   *                                          index and second is the length.
+   * @param  {Array} [option.select_list] A object keys to retrieve
+   * @param  {Array} [option.sort_on] Couples of object keys and "ascending"
+   *                 or "descending"
+   * @param  {Array} [option.limit] Couple of integer, first is an index and
+   *                 second is the length.
    */
   this.exec = function (item_list, option) {
     var i = 0;
@@ -92,6 +94,7 @@ var Query = newClass(function (spec) {
    * Filter a list of items, modifying them to select only wanted keys.
    *
    * @method filterListSelect
+   * @static
    * @param  {Array} select_option Key list to keep
    * @param  {Array} list The item list to filter
    */
@@ -115,6 +118,7 @@ var Query = newClass(function (spec) {
    * Sort a list of items, according to keys and directions.
    *
    * @method sortOn
+   * @static
    * @param  {Array} sort_on_option List of couples [key, direction]
    * @param  {Array} list The item list to sort
    */
@@ -133,6 +137,7 @@ var Query = newClass(function (spec) {
    * Parse a text request to a json query object tree
    *
    * @method parseStringToObject
+   * @static
    * @param  {String} string The string to parse
    * @return {Object} The json query tree
    */

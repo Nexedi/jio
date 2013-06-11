@@ -5,7 +5,6 @@
  * Create a class, manage inheritance, static methods,
  * protected attributes and can hide methods or/and secure methods
  *
- * @method newClass
  * @param  {Class} Class Classes to inherit from (0..n). The last class
  *                       parameter will inherit from the previous one, and so on
  * @param  {Object} option Class option (0..n)
@@ -100,7 +99,7 @@ function newClass() {
 
 /**
  * Escapes regexp special chars from a string.
- * @method stringEscapeRegexpCharacters
+ *
  * @param  {String} string The string to escape
  * @return {String} The escaped string
  */
@@ -109,11 +108,10 @@ function stringEscapeRegexpCharacters(string) {
     return string.replace(/([\\\.\$\[\]\(\)\{\}\^\?\*\+\-])/g, "\\$1");
   }
 }
-_export("stringEscapeRegexpCharacters", stringEscapeRegexpCharacters);
 
 /**
  * Convert a search text to a regexp.
- * @method convertSearchTextToRegExp
+ *
  * @param  {String} string The string to convert
  * @param  {String} [wildcard_character=undefined] The wildcard chararter
  * @return {RegExp} The search text regexp
@@ -124,7 +122,6 @@ function convertSearchTextToRegExp(string, wildcard_character) {
     '.*'
   ) + "$");
 }
-_export("convertSearchTextToRegExp", convertSearchTextToRegExp);
 
 // XXX
 function sortFunction(key, way) {

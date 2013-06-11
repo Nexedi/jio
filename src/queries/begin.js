@@ -15,7 +15,7 @@ var complex_queries;
   var to_export = {}, module_name = "complex_queries";
   /**
    * Add a secured (write permission denied) property to an object.
-   * @method defineProperty
+   *
    * @param  {Object} object The object to fill
    * @param  {String} key The object key where to store the property
    * @param  {Any} value The value to store

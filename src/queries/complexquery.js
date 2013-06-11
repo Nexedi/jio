@@ -7,6 +7,7 @@
  * values.
  *
  * @class ComplexQuery
+ * @extends Query
  * @param  {Object} [spec={}] The specifications
  * @param  {String} [spec.operator="AND"] The compare method to use
  * @param  {String} spec.key The metadata key
@@ -18,18 +19,20 @@ var ComplexQuery = newClass(Query, function (spec) {
   /**
    * Logical operator to use to compare object values
    *
-   * @property operator
+   * @attribute operator
    * @type String
    * @default "AND"
+   * @optional
    */
   this.operator = spec.operator || "AND";
 
   /**
    * The sub Query list which are used to query an item.
    *
-   * @property query_list
+   * @attribute query_list
    * @type Array
    * @default []
+   * @optional
    */
   this.query_list = spec.query_list || [];
   this.query_list = this.query_list.map(QueryFactory.create);

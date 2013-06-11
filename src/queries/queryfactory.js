@@ -2,13 +2,27 @@
 /*global _export: true, ComplexQuery: true, SimpleQuery: true,
          newClass: true, Query: true */
 
-// XXX
+
 var query_class_dict = {}, QueryFactory;
 
+/**
+ * Provides static methods to create Query object
+ *
+ * @class QueryFactory
+ */
 QueryFactory = newClass({
-  "secure_methods": true,
   "static_methods": {
-    // XXX
+
+    /**
+     * Creates Query object from a search text string or a serialized version
+     * of a Query.
+     *
+     * @method create
+     * @static
+     * @param  {Object,String} object The search text or the serialized version
+     *         of a Query
+     * @return {Query} A Query object
+     */
     "create": function (object) {
       if (object === "") {
         return new Query();
