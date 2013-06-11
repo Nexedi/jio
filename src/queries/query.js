@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global newClass: true, sortFunction: true, parseStringToObject: true,
-         _export: true */
+         _export: true, stringEscapeRegexpCharacters: true */
 
 /**
  * The query to use to filter a list of objects.
@@ -141,7 +141,23 @@ var Query = newClass(function (spec) {
    * @param  {String} string The string to parse
    * @return {Object} The json query tree
    */
-  "parseStringToObject": parseStringToObject
+  "parseStringToObject": parseStringToObject,
+
+  /**
+   * Convert a search text to a regexp.
+   *
+   * @method convertStringToRegExp
+   * @static
+   * @param  {String} string The string to convert
+   * @param  {String} [wildcard_character=undefined] The wildcard chararter
+   * @return {RegExp} The search text regexp
+   */
+  "convertStringToRegExp": function (string, wildcard_character) {
+    return new RegExp("^" + stringEscapeRegexpCharacters(string).replace(
+      stringEscapeRegexpCharacters(wildcard_character),
+      '.*'
+    ) + "$");
+  }
 }});
 
 _export("Query", Query);

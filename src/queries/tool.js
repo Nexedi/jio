@@ -109,21 +109,15 @@ function stringEscapeRegexpCharacters(string) {
   }
 }
 
-/**
- * Convert a search text to a regexp.
- *
- * @param  {String} string The string to convert
- * @param  {String} [wildcard_character=undefined] The wildcard chararter
- * @return {RegExp} The search text regexp
- */
-function convertSearchTextToRegExp(string, wildcard_character) {
-  return new RegExp("^" + stringEscapeRegexpCharacters(string).replace(
-    stringEscapeRegexpCharacters(wildcard_character),
-    '.*'
-  ) + "$");
-}
+_export("stringEscapeRegexpCharacters", stringEscapeRegexpCharacters);
 
-// XXX
+/**
+ * A sort function to sort items by key
+ *
+ * @param  {String} key The key to sort on
+ * @param  {String} [way="ascending"] 'ascending' or 'descending'
+ * @return {Function} The sort function
+ */
 function sortFunction(key, way) {
   if (way === 'descending') {
     return function (a, b) {
