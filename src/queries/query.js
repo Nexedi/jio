@@ -58,6 +58,86 @@ var Query = newClass(function () {
     return true;
   };
 
+  /**
+   * The recursive parser.
+   *
+   * @method recParse
+   * @private
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} options Some options usable in the parseMethods
+   * @return {Any} The parser result
+   */
+  function recParse(object, option) {
+    var i, query = object.parsed;
+    if (query.type === "complex") {
+      for (i = 0; i < query.query_list.length; i += 1) {
+        object.parsed = query.query_list[i];
+        recParse(object, option);
+        query.query_list[i] = object.parsed;
+      }
+      object.parsed = query;
+      that.onParseComplexQuery(object, option);
+    } else if (query.type === "simple") {
+      that.onParseSimpleQuery(object, option);
+    }
+  }
+
+  /**
+   * Browse the Query in deep calling parser method in each step.
+   *
+   * `onParseStart` is called first, on end `onParseEnd` is called.
+   * It starts from the simple queries at the bottom of the tree calling the
+   * parser method `onParseSimpleQuery`, and go up calling the
+   * `onParseComplexQuery` method.
+   *
+   * @method parse
+   * @param  {Object} option Any options you want (except 'parsed')
+   * @return {Any} The parse result
+   */
+  that.parse = function (option) {
+    var object;
+    object = {"parsed": JSON.parse(JSON.stringify(that.serialized()))};
+    that.onParseStart(object, option);
+    recParse(object, option);
+    that.onParseEnd(object, option);
+    return object.parsed;
+  };
+
+  /**
+   * Called before parsing the query. Must be overridden!
+   *
+   * @method onParseStart
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} option Some option gave in parse()
+   */
+  that.onParseStart = emptyFunction;
+
+  /**
+   * Called when parsing a simple query. Must be overridden!
+   *
+   * @method onParseSimpleQuery
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} option Some option gave in parse()
+   */
+  that.onParseSimpleQuery = emptyFunction;
+
+  /**
+   * Called when parsing a complex query. Must be overridden!
+   *
+   * @method onParseComplexQuery
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} option Some option gave in parse()
+   */
+  that.onParseComplexQuery = emptyFunction;
+
+  /**
+   * Called after parsing the query. Must be overridden!
+   *
+   * @method onParseEnd
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} option Some option gave in parse()
+   */
+  that.onParseEnd = emptyFunction;
 
   /**
    * Convert this query to a parsable string.
