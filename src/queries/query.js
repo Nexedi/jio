@@ -9,17 +9,9 @@
  * @class Query
  * @constructor
  */
-var Query = newClass(function (spec) {
+var Query = newClass(function () {
 
-  /**
-   * The wildcard character used to extend comparison action
-   *
-   * @attribute wildcard_character
-   * @type String
-   * @default "%"
-   * @optional
-   */
-  this.wildcard_character = spec.wildcard_character || "%";
+  var that = this, emptyFunction = function () {};
 
   /**
    * Filter the item list with matching item only
@@ -34,10 +26,10 @@ var Query = newClass(function (spec) {
    * @param  {Array} [option.limit] Couple of integer, first is an index and
    *                 second is the length.
    */
-  this.exec = function (item_list, option) {
+  that.exec = function (item_list, option) {
     var i = 0;
     while (i < item_list.length) {
-      if (!this.match(item_list[i], option.wildcard_character)) {
+      if (!that.match(item_list[i], option.wildcard_character)) {
         item_list.splice(i, 1);
       } else {
         i += 1;
@@ -62,7 +54,7 @@ var Query = newClass(function (spec) {
    * @param  {Object} item The object to test
    * @return {Boolean} true if match, false otherwise
    */
-  this.match = function (item, wildcard_character) {
+  that.match = function (item, wildcard_character) {
     return true;
   };
 
@@ -73,7 +65,7 @@ var Query = newClass(function (spec) {
    * @method toString
    * @return {String} The string version of this query
    */
-  this.toString = function () {
+  that.toString = function () {
     return "";
   };
 
@@ -84,7 +76,7 @@ var Query = newClass(function (spec) {
    * @method serialized
    * @return {Object} The jsonable object
    */
-  this.serialized = function () {
+  that.serialized = function () {
     return undefined;
   };
 

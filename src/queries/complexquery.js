@@ -12,7 +12,6 @@
  * @param  {String} [spec.operator="AND"] The compare method to use
  * @param  {String} spec.key The metadata key
  * @param  {String} spec.value The value of the metadata to compare
- * @param  {String} [spec.wildcard_character="%"] The wildcard character
  */
 var ComplexQuery = newClass(Query, function (spec) {
 

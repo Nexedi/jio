@@ -11,7 +11,6 @@
  * @param  {String} [spec.operator="="] The compare method to use
  * @param  {String} spec.key The metadata key
  * @param  {String} spec.value The value of the metadata to compare
- * @param  {String} [spec.wildcard_character="%"] The wildcard character
  */
 var SimpleQuery = newClass(Query, function (spec) {
   /**
@@ -80,7 +79,7 @@ var SimpleQuery = newClass(Query, function (spec) {
                         wildcard_character) {
     return convertSearchTextToRegExp(
       comparison_value.toString(),
-      wildcard_character || this.wildcard_character
+      wildcard_character || "%"
     ).test(object_value.toString());
   };
 
@@ -97,7 +96,7 @@ var SimpleQuery = newClass(Query, function (spec) {
                          wildcard_character) {
     return !convertSearchTextToRegExp(
       comparison_value.toString(),
-      wildcard_character || this.wildcard_character
+      wildcard_character || "%"
     ).test(object_value.toString());
   };
 
