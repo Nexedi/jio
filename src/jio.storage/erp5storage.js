@@ -301,9 +301,16 @@ jIO.addStorageType("erp5", function (spec, my) {
    * @param  {string} method The ERP5 request method
    */
   priv.genericCommand = function (command, method) {
+    var option = command.cloneOption();
+    if (complex_queries !== undefined &&
+        method === 'allDocs' &&
+        option.query) {
+      option.query =
+        complex_queries.QueryFactory.create(option.query || "").serialized();
+    }
     erp5.genericRequest(
       command.cloneDoc(),
-      command.cloneOption(),
+      option,
       method
     ).always(function (err, response) {
       if (err) {
