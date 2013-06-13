@@ -44,10 +44,10 @@ function newClass() {
         if (that.hasOwnProperty(key)) {
           if (typeof that[key] === "function") {
             Object.defineProperty(that, key, {
-              configurable: option.secure_methods ? false : true,
-              enumerable: option.hide_methods ? false : true,
-              writable: option.secure_methods ? false : true,
-              value: that[key]
+              "configurable": option.secure_methods ? false : true,
+              "enumerable": option.hide_methods ? false : true,
+              "writable": option.secure_methods ? false : true,
+              "value": that[key]
             });
           }
         }
@@ -63,11 +63,11 @@ function newClass() {
         if (that.hasOwnProperty(key)) {
           if (typeof that[key] === "function") {
             Object.defineProperty(that, key, {
-              configurable: option.secure_static_methods === false ?
-                true : false,
-              enumerable: option.hide_static_methods ? false : true,
-              writable: option.secure_static_methods === false ? true : false,
-              value: that[key]
+              "configurable": option.secure_static_methods ===
+                false ? true : false,
+              "enumerable": option.hide_static_methods ? false : true,
+              "writable": option.secure_static_methods === false ? true : false,
+              "value": that[key]
             });
           }
         }
