@@ -232,7 +232,9 @@
       for (k in meta) {
         if (meta.hasOwnProperty(k)) {
           if (underscored_meta_re.test(k)) {
-            needed_meta[k] = meta[k];
+            if (k === "_id") {
+              needed_meta[k] = meta[k];
+            }
           } else if (that._indexing_object[k]) {
             needed_meta[k] = meta[k];
             ok = true;
