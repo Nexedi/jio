@@ -4517,12 +4517,125 @@ test ("Put", function(){
     o.jio.get({"_id": "A"}, o.f);
     o.tick(o);
 
-    ok(false,
-       "If we run several put at the same time, only one document is indexed.");
-    // there is several put job on the same index, so the job must wait for
-    // the previous one. But nothing change, event after thousands of seconds.
-
     o.jio.stop();
+});
+
+test("Repair", function () {
+  var o = generateTools(this), i;
+
+  o.jio = JIO.newJio({
+    "type": "indexed",
+    "indices": [
+      {"id": "A", "index": ["director"]},
+      {"id": "B", "index": ["year"]}
+    ],
+    "sub_storage": {
+      "type": "local",
+      "username": "indexstoragerepair"
+    }
+  });
+
+  o.fakeIndexA = {
+    "_id": "A",
+    "indexing": ["director"],
+    "free": [],
+    "database": []
+  };
+  o.fakeIndexB = {
+    "_id": "B",
+    "indexing": ["year"],
+    "free": [],
+    "database": []
+  };
+
+  for (i = 0; i < 10; i += 1) {
+    o.jio.put({
+      "_id": "id" + i,
+      "director": "D" + i,
+      "year": i,
+      "title": "T" + i
+    });
+
+    o.tmp = o.fakeIndexA.free.pop() || o.fakeIndexA.database.length;
+    o.fakeIndexA.database[o.tmp] = {"_id": "id" + i, "director": "D" + i};
+
+    o.tmp = o.fakeIndexB.free.pop() || o.fakeIndexB.database.length;
+    o.fakeIndexB.database[o.tmp] = {"_id": "id" + i, "year": i};
+  }
+  o.clock.tick(5000);
+
+  o.spy(o, "value", {"_id": "A", "ok": true}, "Repair database");
+  o.jio.repair({"_id": "A"}, o.f);
+  o.tick(o);
+
+  o.spy(o, "value", {"_id": "B", "ok": true}, "Repair database");
+  o.jio.repair({"_id": "B"}, o.f);
+  o.tick(o);
+
+  // check index file
+  o.spy(o, "value", o.fakeIndexA, "Check index file");
+  o.jio.get({"_id": "A"}, function (err, response) {
+    if (response) {
+      delete response.location;
+      response.database.sort(function (a, b) {
+        return a._id < b._id ? -1 : a._id > b._id ? 1 : 0;
+      });
+    }
+    o.f(err, response);
+  });
+  o.tick(o);
+
+  o.spy(o, "value", o.fakeIndexB, "Check index file");
+  o.jio.get({"_id": "B"}, function (err, response) {
+    if (response) {
+      delete response.location;
+      response.database.sort(function (a, b) {
+        return a._id < b._id ? -1 : a._id > b._id ? 1 : 0;
+      });
+    }
+    o.f(err, response);
+  });
+  o.tick(o);
+
+  o.jio2 = JIO.newJio({"type": "local", "username": "indexstoragerepair"});
+
+  o.jio2.put({"_id": "blah", "title": "t", "year": "y", "director": "d"});
+  o.clock.tick(1000);
+  o.jio2.stop();
+
+  o.fakeIndexA.database.unshift({"_id": "blah", "director": "d"});
+  o.fakeIndexB.database.unshift({"_id": "blah", "year": "y"});
+
+  o.spy(o, "value", {"id": "blah", "ok": true}, "Repair Document");
+  o.jio.repair({"_id": "blah"}, o.f)
+  o.tick(o);
+
+  // check index file
+  o.spy(o, "value", o.fakeIndexA, "Check index file");
+  o.jio.get({"_id": "A"}, function (err, response) {
+    if (response) {
+      delete response.location;
+      response.database.sort(function (a, b) {
+        return a._id < b._id ? -1 : a._id > b._id ? 1 : 0;
+      });
+    }
+    o.f(err, response);
+  });
+  o.tick(o);
+
+  o.spy(o, "value", o.fakeIndexB, "Check index file");
+  o.jio.get({"_id": "B"}, function (err, response) {
+    if (response) {
+      delete response.location;
+      response.database.sort(function (a, b) {
+        return a._id < b._id ? -1 : a._id > b._id ? 1 : 0;
+      });
+    }
+    o.f(err, response);
+  });
+  o.tick(o);
+
+  o.jio.stop();
 });
 
 test ("PutAttachment", function(){
@@ -4953,8 +5066,6 @@ test ("AllDocs Complex Queries", function () {
       "indices": [
         {"id":"A", "index": ["director"]},
         {"id":"B", "index": ["title", "year"]}
-          //,
-          //{"name":"indexABC", "fields":["title","year","director"]}
       ],
       "sub_storage": {
         "type": "local",
@@ -4973,8 +5084,7 @@ test ("AllDocs Complex Queries", function () {
       "One flew over the Cuckoo's Nest", "Inception", "Godfellas"
     ];
     o.years = [1994,1972,1974,1994,1966,1957,2008,1993,2003,1999,1980,2001,
-      1975,2010,1990
-    ];
+               1975,2010,1990];
     o.director = ["Frank Darabont", "Francis Ford Coppola",
       "Francis Ford Coppola", "Quentin Tarantino", "Sergio Leone",
       "Sidney Lumet", "Christopher Nolan", "Steven Spielberg",
@@ -4982,21 +5092,59 @@ test ("AllDocs Complex Queries", function () {
       "Milos Forman", "Christopher Nolan", " Martin Scorsese"
     ];
 
+    o.fakeIndexA = {
+      "_id": "A",
+      "indexing": ["director"],
+      "free": [],
+      "location": {},
+      "database": []
+    };
+
+    o.fakeIndexB = {
+      "_id": "B",
+      "indexing": ["title", "year"],
+      "free": [],
+      "location": {},
+      "database": []
+    };
+
     for (i = 0; i < m; i += 1) {
-      o.fakeDoc = {};
-      o.fakeDoc._id = ""+i;
-      o.fakeDoc.title = o.titles[i];
-      o.fakeDoc.year = o.years[i];
-      o.fakeDoc.director = o.director[i];
-      o.jio.put(o.fakeDoc);
+      o.jio.put({
+        "_id": "" + i,
+        "director": o.director[i],
+        "year": o.years[i],
+        "title": o.titles[i]
+      });
+
+      o.tmp = o.fakeIndexA.free.pop() || o.fakeIndexA.database.length;
+      o.fakeIndexA.database[o.tmp] = {"_id": "" + i, "director": o.director[i]};
+      o.fakeIndexA.location["" + i] = o.tmp;
+
+      o.tmp = o.fakeIndexB.free.pop() || o.fakeIndexB.database.length;
+      o.fakeIndexB.database[o.tmp] = {
+        "_id": "" + i,
+        "year": o.years[i],
+        "title": o.titles[i]
+      };
+      o.fakeIndexB.location["" + i] = o.tmp;
+
       o.clock.tick(1000);
     }
     // o.clock.tick(1000);
 
+    // check index file
+    o.spy(o, "value", o.fakeIndexA, "Check index file");
+    o.jio.get({"_id": "A"}, o.f);
+    o.tick(o);
+
+    o.spy(o, "value", o.fakeIndexB, "Check index file");
+    o.jio.get({"_id": "B"}, o.f);
+    o.tick(o);
+
     // response
     o.allDocsResponse = {};
     o.allDocsResponse.rows = [];
-    o.allDocsResponse.total_rows = 15;
+    o.allDocsResponse.total_rows = m;
     for (i = 0; i < m; i += 1) {
       o.allDocsResponse.rows.push({
         "id": ""+i,

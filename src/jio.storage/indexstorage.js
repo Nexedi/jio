@@ -499,10 +499,10 @@
      * @param  {Function} callback The result callback(err, response)
      */
     priv.storeIndexDatabaseList = function (database_list, option, callback) {
-      var i, count = 0, onResponse, onError;
+      var i, count = 0, count_max = 0, onResponse, onError;
       onResponse = function (response) {
         count += 1;
-        if (count === priv.indices.length) {
+        if (count === count_max) {
           callback({"ok": true});
         }
       };
@@ -511,14 +511,17 @@
         that.error(err);
       };
       for (i = 0; i < priv.indices.length; i += 1) {
-        that.addJob(
-          "put",
-          priv.indices[i].sub_storage || priv.sub_storage,
-          database_list[i].serialized(),
-          option,
-          onResponse,
-          onError
-        );
+        if (database_list[i] !== undefined) {
+          count_max += 1;
+          that.addJob(
+            "put",
+            priv.indices[i].sub_storage || priv.sub_storage,
+            database_list[i].serialized(),
+            option,
+            onResponse,
+            onError
+          );
+        }
       }
     };
 
@@ -673,12 +676,112 @@
       });
     };
 
-    // that.repair = function (command) {
-    //   todo: repair
-    //   easy but don't have time
-    //   if _id is an index id, then repair the index by doing an
-    //   allDocs and recreating the database from scratch. end.
-    // };
+    that.check = function (command) {
+      todo
+      var database_index = -1, i;
+      for (i = 0; i < priv.indices.length; i += 1) {
+        if (priv.indices[i].id === command.getDocId()) {
+          database_index = i;
+          break;
+        }
+      }
+      that.addJob(
+        "check",
+        priv.sub_storage,
+        command.cloneDoc(),
+        command.cloneOption(),
+        function (response) {
+          if (database_index !== -1) {
+            // check index database
+          } else {
+            // regular document
+          }
+        },
+        function (err) {
+          err.message = "Could not repair sub storage";
+          that.error(err);
+        }
+      );
+    };
+
+    priv.repairIndexDatabase = function (command, index) {
+      var i;
+      that.addJob(
+        'allDocs',
+        priv.sub_storage,
+        {},
+        {'include_docs': true},
+        function (response) {
+          var db_list = [], db = new JSONIndex({
+            "_id": command.getDocId(),
+            "indexing": priv.indices[index].index
+          });
+          for (i = 0; i < response.rows.length; i += 1) {
+            db.put(response.rows[i].doc);
+          }
+          db_list[index] = db;
+          priv.storeIndexDatabaseList(db_list, {}, function () {
+            that.success({"ok": true, "_id": command.getDocId()});
+          });
+        },
+        function (err) {
+          err.message = "Unable to repair the index database";
+          that.error(err);
+        }
+      );
+    };
+
+    priv.repairDocument = function (command) {
+      var i, option = command.cloneOption();
+      that.addJob(
+        "get",
+        priv.sub_storage,
+        command.cloneDoc(),
+        {},
+        function (response) {
+          response._id = command.getDocId();
+          priv.getIndexDatabaseList(option, function (database_list) {
+            for (i = 0; i < database_list.length; i += 1) {
+              database_list[i].put(response);
+            }
+            priv.storeIndexDatabaseList(database_list, option, function () {
+              that.success({"ok": true, "id": command.getDocId()});
+            });
+          });
+        },
+        function (err) {
+          err.message = "Unable to repair document";
+          return that.error(err);
+        }
+      );
+    };
+
+    that.repair = function (command) {
+      var database_index = -1, i;
+      for (i = 0; i < priv.indices.length; i += 1) {
+        if (priv.indices[i].id === command.getDocId()) {
+          database_index = i;
+          break;
+        }
+      }
+      that.addJob(
+        "repair",
+        priv.sub_storage,
+        command.cloneDoc(),
+        command.cloneOption(),
+        function (response) {
+          if (database_index !== -1) {
+            priv.repairIndexDatabase(command, database_index);
+          } else {
+            priv.repairDocument(command);
+          }
+        },
+        function (err) {
+          err.message = "Could not repair sub storage";
+          that.error(err);
+        }
+      );
+    };
 
     return that;
   }
@@ -686,7 +789,7 @@
 
   if (typeof exports === "object") {
     // nodejs export module
-    Object.defineProperty(exports, "indexStorage", {
+    Object.defineProperty(exports, "jio_index_storage", {
       configurable: false,
       enumerable: true,
       writable: false,
