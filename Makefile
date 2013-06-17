@@ -11,6 +11,8 @@ COMPLEX_MIN = complex_queries.min.js
 PARSER_PAR  = $(QUERIES_DIR)/parser.par
 PARSER_OUT  = $(QUERIES_DIR)/parser.js
 
+## install npm package system wide -> npm -g install <package>
+
 ## js/cc using rhino
 #JSCC_CMD    = rhino ~/modules/jscc/jscc.js -t ~/modules/jscc/driver_web.js_
 # sh -c 'cd ; npm install jscc-node'
@@ -19,6 +21,8 @@ JSCC_CMD   	= node ~/node_modules/jscc-node/jscc.js -t ~/node_modules/jscc-node/
 LINT_CMD	= $(shell which jslint || echo node ~/node_modules/jslint/bin/jslint.js) --terse
 # sh -c 'cd ; npm install uglify-js'
 UGLIFY_CMD	= $(shell which uglifyjs || echo node ~/node_modules/uglify-js/bin/uglifyjs)
+# sh -c 'cd ; npm install phantomjs'
+PHANTOM_CMD	= $(shell which phantomjs || echo ~/node_modules/phantomjs/bin/phantomjs)
 
 auto: compile build lint
 build: concat uglify
@@ -26,7 +30,7 @@ build: concat uglify
 # The order is important!
 CONCAT_JIO_NAMES = intro exceptions jio.intro storages/* commands/* jobs/status/* jobs/job announcements/announcement activityUpdater announcements/announcer jobs/jobIdHandler jobs/jobManager jobs/jobRules jio.core jio.outro jioNamespace outro
 CONCAT_STORAGE_NAMES = *
-CONCAT_QUERIES_NAMES = begin parser-begin parser parser-end serializer query end
+CONCAT_QUERIES_NAMES = begin parser-begin parser parser-end tool queryfactory query simplequery complexquery end
 LINT_NAMES  = exceptions storages/* commands/* jobs/status/* jobs/* announcements/* activityUpdater jio.core jioNamespace
 
 CONCAT_QUERIES_FILES = $(CONCAT_QUERIES_NAMES:%=$(QUERIES_DIR)/%.js)
@@ -57,7 +61,7 @@ lint:
 	$(LINT_CMD) $(LINT_FILES)
 
 phantom:
-	~/node_modules/phantomjs/bin/phantomjs test/run-qunit.js test/jiotests_withoutrequirejs.html | awk 'BEGIN {print "<!DOCTYPE html><html>"} /^<head>$$/, /^<\/body>$$/ {print} END {print "</html>"}' | sed -e 's,^ *<\(/\|\)script.*>$$,,g' > test/unit_test_result.html
+	$(PHANTOM_CMD) test/run-qunit.js test/jiotests_withoutrequirejs.html | awk 'BEGIN {print "<!DOCTYPE html><html>"} /^<head>$$/, /^<\/body>$$/ {print} END {print "</html>"}' | sed -e 's,^ *<\(/\|\)script.*>$$,,g' > test/unit_test_result.html
 	grep '^  <title>✔ ' test/unit_test_result.html > /dev/null
 
 .phony: clean

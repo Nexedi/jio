@@ -37,7 +37,7 @@ boolean_expression
 
 expression
     : LEFT_PARENTHESE search_text RIGHT_PARENTHESE [* %% = %2; *]
-    | COLUMN expression                            [* simpleQuerySetId(%2,%1.split(':').slice(0,-1).join(':')); %% = %2; *]
+    | COLUMN expression                            [* simpleQuerySetKey(%2,%1.split(':').slice(0,-1).join(':')); %% = %2; *]
     | value                                        [* %% = %1; *]
     ;
 
@@ -53,59 +53,60 @@ string
 
 [*
 var arrayExtend = function () {
-    var j,i,newlist=[],listoflists = arguments;
-    for (j=0; j<listoflists.length; ++j) {
-        for (i=0; i<listoflists[j].length; ++i) {
-            newlist.push(listoflists[j][i]);
-        }
+  var j, i, newlist = [], list_list = arguments;
+  for (j = 0; j < list_list.length; j += 1) {
+    for (i = 0; i < list_list[j].length; i += 1) {
+      newlist.push(list_list[j][i]);
     }
-    return newlist;
-};
-var mkSimpleQuery = function (id,value,operator) {
-    return {type:'simple',operator:'=',id:id,value:value};
-};
-var mkNotQuery = function (query) {
-    if (query.operator === 'NOT') {
-        return query.query_list[0];
+  }
+  return newlist;
+
+}, mkSimpleQuery = function (key, value, operator) {
+  return {"type": "simple", "operator": "=", "key": key, "value": value};
+
+}, mkNotQuery = function (query) {
+  if (query.operator === "NOT") {
+    return query.query_list[0];
+  }
+  return {"type": "complex", "operator": "NOT", "query_list": [query]};
+
+}, mkComplexQuery = function (operator, query_list) {
+  var i, query_list2 = [];
+  for (i = 0; i < query_list.length; i += 1) {
+    if (query_list[i].operator === operator) {
+      query_list2 = arrayExtend(query_list2, query_list[i].query_list);
+    } else {
+      query_list2.push(query_list[i]);
     }
-    return {type:'complex',operator:'NOT',query_list:[query]};
-};
-var mkComplexQuery = function (operator,query_list) {
-    var i,query_list2 = [];
-    for (i=0; i<query_list.length; ++i) {
-        if (query_list[i].operator === operator) {
-            query_list2 = arrayExtend(query_list2,query_list[i].query_list);
-        } else {
-            query_list2.push(query_list[i]);
-        }
+  }
+  return {type:"complex",operator:operator,query_list:query_list2};
+
+}, simpleQuerySetKey = function (query, key) {
+  var i;
+  if (query.type === "complex") {
+    for (i = 0; i < query.query_list.length; ++i) {
+      simpleQuerySetKey (query.query_list[i],key);
     }
-    return {type:'complex',operator:operator,query_list:query_list2};
-};
-var simpleQuerySetId = function (query, id) {
-    var i;
-    if (query.type === 'complex') {
-        for (i = 0; i < query.query_list.length; ++i) {
-            simpleQuerySetId (query.query_list[i],id);
-        }
-        return true;
-    }
-    if (query.type === 'simple' && !query.id) {
-        query.id = id;
-        return true;
-    }
-    return false;
-};
-var error_offsets = [];
-var error_lookaheads = [];
-var error_count = 0;
-var result;
-if ( ( error_count = __##PREFIX##parse( string, error_offsets, error_lookaheads ) ) > 0 ) {
-    var i;
-    for (i = 0; i < error_count; ++i) {
-        throw new Error ( "Parse error near \"" +
-                          string.substr ( error_offsets[i] ) +
-                          "\", expecting \"" +
-                          error_lookaheads[i].join() + "\"" );
-    }
+    return true;
+  }
+  if (query.type === "simple" && !query.key) {
+    query.key = key;
+    return true;
+  }
+  return false;
+},
+  error_offsets = [],
+  error_lookaheads = [],
+  error_count = 0,
+  result;
+
+if ((error_count = __##PREFIX##parse(string, error_offsets, error_lookaheads)) > 0) {
+  var i;
+  for (i = 0; i < error_count; i += 1) {
+    throw new Error("Parse error near \"" +
+                    string.substr(error_offsets[i]) +
+                    "\", expecting \"" +
+                    error_lookaheads[i].join() + "\"");
+  }
 }
 *]
