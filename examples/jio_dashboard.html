@@ -92,8 +92,6 @@ var clearlog = function () {
       </td>
       <td colspan="1" style="text-align: center;">
         Options:<br />
-        <label for="include_docs">Include Docs</label>
-        <input type="checkbox" id="include_docs" /><br />
         <label for="show_conflicts">Get Conflicts</label>
         <input type="checkbox" id="show_conflicts" /><br />
         <label for="show_revision_history">Get Revision History</label>
@@ -101,7 +99,7 @@ var clearlog = function () {
         <label for="show_revision_info">Get Revision Info</label>
         <input type="checkbox" id="show_revision_info" /><br />
         <label for="max_retry">Max Retry</label>
-        <input type="number" id="max_retry" value="0" style="width:30px;"/>
+        <input type="number" id="max_retry" value="0" style="width: 3em;"/>
         (0 = infinite)
       </td>
     </tr>
@@ -111,12 +109,34 @@ var clearlog = function () {
         <button onclick="put()">put</button>
         <button onclick="get()">get</button>
         <button onclick="remove()">remove</button>
-        <button onclick="allDocs()">allDocs</button>
-        <!-- </td> -->
-        <!-- <td style="text-align: center;"> -->
         - <button onclick="putAttachment()">putAttachment</button>
         <button onclick="getAttachment()">getAttachment</button>
         <button onclick="removeAttachment()">removeAttachment</button>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="1" style="width: 50%;">
+        <label for="query">AllDocs Query:</label>
+        <textarea id="query" rows="3" style="width: 98%;">a: 2</textarea>
+      </td>
+      <td colspan="1" style="text-align: center;">
+        AllDocs Options:<br />
+        <label for="include_docs">Include Docs</label>
+        <input type="checkbox" id="include_docs" /><br />
+        <label for="wildcard">Wildcard char: </label>
+        <input type="text" id="wildcard" name="wildcard" value="%" maxlength="1" style="width: 1em;"/><br />
+        <label for="sort_on">Sort on: </label>
+        <input type="text" id="sort_on" name="sort_on" value="[[&quot;author&quot;, &quot;ascending&quot;], [&quot;title&quot;, &quot;descending&quot;]]"
+               style="width: 80%;"/><br />
+        <label for="select_list">Select_list: </label>
+        <input type="text" id="select_list" name="select_list" value="[&quot;author&quot;, &quot;title&quot;]" style="width: 80%;"/><br />
+        <label for="limit">Limit: </label>
+        <input type="text" id="limit" name="limit" value="[0, 100]" style="width: 80%;"/><br />
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="text-align: center;">
+        <button onclick="allDocs()">allDocs</button>
       </td>
     </tr>
   </table>
@@ -130,6 +150,7 @@ var clearlog = function () {
   <div id="log">
   </div>
   <script type="text/javascript" src="../lib/md5/md5.js"></script>
+  <script type="text/javascript" src="../complex_queries.js"></script>
   <script type="text/javascript" src="../jio.js"></script>
   <script type="text/javascript" src="../src/jio.storage/localstorage.js">
   </script>
@@ -223,7 +244,13 @@ var command = function (method) {
     return error('no jio set');
   }
 
+  opts.query = $('#query').attr('value');
   opts.include_docs = $('#include_docs').attr('checked') ? true : false;
+  opts.wildcard_character = $('#wildcard').attr('value') || "";
+  opts.sort_on = JSON.parse($('#sort_on').attr('value') || null);
+  opts.select_list = JSON.parse($('#select_list').attr('value') || null);
+  opts.limit = JSON.parse($('#limit').attr('value') || null);
+
   opts.conflicts = $('#show_conflicts').attr('checked') ? true : false;
   opts.revs = $('#show_revision_history').attr('checked') ? true : false;
   opts.revs_info = $('#show_revision_info').attr('checked') ? true : false;
