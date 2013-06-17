@@ -4,19 +4,31 @@
 * http://www.gnu.org/licenses/lgpl.html
 */
 
-(function (scope) {
+/**
+ * Provides some function to use complex queries with item list
+ *
+ * @module complex_queries
+ */
+var complex_queries;
+(function () {
   "use strict";
-  Object.defineProperty(scope, "ComplexQueries", {
-    configurable: false,
-    enumerable: false,
-    writable: false,
-    value: {}
-  });
-Object.defineProperty(scope.ComplexQueries, "parse", {
-  configurable: false,
-  enumerable: false,
-  writable: false,
-  value: function (string) {
+  var to_export = {}, module_name = "complex_queries";
+  /**
+   * Add a secured (write permission denied) property to an object.
+   *
+   * @param  {Object} object The object to fill
+   * @param  {String} key The object key where to store the property
+   * @param  {Any} value The value to store
+   */
+  function _export(key, value) {
+    Object.defineProperty(to_export, key, {
+      "configurable": false,
+      "enumerable": true,
+      "writable": false,
+      "value": value
+    });
+  }
+function parseStringToObject(string) {
 
 /*
 	Default template driver for JS/CC generated parsers running as
@@ -563,7 +575,7 @@ switch( act )
 	break;
 	case 10:
 	{
-		 simpleQuerySetId(vstack[ vstack.length - 1 ],vstack[ vstack.length - 2 ].split(':').slice(0,-1).join(':')); rval = vstack[ vstack.length - 1 ]; 
+		 simpleQuerySetKey(vstack[ vstack.length - 1 ],vstack[ vstack.length - 2 ].split(':').slice(0,-1).join(':')); rval = vstack[ vstack.length - 1 ]; 
 	}
 	break;
 	case 11:
@@ -643,269 +655,776 @@ switch( act )
 
 
 var arrayExtend = function () {
-    var j,i,newlist=[],listoflists = arguments;
-    for (j=0; j<listoflists.length; ++j) {
-        for (i=0; i<listoflists[j].length; ++i) {
-            newlist.push(listoflists[j][i]);
-        }
+  var j, i, newlist = [], list_list = arguments;
+  for (j = 0; j < list_list.length; j += 1) {
+    for (i = 0; i < list_list[j].length; i += 1) {
+      newlist.push(list_list[j][i]);
     }
-    return newlist;
-};
-var mkSimpleQuery = function (id,value,operator) {
-    return {type:'simple',operator:'=',id:id,value:value};
-};
-var mkNotQuery = function (query) {
-    if (query.operator === 'NOT') {
-        return query.query_list[0];
+  }
+  return newlist;
+
+}, mkSimpleQuery = function (key, value, operator) {
+  return {"type": "simple", "operator": "=", "key": key, "value": value};
+
+}, mkNotQuery = function (query) {
+  if (query.operator === "NOT") {
+    return query.query_list[0];
+  }
+  return {"type": "complex", "operator": "NOT", "query_list": [query]};
+
+}, mkComplexQuery = function (operator, query_list) {
+  var i, query_list2 = [];
+  for (i = 0; i < query_list.length; i += 1) {
+    if (query_list[i].operator === operator) {
+      query_list2 = arrayExtend(query_list2, query_list[i].query_list);
+    } else {
+      query_list2.push(query_list[i]);
     }
-    return {type:'complex',operator:'NOT',query_list:[query]};
-};
-var mkComplexQuery = function (operator,query_list) {
-    var i,query_list2 = [];
-    for (i=0; i<query_list.length; ++i) {
-        if (query_list[i].operator === operator) {
-            query_list2 = arrayExtend(query_list2,query_list[i].query_list);
-        } else {
-            query_list2.push(query_list[i]);
-        }
+  }
+  return {type:"complex",operator:operator,query_list:query_list2};
+
+}, simpleQuerySetKey = function (query, key) {
+  var i;
+  if (query.type === "complex") {
+    for (i = 0; i < query.query_list.length; ++i) {
+      simpleQuerySetKey (query.query_list[i],key);
     }
-    return {type:'complex',operator:operator,query_list:query_list2};
-};
-var simpleQuerySetId = function (query, id) {
-    var i;
-    if (query.type === 'complex') {
-        for (i = 0; i < query.query_list.length; ++i) {
-            simpleQuerySetId (query.query_list[i],id);
-        }
-        return true;
-    }
-    if (query.type === 'simple' && !query.id) {
-        query.id = id;
-        return true;
-    }
-    return false;
-};
-var error_offsets = [];
-var error_lookaheads = [];
-var error_count = 0;
-var result;
-if ( ( error_count = __NODEJS_parse( string, error_offsets, error_lookaheads ) ) > 0 ) {
-    var i;
-    for (i = 0; i < error_count; ++i) {
-        throw new Error ( "Parse error near \"" +
-                          string.substr ( error_offsets[i] ) +
-                          "\", expecting \"" +
-                          error_lookaheads[i].join() + "\"" );
-    }
+    return true;
+  }
+  if (query.type === "simple" && !query.key) {
+    query.key = key;
+    return true;
+  }
+  return false;
+},
+  error_offsets = [],
+  error_lookaheads = [],
+  error_count = 0,
+  result;
+
+if ((error_count = __NODEJS_parse(string, error_offsets, error_lookaheads)) > 0) {
+  var i;
+  for (i = 0; i < error_count; i += 1) {
+    throw new Error("Parse error near \"" +
+                    string.substr(error_offsets[i]) +
+                    "\", expecting \"" +
+                    error_lookaheads[i].join() + "\"");
+  }
 }
 
   return result;
+} // parseStringToObject
+/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*global _export: true */
+
+/**
+ * Create a class, manage inheritance, static methods,
+ * protected attributes and can hide methods or/and secure methods
+ *
+ * @param  {Class} Class Classes to inherit from (0..n). The last class
+ *                       parameter will inherit from the previous one, and so on
+ * @param  {Object} option Class option (0..n)
+ * @param  {Boolean} [option.secure_methods=false] Make methods not configurable
+ *                                                 and not writable
+ * @param  {Boolean} [option.hide_methods=false] Make methods not enumerable
+ * @param  {Boolean} [option.secure_static_methods=true] Make static methods not
+ *                                                       configurable and not
+ *                                                       writable
+ * @param  {Boolean} [option.hide_static_methods=false] Make static methods not
+ *                                                      enumerable
+ * @param  {Object} [option.static_methods={}] Object of static methods
+ * @param  {Function} constructor The new class constructor
+ * @return {Class} The new class
+ */
+function newClass() {
+  var j, k, constructors = [], option, new_class;
+
+  for (j = 0; j < arguments.length; j += 1) {
+    if (typeof arguments[j] === "function") {
+      constructors.push(arguments[j]);
+    } else if (typeof arguments[j] === "object") {
+      option = option || {};
+      for (k in arguments[j]) {
+        if (arguments[j].hasOwnProperty(k)) {
+          option[k] = arguments[j][k];
+        }
+      }
+    }
   }
 
-});
-Object.defineProperty(scope.ComplexQueries,"serialize",{
-    configurable:false,enumerable:false,writable:false,value:function(query){
-        var str_list = [], i;
-        if (query.type === 'complex') {
-            str_list.push ( '(' );
-            for (i=0; i<query.query_list.length; ++i) {
-                str_list.push( scope.ComplexQueries.serialize(query.query_list[i]) );
-                str_list.push( query.operator );
-            }
-            str_list.length --;
-            str_list.push ( ')' );
-            return str_list.join(' ');
-        } else if (query.type === 'simple') {
-            return query.id + (query.id?': ':'') + query.operator + ' "' + query.value + '"';
-        }
-        return query;
-    }
-});
-Object.defineProperty(scope.ComplexQueries,"query",{
-    configurable:false,enumerable:false,writable:false,
-    value: function (query, object_list) {
-        var wildcard_character = typeof query.wildcard_character === 'string' ?
-            query.wildcard_character : '%',
-        operator_actions = {
-            '=':   function (value1, value2) {
-                value1 = '' + value1;
-                return value1.match (convertToRegexp (
-                    value2, wildcard_character
-                )) || false && true;
-            },
-            '!=':  function (value1, value2) {
-                value1 = '' + value1;
-                return !(value1.match (convertToRegexp (
-                    value2, wildcard_character
-                )));
-            },
-            '<':   function (value1, value2) { return value1 < value2; },
-            '<=':  function (value1, value2) { return value1 <= value2; },
-            '>':   function (value1, value2) { return value1 > value2; },
-            '>=':  function (value1, value2) { return value1 >= value2; },
-            'AND': function (item, query_list) {
-                var i;
-                for (i=0; i<query_list.length; ++i) {
-                    if (! itemMatchesQuery (item, query_list[i])) {
-                        return false;
-                    }
-                }
-                return true;
-            },
-            'OR':  function (item, query_list) {
-                var i;
-                for (i=0; i<query_list.length; ++i) {
-                    if (itemMatchesQuery (item, query_list[i])) {
-                        return true;
-                    }
-                }
-                return false;
-            },
-            'NOT': function (item, query_list) {
-                return !itemMatchesQuery(item, query_list[0]);
-            }
-        },
-        convertToRegexp = function (string) {
-            return subString('^' + string.replace(
-                new RegExp(
-                    '([\\{\\}\\(\\)\\^\\$\\&\\.\\*\\?\\\/\\+\\|\\[\\]\\-\\\\])'.
-                        replace (wildcard_character?
-                                 '\\'+wildcard_character:undefined,''),
-                    'g'
-                ),
-                '\\$1'
-            ) + '$',(wildcard_character||undefined), '.*');
-        },
-        subString = function (string, substring, newsubstring) {
-            var res = '', i = 0;
-            if (substring === undefined) {
-                return string;
-            }
-            while (1) {
-                var tmp = string.indexOf(substring,i);
-                if (tmp === -1) {
-                    break;
-                }
-                for (; i < tmp; ++i) {
-                    res += string[i];
-                }
-                res += newsubstring;
-                i += substring.length;
-            }
-            for (; i<string.length; ++i) {
-                res += string[i];
-            }
-            return res;
-        },
-        itemMatchesQuery = function (item, query_object) {
-            var i;
-            if (query_object.type === 'complex') {
-                return operator_actions[query_object.operator](
-                    item, query_object.query_list
-                );
-            } else {
-                if (query_object.id) {
-                    if (typeof item[query_object.id] !== 'undefined') {
-                        return operator_actions[query_object.operator](
-                            item[query_object.id], query_object.value
-                        );
-                    } else {
-                        return false;
-                    }
-                } else {
-                    return true;
-                }
-            }
-        },
-        select = function (list, select_list) {
-            var i;
-            if (select_list.length === 0) {
-                return;
-            }
-            for (i=0; i<list.length; ++i) {
-                var list_value = {}, k;
-                for (k=0; k<select_list.length; ++k) {
-                    list_value[select_list[k]] =
-                        list[i][select_list[k]];
-                }
-                list[i] = list_value;
-            }
-        },
-        sortFunction = function (key, asc) {
-            if (asc === 'descending') {
-                return function (a,b) {
-                    return a[key] < b[key] ? 1 : a[key] > b[key] ? -1 : 0;
-                };
-            }
-            return function (a,b) {
-                return a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0;
-            };
-        },
-        mergeList = function (list, list_to_merge, index) {
-            var i,j;
-            for (i = index,j = 0; i < list_to_merge.length + index; ++i, ++j) {
-                list[i] = list_to_merge[j];
-            }
-        },
-        sort = function (list, sort_list) {
-            var i, tmp, key, asc, sortAndMerge = function() {
-                sort(tmp,sort_list.slice(1));
-                mergeList(list,tmp,i-tmp.length);
-                tmp = [list[i]];
-            };
-            if (list.length < 2) {
-                return;
-            }
-            if (sort_list.length === 0) {
-                return;
-            }
-            key = sort_list[0][0];
-            asc = sort_list[0][1];
-            list.sort (sortFunction (key,asc));
-            tmp = [list[0]];
-            for (i = 1; i < list.length; ++i) {
-                if (tmp[0][key] === list[i][key]) {
-                    tmp.push(list[i]);
-                } else {
-                    sortAndMerge();
-                }
-            }
-            sortAndMerge();
-        },
-        limit = function (list, limit_list) {
-            var i;
-            if (typeof limit_list[0] !== 'undefined') {
-                if (typeof limit_list[1] !== 'undefined') {
-                    if (list.length > limit_list[1] + limit_list[0]) {
-                        list.length = limit_list[1] + limit_list[0];
-                    }
-                    list.splice(0,limit_list[0]);
-                } else {
-                    list.length = limit_list[0];
-                }
-            }
-        },
-        ////////////////////////////////////////////////////////////
-        result_list = [], result_list_tmp = [], j;
-        object_list = object_list || [];
-        if (query.query === undefined) {
-            result_list = object_list;
-        } else {
-          for (j=0; j<object_list.length; ++j) {
-              if ( itemMatchesQuery (
-                  object_list[j], scope.ComplexQueries.parse (query.query)
-              )) {
-                  result_list.push(object_list[j]);
-              }
+  function postObjectCreation(that) {
+    // modify the object according to 'option'
+    var key;
+    if (option) {
+      for (key in that) {
+        if (that.hasOwnProperty(key)) {
+          if (typeof that[key] === "function") {
+            Object.defineProperty(that, key, {
+              "configurable": option.secure_methods ? false : true,
+              "enumerable": option.hide_methods ? false : true,
+              "writable": option.secure_methods ? false : true,
+              "value": that[key]
+            });
           }
         }
-        if (query.filter) {
-            select(result_list,query.filter.select_list || []);
-            sort(result_list,query.filter.sort_on || []);
-            limit(result_list,query.filter.limit || []);
-        }
-        return result_list;
+      }
     }
+  }
+
+  function postClassCreation(that) {
+    // modify the object according to 'option'
+    var key;
+    if (option) {
+      for (key in that) {
+        if (that.hasOwnProperty(key)) {
+          if (typeof that[key] === "function") {
+            Object.defineProperty(that, key, {
+              "configurable": option.secure_static_methods ===
+                false ? true : false,
+              "enumerable": option.hide_static_methods ? false : true,
+              "writable": option.secure_static_methods === false ? true : false,
+              "value": that[key]
+            });
+          }
+        }
+      }
+    }
+  }
+
+  new_class = function (spec, my) {
+    var i;
+    spec = spec || {};
+    my = my || {};
+    // don't use forEach !
+    for (i = 0; i < constructors.length; i += 1) {
+      constructors[i].apply(this, [spec, my]);
+    }
+    postObjectCreation(this);
+    return this;
+  };
+  option = option || {};
+  option.static_methods = option.static_methods || {};
+  for (j in option.static_methods) {
+    if (option.static_methods.hasOwnProperty(j)) {
+      new_class[j] = option.static_methods[j];
+    }
+  }
+  postClassCreation(new_class);
+  return new_class;
+}
+
+/**
+ * Escapes regexp special chars from a string.
+ *
+ * @param  {String} string The string to escape
+ * @return {String} The escaped string
+ */
+function stringEscapeRegexpCharacters(string) {
+  if (typeof string === "string") {
+    return string.replace(/([\\\.\$\[\]\(\)\{\}\^\?\*\+\-])/g, "\\$1");
+  }
+}
+
+_export("stringEscapeRegexpCharacters", stringEscapeRegexpCharacters);
+
+/**
+ * A sort function to sort items by key
+ *
+ * @param  {String} key The key to sort on
+ * @param  {String} [way="ascending"] 'ascending' or 'descending'
+ * @return {Function} The sort function
+ */
+function sortFunction(key, way) {
+  if (way === 'descending') {
+    return function (a, b) {
+      return a[key] < b[key] ? 1 : a[key] > b[key] ? -1 : 0;
+    };
+  }
+  return function (a, b) {
+    return a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0;
+  };
+}
+/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*global _export: true, ComplexQuery: true, SimpleQuery: true,
+         newClass: true, Query: true */
+
+
+var query_class_dict = {}, QueryFactory;
+
+/**
+ * Provides static methods to create Query object
+ *
+ * @class QueryFactory
+ */
+QueryFactory = newClass({
+  "static_methods": {
+
+    /**
+     * Creates Query object from a search text string or a serialized version
+     * of a Query.
+     *
+     * @method create
+     * @static
+     * @param  {Object,String} object The search text or the serialized version
+     *         of a Query
+     * @return {Query} A Query object
+     */
+    "create": function (object) {
+      if (object === "") {
+        return new Query();
+      }
+      if (typeof object === "string") {
+        object = Query.parseStringToObject(object);
+      }
+      if (typeof (object || {}).type === "string" &&
+          query_class_dict[object.type]) {
+        return new query_class_dict[object.type](object);
+      }
+      return null;
+    }
+  }
+}, function () {});
+
+_export("QueryFactory", QueryFactory);
+/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*global newClass: true, sortFunction: true, parseStringToObject: true,
+         _export: true, stringEscapeRegexpCharacters: true */
+
+/**
+ * The query to use to filter a list of objects.
+ * This is an abstract class.
+ *
+ * @class Query
+ * @constructor
+ */
+var Query = newClass(function () {
+
+  var that = this, emptyFunction = function () {};
+
+  /**
+   * Filter the item list with matching item only
+   *
+   * @method exec
+   * @param  {Array} item_list The list of object
+   * @param  {Object} [option] Some operation option
+   * @param  {String} [option.wildcard_character="%"] The wildcard character
+   * @param  {Array} [option.select_list] A object keys to retrieve
+   * @param  {Array} [option.sort_on] Couples of object keys and "ascending"
+   *                 or "descending"
+   * @param  {Array} [option.limit] Couple of integer, first is an index and
+   *                 second is the length.
+   */
+  that.exec = function (item_list, option) {
+    var i = 0;
+    while (i < item_list.length) {
+      if (!that.match(item_list[i], option.wildcard_character)) {
+        item_list.splice(i, 1);
+      } else {
+        i += 1;
+      }
+    }
+    if (option.sort_on) {
+      Query.sortOn(option.sort_on, item_list);
+    }
+    if (option.limit) {
+      item_list.splice(0, option.limit[0]);
+      if (option.limit[1]) {
+        item_list.splice(option.limit[1]);
+      }
+    }
+    Query.filterListSelect(option.select_list || [], item_list);
+  };
+
+  /**
+   * Test if an item matches this query
+   *
+   * @method match
+   * @param  {Object} item The object to test
+   * @return {Boolean} true if match, false otherwise
+   */
+  that.match = function (item, wildcard_character) {
+    return true;
+  };
+
+  /**
+   * The recursive parser.
+   *
+   * @method recParse
+   * @private
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} options Some options usable in the parseMethods
+   * @return {Any} The parser result
+   */
+  function recParse(object, option) {
+    var i, query = object.parsed;
+    if (query.type === "complex") {
+      for (i = 0; i < query.query_list.length; i += 1) {
+        object.parsed = query.query_list[i];
+        recParse(object, option);
+        query.query_list[i] = object.parsed;
+      }
+      object.parsed = query;
+      that.onParseComplexQuery(object, option);
+    } else if (query.type === "simple") {
+      that.onParseSimpleQuery(object, option);
+    }
+  }
+
+  /**
+   * Browse the Query in deep calling parser method in each step.
+   *
+   * `onParseStart` is called first, on end `onParseEnd` is called.
+   * It starts from the simple queries at the bottom of the tree calling the
+   * parser method `onParseSimpleQuery`, and go up calling the
+   * `onParseComplexQuery` method.
+   *
+   * @method parse
+   * @param  {Object} option Any options you want (except 'parsed')
+   * @return {Any} The parse result
+   */
+  that.parse = function (option) {
+    var object;
+    object = {"parsed": JSON.parse(JSON.stringify(that.serialized()))};
+    that.onParseStart(object, option);
+    recParse(object, option);
+    that.onParseEnd(object, option);
+    return object.parsed;
+  };
+
+  /**
+   * Called before parsing the query. Must be overridden!
+   *
+   * @method onParseStart
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} option Some option gave in parse()
+   */
+  that.onParseStart = emptyFunction;
+
+  /**
+   * Called when parsing a simple query. Must be overridden!
+   *
+   * @method onParseSimpleQuery
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} option Some option gave in parse()
+   */
+  that.onParseSimpleQuery = emptyFunction;
+
+  /**
+   * Called when parsing a complex query. Must be overridden!
+   *
+   * @method onParseComplexQuery
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} option Some option gave in parse()
+   */
+  that.onParseComplexQuery = emptyFunction;
+
+  /**
+   * Called after parsing the query. Must be overridden!
+   *
+   * @method onParseEnd
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} option Some option gave in parse()
+   */
+  that.onParseEnd = emptyFunction;
+
+  /**
+   * Convert this query to a parsable string.
+   *
+   * @method toString
+   * @return {String} The string version of this query
+   */
+  that.toString = function () {
+    return "";
+  };
+
+  /**
+   * Convert this query to an jsonable object in order to be remake thanks to
+   * QueryFactory class.
+   *
+   * @method serialized
+   * @return {Object} The jsonable object
+   */
+  that.serialized = function () {
+    return undefined;
+  };
+
+}, {"static_methods": {
+
+  /**
+   * Filter a list of items, modifying them to select only wanted keys.
+   *
+   * @method filterListSelect
+   * @static
+   * @param  {Array} select_option Key list to keep
+   * @param  {Array} list The item list to filter
+   */
+  "filterListSelect": function (select_option, list) {
+    var i, j, new_item;
+    for (i = 0; i < list.length; i += 1) {
+      new_item = {};
+      for (j = 0; j < select_option.length; j += 1) {
+        new_item[select_option[j]] = list[i][select_option[j]];
+      }
+      for (j in new_item) {
+        if (new_item.hasOwnProperty(j)) {
+          list[i] = new_item;
+          break;
+        }
+      }
+    }
+  },
+
+  /**
+   * Sort a list of items, according to keys and directions.
+   *
+   * @method sortOn
+   * @static
+   * @param  {Array} sort_on_option List of couples [key, direction]
+   * @param  {Array} list The item list to sort
+   */
+  "sortOn": function (sort_on_option, list) {
+    var sort_index;
+    for (sort_index = sort_on_option.length - 1; sort_index >= 0;
+         sort_index -= 1) {
+      list.sort(sortFunction(
+        sort_on_option[sort_index][0],
+        sort_on_option[sort_index][1]
+      ));
+    }
+  },
+
+  /**
+   * Parse a text request to a json query object tree
+   *
+   * @method parseStringToObject
+   * @static
+   * @param  {String} string The string to parse
+   * @return {Object} The json query tree
+   */
+  "parseStringToObject": parseStringToObject,
+
+  /**
+   * Convert a search text to a regexp.
+   *
+   * @method convertStringToRegExp
+   * @static
+   * @param  {String} string The string to convert
+   * @param  {String} [wildcard_character=undefined] The wildcard chararter
+   * @return {RegExp} The search text regexp
+   */
+  "convertStringToRegExp": function (string, wildcard_character) {
+    return new RegExp("^" + stringEscapeRegexpCharacters(string).replace(
+      stringEscapeRegexpCharacters(wildcard_character),
+      '.*'
+    ) + "$");
+  }
+}});
+
+_export("Query", Query);
+/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*global newClass: true, Query: true,
+         query_class_dict: true, _export: true */
+
+/**
+ * The SimpleQuery inherits from Query, and compares one metadata value
+ *
+ * @class SimpleQuery
+ * @extends Query
+ * @param  {Object} [spec={}] The specifications
+ * @param  {String} [spec.operator="="] The compare method to use
+ * @param  {String} spec.key The metadata key
+ * @param  {String} spec.value The value of the metadata to compare
+ */
+var SimpleQuery = newClass(Query, function (spec) {
+  /**
+   * Operator to use to compare object values
+   *
+   * @attribute operator
+   * @type String
+   * @default "="
+   * @optional
+   */
+  this.operator = spec.operator || "=";
+
+  /**
+   * Key of the object which refers to the value to compare
+   *
+   * @attribute key
+   * @type String
+   */
+  this.key = spec.key;
+
+  /**
+   * Value is used to do the comparison with the object value
+   *
+   * @attribute value
+   * @type String
+   */
+  this.value = spec.value;
+
+  /**
+   * #crossLink "Query/match:method"
+   */
+  this.match = function (item, wildcard_character) {
+    return this[this.operator](item[this.key], this.value, wildcard_character);
+  };
+
+  /**
+   * #crossLink "Query/toString:method"
+   */
+  this.toString = function () {
+    return (this.key ? this.key + ": " : "") + (this.operator || "=") + ' "' +
+      this.value + '"';
+  };
+
+  /**
+   * #crossLink "Query/serialized:method"
+   */
+  this.serialized = function () {
+    return {
+      "type": "simple",
+      "operator": this.operator,
+      "key": this.key,
+      "value": this.value
+    };
+  };
+
+  /**
+   * Comparison operator, test if this query value matches the item value
+   *
+   * @method =
+   * @param  {String} object_value The value to compare
+   * @param  {String} comparison_value The comparison value
+   * @param  {String} wildcard_character The wildcard_character
+   * @return {Boolean} true if match, false otherwise
+   */
+  this["="] = function (object_value, comparison_value,
+                        wildcard_character) {
+    return Query.convertStringToRegExp(
+      comparison_value.toString(),
+      wildcard_character || "%"
+    ).test(object_value.toString());
+  };
+
+  /**
+   * Comparison operator, test if this query value does not match the item value
+   *
+   * @method !=
+   * @param  {String} object_value The value to compare
+   * @param  {String} comparison_value The comparison value
+   * @param  {String} wildcard_character The wildcard_character
+   * @return {Boolean} true if not match, false otherwise
+   */
+  this["!="] = function (object_value, comparison_value,
+                         wildcard_character) {
+    return !Query.convertStringTextToRegExp(
+      comparison_value.toString(),
+      wildcard_character || "%"
+    ).test(object_value.toString());
+  };
+
+  /**
+   * Comparison operator, test if this query value is lower than the item value
+   *
+   * @method <
+   * @param  {Number, String} object_value The value to compare
+   * @param  {Number, String} comparison_value The comparison value
+   * @return {Boolean} true if lower, false otherwise
+   */
+  this["<"] = function (object_value, comparison_value) {
+    return object_value < comparison_value;
+  };
+
+  /**
+   * Comparison operator, test if this query value is equal or lower than the
+   * item value
+   *
+   * @method <=
+   * @param  {Number, String} object_value The value to compare
+   * @param  {Number, String} comparison_value The comparison value
+   * @return {Boolean} true if equal or lower, false otherwise
+   */
+  this["<="] = function (object_value, comparison_value) {
+    return object_value <= comparison_value;
+  };
+
+  /**
+   * Comparison operator, test if this query value is greater than the item
+   * value
+   *
+   * @method >
+   * @param  {Number, String} object_value The value to compare
+   * @param  {Number, String} comparison_value The comparison value
+   * @return {Boolean} true if greater, false otherwise
+   */
+  this[">"] = function (object_value, comparison_value) {
+    return object_value > comparison_value;
+  };
+
+  /**
+   * Comparison operator, test if this query value is equal or greater than the
+   * item value
+   *
+   * @method >=
+   * @param  {Number, String} object_value The value to compare
+   * @param  {Number, String} comparison_value The comparison value
+   * @return {Boolean} true if equal or greater, false otherwise
+   */
+  this[">="] = function (object_value, comparison_value) {
+    return object_value >= comparison_value;
+  };
 });
 
-}(jIO));
+query_class_dict.simple = SimpleQuery;
+
+_export("SimpleQuery", SimpleQuery);
+/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*global newClass: true, Query: true, query_class_dict: true,
+         _export: true, QueryFactory: true */
+
+/**
+ * The ComplexQuery inherits from Query, and compares one or several metadata
+ * values.
+ *
+ * @class ComplexQuery
+ * @extends Query
+ * @param  {Object} [spec={}] The specifications
+ * @param  {String} [spec.operator="AND"] The compare method to use
+ * @param  {String} spec.key The metadata key
+ * @param  {String} spec.value The value of the metadata to compare
+ */
+var ComplexQuery = newClass(Query, function (spec) {
+
+  /**
+   * Logical operator to use to compare object values
+   *
+   * @attribute operator
+   * @type String
+   * @default "AND"
+   * @optional
+   */
+  this.operator = spec.operator || "AND";
+
+  /**
+   * The sub Query list which are used to query an item.
+   *
+   * @attribute query_list
+   * @type Array
+   * @default []
+   * @optional
+   */
+  this.query_list = spec.query_list || [];
+  this.query_list = this.query_list.map(QueryFactory.create);
+
+  /**
+   * #crossLink "Query/match:method"
+   */
+  this.match = function (item, wildcard_character) {
+    return this[this.operator](item, wildcard_character);
+  };
+
+  /**
+   * #crossLink "Query/toString:method"
+   */
+  this.toString = function () {
+    var str_list = ["("], this_operator = this.operator;
+    this.query_list.forEach(function (query) {
+      str_list.push(query.toString());
+      str_list.push(this_operator);
+    });
+    str_list.pop(); // remove last operator
+    str_list.push(")");
+    return str_list.join(" ");
+  };
+
+  /**
+   * #crossLink "Query/serialized:method"
+   */
+  this.serialized = function () {
+    var s = {
+      "type": "complex",
+      "operator": this.operator,
+      "query_list": []
+    };
+    this.query_list.forEach(function (query) {
+      s.query_list.push(query.serialized());
+    });
+    return s;
+  };
+
+  /**
+   * Comparison operator, test if all sub queries match the
+   * item value
+   *
+   * @method AND
+   * @param  {Object} item The item to match
+   * @param  {String} wildcard_character The wildcard character
+   * @return {Boolean} true if all match, false otherwise
+   */
+  this.AND = function (item, wildcard_character) {
+    var i;
+    for (i = 0; i < this.query_list.length; i += 1) {
+      if (!this.query_list[i].match(item, wildcard_character)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  /**
+   * Comparison operator, test if one of the sub queries matches the
+   * item value
+   *
+   * @method OR
+   * @param  {Object} item The item to match
+   * @param  {String} wildcard_character The wildcard character
+   * @return {Boolean} true if one match, false otherwise
+   */
+  this.OR =  function (item, wildcard_character) {
+    var i;
+    for (i = 0; i < this.query_list.length; i += 1) {
+      if (this.query_list[i].match(item, wildcard_character)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  /**
+   * Comparison operator, test if the sub query does not match the
+   * item value
+   *
+   * @method NOT
+   * @param  {Object} item The item to match
+   * @param  {String} wildcard_character The wildcard character
+   * @return {Boolean} true if one match, false otherwise
+   */
+  this.NOT = function (item, wildcard_character) {
+    return !this.query_list[0].match(item, wildcard_character);
+  };
+});
+
+query_class_dict.complex = ComplexQuery;
+
+_export("ComplexQuery", ComplexQuery);
+
+  if (typeof define === "function" && define.amd) {
+    define(to_export);
+  } else if (typeof window === "object") {
+    Object.defineProperty(window, module_name, {
+      configurable: false,
+      enumerable: true,
+      writable: false,
+      value: to_export
+    });
+  } else if (typeof exports === "object") {
+    var i;
+    for (i in to_export) {
+      if (to_export.hasOwnProperty(i)) {
+        exports[i] = to_export[i];
+      }
+    }
+  } else {
+    complex_queries = to_export;
+  }
+}());
