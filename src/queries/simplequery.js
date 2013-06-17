@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global newClass: true, Query: true, convertSearchTextToRegExp: true,
+/*global newClass: true, Query: true,
          query_class_dict: true, _export: true */
 
 /**
@@ -77,7 +77,7 @@ var SimpleQuery = newClass(Query, function (spec) {
    */
   this["="] = function (object_value, comparison_value,
                         wildcard_character) {
-    return convertSearchTextToRegExp(
+    return Query.convertStringToRegExp(
       comparison_value.toString(),
       wildcard_character || "%"
     ).test(object_value.toString());
@@ -94,7 +94,7 @@ var SimpleQuery = newClass(Query, function (spec) {
    */
   this["!="] = function (object_value, comparison_value,
                          wildcard_character) {
-    return !convertSearchTextToRegExp(
+    return !Query.convertStringTextToRegExp(
       comparison_value.toString(),
       wildcard_character || "%"
     ).test(object_value.toString());
