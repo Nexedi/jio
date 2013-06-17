@@ -137,9 +137,11 @@ jIO.addStorageType('local', function (spec, my) {
       }
       doc = localstorage.getItem(priv.localpath + "/" + doc_id);
       if (doc === null) {
+        doc = command.cloneDoc();
+        doc._id = doc_id;
         // the document does not exist
         localstorage.setItem(priv.localpath + "/" + doc_id,
-          command.cloneDoc());
+          doc);
         that.success({
           "ok": true,
           "id": doc_id
