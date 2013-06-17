@@ -4520,7 +4520,7 @@ test ("Put", function(){
     o.jio.stop();
 });
 
-test("Repair", function () {
+test("Check & Repair", function () {
   var o = generateTools(this), i;
 
   o.jio = JIO.newJio({
@@ -4564,6 +4564,14 @@ test("Repair", function () {
   }
   o.clock.tick(5000);
 
+  o.spy(o, "status", 40, "Check database");
+  o.jio.check({"_id": "A"}, o.f);
+  o.tick(o);
+
+  o.spy(o, "status", 40, "Check database");
+  o.jio.check({"_id": "B"}, o.f);
+  o.tick(o);
+
   o.spy(o, "value", {"_id": "A", "ok": true}, "Repair database");
   o.jio.repair({"_id": "A"}, o.f);
   o.tick(o);
@@ -4572,8 +4580,16 @@ test("Repair", function () {
   o.jio.repair({"_id": "B"}, o.f);
   o.tick(o);
 
+  o.spy(o, "value", {"_id": "A", "ok": true}, "Check database again");
+  o.jio.check({"_id": "A"}, o.f);
+  o.tick(o);
+
+  o.spy(o, "value", {"_id": "B", "ok": true}, "Check database again");
+  o.jio.check({"_id": "B"}, o.f);
+  o.tick(o);
+
   // check index file
-  o.spy(o, "value", o.fakeIndexA, "Check index file");
+  o.spy(o, "value", o.fakeIndexA, "Manually check index file");
   o.jio.get({"_id": "A"}, function (err, response) {
     if (response) {
       delete response.location;
@@ -4585,7 +4601,7 @@ test("Repair", function () {
   });
   o.tick(o);
 
-  o.spy(o, "value", o.fakeIndexB, "Check index file");
+  o.spy(o, "value", o.fakeIndexB, "Manually check index file");
   o.jio.get({"_id": "B"}, function (err, response) {
     if (response) {
       delete response.location;
@@ -4606,12 +4622,20 @@ test("Repair", function () {
   o.fakeIndexA.database.unshift({"_id": "blah", "director": "d"});
   o.fakeIndexB.database.unshift({"_id": "blah", "year": "y"});
 
+  o.spy(o, "status", 40, "Check Document");
+  o.jio.check({"_id": "blah"}, o.f)
+  o.tick(o);
+
   o.spy(o, "value", {"id": "blah", "ok": true}, "Repair Document");
   o.jio.repair({"_id": "blah"}, o.f)
   o.tick(o);
 
+  o.spy(o, "value", {"id": "blah", "ok": true}, "Check Document again");
+  o.jio.repair({"_id": "blah"}, o.f)
+  o.tick(o);
+
   // check index file
-  o.spy(o, "value", o.fakeIndexA, "Check index file");
+  o.spy(o, "value", o.fakeIndexA, "Manually check index file");
   o.jio.get({"_id": "A"}, function (err, response) {
     if (response) {
       delete response.location;
@@ -4623,7 +4647,7 @@ test("Repair", function () {
   });
   o.tick(o);
 
-  o.spy(o, "value", o.fakeIndexB, "Check index file");
+  o.spy(o, "value", o.fakeIndexB, "Manually check index file");
   o.jio.get({"_id": "B"}, function (err, response) {
     if (response) {
       delete response.location;

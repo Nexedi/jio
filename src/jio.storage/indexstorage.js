@@ -98,6 +98,12 @@
       "statusText": "Conflicts",
       "error": "conflicts",
       "reason": "already exist"
+    },
+    "Different Index": {
+      "status": 40,
+      "statusText": "Check failed",
+      "error": "check_failed",
+      "reason": "incomplete database"
     }
   };
 
@@ -279,7 +285,7 @@
     };
 
     /**
-     * Checks if the index document is correct
+     * Checks if the index database document is correct
      *
      * @method check
      */
@@ -301,6 +307,43 @@
               database_meta._id !== id) {
             throw new TypeError("Corrupted Index");
           }
+        }
+      }
+    };
+
+    that.equals = function (json_index) {
+      function equalsDirection(a, b) {
+        var k;
+        for (k in a._location) {
+          if (a._location.hasOwnProperty(k)) {
+            if (b._location[k] === undefined ||
+                JSON.stringify(b._database[b._location[k]]) !==
+                JSON.stringify(a._database[a._location[k]])) {
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+      if (!equalsDirection(that, json_index)) {
+        return false;
+      }
+      if (!equalsDirection(json_index, that)) {
+        return false;
+      }
+      return true;
+    };
+
+    that.checkDocument = function (doc) {
+      var i, key, db_doc;
+      if (typeof that._location[doc._id] !== "number" ||
+          (db_doc = that._database(that._location[doc._id])._id) !== doc._id) {
+        throw new TypeError("Different Index");
+      }
+      for (i = 0; i < that._indexing.length; i += 1) {
+        key = that._indexing[i];
+        if (doc[key] !== db_doc[key]) {
+          throw new TypeError("Different Index");
         }
       }
     };
@@ -679,35 +722,11 @@
     };
 
     that.check = function (command) {
-      todo
-      var database_index = -1, i;
-      for (i = 0; i < priv.indices.length; i += 1) {
-        if (priv.indices[i].id === command.getDocId()) {
-          database_index = i;
-          break;
-        }
-      }
-      that.addJob(
-        "check",
-        priv.sub_storage,
-        command.cloneDoc(),
-        command.cloneOption(),
-        function (response) {
-          if (database_index !== -1) {
-            // check index database
-          } else {
-            // regular document
-          }
-        },
-        function (err) {
-          err.message = "Could not repair sub storage";
-          that.error(err);
-        }
-      );
+      that.repair(command, true);
     };
 
-    priv.repairIndexDatabase = function (command, index) {
-      var i;
+    priv.repairIndexDatabase = function (command, index, just_check) {
+      var i, option = command.cloneOption();
       that.addJob(
         'allDocs',
         priv.sub_storage,
@@ -722,9 +741,22 @@
             db.put(response.rows[i].doc);
           }
           db_list[index] = db;
-          priv.storeIndexDatabaseList(db_list, {}, function () {
-            that.success({"ok": true, "_id": command.getDocId()});
-          });
+          if (just_check) {
+            priv.getIndexDatabase(option, index, function (current_db) {
+              if (db.equals(current_db)) {
+                return that.success({"ok": true, "_id": command.getDocId()});
+              }
+              return that.error(generateErrorObject(
+                "Different Index",
+                "Check failed",
+                "corrupt index database"
+              ));
+            });
+          } else {
+            priv.storeIndexDatabaseList(db_list, {}, function () {
+              that.success({"ok": true, "_id": command.getDocId()});
+            });
+          }
         },
         function (err) {
           err.message = "Unable to repair the index database";
@@ -733,7 +765,7 @@
       );
     };
 
-    priv.repairDocument = function (command) {
+    priv.repairDocument = function (command, just_check) {
       var i, option = command.cloneOption();
       that.addJob(
         "get",
@@ -743,12 +775,27 @@
         function (response) {
           response._id = command.getDocId();
           priv.getIndexDatabaseList(option, function (database_list) {
-            for (i = 0; i < database_list.length; i += 1) {
-              database_list[i].put(response);
+            if (just_check) {
+              for (i = 0; i < database_list.length; i += 1) {
+                try {
+                  database_list[i].checkDocument(response);
+                } catch (e) {
+                  return that.error(generateErrorObject(
+                    e.message,
+                    "Check failed",
+                    "corrupt index database"
+                  ));
+                }
+              }
+              that.success({"_id": command.getDocId(), "ok": true});
+            } else {
+              for (i = 0; i < database_list.length; i += 1) {
+                database_list[i].put(response);
+              }
+              priv.storeIndexDatabaseList(database_list, option, function () {
+                that.success({"ok": true, "id": command.getDocId()});
+              });
             }
-            priv.storeIndexDatabaseList(database_list, option, function () {
-              that.success({"ok": true, "id": command.getDocId()});
-            });
           });
         },
         function (err) {
@@ -758,7 +805,7 @@
       );
     };
 
-    that.repair = function (command) {
+    that.repair = function (command, just_check) {
       var database_index = -1, i;
       for (i = 0; i < priv.indices.length; i += 1) {
         if (priv.indices[i].id === command.getDocId()) {
@@ -773,9 +820,9 @@
         command.cloneOption(),
         function (response) {
           if (database_index !== -1) {
-            priv.repairIndexDatabase(command, database_index);
+            priv.repairIndexDatabase(command, database_index, just_check);
           } else {
-            priv.repairDocument(command);
+            priv.repairDocument(command, just_check);
           }
         },
         function (err) {
