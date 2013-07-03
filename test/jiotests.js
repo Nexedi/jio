@@ -2163,6 +2163,7 @@ test ("Remove", function(){
     o.tick(o);
 
     o.doctree = {
+      "_id": "remove1.revision_tree.json",
       "children":[{
         "rev": "1-veryoldrev", "status": "available", "children": [{
           "rev": "2-oldrev", "status": "available", "children": [{
@@ -3221,6 +3222,7 @@ module ("JIO Replicate Revision Storage");
 
     // add documents to localstorage
     o.doctree1_1 = {
+      "_id": "doc1.revision_tree.json",
       "children": [{
         "rev": "1-111",
         "status": "available",
