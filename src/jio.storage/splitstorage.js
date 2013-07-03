@@ -19,6 +19,8 @@
 (function () {
   "use strict";
 
+  var queries;
+
   /**
    * Get the real type of an object
    *
@@ -274,7 +276,7 @@
       priv.send('get', doc, option, function (err, response) {
         var i, k;
         if (err) {
-          err.message = "Unable to post document";
+          err.message = "Unable to get document";
           delete err.index;
           return that.error(err);
         }
@@ -297,15 +299,10 @@
               if (response[i]._attachments.hasOwnProperty(k)) {
                 doc._attachments[k] = doc._attachments[k] || {
                   "length": 0,
-                  "digest": "",
                   "content_type": "",
                 };
                 doc._attachments[k].length +=
                 response[i]._attachments[k].length;
-                doc._attachments[k].digest = (
-                  doc._attachments[k].digest ?
-                    doc._attachments[k].digest + " " : ""
-                ) + response[i]._attachments[k].digest;
                 doc._attachments[k].content_type =
                   response[i]._attachments[k].content_type;
               }
@@ -313,6 +310,31 @@
           }
         }
         doc._id = command.getDocId();
+        that.success(doc);
+      });
+    };
+
+    /**
+     * Gets splited document attachment then returns real attachment data.
+     *
+     * @method getAttachment
+     * @param  {Command} command The JIO command
+     */
+    that.getAttachment = function (command) {
+      var doc, option;
+      doc = command.cloneDoc();
+      option = command.cloneOption();
+      priv.send('getAttachment', doc, option, function (err, response) {
+        var i, k;
+        if (err) {
+          err.message = "Unable to get attachment";
+          delete err.index;
+          return that.error(err);
+        }
+        doc = '';
+        for (i = 0; i < response.length; i += 1) {
+          doc += response[i];
+        }
         that.success(doc);
       });
     };
@@ -366,6 +388,68 @@
       );
     };
 
+    /**
+     * Retreive a list of all document in the sub storages.
+     *
+     * If include_docs option is false, then it returns the document list from
+     * the first sub storage. Else, it will merge results and return.
+     *
+     * This method support complex queries options.
+     *
+     * @method allDocs
+     * @param  {Command} command The JIO command
+     */
+    that.allDocs = function (command) {
+      var option = command.cloneOption(), result = [];
+      option = {"include_docs": option.include_docs};
+      priv.send(
+        'allDocs',
+        command.cloneDoc(),
+        option,
+        function (err, response) {
+          var row, j, tmp;
+          if (err) {
+            err.message = "Unable to retrieve document list";
+            delete err.index;
+            return that.error(err);
+          }
+          function pop(list, doc_id) {
+            var element;
+            if (!list.dict) {
+              list.dict = {};
+            }
+            if (list.dict[doc_id]) {
+              element = list.dict[doc_id];
+              delete list.dict[doc_id];
+              return element;
+            }
+            while (list.length) {
+              element = list.shift();
+              if (element._id === doc_id) {
+                return element;
+              } else {
+                list.dict[element._id] = element;
+              }
+            }
+          }
+          option = command.cloneOption();
+          while (response[0].rows.length) {
+            // browsing response[0] rows
+            row = response[0].rows.shift();
+            for (j = 1; j < response.length; j += 1) {
+              // browsing responses
+              tmp = pop(response[j].rows, row._id);
+              if (tmp !== undefined) {
+
+              }
+            }
+          }
+
+          return that.success(response[0]);
+        }
+      );
+    };
+
     return that;
   } // end of splitStorage
 
@@ -373,6 +457,9 @@
   // exports to JIO
   if (typeof define === "function" && define.amd) {
     define(['jio'], function (jio) {
+      try {
+        queries = require('complex_queries');
+      } catch(e) {};
       jio.addStorageType('split', splitStorage);
     });
   } else if (typeof require === "function") {
