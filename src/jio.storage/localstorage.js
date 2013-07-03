@@ -65,34 +65,6 @@ jIO.addStorageType('local', function (spec, my) {
   };
 
   /**
-   * Update [doc] the document object and remove [doc] keys
-   * which are not in [new_doc]. It only changes [doc] keys not starting
-   * with an underscore.
-   * ex: doc:     {key:value1,_key:value2} with
-   *     new_doc: {key:value3,_key:value4} updates
-   *     doc:     {key:value3,_key:value2}.
-   * @param  {object} doc The original document object.
-   * @param  {object} new_doc The new document object
-   */
-  priv.documentObjectUpdate = function (doc, new_doc) {
-    var k;
-    for (k in doc) {
-      if (doc.hasOwnProperty(k)) {
-        if (k[0] !== '_') {
-          delete doc[k];
-        }
-      }
-    }
-    for (k in new_doc) {
-      if (new_doc.hasOwnProperty(k)) {
-        if (k[0] !== '_') {
-          doc[k] = new_doc[k];
-        }
-      }
-    }
-  };
-
-  /**
    * Checks if an object has no enumerable keys
    * @method objectIsEmpty
    * @param  {object} obj The object
@@ -137,11 +109,11 @@ jIO.addStorageType('local', function (spec, my) {
       }
       doc = localstorage.getItem(priv.localpath + "/" + doc_id);
       if (doc === null) {
+        // the document does not exist
         doc = command.cloneDoc();
         doc._id = doc_id;
-        // the document does not exist
-        localstorage.setItem(priv.localpath + "/" + doc_id,
-          doc);
+        delete doc._attachments;
+        localstorage.setItem(priv.localpath + "/" + doc_id, doc);
         that.success({
           "ok": true,
           "id": doc_id
@@ -166,14 +138,17 @@ jIO.addStorageType('local', function (spec, my) {
    */
   that.put = function (command) {
     setTimeout(function () {
-      var doc;
+      var doc, tmp;
       doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
       if (doc === null) {
         //  the document does not exist
         doc = command.cloneDoc();
+        delete doc._attachments;
       } else {
         // the document already exists
-        priv.documentObjectUpdate(doc, command.cloneDoc());
+        tmp = command.cloneDoc();
+        tmp._attachments = doc._attachments;
+        doc = tmp;
       }
       // write
       localstorage.setItem(priv.localpath + "/" + command.getDocId(), doc);
