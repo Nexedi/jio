@@ -11,6 +11,37 @@
 /**
  * JIO Local Storage. Type = 'local'.
  * Local browser "database" storage.
+ *
+ * Storage Description:
+ *
+ *     {
+ *       "type": "local",
+ *       "username": <non empty string>, // to define user space
+ *       "application_name": <string> // default 'untitled'
+ *     }
+ *
+ * Document are stored in path
+ * 'jio/localstorage/username/application_name/document_id' like this:
+ *
+ *     {
+ *       "_id": "document_id",
+ *       "_attachments": {
+ *         "attachment_name": {
+ *           "length": data_length,
+ *           "digest": "md5-XXX",
+ *           "content_type": "mime/type"
+ *         },
+ *         "attachment_name2": {..}, ...
+ *       },
+ *       "metadata_name": "metadata_value"
+ *       "metadata_name2": ...
+ *       ...
+ *     }
+ *
+ * Only "_id" and "_attachments" are specific metadata keys, other one can be
+ * added without loss.
+ *
+ * @class LocalStorage
  */
 jIO.addStorageType('local', function (spec, my) {
 
