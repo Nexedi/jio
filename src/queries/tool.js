@@ -128,3 +128,31 @@ function sortFunction(key, way) {
     return a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0;
   };
 }
+
+/**
+ * Clones all native object in deep. Managed types: Object, Array, String,
+ * Number, Boolean, null.
+ *
+ * @param  {A} object The object to clone
+ * @return {A} The cloned object
+ */
+function deepClone(object) {
+  var i, cloned;
+  if (Object.prototype.toString.call(object) === "[object Array]") {
+    cloned = [];
+    for (i = 0; i < object.length; i += 1) {
+      cloned[i] = deepClone(object[i]);
+    }
+    return cloned;
+  }
+  if (typeof object === "object") {
+    cloned = {};
+    for (i in object) {
+      if (object.hasOwnProperty(i)) {
+        cloned[i] = deepClone(object[i]);
+      }
+    }
+    return cloned;
+  }
+  return object;
+}

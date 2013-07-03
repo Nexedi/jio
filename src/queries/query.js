@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global newClass: true, sortFunction: true, parseStringToObject: true,
-         _export: true, stringEscapeRegexpCharacters: true */
+         _export: true, stringEscapeRegexpCharacters: true, deepClone: true */
 
 /**
  * The query to use to filter a list of objects.
@@ -39,12 +39,9 @@ var Query = newClass(function () {
       Query.sortOn(option.sort_on, item_list);
     }
     if (option.limit) {
-      item_list.splice(0, option.limit[0]);
-      if (option.limit[1]) {
-        item_list.splice(option.limit[1]);
-      }
+      Query.limit(option.limit, item_list);
     }
-    Query.filterListSelect(option.select_list || [], item_list);
+    Query.select(option.select_list || [], item_list);
   };
 
   /**
@@ -163,15 +160,21 @@ var Query = newClass(function () {
 }, {"static_methods": {
 
   /**
-   * Filter a list of items, modifying them to select only wanted keys.
+   * Filter a list of items, modifying them to select only wanted keys. If
+   * `clone` is true, then the method will act on a cloned list.
    *
-   * @method filterListSelect
+   * @method select
    * @static
    * @param  {Array} select_option Key list to keep
    * @param  {Array} list The item list to filter
+   * @param  {Boolean} [clone=false] If true, modifies a clone of the list
+   * @return {Array} The filtered list
    */
-  "filterListSelect": function (select_option, list) {
+  "select": function (select_option, list, clone) {
     var i, j, new_item;
+    if (clone) {
+      list = deepClone(list);
+    }
     for (i = 0; i < list.length; i += 1) {
       new_item = {};
       for (j = 0; j < select_option.length; j += 1) {
@@ -184,18 +187,25 @@ var Query = newClass(function () {
         }
       }
     }
+    return list;
   },
 
   /**
-   * Sort a list of items, according to keys and directions.
+   * Sort a list of items, according to keys and directions. If `clone` is true,
+   * then the method will act on a cloned list.
    *
    * @method sortOn
    * @static
    * @param  {Array} sort_on_option List of couples [key, direction]
    * @param  {Array} list The item list to sort
+   * @param  {Boolean} [clone=false] If true, modifies a clone of the list
+   * @return {Array} The filtered list
    */
-  "sortOn": function (sort_on_option, list) {
+  "sortOn": function (sort_on_option, list, clone) {
     var sort_index;
+    if (clone) {
+      list = deepClone(list);
+    }
     for (sort_index = sort_on_option.length - 1; sort_index >= 0;
          sort_index -= 1) {
       list.sort(sortFunction(
@@ -203,6 +213,29 @@ var Query = newClass(function () {
         sort_on_option[sort_index][1]
       ));
     }
+    return list;
+  },
+
+  /**
+   * Limit a list of items, according to index and length. If `clone` is true,
+   * then the method will act on a cloned list.
+   *
+   * @method limit
+   * @static
+   * @param  {Array} limit_option A couple [from, length]
+   * @param  {Array} list The item list to limit
+   * @param  {Boolean} [clone=false] If true, modifies a clone of the list
+   * @return {Array} The filtered list
+   */
+  "limit": function (limit_option, list, clone) {
+    if (clone) {
+      list = deepClone(list);
+    }
+    list.splice(0, limit_option[0]);
+    if (limit_option[1]) {
+      list.splice(limit_option[1]);
+    }
+    return list;
   },
 
   /**
