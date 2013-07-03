@@ -28,6 +28,14 @@ var complex_queries;
       "value": value
     });
   }
+/**
+ * Parse a text request to a json query object tree
+ *
+ * @method parseStringToObject
+ * @static
+ * @param  {String} string The string to parse
+ * @return {Object} The json query tree
+ */
 function parseStringToObject(string) {
 
 /*
@@ -714,104 +722,10 @@ if ((error_count = __NODEJS_parse(string, error_offsets, error_lookaheads)) > 0)
 
   return result;
 } // parseStringToObject
+
+_export('parseStringToObject', parseStringToObject);
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global _export: true */
-
-/**
- * Create a class, manage inheritance, static methods,
- * protected attributes and can hide methods or/and secure methods
- *
- * @param  {Class} Class Classes to inherit from (0..n). The last class
- *                       parameter will inherit from the previous one, and so on
- * @param  {Object} option Class option (0..n)
- * @param  {Boolean} [option.secure_methods=false] Make methods not configurable
- *                                                 and not writable
- * @param  {Boolean} [option.hide_methods=false] Make methods not enumerable
- * @param  {Boolean} [option.secure_static_methods=true] Make static methods not
- *                                                       configurable and not
- *                                                       writable
- * @param  {Boolean} [option.hide_static_methods=false] Make static methods not
- *                                                      enumerable
- * @param  {Object} [option.static_methods={}] Object of static methods
- * @param  {Function} constructor The new class constructor
- * @return {Class} The new class
- */
-function newClass() {
-  var j, k, constructors = [], option, new_class;
-
-  for (j = 0; j < arguments.length; j += 1) {
-    if (typeof arguments[j] === "function") {
-      constructors.push(arguments[j]);
-    } else if (typeof arguments[j] === "object") {
-      option = option || {};
-      for (k in arguments[j]) {
-        if (arguments[j].hasOwnProperty(k)) {
-          option[k] = arguments[j][k];
-        }
-      }
-    }
-  }
-
-  function postObjectCreation(that) {
-    // modify the object according to 'option'
-    var key;
-    if (option) {
-      for (key in that) {
-        if (that.hasOwnProperty(key)) {
-          if (typeof that[key] === "function") {
-            Object.defineProperty(that, key, {
-              "configurable": option.secure_methods ? false : true,
-              "enumerable": option.hide_methods ? false : true,
-              "writable": option.secure_methods ? false : true,
-              "value": that[key]
-            });
-          }
-        }
-      }
-    }
-  }
-
-  function postClassCreation(that) {
-    // modify the object according to 'option'
-    var key;
-    if (option) {
-      for (key in that) {
-        if (that.hasOwnProperty(key)) {
-          if (typeof that[key] === "function") {
-            Object.defineProperty(that, key, {
-              "configurable": option.secure_static_methods ===
-                false ? true : false,
-              "enumerable": option.hide_static_methods ? false : true,
-              "writable": option.secure_static_methods === false ? true : false,
-              "value": that[key]
-            });
-          }
-        }
-      }
-    }
-  }
-
-  new_class = function (spec, my) {
-    var i;
-    spec = spec || {};
-    my = my || {};
-    // don't use forEach !
-    for (i = 0; i < constructors.length; i += 1) {
-      constructors[i].apply(this, [spec, my]);
-    }
-    postObjectCreation(this);
-    return this;
-  };
-  option = option || {};
-  option.static_methods = option.static_methods || {};
-  for (j in option.static_methods) {
-    if (option.static_methods.hasOwnProperty(j)) {
-      new_class[j] = option.static_methods[j];
-    }
-  }
-  postClassCreation(new_class);
-  return new_class;
-}
 
 /**
  * Escapes regexp special chars from a string.
@@ -844,51 +758,195 @@ function sortFunction(key, way) {
     return a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0;
   };
 }
+
+/**
+ * Clones all native object in deep. Managed types: Object, Array, String,
+ * Number, Boolean, null.
+ *
+ * @param  {A} object The object to clone
+ * @return {A} The cloned object
+ */
+function deepClone(object) {
+  var i, cloned;
+  if (Object.prototype.toString.call(object) === "[object Array]") {
+    cloned = [];
+    for (i = 0; i < object.length; i += 1) {
+      cloned[i] = deepClone(object[i]);
+    }
+    return cloned;
+  }
+  if (typeof object === "object") {
+    cloned = {};
+    for (i in object) {
+      if (object.hasOwnProperty(i)) {
+        cloned[i] = deepClone(object[i]);
+      }
+    }
+    return cloned;
+  }
+  return object;
+}
+
+/**
+ * Inherits the prototype methods from one constructor into another. The
+ * prototype of `constructor` will be set to a new object created from
+ * `superConstructor`.
+ */
+function inherits(constructor, superConstructor) {
+  constructor.super_ = superConstructor;
+  constructor.prototype = Object.create(superConstructor.prototype, {});
+}
+
+/**
+ * Does nothing
+ */
+function emptyFunction() {}
+
+/**
+ * Filter a list of items, modifying them to select only wanted keys. If
+ * `clone` is true, then the method will act on a cloned list.
+ *
+ * @method select
+ * @static
+ * @param  {Array} select_option Key list to keep
+ * @param  {Array} list The item list to filter
+ * @param  {Boolean} [clone=false] If true, modifies a clone of the list
+ * @return {Array} The filtered list
+ */
+function select(select_option, list, clone) {
+  var i, j, new_item;
+  if (clone) {
+    list = deepClone(list);
+  }
+  for (i = 0; i < list.length; i += 1) {
+    new_item = {};
+    for (j = 0; j < select_option.length; j += 1) {
+      new_item[select_option[j]] = list[i][select_option[j]];
+    }
+    for (j in new_item) {
+      if (new_item.hasOwnProperty(j)) {
+        list[i] = new_item;
+        break;
+      }
+    }
+  }
+  return list;
+}
+
+_export('select', select);
+
+/**
+ * Sort a list of items, according to keys and directions. If `clone` is true,
+ * then the method will act on a cloned list.
+ *
+ * @method sortOn
+ * @static
+ * @param  {Array} sort_on_option List of couples [key, direction]
+ * @param  {Array} list The item list to sort
+ * @param  {Boolean} [clone=false] If true, modifies a clone of the list
+ * @return {Array} The filtered list
+ */
+function sortOn(sort_on_option, list, clone) {
+  var sort_index;
+  if (clone) {
+    list = deepClone(list);
+  }
+  for (sort_index = sort_on_option.length - 1; sort_index >= 0;
+       sort_index -= 1) {
+    list.sort(sortFunction(
+      sort_on_option[sort_index][0],
+      sort_on_option[sort_index][1]
+    ));
+  }
+  return list;
+}
+
+_export('sortOn', sortOn);
+
+/**
+ * Limit a list of items, according to index and length. If `clone` is true,
+ * then the method will act on a cloned list.
+ *
+ * @method limit
+ * @static
+ * @param  {Array} limit_option A couple [from, length]
+ * @param  {Array} list The item list to limit
+ * @param  {Boolean} [clone=false] If true, modifies a clone of the list
+ * @return {Array} The filtered list
+ */
+function limit(limit_option, list, clone) {
+  if (clone) {
+    list = deepClone(list);
+  }
+  list.splice(0, limit_option[0]);
+  if (limit_option[1]) {
+    list.splice(limit_option[1]);
+  }
+  return list;
+}
+
+_export('limit', limit);
+
+/**
+ * Convert a search text to a regexp.
+ *
+ * @method convertStringToRegExp
+ * @static
+ * @param  {String} string The string to convert
+ * @param  {String} [wildcard_character=undefined] The wildcard chararter
+ * @return {RegExp} The search text regexp
+ */
+function convertStringToRegExp(string, wildcard_character) {
+  return new RegExp("^" + stringEscapeRegexpCharacters(string).replace(
+    stringEscapeRegexpCharacters(wildcard_character),
+    '.*'
+  ) + "$");
+}
+
+_export('convertStringToRegExp', convertStringToRegExp);
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global _export: true, ComplexQuery: true, SimpleQuery: true,
-         newClass: true, Query: true */
+/*global _export: true, ComplexQuery: true, SimpleQuery: true, Query: true,
+  parseStringToObject: true */
 
 
-var query_class_dict = {}, QueryFactory;
+var query_class_dict = {};
 
 /**
  * Provides static methods to create Query object
  *
  * @class QueryFactory
  */
-QueryFactory = newClass({
-  "static_methods": {
+function QueryFactory() {}
 
-    /**
-     * Creates Query object from a search text string or a serialized version
-     * of a Query.
-     *
-     * @method create
-     * @static
-     * @param  {Object,String} object The search text or the serialized version
-     *         of a Query
-     * @return {Query} A Query object
-     */
-    "create": function (object) {
-      if (object === "") {
-        return new Query();
-      }
-      if (typeof object === "string") {
-        object = Query.parseStringToObject(object);
-      }
-      if (typeof (object || {}).type === "string" &&
-          query_class_dict[object.type]) {
-        return new query_class_dict[object.type](object);
-      }
-      return null;
-    }
+/**
+ * Creates Query object from a search text string or a serialized version
+ * of a Query.
+ *
+ * @method create
+ * @static
+ * @param  {Object,String} object The search text or the serialized version
+ *         of a Query
+ * @return {Query} A Query object
+ */
+QueryFactory.create = function (object) {
+  if (object === "") {
+    return new Query();
   }
-}, function () {});
+  if (typeof object === "string") {
+    object = parseStringToObject(object);
+  }
+  if (typeof (object || {}).type === "string" &&
+      query_class_dict[object.type]) {
+    return new query_class_dict[object.type](object);
+  }
+  return null;
+};
 
 _export("QueryFactory", QueryFactory);
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global newClass: true, sortFunction: true, parseStringToObject: true,
-         _export: true, stringEscapeRegexpCharacters: true */
+/*global parseStringToObject: true, emptyFunction: true, sortOn: true, limit:
+  true, select: true, _export: true, stringEscapeRegexpCharacters: true,
+  deepClone: true */
 
 /**
  * The query to use to filter a list of objects.
@@ -897,60 +955,107 @@ _export("QueryFactory", QueryFactory);
  * @class Query
  * @constructor
  */
-var Query = newClass(function () {
-
-  var that = this, emptyFunction = function () {};
+function Query() {
 
   /**
-   * Filter the item list with matching item only
+   * Called before parsing the query. Must be overridden!
    *
-   * @method exec
-   * @param  {Array} item_list The list of object
-   * @param  {Object} [option] Some operation option
-   * @param  {String} [option.wildcard_character="%"] The wildcard character
-   * @param  {Array} [option.select_list] A object keys to retrieve
-   * @param  {Array} [option.sort_on] Couples of object keys and "ascending"
-   *                 or "descending"
-   * @param  {Array} [option.limit] Couple of integer, first is an index and
-   *                 second is the length.
+   * @method onParseStart
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} option Some option gave in parse()
    */
-  that.exec = function (item_list, option) {
-    var i = 0;
-    while (i < item_list.length) {
-      if (!that.match(item_list[i], option.wildcard_character)) {
-        item_list.splice(i, 1);
-      } else {
-        i += 1;
-      }
-    }
-    if (option.sort_on) {
-      Query.sortOn(option.sort_on, item_list);
-    }
-    if (option.limit) {
-      item_list.splice(0, option.limit[0]);
-      if (option.limit[1]) {
-        item_list.splice(option.limit[1]);
-      }
-    }
-    Query.filterListSelect(option.select_list || [], item_list);
-  };
+  this.onParseStart = emptyFunction;
 
   /**
-   * Test if an item matches this query
+   * Called when parsing a simple query. Must be overridden!
    *
-   * @method match
-   * @param  {Object} item The object to test
-   * @return {Boolean} true if match, false otherwise
+   * @method onParseSimpleQuery
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} option Some option gave in parse()
    */
-  that.match = function (item, wildcard_character) {
-    return true;
-  };
+  this.onParseSimpleQuery = emptyFunction;
 
+  /**
+   * Called when parsing a complex query. Must be overridden!
+   *
+   * @method onParseComplexQuery
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} option Some option gave in parse()
+   */
+  this.onParseComplexQuery = emptyFunction;
+
+  /**
+   * Called after parsing the query. Must be overridden!
+   *
+   * @method onParseEnd
+   * @param  {Object} object The object shared in the parse process
+   * @param  {Object} option Some option gave in parse()
+   */
+  this.onParseEnd = emptyFunction;
+
+}
+Query.prototype.constructor = Query;
+
+/**
+ * Filter the item list with matching item only
+ *
+ * @method exec
+ * @param  {Array} item_list The list of object
+ * @param  {Object} [option] Some operation option
+ * @param  {String} [option.wildcard_character="%"] The wildcard character
+ * @param  {Array} [option.select_list] A object keys to retrieve
+ * @param  {Array} [option.sort_on] Couples of object keys and "ascending"
+ *                 or "descending"
+ * @param  {Array} [option.limit] Couple of integer, first is an index and
+ *                 second is the length.
+ */
+Query.prototype.exec = function (item_list, option) {
+  var i = 0;
+  while (i < item_list.length) {
+    if (!this.match(item_list[i], option.wildcard_character)) {
+      item_list.splice(i, 1);
+    } else {
+      i += 1;
+    }
+  }
+  if (option.sort_on) {
+    sortOn(option.sort_on, item_list);
+  }
+  if (option.limit) {
+    limit(option.limit, item_list);
+  }
+  select(option.select_list || [], item_list);
+};
+
+/**
+ * Test if an item matches this query
+ *
+ * @method match
+ * @param  {Object} item The object to test
+ * @return {Boolean} true if match, false otherwise
+ */
+Query.prototype.match = function (item, wildcard_character) {
+  return true;
+};
+
+
+/**
+ * Browse the Query in deep calling parser method in each step.
+ *
+ * `onParseStart` is called first, on end `onParseEnd` is called.
+ * It starts from the simple queries at the bottom of the tree calling the
+ * parser method `onParseSimpleQuery`, and go up calling the
+ * `onParseComplexQuery` method.
+ *
+ * @method parse
+ * @param  {Object} option Any options you want (except 'parsed')
+ * @return {Any} The parse result
+ */
+Query.prototype.parse = function (option) {
+  var that = this, object;
   /**
    * The recursive parser.
    *
-   * @method recParse
-   * @private
    * @param  {Object} object The object shared in the parse process
    * @param  {Object} options Some options usable in the parseMethods
    * @return {Any} The parser result
@@ -969,161 +1074,38 @@ var Query = newClass(function () {
       that.onParseSimpleQuery(object, option);
     }
   }
+  object = {"parsed": JSON.parse(JSON.stringify(that.serialized()))};
+  that.onParseStart(object, option);
+  recParse(object, option);
+  that.onParseEnd(object, option);
+  return object.parsed;
+};
 
-  /**
-   * Browse the Query in deep calling parser method in each step.
-   *
-   * `onParseStart` is called first, on end `onParseEnd` is called.
-   * It starts from the simple queries at the bottom of the tree calling the
-   * parser method `onParseSimpleQuery`, and go up calling the
-   * `onParseComplexQuery` method.
-   *
-   * @method parse
-   * @param  {Object} option Any options you want (except 'parsed')
-   * @return {Any} The parse result
-   */
-  that.parse = function (option) {
-    var object;
-    object = {"parsed": JSON.parse(JSON.stringify(that.serialized()))};
-    that.onParseStart(object, option);
-    recParse(object, option);
-    that.onParseEnd(object, option);
-    return object.parsed;
-  };
+/**
+ * Convert this query to a parsable string.
+ *
+ * @method toString
+ * @return {String} The string version of this query
+ */
+Query.prototype.toString = function () {
+  return "";
+};
 
-  /**
-   * Called before parsing the query. Must be overridden!
-   *
-   * @method onParseStart
-   * @param  {Object} object The object shared in the parse process
-   * @param  {Object} option Some option gave in parse()
-   */
-  that.onParseStart = emptyFunction;
-
-  /**
-   * Called when parsing a simple query. Must be overridden!
-   *
-   * @method onParseSimpleQuery
-   * @param  {Object} object The object shared in the parse process
-   * @param  {Object} option Some option gave in parse()
-   */
-  that.onParseSimpleQuery = emptyFunction;
-
-  /**
-   * Called when parsing a complex query. Must be overridden!
-   *
-   * @method onParseComplexQuery
-   * @param  {Object} object The object shared in the parse process
-   * @param  {Object} option Some option gave in parse()
-   */
-  that.onParseComplexQuery = emptyFunction;
-
-  /**
-   * Called after parsing the query. Must be overridden!
-   *
-   * @method onParseEnd
-   * @param  {Object} object The object shared in the parse process
-   * @param  {Object} option Some option gave in parse()
-   */
-  that.onParseEnd = emptyFunction;
-
-  /**
-   * Convert this query to a parsable string.
-   *
-   * @method toString
-   * @return {String} The string version of this query
-   */
-  that.toString = function () {
-    return "";
-  };
-
-  /**
-   * Convert this query to an jsonable object in order to be remake thanks to
-   * QueryFactory class.
-   *
-   * @method serialized
-   * @return {Object} The jsonable object
-   */
-  that.serialized = function () {
-    return undefined;
-  };
-
-}, {"static_methods": {
-
-  /**
-   * Filter a list of items, modifying them to select only wanted keys.
-   *
-   * @method filterListSelect
-   * @static
-   * @param  {Array} select_option Key list to keep
-   * @param  {Array} list The item list to filter
-   */
-  "filterListSelect": function (select_option, list) {
-    var i, j, new_item;
-    for (i = 0; i < list.length; i += 1) {
-      new_item = {};
-      for (j = 0; j < select_option.length; j += 1) {
-        new_item[select_option[j]] = list[i][select_option[j]];
-      }
-      for (j in new_item) {
-        if (new_item.hasOwnProperty(j)) {
-          list[i] = new_item;
-          break;
-        }
-      }
-    }
-  },
-
-  /**
-   * Sort a list of items, according to keys and directions.
-   *
-   * @method sortOn
-   * @static
-   * @param  {Array} sort_on_option List of couples [key, direction]
-   * @param  {Array} list The item list to sort
-   */
-  "sortOn": function (sort_on_option, list) {
-    var sort_index;
-    for (sort_index = sort_on_option.length - 1; sort_index >= 0;
-         sort_index -= 1) {
-      list.sort(sortFunction(
-        sort_on_option[sort_index][0],
-        sort_on_option[sort_index][1]
-      ));
-    }
-  },
-
-  /**
-   * Parse a text request to a json query object tree
-   *
-   * @method parseStringToObject
-   * @static
-   * @param  {String} string The string to parse
-   * @return {Object} The json query tree
-   */
-  "parseStringToObject": parseStringToObject,
-
-  /**
-   * Convert a search text to a regexp.
-   *
-   * @method convertStringToRegExp
-   * @static
-   * @param  {String} string The string to convert
-   * @param  {String} [wildcard_character=undefined] The wildcard chararter
-   * @return {RegExp} The search text regexp
-   */
-  "convertStringToRegExp": function (string, wildcard_character) {
-    return new RegExp("^" + stringEscapeRegexpCharacters(string).replace(
-      stringEscapeRegexpCharacters(wildcard_character),
-      '.*'
-    ) + "$");
-  }
-}});
+/**
+ * Convert this query to an jsonable object in order to be remake thanks to
+ * QueryFactory class.
+ *
+ * @method serialized
+ * @return {Object} The jsonable object
+ */
+Query.prototype.serialized = function () {
+  return undefined;
+};
 
 _export("Query", Query);
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global newClass: true, Query: true,
-         query_class_dict: true, _export: true */
+/*global Query: true, inherits: true, query_class_dict: true, _export: true,
+  convertStringToRegExp: true */
 
 /**
  * The SimpleQuery inherits from Query, and compares one metadata value
@@ -1135,7 +1117,9 @@ _export("Query", Query);
  * @param  {String} spec.key The metadata key
  * @param  {String} spec.value The value of the metadata to compare
  */
-var SimpleQuery = newClass(Query, function (spec) {
+function SimpleQuery(spec) {
+  Query.call(this);
+
   /**
    * Operator to use to compare object values
    *
@@ -1162,124 +1146,127 @@ var SimpleQuery = newClass(Query, function (spec) {
    */
   this.value = spec.value;
 
-  /**
-   * #crossLink "Query/match:method"
-   */
-  this.match = function (item, wildcard_character) {
-    return this[this.operator](item[this.key], this.value, wildcard_character);
-  };
+}
+inherits(SimpleQuery, Query);
+SimpleQuery.prototype.constructor = SimpleQuery;
 
-  /**
-   * #crossLink "Query/toString:method"
-   */
-  this.toString = function () {
-    return (this.key ? this.key + ": " : "") + (this.operator || "=") + ' "' +
-      this.value + '"';
-  };
+/**
+ * #crossLink "Query/match:method"
+ */
+SimpleQuery.prototype.match = function (item, wildcard_character) {
+  return this[this.operator](item[this.key], this.value, wildcard_character);
+};
 
-  /**
-   * #crossLink "Query/serialized:method"
-   */
-  this.serialized = function () {
-    return {
-      "type": "simple",
-      "operator": this.operator,
-      "key": this.key,
-      "value": this.value
-    };
-  };
+/**
+ * #crossLink "Query/toString:method"
+ */
+SimpleQuery.prototype.toString = function () {
+  return (this.key ? this.key + ": " : "") + (this.operator || "=") + ' "' +
+    this.value + '"';
+};
 
-  /**
-   * Comparison operator, test if this query value matches the item value
-   *
-   * @method =
-   * @param  {String} object_value The value to compare
-   * @param  {String} comparison_value The comparison value
-   * @param  {String} wildcard_character The wildcard_character
-   * @return {Boolean} true if match, false otherwise
-   */
-  this["="] = function (object_value, comparison_value,
-                        wildcard_character) {
-    return Query.convertStringToRegExp(
-      comparison_value.toString(),
-      wildcard_character || "%"
-    ).test(object_value.toString());
+/**
+ * #crossLink "Query/serialized:method"
+ */
+SimpleQuery.prototype.serialized = function () {
+  return {
+    "type": "simple",
+    "operator": this.operator,
+    "key": this.key,
+    "value": this.value
   };
+};
 
-  /**
-   * Comparison operator, test if this query value does not match the item value
-   *
-   * @method !=
-   * @param  {String} object_value The value to compare
-   * @param  {String} comparison_value The comparison value
-   * @param  {String} wildcard_character The wildcard_character
-   * @return {Boolean} true if not match, false otherwise
-   */
-  this["!="] = function (object_value, comparison_value,
-                         wildcard_character) {
-    return !Query.convertStringTextToRegExp(
-      comparison_value.toString(),
-      wildcard_character || "%"
-    ).test(object_value.toString());
-  };
+/**
+ * Comparison operator, test if this query value matches the item value
+ *
+ * @method =
+ * @param  {String} object_value The value to compare
+ * @param  {String} comparison_value The comparison value
+ * @param  {String} wildcard_character The wildcard_character
+ * @return {Boolean} true if match, false otherwise
+ */
+SimpleQuery.prototype["="] = function (object_value, comparison_value,
+                      wildcard_character) {
+  return convertStringToRegExp(
+    comparison_value.toString(),
+    wildcard_character || "%"
+  ).test(object_value.toString());
+};
 
-  /**
-   * Comparison operator, test if this query value is lower than the item value
-   *
-   * @method <
-   * @param  {Number, String} object_value The value to compare
-   * @param  {Number, String} comparison_value The comparison value
-   * @return {Boolean} true if lower, false otherwise
-   */
-  this["<"] = function (object_value, comparison_value) {
-    return object_value < comparison_value;
-  };
+/**
+ * Comparison operator, test if this query value does not match the item value
+ *
+ * @method !=
+ * @param  {String} object_value The value to compare
+ * @param  {String} comparison_value The comparison value
+ * @param  {String} wildcard_character The wildcard_character
+ * @return {Boolean} true if not match, false otherwise
+ */
+SimpleQuery.prototype["!="] = function (object_value, comparison_value,
+                       wildcard_character) {
+  return !convertStringToRegExp(
+    comparison_value.toString(),
+    wildcard_character || "%"
+  ).test(object_value.toString());
+};
 
-  /**
-   * Comparison operator, test if this query value is equal or lower than the
-   * item value
-   *
-   * @method <=
-   * @param  {Number, String} object_value The value to compare
-   * @param  {Number, String} comparison_value The comparison value
-   * @return {Boolean} true if equal or lower, false otherwise
-   */
-  this["<="] = function (object_value, comparison_value) {
-    return object_value <= comparison_value;
-  };
+/**
+ * Comparison operator, test if this query value is lower than the item value
+ *
+ * @method <
+ * @param  {Number, String} object_value The value to compare
+ * @param  {Number, String} comparison_value The comparison value
+ * @return {Boolean} true if lower, false otherwise
+ */
+SimpleQuery.prototype["<"] = function (object_value, comparison_value) {
+  return object_value < comparison_value;
+};
 
-  /**
-   * Comparison operator, test if this query value is greater than the item
-   * value
-   *
-   * @method >
-   * @param  {Number, String} object_value The value to compare
-   * @param  {Number, String} comparison_value The comparison value
-   * @return {Boolean} true if greater, false otherwise
-   */
-  this[">"] = function (object_value, comparison_value) {
-    return object_value > comparison_value;
-  };
+/**
+ * Comparison operator, test if this query value is equal or lower than the
+ * item value
+ *
+ * @method <=
+ * @param  {Number, String} object_value The value to compare
+ * @param  {Number, String} comparison_value The comparison value
+ * @return {Boolean} true if equal or lower, false otherwise
+ */
+SimpleQuery.prototype["<="] = function (object_value, comparison_value) {
+  return object_value <= comparison_value;
+};
 
-  /**
-   * Comparison operator, test if this query value is equal or greater than the
-   * item value
-   *
-   * @method >=
-   * @param  {Number, String} object_value The value to compare
-   * @param  {Number, String} comparison_value The comparison value
-   * @return {Boolean} true if equal or greater, false otherwise
-   */
-  this[">="] = function (object_value, comparison_value) {
-    return object_value >= comparison_value;
-  };
-});
+/**
+ * Comparison operator, test if this query value is greater than the item
+ * value
+ *
+ * @method >
+ * @param  {Number, String} object_value The value to compare
+ * @param  {Number, String} comparison_value The comparison value
+ * @return {Boolean} true if greater, false otherwise
+ */
+SimpleQuery.prototype[">"] = function (object_value, comparison_value) {
+  return object_value > comparison_value;
+};
+
+/**
+ * Comparison operator, test if this query value is equal or greater than the
+ * item value
+ *
+ * @method >=
+ * @param  {Number, String} object_value The value to compare
+ * @param  {Number, String} comparison_value The comparison value
+ * @return {Boolean} true if equal or greater, false otherwise
+ */
+SimpleQuery.prototype[">="] = function (object_value, comparison_value) {
+  return object_value >= comparison_value;
+};
 
 query_class_dict.simple = SimpleQuery;
 
 _export("SimpleQuery", SimpleQuery);
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global newClass: true, Query: true, query_class_dict: true,
+/*global Query: true, query_class_dict: true, inherits: true,
          _export: true, QueryFactory: true */
 
 /**
@@ -1293,7 +1280,8 @@ _export("SimpleQuery", SimpleQuery);
  * @param  {String} spec.key The metadata key
  * @param  {String} spec.value The value of the metadata to compare
  */
-var ComplexQuery = newClass(Query, function (spec) {
+function ComplexQuery(spec) {
+  Query.call(this);
 
   /**
    * Logical operator to use to compare object values
@@ -1316,93 +1304,96 @@ var ComplexQuery = newClass(Query, function (spec) {
   this.query_list = spec.query_list || [];
   this.query_list = this.query_list.map(QueryFactory.create);
 
-  /**
-   * #crossLink "Query/match:method"
-   */
-  this.match = function (item, wildcard_character) {
-    return this[this.operator](item, wildcard_character);
-  };
+}
+inherits(ComplexQuery, Query);
+ComplexQuery.prototype.constructor = ComplexQuery;
 
-  /**
-   * #crossLink "Query/toString:method"
-   */
-  this.toString = function () {
-    var str_list = ["("], this_operator = this.operator;
-    this.query_list.forEach(function (query) {
-      str_list.push(query.toString());
-      str_list.push(this_operator);
-    });
-    str_list.pop(); // remove last operator
-    str_list.push(")");
-    return str_list.join(" ");
-  };
+/**
+ * #crossLink "Query/match:method"
+ */
+ComplexQuery.prototype.match = function (item, wildcard_character) {
+  return this[this.operator](item, wildcard_character);
+};
 
-  /**
-   * #crossLink "Query/serialized:method"
-   */
-  this.serialized = function () {
-    var s = {
-      "type": "complex",
-      "operator": this.operator,
-      "query_list": []
-    };
-    this.query_list.forEach(function (query) {
-      s.query_list.push(query.serialized());
-    });
-    return s;
-  };
+/**
+ * #crossLink "Query/toString:method"
+ */
+ComplexQuery.prototype.toString = function () {
+  var str_list = ["("], this_operator = this.operator;
+  this.query_list.forEach(function (query) {
+    str_list.push(query.toString());
+    str_list.push(this_operator);
+  });
+  str_list.pop(); // remove last operator
+  str_list.push(")");
+  return str_list.join(" ");
+};
 
-  /**
-   * Comparison operator, test if all sub queries match the
-   * item value
-   *
-   * @method AND
-   * @param  {Object} item The item to match
-   * @param  {String} wildcard_character The wildcard character
-   * @return {Boolean} true if all match, false otherwise
-   */
-  this.AND = function (item, wildcard_character) {
-    var i;
-    for (i = 0; i < this.query_list.length; i += 1) {
-      if (!this.query_list[i].match(item, wildcard_character)) {
-        return false;
-      }
+/**
+ * #crossLink "Query/serialized:method"
+ */
+ComplexQuery.prototype.serialized = function () {
+  var s = {
+    "type": "complex",
+    "operator": this.operator,
+    "query_list": []
+  };
+  this.query_list.forEach(function (query) {
+    s.query_list.push(query.serialized());
+  });
+  return s;
+};
+
+/**
+ * Comparison operator, test if all sub queries match the
+ * item value
+ *
+ * @method AND
+ * @param  {Object} item The item to match
+ * @param  {String} wildcard_character The wildcard character
+ * @return {Boolean} true if all match, false otherwise
+ */
+ComplexQuery.prototype.AND = function (item, wildcard_character) {
+  var i;
+  for (i = 0; i < this.query_list.length; i += 1) {
+    if (!this.query_list[i].match(item, wildcard_character)) {
+      return false;
     }
-    return true;
-  };
+  }
+  return true;
+};
 
-  /**
-   * Comparison operator, test if one of the sub queries matches the
-   * item value
-   *
-   * @method OR
-   * @param  {Object} item The item to match
-   * @param  {String} wildcard_character The wildcard character
-   * @return {Boolean} true if one match, false otherwise
-   */
-  this.OR =  function (item, wildcard_character) {
-    var i;
-    for (i = 0; i < this.query_list.length; i += 1) {
-      if (this.query_list[i].match(item, wildcard_character)) {
-        return true;
-      }
+/**
+ * Comparison operator, test if one of the sub queries matches the
+ * item value
+ *
+ * @method OR
+ * @param  {Object} item The item to match
+ * @param  {String} wildcard_character The wildcard character
+ * @return {Boolean} true if one match, false otherwise
+ */
+ComplexQuery.prototype.OR =  function (item, wildcard_character) {
+  var i;
+  for (i = 0; i < this.query_list.length; i += 1) {
+    if (this.query_list[i].match(item, wildcard_character)) {
+      return true;
     }
-    return false;
-  };
+  }
+  return false;
+};
 
-  /**
-   * Comparison operator, test if the sub query does not match the
-   * item value
-   *
-   * @method NOT
-   * @param  {Object} item The item to match
-   * @param  {String} wildcard_character The wildcard character
-   * @return {Boolean} true if one match, false otherwise
-   */
-  this.NOT = function (item, wildcard_character) {
-    return !this.query_list[0].match(item, wildcard_character);
-  };
-});
+/**
+ * Comparison operator, test if the sub query does not match the
+ * item value
+ *
+ * @method NOT
+ * @param  {Object} item The item to match
+ * @param  {String} wildcard_character The wildcard character
+ * @return {Boolean} true if one match, false otherwise
+ */
+ComplexQuery.prototype.NOT = function (item, wildcard_character) {
+  return !this.query_list[0].match(item, wildcard_character);
+};
 
 query_class_dict.complex = ComplexQuery;
 

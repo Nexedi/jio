@@ -2,102 +2,6 @@
 /*global _export: true */
 
 /**
- * Create a class, manage inheritance, static methods,
- * protected attributes and can hide methods or/and secure methods
- *
- * @param  {Class} Class Classes to inherit from (0..n). The last class
- *                       parameter will inherit from the previous one, and so on
- * @param  {Object} option Class option (0..n)
- * @param  {Boolean} [option.secure_methods=false] Make methods not configurable
- *                                                 and not writable
- * @param  {Boolean} [option.hide_methods=false] Make methods not enumerable
- * @param  {Boolean} [option.secure_static_methods=true] Make static methods not
- *                                                       configurable and not
- *                                                       writable
- * @param  {Boolean} [option.hide_static_methods=false] Make static methods not
- *                                                      enumerable
- * @param  {Object} [option.static_methods={}] Object of static methods
- * @param  {Function} constructor The new class constructor
- * @return {Class} The new class
- */
-function newClass() {
-  var j, k, constructors = [], option, new_class;
-
-  for (j = 0; j < arguments.length; j += 1) {
-    if (typeof arguments[j] === "function") {
-      constructors.push(arguments[j]);
-    } else if (typeof arguments[j] === "object") {
-      option = option || {};
-      for (k in arguments[j]) {
-        if (arguments[j].hasOwnProperty(k)) {
-          option[k] = arguments[j][k];
-        }
-      }
-    }
-  }
-
-  function postObjectCreation(that) {
-    // modify the object according to 'option'
-    var key;
-    if (option) {
-      for (key in that) {
-        if (that.hasOwnProperty(key)) {
-          if (typeof that[key] === "function") {
-            Object.defineProperty(that, key, {
-              "configurable": option.secure_methods ? false : true,
-              "enumerable": option.hide_methods ? false : true,
-              "writable": option.secure_methods ? false : true,
-              "value": that[key]
-            });
-          }
-        }
-      }
-    }
-  }
-
-  function postClassCreation(that) {
-    // modify the object according to 'option'
-    var key;
-    if (option) {
-      for (key in that) {
-        if (that.hasOwnProperty(key)) {
-          if (typeof that[key] === "function") {
-            Object.defineProperty(that, key, {
-              "configurable": option.secure_static_methods ===
-                false ? true : false,
-              "enumerable": option.hide_static_methods ? false : true,
-              "writable": option.secure_static_methods === false ? true : false,
-              "value": that[key]
-            });
-          }
-        }
-      }
-    }
-  }
-
-  new_class = function (spec, my) {
-    var i;
-    spec = spec || {};
-    my = my || {};
-    // don't use forEach !
-    for (i = 0; i < constructors.length; i += 1) {
-      constructors[i].apply(this, [spec, my]);
-    }
-    postObjectCreation(this);
-    return this;
-  };
-  option = option || {};
-  option.static_methods = option.static_methods || {};
-  for (j in option.static_methods) {
-    if (option.static_methods.hasOwnProperty(j)) {
-      new_class[j] = option.static_methods[j];
-    }
-  }
-  postClassCreation(new_class);
-  return new_class;
-}
-
-/**
  * Escapes regexp special chars from a string.
  *
  * @param  {String} string The string to escape
@@ -156,3 +60,113 @@ function deepClone(object) {
   }
   return object;
 }
+
+/**
+ * Inherits the prototype methods from one constructor into another. The
+ * prototype of `constructor` will be set to a new object created from
+ * `superConstructor`.
+ */
+function inherits(constructor, superConstructor) {
+  constructor.super_ = superConstructor;
+  constructor.prototype = Object.create(superConstructor.prototype, {});
+}
+
+/**
+ * Does nothing
+ */
+function emptyFunction() {}
+
+/**
+ * Filter a list of items, modifying them to select only wanted keys. If
+ * `clone` is true, then the method will act on a cloned list.
+ *
+ * @param  {Array} select_option Key list to keep
+ * @param  {Array} list The item list to filter
+ * @param  {Boolean} [clone=false] If true, modifies a clone of the list
+ * @return {Array} The filtered list
+ */
+function select(select_option, list, clone) {
+  var i, j, new_item;
+  if (clone) {
+    list = deepClone(list);
+  }
+  for (i = 0; i < list.length; i += 1) {
+    new_item = {};
+    for (j = 0; j < select_option.length; j += 1) {
+      new_item[select_option[j]] = list[i][select_option[j]];
+    }
+    for (j in new_item) {
+      if (new_item.hasOwnProperty(j)) {
+        list[i] = new_item;
+        break;
+      }
+    }
+  }
+  return list;
+}
+
+_export('select', select);
+
+/**
+ * Sort a list of items, according to keys and directions. If `clone` is true,
+ * then the method will act on a cloned list.
+ *
+ * @param  {Array} sort_on_option List of couples [key, direction]
+ * @param  {Array} list The item list to sort
+ * @param  {Boolean} [clone=false] If true, modifies a clone of the list
+ * @return {Array} The filtered list
+ */
+function sortOn(sort_on_option, list, clone) {
+  var sort_index;
+  if (clone) {
+    list = deepClone(list);
+  }
+  for (sort_index = sort_on_option.length - 1; sort_index >= 0;
+       sort_index -= 1) {
+    list.sort(sortFunction(
+      sort_on_option[sort_index][0],
+      sort_on_option[sort_index][1]
+    ));
+  }
+  return list;
+}
+
+_export('sortOn', sortOn);
+
+/**
+ * Limit a list of items, according to index and length. If `clone` is true,
+ * then the method will act on a cloned list.
+ *
+ * @param  {Array} limit_option A couple [from, length]
+ * @param  {Array} list The item list to limit
+ * @param  {Boolean} [clone=false] If true, modifies a clone of the list
+ * @return {Array} The filtered list
+ */
+function limit(limit_option, list, clone) {
+  if (clone) {
+    list = deepClone(list);
+  }
+  list.splice(0, limit_option[0]);
+  if (limit_option[1]) {
+    list.splice(limit_option[1]);
+  }
+  return list;
+}
+
+_export('limit', limit);
+
+/**
+ * Convert a search text to a regexp.
+ *
+ * @param  {String} string The string to convert
+ * @param  {String} [wildcard_character=undefined] The wildcard chararter
+ * @return {RegExp} The search text regexp
+ */
+function convertStringToRegExp(string, wildcard_character) {
+  return new RegExp("^" + stringEscapeRegexpCharacters(string).replace(
+    stringEscapeRegexpCharacters(wildcard_character),
+    '.*'
+  ) + "$");
+}
+
+_export('convertStringToRegExp', convertStringToRegExp);
