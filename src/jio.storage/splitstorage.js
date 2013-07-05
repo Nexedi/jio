@@ -54,7 +54,167 @@
     }
     return S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() +
       S4() + S4();
+  }
+
+
+  /**
+   * Class to merge allDocs responses from several sub storages.
+   *
+   * @class AllDocsResponseMerger
+   * @constructor
+   */
+  function AllDocsResponseMerger() {
+
+    /**
+     * A list of allDocs response.
+     *
+     * @attribute response_list
+     * @type {Array} Contains allDocs responses
+     * @default []
+     */
+    this.response_list = [];
+  }
+  AllDocsResponseMerger.prototype.constructor = AllDocsResponseMerger;
+
+  /**
+   * Add an allDocs response to the response list.
+   *
+   * @method addResponse
+   * @param  {Object} response The allDocs response.
+   * @return {AllDocsResponseMerger} This
+   */
+  AllDocsResponseMerger.prototype.addResponse = function (response) {
+    this.response_list.push(response);
+    return this;
   };
+
+  /**
+   * Add several allDocs responses to the response list.
+   *
+   * @method addResponseList
+   * @param  {Array} response_list An array of allDocs responses.
+   * @return {AllDocsResponseMerger} This
+   */
+  AllDocsResponseMerger.prototype.addResponseList = function (response_list) {
+    var i;
+    for (i = 0; i < response_list.length; i += 1) {
+      this.response_list.push(response_list[i]);
+    }
+    return this;
+  };
+
+  /**
+   * Merge the response_list to one allDocs response.
+   *
+   * The merger will find rows with the same id in order to merge them, thanks
+   * to the onRowToMerge method. If no row correspond to an id, rows with the
+   * same id will be ignored.
+   *
+   * @method merge
+   * @param  {Object} [option={}] The merge options
+   * @param  {Boolean} [option.include_docs=false] Tell the merger to also
+   *   merge metadata if true.
+   * @return {Object} The merged allDocs response.
+   */
+  AllDocsResponseMerger.prototype.merge = function (option) {
+    var result = [], row, to_merge = [], tmp, i;
+    if (this.response_list.length === 0) {
+      return [];
+    }
+    while ((row = this.response_list[0].rows.shift()) !== undefined) {
+      console.log('row', row);
+      to_merge[0] = row;
+      for (i = 1; i < this.response_list.length; i += 1) {
+        to_merge[i] = AllDocsResponseMerger.listPopFromRowId(
+          this.response_list[i].rows,
+          row.id
+        );
+        if (to_merge[i] === undefined) {
+          break;
+        }
+      }
+      console.log('to merge', to_merge);
+      tmp = this.onRowToMerge(to_merge, option || {});
+      if (tmp !== undefined) {
+        result[result.length] = tmp;
+      }
+    }
+    this.response_list = [];
+    return {"total_rows": result.length, "rows": result};
+  };
+
+  /**
+   * This method is called when the merger want to merge several rows with the
+   * same id.
+   *
+   * @method onRowToMerge
+   * @param  {Array} row_list An array of rows.
+   * @param  {Object} [option={}] The merge option.
+   * @param  {Boolean} [option.include_docs=false] Also merge the metadata if
+   *   true
+   * @return {Object} The merged row
+   */
+  AllDocsResponseMerger.prototype.onRowToMerge = function (row_list, option) {
+    var i, k, new_row = {"value": {}}, data = "";
+    option = option || {};
+    for (i = 0; i < row_list.length; i += 1) {
+      new_row.id = row_list[i].id;
+      if (row_list[i].key) {
+        new_row.key = row_list[i].key;
+      }
+      if (option.include_docs) {
+        new_row.doc = new_row.doc || {};
+        for (k in row_list[i].doc) {
+          if (row_list[i].doc.hasOwnProperty(k)) {
+            if (k[0] === "_") {
+              new_row.doc[k] = row_list[i].doc[k];
+            }
+          }
+        }
+        data += row_list[i].doc.data;
+      }
+    }
+    if (option.include_docs) {
+      try {
+        data = JSON.parse(data);
+      } catch (e) { return undefined; }
+      for (k in data) {
+        if (data.hasOwnProperty(k)) {
+          new_row.doc[k] = data[k];
+        }
+      }
+    }
+    return new_row;
+  };
+
+  /**
+   * Search for a specific row and pop it. During the search operation, all
+   * parsed rows are stored on a dictionnary in order to be found instantly
+   * later.
+   *
+   * @method listPopFromRowId
+   * @param  {Array} rows The row list
+   * @param  {String} doc_id The document/row id
+   * @return {Object/undefined} The poped row
+   */
+  AllDocsResponseMerger.listPopFromRowId = function (rows, doc_id) {
+    var row;
+    if (!rows.dict) {
+      rows.dict = {};
+    }
+    if (rows.dict[doc_id]) {
+      row = rows.dict[doc_id];
+      delete rows.dict[doc_id];
+      return row;
+    }
+    while ((row = rows.shift()) !== undefined) {
+      if (row.id === doc_id) {
+        return row;
+      }
+      rows.dict[row.id] = row;
+    }
+  };
+
 
   /**
    * The split storage class used by JIO.
@@ -301,10 +461,10 @@
                   "length": 0,
                   "content_type": "",
                 };
-                doc._attachments[k].length +=
-                response[i]._attachments[k].length;
-                doc._attachments[k].content_type =
-                  response[i]._attachments[k].content_type;
+                doc._attachments[k].length += response[i]._attachments[k].
+                  length;
+                doc._attachments[k].content_type = response[i]._attachments[k].
+                  content_type;
               }
             }
           }
@@ -394,58 +554,26 @@
      * If include_docs option is false, then it returns the document list from
      * the first sub storage. Else, it will merge results and return.
      *
-     * This method support complex queries options.
-     *
      * @method allDocs
      * @param  {Command} command The JIO command
      */
     that.allDocs = function (command) {
-      var option = command.cloneOption(), result = [];
+      var option = command.cloneOption();
       option = {"include_docs": option.include_docs};
       priv.send(
         'allDocs',
         command.cloneDoc(),
         option,
-        function (err, response) {
-          var row, j, tmp;
+        function (err, response_list) {
+          var all_docs_merger;
           if (err) {
             err.message = "Unable to retrieve document list";
             delete err.index;
             return that.error(err);
           }
-          function pop(list, doc_id) {
-            var element;
-            if (!list.dict) {
-              list.dict = {};
-            }
-            if (list.dict[doc_id]) {
-              element = list.dict[doc_id];
-              delete list.dict[doc_id];
-              return element;
-            }
-            while (list.length) {
-              element = list.shift();
-              if (element._id === doc_id) {
-                return element;
-              } else {
-                list.dict[element._id] = element;
-              }
-            }
-          }
-          option = command.cloneOption();
-          while (response[0].rows.length) {
-            // browsing response[0] rows
-            row = response[0].rows.shift();
-            for (j = 1; j < response.length; j += 1) {
-              // browsing responses
-              tmp = pop(response[j].rows, row._id);
-              if (tmp !== undefined) {
-
-              }
-            }
-          }
-
-          return that.success(response[0]);
+          all_docs_merger = new AllDocsResponseMerger();
+          all_docs_merger.addResponseList(response_list);
+          return that.success(all_docs_merger.merge(option));
         }
       );
     };
@@ -459,7 +587,7 @@
     define(['jio'], function (jio) {
       try {
         queries = require('complex_queries');
-      } catch(e) {};
+      } catch (e) {}
       jio.addStorageType('split', splitStorage);
     });
   } else if (typeof require === "function") {
