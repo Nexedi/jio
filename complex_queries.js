@@ -31,8 +31,6 @@ var complex_queries;
 /**
  * Parse a text request to a json query object tree
  *
- * @method parseStringToObject
- * @static
  * @param  {String} string The string to parse
  * @return {Object} The json query tree
  */
@@ -737,6 +735,8 @@ function stringEscapeRegexpCharacters(string) {
   if (typeof string === "string") {
     return string.replace(/([\\\.\$\[\]\(\)\{\}\^\?\*\+\-])/g, "\\$1");
   }
+  throw new TypeError("complex_queries.stringEscapeRegexpCharacters(): " +
+                      "Argument no 1 is not of type 'string'");
 }
 
 _export("stringEscapeRegexpCharacters", stringEscapeRegexpCharacters);
@@ -754,9 +754,13 @@ function sortFunction(key, way) {
       return a[key] < b[key] ? 1 : a[key] > b[key] ? -1 : 0;
     };
   }
-  return function (a, b) {
-    return a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0;
-  };
+  if (way === 'ascending') {
+    return function (a, b) {
+      return a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0;
+    };
+  }
+  throw new TypeError("complex_queries.sortFunction(): " +
+                      "Argument 2 must be 'ascending' or 'descending'");
 }
 
 /**
@@ -768,7 +772,7 @@ function sortFunction(key, way) {
  */
 function deepClone(object) {
   var i, cloned;
-  if (Object.prototype.toString.call(object) === "[object Array]") {
+  if (Array.isArray(object)) {
     cloned = [];
     for (i = 0; i < object.length; i += 1) {
       cloned[i] = deepClone(object[i]);
@@ -791,10 +795,20 @@ function deepClone(object) {
  * Inherits the prototype methods from one constructor into another. The
  * prototype of `constructor` will be set to a new object created from
  * `superConstructor`.
+ *
+ * @param  {Function} constructor The constructor which inherits the super one
+ * @param  {Function} superConstructor The super constructor
  */
 function inherits(constructor, superConstructor) {
   constructor.super_ = superConstructor;
-  constructor.prototype = Object.create(superConstructor.prototype, {});
+  constructor.prototype = Object.create(superConstructor.prototype, {
+    "constructor": {
+      "configurable": true,
+      "enumerable": false,
+      "writable": true,
+      "value": constructor
+    }
+  });
 }
 
 /**
@@ -806,8 +820,6 @@ function emptyFunction() {}
  * Filter a list of items, modifying them to select only wanted keys. If
  * `clone` is true, then the method will act on a cloned list.
  *
- * @method select
- * @static
  * @param  {Array} select_option Key list to keep
  * @param  {Array} list The item list to filter
  * @param  {Boolean} [clone=false] If true, modifies a clone of the list
@@ -815,7 +827,15 @@ function emptyFunction() {}
  */
 function select(select_option, list, clone) {
   var i, j, new_item;
-  if (clone) {
+  if (!Array.isArray(select_option)) {
+    throw new TypeError("complex_queries.select(): " +
+                        "Argument 1 is not of type Array");
+  }
+  if (!Array.isArray(list)) {
+    throw new TypeError("complex_queries.select(): " +
+                        "Argument 2 is not of type Array");
+  }
+  if (clone === true) {
     list = deepClone(list);
   }
   for (i = 0; i < list.length; i += 1) {
@@ -839,8 +859,6 @@ _export('select', select);
  * Sort a list of items, according to keys and directions. If `clone` is true,
  * then the method will act on a cloned list.
  *
- * @method sortOn
- * @static
  * @param  {Array} sort_on_option List of couples [key, direction]
  * @param  {Array} list The item list to sort
  * @param  {Boolean} [clone=false] If true, modifies a clone of the list
@@ -848,6 +866,10 @@ _export('select', select);
  */
 function sortOn(sort_on_option, list, clone) {
   var sort_index;
+  if (!Array.isArray(sort_on_option)) {
+    throw new TypeError("complex_queries.sortOn(): " +
+                        "Argument 1 is not of type 'array'");
+  }
   if (clone) {
     list = deepClone(list);
   }
@@ -867,14 +889,20 @@ _export('sortOn', sortOn);
  * Limit a list of items, according to index and length. If `clone` is true,
  * then the method will act on a cloned list.
  *
- * @method limit
- * @static
  * @param  {Array} limit_option A couple [from, length]
  * @param  {Array} list The item list to limit
  * @param  {Boolean} [clone=false] If true, modifies a clone of the list
  * @return {Array} The filtered list
  */
 function limit(limit_option, list, clone) {
+  if (!Array.isArray(limit_option)) {
+    throw new TypeError("complex_queries.limit(): " +
+                        "Argument 1 is not of type 'array'");
+  }
+  if (!Array.isArray(list)) {
+    throw new TypeError("complex_queries.limit(): " +
+                        "Argument 2 is not of type 'array'");
+  }
   if (clone) {
     list = deepClone(list);
   }
@@ -890,15 +918,25 @@ _export('limit', limit);
 /**
  * Convert a search text to a regexp.
  *
- * @method convertStringToRegExp
- * @static
  * @param  {String} string The string to convert
  * @param  {String} [wildcard_character=undefined] The wildcard chararter
  * @return {RegExp} The search text regexp
  */
 function convertStringToRegExp(string, wildcard_character) {
+  if (typeof string !== 'string') {
+    throw new TypeError("complex_queries.convertStringToRegExp(): " +
+                        "Argument 1 is not of type 'string'");
+  }
+  if (wildcard_character === undefined ||
+      wildcard_character === null || wildcard_character === '') {
+    return new RegExp("^" + stringEscapeRegexpCharacters(string) + "$");
+  }
+  if (typeof wildcard_character !== 'string' || wildcard_character.length > 1) {
+    throw new TypeError("complex_queries.convertStringToRegExp(): " +
+                        "Optional argument 2 must be a string of length <= 1");
+  }
   return new RegExp("^" + stringEscapeRegexpCharacters(string).replace(
-    stringEscapeRegexpCharacters(wildcard_character),
+    new RegExp(stringEscapeRegexpCharacters(wildcard_character), 'g'),
     '.*'
   ) + "$");
 }
@@ -939,7 +977,8 @@ QueryFactory.create = function (object) {
       query_class_dict[object.type]) {
     return new query_class_dict[object.type](object);
   }
-  return null;
+  throw new TypeError("QueryFactory.create(): " +
+                      "Argument 1 is not a search text or a parsable object");
 };
 
 _export("QueryFactory", QueryFactory);
@@ -994,7 +1033,6 @@ function Query() {
   this.onParseEnd = emptyFunction;
 
 }
-Query.prototype.constructor = Query;
 
 /**
  * Filter the item list with matching item only
@@ -1011,6 +1049,19 @@ Query.prototype.constructor = Query;
  */
 Query.prototype.exec = function (item_list, option) {
   var i = 0;
+  if (!Array.isArray(item_list)) {
+    throw new TypeError("Query().exec(): Argument 1 is not of type 'array'");
+  }
+  if (option === undefined) {
+    option = {};
+  }
+  if (typeof option !== 'object') {
+    throw new TypeError("Query().exec(): " +
+                        "Optional argument 2 is not of type 'object'");
+  }
+  if (option.wildcard_character === undefined) {
+    option.wildcard_character = '%';
+  }
   while (i < item_list.length) {
     if (!this.match(item_list[i], option.wildcard_character)) {
       item_list.splice(i, 1);
@@ -1148,7 +1199,6 @@ function SimpleQuery(spec) {
 
 }
 inherits(SimpleQuery, Query);
-SimpleQuery.prototype.constructor = SimpleQuery;
 
 /**
  * #crossLink "Query/match:method"
@@ -1306,7 +1356,6 @@ function ComplexQuery(spec) {
 
 }
 inherits(ComplexQuery, Query);
-ComplexQuery.prototype.constructor = ComplexQuery;
 
 /**
  * #crossLink "Query/match:method"
