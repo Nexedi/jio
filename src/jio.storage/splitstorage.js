@@ -334,8 +334,9 @@
      * @private
      * @param  {Object} doc A serialized document object
      * @param  {Object} option Command option properties
+     * @param  {String} method The command method ('post' or 'put')
      */
-    priv.postOrPut = function (doc, option) {
+    priv.postOrPut = function (doc, option, method) {
       var i, data, doc_list = [], doc_underscores = {};
       if (!doc._id) {
         doc._id = generateUuid();
@@ -356,9 +357,9 @@
           (data.length / priv.storage_list.length) * (i + 1)
         );
       }
-      priv.send('put', doc_list, option, function (err, response) {
+      priv.send(method, doc_list, option, function (err, response) {
         if (err) {
-          err.message = "Unable to post document";
+          err.message = "Unable to " + method + " document";
           delete err.index;
           return that.error(err);
         }
@@ -376,7 +377,7 @@
      * @param  {Command} command The JIO command
      */
     that.post = function (command) {
-      priv.postOrPut(command.cloneDoc(), command.cloneOption());
+      priv.postOrPut(command.cloneDoc(), command.cloneOption(), 'post');
     };
 
     /**
@@ -386,7 +387,7 @@
      * @param  {Command} command The JIO command
      */
     that.put = function (command) {
-      priv.postOrPut(command.cloneDoc(), command.cloneOption());
+      priv.postOrPut(command.cloneDoc(), command.cloneOption(), 'put');
     };
 
     /**
