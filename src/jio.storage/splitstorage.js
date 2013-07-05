@@ -454,16 +454,28 @@
               }
             }
           }
+        }
+        delete doc._attachments;
+        for (i = 0; i < response.length; i += 1) {
           if (response[i]._attachments) {
-            doc._attachments = doc._attachments || {};
             for (k in response[i]._attachments) {
               if (response[i]._attachments.hasOwnProperty(k)) {
+                doc._attachments = doc._attachments || {};
                 doc._attachments[k] = doc._attachments[k] || {
                   "length": 0,
-                  "content_type": "",
+                  "content_type": ""
                 };
                 doc._attachments[k].length += response[i]._attachments[k].
                   length;
+                // if (response[i]._attachments[k].digest) {
+                //   if (doc._attachments[k].digest) {
+                //     doc._attachments[k].digest += " " + response[i].
+                //       _attachments[k].digest;
+                //   } else {
+                //     doc._attachments[k].digest = response[i].
+                //       _attachments[k].digest;
+                //   }
+                // }
                 doc._attachments[k].content_type = response[i]._attachments[k].
                   content_type;
               }
