@@ -49,7 +49,6 @@ function Query() {
   this.onParseEnd = emptyFunction;
 
 }
-Query.prototype.constructor = Query;
 
 /**
  * Filter the item list with matching item only

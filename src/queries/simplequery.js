@@ -43,7 +43,6 @@ function SimpleQuery(spec) {
 
 }
 inherits(SimpleQuery, Query);
-SimpleQuery.prototype.constructor = SimpleQuery;
 
 /**
  * #crossLink "Query/match:method"

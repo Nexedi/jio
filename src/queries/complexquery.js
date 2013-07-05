@@ -39,7 +39,6 @@ function ComplexQuery(spec) {
 
 }
 inherits(ComplexQuery, Query);
-ComplexQuery.prototype.constructor = ComplexQuery;
 
 /**
  * #crossLink "Query/match:method"

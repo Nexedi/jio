@@ -65,10 +65,20 @@ function deepClone(object) {
  * Inherits the prototype methods from one constructor into another. The
  * prototype of `constructor` will be set to a new object created from
  * `superConstructor`.
+ *
+ * @param  {Function} constructor The constructor which inherits the super one
+ * @param  {Function} superConstructor The super constructor
  */
 function inherits(constructor, superConstructor) {
   constructor.super_ = superConstructor;
-  constructor.prototype = Object.create(superConstructor.prototype, {});
+  constructor.prototype = Object.create(superConstructor.prototype, {
+    "constructor": {
+      "configurable": true,
+      "enumerable": false,
+      "writable": true,
+      "value": constructor
+    }
+  });
 }
 
 /**
