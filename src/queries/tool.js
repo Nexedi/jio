@@ -11,6 +11,8 @@ function stringEscapeRegexpCharacters(string) {
   if (typeof string === "string") {
     return string.replace(/([\\\.\$\[\]\(\)\{\}\^\?\*\+\-])/g, "\\$1");
   }
+  throw new TypeError("complex_queries.stringEscapeRegexpCharacters(): " +
+                      "Argument no 1 is not of type 'string'");
 }
 
 _export("stringEscapeRegexpCharacters", stringEscapeRegexpCharacters);
@@ -28,9 +30,13 @@ function sortFunction(key, way) {
       return a[key] < b[key] ? 1 : a[key] > b[key] ? -1 : 0;
     };
   }
-  return function (a, b) {
-    return a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0;
-  };
+  if (way === 'ascending') {
+    return function (a, b) {
+      return a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0;
+    };
+  }
+  throw new TypeError("complex_queries.sortFunction(): " +
+                      "Argument 2 must be 'ascending' or 'descending'");
 }
 
 /**
@@ -42,7 +48,7 @@ function sortFunction(key, way) {
  */
 function deepClone(object) {
   var i, cloned;
-  if (Object.prototype.toString.call(object) === "[object Array]") {
+  if (Array.isArray(object)) {
     cloned = [];
     for (i = 0; i < object.length; i += 1) {
       cloned[i] = deepClone(object[i]);
@@ -97,7 +103,15 @@ function emptyFunction() {}
  */
 function select(select_option, list, clone) {
   var i, j, new_item;
-  if (clone) {
+  if (!Array.isArray(select_option)) {
+    throw new TypeError("complex_queries.select(): " +
+                        "Argument 1 is not of type Array");
+  }
+  if (!Array.isArray(list)) {
+    throw new TypeError("complex_queries.select(): " +
+                        "Argument 2 is not of type Array");
+  }
+  if (clone === true) {
     list = deepClone(list);
   }
   for (i = 0; i < list.length; i += 1) {
@@ -128,6 +142,10 @@ _export('select', select);
  */
 function sortOn(sort_on_option, list, clone) {
   var sort_index;
+  if (!Array.isArray(sort_on_option)) {
+    throw new TypeError("complex_queries.sortOn(): " +
+                        "Argument 1 is not of type 'array'");
+  }
   if (clone) {
     list = deepClone(list);
   }
@@ -153,6 +171,14 @@ _export('sortOn', sortOn);
  * @return {Array} The filtered list
  */
 function limit(limit_option, list, clone) {
+  if (!Array.isArray(limit_option)) {
+    throw new TypeError("complex_queries.limit(): " +
+                        "Argument 1 is not of type 'array'");
+  }
+  if (!Array.isArray(list)) {
+    throw new TypeError("complex_queries.limit(): " +
+                        "Argument 2 is not of type 'array'");
+  }
   if (clone) {
     list = deepClone(list);
   }
@@ -173,8 +199,20 @@ _export('limit', limit);
  * @return {RegExp} The search text regexp
  */
 function convertStringToRegExp(string, wildcard_character) {
+  if (typeof string !== 'string') {
+    throw new TypeError("complex_queries.convertStringToRegExp(): " +
+                        "Argument 1 is not of type 'string'");
+  }
+  if (wildcard_character === undefined ||
+      wildcard_character === null || wildcard_character === '') {
+    return new RegExp("^" + stringEscapeRegexpCharacters(string) + "$");
+  }
+  if (typeof wildcard_character !== 'string' || wildcard_character.length > 1) {
+    throw new TypeError("complex_queries.convertStringToRegExp(): " +
+                        "Optional argument 2 must be a string of length <= 1");
+  }
   return new RegExp("^" + stringEscapeRegexpCharacters(string).replace(
-    stringEscapeRegexpCharacters(wildcard_character),
+    new RegExp(stringEscapeRegexpCharacters(wildcard_character), 'g'),
     '.*'
   ) + "$");
 }

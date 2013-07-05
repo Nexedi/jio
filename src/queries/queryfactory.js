@@ -33,7 +33,8 @@ QueryFactory.create = function (object) {
       query_class_dict[object.type]) {
     return new query_class_dict[object.type](object);
   }
-  return null;
+  throw new TypeError("QueryFactory.create(): " +
+                      "Argument 1 is not a search text or a parsable object");
 };
 
 _export("QueryFactory", QueryFactory);

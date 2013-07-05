@@ -65,6 +65,19 @@ function Query() {
  */
 Query.prototype.exec = function (item_list, option) {
   var i = 0;
+  if (!Array.isArray(item_list)) {
+    throw new TypeError("Query().exec(): Argument 1 is not of type 'array'");
+  }
+  if (option === undefined) {
+    option = {};
+  }
+  if (typeof option !== 'object') {
+    throw new TypeError("Query().exec(): " +
+                        "Optional argument 2 is not of type 'object'");
+  }
+  if (option.wildcard_character === undefined) {
+    option.wildcard_character = '%';
+  }
   while (i < item_list.length) {
     if (!this.match(item_list[i], option.wildcard_character)) {
       item_list.splice(i, 1);
