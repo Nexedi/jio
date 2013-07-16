@@ -82,10 +82,33 @@ SimpleQuery.prototype.serialized = function () {
  */
 SimpleQuery.prototype["="] = function (object_value, comparison_value,
                       wildcard_character) {
-  return convertStringToRegExp(
-    comparison_value.toString(),
-    wildcard_character || "%"
-  ).test(object_value.toString());
+  var value, i;
+  if (!Array.isArray(object_value)) {
+    object_value = [object_value];
+  }
+  for (i = 0; i < object_value.length; i += 1) {
+    value = object_value[i];
+    if (typeof value === 'object') {
+      value = value.content;
+    }
+    if (comparison_value === undefined) {
+      if (value === undefined) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+    if (value === undefined) {
+      return false;
+    }
+    if (convertStringToRegExp(
+      comparison_value.toString(),
+      wildcard_character
+    ).test(value.toString())) {
+      return true;
+    }
+  }
+  return false;
 };
 
 /**
@@ -99,10 +122,33 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
  */
 SimpleQuery.prototype["!="] = function (object_value, comparison_value,
                        wildcard_character) {
-  return !convertStringToRegExp(
-    comparison_value.toString(),
-    wildcard_character || "%"
-  ).test(object_value.toString());
+  var value, i;
+  if (!Array.isArray(object_value)) {
+    object_value = [object_value];
+  }
+  for (i = 0; i < object_value.length; i += 1) {
+    value = object_value[i];
+    if (typeof value === 'object') {
+      value = value.content;
+    }
+    if (comparison_value === undefined) {
+      if (value === undefined) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+    if (value === undefined) {
+      return true;
+    }
+    if (convertStringToRegExp(
+      comparison_value.toString(),
+      wildcard_character
+    ).test(value.toString())) {
+      return false;
+    }
+  }
+  return true;
 };
 
 /**
@@ -114,7 +160,15 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
  * @return {Boolean} true if lower, false otherwise
  */
 SimpleQuery.prototype["<"] = function (object_value, comparison_value) {
-  return object_value < comparison_value;
+  var value;
+  if (!Array.isArray(object_value)) {
+    object_value = [object_value];
+  }
+  value = object_value[0];
+  if (typeof value === 'object') {
+    value = value.content;
+  }
+  return value < comparison_value;
 };
 
 /**
@@ -127,7 +181,15 @@ SimpleQuery.prototype["<"] = function (object_value, comparison_value) {
  * @return {Boolean} true if equal or lower, false otherwise
  */
 SimpleQuery.prototype["<="] = function (object_value, comparison_value) {
-  return object_value <= comparison_value;
+  var value;
+  if (!Array.isArray(object_value)) {
+    object_value = [object_value];
+  }
+  value = object_value[0];
+  if (typeof value === 'object') {
+    value = value.content;
+  }
+  return value <= comparison_value;
 };
 
 /**
@@ -140,7 +202,15 @@ SimpleQuery.prototype["<="] = function (object_value, comparison_value) {
  * @return {Boolean} true if greater, false otherwise
  */
 SimpleQuery.prototype[">"] = function (object_value, comparison_value) {
-  return object_value > comparison_value;
+  var value;
+  if (!Array.isArray(object_value)) {
+    object_value = [object_value];
+  }
+  value = object_value[0];
+  if (typeof value === 'object') {
+    value = value.content;
+  }
+  return value > comparison_value;
 };
 
 /**
@@ -153,7 +223,15 @@ SimpleQuery.prototype[">"] = function (object_value, comparison_value) {
  * @return {Boolean} true if equal or greater, false otherwise
  */
 SimpleQuery.prototype[">="] = function (object_value, comparison_value) {
-  return object_value >= comparison_value;
+  var value;
+  if (!Array.isArray(object_value)) {
+    object_value = [object_value];
+  }
+  value = object_value[0];
+  if (typeof value === 'object') {
+    value = value.content;
+  }
+  return value >= comparison_value;
 };
 
 query_class_dict.simple = SimpleQuery;
