@@ -122,7 +122,6 @@
       return [];
     }
     while ((row = this.response_list[0].rows.shift()) !== undefined) {
-      console.log('row', row);
       to_merge[0] = row;
       for (i = 1; i < this.response_list.length; i += 1) {
         to_merge[i] = AllDocsResponseMerger.listPopFromRowId(
@@ -133,7 +132,6 @@
           break;
         }
       }
-      console.log('to merge', to_merge);
       tmp = this.onRowToMerge(to_merge, option || {});
       if (tmp !== undefined) {
         result[result.length] = tmp;
