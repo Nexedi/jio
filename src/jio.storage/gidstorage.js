@@ -328,6 +328,57 @@
     };
 
     /**
+     * Puts an attachment to a document thank to its gid, a sub allDocs and a
+     * complex query.
+     *
+     * @method putAttachment
+     * @param  {Command} command The JIO command
+     */
+    that.putAttachment = function (command) {
+      setTimeout(function () {
+        var gid_object, complex_query, doc = command.cloneDoc();
+        gid_object = gidParse(doc._id, priv.constraints);
+        if (gid_object === undefined) {
+          return that.error({
+            "status": 409,
+            "statusText": "Conflict",
+            "error": "conflict",
+            "message": "Cannot put attachment",
+            "reason": "metadata should respect constraints"
+          });
+        }
+        complex_query = gidToComplexQuery(gid_object);
+        that.addJob('allDocs', priv.sub_storage, {}, {
+          "query": complex_query,
+          "wildcard_character": null
+        }, function (response) {
+          if (response.total_rows === 0) {
+            return that.error({
+              "status": 404,
+              "statusText": "Not Found",
+              "error": "not_found",
+              "message": "Cannot put attachment",
+              "reason": "Document already exist"
+            });
+          }
+          gid_object = doc._id;
+          doc._id = response.rows[0].id;
+          that.addJob('putAttachment', priv.sub_storage, doc, {
+          }, function (response) {
+            response.id = gid_object;
+            that.success(response);
+          }, function (err) {
+            err.message = "Cannot put attachment";
+            that.error(err);
+          });
+        }, function (err) {
+          err.message = "Cannot put attachment";
+          that.error(err);
+        });
+      });
+    };
+
+    /**
      * Gets a document thank to its gid, a sub allDocs and a complex query.
      *
      * @method get
