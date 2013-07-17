@@ -391,6 +391,50 @@
       });
     };
 
+    that.remove = function (command) {
+      setTimeout(function () {
+        var gid_object, complex_query, doc = command.cloneDoc();
+        gid_object = gidParse(doc._id, priv.constraints);
+        if (gid_object === undefined) {
+          return that.error({
+            "status": 409,
+            "statusText": "Conflict",
+            "error": "conflict",
+            "message": "Cannot remove document",
+            "reason": "metadata should respect constraints"
+          });
+        }
+        complex_query = gidToComplexQuery(gid_object);
+        that.addJob('allDocs', priv.sub_storage, {}, {
+          "query": complex_query,
+          "wildcard_character": null
+        }, function (response) {
+          if (response.total_rows === 0) {
+            return that.error({
+              "status": 404,
+              "statusText": "Not found",
+              "error": "not_found",
+              "message": "Cannot remove document",
+              "reason": "missing"
+            });
+          }
+          gid_object = doc._id;
+          doc = {"_id": response.rows[0].id};
+          that.addJob('remove', priv.sub_storage, doc, {
+          }, function (response) {
+            response.id = gid_object;
+            that.success(response);
+          }, function (err) {
+            err.message = "Cannot remove document";
+            that.error(err);
+          });
+        }, function (err) {
+          err.message = "Cannot remove document";
+          that.error(err);
+        });
+      });
+    };
+
     that.allDocs = function (command) {
       setTimeout(function () {
         var options = command.cloneOption(), include_docs;
