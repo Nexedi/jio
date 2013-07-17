@@ -8246,6 +8246,80 @@ test("Remove", function () {
   o.jio.stop();
 });
 
+test("putAttachment", function () {
+  var o = generateTools(this);
+
+  o.localstorage_spec = {
+    "type": "local",
+    "username": "one",
+    "application_name": "gid storage put attachment test"
+  };
+
+  o.local_jio = JIO.newJio(o.localstorage_spec);
+
+  o.jio = JIO.newJio({
+    "type": "gid",
+    "sub_storage": o.localstorage_spec,
+    "constraints": {
+      "default": {
+        "identifier": "list"
+      }
+    }
+  });
+
+  o.local_jio.put({"_id": "blue", "identifier": "a"});
+  o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
+  o.clock.tick(2000);
+
+
+  o.spy(o, 'status', 409, 'put attachment without respecting constraints ' +
+        '-> conflicts');
+  o.jio.putAttachment({
+    "_id": "a",
+    "_attachment": "body",
+    "_data": "abc",
+    "_mimetype": "text/plain"
+  }, o.f);
+  o.tick(o);
+
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "{\"identifier\":[\"b\"]}",
+    "attachment": "body"
+  }, 'put attachment');
+  o.jio.putAttachment({
+    "_id": "{\"identifier\":[\"b\"]}",
+    "_attachment": "body",
+    "_data": "abc",
+    "_mimetype": "text/plain"
+  }, o.f);
+  o.tick(o);
+
+  o.spy(o, 'value', "abc", "Check attachment");
+  o.local_jio.getAttachment({"_id": "green", "_attachment": "body"}, o.f);
+  o.tick(o);
+
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "{\"identifier\":[\"b\"]}",
+    "attachment": "body"
+  }, 'put attachment');
+  o.jio.putAttachment({
+    "_id": "{\"identifier\":[\"b\"]}",
+    "_attachment": "body",
+    "_data": "def",
+    "_mimetype": "text/plain"
+  }, o.f);
+  o.tick(o);
+
+  o.spy(o, 'value', "def", "Check attachment");
+  o.local_jio.getAttachment({"_id": "green", "_attachment": "body"}, o.f);
+  o.tick(o);
+
+  o.local_jio.stop();
+  o.jio.stop();
+});
+
 };                              // end thisfun
 
 if (window.requirejs) {
