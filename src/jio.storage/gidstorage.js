@@ -320,7 +320,7 @@
                 "status": 409,
                 "statusText": "Conflict",
                 "error": "conflict",
-                "message": "Cannot post document",
+                "message": "Cannot " + method + " document",
                 "reason": "Document already exist"
               });
             }
