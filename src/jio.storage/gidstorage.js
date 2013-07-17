@@ -385,7 +385,6 @@
         that.addJob('allDocs', priv.sub_storage, {
         }, options, function (response) {
           var result = [], doc_gids = {}, i, row, gid;
-          console.log(JSON.parse(JSON.stringify(response)));
           while ((row = response.rows.shift()) !== undefined) {
             if ((gid = gidFormat(row.doc, priv.constraints)) !== undefined) {
               if (!doc_gids[gid]) {

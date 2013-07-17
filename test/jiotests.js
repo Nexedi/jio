@@ -8081,8 +8081,6 @@ test("AllDocs", function () {
   o.local_jio.put({"_id": "purple", "identifier": ["p", "d"]})
   o.clock.tick(3000);
 
-  console.log(JSON.parse(JSON.stringify(localStorage)));
-
   o.local_jio.stop();
 
   o.spy(o, 'value', {
