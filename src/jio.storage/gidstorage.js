@@ -48,7 +48,7 @@
  */
 (function () {
 
-  var dcmi_types, metadata_actions, content_type_re
+  var dcmi_types, metadata_actions, content_type_re;
   dcmi_types = {
     'Collection': 'Collection',
     'Dataset': 'Dataset',
