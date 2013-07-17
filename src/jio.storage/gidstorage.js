@@ -17,8 +17,7 @@
  */
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global jIO: true, localStorage: true, setTimeout: true,
-         complex_queries: true */
+/*global jIO: true, setTimeout: true, complex_queries: true */
 
 /**
  * JIO GID Storage. Type = 'gid'.
