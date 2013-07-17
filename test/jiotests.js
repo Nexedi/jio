@@ -8079,6 +8079,7 @@ test("AllDocs", function () {
   o.local_jio.put({"_id": "red", "identifier": ["a", "b"]})
   o.local_jio.put({"_id": "yellow", "identifier": ["c", "d"]})
   o.local_jio.put({"_id": "purple", "identifier": ["p", "d"]})
+  o.local_jio.put({"_id": "blue", "title": "Hey"})
   o.clock.tick(3000);
 
   o.local_jio.stop();
