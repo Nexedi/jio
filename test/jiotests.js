@@ -8196,6 +8196,56 @@ test("Put", function () {
   o.jio.stop();
 });
 
+test("Remove", function () {
+  var o = generateTools(this);
+
+  o.localstorage_spec = {
+    "type": "local",
+    "username": "one",
+    "application_name": "gid storage remove test"
+  };
+
+  o.local_jio = JIO.newJio(o.localstorage_spec);
+
+  o.jio = JIO.newJio({
+    "type": "gid",
+    "sub_storage": o.localstorage_spec,
+    "constraints": {
+      "default": {
+        "identifier": "list"
+      }
+    }
+  });
+
+  o.local_jio.put({"_id": "blue", "identifier": "a"});
+  o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
+  o.clock.tick(2000);
+
+  o.local_jio.stop();
+
+  o.spy(o, 'status', 409, 'Remove document without respecting constraints ' +
+        '-> conflicts');
+  o.jio.remove({"_id": "a"}, o.f);
+  o.tick(o);
+
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "{\"identifier\":[\"b\"]}"
+  }, 'Remove document');
+  o.jio.remove({
+    "_id": "{\"identifier\":[\"b\"]}"
+  }, o.f);
+  o.tick(o);
+
+  o.spy(o, 'status', 404, 'Remove inexistent document');
+  o.jio.remove({
+    "_id": "{\"identifier\":[\"b\"]}"
+  }, o.f);
+  o.tick(o);
+
+  o.jio.stop();
+});
+
 };                              // end thisfun
 
 if (window.requirejs) {
