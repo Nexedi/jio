@@ -18,6 +18,33 @@ function stringEscapeRegexpCharacters(string) {
 _export("stringEscapeRegexpCharacters", stringEscapeRegexpCharacters);
 
 /**
+ * Convert metadata values to array of strings. ex:
+ *
+ *     "a" -> ["a"],
+ *     {"content": "a"} -> ["a"]
+ *
+ * @param  {Any} value The metadata value
+ * @return {Array} The value in string array format
+ */
+function metadataValueToStringArray(value) {
+  var i, new_value = [];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    value = [value];
+  }
+  for (i = 0; i < value.length; i += 1) {
+    if (typeof value[i] === 'object') {
+      new_value[i] = value[i].content;
+    } else {
+      new_value[i] = value[i];
+    }
+  }
+  return new_value;
+}
+
+/**
  * A sort function to sort items by key
  *
  * @param  {String} key The key to sort on
@@ -27,12 +54,50 @@ _export("stringEscapeRegexpCharacters", stringEscapeRegexpCharacters);
 function sortFunction(key, way) {
   if (way === 'descending') {
     return function (a, b) {
-      return a[key] < b[key] ? 1 : a[key] > b[key] ? -1 : 0;
+      // this comparison is 5 times faster than json comparison
+      var i, l;
+      a = metadataValueToStringArray(a[key]) || [];
+      b = metadataValueToStringArray(b[key]) || [];
+      l = a.length > b.length ? a.length : b.length;
+      for (i = 0; i < l; i += 1) {
+        if (a[i] === undefined) {
+          return 1;
+        }
+        if (b[i] === undefined) {
+          return -1;
+        }
+        if (a[i] > b[i]) {
+          return -1;
+        }
+        if (a[i] < b[i]) {
+          return 1;
+        }
+      }
+      return 0;
     };
   }
   if (way === 'ascending') {
     return function (a, b) {
-      return a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0;
+      // this comparison is 5 times faster than json comparison
+      var i, l;
+      a = metadataValueToStringArray(a[key]) || [];
+      b = metadataValueToStringArray(b[key]) || [];
+      l = a.length > b.length ? a.length : b.length;
+      for (i = 0; i < l; i += 1) {
+        if (a[i] === undefined) {
+          return -1;
+        }
+        if (b[i] === undefined) {
+          return 1;
+        }
+        if (a[i] > b[i]) {
+          return 1;
+        }
+        if (a[i] < b[i]) {
+          return -1;
+        }
+      }
+      return 0;
     };
   }
   throw new TypeError("complex_queries.sortFunction(): " +
