@@ -94,17 +94,18 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
     if (comparison_value === undefined) {
       if (value === undefined) {
         return true;
-      } else {
-        return false;
       }
+      return false;
     }
     if (value === undefined) {
       return false;
     }
-    if (convertStringToRegExp(
-      comparison_value.toString(),
-      wildcard_character
-    ).test(value.toString())) {
+    if (
+      convertStringToRegExp(
+        comparison_value.toString(),
+        wildcard_character
+      ).test(value.toString())
+    ) {
       return true;
     }
   }
@@ -134,17 +135,18 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
     if (comparison_value === undefined) {
       if (value === undefined) {
         return false;
-      } else {
-        return true;
       }
+      return true;
     }
     if (value === undefined) {
       return true;
     }
-    if (convertStringToRegExp(
-      comparison_value.toString(),
-      wildcard_character
-    ).test(value.toString())) {
+    if (
+      convertStringToRegExp(
+        comparison_value.toString(),
+        wildcard_character
+      ).test(value.toString())
+    ) {
       return false;
     }
   }
