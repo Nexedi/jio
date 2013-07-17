@@ -296,7 +296,7 @@
       };
     };
 
-    that.post = function (command) {
+    priv.putOrPost = function (command, method) {
       setTimeout(function () {
         var gid, complex_query, doc = command.cloneDoc();
         gid = gidFormat(doc, priv.constraints);
@@ -305,7 +305,7 @@
             "status": 409,
             "statusText": "Conflict",
             "error": "conflict",
-            "message": "Cannot post document",
+            "message": "Cannot " + method + " document",
             "reason": "metadata should respect constraints"
           });
         }
@@ -314,31 +314,46 @@
           "query": complex_query,
           "wildcard_character": null
         }, function (response) {
-          var doc;
+          var doc, update_method = method;
           if (response.total_rows !== 0) {
-            return that.error({
-              "status": 409,
-              "statusText": "Conflict",
-              "error": "conflict",
-              "message": "Cannot post document",
-              "reason": "Document already exist"
-            });
+            if (method === 'post') {
+              return that.error({
+                "status": 409,
+                "statusText": "Conflict",
+                "error": "conflict",
+                "message": "Cannot post document",
+                "reason": "Document already exist"
+              });
+            } else {
+              doc = command.cloneDoc();
+              doc._id = response.rows[0].id;
+            }
+          } else {
+            doc = command.cloneDoc();
+            delete doc._id;
+            update_method = 'post';
           }
-          doc = command.cloneDoc();
-          delete doc._id;
-          that.addJob('post', priv.sub_storage, doc, {
+          that.addJob(update_method, priv.sub_storage, doc, {
           }, function (response) {
             response.id = gid;
             that.success(response);
           }, function (err) {
-            err.message = "Cannot post document";
+            err.message = "Cannot " + method + " document";
             that.error(err);
           });
         }, function (err) {
-          err.message = "Cannot post document";
+          err.message = "Cannot " + method + " document";
           that.error(err);
         });
       });
+    };
+
+    that.post = function (command) {
+      priv.putOrPost(command, 'post');
+    };
+
+    that.put = function (command) {
+      priv.putOrPost(command, 'put');
     };
 
     that.get = function (command) {
