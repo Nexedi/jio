@@ -7963,6 +7963,97 @@ test("AllDocs", function () {
   o.jio.stop();
 });
 
+module("JIO GID Storage");
+
+test("Post", function () {
+  var o = generateTools(this);
+
+  o.localstorage_spec = {
+    "type": "local",
+    "username": "one",
+    "application_name": "gid storage post test"
+  };
+
+  o.local_jio = JIO.newJio(o.localstorage_spec);
+
+  o.jio = JIO.newJio({
+    "type": "gid",
+    "sub_storage": o.localstorage_spec,
+    "constraints": {
+      "default": {
+        "identifier": "list"
+      }
+    }
+  });
+
+  o.local_jio.put({"_id": "blue", "identifier": "a"});
+  o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
+  o.clock.tick(2000);
+
+  o.local_jio.stop();
+
+  o.spy(o, 'status', 409, 'Post document without respecting constraints ' +
+        '-> conflicts');
+  o.jio.post({}, o.f);
+  o.tick(o);
+
+  o.spy(o, 'status', 409, 'Post existent document -> conflict');
+  o.jio.post({"identifier": "a"}, o.f);
+  o.tick(o);
+
+  o.spy(o, 'value', {
+    "id": "{\"identifier\":[\"a%\"]}",
+    "ok": true
+  }, 'Post respecting constraints');
+  o.jio.post({"identifier": "a%"}, o.f);
+  o.tick(o);
+
+  o.spy(o, 'status', 409, 'Post same document respecting constraints ' +
+        '-> conflicts');
+  o.jio.post({"identifier": "a%"}, o.f);
+  o.tick(o);
+
+  o.jio.stop();
+});
+
+test("Get", function () {
+  var o = generateTools(this);
+
+  o.localstorage_spec = {
+    "type": "local",
+    "username": "one",
+    "application_name": "gid storage get test"
+  };
+
+  o.local_jio = JIO.newJio(o.localstorage_spec);
+
+  o.jio = JIO.newJio({
+    "type": "gid",
+    "sub_storage": o.localstorage_spec,
+    "constraints": {
+      "default": {
+        "identifier": "list"
+      }
+    }
+  });
+
+  o.local_jio.put({"_id": "blue", "identifier": "a"});
+  o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
+  o.clock.tick(2000);
+
+  o.local_jio.stop();
+
+  o.spy(o, 'status', 404, 'Get inexistent document');
+  o.jio.get({"_id": "{\"identifier\":[\"b\"]}"}, o.f);
+  o.tick(o);
+
+  o.spy(o, 'value', {"_id": "blue", "identifier": "a"}, 'Get document');
+  o.jio.get({"_id": "{\"identifier\":[\"a\"]}"}, o.f);
+  o.tick(o);
+
+  o.jio.stop();
+});
+
 };                              // end thisfun
 
 if (window.requirejs) {
