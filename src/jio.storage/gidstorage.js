@@ -23,7 +23,7 @@
  * JIO GID Storage. Type = 'gid'.
  * Identifies document with their global identifier représentation
  *
- * Sub storages must support complex queries.
+ * Sub storages must support complex queries and include_docs options.
  *
  * Storage Description:
  *
@@ -63,14 +63,23 @@
     'Text': 'Text'
   };
   metadata_actions = {
+    /**
+     * Returns the metadata value
+     */
     json: function (value) {
       return value;
     },
+    /**
+     * Returns the metadata if it is a string
+     */
     string: function (value) {
       if (typeof value === 'string') {
         return value;
       }
     },
+    /**
+     * Returns the metadata in a array format
+     */
     list: function (value) {
       var i, new_value = [];
       if (Array.isArray(value)) {
@@ -86,9 +95,15 @@
       }
       return value;
     },
+    /**
+     * Returns the metadata if it is a string equal to a DCMIType
+     */
     DCMIType: function (value) {
       return dcmi_types[value];
     },
+    /**
+     * Returns the metadata content type if exist
+     */
     contentType: function (value) {
       var i;
       if (!Array.isArray(value)) {
@@ -214,6 +229,14 @@
     }
   };
 
+  /**
+   * Creates a gid from metadata and constraints.
+   *
+   * @param  {Object} metadata The metadata to use
+   * @param  {Object} constraints The constraints
+   * @return {String} The gid or undefined if metadata doesn't respect the
+   *   constraints
+   */
   function gidFormat(metadata, constraints) {
     var types, i, meta_key, result = {}, tmp;
     types = ['default', metadata.type];
@@ -233,6 +256,13 @@
     return JSON.stringify(result);
   }
 
+  /**
+   * Convert a gid to a complex query.
+   *
+   * @param  {Object,String} gid The gid
+   * @param  {Object} constraints The constraints
+   * @return {Object} A complex serialized object
+   */
   function gidToComplexQuery(gid, contraints) {
     var k, i, result = [], meta, content;
     if (typeof gid === 'string') {
@@ -265,6 +295,13 @@
     };
   }
 
+  /**
+   * Parse the gid and returns a metadata object containing gid keys and values.
+   *
+   * @param  {String} gid The gid to convert
+   * @param  {Object} constraints The constraints
+   * @return {Object} The gid metadata
+   */
   function gidParse(gid, constraints) {
     var object;
     try {
@@ -278,8 +315,19 @@
     return object;
   }
 
+  /**
+   * The gid storage used by JIO.
+   *
+   * This storage change the id of a document with its global id. A global id
+   * is representation of a document metadata used to define it as uniq. The way
+   * to generate global ids can be define in the storage description. It allows
+   * us use duplicating storage with different sub storage kind.
+   *
+   * @class gidStorage
+   */
   function gidStorage(spec, my) {
     var that = my.basicStorage(spec, my), priv = {};
+
     priv.sub_storage = spec.sub_storage;
     priv.constraints = spec.constraints || {
       "default": {
@@ -288,6 +336,8 @@
       }
     };
 
+    // Overrides
+
     that.specToStore = function () {
       return {
         "sub_storage": priv.sub_storage,
@@ -295,6 +345,21 @@
       };
     };
 
+    // JIO Commands
+
+    /**
+     * Generic command for post or put one.
+     *
+     * This command will check if the document already exist with an allDocs
+     * and a complex query. If exist, then post will fail. Put will update the
+     * retrieved document thanks to its real id. If no documents are found, post
+     * and put will create a new document with the sub storage id generator.
+     *
+     * @method putOrPost
+     * @private
+     * @param  {Command} command The JIO command
+     * @param  {String} method The command method
+     */
     priv.putOrPost = function (command, method) {
       setTimeout(function () {
         var gid, complex_query, doc = command.cloneDoc();
@@ -346,14 +411,32 @@
       });
     };
 
+    /**
+     * See {{#crossLink "gidStorage/putOrPost:method"}}{{/#crossLink}}.
+     *
+     * @method post
+     * @param  {Command} command The JIO command
+     */
     that.post = function (command) {
       priv.putOrPost(command, 'post');
     };
 
+    /**
+     * See {{#crossLink "gidStorage/putOrPost:method"}}{{/#crossLink}}.
+     *
+     * @method put
+     * @param  {Command} command The JIO command
+     */
     that.put = function (command) {
       priv.putOrPost(command, 'put');
     };
 
+    /**
+     * Gets a document thank to its gid, a sub allDocs and a complex query.
+     *
+     * @method get
+     * @param  {Command} command The JIO command
+     */
     that.get = function (command) {
       setTimeout(function () {
         var gid_object, complex_query;
@@ -390,6 +473,12 @@
       });
     };
 
+    /**
+     * Remove a document thank to its gid, sub allDocs and a complex query.
+     *
+     * @method remove
+     * @param  {Command} command The JIO command.
+     */
     that.remove = function (command) {
       setTimeout(function () {
         var gid_object, complex_query, doc = command.cloneDoc();
@@ -434,6 +523,12 @@
       });
     };
 
+    /**
+     * Retrieve a list of document which respect gid constraints.
+     *
+     * @method allDocs
+     * @param  {Command} command The JIO command
+     */
     that.allDocs = function (command) {
       setTimeout(function () {
         var options = command.cloneOption(), include_docs;
