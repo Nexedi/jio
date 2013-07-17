@@ -350,14 +350,15 @@
             "status": 409,
             "statusText": "Conflict",
             "error": "conflict",
-            "message": "Cannot post document",
+            "message": "Cannot get document",
             "reason": "metadata should respect constraints"
           });
         }
         complex_query = gidToComplexQuery(gid_object);
         that.addJob('allDocs', priv.sub_storage, {}, {
           "query": complex_query,
-          "wildcard_character": null
+          "wildcard_character": null,
+          "include_docs": true
         }, function (response) {
           if (response.total_rows === 0) {
             return that.error({
@@ -368,10 +369,44 @@
               "reason": "missing"
             });
           }
-          // XXX
+          return that.success(response.rows[0].doc);
         }, function (err) {
-          err.message = "Cannot post document";
-          that.error(err);
+          err.message = "Cannot get document";
+          return that.error(err);
+        });
+      });
+    };
+
+    that.allDocs = function (command) {
+      setTimeout(function () {
+        var options = command.cloneOption(), include_docs;
+        include_docs = options.include_docs;
+        options.include_docs = true;
+        that.addJob('allDocs', priv.sub_storage, {
+        }, options, function (response) {
+          var result = [], doc_gids = {}, i, row, gid;
+          console.log(JSON.parse(JSON.stringify(response)));
+          while ((row = response.rows.shift()) !== undefined) {
+            if ((gid = gidFormat(row.doc, priv.constraints)) !== undefined) {
+              if (!doc_gids[gid]) {
+                doc_gids[gid] = true;
+                row.id = gid;
+                delete row.key;
+                result[result.length] = row;
+                if (include_docs === true) {
+                  row.doc._id = gid;
+                } else {
+                  delete row.doc;
+                }
+              }
+            }
+          }
+          doc_gids = undefined; // free memory
+          row = undefined;
+          that.success({"total_rows": result.length, "rows": result});
+        }, function (err) {
+          err.message = "Cannot get all documents";
+          return that.error(err);
         });
       });
     };

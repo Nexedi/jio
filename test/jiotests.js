@@ -8038,17 +8038,87 @@ test("Get", function () {
   });
 
   o.local_jio.put({"_id": "blue", "identifier": "a"});
-  o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
+  o.local_jio.put({"_id": "red", "identifier": ["ac", "b"]});
   o.clock.tick(2000);
 
   o.local_jio.stop();
 
   o.spy(o, 'status', 404, 'Get inexistent document');
+  o.jio.get({"_id": "{\"identifier\":[\"c\"]}"}, o.f);
+  o.tick(o);
+
+  o.spy(o, 'value', {"_id": "red", "identifier": ["ac", "b"]}, 'Get document');
   o.jio.get({"_id": "{\"identifier\":[\"b\"]}"}, o.f);
   o.tick(o);
 
-  o.spy(o, 'value', {"_id": "blue", "identifier": "a"}, 'Get document');
-  o.jio.get({"_id": "{\"identifier\":[\"a\"]}"}, o.f);
+  o.jio.stop();
+});
+
+test("AllDocs", function () {
+  var o = generateTools(this);
+
+  o.localstorage_spec = {
+    "type": "local",
+    "username": "one",
+    "application_name": "gid storage allDocs test"
+  };
+
+  o.local_jio = JIO.newJio(o.localstorage_spec);
+
+  o.jio = JIO.newJio({
+    "type": "gid",
+    "sub_storage": o.localstorage_spec,
+    "constraints": {
+      "default": {
+        "identifier": "list"
+      }
+    }
+  });
+
+  o.local_jio.put({"_id": "green", "identifier": ["a"]})
+  o.local_jio.put({"_id": "red", "identifier": ["a", "b"]})
+  o.local_jio.put({"_id": "yellow", "identifier": ["c", "d"]})
+  o.local_jio.put({"_id": "purple", "identifier": ["p", "d"]})
+  o.clock.tick(3000);
+
+  console.log(JSON.parse(JSON.stringify(localStorage)));
+
+  o.local_jio.stop();
+
+  o.spy(o, 'value', {
+    "rows": [{
+      "id": "{\"identifier\":[\"a\"]}",
+      "value": {}
+    }, {
+      "id": "{\"identifier\":[\"a\",\"b\"]}",
+      "value": {}
+    }, {
+      "id": "{\"identifier\":[\"c\",\"d\"]}",
+      "value": {}
+    }, {
+      "id": "{\"identifier\":[\"p\",\"d\"]}",
+      "value": {}
+    }],
+    "total_rows": 4
+  }, 'Get all docs');
+  o.jio.allDocs({
+    "sort_on": [["identifier", "ascending"]]
+  }, o.f);
+  o.tick(o);
+
+  o.spy(o, 'value', {
+    "rows": [{
+      "id": "{\"identifier\":[\"a\",\"b\"]}",
+      "value": {}
+    }],
+    "total_rows": 1
+  }, 'Get all docs');
+  o.jio.allDocs({
+    "query": 'identifier: "a"',
+    "select": ["identifier"],
+    "limit": [1, 1],
+    "sort_on": [["identifier", "ascending"]]
+  }, o.f);
   o.tick(o);
 
   o.jio.stop();
