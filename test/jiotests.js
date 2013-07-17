@@ -8176,7 +8176,7 @@ test("Put", function () {
   o.spy(o, 'value', {
     "ok": true,
     "id": "{\"identifier\":[\"c\"]}"
-  }, 'Update document');
+  }, 'Create document');
   o.jio.put({
     "_id": "{\"identifier\":[\"c\"]}",
     "identifier": "c",
