@@ -8123,6 +8123,79 @@ test("AllDocs", function () {
   o.jio.stop();
 });
 
+test("Put", function () {
+  var o = generateTools(this);
+
+  o.localstorage_spec = {
+    "type": "local",
+    "username": "one",
+    "application_name": "gid storage put test"
+  };
+
+  o.local_jio = JIO.newJio(o.localstorage_spec);
+
+  o.jio = JIO.newJio({
+    "type": "gid",
+    "sub_storage": o.localstorage_spec,
+    "constraints": {
+      "default": {
+        "identifier": "list"
+      }
+    }
+  });
+
+  o.local_jio.put({"_id": "blue", "identifier": "a"});
+  o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
+  o.clock.tick(2000);
+
+  o.spy(o, 'status', 409, 'Put document without respecting constraints ' +
+        '-> conflicts');
+  o.jio.put({"_id": "a", "identifier": "a", "title": "t"}, o.f);
+  o.tick(o);
+
+  o.spy(o, 'status', 409, 'Put document without respecting constraints ' +
+        '-> conflicts');
+  o.jio.put({
+    "_id": "{\"identifier\":[\"a\"]}",
+    "identifier": "b",
+    "title": "t"
+  }, o.f);
+  o.tick(o);
+
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "{\"identifier\":[\"a\"]}"
+  }, 'Update document');
+  o.jio.put({
+    "_id": "{\"identifier\":[\"a\"]}",
+    "identifier": "a",
+    "title": "t"
+  }, o.f);
+  o.tick(o);
+
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "{\"identifier\":[\"c\"]}"
+  }, 'Update document');
+  o.jio.put({
+    "_id": "{\"identifier\":[\"c\"]}",
+    "identifier": "c",
+    "title": "i"
+  }, o.f);
+  o.tick(o);
+
+  o.spy(o, 'value', {
+    "_id": "blue",
+    "identifier": "a",
+    "title": "t"
+  }, "Check sub documents");
+  o.local_jio.get({"_id": "blue"}, o.f);
+  o.tick(o);
+
+  o.local_jio.stop();
+  o.jio.stop();
+});
+
 };                              // end thisfun
 
 if (window.requirejs) {
