@@ -313,7 +313,7 @@
           "query": complex_query,
           "wildcard_character": null
         }, function (response) {
-          var doc, update_method = method;
+          var update_method = method;
           if (response.total_rows !== 0) {
             if (method === 'post') {
               return that.error({
@@ -323,10 +323,9 @@
                 "message": "Cannot post document",
                 "reason": "Document already exist"
               });
-            } else {
-              doc = command.cloneDoc();
-              doc._id = response.rows[0].id;
             }
+            doc = command.cloneDoc();
+            doc._id = response.rows[0].id;
           } else {
             doc = command.cloneDoc();
             delete doc._id;
