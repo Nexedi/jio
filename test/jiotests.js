@@ -7992,8 +7992,9 @@ test("Post", function () {
 
   o.local_jio.stop();
 
-  o.spy(o, 'status', 409, 'Post document without respecting constraints ' +
-        '-> conflicts');
+  // XXX check reason
+  o.spy(o, 'status', 400, 'Post document without respecting constraints ' +
+        '-> bad request');
   o.jio.post({}, o.f);
   o.tick(o);
 
@@ -8042,6 +8043,11 @@ test("Get", function () {
   o.clock.tick(2000);
 
   o.local_jio.stop();
+
+  o.spy(o, 'status', 400, 'Get document without respecting constraints ' +
+        '-> bad request');
+  o.jio.get({"_id": "a"}, o.f);
+  o.tick(o);
 
   o.spy(o, 'status', 404, 'Get inexistent document');
   o.jio.get({"_id": "{\"identifier\":[\"c\"]}"}, o.f);
@@ -8148,13 +8154,13 @@ test("Put", function () {
   o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
   o.clock.tick(2000);
 
-  o.spy(o, 'status', 409, 'Put document without respecting constraints ' +
-        '-> conflicts');
+  o.spy(o, 'status', 400, 'Put document without respecting constraints ' +
+        '-> bad request');
   o.jio.put({"_id": "a", "identifier": "a", "title": "t"}, o.f);
   o.tick(o);
 
-  o.spy(o, 'status', 409, 'Put document without respecting constraints ' +
-        '-> conflicts');
+  o.spy(o, 'status', 400, 'Put document without respecting constraints ' +
+        '-> bad request');
   o.jio.put({
     "_id": "{\"identifier\":[\"a\"]}",
     "identifier": "b",
@@ -8223,8 +8229,8 @@ test("Remove", function () {
 
   o.local_jio.stop();
 
-  o.spy(o, 'status', 409, 'Remove document without respecting constraints ' +
-        '-> conflicts');
+  o.spy(o, 'status', 400, 'Remove document without respecting constraints ' +
+        '-> bad request');
   o.jio.remove({"_id": "a"}, o.f);
   o.tick(o);
 
@@ -8271,9 +8277,8 @@ test("putAttachment", function () {
   o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
   o.clock.tick(2000);
 
-
-  o.spy(o, 'status', 409, 'put attachment without respecting constraints ' +
-        '-> conflicts');
+  o.spy(o, 'status', 400, 'put attachment without respecting constraints ' +
+        '-> bad request');
   o.jio.putAttachment({
     "_id": "a",
     "_attachment": "body",
