@@ -166,22 +166,38 @@
    *   constraints
    */
   function gidFormat(metadata, constraints) {
-    var types, i, meta_key, result = {}, tmp;
-    types = ['default', metadata.type];
+    var types, i, j, meta_key, result = [], tmp, constraint, actions;
+    types = (metadata_actions.list(metadata.type) || []).slice();
+    types.unshift('default');
     for (i = 0; i < types.length; i += 1) {
-      for (meta_key in constraints[types[i]]) {
-        if (constraints[types[i]].hasOwnProperty(meta_key)) {
-          tmp = metadata_actions[
-            constraints[types[i]][meta_key]
-          ](metadata[meta_key]);
-          if (tmp === undefined) {
-            return;
+      constraint = constraints[types[i]];
+      for (meta_key in constraint) {
+        if (constraint.hasOwnProperty(meta_key)) {
+          actions = constraint[meta_key];
+          if (!Array.isArray(actions)) {
+            actions = [actions];
           }
-          result[meta_key] = tmp;
+          for (j = 0; j < actions.length; j += 1) {
+            tmp = metadata_actions[
+              actions[j]
+            ](metadata[meta_key]);
+            if (tmp === undefined) {
+              return;
+            }
+          }
+          result[result.length] = [meta_key, tmp];
         }
       }
     }
-    return JSON.stringify(result);
+    // sort dict keys to make gid universal
+    result.sort(function (a, b) {
+      return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0;
+    });
+    tmp = {};
+    for (i = 0; i < result.length; i += 1) {
+      tmp[result[i][0]] = result[i][1];
+    }
+    return JSON.stringify(tmp);
   }
 
   /**
