@@ -8506,6 +8506,146 @@ test("removeAttachment", function () {
   o.jio.stop();
 });
 
+test("More Constraints", function () {
+  // This test will use gid storage in a 'real case'
+
+  var o = generateTools(this);
+
+  o.localstorage_spec = {
+    "type": "local",
+    "username": "one",
+    "application_name": "gid storage more constraints test"
+  };
+
+  o.jio = JIO.newJio({
+    "type": "gid",
+    "sub_storage": o.localstorage_spec,
+    "constraints": {
+      "default": {
+        "type": "DCMIType",
+        "title": "string"
+      },
+      "Text": {
+        "date": "date",
+        "language": "string"
+      },
+      "Image": {
+        "format": "contentType"
+      }
+    }
+  });
+
+  // Post a text document. This test also checks if the gid is well
+  // created. Indeed, the json string "id" of the response is a dict with keys
+  // inserted in alphabetic order, so that a gid is universal. It also checks
+  // document types list management. It checks 'string', 'DCMIType' and 'date'
+  // metadata types.
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "{\"date\":\"2012-12-12\",\"language\":\"fr\"," +
+      "\"title\":\"Texte pour ce test\",\"type\":\"Text\"}"
+  }, 'Post a text document');
+  o.jio.post({
+    "type": ["Text", "web page"],
+    "title": {"lang": "fr", "content": "Texte pour ce test"},
+    "date": "2012-12-12",
+    "modified": "2012-12-12",
+    "format": "text/html",
+    "language": "fr"
+  }, o.f);
+  o.tick(o);
+
+  // Put the associated attachment
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "{\"date\":\"2012-12-12\",\"language\":\"fr\"," +
+      "\"title\":\"Texte pour ce test\",\"type\":\"Text\"}",
+    "attachment": "body"
+  }, 'Put text content as body');
+  o.jio.putAttachment({
+    "_id": "{\"date\":\"2012-12-12\",\"language\":\"fr\"," +
+      "\"title\":\"Texte pour ce test\",\"type\":\"Text\"}",
+    "_attachment": "body",
+    "_data": "<h1>Mon document html.</h1>",
+    "_mimetype": "text/html"
+  }, o.f);
+  o.tick(o);
+
+  // Post an image. It checks 'string', 'DCMIType' and 'contentType' metadata
+  // types.
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "{\"format\":\"text/svg+xml\"," +
+      "\"title\":\"My image title\",\"type\":\"Image\"}"
+  }, 'Post an image document');
+  o.jio.post({
+    "type": "Image",
+    "title": "My image title",
+    "date": "2012-12-13",
+    "modified": "2012-12-13",
+    "format": "text/svg+xml"
+  }, o.f);
+  o.tick(o);
+
+  // Put the associated attachment
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "{\"format\":\"text/svg+xml\"," +
+      "\"title\":\"My image title\",\"type\":\"Image\"}",
+    "attachment": "body"
+  }, 'Put text content as body');
+  o.jio.putAttachment({
+    "_id": "{\"format\":\"text/svg+xml\"," +
+      "\"title\":\"My image title\",\"type\":\"Image\"}",
+    "_attachment": "body",
+    "_data": "<svg/>",
+    "_mimetype": "text/svg+xml"
+  }, o.f);
+  o.tick(o);
+
+  // Get the html document
+  o.spy(o, 'value', {
+    "_id": "{\"date\":\"2012-12-12\",\"language\":\"fr\"," +
+      "\"title\":\"Texte pour ce test\",\"type\":\"Text\"}",
+    "type": ["Text", "web page"],
+    "title": {"lang": "fr", "content": "Texte pour ce test"},
+    "date": "2012-12-12",
+    "modified": "2012-12-12",
+    "format": "text/html",
+    "language": "fr",
+    "_attachments": {
+      "body": {
+        "length": 27,
+        "digest": "md5-6f40c762ca7a8fac52567f12ce5441ef",
+        "content_type": "text/html"
+      }
+    }
+  }, "Get html metadata");
+  o.jio.get({
+    "_id": "{\"date\":\"2012-12-12\",\"language\":\"fr\"," +
+      "\"title\":\"Texte pour ce test\",\"type\":\"Text\"}",
+  }, o.f);
+  o.tick(o);
+
+  // Get a list of documents
+  o.spy(o, 'value', {
+    "rows": [{
+      "id": "{\"format\":\"text/svg+xml\"," +
+        "\"title\":\"My image title\",\"type\":\"Image\"}",
+      "value": {}
+    }, {
+      "id": "{\"date\":\"2012-12-12\",\"language\":\"fr\"," +
+        "\"title\":\"Texte pour ce test\",\"type\":\"Text\"}",
+      "value": {}
+    }],
+    "total_rows": 2
+  }, 'Get a document list');
+  o.jio.allDocs({"sort_on": [["title", "ascending"]]}, o.f);
+  o.tick(o);
+
+  o.jio.stop();
+});
+
 };                              // end thisfun
 
 if (window.requirejs) {
