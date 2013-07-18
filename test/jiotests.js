@@ -8320,6 +8320,65 @@ test("putAttachment", function () {
   o.jio.stop();
 });
 
+test("getAttachment", function () {
+  var o = generateTools(this);
+
+  o.localstorage_spec = {
+    "type": "local",
+    "username": "one",
+    "application_name": "gid storage get attachment test"
+  };
+
+  o.local_jio = JIO.newJio(o.localstorage_spec);
+
+  o.jio = JIO.newJio({
+    "type": "gid",
+    "sub_storage": o.localstorage_spec,
+    "constraints": {
+      "default": {
+        "identifier": "list"
+      }
+    }
+  });
+
+  o.local_jio.put({"_id": "blue", "identifier": "a"});
+  o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
+  o.clock.tick(2000);
+
+  o.spy(o, 'status', 400, 'get attachment without respecting constraints ' +
+        '-> bad request');
+  o.jio.getAttachment({
+    "_id": "a",
+    "_attachment": "body"
+  }, o.f);
+  o.tick(o);
+
+  o.spy(o, 'status', 404, 'Get inexistent attachment');
+  o.jio.getAttachment({
+    "_id": "{\"identifier\":[\"a\"]}",
+    "_attachment": "body"
+  }, o.f);
+  o.tick(o);
+
+  o.local_jio.putAttachment({
+    "_id": "blue",
+    "_attachment": "body",
+    "_data": "lol",
+    "_mimetype": "text/plain"
+  });
+  o.clock.tick(2000);
+  o.local_jio.stop();
+
+  o.spy(o, 'value', "lol", 'Get attachment');
+  o.jio.getAttachment({
+    "_id": "{\"identifier\":[\"a\"]}",
+    "_attachment": "body"
+  }, o.f);
+  o.tick(o);
+
+  o.jio.stop();
+});
+
 };                              // end thisfun
 
 if (window.requirejs) {
