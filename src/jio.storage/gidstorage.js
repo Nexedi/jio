@@ -109,7 +109,8 @@
       for (i = 0; i < value.length; i += 1) {
         if (typeof value[i] === 'object' && dcmi_types[value[i].content]) {
           return value[i].content;
-        } else if (dcmi_types[value[i]]) {
+        }
+        if (dcmi_types[value[i]]) {
           return value[i];
         }
       }
