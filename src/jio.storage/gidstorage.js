@@ -70,10 +70,13 @@
       return value;
     },
     /**
-     * Returns the metadata if it is a string
+     * Returns the metadata if there is a string
      */
     string: function (value) {
-      if (typeof value === 'string') {
+      if (!Array.isArray(value)) {
+        if (typeof value === 'object') {
+          return value.content;
+        }
         return value;
       }
     },
@@ -96,10 +99,20 @@
       return value;
     },
     /**
-     * Returns the metadata if it is a string equal to a DCMIType
+     * Returns the metadata if there is a string equal to a DCMIType
      */
     DCMIType: function (value) {
-      return dcmi_types[value];
+      var i;
+      if (!Array.isArray(value)) {
+        value = [value];
+      }
+      for (i = 0; i < value.length; i += 1) {
+        if (typeof value[i] === 'object' && dcmi_types[value[i].content]) {
+          return value[i].content;
+        } else if (dcmi_types[value[i]]) {
+          return value[i];
+        }
+      }
     },
     /**
      * Returns the metadata content type if exist
