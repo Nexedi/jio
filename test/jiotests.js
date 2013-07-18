@@ -8053,7 +8053,10 @@ test("Get", function () {
   o.jio.get({"_id": "{\"identifier\":[\"c\"]}"}, o.f);
   o.tick(o);
 
-  o.spy(o, 'value', {"_id": "red", "identifier": ["ac", "b"]}, 'Get document');
+  o.spy(o, 'value', {
+    "_id": "{\"identifier\":[\"b\"]}",
+    "identifier": ["ac", "b"]
+  }, 'Get document');
   o.jio.get({"_id": "{\"identifier\":[\"b\"]}"}, o.f);
   o.tick(o);
 
