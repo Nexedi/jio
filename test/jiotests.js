@@ -8430,6 +8430,82 @@ test("getAttachment", function () {
   o.jio.stop();
 });
 
+test("removeAttachment", function () {
+  var o = generateTools(this);
+
+  o.localstorage_spec = {
+    "type": "local",
+    "username": "one",
+    "application_name": "gid storage remove attachment test"
+  };
+
+  // local jio is going to help us to prepare localstorage for gid tests
+  o.local_jio = JIO.newJio(o.localstorage_spec);
+
+  o.jio = JIO.newJio({
+    "type": "gid",
+    "sub_storage": o.localstorage_spec,
+    "constraints": {
+      "default": {
+        "creator": "list"
+      }
+    }
+  });
+
+  // preparing localstorage with documents
+  o.local_jio.put({"_id": "blue", "creator": "a", "title": "earth"});
+  o.local_jio.put({"_id": "green", "creator": ["ac", "b"], "title": "wind"});
+  o.clock.tick(2000);
+  o.local_jio.putAttachment({
+    "_id": "blue",
+    "_attachment": "body",
+    "_data": "lol",
+    "_mimetype": "text/plain"
+  });
+  o.clock.tick(2000);
+
+  // Fail to remove attachment because given gid doesn't respect constraints
+  o.spy(o, 'status', 400, 'Remove attachment without respecting constraints ' +
+        '-> bad request');
+  o.jio.removeAttachment({
+    "_id": "a",
+    "_attachment": "body",
+    "_data": "abc",
+    "_mimetype": "text/plain"
+  }, o.f);
+  o.tick(o);
+
+  // Succeed to remove an attachment from a document
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "{\"creator\":[\"a\"]}",
+    "attachment": "body"
+  }, 'Remove attachment');
+  o.jio.removeAttachment({
+    "_id": "{\"creator\":[\"a\"]}",
+    "_attachment": "body"
+  }, o.f);
+  o.tick(o);
+
+  // Check if the local storage document doesn't have attachment anymore
+  o.spy(o, 'status', 404, "Check attachment");
+  o.local_jio.getAttachment({"_id": "green", "_attachment": "body"}, o.f);
+  o.tick(o);
+
+  // Fail to remove the same attachment because it's already removed
+  o.spy(o, 'status', 404, 'Remove attachment');
+  o.jio.removeAttachment({
+    "_id": "{\"creator\":[\"b\"]}",
+    "_attachment": "body",
+    "_data": "def",
+    "_mimetype": "text/plain"
+  }, o.f);
+  o.tick(o);
+
+  o.local_jio.stop();
+  o.jio.stop();
+});
+
 };                              // end thisfun
 
 if (window.requirejs) {
