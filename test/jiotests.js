@@ -7974,6 +7974,7 @@ test("Post", function () {
     "application_name": "gid storage post test"
   };
 
+  // local jio is going to help us to prepare localstorage for gid tests
   o.local_jio = JIO.newJio(o.localstorage_spec);
 
   o.jio = JIO.newJio({
@@ -7981,37 +7982,42 @@ test("Post", function () {
     "sub_storage": o.localstorage_spec,
     "constraints": {
       "default": {
-        "identifier": "list"
+        "creator": "list"
       }
     }
   });
 
-  o.local_jio.put({"_id": "blue", "identifier": "a"});
-  o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
+  // preparing localstorage with documents
+  o.local_jio.put({"_id": "blue", "creator": "a", "title": "earth"});
+  o.local_jio.put({"_id": "green", "creator": ["ac", "b"], "title": "wind"});
   o.clock.tick(2000);
 
   o.local_jio.stop();
 
+  // Fail to post a document because metadata doesn't respect constraints
   // XXX check reason
   o.spy(o, 'status', 400, 'Post document without respecting constraints ' +
         '-> bad request');
   o.jio.post({}, o.f);
   o.tick(o);
 
+  // Fail to post a document but a document already exists
   o.spy(o, 'status', 409, 'Post existent document -> conflict');
-  o.jio.post({"identifier": "a"}, o.f);
+  o.jio.post({"creator": "a", "title": "water"}, o.f);
   o.tick(o);
 
+  // Succeed to post because no document with the same gid has been found
   o.spy(o, 'value', {
-    "id": "{\"identifier\":[\"a%\"]}",
+    "id": "{\"creator\":[\"a%\"]}",
     "ok": true
   }, 'Post respecting constraints');
-  o.jio.post({"identifier": "a%"}, o.f);
+  o.jio.post({"creator": "a%", "title": "fire"}, o.f);
   o.tick(o);
 
+  // Fail to post because this document has been uploaded right before
   o.spy(o, 'status', 409, 'Post same document respecting constraints ' +
         '-> conflicts');
-  o.jio.post({"identifier": "a%"}, o.f);
+  o.jio.post({"creator": "a%", "title": "space"}, o.f);
   o.tick(o);
 
   o.jio.stop();
@@ -8026,6 +8032,7 @@ test("Get", function () {
     "application_name": "gid storage get test"
   };
 
+  // local jio is going to help us to prepare localstorage for gid tests
   o.local_jio = JIO.newJio(o.localstorage_spec);
 
   o.jio = JIO.newJio({
@@ -8033,31 +8040,36 @@ test("Get", function () {
     "sub_storage": o.localstorage_spec,
     "constraints": {
       "default": {
-        "identifier": "list"
+        "creator": "list"
       }
     }
   });
 
-  o.local_jio.put({"_id": "blue", "identifier": "a"});
-  o.local_jio.put({"_id": "red", "identifier": ["ac", "b"]});
+  // preparing localstorage with documents
+  o.local_jio.put({"_id": "blue", "creator": "a", "title": "earth"});
+  o.local_jio.put({"_id": "red", "creator": ["ac", "b"], "title": "wind"});
   o.clock.tick(2000);
 
   o.local_jio.stop();
 
+  // Fail to get document because _id doesn't respect constraints
   o.spy(o, 'status', 400, 'Get document without respecting constraints ' +
         '-> bad request');
   o.jio.get({"_id": "a"}, o.f);
   o.tick(o);
 
+  // Fail to get because no document with the same gid has been found
   o.spy(o, 'status', 404, 'Get inexistent document');
-  o.jio.get({"_id": "{\"identifier\":[\"c\"]}"}, o.f);
+  o.jio.get({"_id": "{\"creator\":[\"c\"]}"}, o.f);
   o.tick(o);
 
+  // Succeed to get, gid is good, document found
   o.spy(o, 'value', {
-    "_id": "{\"identifier\":[\"b\"]}",
-    "identifier": ["ac", "b"]
+    "_id": "{\"creator\":[\"b\"]}",
+    "creator": ["ac", "b"],
+    "title": "wind"
   }, 'Get document');
-  o.jio.get({"_id": "{\"identifier\":[\"b\"]}"}, o.f);
+  o.jio.get({"_id": "{\"creator\":[\"b\"]}"}, o.f);
   o.tick(o);
 
   o.jio.stop();
@@ -8072,6 +8084,7 @@ test("AllDocs", function () {
     "application_name": "gid storage allDocs test"
   };
 
+  // local jio is going to help us to prepare localstorage for gid tests
   o.local_jio = JIO.newJio(o.localstorage_spec);
 
   o.jio = JIO.newJio({
@@ -8079,53 +8092,56 @@ test("AllDocs", function () {
     "sub_storage": o.localstorage_spec,
     "constraints": {
       "default": {
-        "identifier": "list"
+        "creator": "list"
       }
     }
   });
 
-  o.local_jio.put({"_id": "green", "identifier": ["a"]})
-  o.local_jio.put({"_id": "red", "identifier": ["a", "b"]})
-  o.local_jio.put({"_id": "yellow", "identifier": ["c", "d"]})
-  o.local_jio.put({"_id": "purple", "identifier": ["p", "d"]})
-  o.local_jio.put({"_id": "blue", "title": "Hey"})
+  // preparing localstorage with documents
+  o.local_jio.put({"_id": "green", "creator": ["a"], "title": "earth"});
+  o.local_jio.put({"_id": "red", "creator": ["a", "b"], "title": "water"});
+  o.local_jio.put({"_id": "yellow", "creator": ["c", "d"], "title": "wind"});
+  o.local_jio.put({"_id": "purple", "creator": ["s", "d"], "title": "fire"});
+  o.local_jio.put({"_id": "blue", "title": "space"})
   o.clock.tick(3000);
 
   o.local_jio.stop();
 
+  // Get all document and sort to make comparison easier
   o.spy(o, 'value', {
     "rows": [{
-      "id": "{\"identifier\":[\"a\"]}",
+      "id": "{\"creator\":[\"a\"]}",
       "value": {}
     }, {
-      "id": "{\"identifier\":[\"a\",\"b\"]}",
+      "id": "{\"creator\":[\"a\",\"b\"]}",
       "value": {}
     }, {
-      "id": "{\"identifier\":[\"c\",\"d\"]}",
+      "id": "{\"creator\":[\"c\",\"d\"]}",
       "value": {}
     }, {
-      "id": "{\"identifier\":[\"p\",\"d\"]}",
+      "id": "{\"creator\":[\"s\",\"d\"]}",
       "value": {}
     }],
     "total_rows": 4
   }, 'Get all docs');
   o.jio.allDocs({
-    "sort_on": [["identifier", "ascending"]]
+    "sort_on": [["creator", "ascending"]]
   }, o.f);
   o.tick(o);
 
+  // Get all document with complex queries
   o.spy(o, 'value', {
     "rows": [{
-      "id": "{\"identifier\":[\"a\",\"b\"]}",
+      "id": "{\"creator\":[\"s\",\"d\"]}",
       "value": {}
     }],
     "total_rows": 1
   }, 'Get all docs');
   o.jio.allDocs({
-    "query": 'identifier: "a"',
-    "select": ["identifier"],
+    "query": 'creator: "d"',
+    "select": ["creator"],
     "limit": [1, 1],
-    "sort_on": [["identifier", "ascending"]]
+    "sort_on": [["creator", "ascending"]]
   }, o.f);
   o.tick(o);
 
@@ -8141,6 +8157,7 @@ test("Put", function () {
     "application_name": "gid storage put test"
   };
 
+  // local jio is going to help us to prepare localstorage for gid tests
   o.local_jio = JIO.newJio(o.localstorage_spec);
 
   o.jio = JIO.newJio({
@@ -8148,55 +8165,62 @@ test("Put", function () {
     "sub_storage": o.localstorage_spec,
     "constraints": {
       "default": {
-        "identifier": "list"
+        "creator": "list"
       }
     }
   });
 
-  o.local_jio.put({"_id": "blue", "identifier": "a"});
-  o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
+  // preparing localstorage with documents
+  o.local_jio.put({"_id": "blue", "creator": "a", "title": "earth"});
+  o.local_jio.put({"_id": "green", "creator": ["ac", "b"], "title": "wind"});
   o.clock.tick(2000);
 
+  // Fail to put document because id does not respect constraints
   o.spy(o, 'status', 400, 'Put document without respecting constraints ' +
         '-> bad request');
-  o.jio.put({"_id": "a", "identifier": "a", "title": "t"}, o.f);
+  o.jio.put({"_id": "a", "creator": "a", "title": "fire"}, o.f);
   o.tick(o);
 
+  // Fail to put because gid given != gid generated by the constraints
   o.spy(o, 'status', 400, 'Put document without respecting constraints ' +
         '-> bad request');
   o.jio.put({
-    "_id": "{\"identifier\":[\"a\"]}",
-    "identifier": "b",
-    "title": "t"
+    "_id": "{\"creator\":[\"a\"]}",
+    "creator": "b",
+    "title": "water"
   }, o.f);
   o.tick(o);
 
+  // Succeed to update a document with its gid
   o.spy(o, 'value', {
     "ok": true,
-    "id": "{\"identifier\":[\"a\"]}"
+    "id": "{\"creator\":[\"a\"]}"
   }, 'Update document');
   o.jio.put({
-    "_id": "{\"identifier\":[\"a\"]}",
-    "identifier": "a",
-    "title": "t"
+    "_id": "{\"creator\":[\"a\"]}",
+    "creator": "a",
+    "title": "space"
   }, o.f);
   o.tick(o);
 
+  // Succeed to create a document, the gid given is good
   o.spy(o, 'value', {
     "ok": true,
-    "id": "{\"identifier\":[\"c\"]}"
+    "id": "{\"creator\":[\"c\"]}"
   }, 'Create document');
   o.jio.put({
-    "_id": "{\"identifier\":[\"c\"]}",
-    "identifier": "c",
-    "title": "i"
+    "_id": "{\"creator\":[\"c\"]}",
+    "creator": "c",
+    "title": "magma"
   }, o.f);
   o.tick(o);
 
+  // Check if the local storage document is well updated to make sure the second
+  // put did not update the wrong document.
   o.spy(o, 'value', {
     "_id": "blue",
-    "identifier": "a",
-    "title": "t"
+    "creator": "a",
+    "title": "space"
   }, "Check sub documents");
   o.local_jio.get({"_id": "blue"}, o.f);
   o.tick(o);
@@ -8214,6 +8238,7 @@ test("Remove", function () {
     "application_name": "gid storage remove test"
   };
 
+  // local jio is going to help us to prepare localstorage for gid tests
   o.local_jio = JIO.newJio(o.localstorage_spec);
 
   o.jio = JIO.newJio({
@@ -8221,34 +8246,39 @@ test("Remove", function () {
     "sub_storage": o.localstorage_spec,
     "constraints": {
       "default": {
-        "identifier": "list"
+        "creator": "list"
       }
     }
   });
 
-  o.local_jio.put({"_id": "blue", "identifier": "a"});
-  o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
+  // preparing localstorage with documents
+  o.local_jio.put({"_id": "blue", "creator": "a", "title": "earth"});
+  o.local_jio.put({"_id": "green", "creator": ["ac", "b"], "title": "wind"});
   o.clock.tick(2000);
 
   o.local_jio.stop();
 
+  // Fail to remove document because given gid does not respect constraints
   o.spy(o, 'status', 400, 'Remove document without respecting constraints ' +
         '-> bad request');
   o.jio.remove({"_id": "a"}, o.f);
   o.tick(o);
 
+  // Succeed to remove
   o.spy(o, 'value', {
     "ok": true,
-    "id": "{\"identifier\":[\"b\"]}"
+    "id": "{\"creator\":[\"b\"]}"
   }, 'Remove document');
   o.jio.remove({
-    "_id": "{\"identifier\":[\"b\"]}"
+    "_id": "{\"creator\":[\"b\"]}"
   }, o.f);
   o.tick(o);
 
+  // Fail to remove the same document. This test checks also that only one
+  // document matches the gid constraints
   o.spy(o, 'status', 404, 'Remove inexistent document');
   o.jio.remove({
-    "_id": "{\"identifier\":[\"b\"]}"
+    "_id": "{\"creator\":[\"b\"]}"
   }, o.f);
   o.tick(o);
 
@@ -8264,6 +8294,7 @@ test("putAttachment", function () {
     "application_name": "gid storage put attachment test"
   };
 
+  // local jio is going to help us to prepare localstorage for gid tests
   o.local_jio = JIO.newJio(o.localstorage_spec);
 
   o.jio = JIO.newJio({
@@ -8271,15 +8302,17 @@ test("putAttachment", function () {
     "sub_storage": o.localstorage_spec,
     "constraints": {
       "default": {
-        "identifier": "list"
+        "creator": "list"
       }
     }
   });
 
-  o.local_jio.put({"_id": "blue", "identifier": "a"});
-  o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
+  // preparing localstorage with documents
+  o.local_jio.put({"_id": "blue", "creator": "a", "title": "earth"});
+  o.local_jio.put({"_id": "green", "creator": ["ac", "b"], "title": "wind"});
   o.clock.tick(2000);
 
+  // Fail to put attachment because given gid doesn't respect constraints
   o.spy(o, 'status', 400, 'put attachment without respecting constraints ' +
         '-> bad request');
   o.jio.putAttachment({
@@ -8290,36 +8323,40 @@ test("putAttachment", function () {
   }, o.f);
   o.tick(o);
 
+  // Succeed to put an attachment to a document
   o.spy(o, 'value', {
     "ok": true,
-    "id": "{\"identifier\":[\"b\"]}",
+    "id": "{\"creator\":[\"b\"]}",
     "attachment": "body"
   }, 'put attachment');
   o.jio.putAttachment({
-    "_id": "{\"identifier\":[\"b\"]}",
+    "_id": "{\"creator\":[\"b\"]}",
     "_attachment": "body",
     "_data": "abc",
     "_mimetype": "text/plain"
   }, o.f);
   o.tick(o);
 
+  // Check if the local storage document really have the new attachment
   o.spy(o, 'value', "abc", "Check attachment");
   o.local_jio.getAttachment({"_id": "green", "_attachment": "body"}, o.f);
   o.tick(o);
 
+  // Succeed to update an attachment
   o.spy(o, 'value', {
     "ok": true,
-    "id": "{\"identifier\":[\"b\"]}",
+    "id": "{\"creator\":[\"b\"]}",
     "attachment": "body"
   }, 'put attachment');
   o.jio.putAttachment({
-    "_id": "{\"identifier\":[\"b\"]}",
+    "_id": "{\"creator\":[\"b\"]}",
     "_attachment": "body",
     "_data": "def",
     "_mimetype": "text/plain"
   }, o.f);
   o.tick(o);
 
+  // Check if the local storage attachment really changed
   o.spy(o, 'value', "def", "Check attachment");
   o.local_jio.getAttachment({"_id": "green", "_attachment": "body"}, o.f);
   o.tick(o);
@@ -8337,6 +8374,7 @@ test("getAttachment", function () {
     "application_name": "gid storage get attachment test"
   };
 
+  // local jio is going to help us to prepare localstorage for gid tests
   o.local_jio = JIO.newJio(o.localstorage_spec);
 
   o.jio = JIO.newJio({
@@ -8344,15 +8382,17 @@ test("getAttachment", function () {
     "sub_storage": o.localstorage_spec,
     "constraints": {
       "default": {
-        "identifier": "list"
+        "creator": "list"
       }
     }
   });
 
-  o.local_jio.put({"_id": "blue", "identifier": "a"});
-  o.local_jio.put({"_id": "green", "identifier": ["ac", "b"]});
+  // preparing localstorage with documents
+  o.local_jio.put({"_id": "blue", "creator": "a", "title": "earth"});
+  o.local_jio.put({"_id": "green", "creator": ["ac", "b"], "title": "wind"});
   o.clock.tick(2000);
 
+  // Fail to get attachment because given gid doesn't respect constraints
   o.spy(o, 'status', 400, 'get attachment without respecting constraints ' +
         '-> bad request');
   o.jio.getAttachment({
@@ -8361,13 +8401,15 @@ test("getAttachment", function () {
   }, o.f);
   o.tick(o);
 
+  // Fail to get an inexistent attachment from a document
   o.spy(o, 'status', 404, 'Get inexistent attachment');
   o.jio.getAttachment({
-    "_id": "{\"identifier\":[\"a\"]}",
+    "_id": "{\"creator\":[\"a\"]}",
     "_attachment": "body"
   }, o.f);
   o.tick(o);
 
+  // Add an attachment manually to the document 'blue'
   o.local_jio.putAttachment({
     "_id": "blue",
     "_attachment": "body",
@@ -8377,9 +8419,10 @@ test("getAttachment", function () {
   o.clock.tick(2000);
   o.local_jio.stop();
 
+  // Succeed to get the previous attachment
   o.spy(o, 'value', "lol", 'Get attachment');
   o.jio.getAttachment({
-    "_id": "{\"identifier\":[\"a\"]}",
+    "_id": "{\"creator\":[\"a\"]}",
     "_attachment": "body"
   }, o.f);
   o.tick(o);
