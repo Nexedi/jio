@@ -8133,13 +8133,13 @@ test("AllDocs", function () {
   o.spy(o, 'value', {
     "rows": [{
       "id": "{\"creator\":[\"s\",\"d\"]}",
-      "value": {}
+      "value": {"creator": ["s", "d"]}
     }],
     "total_rows": 1
-  }, 'Get all docs');
+  }, 'Get all docs with complex query');
   o.jio.allDocs({
     "query": 'creator: "d"',
-    "select": ["creator"],
+    "select_list": ["creator"],
     "limit": [1, 1],
     "sort_on": [["creator", "ascending"]]
   }, o.f);
