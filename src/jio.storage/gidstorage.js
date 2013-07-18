@@ -387,7 +387,7 @@
     that.get = function (command) {
       setTimeout(function () {
         var gid_object, complex_query;
-        gid_object = gidParse(command.cloneDoc()._id, priv.constraints);
+        gid_object = gidParse(command.getDocId(), priv.constraints);
         if (gid_object === undefined) {
           return that.error({
             "status": 400,
@@ -412,6 +412,7 @@
               "reason": "missing"
             });
           }
+          response.rows[0].doc._id = command.getDocId();
           return that.success(response.rows[0].doc);
         }, function (err) {
           err.message = "Cannot get document";
