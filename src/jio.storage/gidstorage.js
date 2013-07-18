@@ -133,6 +133,25 @@
           }
         }
       }
+    },
+    /**
+     * Returns the metadata if it is a date
+     */
+    date: function (value) {
+      var d;
+      if (!Array.isArray(value)) {
+        if (typeof value === 'object') {
+          d = new Date(value.content);
+          value = value.content;
+        } else {
+          d = new Date(value);
+        }
+      }
+      if (Object.prototype.toString.call(d) === "[object Date]") {
+        if (!isNaN(d.getTime())) {
+          return value;
+        }
+      }
     }
   };
   content_type_re =
