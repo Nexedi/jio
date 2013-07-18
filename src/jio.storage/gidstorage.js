@@ -21,7 +21,7 @@
 
 /**
  * JIO GID Storage. Type = 'gid'.
- * Identifies document with their global identifier représentation
+ * Identifies document with their global identifier representation
  *
  * Sub storages must support complex queries and include_docs options.
  *
