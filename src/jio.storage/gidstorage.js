@@ -275,8 +275,8 @@
     priv.sub_storage = spec.sub_storage;
     priv.constraints = spec.constraints || {
       "default": {
-        "identifier": "list",
-        "type": "DCMIType"
+        "type": "DCMIType",
+        "title": "string"
       }
     };
 
