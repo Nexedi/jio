@@ -4,7 +4,7 @@
  * http://www.gnu.org/licenses/lgpl.html
  */
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global jIO: true, $: true */
+/*global jIO: true, $: true, complex_queries: true */
 
 // JIO Erp5 Storage Description :
 // {
