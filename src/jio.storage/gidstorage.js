@@ -393,47 +393,7 @@
      * @param  {Command} command The JIO command
      */
     that.putAttachment = function (command) {
-      setTimeout(function () {
-        var gid_object, complex_query, doc = command.cloneDoc();
-        gid_object = gidParse(doc._id, priv.constraints);
-        if (gid_object === undefined) {
-          return that.error({
-            "status": 400,
-            "statusText": "Bad Request",
-            "error": "bad_request",
-            "message": "Cannot put attachment",
-            "reason": "metadata should respect constraints"
-          });
-        }
-        complex_query = gidToComplexQuery(gid_object);
-        that.addJob('allDocs', priv.sub_storage, {}, {
-          "query": complex_query,
-          "wildcard_character": null
-        }, function (response) {
-          if (response.total_rows === 0) {
-            return that.error({
-              "status": 404,
-              "statusText": "Not Found",
-              "error": "not_found",
-              "message": "Cannot put attachment",
-              "reason": "Document already exist"
-            });
-          }
-          gid_object = doc._id;
-          doc._id = response.rows[0].id;
-          that.addJob('putAttachment', priv.sub_storage, doc, {
-          }, function (response) {
-            response.id = gid_object;
-            that.success(response);
-          }, function (err) {
-            err.message = "Cannot put attachment";
-            that.error(err);
-          });
-        }, function (err) {
-          err.message = "Cannot put attachment";
-          that.error(err);
-        });
-      });
+      priv.putGetOrRemoveAttachment(command, 'put');
     };
 
     /**
@@ -487,46 +447,7 @@
      * @param  {Command} command The JIO command
      */
     that.getAttachment = function (command) {
-      setTimeout(function () {
-        var gid_object, complex_query, doc = command.cloneDoc();
-        gid_object = gidParse(doc._id, priv.constraints);
-        if (gid_object === undefined) {
-          return that.error({
-            "status": 400,
-            "statusText": "Bad Request",
-            "error": "bad_request",
-            "message": "Cannot get attachment",
-            "reason": "metadata should respect constraints"
-          });
-        }
-        complex_query = gidToComplexQuery(gid_object);
-        that.addJob('allDocs', priv.sub_storage, {}, {
-          "query": complex_query,
-          "wildcard_character": null
-        }, function (response) {
-          if (response.total_rows === 0) {
-            return that.error({
-              "status": 404,
-              "statusText": "Not Found",
-              "error": "not_found",
-              "message": "Cannot get attachment",
-              "reason": "Document already exist"
-            });
-          }
-          gid_object = doc._id;
-          doc._id = response.rows[0].id;
-          that.addJob('getAttachment', priv.sub_storage, doc, {
-          }, function (response) {
-            that.success(response);
-          }, function (err) {
-            err.message = "Cannot put attachment";
-            that.error(err);
-          });
-        }, function (err) {
-          err.message = "Cannot put attachment";
-          that.error(err);
-        });
-      });
+      priv.putGetOrRemoveAttachment(command, 'get');
     };
 
     /**
