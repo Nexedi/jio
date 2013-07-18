@@ -262,9 +262,9 @@
         gid = gidFormat(doc, priv.constraints);
         if (gid === undefined || (doc._id && gid !== doc._id)) {
           return that.error({
-            "status": 409,
-            "statusText": "Conflict",
-            "error": "conflict",
+            "status": 400,
+            "statusText": "Bad Request",
+            "error": "bad_request",
             "message": "Cannot " + method + " document",
             "reason": "metadata should respect constraints"
           });
@@ -340,9 +340,9 @@
         gid_object = gidParse(doc._id, priv.constraints);
         if (gid_object === undefined) {
           return that.error({
-            "status": 409,
-            "statusText": "Conflict",
-            "error": "conflict",
+            "status": 400,
+            "statusText": "Bad Request",
+            "error": "bad_request",
             "message": "Cannot put attachment",
             "reason": "metadata should respect constraints"
           });
@@ -390,9 +390,9 @@
         gid_object = gidParse(command.cloneDoc()._id, priv.constraints);
         if (gid_object === undefined) {
           return that.error({
-            "status": 409,
-            "statusText": "Conflict",
-            "error": "conflict",
+            "status": 400,
+            "statusText": "Bad Request",
+            "error": "bad_request",
             "message": "Cannot get document",
             "reason": "metadata should respect constraints"
           });
@@ -482,9 +482,9 @@
         gid_object = gidParse(doc._id, priv.constraints);
         if (gid_object === undefined) {
           return that.error({
-            "status": 409,
-            "statusText": "Conflict",
-            "error": "conflict",
+            "status": 400,
+            "statusText": "Bad Request",
+            "error": "bad_request",
             "message": "Cannot remove document",
             "reason": "metadata should respect constraints"
           });
