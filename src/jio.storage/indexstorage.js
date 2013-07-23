@@ -1,11 +1,23 @@
 /*
- * Copyright 2013, Nexedi SA
- * Released under the LGPL license.
- * http://www.gnu.org/licenses/lgpl.html
+ * JIO extension for resource indexing.
+ * Copyright (C) 2013  Nexedi SA
+ *
+ *   This library is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Lesser General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This library is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU Lesser General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Lesser General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, regexp: true */
-/*global jIO: true, localStorage: true, define: true, complex_queries: true */
+/*global jIO, define, complex_queries */
 
 /**
  * JIO Index Storage.
@@ -15,7 +27,15 @@
  *   "type": "index",
  *   "indices": [{
  *     "id": "index_title_subject.json", // doc id where to store indices
- *     "index": ["title", "subject"] // metadata to index
+ *     "index": ["title", "subject"], // metadata to index
+ *     "attachment": "youhou", // default "body"
+ *     "metadata": { // default {}
+ *       "type": "Dataset",
+ *       "format": "application/json",
+ *       "date": "yyyy-mm-ddTHH:MM:SS+HH:MM",
+ *       "title": "My index database",
+ *       "creator": "Me"
+ *     },
  *     "sub_storage": <sub storage where to store index>
  *                    (default equal to parent sub_storage field)
  *   }, {
@@ -30,6 +50,21 @@
  * index_titre_subject.json
  * {
  *   "_id": "index_title_subject.json",
+ *   "type": "Dataset",
+ *   "format": "application/json",
+ *   "date": "yyyy-mm-ddTHH:MM:SS+HH:MM",
+ *   "title": "My index database",
+ *   "creator": "Me",
+ *   "_attachments": {
+ *     "youhou": {
+ *       "length": Num,
+ *       "digest": "XXX",
+ *       "content_type": "application/json"
+ *     }
+ *   }
+ * }
+ * Attachment "youhou"
+ * {
  *   "indexing": ["title", "subject"],
  *   "free": [0],
  *   "location": {
@@ -48,6 +83,12 @@
  * index_year.json
  * {
  *   "_id": "index_year.json",
+ *   "_attachments": {
+ *     "body": {..}
+ *   }
+ * }
+ * Attachment "body"
+ * {
  *   "indexing": ["year"],
  *   "free": [1],
  *   "location": {
@@ -171,6 +212,32 @@
   }
 
   /**
+   * Tool to get the date in W3C date format "2011-12-13T14:15:16+01:00"
+   *
+   * @param  {Any} date The new Date() parameter
+   * @return {String} The date in W3C date format
+   */
+  function w3cDate(date) {
+    var d = new Date(date), offset = -d.getTimezoneOffset();
+    return (
+      d.getFullYear() + "-" +
+        (d.getMonth() + 1) + "-" +
+        d.getDate() + "T" +
+        d.getHours() + ":" +
+        d.getMinutes() + ":" +
+        d.getSeconds() +
+        (offset < 0 ? "-" : "+") +
+        (offset / 60) + ":" +
+        (offset % 60)
+    ).replace(/[0-9]+/g, function (found) {
+      if (found.length < 2) {
+        return '0' + found;
+      }
+      return found;
+    });
+  }
+
+  /**
    * A JSON Index manipulator
    *
    * @class JSONIndex
@@ -187,6 +254,14 @@
      * @type String
      */
     that._id = spec._id;
+
+    /**
+     * The attachment id
+     *
+     * @property _attachment
+     * @type String
+     */
+    that._attachment = spec._attachment;
 
     /**
      * The array with metadata key to index
@@ -231,13 +306,13 @@
      * @return {Boolean} true if added, false otherwise
      */
     that.put = function (meta) {
-      var underscored_meta_re = /^_.*$/, k, needed_meta = {}, ok = false;
+      var k, needed_meta = {}, ok = false;
       if (typeof meta._id !== "string" && meta._id !== "") {
         throw new TypeError("Corrupted Metadata");
       }
       for (k in meta) {
         if (meta.hasOwnProperty(k)) {
-          if (underscored_meta_re.test(k)) {
+          if (k[0] === "_") {
             if (k === "_id") {
               needed_meta[k] = meta[k];
             }
@@ -293,10 +368,13 @@
       var id, database_meta;
       if (typeof that._id !== "string" ||
           that._id === "" ||
-          type(that._free) !== "Array" ||
-          type(that._indexing) !== "Array" ||
-          type(that._location) !== "Object" ||
-          type(that._database) !== "Array" ||
+          typeof that._attachment !== "string" ||
+          that._attachment === "" ||
+          !Array.isArray(that._free) ||
+          !Array.isArray(that._indexing) ||
+          typeof that._location !== 'object' ||
+          Array.isArray(that._location) ||
+          !Array.isArray(that._database) ||
           that._indexing.length === 0) {
         throw new TypeError("Corrupted Index");
       }
@@ -381,7 +459,6 @@
      */
     that.serialized = function () {
       return {
-        "_id": that._id,
         "indexing": that._indexing,
         "free": that._free,
         "location": that._location,
@@ -467,17 +544,32 @@
      */
     priv.getIndexDatabase = function (option, number, callback) {
       that.addJob(
-        "get",
+        "getAttachment",
         priv.indices[number].sub_storage || priv.sub_storage,
-        {"_id": priv.indices[number].id},
+        {
+          "_id": priv.indices[number].id,
+          "_attachment": priv.indices[number].attachment || "body"
+        },
         option,
         function (response) {
-          callback(new JSONIndex(response));
+          try {
+            response = JSON.parse(response);
+            response._id = priv.indices[number].id;
+            response._attachment = priv.indices[number].attachment || "body";
+            callback(new JSONIndex(response));
+          } catch (e) {
+            return that.error(generateErrorObject(
+              e.message,
+              "Repair is necessary",
+              "corrupt"
+            ));
+          }
         },
         function (err) {
           if (err.status === 404) {
             callback(new JSONIndex({
               "_id": priv.indices[number].id,
+              "_attachment": priv.indices[number].attachment || "body",
               "indexing": priv.indices[number].index
             }));
             return;
@@ -502,6 +594,7 @@
           if (err.status === 404) {
             response_list[index] = new JSONIndex({
               "_id": priv.indices[index].id,
+              "_attachment": priv.indices[index].attachment || "body",
               "indexing": priv.indices[index].index
             });
             count += 1;
@@ -516,7 +609,19 @@
       };
       callbacks.success = function (index) {
         return function (response) {
-          response_list[index] = new JSONIndex(response);
+          try {
+            response = JSON.parse(response);
+            response._id = priv.indices[index].id;
+            response._attachment = priv.indices[index].attachment || "body";
+            console.log(response);
+            response_list[index] = new JSONIndex(response);
+          } catch (e) {
+            return that.error(generateErrorObject(
+              e.message,
+              "Repair is necessary",
+              "corrupt"
+            ));
+          }
           count += 1;
           if (count === priv.indices.length) {
             callback(response_list);
@@ -525,9 +630,12 @@
       };
       for (i = 0; i < priv.indices.length; i += 1) {
         that.addJob(
-          "get",
+          "getAttachment",
           priv.indices[i].sub_storage || priv.sub_storage,
-          {"_id": priv.indices[i].id},
+          {
+            "_id": priv.indices[i].id,
+            "_attachment": priv.indices[i].attachment || "body"
+          },
           option,
           callbacks.success(i),
           callbacks.error(i)
@@ -544,28 +652,56 @@
      * @param  {Function} callback The result callback(err, response)
      */
     priv.storeIndexDatabaseList = function (database_list, option, callback) {
-      var i, count = 0, count_max = 0, onResponse, onError;
-      onResponse = function (response) {
+      var i, count = 0, count_max = 0;
+      function onAttachmentResponse(response) {
         count += 1;
         if (count === count_max) {
           callback({"ok": true});
         }
-      };
-      onError = function (err) {
+      }
+      function onAttachmentError(err) {
         err.message = "Unable to store index database.";
         that.error(err);
-      };
+      }
+      function putAttachment(i) {
+        that.addJob(
+          "putAttachment",
+          priv.indices[i].sub_storage || priv.sub_storage,
+          {
+            "_id": database_list[i]._id,
+            "_attachment": database_list[i]._attachment,
+            "_data": JSON.stringify(database_list[i].serialized()),
+            "_mimetype": "application/json"
+          },
+          option,
+          onAttachmentResponse,
+          onAttachmentError
+        );
+      }
+      function post(i) {
+        var doc = priv.indices[i].metadata || {};
+        doc._id = database_list[i]._id;
+        that.addJob(
+          "post", // with id
+          priv.indices[i].sub_storage || priv.sub_storage,
+          doc,
+          option,
+          function (response) {
+            putAttachment(i);
+          },
+          function (err) {
+            if (err.status === 409) {
+              return putAttachment(i);
+            }
+            err.message = "Unable to store index database.";
+            that.error(err);
+          }
+        );
+      }
       for (i = 0; i < priv.indices.length; i += 1) {
         if (database_list[i] !== undefined) {
           count_max += 1;
-          that.addJob(
-            "put",
-            priv.indices[i].sub_storage || priv.sub_storage,
-            database_list[i].serialized(),
-            option,
-            onResponse,
-            onError
-          );
+          post(i);
         }
       }
     };
@@ -735,6 +871,7 @@
         function (response) {
           var db_list = [], db = new JSONIndex({
             "_id": command.getDocId(),
+            "_attachment": priv.indices[index].attachment || "body",
             "indexing": priv.indices[index].index
           });
           for (i = 0; i < response.rows.length; i += 1) {
