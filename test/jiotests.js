@@ -4468,6 +4468,17 @@ test ("Post", function () {
       }
     });
 
+    o.getAttachmentCallback = function (err, response) {
+      if (response) {
+        try {
+          response = JSON.parse(response);
+        } catch (e) {
+          response = "PARSE ERROR " + response;
+        }
+      }
+      o.f(err, response);
+    };
+
     // post without id
     o.spy (o, "jobstatus", "done", "Post without id");
     o.jio.post({}, function (err, response) {
@@ -4485,7 +4496,6 @@ test ("Post", function () {
 
     // check document
     o.fakeIndexA = {
-      "_id": "A",
       "indexing": ["title"],
       "free": [],
       "location": {
@@ -4496,11 +4506,13 @@ test ("Post", function () {
       ]
     };
     o.spy(o, "value", o.fakeIndexA, "Check index file");
-    o.jio.get({"_id": "A"}, o.f);
+    o.jio.getAttachment({
+      "_id": "A",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     o.fakeIndexB = {
-      "_id": "B",
       "indexing": ["title", "year"],
       "free": [],
       "location": {
@@ -4511,7 +4523,10 @@ test ("Post", function () {
       ]
     };
     o.spy(o, "value", o.fakeIndexB, "Check index file");
-    o.jio.get({"_id": "B"}, o.f);
+    o.jio.getAttachment({
+      "_id": "B",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     // post with escapable characters
@@ -4551,6 +4566,17 @@ test ("Put", function(){
       }
     });
 
+    o.getAttachmentCallback = function (err, response) {
+      if (response) {
+        try {
+          response = JSON.parse(response);
+        } catch (e) {
+          response = "PARSE ERROR " + response;
+        }
+      }
+      o.f(err, response);
+    };
+
     // put without id
     // error 20 -> document id required
     o.spy (o, "status", 20, "Put without id");
@@ -4565,7 +4591,6 @@ test ("Put", function(){
 
     // check index file
     o.fakeIndexA = {
-      "_id": "A",
       "indexing": ["author"],
       "free": [],
       "location": {
@@ -4574,18 +4599,23 @@ test ("Put", function(){
       "database": [{"_id": "put1", "author": "John Doe"}]
     };
     o.spy(o, "value", o.fakeIndexA, "Check index file");
-    o.jio.get({"_id": "A"}, o.f);
+    o.jio.getAttachment({
+      "_id": "A",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     o.fakeIndexB = {
-      "_id": "B",
       "indexing": ["year"],
       "free": [],
       "location": {},
       "database": []
     };
     o.spy(o, "value", o.fakeIndexB, "Check index file");
-    o.jio.get({"_id": "B"}, o.f);
+    o.jio.getAttachment({
+      "_id": "B",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     // modify document - modify keyword on index!
@@ -4597,7 +4627,10 @@ test ("Put", function(){
     // check index file
     o.fakeIndexA.database[0].author = "Jane Doe";
     o.spy(o, "value", o.fakeIndexA, "Check index file");
-    o.jio.get({"_id": "A"}, o.f);
+    o.jio.getAttachment({
+      "_id": "A",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     // add new document with same keyword!
@@ -4611,7 +4644,10 @@ test ("Put", function(){
     o.fakeIndexA.location.new_doc = 1;
     o.fakeIndexA.database.push({"_id": "new_doc", "author": "Jane Doe"});
     o.spy(o, "value", o.fakeIndexA, "Check index file");
-    o.jio.get({"_id": "A"}, o.f);
+    o.jio.getAttachment({
+      "_id": "A",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     // add second keyword to index file
@@ -4624,13 +4660,19 @@ test ("Put", function(){
 
     // check index file
     o.spy(o, "value", o.fakeIndexA, "Check index file");
-    o.jio.get({"_id": "A"}, o.f);
+    o.jio.getAttachment({
+      "_id": "A",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     o.fakeIndexB.location.put1 = 0;
     o.fakeIndexB.database.push({"_id": "put1", "year": "1912"});
     o.spy(o, "value", o.fakeIndexB, "Check index file");
-    o.jio.get({"_id": "B"}, o.f);
+    o.jio.getAttachment({
+      "_id": "B",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     // remove a keyword from an existing document
@@ -4645,7 +4687,10 @@ test ("Put", function(){
     o.fakeIndexA.database[1] = null;
     o.fakeIndexA.free.push(1);
     o.spy(o, "value", o.fakeIndexA, "Check index file");
-    o.jio.get({"_id": "A"}, o.f);
+    o.jio.getAttachment({
+      "_id": "A",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     o.jio.stop();
@@ -4666,14 +4711,27 @@ test("Check & Repair", function () {
     }
   });
 
+  o.getAttachmentCallback = function (err, response) {
+    if (response) {
+      try {
+        response = JSON.parse(response);
+      } catch (e) {
+        response = "PARSE ERROR " + response;
+      }
+      delete response.location;
+      response.database.sort(function (a, b) {
+        return a._id < b._id ? -1 : a._id > b._id ? 1 : 0;
+      });
+    }
+    o.f(err, response);
+  };
+
   o.fakeIndexA = {
-    "_id": "A",
     "indexing": ["director"],
     "free": [],
     "database": []
   };
   o.fakeIndexB = {
-    "_id": "B",
     "indexing": ["year"],
     "free": [],
     "database": []
@@ -4721,27 +4779,17 @@ test("Check & Repair", function () {
 
   // check index file
   o.spy(o, "value", o.fakeIndexA, "Manually check index file");
-  o.jio.get({"_id": "A"}, function (err, response) {
-    if (response) {
-      delete response.location;
-      response.database.sort(function (a, b) {
-        return a._id < b._id ? -1 : a._id > b._id ? 1 : 0;
-      });
-    }
-    o.f(err, response);
-  });
+  o.jio.getAttachment({
+    "_id": "A",
+    "_attachment": "body"
+  }, o.getAttachmentCallback);
   o.tick(o);
 
   o.spy(o, "value", o.fakeIndexB, "Manually check index file");
-  o.jio.get({"_id": "B"}, function (err, response) {
-    if (response) {
-      delete response.location;
-      response.database.sort(function (a, b) {
-        return a._id < b._id ? -1 : a._id > b._id ? 1 : 0;
-      });
-    }
-    o.f(err, response);
-  });
+  o.jio.getAttachment({
+    "_id": "B",
+    "_attachment": "body"
+  }, o.getAttachmentCallback);
   o.tick(o);
 
   o.jio2 = JIO.newJio({"type": "local", "username": "indexstoragerepair"});
@@ -4767,27 +4815,17 @@ test("Check & Repair", function () {
 
   // check index file
   o.spy(o, "value", o.fakeIndexA, "Manually check index file");
-  o.jio.get({"_id": "A"}, function (err, response) {
-    if (response) {
-      delete response.location;
-      response.database.sort(function (a, b) {
-        return a._id < b._id ? -1 : a._id > b._id ? 1 : 0;
-      });
-    }
-    o.f(err, response);
-  });
+  o.jio.getAttachment({
+    "_id": "A",
+    "_attachment": "body"
+  }, o.getAttachmentCallback);
   o.tick(o);
 
   o.spy(o, "value", o.fakeIndexB, "Manually check index file");
-  o.jio.get({"_id": "B"}, function (err, response) {
-    if (response) {
-      delete response.location;
-      response.database.sort(function (a, b) {
-        return a._id < b._id ? -1 : a._id > b._id ? 1 : 0;
-      });
-    }
-    o.f(err, response);
-  });
+  o.jio.getAttachment({
+    "_id": "B",
+    "_attachment": "body"
+  }, o.getAttachmentCallback);
   o.tick(o);
 
   o.jio.stop();
@@ -4992,6 +5030,17 @@ test ("Remove", function(){
       }
     });
 
+    o.getAttachmentCallback = function (err, response) {
+      if (response) {
+        try {
+          response = JSON.parse(response);
+        } catch (e) {
+          response = "PARSE ERROR " + response;
+        }
+      }
+      o.f(err, response);
+    };
+
     // remove inexistent document
     o.spy(o, "status", 404, "Remove inexistent document");
     o.jio.remove({"_id": "remove1"}, o.f);
@@ -5021,7 +5070,6 @@ test ("Remove", function(){
 
     // check index
     o.fakeIndexA = {
-      "_id": "A",
       "indexing": ["author"],
       "free": [0],
       "location": {
@@ -5030,11 +5078,13 @@ test ("Remove", function(){
       "database": [null, {"_id": "removeAlso", "author": "Martin Mustermann"}]
     };
     o.spy(o, "value", o.fakeIndexA, "Check index file");
-    o.jio.get({"_id": "A"}, o.f);
+    o.jio.getAttachment({
+      "_id": "A",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     o.fakeIndexB = {
-      "_id": "B",
       "indexing": ["year"],
       "free": [0],
       "location": {
@@ -5043,7 +5093,10 @@ test ("Remove", function(){
       "database": [null, {"_id": "removeAlso", "year": "2525"}]
     };
     o.spy(o, "value", o.fakeIndexB, "Check index file");
-    o.jio.get({"_id": "B"}, o.f);
+    o.jio.getAttachment({
+      "_id": "B",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     // check document
@@ -5087,14 +5140,20 @@ test ("Remove", function(){
     o.fakeIndexA.location.remove3 = 0;
     o.fakeIndexA.database[0] = {"_id": "remove3", "author": "Mrs Sunshine"};
     o.spy(o, "value", o.fakeIndexA, "Check index file");
-    o.jio.get({"_id": "A"}, o.f);
+    o.jio.getAttachment({
+      "_id": "A",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     o.fakeIndexB.free = [];
     o.fakeIndexB.location.remove3 = 0;
     o.fakeIndexB.database[0] = {"_id": "remove3", "year": "1234"};
     o.spy(o, "value", o.fakeIndexB, "Check index file");
-    o.jio.get({"_id": "B"}, o.f);
+    o.jio.getAttachment({
+      "_id": "B",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     // remove document and attachment together
@@ -5108,14 +5167,20 @@ test ("Remove", function(){
     delete o.fakeIndexA.location.remove3;
     o.fakeIndexA.database[0] = null;
     o.spy(o, "value", o.fakeIndexA, "Check index file");
-    o.jio.get({"_id": "A"}, o.f);
+    o.jio.getAttachment({
+      "_id": "A",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     o.fakeIndexB.free = [0];
     delete o.fakeIndexB.location.remove3;
     o.fakeIndexB.database[0] = null;
     o.spy(o, "value", o.fakeIndexB, "Check index file");
-    o.jio.get({"_id": "B"}, o.f);
+    o.jio.getAttachment({
+      "_id": "B",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     // check attachment
@@ -5148,6 +5213,17 @@ test ("AllDocs", function () {
     }
   });
 
+  o.getAttachmentCallback = function (err, response) {
+    if (response) {
+      try {
+        response = JSON.parse(response);
+      } catch (e) {
+        response = "PARSE ERROR " + response;
+      }
+    }
+    o.f(err, response);
+  };
+
   // adding documents
   o.all1 = { "_id": "dragon.doc",
     "title": "some title", "author": "Dr. No", "year": "1968"
@@ -5176,7 +5252,6 @@ test ("AllDocs", function () {
 
   // check index
   o.fakeIndexA = {
-    "_id": "A",
     "indexing": ["author"],
     "free": [],
     "location": {
@@ -5193,7 +5268,10 @@ test ("AllDocs", function () {
     ]
   };
   o.spy(o, "value", o.fakeIndexA, "Check index file");
-  o.jio.get({"_id": "A"}, o.f);
+  o.jio.getAttachment({
+    "_id": "A",
+    "_attachment": "body"
+  }, o.getAttachmentCallback);
   o.tick(o);
 
   o.thisShouldBeTheAnswer = {
@@ -5230,6 +5308,17 @@ test ("AllDocs Complex Queries", function () {
     });
     o.localpath = "jio/localstorage/icomplex/acomplex";
 
+    o.getAttachmentCallback = function (err, response) {
+      if (response) {
+        try {
+          response = JSON.parse(response);
+        } catch (e) {
+          response = "PARSE ERROR " + response;
+        }
+      }
+      o.f(err, response);
+    };
+
     // sample data
     o.titles = ["Shawshank Redemption", "Godfather", "Godfather 2",
       "Pulp Fiction", "The Good, The Bad and The Ugly", "12 Angry Men",
@@ -5248,7 +5337,6 @@ test ("AllDocs Complex Queries", function () {
     ];
 
     o.fakeIndexA = {
-      "_id": "A",
       "indexing": ["director"],
       "free": [],
       "location": {},
@@ -5256,7 +5344,6 @@ test ("AllDocs Complex Queries", function () {
     };
 
     o.fakeIndexB = {
-      "_id": "B",
       "indexing": ["title", "year"],
       "free": [],
       "location": {},
@@ -5289,11 +5376,17 @@ test ("AllDocs Complex Queries", function () {
 
     // check index file
     o.spy(o, "value", o.fakeIndexA, "Check index file");
-    o.jio.get({"_id": "A"}, o.f);
+    o.jio.getAttachment({
+      "_id": "A",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     o.spy(o, "value", o.fakeIndexB, "Check index file");
-    o.jio.get({"_id": "B"}, o.f);
+    o.jio.getAttachment({
+      "_id": "B",
+      "_attachment": "body"
+    }, o.getAttachmentCallback);
     o.tick(o);
 
     // response
