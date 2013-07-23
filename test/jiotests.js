@@ -4703,19 +4703,19 @@ test("Check & Repair", function () {
   o.jio.check({"_id": "B"}, o.f);
   o.tick(o);
 
-  o.spy(o, "value", {"_id": "A", "ok": true}, "Repair database");
+  o.spy(o, "value", {"id": "A", "ok": true}, "Repair database");
   o.jio.repair({"_id": "A"}, o.f);
   o.tick(o);
 
-  o.spy(o, "value", {"_id": "B", "ok": true}, "Repair database");
+  o.spy(o, "value", {"id": "B", "ok": true}, "Repair database");
   o.jio.repair({"_id": "B"}, o.f);
   o.tick(o);
 
-  o.spy(o, "value", {"_id": "A", "ok": true}, "Check database again");
+  o.spy(o, "value", {"id": "A", "ok": true}, "Check database again");
   o.jio.check({"_id": "A"}, o.f);
   o.tick(o);
 
-  o.spy(o, "value", {"_id": "B", "ok": true}, "Check database again");
+  o.spy(o, "value", {"id": "B", "ok": true}, "Check database again");
   o.jio.check({"_id": "B"}, o.f);
   o.tick(o);
 

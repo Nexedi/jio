@@ -744,7 +744,7 @@
           if (just_check) {
             priv.getIndexDatabase(option, index, function (current_db) {
               if (db.equals(current_db)) {
-                return that.success({"ok": true, "_id": command.getDocId()});
+                return that.success({"ok": true, "id": command.getDocId()});
               }
               return that.error(generateErrorObject(
                 "Different Index",
@@ -754,7 +754,7 @@
             });
           } else {
             priv.storeIndexDatabaseList(db_list, {}, function () {
-              that.success({"ok": true, "_id": command.getDocId()});
+              that.success({"ok": true, "id": command.getDocId()});
             });
           }
         },
