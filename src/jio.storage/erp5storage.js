@@ -249,6 +249,47 @@ jIO.addStorageType("erp5", function (spec, my) {
     return jql;
   };
 
+  /**
+   * Use option object and converts a query to a compatible ERP5 Query.
+   *
+   * @param  {Object} option The command options
+   */
+  priv.convertToErp5Query = function (option) {
+    option.query = complex_queries.QueryFactory.create(option.query || "");
+    if (option.wildcard_character === undefined ||
+        (option.wildcard_character !== null &&
+         typeof option.wildcard_character !== 'string')) {
+      option.wildcard_character = '%';
+    } else {
+      option.wildcard_character = option.wildcard_character || '';
+    }
+    option.query.onParseSimpleQuery = function (object) {
+      if (option.wildcard_character.length === 1 &&
+          object.parsed.operator === '=') {
+        object.parsed.operator = 'like';
+        if (option.wildcard_character === '%') {
+          object.parsed.value =
+            object.parsed.value.replace(/_/g, '\\_');
+        } else if (option.wildcard_character === '_') {
+          object.parsed.value =
+            object.parsed.value.replace(/%/g, '\\%').replace(/_/g, '%');
+        } else {
+          object.parsed.value =
+            object.parsed.value.replace(
+                /([%_])/g,
+              '\\$1'
+            ).replace(
+              new RegExp(complex_queries.stringEscapeRegexpCharacters(
+                option.wildcard_character
+              ), 'g'),
+              '%'
+            );
+        }
+      }
+    };
+    option.query = option.query.parse();
+  };
+
   // ERP5 REQUESTS //
   /**
    * Sends a request to ERP5
@@ -305,8 +346,7 @@ jIO.addStorageType("erp5", function (spec, my) {
     if (complex_queries !== undefined &&
         method === 'allDocs' &&
         option.query) {
-      option.query =
-        complex_queries.QueryFactory.create(option.query || "").serialized();
+      priv.convertToErp5Query(option);
     }
     erp5.genericRequest(
       command.cloneDoc(),
