@@ -8739,6 +8739,385 @@ test("More Constraints", function () {
   o.jio.stop();
 });
 
+module("JIO ERP5 Storage");
+
+test("Post", function () {
+  var o = generateTools(this);
+  o.jio = JIO.newJio({
+    "type": "erp5",
+    "url": "http://my.website.org/erp5",
+    "username": "login",
+    "password": "pwd"
+  });
+
+  // Post without document type -> bad request
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "POST",
+      /http:\/\/my\.website\.org\/erp5\/JIO_post\?__ac_name=login&__ac_password=pwd&_=[0-9]+/,
+    [
+      200,
+      {"Content-Type": "text/plain; charset=utf-8"},
+      JSON.stringify({"response": null, "err": {
+        "status": 409,
+        "statusText": "Conflict", // XXX should be bad request
+        "message": "Cannot post document",
+        "reason": "Type missing",
+        "error": "conflict"
+      }})
+    ]
+  );
+
+  o.spy(o, 'status', 409, 'Post document without type -> conflict');
+  o.jio.post({}, o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  // Post with document type
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "POST",
+      /http:\/\/my\.website\.org\/erp5\/JIO_post\?__ac_name=login&__ac_password=pwd&_=[0-9]+/,
+    [
+      200,
+      {"Content-Type": "text/plain; charset=utf-8"},
+      JSON.stringify({"response": {
+        "ok": true,
+        "id": "/web_page_module/123"
+      }, "err": null})
+    ]
+  );
+
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "/web_page_module/123"
+  }, 'Post document with type');
+  o.jio.post({"type": "Web Page"}, o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  // Post with id
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "POST",
+      /http:\/\/my\.website\.org\/erp5\/JIO_post\?__ac_name=login&__ac_password=pwd&_=[0-9]+/,
+    [
+      200,
+      {"Content-Type": "text/plain; charset=utf-8"},
+      JSON.stringify({"response": {
+        "ok": true,
+        "id": "/web_page_module/321"
+      }, "err": null})
+    ]
+  );
+
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "/web_page_module/321"
+  }, 'Post document with type and id');
+  o.jio.post({"type": "Web Page", "_id": "/web_page_module/321"}, o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  o.jio.stop();
+});
+
+test("Put", function () {
+  var o = generateTools(this);
+  o.jio = JIO.newJio({
+    "type": "erp5",
+    "url": "http://my.website.org/erp5",
+    "username": "login",
+    "password": "pwd"
+  });
+
+  // Put without document type -> bad request
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "POST",
+      /http:\/\/my\.website\.org\/erp5\/JIO_put\?__ac_name=login&__ac_password=pwd&_=[0-9]+/,
+    [
+      200,
+      {"Content-Type": "text/plain; charset=utf-8"},
+      JSON.stringify({"response": null, "err": {
+        "status": 409,
+        "statusText": "Conflict", // XXX should be bad request
+        "message": "Cannot post document",
+        "reason": "Type missing",
+        "error": "conflict"
+      }})
+    ]
+  );
+
+  o.spy(o, 'status', 409, 'Put document without type -> conflict');
+  o.jio.put({"_id": "/web_page_module/123"}, o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  // Put without document type -> bad request
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "POST",
+      /http:\/\/my\.website\.org\/erp5\/JIO_put\?__ac_name=login&__ac_password=pwd&_=[0-9]+/,
+    [
+      200,
+      {"Content-Type": "text/plain; charset=utf-8"},
+      JSON.stringify({"response": {
+        "ok": true,
+        "id": "/web_page_module/123"
+      }, "err": null})
+    ]
+  );
+
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "/web_page_module/123"
+  }, 'Put document with type');
+  o.jio.put({"_id": "/web_page_module/123", "type": "Web Page"}, o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  o.jio.stop();
+});
+
+test("PutAttachment", function () {
+  var o = generateTools(this);
+  o.jio = JIO.newJio({
+    "type": "erp5",
+    "url": "http://my.website.org/erp5",
+    "username": "login",
+    "password": "pwd"
+  });
+
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "POST",
+      /http:\/\/my\.website\.org\/erp5\/JIO_putAttachment\?__ac_name=login&__ac_password=pwd&_=[0-9]+/,
+    [
+      200,
+      {"Content-Type": "text/plain; charset=utf-8"},
+      JSON.stringify({"response": {
+        "ok": true,
+        "id": "/web_page_module/123",
+        "attachment": "body"
+      }, "err": null})
+    ]
+  );
+
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "/web_page_module/123",
+    "attachment": "body"
+  }, 'Put document with type');
+  o.jio.putAttachment({
+    "_id": "/web_page_module/123",
+    "_attachment": "body"
+  }, o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  o.jio.stop();
+});
+
+test("Remove", function () {
+  var o = generateTools(this);
+  o.jio = JIO.newJio({
+    "type": "erp5",
+    "url": "http://my.website.org/erp5",
+    "username": "login",
+    "password": "pwd"
+  });
+
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "POST",
+      /http:\/\/my\.website\.org\/erp5\/JIO_remove\?__ac_name=login&__ac_password=pwd&_=[0-9]+/,
+    [
+      200,
+      {"Content-Type": "text/plain; charset=utf-8"},
+      JSON.stringify({"response": {
+        "ok": true,
+        "id": "/web_page_module/123",
+      }, "err": null})
+    ]
+  );
+
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "/web_page_module/123"
+  }, 'Remove document');
+  o.jio.remove({
+    "_id": "/web_page_module/123"
+  }, o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  o.jio.stop();
+});
+
+test("RemoveAttachment", function () {
+  var o = generateTools(this);
+  o.jio = JIO.newJio({
+    "type": "erp5",
+    "url": "http://my.website.org/erp5",
+    "username": "login",
+    "password": "pwd"
+  });
+
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "POST",
+      /http:\/\/my\.website\.org\/erp5\/JIO_removeAttachment\?__ac_name=login&__ac_password=pwd&_=[0-9]+/,
+    [
+      200,
+      {"Content-Type": "text/plain; charset=utf-8"},
+      JSON.stringify({"response": {
+        "ok": true,
+        "id": "/web_page_module/123",
+        "attachment": "body"
+      }, "err": null})
+    ]
+  );
+
+  o.spy(o, 'value', {
+    "ok": true,
+    "id": "/web_page_module/123",
+    "attachment": "body"
+  }, 'Remove attachment');
+  o.jio.removeAttachment({
+    "_id": "/web_page_module/123",
+    "_attachment": "body"
+  }, o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  o.jio.stop();
+});
+
+test("Get", function () {
+  var o = generateTools(this);
+  o.jio = JIO.newJio({
+    "type": "erp5",
+    "url": "http://my.website.org/erp5",
+    "username": "login",
+    "password": "pwd"
+  });
+
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "POST",
+      /http:\/\/my\.website\.org\/erp5\/JIO_get\?__ac_name=login&__ac_password=pwd&_=[0-9]+/,
+    [
+      200,
+      {"Content-Type": "text/plain; charset=utf-8"},
+      JSON.stringify({"response": {
+        // fill here?
+      }, "err": null})
+    ]
+  );
+
+  o.spy(o, 'value', {
+    // fill here?
+  }, 'Get document');
+  o.jio.get({
+    "_id": "/web_page_module/123"
+  }, o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  o.jio.stop();
+});
+
+test("Get Attachment", function () {
+  var o = generateTools(this);
+  o.jio = JIO.newJio({
+    "type": "erp5",
+    "url": "http://my.website.org/erp5",
+    "username": "login",
+    "password": "pwd"
+  });
+
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "POST",
+      /http:\/\/my\.website\.org\/erp5\/JIO_getAttachment\?__ac_name=login&__ac_password=pwd&_=[0-9]+/,
+    [
+      200,
+      {"Content-Type": "text/plain; charset=utf-8"},
+      JSON.stringify({"response": "abc", "err": null})
+    ]
+  );
+
+  o.spy(o, 'value', "abc", 'Get attachment');
+  o.jio.getAttachment({
+    "_id": "/web_page_module/123",
+    "_attachment": "body"
+  }, o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  o.jio.stop();
+});
+
+test("All Documents", function () {
+  var o = generateTools(this);
+  o.jio = JIO.newJio({
+    "type": "erp5",
+    "url": "http://my.website.org/erp5",
+    "username": "login",
+    "password": "pwd"
+  });
+
+  o.server = sinon.fakeServer.create();
+  o.server.respondWith(
+    "POST",
+      /http:\/\/my\.website\.org\/erp5\/JIO_allDocs\?__ac_name=login&__ac_password=pwd&_=[0-9]+/,
+    [
+      200,
+      {"Content-Type": "text/plain; charset=utf-8"},
+      JSON.stringify({"response": {
+        "total_row": 0,
+        "rows": []
+      }, "err": null})
+    ]
+  );
+
+  o.spy(o, 'value', {
+    "total_row": 0,
+    "rows": []
+  }, 'Get attachment');
+  o.jio.allDocs({
+    "query": "title: foo_%",
+    "wildcard_character": ""
+  }, o.f);
+  o.clock.tick(1000);
+  o.server.respond();
+  o.tick(o);
+  o.server.restore();
+
+  o.jio.stop();
+});
+
 };                              // end thisfun
 
 if (window.requirejs) {
