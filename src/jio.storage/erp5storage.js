@@ -256,9 +256,8 @@ jIO.addStorageType("erp5", function (spec, my) {
    */
   priv.convertToErp5Query = function (option) {
     option.query = complex_queries.QueryFactory.create(option.query || "");
-    if (option.wildcard_character === undefined ||
-        (option.wildcard_character !== null &&
-         typeof option.wildcard_character !== 'string')) {
+    if (option.wildcard_character !== null &&
+        typeof option.wildcard_character !== 'string') {
       option.wildcard_character = '%';
     } else {
       option.wildcard_character = option.wildcard_character || '';
@@ -266,24 +265,14 @@ jIO.addStorageType("erp5", function (spec, my) {
     option.query.onParseSimpleQuery = function (object) {
       if (option.wildcard_character.length === 1 &&
           object.parsed.operator === '=') {
-        object.parsed.operator = 'like';
         if (option.wildcard_character === '%') {
+          object.parsed.operator = 'like';
           object.parsed.value =
             object.parsed.value.replace(/_/g, '\\_');
         } else if (option.wildcard_character === '_') {
+          object.parsed.operator = 'like';
           object.parsed.value =
             object.parsed.value.replace(/%/g, '\\%').replace(/_/g, '%');
-        } else {
-          object.parsed.value =
-            object.parsed.value.replace(
-                /([%_])/g,
-              '\\$1'
-            ).replace(
-              new RegExp(complex_queries.stringEscapeRegexpCharacters(
-                option.wildcard_character
-              ), 'g'),
-              '%'
-            );
         }
       }
     };
