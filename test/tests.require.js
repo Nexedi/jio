@@ -16,6 +16,9 @@
       "localstorage_tests": "jio.storage/localstorage.tests",
       "revisionstorage": "../src/jio.storage/revisionstorage",
       "revisionstorage_tests": "jio.storage/revisionstorage.tests",
+      "replicaterevisionstorage": "../src/jio.storage/replicaterevisionstorage",
+      "replicaterevisionstorage_tests": "jio.storage/" +
+        "replicaterevisionstorage.tests",
 
       "qunit": "../lib/qunit/qunit",
       "sinon": "../lib/sinon/sinon",
@@ -35,6 +38,7 @@
     "complex_queries_tests",
     "jio_tests",
     "localstorage_tests",
-    "revisionstorage_tests"
+    "revisionstorage_tests",
+    "replicaterevisionstorage_tests"
   ]);
 }());
