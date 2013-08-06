@@ -275,7 +275,7 @@
     o.revisions = {"start": 3, "ids": ["wr3"]};
     o.rev = "4-" + generateRevisionHash(o.doc, o.revisions);
     o.spy(o, "value", {"id": "post1", "ok": true, "rev": o.rev},
-          "Postt + wrong revision");
+          "Post + wrong revision");
     o.jio.post(o.doc, o.f);
     o.tick(o);
 
