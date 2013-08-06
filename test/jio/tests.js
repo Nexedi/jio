@@ -690,7 +690,7 @@
 
     o.jio_id = o.jio.getId();
 
-    o.jio.put({"_id": "file", "title": "myFile"}, {"max_retry":3}, o.f);
+    o.jio.put({"_id": "file", "title": "myFile"}, {"max_retry": 3}, o.f);
     waitUntilLastJobIs("initial"); // "on going" or "wait" should work
     // xxx also test with waitUntilLastJobIs("on going") ?
     o.jio.close();

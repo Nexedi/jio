@@ -349,7 +349,9 @@
       }
     });
     util.jsonlocalstorage.setItem(
-      "jio/localstorage/uremove/aremove/remove1/remove2", "fghi");
+      "jio/localstorage/uremove/aremove/remove1/remove2",
+      "fghi"
+    );
 
     // remove attachment
     o.spy(o, "value", {"ok": true, "id": "remove1"},
@@ -432,7 +434,7 @@
 
     for (i = 0; i < m; i += 1) {
       o.fakeDoc = {};
-      o.fakeDoc._id = "doc_"+(i < 10 ? "0"+i : i);
+      o.fakeDoc._id = "doc_" + (i < 10 ? "0" + i : i);
       o.fakeDoc.title = o.titles[i];
       o.fakeDoc.year = o.years[i];
       o.fakeDoc.author = o.director[i];
@@ -447,7 +449,7 @@
         util.jsonlocalstorage.setItem(o.localpath + "/doc_05/att", "abc");
       }
       util.jsonlocalstorage.setItem(
-        o.localpath+"/doc_"+(i < 10 ? "0"+i : i),
+        o.localpath + "/doc_" + (i < 10 ? "0" + i : i),
         o.fakeDoc
       );
     }
@@ -458,8 +460,8 @@
     o.allDocsResponse.total_rows = 15;
     for (i = 0; i < m; i += 1) {
       o.allDocsResponse.rows.push({
-        "id": "doc_"+(i < 10 ? "0"+i : i),
-        "key": "doc_"+(i < 10 ? "0"+i : i),
+        "id": "doc_" + (i < 10 ? "0" + i : i),
+        "key": "doc_" + (i < 10 ? "0" + i : i),
         "value": {}
       });
     }
@@ -481,11 +483,11 @@
     o.allDocsResponse.total_rows = m;
     for (i = 0; i < m; i += 1) {
       o.allDocsResponse.rows.push({
-        "id": "doc_"+(i < 10 ? "0"+i : i),
-        "key": "doc_"+(i < 10 ? "0"+i : i),
+        "id": "doc_" + (i < 10 ? "0" + i : i),
+        "key": "doc_" + (i < 10 ? "0" + i : i),
         "value": {},
         "doc": util.jsonlocalstorage.getItem(
-          o.localpath+"/doc_"+(i < 10 ? "0"+i : i)
+          o.localpath + "/doc_" + (i < 10 ? "0" + i : i)
         )
       });
     }
@@ -516,8 +518,8 @@
       }
     });
     o.thisShouldBeTheAnswer4.rows.sort(function (a, b) {
-      return a.value.year > b.value.year ? -1 :
-        a.value.year < b.value.year ? 1 : 0;
+      return (a.value.year > b.value.year ? -1 :
+              a.value.year < b.value.year ? 1 : 0);
     });
     o.thisShouldBeTheAnswer4.total_rows = 5;
     o.thisShouldBeTheAnswer4.rows.length = 5;
@@ -526,7 +528,7 @@
           "allDocs (complex queries year >= 1980, all query options)");
     o.jio.allDocs({
       "query": '(year: >= "1980")',
-      "limit": [0,5],
+      "limit": [0, 5],
       "sort_on": [["year", "descending"]],
       "select_list": ["title", "year"]
     }, o.f);
@@ -541,8 +543,8 @@
       o.thisShouldBeTheAnswer5.total_rows += 1;
     });
     o.thisShouldBeTheAnswer5.rows.sort(function (a, b) {
-      return a.value.title > b.value.title ? -1 :
-        a.value.title < b.value.title ? 1 : 0;
+      return (a.value.title > b.value.title ? -1 :
+              a.value.title < b.value.title ? 1 : 0);
     });
 
     o.spy(o, "value", o.thisShouldBeTheAnswer5,
