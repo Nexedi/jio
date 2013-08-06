@@ -9,10 +9,17 @@
  *
  * @module complex_queries
  */
-var complex_queries;
-(function () {
+// define([module_name], [dependencies], module);
+(function (module) {
   "use strict";
-  var to_export = {}, module_name = "complex_queries";
+  if (typeof define === 'function' && define.amd) {
+    return define(module);
+  }
+  window.complex_queries = module();
+}(function () {
+  "use strict";
+  var to_export = {};
+
   /**
    * Add a secured (write permission denied) property to an object.
    *
