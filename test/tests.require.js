@@ -8,6 +8,7 @@
     "paths": {
       "md5": "../lib/md5/md5",
       "sha256": "../lib/jsSha2/sha256",
+      "jquery": "../lib/jquery/jquery.min",
       "complex_queries": "../complex_queries",
       "complex_queries_tests": "queries/tests",
       "jio": "../jio",
@@ -19,6 +20,8 @@
       "replicaterevisionstorage": "../src/jio.storage/replicaterevisionstorage",
       "replicaterevisionstorage_tests": "jio.storage/" +
         "replicaterevisionstorage.tests",
+      "davstorage": "../src/jio.storage/davstorage",
+      "davstorage_tests": "jio.storage/davstorage.tests",
 
       "qunit": "../lib/qunit/qunit",
       "sinon": "../lib/sinon/sinon",
@@ -27,6 +30,7 @@
     "shim": {
       "md5": {"exports": "hex_md5"},
       "sha256": {"exports": "hex_sha256"},
+      "jquery": {"exports": "jQuery"},
 
       "sinon": ["qunit"],
       "sinon_qunit": ["sinon"]
@@ -39,6 +43,7 @@
     "jio_tests",
     "localstorage_tests",
     "revisionstorage_tests",
-    "replicaterevisionstorage_tests"
+    "replicaterevisionstorage_tests",
+    "davstorage_tests"
   ]);
 }());
