@@ -47,34 +47,6 @@
   }
   to_export.spyJioCallback = spyJioCallback;
 
-  /**
-   * Clones all native object in deep. Managed types: Object, Array, String,
-   * Number, Boolean, Function, null.
-   *
-   * @param  {A} object The object to clone
-   * @return {A} The cloned object
-   */
-  function deepClone(object) {
-    var i, cloned;
-    if (Array.isArray(object)) {
-      cloned = [];
-      for (i = 0; i < object.length; i += 1) {
-        cloned[i] = deepClone(object[i]);
-      }
-      return cloned;
-    }
-    if (typeof object === "object") {
-      cloned = {};
-      for (i in object) {
-        if (object.hasOwnProperty(i)) {
-          cloned[i] = deepClone(object[i]);
-        }
-      }
-      return cloned;
-    }
-    return object;
-  }
-
   // XXX docstring
   function isUuid(uuid) {
     var x = "[0-9a-fA-F]";
