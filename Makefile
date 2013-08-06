@@ -35,7 +35,7 @@ LINT_NAMES  = exceptions storages/* commands/* jobs/status/* jobs/* announcement
 
 CONCAT_QUERIES_FILES = $(CONCAT_QUERIES_NAMES:%=$(QUERIES_DIR)/%.js)
 CONCAT_JIO_FILES = $(CONCAT_JIO_NAMES:%=$(JIO_DIR)/%.js)
-LINT_FILES  = $(LINT_NAMES:%=$(JIO_DIR)/%.js) $(CONCAT_STORAGE_NAMES:%=$(STORAGE_DIR)/%.js)
+LINT_FILES  = $(LINT_NAMES:%=$(JIO_DIR)/%.js) $(CONCAT_STORAGE_NAMES:%=$(STORAGE_DIR)/%.js) test/jio/*.js test/jio.storage/*.js test/queries/*.js
 
 # build parser.js
 compile:
