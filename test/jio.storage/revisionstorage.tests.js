@@ -57,7 +57,7 @@
 
   function generateRevisionHash(doc, revisions, deleted_flag) {
     var string;
-    doc = util.deepClone(doc);
+    doc = deepClone(doc);
     delete doc._rev;
     delete doc._revs;
     delete doc._revs_info;
@@ -772,7 +772,7 @@
     util.jsonlocalstorage.setItem(o.localpath + "/get1.1-rev1", o.doc_myget1);
 
     // get document
-    o.doc_myget1_cloned = util.deepClone(o.doc_myget1);
+    o.doc_myget1_cloned = deepClone(o.doc_myget1);
     o.doc_myget1_cloned._id = "get1";
     o.doc_myget1_cloned._rev = "1-rev1";
     o.doc_myget1_cloned._revisions = {"start": 1, "ids": ["rev1"]};
@@ -812,7 +812,7 @@
     util.jsonlocalstorage.setItem(o.localpath + "/get1.2-rev3", o.doc_myget3);
 
     // get document
-    o.doc_myget3_cloned = util.deepClone(o.doc_myget3);
+    o.doc_myget3_cloned = deepClone(o.doc_myget3);
     o.doc_myget3_cloned._id = "get1";
     o.doc_myget3_cloned._rev = "2-rev3";
     o.doc_myget3_cloned._revisions = {"start": 2, "ids": ["rev3", "rev2"]};
@@ -842,7 +842,7 @@
     o.tick(o);
 
     // get specific document
-    o.doc_myget2_cloned = util.deepClone(o.doc_myget2);
+    o.doc_myget2_cloned = deepClone(o.doc_myget2);
     o.doc_myget2_cloned._id = "get1";
     o.doc_myget2_cloned._rev = "1-rev2";
     o.doc_myget2_cloned._revisions = {"start": 1, "ids": ["rev2"]};
