@@ -549,7 +549,7 @@
       };
       callback.getRevisionTree = function (err, response) {
         var winner_info, previous_revision, generate_new_revision;
-        previous_revision = doc._rew;
+        previous_revision = doc._rev;
         generate_new_revision = doc._revs || doc._revs_info ? false : true;
         if (err) {
           if (err.status !== 404) {
