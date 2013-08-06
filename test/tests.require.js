@@ -8,6 +8,7 @@
     "paths": {
       "md5": "../lib/md5/md5",
       "complex_queries": "../complex_queries",
+      "complex_queries_tests": "queries/tests",
       "jio": "../jio",
       "jio_tests": "jio/tests",
       "localstorage": "../src/jio.storage/localstorage",
@@ -19,7 +20,6 @@
     },
     "shim": {
       "md5": {"exports": "hex_md5"},
-      "localstorage": ["jio", "complex_queries"],
 
       "sinon": ["qunit"],
       "sinon_qunit": ["sinon"]
@@ -28,6 +28,7 @@
 
   require([
     "sinon_qunit",
+    "complex_queries_tests",
     "jio_tests",
     "localstorage_tests"
   ]);
