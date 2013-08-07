@@ -24,6 +24,8 @@
       "davstorage_tests": "jio.storage/davstorage.tests",
       "indexstorage": "../src/jio.storage/indexstorage",
       "indexstorage_tests": "jio.storage/indexstorage.tests",
+      "splitstorage": "../src/jio.storage/splitstorage",
+      "splitstorage_tests": "jio.storage/splitstorage.tests",
 
       "qunit": "../lib/qunit/qunit",
       "sinon": "../lib/sinon/sinon",
@@ -47,6 +49,7 @@
     "revisionstorage_tests",
     "replicaterevisionstorage_tests",
     "indexstorage_tests",
+    "splitstorage_tests",
     "davstorage_tests",
   ]);
 }());
