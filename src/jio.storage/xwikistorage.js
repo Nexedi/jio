@@ -481,9 +481,9 @@
     // getAttachment() rather than strings.
     priv.useBlobs = spec.useBlobs || false;
 
-  // If true then Blob objects will be returned by
-  // getAttachment() rather than strings.
-  priv.useBlobs = spec.useBlobs || false;
+    // If true then Blob objects will be returned by
+    // getAttachment() rather than strings.
+    priv.useBlobs = spec.useBlobs || false;
 
 
     that.specToStore = function () {
