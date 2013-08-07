@@ -16,23 +16,15 @@
  *       "storage_list": [<storage description>, ...]
  *     }
  */
-(function () {
+// define([module_name], [dependencies], module);
+(function (dependencies, module) {
   "use strict";
-
-  var queries;
-
-  /**
-   * Get the real type of an object
-   *
-   * @param  {Any} value The value to check
-   * @return {String} The value type
-   */
-  function type(value) {
-    // returns "String", "Object", "Array", "RegExp", ...
-    return (/^\[object ([a-zA-Z]+)\]$/).exec(
-      Object.prototype.toString.call(value)
-    )[1];
+  if (typeof define === 'function' && define.amd) {
+    return define(dependencies, module);
   }
+  module(jIO);
+}(['jio'], function (jIO) {
+  "use strict";
 
   /**
    * Generate a new uuid
@@ -299,7 +291,7 @@
           }
         };
       }
-      if (type(doc) !== "Array") {
+      if (!Array.isArray(doc)) {
         for (i = 0; i < priv.storage_list.length; i += 1) {
           that.addJob(
             method,
@@ -592,20 +584,5 @@
     return that;
   } // end of splitStorage
 
-  //////////////////////////////
-  // exports to JIO
-  if (typeof define === "function" && define.amd) {
-    define(['jio'], function (jio) {
-      try {
-        queries = require('complex_queries');
-      } catch (e) {}
-      jio.addStorageType('split', splitStorage);
-    });
-  } else if (typeof require === "function") {
-    require('jio').addStorageType('split', splitStorage);
-  } else if (typeof jIO === "object") {
-    jIO.addStorageType('split', splitStorage);
-  } else {
-    throw new Error("Unable to export splitStorage to JIO.");
-  }
-}());
+  jIO.addStorageType('split', splitStorage);
+}));
