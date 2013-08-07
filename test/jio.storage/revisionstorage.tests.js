@@ -8,11 +8,11 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  module(jIO, jio_tests, hex_sha256);
+  module(jIO, jio_tests, {hex_sha256: hex_sha256});
 }(['jio', 'jio_tests', 'sha256', 'localstorage', 'revisionstorage'], function (
   jIO,
   util,
-  hex_sha256
+  sha256
 ) {
   "use strict";
 
@@ -63,7 +63,7 @@
     delete doc._revs_info;
     string = JSON.stringify(doc) + JSON.stringify(revisions) +
       JSON.stringify(deleted_flag ? true : false);
-    return hex_sha256(string);
+    return sha256.hex_sha256(string);
   }
 
   //////////////////////////////////////////////////////////////////////////////

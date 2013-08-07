@@ -6,8 +6,9 @@
 
   require.config({
     "paths": {
-      "md5": "../lib/md5/md5",
-      "sha256": "../lib/jsSha2/sha256",
+      "md5": "../lib/md5/md5.amd",
+      "sha1": "../lib/jsSha1/sha1.amd",
+      "sha256": "../lib/jsSha2/sha256.amd",
       "jquery": "../lib/jquery/jquery.min",
       "complex_queries": "../complex_queries",
       "complex_queries_tests": "queries/tests",
@@ -36,8 +37,6 @@
       "sinon_qunit": "../lib/sinon/sinon-qunit"
     },
     "shim": {
-      "md5": {"exports": "hex_md5"},
-      "sha256": {"exports": "hex_sha256"},
       "jquery": {"exports": "jQuery"},
 
       "sinon": ["qunit"],

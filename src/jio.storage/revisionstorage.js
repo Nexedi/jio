@@ -16,8 +16,8 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  module(jIO, hex_sha256);
-}(['jio', 'sha256'], function (jIO, hex_sha256) {
+  module(jIO, {hex_sha256: hex_sha256});
+}(['jio', 'sha256'], function (jIO, sha256) {
   "use strict";
 
   jIO.addStorageType("revision", function (spec, my) {
@@ -88,7 +88,7 @@
      * @return {string} The string hash code
      */
     priv.hashCode = function (string) {
-      return hex_sha256(string);
+      return sha256.hex_sha256(string);
     };
 
     /**

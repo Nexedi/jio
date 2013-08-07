@@ -10,11 +10,11 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  window.jIO = module(hex_md5);
-}(['md5'], function (hex_md5) {
+  window.jIO = module({hex_md5: hex_md5});
+}(['md5'], function (md5) {
   "use strict";
 
-  var localstorage;
+  var localstorage, hex_md5 = md5.hex_md5;
   if (typeof localStorage !== "undefined") {
     localstorage = {
       getItem: function (item) {
