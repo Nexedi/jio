@@ -158,7 +158,7 @@
     o.local_jio.put({"_id": "red", "creator": ["a", "b"], "title": "water"});
     o.local_jio.put({"_id": "yellow", "creator": ["c", "d"], "title": "wind"});
     o.local_jio.put({"_id": "purple", "creator": ["s", "d"], "title": "fire"});
-    o.local_jio.put({"_id": "blue", "title": "space"})
+    o.local_jio.put({"_id": "blue", "title": "space"});
     o.clock.tick(3000);
 
     util.closeAndcleanUpJio(o.local_jio);
@@ -271,8 +271,8 @@
     }, o.f);
     o.tick(o);
 
-    // Check if the local storage document is well updated to make sure the second
-    // put did not update the wrong document.
+    // Check if the local storage document is well updated to make sure the
+    // second put did not update the wrong document.
     o.spy(o, 'value', {
       "_id": "blue",
       "creator": "a",
@@ -521,8 +521,8 @@
     o.clock.tick(2000);
 
     // Fail to remove attachment because given gid doesn't respect constraints
-    o.spy(o, 'status', 400, 'Remove attachment without respecting constraints ' +
-          '-> bad request');
+    o.spy(o, 'status', 400, 'Remove attachment without respecting ' +
+          'constraints -> bad request');
     o.jio.removeAttachment({
       "_id": "a",
       "_attachment": "body",
