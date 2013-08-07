@@ -54,29 +54,69 @@
 }(['jio', 'complex_queries'], function (jIO, complex_queries) {
   "use strict";
 
+  /**
+   * Returns 4 hexadecimal random characters.
+   *
+   * @return {String} The characters
+   */
+  function S4() {
+    return ('0000' + Math.floor(
+      Math.random() * 0x10000 /* 65536 */
+    ).toString(16)).slice(-4);
+  }
+
+  /**
+   * An Universal Unique ID generator
+   *
+   * @return {String} The new UUID.
+   */
+  function generateUuid() {
+    return S4() + S4() + "-" +
+      S4() + "-" +
+      S4() + "-" +
+      S4() + "-" +
+      S4() + S4() + S4();
+  }
+
+  /**
+   * Checks if an object has no enumerable keys
+   *
+   * @param  {Object} obj The object
+   * @return {Boolean} true if empty, else false
+   */
+  function objectIsEmpty(obj) {
+    var k;
+    for (k in obj) {
+      if (obj.hasOwnProperty(k)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /*
+   * Wrapper for the localStorage used to simplify instion of any kind of
+   * values
+   */
+  var localstorage = {
+    getItem: function (item) {
+      var value = localStorage.getItem(item);
+      return value === null ? null : JSON.parse(value);
+    },
+    setItem: function (item, value) {
+      return localStorage.setItem(item, JSON.stringify(value));
+    },
+    removeItem: function (item) {
+      return localStorage.removeItem(item);
+    }
+  };
+
   jIO.addStorageType('local', function (spec, my) {
 
     spec = spec || {};
-    var that, priv, localstorage;
+    var that, priv;
     that = my.basicStorage(spec, my);
     priv = {};
-
-    /*
-     * Wrapper for the localStorage used to simplify instion of any kind of
-     * values
-     */
-    localstorage = {
-      getItem: function (item) {
-        var value = localStorage.getItem(item);
-        return value === null ? null : JSON.parse(value);
-      },
-      setItem: function (item, value) {
-        return localStorage.setItem(item, JSON.stringify(value));
-      },
-      removeItem: function (item) {
-        return localStorage.removeItem(item);
-      }
-    };
 
     // attributes
     priv.username = spec.username || '';
@@ -84,43 +124,6 @@
 
     priv.localpath = 'jio/localstorage/' + priv.username + '/' +
       priv.application_name;
-
-    // ==================== Tools ====================
-    /**
-     * Generate a new uuid
-     * @method generateUuid
-     * @return {string} The new uuid
-     */
-    priv.generateUuid = function () {
-      var S4 = function () {
-        /* 65536 */
-        var i, string = Math.floor(
-          Math.random() * 0x10000
-        ).toString(16);
-        for (i = string.length; i < 4; i += 1) {
-          string = '0' + string;
-        }
-        return string;
-      };
-      return S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() +
-        S4() + S4();
-    };
-
-    /**
-     * Checks if an object has no enumerable keys
-     * @method objectIsEmpty
-     * @param  {object} obj The object
-     * @return {boolean} true if empty, else false
-     */
-    priv.objectIsEmpty = function (obj) {
-      var k;
-      for (k in obj) {
-        if (obj.hasOwnProperty(k)) {
-          return false;
-        }
-      }
-      return true;
-    };
 
     // ===================== overrides ======================
     that.specToStore = function () {
@@ -147,7 +150,7 @@
       setTimeout(function () {
         var doc, doc_id = command.getDocId();
         if (!doc_id) {
-          doc_id = priv.generateUuid();
+          doc_id = generateUuid();
         }
         doc = localstorage.getItem(priv.localpath + "/" + doc_id);
         if (doc === null) {
@@ -358,7 +361,7 @@
           if (typeof doc._attachments[command.getAttachmentId()] ===
               "object") {
             delete doc._attachments[command.getAttachmentId()];
-            if (priv.objectIsEmpty(doc._attachments)) {
+            if (objectIsEmpty(doc._attachments)) {
               delete doc._attachments;
             }
             localstorage.setItem(priv.localpath + "/" + command.getDocId(),
