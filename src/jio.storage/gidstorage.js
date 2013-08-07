@@ -17,7 +17,7 @@
  */
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global jIO: true, setTimeout: true, complex_queries: true */
+/*global define, jIO, setTimeout */
 
 /**
  * JIO GID Storage. Type = 'gid'.
@@ -45,7 +45,15 @@
  *       }
  *     }
  */
-(function () {
+// define([module_name], [dependencies], module);
+(function (dependencies, module) {
+  "use strict";
+  if (typeof define === 'function' && define.amd) {
+    return define(dependencies, module);
+  }
+  module(jIO);
+}(['jio'], function (jIO) {
+  "use strict";
 
   var dcmi_types, metadata_actions, content_type_re;
   dcmi_types = {
@@ -604,4 +612,4 @@
 
   jIO.addStorageType('gid', gidStorage);
 
-}());
+}));
