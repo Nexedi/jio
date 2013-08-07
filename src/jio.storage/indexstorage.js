@@ -112,7 +112,14 @@
  * - one to filter retrieved document list (no query -> no loop)
  * - one to format the result to a JIO response
  */
-(function () {
+// define([module_name], [dependencies], module);
+(function (dependencies, module) {
+  "use strict";
+  if (typeof define === 'function' && define.amd) {
+    return define(dependencies, module);
+  }
+  module(jIO, complex_queries);
+}(['jio', 'complex_queries'], function (jIO, complex_queries) {
   "use strict";
 
   var error_dict = {
@@ -972,20 +979,5 @@
     return that;
   }
 
-
-  if (typeof exports === "object") {
-    // nodejs export module
-    Object.defineProperty(exports, "jio_index_storage", {
-      configurable: false,
-      enumerable: true,
-      writable: false,
-      value: indexStorage
-    });
-  } else if (typeof define === "function" && define.amd) {
-    // requirejs export
-    define(indexStorage);
-  } else {
-    // classical browser and web workers JIO export
-    jIO.addStorageType("indexed", indexStorage);
-  }
-}());
+  jIO.addStorageType("indexed", indexStorage);
+}));
