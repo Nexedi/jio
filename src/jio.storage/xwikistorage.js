@@ -1,8 +1,6 @@
 /*jslint indent: 2,
     maxlen: 80,
-    sloppy: true,
-    nomen: true,
-    plusplus: true
+    nomen: true
 */
 /*global
     define: true,
@@ -18,6 +16,8 @@
  * XWiki Document/Attachment storage.
  */
 (function () {
+  "use strict";
+
   var $, store;
   store = function (spec, my) {
 
@@ -117,7 +117,7 @@
         BB = (window.MozBlobBuilder || window.WebKitBlobBuilder
           || window.BlobBuilder);
         bb = new BB();
-        for (i = 0; i < contentArray.length; i++) {
+        for (i = 0; i < contentArray.length; i += 1) {
           bb.append(contentArray[i]);
         }
         return bb.getBlob(options ? options.type : undefined);
