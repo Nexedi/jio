@@ -719,14 +719,9 @@
   };
 
   if (typeof (define) === 'function' && define.amd) {
-    define(['jquery', 'jiobase', 'module'], function (jquery, j, mod) {
+    define(['jquery', 'jio'], function (jquery, jIO) {
       $ = jquery;
       jIO.addStorageType('xwiki', store);
-
-      var conf = mod.config();
-      conf.type = 'xwiki';
-
-      return jIO.newJio(conf);
     });
   } else {
     jIO.addStorageType('xwiki', store);
