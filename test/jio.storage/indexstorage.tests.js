@@ -50,7 +50,7 @@
     };
 
     // post without id
-    o.spy (o, "jobstatus", "done", "Post without id");
+    o.spy(o, "jobstatus", "done", "Post without id");
     o.jio.post({}, function (err, response) {
       o.id = (response || {}).id;
       o.f(err, response);
@@ -60,7 +60,7 @@
     // post non empty document
     o.doc = {"_id": "some_id", "title": "My Title",
              "year": 2000, "hey": "def"};
-    o.spy (o, "value", {"ok": true, "id": "some_id"}, "Post document");
+    o.spy(o, "value", {"ok": true, "id": "some_id"}, "Post document");
     o.jio.post(o.doc, o.f);
     o.tick(o);
 
@@ -100,19 +100,25 @@
     o.tick(o);
 
     // post with escapable characters
-    o.doc = {"_id": "other_id", "title": "myPost2",
-             "findMeA":"keyword_*§$%&/()=?", "findMeB":"keyword_|ð@ł¶đæðſæðæſ³"
-            };
-    o.spy (o, "value", {"ok": true, "id": "other_id"},
-           "Post with escapable characters");
+    o.doc = {
+      "_id": "other_id",
+      "title": "myPost2",
+      "findMeA": "keyword_*§$%&/()=?",
+      "findMeB": "keyword_|ð@ł¶đæðſæðæſ³"
+    };
+    o.spy(o, "value", {"ok": true, "id": "other_id"},
+          "Post with escapable characters");
     o.jio.post(o.doc, o.f);
     o.tick(o);
 
     // post and document already exists
-    o.doc = {"_id": "some_id", "title": "myPost3",
-             "findMeA":"keyword_ghi", "findMeB":"keyword_jkl"
-            }
-    o.spy (o, "status", 409, "Post and document already exists");
+    o.doc = {
+      "_id": "some_id",
+      "title": "myPost3",
+      "findMeA": "keyword_ghi",
+      "findMeB": "keyword_jkl"
+    };
+    o.spy(o, "status", 409, "Post and document already exists");
     o.jio.post(o.doc, o.f);
     o.tick(o);
 
@@ -149,13 +155,13 @@
 
     // put without id
     // error 20 -> document id required
-    o.spy (o, "status", 20, "Put without id");
+    o.spy(o, "status", 20, "Put without id");
     o.jio.put({}, o.f);
     o.tick(o);
 
     // put non empty document
     o.doc = {"_id": "put1", "title": "myPut1", "author": "John Doe"};
-    o.spy (o, "value", {"ok": true, "id": "put1"}, "Put-create document");
+    o.spy(o, "value", {"ok": true, "id": "put1"}, "Put-create document");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
@@ -190,7 +196,7 @@
 
     // modify document - modify keyword on index!
     o.doc = {"_id": "put1", "title": "myPuttter1", "author": "Jane Doe"};
-    o.spy (o, "value", {"ok": true, "id": "put1"}, "Modify existing document");
+    o.spy(o, "value", {"ok": true, "id": "put1"}, "Modify existing document");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
@@ -205,7 +211,7 @@
 
     // add new document with same keyword!
     o.doc = {"_id": "new_doc", "title": "myPut2", "author": "Jane Doe"};
-    o.spy (o, "value", {"ok": true, "id": "new_doc"},
+    o.spy(o, "value", {"ok": true, "id": "new_doc"},
            "Add new document with same keyword");
     o.jio.put(o.doc, o.f);
     o.tick(o);
@@ -222,8 +228,8 @@
 
     // add second keyword to index file
     o.doc = {"_id": "put1", "title": "myPut2", "author": "Jane Doe",
-             "year":"1912"};
-    o.spy (o, "value", {"ok": true, "id": "put1"},
+             "year": "1912"};
+    o.spy(o, "value", {"ok": true, "id": "put1"},
            "add second keyword to index file");
     o.jio.put(o.doc, o.f);
     o.tick(o);
@@ -247,7 +253,7 @@
 
     // remove a keyword from an existing document
     o.doc = {"_id": "new_doc", "title": "myPut2"};
-    o.spy (o, "value", {"ok": true, "id": "new_doc"},
+    o.spy(o, "value", {"ok": true, "id": "new_doc"},
            "Remove keyword from existing document");
     o.jio.put(o.doc, o.f);
     o.tick(o);
@@ -372,15 +378,15 @@
     o.fakeIndexB.database.unshift({"_id": "blah", "year": "y"});
 
     o.spy(o, "status", 40, "Check Document");
-    o.jio.check({"_id": "blah"}, o.f)
+    o.jio.check({"_id": "blah"}, o.f);
     o.tick(o);
 
     o.spy(o, "value", {"id": "blah", "ok": true}, "Repair Document");
-    o.jio.repair({"_id": "blah"}, o.f)
+    o.jio.repair({"_id": "blah"}, o.f);
     o.tick(o);
 
     o.spy(o, "value", {"id": "blah", "ok": true}, "Check Document again");
-    o.jio.repair({"_id": "blah"}, o.f)
+    o.jio.repair({"_id": "blah"}, o.f);
     o.tick(o);
 
     // check index file
@@ -440,41 +446,39 @@
     o.tick(o);
 
     // putAttachment with document
-    o.doc = {"_id": "putattmt1","title": "myPutAttmt1"};
-    o.spy (o, "value", {"ok": true, "id": "putattmt1"},
-           "Put underlying document");
+    o.doc = {"_id": "putattmt1", "title": "myPutAttmt1"};
+    o.spy(o, "value", {"ok": true, "id": "putattmt1"},
+          "Put underlying document");
     o.jio.put(o.doc, o.f);
     o.tick(o);
 
-    o.spy(o, "value",
-          {"ok": true, "id": "putattmt1", "attachment": "putattmt2"},
-          "PutAttachment with document, without data");
+    o.spy(o, "value", {
+      "ok": true,
+      "id": "putattmt1",
+      "attachment": "putattmt2"
+    }, "PutAttachment with document, without data");
     o.jio.putAttachment({"_id": "putattmt1", "_attachment": "putattmt2"}, o.f);
     o.tick(o);
 
     // check document
-    deepEqual(
-      util.jsonlocalstorage.getItem("jio/localstorage/iputatt/iputatt/putattmt1"),
-      {
-        "_id": "putattmt1",
-        "title": "myPutAttmt1",
-        "_attachments": {
-          "putattmt2": {
-            "length": 0,
-            // md5("")
-            "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
-          }
+    deepEqual(util.jsonlocalstorage.getItem(
+      "jio/localstorage/iputatt/iputatt/putattmt1"
+    ), {
+      "_id": "putattmt1",
+      "title": "myPutAttmt1",
+      "_attachments": {
+        "putattmt2": {
+          "length": 0,
+          // md5("")
+          "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
         }
-      },
-      "Check document"
-    );
+      }
+    }, "Check document");
 
     // check attachment
-    deepEqual(
-      util.jsonlocalstorage.getItem(
-        "jio/localstorage/iputatt/iputatt/putattmt1/putattmt2"),
-      "", "Check attachment"
-    );
+    deepEqual(util.jsonlocalstorage.getItem(
+      "jio/localstorage/iputatt/iputatt/putattmt1/putattmt2"
+    ), "", "Check attachment");
 
     // update attachment
     o.spy(o, "value",
@@ -488,28 +492,24 @@
     o.tick(o);
 
     // check document
-    deepEqual(
-      util.jsonlocalstorage.getItem("jio/localstorage/iputatt/iputatt/putattmt1"),
-      {
-        "_id": "putattmt1",
-        "title": "myPutAttmt1",
-        "_attachments": {
-          "putattmt2": {
-            "length": 3,
-            // md5("abc")
-            "digest": "md5-900150983cd24fb0d6963f7d28e17f72"
-          }
+    deepEqual(util.jsonlocalstorage.getItem(
+      "jio/localstorage/iputatt/iputatt/putattmt1"
+    ), {
+      "_id": "putattmt1",
+      "title": "myPutAttmt1",
+      "_attachments": {
+        "putattmt2": {
+          "length": 3,
+          // md5("abc")
+          "digest": "md5-900150983cd24fb0d6963f7d28e17f72"
         }
-      },
-      "Check document"
-    );
+      }
+    }, "Check document");
 
     // check attachment
-    deepEqual(
-      util.jsonlocalstorage.getItem(
-        "jio/localstorage/iputatt/iputatt/putattmt1/putattmt2"),
-      "abc", "Check attachment"
-    );
+    deepEqual(util.jsonlocalstorage.getItem(
+      "jio/localstorage/iputatt/iputatt/putattmt1/putattmt2"
+    ), "abc", "Check attachment");
 
     util.closeAndcleanUpJio(o.jio);
   });
@@ -549,7 +549,10 @@
       "_id": "get1",
       "title": "myGet1"
     };
-    util.jsonlocalstorage.setItem("jio/localstorage/iget/iget/get1", o.doc_get1);
+    util.jsonlocalstorage.setItem(
+      "jio/localstorage/iget/iget/get1",
+      o.doc_get1
+    );
 
     // get document
     o.spy(o, "value", o.doc_get1, "Get document");
@@ -562,14 +565,17 @@
     o.tick(o);
 
     // adding an attachment
-    o.doc_get1["_attachments"] = {
+    o.doc_get1._attachments = {
       "get2": {
         "length": 2,
         // md5("de")
         "digest": "md5-5f02f0889301fd7be1ac972c11bf3e7d"
       }
     };
-    util.jsonlocalstorage.setItem("jio/localstorage/iget/iget/get1", o.doc_get1);
+    util.jsonlocalstorage.setItem(
+      "jio/localstorage/iget/iget/get1",
+      o.doc_get1
+    );
     util.jsonlocalstorage.setItem("jio/localstorage/iget/iget/get1/get2", "de");
 
     // get attachment
@@ -687,7 +693,8 @@
       "_id": "remove3",
       "_attachment": "removeAtt",
       "_mimetype": "text/plain",
-      "_data": "hello"});
+      "_data": "hello"
+    });
     o.tick(o);
 
     // add another attachment
@@ -695,14 +702,17 @@
       "_id": "remove3",
       "_attachment": "removeAtt2",
       "_mimetype": "text/plain",
-      "_data": "hello2"});
+      "_data": "hello2"
+    });
     o.tick(o);
 
     // remove attachment
     o.spy(o, "value", {"ok": true, "id": "remove3", "attachment": "removeAtt2"},
           "Remove one of multiple attachment");
-    o.jio.removeAttachment({"_id": "remove3", "_attachment": "removeAtt2"},
-                           o.f);
+    o.jio.removeAttachment({
+      "_id": "remove3",
+      "_attachment": "removeAtt2"
+    }, o.f);
     o.tick(o);
 
     // check index
@@ -798,25 +808,34 @@
     o.all1 = { "_id": "dragon.doc",
                "title": "some title", "author": "Dr. No", "year": "1968"
              };
-    o.spy (o, "value", {"ok": true, "id": "dragon.doc"}, "Put 1");
+    o.spy(o, "value", {"ok": true, "id": "dragon.doc"}, "Put 1");
     o.jio.put(o.all1, o.f);
     o.tick(o);
-    o.all2 = {"_id": "timemachine",
-              "title": "hello world", "author": "Dr. Who", "year": "1968"
-             }
-    o.spy (o, "value", {"ok": true, "id": "timemachine"}, "Put 2");
+    o.all2 = {
+      "_id": "timemachine",
+      "title": "hello world",
+      "author": "Dr. Who",
+      "year": "1968"
+    };
+    o.spy(o, "value", {"ok": true, "id": "timemachine"}, "Put 2");
     o.jio.put(o.all2, o.f);
     o.tick(o);
-    o.all3 = {"_id": "rocket.ppt",
-              "title": "sunshine.", "author": "Dr. Snuggles", "year": "1985"
-             }
-    o.spy (o, "value", {"ok": true, "id": "rocket.ppt"}, "Put 3");
+    o.all3 = {
+      "_id": "rocket.ppt",
+      "title": "sunshine.",
+      "author": "Dr. Snuggles",
+      "year": "1985"
+    };
+    o.spy(o, "value", {"ok": true, "id": "rocket.ppt"}, "Put 3");
     o.jio.put(o.all3, o.f);
     o.tick(o);
-    o.all4 = {"_id": "stick.jpg",
-              "title": "clouds", "author": "Dr. House", "year": "2005"
-             }
-    o.spy (o, "value", {"ok": true, "id": "stick.jpg"}, "Put 4");
+    o.all4 = {
+      "_id": "stick.jpg",
+      "title": "clouds",
+      "author": "Dr. House",
+      "year": "2005"
+    };
+    o.spy(o, "value", {"ok": true, "id": "stick.jpg"}, "Put 4");
     o.jio.put(o.all4, o.f);
     o.tick(o);
 
@@ -852,7 +871,7 @@
         {"id": "stick.jpg", "key": "stick.jpg", "value": {} }
       ],
       "total_rows": 4
-    }
+    };
     o.spy(o, "value", o.thisShouldBeTheAnswer, "allDocs (served by index)");
     o.jio.allDocs(o.f);
     o.tick(o);
@@ -867,8 +886,8 @@
     o.jio = jIO.newJio({
       "type": "indexed",
       "indices": [
-        {"id":"A", "index": ["director"]},
-        {"id":"B", "index": ["title", "year"]}
+        {"id": "A", "index": ["director"]},
+        {"id": "B", "index": ["title", "year"]}
       ],
       "sub_storage": {
         "type": "local",
@@ -890,21 +909,56 @@
     };
 
     // sample data
-    o.titles = ["Shawshank Redemption", "Godfather", "Godfather 2",
-                "Pulp Fiction", "The Good, The Bad and The Ugly", "12 Angry Men",
-                "The Dark Knight", "Schindlers List",
-                "Lord of the Rings - Return of the King", "Fight Club",
-                "Star Wars Episode V", "Lord Of the Rings - Fellowship of the Ring",
-                "One flew over the Cuckoo's Nest", "Inception", "Godfellas"
-               ];
-    o.years = [1994,1972,1974,1994,1966,1957,2008,1993,2003,1999,1980,2001,
-               1975,2010,1990];
-    o.director = ["Frank Darabont", "Francis Ford Coppola",
-                  "Francis Ford Coppola", "Quentin Tarantino", "Sergio Leone",
-                  "Sidney Lumet", "Christopher Nolan", "Steven Spielberg",
-                  "Peter Jackson", "David Fincher", "Irvin Kershner", "Peter Jackson",
-                  "Milos Forman", "Christopher Nolan", " Martin Scorsese"
-                 ];
+    o.titles = [
+      "Shawshank Redemption",
+      "Godfather",
+      "Godfather 2",
+      "Pulp Fiction",
+      "The Good, The Bad and The Ugly",
+      "12 Angry Men",
+      "The Dark Knight",
+      "Schindlers List",
+      "Lord of the Rings - Return of the King",
+      "Fight Club",
+      "Star Wars Episode V",
+      "Lord Of the Rings - Fellowship of the Ring",
+      "One flew over the Cuckoo's Nest",
+      "Inception", "Godfellas"
+    ];
+    o.years = [
+      1994,
+      1972,
+      1974,
+      1994,
+      1966,
+      1957,
+      2008,
+      1993,
+      2003,
+      1999,
+      1980,
+      2001,
+      1975,
+      2010,
+      1990
+    ];
+    o.director = [
+      "Frank Darabont",
+      "Francis Ford Coppola",
+      "Francis Ford Coppola",
+      "Quentin Tarantino",
+      "Sergio Leone",
+      "Sidney Lumet",
+      "Christopher Nolan",
+      "Steven Spielberg",
+      "Peter Jackson",
+      "David Fincher",
+      "Irvin Kershner",
+      "Peter Jackson",
+      "Milos Forman",
+      "Christopher Nolan",
+      " Martin Scorsese"
+    ];
 
     o.fakeIndexA = {
       "indexing": ["director"],
@@ -922,23 +976,26 @@
 
     for (i = 0; i < m; i += 1) {
       o.jio.put({
-        "_id": "" + i,
+        "_id": i.toString(),
         "director": o.director[i],
         "year": o.years[i],
         "title": o.titles[i]
       });
 
       o.tmp = o.fakeIndexA.free.pop() || o.fakeIndexA.database.length;
-      o.fakeIndexA.database[o.tmp] = {"_id": "" + i, "director": o.director[i]};
-      o.fakeIndexA.location["" + i] = o.tmp;
+      o.fakeIndexA.database[o.tmp] = {
+        "_id": i.toString(),
+        "director": o.director[i]
+      };
+      o.fakeIndexA.location[i] = o.tmp;
 
       o.tmp = o.fakeIndexB.free.pop() || o.fakeIndexB.database.length;
       o.fakeIndexB.database[o.tmp] = {
-        "_id": "" + i,
+        "_id": i.toString(),
         "year": o.years[i],
         "title": o.titles[i]
       };
-      o.fakeIndexB.location["" + i] = o.tmp;
+      o.fakeIndexB.location[i] = o.tmp;
 
       o.clock.tick(1000);
     }
@@ -965,11 +1022,11 @@
     o.allDocsResponse.total_rows = m;
     for (i = 0; i < m; i += 1) {
       o.allDocsResponse.rows.push({
-        "id": ""+i,
-        "key": ""+i,
+        "id": i.toString(),
+        "key": i.toString(),
         "value": {},
         "doc": {
-          "_id": ""+i,
+          "_id": i.toString(),
           "title": o.titles[i],
           "year": o.years[i],
           "director": o.director[i]
@@ -997,14 +1054,14 @@
         o.response.rows[i].value = {
           "year": o.response.rows[i].doc.year,
           "title": o.response.rows[i].doc.title
-        }
+        };
         delete o.response.rows[i].doc;
         i += 1;
       }
     }
     o.response.rows.sort(function (a, b) {
-      return a.value.year > b.value.year ? -1 :
-        a.value.year < b.value.year ? 1 : 0;
+      return (a.value.year > b.value.year ? -1 :
+              a.value.year < b.value.year ? 1 : 0);
     });
     o.response.rows.length = 5;
     o.response.total_rows = 5;
@@ -1026,7 +1083,7 @@
       // "query":'(year: >= "1980" AND year: < "2000")',
       "query": '(year: >= "1980")',
       "limit": [0, 5],
-      "sort_on": [['year','descending']],
+      "sort_on": [['year', 'descending']],
       "select_list": ['director', 'year']
     }, o.f);
     o.tick(o);
@@ -1041,14 +1098,14 @@
       i += 1;
     }
     o.response.rows.sort(function (a, b) {
-      return a.value.title > b.value.title ? -1 :
-        a.value.title < b.value.title ? 1 : 0;
+      return (a.value.title > b.value.title ? -1 :
+              a.value.title < b.value.title ? 1 : 0);
     });
     o.spy(o, "value", o.response,
           "allDocs (empty query in complex query)");
     o.jio.allDocs({
-      "sort_on":[['title','descending']],
-      "select_list":['title']
+      "sort_on": [['title', 'descending']],
+      "select_list": ['title']
     }, o.f);
     o.tick(o);
 
