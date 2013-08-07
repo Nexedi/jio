@@ -28,6 +28,8 @@
       "splitstorage_tests": "jio.storage/splitstorage.tests",
       "gidstorage": "../src/jio.storage/gidstorage",
       "gidstorage_tests": "jio.storage/gidstorage.tests",
+      "xwikistorage": "../src/jio.storage/xwikistorage",
+      "xwikistorage_tests": "jio.storage/xwikistorage.tests",
 
       "qunit": "../lib/qunit/qunit",
       "sinon": "../lib/sinon/sinon",
@@ -54,5 +56,6 @@
     "splitstorage_tests",
     "gidstorage_tests",
     "davstorage_tests",
+    "xwikistorage_tests",
   ]);
 }());
