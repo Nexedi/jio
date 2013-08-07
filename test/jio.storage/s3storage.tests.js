@@ -678,11 +678,9 @@
       ]
     );
 
-    console.log(o);
 
     o.spy(o, "jobstatus", "done", "AllDocs with include docs");
     o.jio.allDocs({"include_docs": true}, o.f);
-    console.log(o.f);
     o.clock.tick(5000);
     o.server.respond();
     o.tick(o);
