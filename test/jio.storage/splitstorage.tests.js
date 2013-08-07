@@ -50,17 +50,21 @@
     o.tick(o);
 
     // check uploaded documents
-    deepEqual(
-      util.jsonlocalstorage.getItem('jio/localstorage/splitstorage/post1/' + o.uuid),
-      {"_id": o.uuid, "_underscored_meta": "uvalue", "data": "{\"meta\""},
-      "Check uploaded document in sub storage 1"
-    );
+    deepEqual(util.jsonlocalstorage.getItem(
+      'jio/localstorage/splitstorage/post1/' + o.uuid
+    ), {
+      "_id": o.uuid,
+      "_underscored_meta": "uvalue",
+      "data": "{\"meta\""
+    }, "Check uploaded document in sub storage 1");
 
-    deepEqual(
-      util.jsonlocalstorage.getItem('jio/localstorage/splitstorage/post2/' + o.uuid),
-      {"_id": o.uuid, "_underscored_meta": "uvalue", "data": ":\"data\"}"},
-      "Check uploaded document in sub storage 2"
-    );
+    deepEqual(util.jsonlocalstorage.getItem(
+      'jio/localstorage/splitstorage/post2/' + o.uuid
+    ), {
+      "_id": o.uuid,
+      "_underscored_meta": "uvalue",
+      "data": ":\"data\"}"
+    }, "Check uploaded document in sub storage 2");
 
     // post with id
     o.spy(o, "value", {"ok": true, "id": "one"}, "Post document with id");
@@ -73,13 +77,17 @@
     o.tick(o);
 
     // check uploaded documents
-    deepEqual(util.jsonlocalstorage.getItem('jio/localstorage/splitstorage/post1/one'), {
+    deepEqual(util.jsonlocalstorage.getItem(
+      'jio/localstorage/splitstorage/post1/one'
+    ), {
       "_id": "one",
       "_underscored_meta": "uvalue",
       "data": "{\"meta\":\"data\","
     }, "Check uploaded document in sub storage 1");
 
-    deepEqual(util.jsonlocalstorage.getItem('jio/localstorage/splitstorage/post2/one'), {
+    deepEqual(util.jsonlocalstorage.getItem(
+      'jio/localstorage/splitstorage/post2/one'
+    ), {
       "_id": "one",
       "_underscored_meta": "uvalue",
       "data": "\"hello\":\"world\"}"
@@ -395,8 +403,12 @@
     });
 
     o.spy(o, "value", {"ok": true, "id": "one"}, "Put document");
-    o.jio.put({"_id": "one", "_underscored_meta": "uvalue", "meta": "data"}, o.f);
-    o.tick(o)
+    o.jio.put({
+      "_id": "one",
+      "_underscored_meta": "uvalue",
+      "meta": "data"
+    }, o.f);
+    o.tick(o);
 
     o.spy(o, "value", {
       "_id": "one",
@@ -407,8 +419,12 @@
     o.tick(o);
 
     o.spy(o, "value", {"ok": true, "id": "one"}, "Put document again");
-    o.jio.put({"_id": "one", "_underscored_meta": "uvalue", "meow": "dog"}, o.f);
-    o.tick(o)
+    o.jio.put({
+      "_id": "one",
+      "_underscored_meta": "uvalue",
+      "meow": "dog"
+    }, o.f);
+    o.tick(o);
 
     o.spy(o, "value", {
       "_id": "one",
