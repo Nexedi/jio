@@ -9,11 +9,14 @@
     return define(dependencies, module);
   }
   module(jIO, jio_tests, hex_sha256);
-}(['jio', 'jio_tests', 'sha256', 'replicaterevisionstorage'], function (
-  jIO,
-  util,
-  hex_sha256
-) {
+}([
+  'jio',
+  'jio_tests',
+  'sha256',
+  'localstorage',
+  'revisionstorage',
+  'replicaterevisionstorage'
+], function (jIO, util, hex_sha256) {
   "use strict";
 
   //////////////////////////////////////////////////////////////////////////////

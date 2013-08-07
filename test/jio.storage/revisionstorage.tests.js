@@ -9,7 +9,7 @@
     return define(dependencies, module);
   }
   module(jIO, jio_tests, hex_sha256);
-}(['jio', 'jio_tests', 'sha256', 'revisionstorage'], function (
+}(['jio', 'jio_tests', 'sha256', 'localstorage', 'revisionstorage'], function (
   jIO,
   util,
   hex_sha256

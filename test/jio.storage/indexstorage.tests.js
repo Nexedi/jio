@@ -8,7 +8,7 @@
     return define(dependencies, module);
   }
   module(jIO, jio_tests);
-}(['jio', 'jio_tests', 'indexstorage'], function (jIO, util) {
+}(['jio', 'jio_tests', 'localstorage', 'indexstorage'], function (jIO, util) {
   "use strict";
 
   function generateTools() {
