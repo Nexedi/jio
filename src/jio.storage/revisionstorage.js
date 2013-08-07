@@ -30,13 +30,6 @@
     priv.sub_storage = spec.sub_storage;
     // METHODS //
     /**
-     * Constructor
-     */
-    priv.RevisionStorage = function () {
-      // no init
-    };
-
-    /**
      * Description to store in order to be restored later
      * @method specToStore
      * @return {object} Descriptions to store
@@ -1035,7 +1028,6 @@
     };
 
     // END //
-    priv.RevisionStorage();
     return that;
   }); // end RevisionStorage
 

@@ -620,7 +620,6 @@
             response = JSON.parse(response);
             response._id = priv.indices[index].id;
             response._attachment = priv.indices[index].attachment || "body";
-            console.log(response);
             response_list[index] = new JSONIndex(response);
           } catch (e) {
             return that.error(generateErrorObject(
