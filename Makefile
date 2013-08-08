@@ -39,15 +39,21 @@ LINT_FILES  = $(LINT_NAMES:%=$(JIO_DIR)/%.js) $(CONCAT_STORAGE_NAMES:%=$(STORAGE
 
 # build parser.js
 compile:
+	 #
+	 ############################## Compile Query Parser ##############################
 	$(JSCC_CMD) -o $(PARSER_OUT) $(PARSER_PAR)
 
 # concat source files into jio.js and complex-queries.js
 concat:
+	 #
+	 ############################## Concat JIO and Queries ##############################
 	cat $(CONCAT_JIO_FILES) > "$(JIO)"
 	cat $(CONCAT_QUERIES_FILES) > "$(COMPLEX)"
 
 # uglify into jio.min.js and complex.min.js
 uglify:
+	 #
+	 ############################## Uglify JIO and Queries ##############################
 	$(UGLIFY_CMD) "$(JIO)" > "$(JIO_MIN)"
 	$(UGLIFY_CMD) "$(COMPLEX)" > "$(COMPLEX_MIN)"
 
@@ -58,9 +64,13 @@ uglify:
 # /*jslint indent: 2, maxlen: 80 */
 # /*global hex_sha256: true, jQuery: true */
 lint:
-	$(LINT_CMD) $(LINT_FILES)
+	 #
+	 ############################## Lint All files ##############################
+	echo; a="$$($(LINT_CMD) $(LINT_FILES))" ; [ $$? != 0 ] && echo "$$a" | grep -v 'OK\.$$' | uniq && false
 
 phantom:
+     #
+     ############################## Phantom ##############################
 	$(PHANTOM_CMD) test/run-qunit.js test/jiotests_withoutrequirejs.html | awk 'BEGIN {print "<!DOCTYPE html><html>"} /^<head>$$/, /^<\/body>$$/ {print} END {print "</html>"}' | sed -e 's,^ *<\(/\|\)script.*>$$,,g' > test/unit_test_result.html
 	grep '^  <title>✔ ' test/unit_test_result.html > /dev/null
 
