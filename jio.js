@@ -4,9 +4,17 @@
 * http://www.gnu.org/licenses/lgpl.html
 */
 
-(function (scope, hex_md5) {
+// define([module_name], [dependencies], module);
+(function (dependencies, module) {
   "use strict";
-  var localstorage;
+  if (typeof define === 'function' && define.amd) {
+    return define(dependencies, module);
+  }
+  window.jIO = module({hex_md5: hex_md5});
+}(['md5'], function (md5) {
+  "use strict";
+
+  var localstorage, hex_md5 = md5.hex_md5;
   if (typeof localStorage !== "undefined") {
     localstorage = {
       getItem: function (item) {
@@ -2841,11 +2849,5 @@ var jioNamespace = (function (spec) {
 
   return that;
 }());
-
-Object.defineProperty(scope, "jIO", {
-  configurable: false,
-  enumerable: false,
-  writable: false,
-  value: jioNamespace
-});
-}(window, hex_md5));
+  return jioNamespace;
+}));

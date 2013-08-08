@@ -9,10 +9,17 @@
  *
  * @module complex_queries
  */
-var complex_queries;
-(function () {
+// define([module_name], [dependencies], module);
+(function (module) {
   "use strict";
-  var to_export = {}, module_name = "complex_queries";
+  if (typeof define === 'function' && define.amd) {
+    return define(module);
+  }
+  window.complex_queries = module();
+}(function () {
+  "use strict";
+  var to_export = {};
+
   /**
    * Add a secured (write permission denied) property to an object.
    *
@@ -1593,23 +1600,5 @@ query_class_dict.complex = ComplexQuery;
 
 _export("ComplexQuery", ComplexQuery);
 
-  if (typeof define === "function" && define.amd) {
-    define(to_export);
-  } else if (typeof window === "object") {
-    Object.defineProperty(window, module_name, {
-      configurable: false,
-      enumerable: true,
-      writable: false,
-      value: to_export
-    });
-  } else if (typeof exports === "object") {
-    var i;
-    for (i in to_export) {
-      if (to_export.hasOwnProperty(i)) {
-        exports[i] = to_export[i];
-      }
-    }
-  } else {
-    complex_queries = to_export;
-  }
-}());
+  return to_export;
+}));
