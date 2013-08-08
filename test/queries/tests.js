@@ -7,8 +7,11 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
+  if (typeof exports === 'object') {
+    return module(require('complex_queries'));
+  }
   module(complex_queries);
-}(['complex_queries'], function (complex_queries) {
+}(['complex_queries', 'sinon_qunit'], function (complex_queries) {
   "use strict";
 
   module('Complex Queries');
