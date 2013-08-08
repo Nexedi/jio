@@ -6,9 +6,9 @@
 
   require.config({
     "paths": {
-      "md5": "../lib/md5/md5.amd",
-      "sha1": "../lib/jsSha1/sha1.amd",
-      "sha256": "../lib/jsSha2/sha256.amd",
+      "md5": "../src/md5.amd",
+      "sha1": "../src/sha1.amd",
+      "sha256": "../src/sha256.amd",
       "jquery": "../lib/jquery/jquery.min",
       "complex_queries": "../complex_queries",
       "complex_queries_tests": "queries/tests",

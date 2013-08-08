@@ -1,3 +1,12 @@
+(function (dependencies, module) {
+    if (typeof define === 'function' && define.amd) {
+        return define(dependencies, module);
+    }
+    if (typeof exports === 'object') {
+        return module(exports);
+    }
+    module(window);
+}(['exports'], function (window) {
 /* A JavaScript implementation of the Secure Hash Standard
  * Version 0.3 Copyright Angel Marin 2003-2004 - http://anmar.eu.org/
  * Distributed under the BSD License
@@ -165,3 +174,4 @@
     window.b64_sha256 = b64_sha256;
     window.str_sha256 = str_sha256;
 }());
+}));

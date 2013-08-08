@@ -1,9 +1,12 @@
-(function (module) {
+(function (dependencies, module) {
   if (typeof define === 'function' && define.amd) {
-    return define(module);
+    return define(dependencies, module);
   }
-  window.sha1 = module();
-}(function () {
+  if (typeof exports === 'object') {
+    return module(exports);
+  }
+  module(window);
+}(['exports'], function (exports) {
 /*
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-1, as defined
  * in FIPS PUB 180-1
@@ -208,12 +211,10 @@ function binb2b64(binarray)
   return str;
 }
 
-  return {
-    hex_sha1: hex_sha1,
-    b64_sha1: b64_sha1,
-    str_sha1: str_sha1,
-    hex_hmac_sha1: hex_hmac_sha1,
-    b64_hmac_sha1: b64_hmac_sha1,
-    str_hmac_sha1: str_hmac_sha1
-  };
+  exports.hex_sha1 = hex_sha1;
+  exports.b64_sha1 = b64_sha1;
+  exports.str_sha1 = str_sha1;
+  exports.hex_hmac_sha1 = hex_hmac_sha1;
+  exports.b64_hmac_sha1 = b64_hmac_sha1;
+  exports.str_hmac_sha1 = str_hmac_sha1;
 }));

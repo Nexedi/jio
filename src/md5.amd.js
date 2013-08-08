@@ -1,3 +1,12 @@
+(function (dependencies, module) {
+  if (typeof define === 'function' && define.amd) {
+    return define(dependencies, module);
+  }
+  if (typeof exports === 'object') {
+    return module(exports);
+  }
+  module(window);
+}(['exports'], function (exports) {
 /*
  * A JavaScript implementation of the RSA Data Security, Inc. MD5 Message
  * Digest Algorithm, as defined in RFC 1321.
@@ -377,3 +386,11 @@ function bit_rol(num, cnt)
 {
   return (num << cnt) | (num >>> (32 - cnt));
 }
+
+  exports.hex_md5 = hex_md5;
+  exports.b64_md5 = b64_md5;
+  exports.any_md5 = any_md5;
+  exports.hex_hmac_md5 = hex_hmac_md5;
+  exports.b64_hmac_md5 = b64_hmac_md5;
+  exports.any_hmac_md5 = any_hmac_md5;
+}));
