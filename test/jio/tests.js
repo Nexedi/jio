@@ -8,10 +8,14 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  window.jio_tests = module(jIO);
-}(['jio'], function (jIO) {
+  if (typeof exports === 'object') {
+    return module(exports, require('jio'));
+  }
+  window.jio_tests = {};
+  module(window.jio_tests, jIO);
+}(['exports', 'jio', 'sinon_qunit'], function (exports, jIO) {
   "use strict";
-  var to_export = {}, tmp;
+  var tmp;
 
   // localStorage cleanup
   for (tmp in localStorage) {
@@ -45,7 +49,7 @@
       deepEqual(val, value, message);
     };
   }
-  to_export.spyJioCallback = spyJioCallback;
+  exports.spyJioCallback = spyJioCallback;
 
   // XXX docstring
   function isUuid(uuid) {
@@ -58,10 +62,10 @@
         x + "{4}-" + x + "{4}-" + x + "{12}$"
     ) === null ? false : true);
   }
-  to_export.isUuid = isUuid;
+  exports.isUuid = isUuid;
 
   // XXX docstring
-  to_export.jsonlocalstorage = {
+  exports.jsonlocalstorage = {
     clear: function () {
       return localStorage.clear();
     },
@@ -87,13 +91,13 @@
 
   function closeAndcleanUpJio(jio) {
     jio.close();
-    to_export.jsonlocalstorage.removeItem("jio/id/" + jio.getId());
-    to_export.jsonlocalstorage.removeItem("jio/job_array/" + jio.getId());
+    exports.jsonlocalstorage.removeItem("jio/id/" + jio.getId());
+    exports.jsonlocalstorage.removeItem("jio/job_array/" + jio.getId());
   }
-  to_export.closeAndcleanUpJio = closeAndcleanUpJio;
+  exports.closeAndcleanUpJio = closeAndcleanUpJio;
 
   function getJioLastJob(jio) {
-    return (to_export.jsonlocalstorage.getItem(
+    return (exports.jsonlocalstorage.getItem(
       "jio/job_array/" + jio.getId()
     ) || [undefined]).pop();
   }
@@ -123,7 +127,7 @@
     };
     sinon.spy(o, function_name);
   }
-  to_export.ospy = ospy;
+  exports.ospy = ospy;
 
   function otick(o, a, b) {
     var tick = 10000, function_name = 'f';
@@ -143,7 +147,7 @@
       }
     }
   }
-  to_export.otick = otick;
+  exports.otick = otick;
 
   //////////////////////////////////////////////////////////////////////////////
   // Dummy Storage
@@ -228,7 +232,7 @@
   }
 
   jIO.addStorageType('dummy', dummyStorage);
-  to_export.dummyStorage = dummyStorage;
+  exports.dummyStorage = dummyStorage;
 
   //////////////////////////////////////////////////////////////////////////////
   // Tests
@@ -708,11 +712,10 @@
     ok(getJioLastJob(o.jio) === undefined, "Job executed");
     o.clock.tick(1000);
 
-    to_export.jsonlocalstorage.removeItem("jio/id/" + o.jio_id);
-    to_export.jsonlocalstorage.removeItem("jio/job_array/" + o.jio_id);
+    exports.jsonlocalstorage.removeItem("jio/id/" + o.jio_id);
+    exports.jsonlocalstorage.removeItem("jio/job_array/" + o.jio_id);
     closeAndcleanUpJio(o.jio);
 
   });
 
-  return to_export;
 }));

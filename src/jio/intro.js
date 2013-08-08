@@ -10,8 +10,12 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  window.jIO = module({hex_md5: hex_md5});
-}(['md5'], function (md5) {
+  if (typeof exports === 'object') {
+    return module(exports, require('md5'));
+  }
+  window.jIO = {};
+  module(window.jIO, {hex_md5: hex_md5});
+}(['exports', 'md5'], function (exports, md5) {
   "use strict";
 
   var localstorage, hex_md5 = md5.hex_md5;
