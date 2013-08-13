@@ -29,7 +29,7 @@
         return localStorage.setItem(item, JSON.stringify(value));
       },
       removeItem: function (item) {
-        delete localStorage[item];
+        return localStorage.removeItem(item);
       },
       clone: function () {
         return JSON.parse(JSON.stringify(localStorage));
@@ -41,8 +41,7 @@
       localstorage = {
         getItem: function (item) {
           var value = pseudo_localStorage[item];
-          return value === undefined ?
-              null : JSON.parse(pseudo_localStorage[item]);
+          return value === undefined ? null : JSON.parse(value);
         },
         setItem: function (item, value) {
           pseudo_localStorage[item] = JSON.stringify(value);
