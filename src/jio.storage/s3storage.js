@@ -856,7 +856,7 @@
     **/
 
     that.allDocs = function (command) {
-      var mon_document, mime, self;
+      var mon_document, mime;
       mon_document = null;
       mime = 'text/plain; charset=UTF-8';
 
