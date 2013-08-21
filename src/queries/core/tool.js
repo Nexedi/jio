@@ -155,7 +155,9 @@ function inherits(constructor, superConstructor) {
 /**
  * Does nothing
  */
-function emptyFunction() {}
+function emptyFunction() {
+  return;
+}
 
 /**
  * Filter a list of items, modifying them to select only wanted keys. If

@@ -99,9 +99,10 @@ Query.prototype.exec = function (item_list, option) {
  *
  * @method match
  * @param  {Object} item The object to test
+ * @param  {String} wildcard_character The wildcard character to use
  * @return {Boolean} true if match, false otherwise
  */
-Query.prototype.match = function (item, wildcard_character) {
+Query.prototype.match = function () {
   return true;
 };
 

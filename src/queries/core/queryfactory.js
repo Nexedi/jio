@@ -10,7 +10,9 @@ var query_class_dict = {};
  *
  * @class QueryFactory
  */
-function QueryFactory() {}
+function QueryFactory() {
+  return;
+}
 
 /**
  * Creates Query object from a search text string or a serialized version
