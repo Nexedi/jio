@@ -380,7 +380,7 @@
      */
     that.removeAttachment = function (command) {
       setTimeout(function () {
-        var doc, error, i, attachment_list;
+        var doc, error;
         error = function (word) {
           that.error({
             "status": 404,

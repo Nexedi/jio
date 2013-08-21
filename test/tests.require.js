@@ -58,6 +58,6 @@
     "gidstorage_tests",
     "davstorage_tests",
     "xwikistorage_tests",
-    "s3storage_tests",
+    "s3storage_tests"
   ]);
 }());
