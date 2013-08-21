@@ -6,14 +6,15 @@ JIO         = jio.js
 JIO_MIN     = jio.min.js
 COMPLEX     = complex_queries.js
 COMPLEX_MIN = complex_queries.min.js
-PARSER_PAR  = $(QUERIES_DIR)/parser.par
-PARSER_OUT  = $(QUERIES_DIR)/parser.js
+PARSER_PAR  = $(QUERIES_DIR)/core/parser.par
+PARSER_OUT  = $(QUERIES_DIR)/build/parser.js
 
 JSCC_CMD   	= node ./node_modules/jscc-node/jscc.js -t ./node_modules/jscc-node/driver_node.js_
 
 auto: compile
 
 compile:
+	mkdir -p $(dir $(PARSER_OUT))
 	$(JSCC_CMD) -o $(PARSER_OUT) $(PARSER_PAR)
 
 .phony: clean
