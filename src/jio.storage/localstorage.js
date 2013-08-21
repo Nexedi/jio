@@ -5,8 +5,7 @@
  */
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global jIO: true, localStorage: true, setTimeout: true,
-         complex_queries, define */
+/*global jIO, localStorage, setTimeout, complex_queries, define */
 
 /**
  * JIO Local Storage. Type = 'local'.
@@ -16,6 +15,9 @@
  *
  *     {
  *       "type": "local",
+ *       "mode": <string>,
+ *         // - "localStorage" // default
+ *         // - "memory"
  *       "username": <non empty string>, // to define user space
  *       "application_name": <string> // default 'untitled'
  *     }
@@ -94,11 +96,13 @@
     return true;
   }
 
+  var ram = {}, memorystorage, localstorage;
+
   /*
    * Wrapper for the localStorage used to simplify instion of any kind of
    * values
    */
-  var localstorage = {
+  localstorage = {
     getItem: function (item) {
       var value = localStorage.getItem(item);
       return value === null ? null : JSON.parse(value);
@@ -108,6 +112,23 @@
     },
     removeItem: function (item) {
       return localStorage.removeItem(item);
+    }
+  };
+
+  /*
+   * Wrapper for the localStorage used to simplify instion of any kind of
+   * values
+   */
+  memorystorage = {
+    getItem: function (item) {
+      var value = ram[item];
+      return value === undefined ? null : JSON.parse(value);
+    },
+    setItem: function (item, value) {
+      ram[item] = JSON.stringify(value);
+    },
+    removeItem: function (item) {
+      delete ram[item];
     }
   };
 
@@ -125,11 +146,26 @@
     priv.localpath = 'jio/localstorage/' + priv.username + '/' +
       priv.application_name;
 
+    switch (spec.mode) {
+    case "memory":
+      priv.database = ram;
+      priv.storage = memorystorage;
+      priv.mode = "memory";
+      break;
+    default:
+      priv.database = localStorage;
+      priv.storage = localstorage;
+      priv.mode = "localStorage";
+      break;
+    }
+
+
     // ===================== overrides ======================
     that.specToStore = function () {
       return {
         "application_name": priv.application_name,
-        "username": priv.username
+        "username": priv.username,
+        "mode": priv.mode
       };
     };
 
@@ -152,13 +188,13 @@
         if (!doc_id) {
           doc_id = generateUuid();
         }
-        doc = localstorage.getItem(priv.localpath + "/" + doc_id);
+        doc = priv.storage.getItem(priv.localpath + "/" + doc_id);
         if (doc === null) {
           // the document does not exist
           doc = command.cloneDoc();
           doc._id = doc_id;
           delete doc._attachments;
-          localstorage.setItem(priv.localpath + "/" + doc_id, doc);
+          priv.storage.setItem(priv.localpath + "/" + doc_id, doc);
           that.success({
             "ok": true,
             "id": doc_id
@@ -184,7 +220,7 @@
     that.put = function (command) {
       setTimeout(function () {
         var doc, tmp;
-        doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
+        doc = priv.storage.getItem(priv.localpath + "/" + command.getDocId());
         if (doc === null) {
           //  the document does not exist
           doc = command.cloneDoc();
@@ -196,7 +232,7 @@
           doc = tmp;
         }
         // write
-        localstorage.setItem(priv.localpath + "/" + command.getDocId(), doc);
+        priv.storage.setItem(priv.localpath + "/" + command.getDocId(), doc);
         that.success({
           "ok": true,
           "id": command.getDocId()
@@ -212,7 +248,7 @@
     that.putAttachment = function (command) {
       setTimeout(function () {
         var doc;
-        doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
+        doc = priv.storage.getItem(priv.localpath + "/" + command.getDocId());
         if (doc === null) {
           //  the document does not exist
           that.error({
@@ -234,11 +270,11 @@
         };
 
         // upload data
-        localstorage.setItem(priv.localpath + "/" + command.getDocId() + "/" +
+        priv.storage.setItem(priv.localpath + "/" + command.getDocId() + "/" +
                              command.getAttachmentId(),
                              command.getAttachmentData());
         // write document
-        localstorage.setItem(priv.localpath + "/" + command.getDocId(), doc);
+        priv.storage.setItem(priv.localpath + "/" + command.getDocId(), doc);
         that.success({
           "ok": true,
           "id": command.getDocId(),
@@ -254,7 +290,7 @@
      */
     that.get = function (command) {
       setTimeout(function () {
-        var doc = localstorage.getItem(
+        var doc = priv.storage.getItem(
           priv.localpath + "/" + command.getDocId()
         );
         if (doc !== null) {
@@ -278,7 +314,7 @@
      */
     that.getAttachment = function (command) {
       setTimeout(function () {
-        var doc = localstorage.getItem(
+        var doc = priv.storage.getItem(
           priv.localpath + "/" + command.getDocId() +
             "/" + command.getAttachmentId()
         );
@@ -304,7 +340,7 @@
     that.remove = function (command) {
       setTimeout(function () {
         var doc, i, attachment_list;
-        doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
+        doc = priv.storage.getItem(priv.localpath + "/" + command.getDocId());
         attachment_list = [];
         if (doc !== null && typeof doc === "object") {
           if (typeof doc._attachments === "object") {
@@ -324,10 +360,10 @@
             "reason": "missing"
           });
         }
-        localstorage.removeItem(priv.localpath + "/" + command.getDocId());
+        priv.storage.removeItem(priv.localpath + "/" + command.getDocId());
         // delete all attachments
         for (i = 0; i < attachment_list.length; i += 1) {
-          localstorage.removeItem(priv.localpath + "/" + command.getDocId() +
+          priv.storage.removeItem(priv.localpath + "/" + command.getDocId() +
                                   "/" + attachment_list[i]);
         }
         that.success({
@@ -354,7 +390,7 @@
             "reason": "missing"
           });
         };
-        doc = localstorage.getItem(priv.localpath + "/" + command.getDocId());
+        doc = priv.storage.getItem(priv.localpath + "/" + command.getDocId());
         // remove attachment from document
         if (doc !== null && typeof doc === "object" &&
             typeof doc._attachments === "object") {
@@ -364,9 +400,9 @@
             if (objectIsEmpty(doc._attachments)) {
               delete doc._attachments;
             }
-            localstorage.setItem(priv.localpath + "/" + command.getDocId(),
+            priv.storage.setItem(priv.localpath + "/" + command.getDocId(),
                                  doc);
-            localstorage.removeItem(priv.localpath + "/" + command.getDocId() +
+            priv.storage.removeItem(priv.localpath + "/" + command.getDocId() +
                                     "/" + command.getAttachmentId());
             that.success({
               "ok": true,
@@ -401,15 +437,15 @@
            option.select_list === undefined &&
            option.include_docs === undefined)) {
         rows = [];
-        for (i in localStorage) {
-          if (localStorage.hasOwnProperty(i)) {
+        for (i in priv.database) {
+          if (priv.database.hasOwnProperty(i)) {
             // filter non-documents
             if (path_re.test(i)) {
               row = { value: {} };
               row.id = i.split('/').slice(-1)[0];
               row.key = row.id;
               if (command.getOption('include_docs')) {
-                row.doc = JSON.parse(localStorage.getItem(i));
+                row.doc = JSON.parse(priv.storage.getItem(i));
               }
               rows.push(row);
             }
@@ -418,10 +454,10 @@
         that.success({"rows": rows, "total_rows": rows.length});
       } else {
         // create complex query object from returned results
-        for (i in localStorage) {
-          if (localStorage.hasOwnProperty(i)) {
+        for (i in priv.database) {
+          if (priv.database.hasOwnProperty(i)) {
             if (path_re.test(i)) {
-              document_list.push(localstorage.getItem(i));
+              document_list.push(priv.storage.getItem(i));
             }
           }
         }
