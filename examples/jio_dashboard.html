@@ -149,7 +149,7 @@ var clearlog = function () {
   <hr />
   <div id="log">
   </div>
-  <script type="text/javascript" src="../lib/md5/md5.js"></script>
+  <script type="text/javascript" src="../src/md5.amd.js"></script>
   <script type="text/javascript" src="../complex_queries.js"></script>
   <script type="text/javascript" src="../jio.js"></script>
   <script type="text/javascript" src="../src/jio.storage/localstorage.js">
@@ -159,7 +159,7 @@ var clearlog = function () {
   </script>
   <script type="text/javascript" src="../src/jio.storage/erp5storage.js">
   </script>
-  <script type="text/javascript" src="../lib/jsSha2/sha2.js"></script>
+  <script type="text/javascript" src="../src/sha256.amd.js"></script>
   <script type="text/javascript" src="../src/jio.storage/revisionstorage.js">
   </script>
   <script type="text/javascript" src="../src/jio.storage/splitstorage.js">
@@ -174,8 +174,8 @@ var clearlog = function () {
 var my_jio = null;
 var newLocalJio = function () {
   var localuser, localapp;
-  localuser = $('#localuser').attr('value');
-  localapp = $('#localapp').attr('value');
+  localuser = $('#localuser').val();
+  localapp = $('#localapp').val();
   var spec = {type: 'local', username: localuser, application_name: localapp};
   if (my_jio) { log('closing older jio'); my_jio.close(); }
   log('local storage description object: ' + JSON.stringify(spec));
@@ -183,9 +183,9 @@ var newLocalJio = function () {
 };
 var newCryptJio = function () {
   var user, app, pwd;
-  user = $('#cryptuser').attr('value');
-  app = $('#cryptapp').attr('value');
-  pwd = $('#cryptpassword').attr('value');
+  user = $('#cryptuser').val();
+  app = $('#cryptapp').val();
+  pwd = $('#cryptpassword').val();
   var spec = {type: 'crypt', username: user, password: pwd, storage:{
     type: 'local', username: user, application_name: app
   }};
@@ -195,9 +195,9 @@ var newCryptJio = function () {
 };
 var newDavJio = function () {
   var user, app, pwd, url;
-  user = $('#davuser').attr('value');
-  pwd = $('#davpassword').attr('value');
-  url = $('#davurl').attr('value');
+  user = $('#davuser').val();
+  pwd = $('#davpassword').val();
+  url = $('#davurl').val();
   var spec = {
     "type": "dav",
     "url": url,
@@ -211,8 +211,8 @@ var newDavJio = function () {
 };
 var newRevisionJio = function () {
   var user, app;
-  user = $('#revisionuser').attr('value');
-  app = $('#revisionapp').attr('value');
+  user = $('#revisionuser').val();
+  app = $('#revisionapp').val();
   var spec = {
     type: 'revision', sub_storage: {
       type: 'local', username: user, application_name: app
@@ -223,7 +223,7 @@ var newRevisionJio = function () {
   my_jio = jIO.newJio(spec);
 };
 var newCustomJio = function () {
-  var spec = JSON.parse ($('#customstorage').attr('value'));
+  var spec = JSON.parse ($('#customstorage').val());
   if (my_jio) { log('closing older jio'); my_jio.close(); }
   log('custom storage description object: '+JSON.stringify(spec));
   my_jio = jIO.newJio(spec);
@@ -250,19 +250,19 @@ var command = function (method) {
     return error('no jio set');
   }
 
-  opts.query = $('#query').attr('value');
+  opts.query = $('#query').val();
   opts.include_docs = $('#include_docs').attr('checked') ? true : false;
-  opts.wildcard_character = $('#wildcard').attr('value') || "";
-  opts.sort_on = JSON.parse($('#sort_on').attr('value') || null);
-  opts.select_list = JSON.parse($('#select_list').attr('value') || null);
-  opts.limit = JSON.parse($('#limit').attr('value') || null);
+  opts.wildcard_character = $('#wildcard').val() || "";
+  opts.sort_on = JSON.parse($('#sort_on').val() || null);
+  opts.select_list = JSON.parse($('#select_list').val() || null);
+  opts.limit = JSON.parse($('#limit').val() || null);
 
   opts.conflicts = $('#show_conflicts').attr('checked') ? true : false;
   opts.revs = $('#show_revision_history').attr('checked') ? true : false;
   opts.revs_info = $('#show_revision_info').attr('checked') ? true : false;
-  opts.max_retry = parseInt($('#max_retry').attr('value') || '0');
+  opts.max_retry = parseInt($('#max_retry').val() || '0');
 
-  doc = JSON.parse($('#metadata').attr('value'));
+  doc = JSON.parse($('#metadata').val());
   log('doc: ' + JSON.stringify(doc));
   log('opts: ' + JSON.stringify(opts));
 
