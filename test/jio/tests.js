@@ -141,6 +141,44 @@
   });
 
   /**
+   * Tests asynchrony
+   */
+  test("Asynchrony", function () {
+    var workspace = {}, clock, jio, count = 0;
+    expect(8);
+
+    clock = sinon.useFakeTimers();
+    jio = new JIO({
+      "type": "fake",
+      "id": "Asynchrony"
+    }, {
+      "workspace": workspace
+    });
+
+    jio.post({}).done(function () {
+      count += 1;
+      deepEqual(count, 6, "Command done");
+    }).progress(function () {
+      count += 1;
+      deepEqual(count, 3, "Command notifiy");
+    });
+    count += 1;
+    deepEqual(count, 1, "JIO post");
+    ok(!fakestorage['Asynchrony/post'], "Command not called yet");
+    clock.tick(1);
+    count += 1;
+    deepEqual(count, 2, "Next instructions");
+    ok(fakestorage['Asynchrony/post'], "Command called");
+    fakestorage['Asynchrony/post'].notify();
+    count += 1;
+    deepEqual(count, 4, "Next timer");
+    fakestorage['Asynchrony/post'].success({"id": "a"});
+    count += 1;
+    deepEqual(count, 5, "Command success requested");
+    clock.tick(1);
+  });
+
+  /**
    * Tests a storage initialization error
    */
   test('Description Error', function () {
