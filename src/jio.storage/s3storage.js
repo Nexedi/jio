@@ -1,4 +1,4 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*jslint indent: 2, maxlen: 80, nomen: true */
 /*global define, jIO, btoa, b64_hmac_sha1, jQuery, XMLHttpRequest, XHRwrapper,
   FormData*/
 /**
@@ -13,6 +13,7 @@
   }
   module(jIO, jQuery, {b64_hmac_sha1: b64_hmac_sha1});
 }(['jio', 'jquery', 'sha1'], function (jIO, $, sha1) {
+  "use strict";
   var b64_hmac_sha1 = sha1.b64_hmac_sha1;
 
   jIO.addStorageType("s3", function (spec, my) {
@@ -855,7 +856,7 @@
     **/
 
     that.allDocs = function (command) {
-      var mon_document, mime;
+      var mon_document, mime, self;
       mon_document = null;
       mime = 'text/plain; charset=UTF-8';
 
@@ -968,7 +969,7 @@
                 //'x-amz-security-token' : ,
               },
               success : dealCallback(i, countB, allDocResponse),
-              error : errCallback(this)
+              error : errCallback(that.error)
             });
             countB += 1;
           }
