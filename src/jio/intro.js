@@ -1,57 +1,74 @@
-/*
-* Copyright 2013, Nexedi SA
-* Released under the LGPL license.
-* http://www.gnu.org/licenses/lgpl.html
-*/
-
-// define([module_name], [dependencies], module);
 (function (dependencies, module) {
   "use strict";
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    return module(exports, require('md5'));
+    return module(exports);
   }
   window.jIO = {};
-  module(window.jIO, {hex_md5: hex_md5});
-}(['exports', 'md5'], function (exports, md5) {
-  "use strict";
+  module(window.jIO);
+}(['exports'], function (exports) {
 
-  var localstorage, hex_md5 = md5.hex_md5;
-  if (typeof localStorage !== "undefined") {
-    localstorage = {
-      getItem: function (item) {
-        var value = localStorage.getItem(item);
-        return value === null ? null : JSON.parse(value);
-      },
-      setItem: function (item, value) {
-        return localStorage.setItem(item, JSON.stringify(value));
-      },
-      removeItem: function (item) {
-        return localStorage.removeItem(item);
-      },
-      clone: function () {
-        return JSON.parse(JSON.stringify(localStorage));
-      }
-    };
-  } else {
-    (function () {
-      var pseudo_localStorage = {};
-      localstorage = {
-        getItem: function (item) {
-          var value = pseudo_localStorage[item];
-          return value === undefined ? null : JSON.parse(value);
-        },
-        setItem: function (item, value) {
-          pseudo_localStorage[item] = JSON.stringify(value);
-        },
-        removeItem: function (item) {
-          delete pseudo_localStorage[item];
-        },
-        clone: function () {
-          return JSON.parse(JSON.stringify(pseudo_localStorage));
+    /**
+     * Add a secured (write permission denied) property to an object.
+     *
+     * @method defineConstant
+     * @param  {Object} object The object to fill
+     * @param  {String} key The object key where to store the property
+     * @param  {Any} value The value to store
+     */
+    function defineConstant(object, key, value) {
+      Object.defineProperty(object, key, {
+        "configurable": false,
+        "enumerable": true,
+        "writable": false,
+        "value": value
+      });
+      return object;
+    }
+
+    /**
+     * Secures all enumerable functions from an object, making them
+     * not configurable, not writable, not enumerable.
+     *
+     * @method secureMethods
+     * @param {Object} object The object to secure
+     */
+    function secureMethods(object) {
+      var key;
+      for (key in object) {
+        if (object.hasOwnProperty(key)) {
+          if (typeof object[key] === "function") {
+            Object.defineProperty(object, key, {
+              "configurable": false,
+              "enumerable": false,
+              "writable": false,
+              "value": object[key]
+            });
+          }
         }
-      };
-    }());
-  }
+      }
+      return object;
+    }
+
+    /**
+     * Inherits the prototype methods from one constructor into another. The
+     * prototype of `constructor` will be set to a new object created from
+     * `superConstructor`.
+     *
+     * @param  {Function} constructor The constructor which inherits the super
+     *   one
+     * @param  {Function} superConstructor The super constructor
+     */
+    function inherits(constructor, superConstructor) {
+      constructor.super_ = superConstructor;
+      constructor.prototype = Object.create(superConstructor.prototype, {
+        "constructor": {
+          "configurable": true,
+          "enumerable": false,
+          "writable": true,
+          "value": constructor
+        }
+      });
+    }
