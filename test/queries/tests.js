@@ -1,5 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, complex_queries, window, test, ok, deepEqual, sinon */
+/*global define, exports, require, module, complex_queries, window, test, ok,
+  deepEqual, sinon */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -36,7 +37,7 @@
     ];
     complex_queries.QueryFactory.create('identifier: "a"').exec(doc_list);
     deepEqual(doc_list, [
-      {"identifier": "a"},
+      {"identifier": "a"}
     ], 'Document with several identifier should be removed');
 
     doc_list = [
