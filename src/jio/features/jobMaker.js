@@ -36,6 +36,24 @@ function enableJobMaker(jio, shared, options) {
     "options"
   ]);
 
+  function addCommandToJob(param) {
+    param.command = {};
+    param.command.resolve = function () {
+      shared.emit('jobDone', param, arguments);
+    };
+    param.command.success = param.command.resolve;
+    param.command.reject = function () {
+      shared.emit('jobFail', param, arguments);
+    };
+    param.command.error = param.command.reject;
+    param.command.notify = function () {
+      shared.emit('jobNotify', param, arguments);
+    };
+    param.command.storage = function () {
+      return shared.createRestApi.apply(null, arguments);
+    };
+  }
+
   // listeners
 
   shared.rest_method_names.forEach(function (method) {
@@ -43,27 +61,24 @@ function enableJobMaker(jio, shared, options) {
       if (param.deferred) {
         // params are good
         param.created = new Date();
-        param.tried = 0;
-        param.state = 'ready';
-        param.command = {};
-        param.command.resolve = function () {
-          shared.emit('jobDone', param, arguments);
-        };
-        param.command.success = param.command.resolve;
-        param.command.reject = function () {
-          shared.emit('jobFail', param, arguments);
-        };
-        param.command.error = param.command.reject;
-        param.command.notify = function () {
-          shared.emit('jobNotify', param, arguments);
-        };
-        param.command.storage = function () {
-          return shared.createRestApi.apply(null, arguments);
-        };
-        param.modified = new Date();
         shared.emit('job', param);
       }
     });
+  });
+
+  shared.on('job', function (param) {
+    // new or recovered job
+    param.state = 'ready';
+    if (typeof param.tried !== 'number' || !isFinite(param.tried)) {
+      param.tried = 0;
+    }
+    if (!param.created) {
+      param.created = new Date();
+    }
+    if (!param.command) {
+      addCommandToJob(param);
+    }
+    param.modified = new Date();
   });
 
 }
