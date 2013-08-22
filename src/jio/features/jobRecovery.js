@@ -51,7 +51,7 @@ function enableJobRecovery(jio, shared, options) {
           // deadline not reached yet
           // wait until deadline is reached then check job again
           setTimeout(jobWaiter(job_array[i].id, job_array[i].modified),
-                     deadline - delay);
+                     deadline - Date.now());
         }
       }
     }
