@@ -63,7 +63,14 @@ function deepClone(object) {
       // returns `"Invalid Date"` but in browsers it returns `null`. In
       // browsers, give `null` as parameter to `new Date()` doesn't return an
       // invalid date.
-      return new Date(object);
+
+      // Clonning date with `return new Date(object)` make problems on Firefox.
+      // I don't know why...  (Tested on Firefox 23)
+
+      if (isFinite(object.getTime())) {
+        return new Date(object.toJSON());
+      }
+      return new Date("Invalid Date");
     }
     // clone serializable objects
     if (typeof object.toJSON === 'function') {
