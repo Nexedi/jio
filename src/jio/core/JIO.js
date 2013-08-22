@@ -1,10 +1,8 @@
-/*jslint indent: 2, maxlen: 80, nomen: true, sloppy: true, regexp: true */
-/*global EventEmitter, deepClone, inherits, secureMethods, defineConstant,
-  exports */
-/*global addBlobStorageUtilities, addClassesToStorageUtilities, enableRestAPI,
-  enableRestParamChecker, enableCommandMaker, enableCommandExecuter,
-  enableCommandTimeout, enableJobMaker, enableJobRetry, enableJobChecker,
-  enableJobQueue, enableJobRecoverer, enableJobExecuter, enableJobTimeout */
+/*jslint indent: 2, maxlen: 80, nomen: true, sloppy: true */
+/*global EventEmitter, deepClone, inherits, exports */
+/*global enableRestAPI, enableRestParamChecker, enableJobMaker, enableJobRetry,
+  enableJobChecker, enableJobQueue, enableJobRecovery, enableJobTimeout,
+  enableJobExecuter */
 
 function JIO(storage_spec, options) {
   JIO.super_.call(this);
@@ -24,7 +22,7 @@ function JIO(storage_spec, options) {
   enableJobRetry(that, shared, options);
   // enableJobChecker(that, shared, options);
   enableJobQueue(that, shared, options);
-  // enableJobRecoverer(that, shared, options);
+  enableJobRecovery(that, shared, options);
   enableJobTimeout(that, shared, options);
   enableJobExecuter(that, shared, options);
 
