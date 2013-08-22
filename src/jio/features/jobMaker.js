@@ -58,9 +58,7 @@ function enableJobMaker(jio, shared, options) {
           shared.emit('jobNotify', param, arguments);
         };
         param.command.storage = function () {
-          if (param.state === 'running') {
-            shared.createRestApi.apply(null, arguments);
-          }
+          return shared.createRestApi.apply(null, arguments);
         };
         param.modified = new Date();
         shared.emit('job', param);
