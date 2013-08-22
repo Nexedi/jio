@@ -765,12 +765,43 @@
    * Test job recovery
    */
   test('Job Recovery', function () {
-    expect(0);
+    expect(1);
+    var workspace = {}, clock, jio;
+
+    clock = sinon.useFakeTimers();
     // create instance
+    jio = new JIO({
+      "type": "fake",
+      "id": "Job Recove"
+    }, {
+      "workspace": workspace
+    });
+
     // create a job
+    jio.post({});
     // copy workspace
+    workspace = jIO.util.deepClone(workspace);
+    clock.tick(1);
+    fakestorage['Job Recove/post'].success({"id": "a"});
+
     // create instance with copied workspace
+    jio = new JIO({
+      "type": "fake",
+      "id": "Job Recove"
+    }, {
+      "workspace": workspace
+    });
+
     // wait for action
+    clock.tick(20020); // 20 seconds
+    if (!fakestorage['Job Recove/post']) {
+      return ok(false, "Command not called, job recovery failed");
+    }
+    ok(true, "Command called, job recovery ok");
+    fakestorage['Job Recove/post'].success({"id": "a"});
+
+    // XXX job waiting for time recovery
+    // XXX job waiting for job recovery
   });
 
 }));
