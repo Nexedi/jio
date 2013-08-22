@@ -651,44 +651,126 @@
   });
 
   /**
-   * Tests job workspace
+   * Tests job management
    */
-  test("Job Workspace", function () {
-    var workspace = {}, clock, jio;
-    expect(2);
+  test("Job Management", function () {
+    var workspace = {}, clock, jio, o = {};
+    expect(8);
 
     clock = sinon.useFakeTimers();
     jio = new JIO({
       "type": "fake",
-      "id": "1 Job Worksp"
+      "id": "1 Job Manage"
     }, {
       "workspace": workspace
     });
 
-    jio.get({"_id": "a"}, {"max_retry": 2, "timeout": 12});
-
+    // Launch a get command, check the workspace and then respond
+    jio.get({"_id": "a"}, {"max_retry": 2, "timeout": 12}).
+      always(function (answer) {
+        deepEqual(answer, {
+          "_id": "a",
+          "b": "c",
+          "ok": true,
+          "status": 200,
+          "statusText": "Ok"
+        }, "Job respond");
+      });
+    o.job1 = {
+      "kwargs": {"_id": "a"},
+      "options": {"max_retry": 2, "timeout": 12},
+      "storage_spec": {"type": "fake", "id": "1 Job Manage"},
+      "method": "get",
+      "created": new Date(0),
+      "tried": 1,
+      "state": "running",
+      "modified": new Date(0),
+      "max_retry": 2,
+      "timeout": 12,
+      "id": 1
+    };
     deepEqual(workspace, {
-      "jio/jobs/{\"id\":\"1 Job Worksp\",\"type\":\"fake\"}": jIO.util.
-        uniqueJSONStringify([{
-          "kwargs": {"_id": "a"},
-          "options": {"max_retry": 2, "timeout": 12},
-          "storage_spec": {"type": "fake", "id": "1 Job Worksp"},
-          "method": "get",
-          "created": new Date(0),
-          "tried": 1,
-          "state": "running",
-          "modified": new Date(0),
-          "max_retry": 2,
-          "timeout": 12,
-          "id": 1
-        }])
-    }, 'Check workspace');
+      "jio/jobs/{\"id\":\"1 Job Manage\",\"type\":\"fake\"}": jIO.util.
+        uniqueJSONStringify([o.job1])
+    }, 'Job added, workspace have one job');
 
     clock.tick(1);
-    fakestorage["1 Job Worksp/get"].success({"_id": "a", "b": "c"});
+    fakestorage["1 Job Manage/get"].success({"_id": "a", "b": "c"});
     clock.tick(1);
 
-    deepEqual(workspace, {}, 'Check workspace');
+    deepEqual(workspace, {}, 'Job ended, empty workspace');
+
+    // Launch a get command which launches another get command
+    // check workspace after every command and respond
+    jio.get({"_id": "b"}, {"max_retry": 2, "timeout": 12}).
+      always(function (answer) {
+        deepEqual(answer, {
+          "_id": "b",
+          "c": "d",
+          "ok": true,
+          "status": 200,
+          "statusText": "Ok"
+        }, "First job respond");
+      });
+    clock.tick(1);
+    fakestorage["1 Job Manage/get"].storage({
+      "type": "fake",
+      "id": "2 Job Manage"
+    }).get({"_id": "c"}).always(function (answer) {
+      deepEqual(answer, {
+        "_id": "c",
+        "d": "e",
+        "ok": true,
+        "status": 200,
+        "statusText": "Ok"
+      }, "Second job respond");
+    });
+
+    o.job1.kwargs._id = 'b';
+    o.job2 = {
+      "kwargs": {"_id": "c"},
+      "options": {},
+      "storage_spec": {"type": "fake", "id": "2 Job Manage"},
+      "method": "get",
+      "created": new Date(0),
+      "tried": 1,
+      "state": "running",
+      "modified": new Date(0),
+      "max_retry": 3,
+      "timeout": 10000,
+      "id": 2
+    };
+    deepEqual(workspace, {
+      "jio/jobs/{\"id\":\"1 Job Manage\",\"type\":\"fake\"}": jIO.util.
+        uniqueJSONStringify([o.job1, o.job2])
+    }, 'Job calls another job, workspace have two jobs');
+
+    clock.tick(1);
+    fakestorage['1 Job Manage/get'].end();
+    deepEqual(workspace, {
+      "jio/jobs/{\"id\":\"1 Job Manage\",\"type\":\"fake\"}": jIO.util.
+        uniqueJSONStringify([o.job2])
+    }, 'First Job ended, second still there');
+
+    fakestorage['1 Job Manage/get'].success({"_id": "b", "c": "d"});
+    clock.tick(1);
+
+    fakestorage['2 Job Manage/get'].success({"_id": "c", "d": "e"});
+    clock.tick(1);
+
+    deepEqual(workspace, {}, 'No more job in the queue');
+  });
+
+  /**
+   * Test job recovery
+   */
+  test('Job Recovery', function () {
+    expect(0);
+    // create instance
+    // create a job
+    // copy workspace
+    // create instance with copied workspace
+    // wait for action
   });
 
 }));
