@@ -15,6 +15,8 @@ function enableJobRecovery(jio, shared, options) {
   }
 
   function recoverJob(param) {
+    shared.job_queue.remove(param.id);
+    shared.job_queue.save();
     shared.emit('job', param);
   }
 
