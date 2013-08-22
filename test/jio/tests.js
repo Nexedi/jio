@@ -764,10 +764,15 @@
    * Test job recovery
    */
   test('Job Recovery', function () {
-    expect(1);
-    var workspace = {}, clock, jio;
+    expect(4);
+    var workspace, clock, jio;
 
     clock = sinon.useFakeTimers();
+
+    //////////////////////////////
+    // Running job recovery
+
+    workspace = {};
     // create instance
     jio = new JIO({
       "type": "fake",
@@ -778,7 +783,7 @@
 
     // create a job
     jio.post({});
-    // copy workspace
+    // copy workspace when job is running
     workspace = jIO.util.deepClone(workspace);
     clock.tick(1); // now: 1 ms
     fakestorage['Job Recove/post'].success({"id": "a"});
@@ -791,20 +796,70 @@
       "workspace": workspace
     });
 
-    // wait for action
     clock.tick(19998); // now: 19999 ms
     if (fakestorage['Job Recove/post']) {
-      return ok(false, "Command called, job recovered to earlier");
+      ok(false, "Command called, job recovered to earlier");
     }
     clock.tick(1); // now: 20000 ms
     if (!fakestorage['Job Recove/post']) {
-      return ok(false, "Command not called, job recovery failed");
+      ok(false, "Command not called, job recovery failed");
+    } else {
+      ok(true, "Command called, job recovery ok");
     }
-    ok(true, "Command called, job recovery ok");
+    fakestorage['Job Recove/post'].success({"id": "a"});
+    clock.tick(1); // now: 20001 ms
+
+    deepEqual(workspace, {}, 'No more job in the queue');
+    clock.tick(79999); // now: 100000 ms
+
+    //////////////////////////////
+    // Waiting for time job recovery
+
+    workspace = {};
+    // create instance
+    jio = new JIO({
+      "type": "fake",
+      "id": "Job Recove"
+    }, {
+      "workspace": workspace
+    });
+
+    // create a job
+    jio.post({});
+    clock.tick(1); // now: 1 ms
+    // copy workspace when job is waiting
+    fakestorage['Job Recove/post'].retry();
+    workspace = jIO.util.deepClone(workspace);
+    clock.tick(2000); // now: 2001 ms
     fakestorage['Job Recove/post'].success({"id": "a"});
 
-    // XXX job waiting for time recovery
-    // XXX job waiting for job recovery
+    // create instance with copied workspace
+    jio = new JIO({
+      "type": "fake",
+      "id": "Job Recove"
+    }, {
+      "workspace": workspace
+    });
+
+    clock.tick(17998); // now: 19999 ms
+    if (fakestorage['Job Recove/post']) {
+      ok(false, "Command called, job recovered to earlier");
+    }
+    clock.tick(1); // now: 20000 ms
+    if (!fakestorage['Job Recove/post']) {
+      ok(false, "Command not called, job recovery failed");
+    } else {
+      ok(true, "Command called, job recovery ok");
+    }
+    fakestorage['Job Recove/post'].success({"id": "a"});
+    clock.tick(1); // now: 20001 ms
+
+    deepEqual(workspace, {}, 'No more job in the queue');
+    clock.tick(79999); // now: 100000 ms
+
+    //////////////////////////////
+    // XXX Waiting for jobs job recovery
+
   });
 
 }));
