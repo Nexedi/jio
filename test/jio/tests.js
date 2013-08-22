@@ -753,12 +753,11 @@
     }, 'First Job ended, second still there');
 
     fakestorage['1 Job Manage/get'].success({"_id": "b", "c": "d"});
-    clock.tick(1);
-
     fakestorage['2 Job Manage/get'].success({"_id": "c", "d": "e"});
-    clock.tick(1);
 
     deepEqual(workspace, {}, 'No more job in the queue');
+
+    clock.tick(1); // success 1 and 2
   });
 
   /**
