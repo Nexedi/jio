@@ -46,7 +46,8 @@ function enableJobRecovery(jio, shared, options) {
 
     for (i = 0; i < job_array.length; i += 1) {
       if (job_array[i].state === 'ready' ||
-          job_array[i].state === 'running') {
+          job_array[i].state === 'running' ||
+          job_array[i].state === 'waiting') {
         delay = numberOrDefault(job_array[i].timeout + recovery_delay,
                                 recovery_delay);
         deadline = new Date(job_array[i].modified).getTime() + delay;

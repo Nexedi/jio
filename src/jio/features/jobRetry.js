@@ -70,7 +70,7 @@ function enableJobRetry(jio, shared, options) {
           param.max_retry > param.tried) {
         param.state = 'waiting';
         param.modified = new Date();
-        shared.emit('jobStateChange', param);
+        shared.emit('jobStop', param);
         setTimeout(function () {
           param.state = 'ready';
           param.modified = new Date();

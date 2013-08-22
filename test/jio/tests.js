@@ -843,21 +843,21 @@
       "workspace": workspace
     });
 
-    clock.tick(17998); // now: 19999 ms
+    clock.tick(17999); // now: 20000 ms
     if (fakestorage['Job Recove/post']) {
       ok(false, "Command called, job recovered to earlier");
     }
-    clock.tick(1); // now: 20000 ms
+    clock.tick(1); // now: 20001 ms
     if (!fakestorage['Job Recove/post']) {
       ok(false, "Command not called, job recovery failed");
     } else {
       ok(true, "Command called, job recovery ok");
     }
     fakestorage['Job Recove/post'].success({"id": "a"});
-    clock.tick(1); // now: 20001 ms
+    clock.tick(1); // now: 20002 ms
 
     deepEqual(workspace, {}, 'No more job in the queue');
-    clock.tick(79999); // now: 100000 ms
+    clock.tick(79998); // now: 100000 ms
 
     //////////////////////////////
     // XXX Waiting for jobs job recovery
