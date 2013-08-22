@@ -39,28 +39,31 @@
       param: param,
       options: options,
       success: function () {
-        command.success.apply(command, arguments);
+        var res = command.success.apply(command, arguments);
         delete fakestorage[that._id + '/' + method];
+        return res;
       },
       error: function () {
-        command.error.apply(command, arguments);
+        var res = command.error.apply(command, arguments);
         delete fakestorage[that._id + '/' + method];
+        return res;
       },
       retry: function () {
-        command.retry.apply(command, arguments);
+        var res = command.retry.apply(command, arguments);
         delete fakestorage[that._id + '/' + method];
+        return res;
       },
       notify: function () {
-        command.notify.apply(command, arguments);
+        return command.notify.apply(command, arguments);
       },
       storage: function () {
-        command.storage.apply(command, arguments);
+        return command.storage.apply(command, arguments);
       },
       end: function () {
-        command.end.apply(command, arguments);
+        return command.end.apply(command, arguments);
       },
       commit: function () {
-        command.commit.apply(command, arguments);
+        return command.commit.apply(command, arguments);
       },
       free: function () {
         delete fakestorage[that._id + '/' + method];
