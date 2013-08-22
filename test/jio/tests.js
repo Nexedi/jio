@@ -781,7 +781,7 @@
     jio.post({});
     // copy workspace
     workspace = jIO.util.deepClone(workspace);
-    clock.tick(1);
+    clock.tick(1); // now: 1 ms
     fakestorage['Job Recove/post'].success({"id": "a"});
 
     // create instance with copied workspace
@@ -793,7 +793,11 @@
     });
 
     // wait for action
-    clock.tick(20020); // 20 seconds
+    clock.tick(19998); // now: 19999 ms
+    if (fakestorage['Job Recove/post']) {
+      return ok(false, "Command called, job recovered to earlier");
+    }
+    clock.tick(1); // now: 20000 ms
     if (!fakestorage['Job Recove/post']) {
       return ok(false, "Command not called, job recovery failed");
     }
