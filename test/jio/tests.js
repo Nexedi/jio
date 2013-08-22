@@ -681,10 +681,10 @@
       "options": {"max_retry": 2, "timeout": 12},
       "storage_spec": {"type": "fake", "id": "1 Job Manage"},
       "method": "get",
-      "created": new Date(0),
+      "created": new Date(),
       "tried": 1,
       "state": "running",
-      "modified": new Date(0),
+      "modified": new Date(),
       "max_retry": 2,
       "timeout": 12,
       "id": 1
@@ -694,9 +694,9 @@
         uniqueJSONStringify([o.job1])
     }, 'Job added, workspace have one job');
 
-    clock.tick(1);
+    clock.tick(1); // now: 1 ms
     fakestorage["1 Job Manage/get"].success({"_id": "a", "b": "c"});
-    clock.tick(1);
+    clock.tick(1); // now: 2 ms
 
     deepEqual(workspace, {}, 'Job ended, empty workspace');
 
@@ -712,7 +712,10 @@
           "statusText": "Ok"
         }, "First job respond");
       });
-    clock.tick(1);
+    o.job1.kwargs._id = 'b';
+    o.job1.created = new Date();
+    o.job1.modified = new Date();
+    clock.tick(1); // now: 3 ms
     fakestorage["1 Job Manage/get"].storage({
       "type": "fake",
       "id": "2 Job Manage"
@@ -726,16 +729,15 @@
       }, "Second job respond");
     });
 
-    o.job1.kwargs._id = 'b';
     o.job2 = {
       "kwargs": {"_id": "c"},
       "options": {},
       "storage_spec": {"type": "fake", "id": "2 Job Manage"},
       "method": "get",
-      "created": new Date(0),
+      "created": new Date(),
       "tried": 1,
       "state": "running",
-      "modified": new Date(0),
+      "modified": new Date(),
       "max_retry": 3,
       "timeout": 10000,
       "id": 2
