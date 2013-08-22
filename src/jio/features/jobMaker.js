@@ -60,7 +60,6 @@ function enableJobMaker(jio, shared, options) {
     shared.on(method, function (param) {
       if (param.deferred) {
         // params are good
-        param.created = new Date();
         shared.emit('job', param);
       }
     });
