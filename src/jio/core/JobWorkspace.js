@@ -59,6 +59,16 @@ JobWorkspace.prototype.load = function () {
 };
 
 /**
+ * Returns the array version of the job queue
+ *
+ * @method asArray
+ * @return {Array} The job queue as array
+ */
+JobWorkspace.prototype.asArray = function () {
+  return this._job_queue._array;
+};
+
+/**
  * Post a job in the job queue
  *
  * @method post
