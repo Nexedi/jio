@@ -28,7 +28,11 @@ IODeferred.prototype.resolve = function (a, b) {
   } else {
     weak.status = constants.http_status.ok;
     weak.statusText = constants.http_status_text.ok;
-    weak.id = this._info._id;
+    if (this._method !== 'get') {
+      weak.id = this._info._id;
+    } else {
+      weak._id = this._info._id;
+    }
     if (/Attachment$/.test(this._method)) {
       weak.attachment = this._info._attachment;
     }
@@ -52,7 +56,7 @@ IODeferred.prototype.resolve = function (a, b) {
   }
   dictUpdate(weak, strong);
   strong = undefined; // free memory
-  if (typeof weak.id !== 'string' || !weak.id) {
+  if (this._method !== 'get' && (typeof weak.id !== 'string' || !weak.id)) {
     return this.reject(
       'internal_storage_error',
       'invalid response',
