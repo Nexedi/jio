@@ -265,7 +265,7 @@ Promise.first = function () { // *promises
  * @param  {Number} [every] In milliseconds
  * @return {Promise} The promise
  */
-Promise.delay = function (timeout, every) { // *promises
+Promise.delay = function (timeout, every) {
   var next = new Promise(), solver, ident, now = 0;
   solver = next.defer();
   if (typeof every === 'number' && !isNaN(every)) {
