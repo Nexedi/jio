@@ -339,7 +339,7 @@ exports.util.blobAsBinaryString = blobAsBinaryString;
  * array. It extends the original array and return it.
  *
  * @param  {Array} array The array to extend
- * @param  {Any} [args*] Values to add in the array
+ * @param  {Any} [args]* Values to add in the array
  * @return {Array} The original array
  */
 function arrayExtend(array) { // args*
