@@ -20,7 +20,7 @@ function JIO(storage_spec, options) {
   enableRestParamChecker(that, shared, options);
   enableJobMaker(that, shared, options);
   enableJobRetry(that, shared, options);
-  // enableJobChecker(that, shared, options);
+  enableJobChecker(that, shared, options);
   enableJobQueue(that, shared, options);
   enableJobRecovery(that, shared, options);
   enableJobTimeout(that, shared, options);
