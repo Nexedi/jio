@@ -48,8 +48,11 @@ module.exports = function (grunt) {
     },
     concat: {
       jio: {
+        // duplicate files are ignored
         src: [
           'src/jio/intro.js',
+          'src/jio/core/globals.js',
+          'src/jio/core/util.js',
           'src/jio/core/**/*.js',
           'src/jio/features/**/*.js',
           'src/jio/outro.js'
