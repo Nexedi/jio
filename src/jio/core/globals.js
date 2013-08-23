@@ -1,4 +1,5 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true */
+/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*global uniqueJSONStringify */
 
 var defaults = {}, constants = {};
 
@@ -330,6 +331,135 @@ constants.http_action = {
 constants.content_type_re =
   /^([a-z]+\/[a-zA-Z0-9\+\-\.]+)(?:\s*;\s*charset\s*=\s*([a-zA-Z0-9\-]+))?$/;
 
+/**
+ * Function that does nothing
+ */
 constants.emptyFunction = function () {
   return;
 };
+
+defaults.job_rule_actions = {};
+
+/**
+ * Adds some job rule actions
+ */
+(function () {
+
+  /**
+   * Compare two jobs and test if they use the same storage description
+   *
+   * @param  {Object} a The first job to compare
+   * @param  {Object} b The second job to compare
+   * @return {Boolean} True if equal, else false
+   */
+  function sameStorageDescription(a, b) {
+    return uniqueJSONStringify(a.storage_spec) ===
+      uniqueJSONStringify(b.storage_spec);
+  }
+
+  /**
+   * Guess if the method is a writer or a reader.
+   *
+   * @param  {String} method The method name
+   * @return {String} "writer", "reader" or "unknown"
+   */
+  function methodType(method) {
+    switch (method) {
+    case "post":
+    case "put":
+    case "putAttachment":
+    case "remove":
+    case "removeAttachment":
+    case "repair":
+      return 'writer';
+    case "get":
+    case "getAttachment":
+    case "allDocs":
+    case "check":
+      return 'reader';
+    default:
+      return 'unknown';
+    }
+  }
+
+  /**
+   * Compare two jobs and test if they are writers
+   *
+   * @param  {Object} a The first job to compare
+   * @param  {Object} b The second job to compare
+   * @return {Boolean} True if equal, else false
+   */
+  function areWriters(a, b) {
+    return methodType(a.method) === 'writer' &&
+      methodType(b.method) === 'writer';
+  }
+
+  /**
+   * Compare two jobs and test if they are readers
+   *
+   * @param  {Object} a The first job to compare
+   * @param  {Object} b The second job to compare
+   * @return {Boolean} True if equal, else false
+   */
+  function areReaders(a, b) {
+    return methodType(a.method) === 'reader' &&
+      methodType(b.method) === 'reader';
+  }
+
+  /**
+   * Compare two jobs and test if their methods are the same
+   *
+   * @param  {Object} a The first job to compare
+   * @param  {Object} b The second job to compare
+   * @return {Boolean} True if equal, else false
+   */
+  function sameMethod(a, b) {
+    return a.method === b.method;
+  }
+
+  /**
+   * Compare two jobs and test if their document ids are the same
+   *
+   * @param  {Object} a The first job to compare
+   * @param  {Object} b The second job to compare
+   * @return {Boolean} True if equal, else false
+   */
+  function sameDocumentId(a, b) {
+    return a.kwargs._id === b.kwargs._id;
+  }
+
+  /**
+   * Compare two jobs and test if their kwargs are equal
+   *
+   * @param  {Object} a The first job to compare
+   * @param  {Object} b The second job to compare
+   * @return {Boolean} True if equal, else false
+   */
+  function sameParameters(a, b) {
+    return uniqueJSONStringify(a.kwargs) ===
+      uniqueJSONStringify(b.kwargs);
+  }
+
+  /**
+   * Compare two jobs and test if their options are equal
+   *
+   * @param  {Object} a The first job to compare
+   * @param  {Object} b The second job to compare
+   * @return {Boolean} True if equal, else false
+   */
+  function sameOptions(a, b) {
+    return uniqueJSONStringify(a.options) ===
+      uniqueJSONStringify(b.options);
+  }
+
+  defaults.job_rule_actions = {
+    "sameStorageDescription": sameStorageDescription,
+    "areWriters": areWriters,
+    "areReaders": areReaders,
+    "sameMethod": sameMethod,
+    "sameDocumentId": sameDocumentId,
+    "sameParameters": sameParameters,
+    "sameOptions": sameOptions
+  };
+
+}());
