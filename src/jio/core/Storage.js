@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true */
-/*global exports, defaults, defineConstant */
+/*global exports, defaults */
 
 function Storage() { // (storage_spec, util)
   return undefined; // this is a constructor
@@ -33,4 +33,4 @@ function addStorage(type, Constructor) {
   // dictUpdate(Constructor.prototype, proto);
   defaults.storage_types[type] = Constructor;
 }
-defineConstant(exports, 'addStorage', addStorage);
+exports.addStorage = addStorage;

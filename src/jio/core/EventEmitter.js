@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, nomen: true, sloppy: true */
-/*global secureMethods, exports, defineConstant, console */
+/*global secureMethods, exports, console */
 
 /**
  * Inspired by nodejs EventEmitter class
