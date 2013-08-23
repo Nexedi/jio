@@ -356,3 +356,20 @@ function arrayExtend(array) { // args*
   return array;
 }
 exports.util.arrayExtend = arrayExtend;
+
+/**
+ * Acts like `Array.prototype.concat` but does not create a copy of the original
+ * array. It extends the original array from a specific position and return it.
+ *
+ * @param  {Array} array The array to extend
+ * @param  {Number} position The position where to extend
+ * @param  {Any} [args]* Values to add in the array
+ * @return {Array} The original array
+ */
+function arrayInsert(array, position) { // args*
+  var array_part = array.splice(position, array.length - position);
+  arrayExtend.apply(null, arrayExtend([
+  ], [array], Array.prototype.slice.call(arguments, 2)));
+  return arrayExtend(array, array_part);
+}
+exports.util.arrayInsert = arrayInsert;
