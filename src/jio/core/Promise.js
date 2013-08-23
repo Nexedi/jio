@@ -225,21 +225,21 @@ Promise.any = function (items) {
 };
 
 /**
- * first(*items): Promise
+ * first(items): Promise
  *
  * Resolve the promise only when one item is resolved. The item type must be
  * like the item parameter of the `when` static method.
  *
- *     Promise.first(Promise.delay(100), 'b').then(console.log); // shows 'b'
+ *     Promise.first([Promise.delay(100), 'b']).then(console.log); // shows 'b'
  *
  * @method first
  * @static
- * @param  {Any} *items The items to use
+ * @param  {Array} items The items to use
  * @return {Promise} The promise
  */
-Promise.first = function () { // *promises
+Promise.first = function (items) { // *promises
   var next = new Promise(), solver = next.defer();
-  Array.prototype.forEach.call(arguments, function (item) {
+  items.forEach(function (item) {
     Promise.when(item).done(solver.resolve).fail(solver.reject);
   });
   return next;
