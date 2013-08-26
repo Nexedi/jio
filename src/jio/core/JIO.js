@@ -6,7 +6,7 @@
 
 function JIO(storage_spec, options) {
   JIO.super_.call(this);
-  var that = this, shared = new EventEmitter();
+  var shared = new EventEmitter();
 
   shared.storage_spec = deepClone(storage_spec);
 
@@ -16,15 +16,16 @@ function JIO(storage_spec, options) {
     throw new TypeError("JIO(): Optional argument 2 is not of type 'object'");
   }
 
-  enableRestAPI(that, shared, options);
-  enableRestParamChecker(that, shared, options);
-  enableJobMaker(that, shared, options);
-  enableJobRetry(that, shared, options);
-  enableJobChecker(that, shared, options);
-  enableJobQueue(that, shared, options);
-  enableJobRecovery(that, shared, options);
-  enableJobTimeout(that, shared, options);
-  enableJobExecuter(that, shared, options);
+  enableRestAPI(this, shared, options);
+  enableRestParamChecker(this, shared, options);
+  enableJobMaker(this, shared, options);
+  enableJobReference(this, shared, options);
+  enableJobRetry(this, shared, options);
+  enableJobChecker(this, shared, options);
+  enableJobQueue(this, shared, options);
+  enableJobRecovery(this, shared, options);
+  enableJobTimeout(this, shared, options);
+  enableJobExecuter(this, shared, options);
 
   shared.emit('load');
 }
