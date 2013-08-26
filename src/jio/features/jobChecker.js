@@ -44,8 +44,12 @@ function enableJobChecker(jio, shared, options) {
       new_job.modified = new Date();
     },
     deny: function (original_job, new_job) {
-      // XXX
-      return;
+      new_job.state = 'running';
+      new_job.command.reject(
+        'precondition_failed',
+        'command denied',
+        'Command rejected by the job checker.'
+      );
     }
   };
 
@@ -70,8 +74,16 @@ function enableJobChecker(jio, shared, options) {
       // wrong conditions
       return;
     }
+    if (job_rule.single !== undefined && typeof job_rule.single !== 'boolean') {
+      // wrong single property
+      return;
+    }
     if (indexOf(job_rule.action, shared.job_rule_action_names) === -1) {
       // wrong action
+      return;
+    }
+    if (job_rule.action !== 'deny' && job_rule.single === true) {
+      // only 'deny' action doesn't require original_job parameter
       return;
     }
 
@@ -97,6 +109,7 @@ function enableJobChecker(jio, shared, options) {
     job_rule = {
       "code_name": job_rule.code_name,
       "conditions": job_rule.conditions,
+      "single": job_rule.single || false,
       "action": job_rule.action || "ok"
     };
 
@@ -137,21 +150,38 @@ function enableJobChecker(jio, shared, options) {
     if (job.state === 'ready') {
       // browsing rules
       for (i = 0; i < shared.job_rules.length; i += 1) {
-        // browsing jobs
-        for (j = 0; j < shared.jobs.length; j += 1) {
-          if (shared.jobs[j] !== job) {
-            if (
-              jobsRespectConditions(
-                shared.jobs[j],
-                job,
-                shared.job_rules[i].conditions
-              )
-            ) {
-              shared.job_rule_actions[shared.job_rules[i].action](
-                shared.jobs[j],
-                job
-              );
-              return;
+        if (shared.job_rules[i].single) {
+          // no browse
+          if (
+            jobsRespectConditions(
+              job,
+              undefined,
+              shared.job_rules[i].conditions
+            )
+          ) {
+            shared.job_rule_actions[shared.job_rules[i].action](
+              undefined,
+              job
+            );
+            return;
+          }
+        } else {
+          // browsing jobs
+          for (j = 0; j < shared.jobs.length; j += 1) {
+            if (shared.jobs[j] !== job) {
+              if (
+                jobsRespectConditions(
+                  shared.jobs[j],
+                  job,
+                  shared.job_rules[i].conditions
+                )
+              ) {
+                shared.job_rule_actions[shared.job_rules[i].action](
+                  shared.jobs[j],
+                  job
+                );
+                return;
+              }
             }
           }
         }
@@ -203,4 +233,5 @@ function enableJobChecker(jio, shared, options) {
   jio.jobRules = function () {
     return deepClone(shared.job_rules);
   };
+
 }
