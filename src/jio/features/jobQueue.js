@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
 /*global arrayExtend, localStorage, Workspace, uniqueJSONStringify, JobQueue,
-  JobWorkspace, constants */
+  constants */
 
 function enableJobQueue(jio, shared, options) {
 
@@ -14,7 +14,7 @@ function enableJobQueue(jio, shared, options) {
   // creates
   // - shared.storage_spec_str String
   // - shared.workspace Workspace
-  // - shared.job_queue JobWorkspace
+  // - shared.job_queue JobQueue
 
   // uses 'job', 'jobRun', 'jobStop', 'jobEnd' events
   // emits 'jobEnd' events
@@ -33,9 +33,8 @@ function enableJobQueue(jio, shared, options) {
       shared.storage_spec_str = uniqueJSONStringify(shared.storage_spec);
     }
 
-    shared.job_queue = new JobWorkspace(
+    shared.job_queue = new JobQueue(
       shared.workspace,
-      new JobQueue([]),
       'jio/jobs/' + shared.storage_spec_str,
       shared.job_keys
     );
