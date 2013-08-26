@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
-/*global arrayInsert, indexOf, deepClone */
+/*global arrayInsert, indexOf, deepClone, defaults */
 
 // creates
 // - some defaults job rule actions
@@ -7,14 +7,43 @@
 function enableJobChecker(jio, shared, options) {
 
   // dependencies
-  // - shared.job_queue JobWorkspace
+  // - shared.jobs Object Array
 
   // creates
   // - shared.job_rules Array
 
   // uses 'job' events
 
-  shared.job_check_method_names = [undefined, "ok", "wait", "update", "deny"];
+  var i;
+
+  shared.job_rule_action_names = [undefined, "ok", "wait", "update", "deny"];
+
+  shared.job_rule_actions = {
+    wait: function (original_job, new_job) {
+      // XXX
+      return;
+    },
+    update: function (original_job, new_job) {
+      if (!new_job.deferred) {
+        // promise associated to the job
+        new_job.state = 'done';
+        shared.emit('jobDone', new_job);
+      } else {
+        if (!original_job.deferred) {
+          original_job.deferred = new_job.deferred;
+        } else {
+          original_job.deferred.promise().
+            done(new_job.command.resolve).
+            fail(new_job.command.reject);
+        }
+      }
+      new_job.state = 'running';
+    },
+    deny: function (original_job, new_job) {
+      // XXX
+      return;
+    }
+  };
 
   function addJobRule(job_rule) {
     var i, old_position, before_position, after_position;
@@ -37,7 +66,7 @@ function enableJobChecker(jio, shared, options) {
       // wrong conditions
       return;
     }
-    if (indexOf(job_rule.action, shared.job_check_method_names) === -1) {
+    if (indexOf(job_rule.action, shared.job_rule_action_names) === -1) {
       // wrong action
       return;
     }
@@ -84,6 +113,48 @@ function enableJobChecker(jio, shared, options) {
     }
   }
 
+  function jobsRespectConditions(original_job, new_job, conditions) {
+    var j;
+    // browsing conditions
+    for (j = 0; j < conditions.length; j += 1) {
+      if (defaults.job_rule_conditions[conditions[j]]) {
+        if (
+          !defaults.job_rule_conditions[conditions[j]](original_job, new_job)
+        ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  function checkJob(job) {
+    var i, j;
+    if (job.state === 'ready') {
+      // browsing rules
+      for (i = 0; i < shared.job_rules.length; i += 1) {
+        // browsing jobs
+        for (j = 0; j < shared.jobs.length; j += 1) {
+          if (shared.jobs[j] !== job) {
+            if (
+              jobsRespectConditions(
+                shared.jobs[j],
+                job,
+                shared.job_rules[i].conditions
+              )
+            ) {
+              shared.job_rule_actions[shared.job_rules[i].action](
+                shared.jobs[j],
+                job
+              );
+              return;
+            }
+          }
+        }
+      }
+    }
+  }
+
   if (options.job_management !== false) {
 
     shared.job_rules = [{
@@ -115,17 +186,13 @@ function enableJobChecker(jio, shared, options) {
       "action": "wait"
     }];
 
-    var i;
     if (Array.isArray(options.job_rules)) {
       for (i = 0; i < options.job_rules.length; i += 1) {
         addJobRule(deepClone(options.job_rules[i]));
       }
     }
 
-    shared.on('job', function (param) {
-      // XXX
-      return;
-    });
+    shared.on('job', checkJob);
 
   }
 
