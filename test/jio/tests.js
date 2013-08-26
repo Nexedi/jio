@@ -953,4 +953,40 @@
 
   });
 
+  test('Job Deny + Job condition addition', function () {
+    expect(1);
+    var clock, jio;
+    clock = sinon.useFakeTimers();
+
+    jIO.addJobRuleCondition('isGetMethod', function (job) {
+      return job.method === 'get';
+    });
+
+    jio = new JIO({
+      "type": "fake",
+      "id": "Job Wait"
+    }, {
+      "workspace": {},
+      "job_rules": [{
+        "code_name": "get rejecter",
+        "single": true,
+        "action": "deny",
+        "conditions": ["isGetMethod"]
+      }]
+    });
+
+    jio.get({"_id": "a"}).always(function (answer) {
+      deepEqual(answer, {
+        "error": "precondition_failed",
+        "message": "Command rejected by the job checker.",
+        "reason": "command denied",
+        "status": 412,
+        "statusText": "Precondition Failed"
+      }, "Get respond");
+    });
+
+    clock.tick(1);
+
+  });
+
 }));
