@@ -373,3 +373,28 @@ function arrayInsert(array, position) { // args*
   return arrayExtend(array, array_part);
 }
 exports.util.arrayInsert = arrayInsert;
+
+/**
+ * Guess if the method is a writer or a reader.
+ *
+ * @param  {String} method The method name
+ * @return {String} "writer", "reader" or "unknown"
+ */
+function methodType(method) {
+  switch (method) {
+  case "post":
+  case "put":
+  case "putAttachment":
+  case "remove":
+  case "removeAttachment":
+  case "repair":
+    return 'writer';
+  case "get":
+  case "getAttachment":
+  case "allDocs":
+  case "check":
+    return 'reader';
+  default:
+    return 'unknown';
+  }
+}
