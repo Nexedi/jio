@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global uniqueJSONStringify */
+/*global uniqueJSONStringify, methodType */
 
 var defaults = {}, constants = {};
 
@@ -355,31 +355,6 @@ defaults.job_rule_conditions = {};
   function sameStorageDescription(a, b) {
     return uniqueJSONStringify(a.storage_spec) ===
       uniqueJSONStringify(b.storage_spec);
-  }
-
-  /**
-   * Guess if the method is a writer or a reader.
-   *
-   * @param  {String} method The method name
-   * @return {String} "writer", "reader" or "unknown"
-   */
-  function methodType(method) {
-    switch (method) {
-    case "post":
-    case "put":
-    case "putAttachment":
-    case "remove":
-    case "removeAttachment":
-    case "repair":
-      return 'writer';
-    case "get":
-    case "getAttachment":
-    case "allDocs":
-    case "check":
-      return 'reader';
-    default:
-      return 'unknown';
-    }
   }
 
   /**
