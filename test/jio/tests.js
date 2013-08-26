@@ -865,15 +865,16 @@
   });
 
   test('Job Update', function () {
-    expect(4);
+    expect(5);
     var clock, jio, o = {};
     clock = sinon.useFakeTimers();
 
+    o.workspace = {};
     jio = new JIO({
       "type": "fake",
       "id": "Job Update"
     }, {
-      "workspace": {}
+      "workspace": o.workspace
     });
 
     jio.put({"_id": "a"}).always(function (answer) {
@@ -905,18 +906,21 @@
     o.first_put_command.success();
     clock.tick(1);
 
+    deepEqual(o.workspace, {}, 'No job in the queue');
+
   });
 
   test('Job Wait', function () {
-    expect(5);
+    expect(6);
     var clock, jio, o = {};
     clock = sinon.useFakeTimers();
 
+    o.workspace = {};
     jio = new JIO({
       "type": "fake",
       "id": "Job Wait"
     }, {
-      "workspace": {}
+      "workspace": o.workspace
     });
 
     jio.put({"_id": "a"}).always(function (answer) {
@@ -951,11 +955,13 @@
     fakestorage['Job Wait/put'].success();
     clock.tick(1);
 
+    deepEqual(o.workspace, {}, 'No job in the queue');
+
   });
 
   test('Job Deny + Job condition addition', function () {
-    expect(1);
-    var clock, jio;
+    expect(2);
+    var clock, jio, workspace = {};
     clock = sinon.useFakeTimers();
 
     jIO.addJobRuleCondition('isGetMethod', function (job) {
@@ -966,7 +972,7 @@
       "type": "fake",
       "id": "Job Wait"
     }, {
-      "workspace": {},
+      "workspace": workspace,
       "job_rules": [{
         "code_name": "get rejecter",
         "single": true,
@@ -986,6 +992,8 @@
     });
 
     clock.tick(1);
+
+    deepEqual(workspace, {}, 'No job in the queue');
 
   });
 
