@@ -864,4 +864,47 @@
 
   });
 
+  test('Job Update', function () {
+    expect(4);
+    var clock, jio, o = {};
+    clock = sinon.useFakeTimers();
+
+    jio = new JIO({
+      "type": "fake",
+      "id": "Job Update"
+    }, {
+      "workspace": {}
+    });
+
+    jio.put({"_id": "a"}).always(function (answer) {
+      deepEqual(answer, {
+        "id": "a",
+        "ok": true,
+        "status": 200,
+        "statusText": "Ok"
+      }, "First put respond");
+    });
+
+    clock.tick(1);
+    o.first_put_command = fakestorage["Job Update/put"];
+    ok(o.first_put_command, "First command called");
+    o.first_put_command.free();
+
+    jio.put({"_id": "a"}).always(function (answer) {
+      deepEqual(answer, {
+        "id": "a",
+        "ok": true,
+        "status": 200,
+        "statusText": "Ok"
+      }, "Second put respond");
+    });
+
+    clock.tick(1);
+    ok(fakestorage['Job Update/put'] === undefined,
+       'Second command not called');
+    o.first_put_command.success();
+    clock.tick(1);
+
+  });
+
 }));
