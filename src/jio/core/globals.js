@@ -338,10 +338,10 @@ constants.emptyFunction = function () {
   return;
 };
 
-defaults.job_rule_actions = {};
+defaults.job_rule_conditions = {};
 
 /**
- * Adds some job rule actions
+ * Adds some job rule conditions
  */
 (function () {
 
@@ -452,7 +452,7 @@ defaults.job_rule_actions = {};
       uniqueJSONStringify(b.options);
   }
 
-  defaults.job_rule_actions = {
+  defaults.job_rule_conditions = {
     "sameStorageDescription": sameStorageDescription,
     "areWriters": areWriters,
     "areReaders": areReaders,
