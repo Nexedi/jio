@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
-/*global arrayInsert, indexOf, deepClone, defaults */
+/*global arrayInsert, indexOf, deepClone, defaults, IODeferred */
 
 // creates
 // - some defaults job rule actions
@@ -44,8 +44,9 @@ function enableJobChecker(jio, shared, options) {
       new_job.modified = new Date();
     },
     deny: function (original_job, new_job) {
-      new_job.state = 'running';
-      new_job.command.reject(
+      new_job.state = 'fail';
+      new_job.modified = new Date();
+      IODeferred.createFromParam(new_job).reject(
         'precondition_failed',
         'command denied',
         'Command rejected by the job checker.'

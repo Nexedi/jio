@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
 /*global arrayExtend, localStorage, Workspace, uniqueJSONStringify, JobQueue,
-  constants */
+  constants, indexOf */
 
 function enableJobQueue(jio, shared, options) {
 
@@ -40,11 +40,13 @@ function enableJobQueue(jio, shared, options) {
     );
 
     shared.on('job', function (param) {
-      if (!param.stored) {
-        shared.job_queue.load();
-        shared.job_queue.post(param);
-        shared.job_queue.save();
-        param.stored = true;
+      if (indexOf(param.state, ['fail', 'done']) === -1) {
+        if (!param.stored) {
+          shared.job_queue.load();
+          shared.job_queue.post(param);
+          shared.job_queue.save();
+          param.stored = true;
+        }
       }
     });
 
