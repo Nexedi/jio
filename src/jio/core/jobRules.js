@@ -18,3 +18,4 @@ function addJobRuleCondition(name, method) {
   }
   defaults.job_rule_conditions[name] = method;
 }
+exports.addJobRuleCondition = addJobRuleCondition;
