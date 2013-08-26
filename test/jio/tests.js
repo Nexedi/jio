@@ -201,7 +201,9 @@
         "message": "Check if the storage description respects the " +
           "constraints provided by the storage designer. (TypeError: " +
           "Unknown storage 'blue')",
+        "method": "post",
         "reason": "invalid description",
+        "result": "error",
         "status": 551,
         "statusText": "Internal Storage Error"
       }, "Unknown storage");
@@ -222,7 +224,9 @@
         "message": "Check if the storage description respects the " +
           "constraints provided by the storage designer. (TypeError: " +
           "Initialization error: wrong id)",
+        "method": "post",
         "reason": "invalid description",
+        "result": "error",
         "status": 551,
         "statusText": "Internal Storage Error"
       }, "Initialization error");
@@ -250,6 +254,8 @@
         "error": "request_timeout",
         "message": "Operation canceled after around " +
           "10000 milliseconds of inactivity.",
+        "method": "post",
+        "result": "error",
         "reason": "timeout",
         "status": 408,
         "statusText": "Request Timeout"
@@ -274,6 +280,8 @@
         "error": "request_timeout",
         "message": "Operation canceled after around " +
           "10000 milliseconds of inactivity.",
+        "method": "post",
+        "result": "error",
         "reason": "timeout",
         "status": 408,
         "statusText": "Request Timeout"
@@ -301,6 +309,8 @@
         "error": "request_timeout",
         "message": "Operation canceled after around " +
           "2 milliseconds of inactivity.",
+        "method": "post",
+        "result": "error",
         "reason": "timeout",
         "status": 408,
         "statusText": "Request Timeout"
@@ -315,6 +325,8 @@
         "error": "request_timeout",
         "message": "Operation canceled after around " +
           "50 milliseconds of inactivity.",
+        "method": "post",
+        "result": "error",
         "reason": "timeout",
         "status": 408,
         "statusText": "Request Timeout"
@@ -342,6 +354,8 @@
       deepEqual(answer, {
         "error": "internal_storage_error",
         "message": "New document id have to be specified",
+        "method": "post",
+        "result": "error",
         "reason": "invalid response",
         "status": 551,
         "statusText": "Internal Storage Error"
@@ -362,7 +376,9 @@
       deepEqual(answer, {
         "error": "internal_storage_error",
         "message": "Unknown status \"undefined\"",
+        "method": "post",
         "reason": "invalid response",
+        "result": "error",
         "status": 551,
         "statusText": "Internal Storage Error"
       }, "Invalid Post Error Response");
@@ -377,7 +393,7 @@
    */
   test('Valid Responses & Callbacks', function () {
     var clock, jio, o = {};
-    expect(7);
+    expect(8);
     clock = sinon.useFakeTimers();
 
     jio = new JIO({
@@ -393,8 +409,9 @@
       "+ valid response.";
     jio.post({}).always(function (answer) {
       deepEqual(answer, {
-        "ok": true,
         "id": "document id a",
+        "method": "post",
+        "result": "success",
         "status": 201,
         "statusText": "Created"
       }, o.message);
@@ -408,8 +425,9 @@
       "fail(function (answer) {..})";
     jio.post({}).done(function (answer) {
       deepEqual(answer, {
-        "ok": true,
         "id": "document id a",
+        "method": "post",
+        "result": "success",
         "status": 201,
         "statusText": "Created"
       }, o.message);
@@ -427,8 +445,9 @@
         return deepEqual(err, "Should not fail", o.message);
       }
       deepEqual(response, {
-        "ok": true,
         "id": "document id a",
+        "method": "post",
+        "result": "success",
         "status": 201,
         "statusText": "Created"
       }, o.message);
@@ -448,8 +467,10 @@
       deepEqual(err, {
         "status": 409,
         "statusText": "Conflict",
+        "method": "post",
         "error": "conflict",
         "reason": "unknown",
+        "result": "error",
         "message": ""
       }, o.message);
     });
@@ -460,10 +481,22 @@
     // Tests getAttachment command string response
     jio.getAttachment({"_id": "a", "_attachment": "b"}).
       always(function (answer) {
-        ok(answer instanceof Blob, "Get Attachment Command: Blob returned");
+        deepEqual(JSON.parse(JSON.stringify(answer)), {
+          "attachment": "b",
+          "data": {},
+          "id": "a",
+          "method": "getAttachment",
+          "result": "success",
+          "status": 200,
+          "statusText": "Ok"
+        });
+        ok(answer.data instanceof Blob,
+           "Get Attachment Command: Blob should be returned");
       });
     clock.tick(1);
-    fakestorage['Valid Resp/getAttachment'].success("document id a");
+    fakestorage['Valid Resp/getAttachment'].success("ok", {
+      "data": "document id a"
+    });
     clock.tick(1);
 
     // Tests notify responses
@@ -628,8 +661,11 @@
       state = "Called";
       deepEqual(answer, {
         "error": "internal_server_error",
+        "id": "a",
         "message": "",
+        "method": "get",
         "reason": "unknown",
+        "result": "error",
         "status": 500,
         "statusText": "Internal Server Error"
       }, "Error response");
@@ -669,11 +705,12 @@
     jio.get({"_id": "a"}, {"max_retry": 2, "timeout": 12}).
       always(function (answer) {
         deepEqual(answer, {
-          "_id": "a",
-          "b": "c",
-          "ok": true,
+          "id": "a",
+          "method": "get",
+          "result": "success",
           "status": 200,
-          "statusText": "Ok"
+          "statusText": "Ok",
+          "data": {"b": "c"}
         }, "Job respond");
       });
     o.job1 = {
@@ -695,7 +732,7 @@
     }, 'Job added, workspace have one job');
 
     clock.tick(1); // now: 1 ms
-    fakestorage["1 Job Manage/get"].success({"_id": "a", "b": "c"});
+    fakestorage["1 Job Manage/get"].success({"data": {"b": "c"}});
     clock.tick(1); // now: 2 ms
 
     deepEqual(workspace, {}, 'Job ended, empty workspace');
@@ -705,11 +742,12 @@
     jio.get({"_id": "b"}, {"max_retry": 2, "timeout": 12}).
       always(function (answer) {
         deepEqual(answer, {
-          "_id": "b",
-          "c": "d",
-          "ok": true,
+          "id": "b",
+          "method": "get",
+          "result": "success",
           "status": 200,
-          "statusText": "Ok"
+          "statusText": "Ok",
+          "data": {"c": "d"}
         }, "First job respond");
       });
     o.job1.kwargs._id = 'b';
@@ -721,11 +759,12 @@
       "id": "2 Job Manage"
     }).get({"_id": "c"}).always(function (answer) {
       deepEqual(answer, {
-        "_id": "c",
-        "d": "e",
-        "ok": true,
+        "id": "c",
+        "method": "get",
+        "result": "success",
         "status": 200,
-        "statusText": "Ok"
+        "statusText": "Ok",
+        "data": {"d": "e"}
       }, "Second job respond");
     });
 
@@ -754,8 +793,8 @@
         uniqueJSONStringify([o.job2])
     }, 'First Job ended, second still there');
 
-    fakestorage['1 Job Manage/get'].success({"_id": "b", "c": "d"});
-    fakestorage['2 Job Manage/get'].success({"_id": "c", "d": "e"});
+    fakestorage['1 Job Manage/get'].success({"data": {"c": "d"}});
+    fakestorage['2 Job Manage/get'].success({"data": {"d": "e"}});
 
     deepEqual(workspace, {}, 'No more job in the queue');
 
@@ -880,7 +919,8 @@
     jio.put({"_id": "a"}).always(function (answer) {
       deepEqual(answer, {
         "id": "a",
-        "ok": true,
+        "method": "put",
+        "result": "success",
         "status": 200,
         "statusText": "Ok"
       }, "First put respond");
@@ -894,7 +934,8 @@
     jio.put({"_id": "a"}).always(function (answer) {
       deepEqual(answer, {
         "id": "a",
-        "ok": true,
+        "method": "put",
+        "result": "success",
         "status": 200,
         "statusText": "Ok"
       }, "Second put respond");
@@ -926,7 +967,8 @@
     jio.put({"_id": "a"}).always(function (answer) {
       deepEqual(answer, {
         "id": "a",
-        "ok": true,
+        "method": "put",
+        "result": "success",
         "status": 200,
         "statusText": "Ok"
       }, "First put respond");
@@ -940,7 +982,8 @@
     jio.put({"_id": "a", "a": "b"}).always(function (answer) {
       deepEqual(answer, {
         "id": "a",
-        "ok": true,
+        "method": "put",
+        "result": "success",
         "status": 200,
         "statusText": "Ok"
       }, "Second put respond");
@@ -984,8 +1027,11 @@
     jio.get({"_id": "a"}).always(function (answer) {
       deepEqual(answer, {
         "error": "precondition_failed",
+        "id": "a",
         "message": "Command rejected by the job checker.",
+        "method": "get",
         "reason": "command denied",
+        "result": "error",
         "status": 412,
         "statusText": "Precondition Failed"
       }, "Get respond");
