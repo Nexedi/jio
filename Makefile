@@ -9,6 +9,7 @@ COMPLEX_MIN = complex_queries.min.js
 PARSER_PAR  = $(QUERIES_DIR)/core/parser.par
 PARSER_OUT  = $(QUERIES_DIR)/build/parser.js
 
+# npm install jscc-node
 JSCC_CMD   	= node ./node_modules/jscc-node/jscc.js -t ./node_modules/jscc-node/driver_node.js_
 
 auto: compile
