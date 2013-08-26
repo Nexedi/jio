@@ -1,5 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true, sloppy: true, regexp: true */
-/*global Deferred, inherits, constants, dictUpdate, deepClone, Blob */
+/*global Deferred, inherits, constants, dictUpdate, deepClone, Blob,
+  methodType */
 
 function IODeferred(method, info) {
   IODeferred.super_.call(this);
@@ -10,35 +11,26 @@ function IODeferred(method, info) {
 inherits(IODeferred, Deferred);
 
 IODeferred.prototype.resolve = function (a, b) {
-  if (this._method === 'getAttachment') {
-    if (typeof a === 'string') {
-      return IODeferred.super_.prototype.resolve.call(this, new Blob([a]));
-    }
-    if (a instanceof Blob) {
-      return IODeferred.super_.prototype.resolve.call(this, a);
-    }
-  }
   // resolve('ok', {"custom": "value"});
   // resolve(200, {...});
   // resolve({...});
-  var weak = {"ok": true}, strong = {};
+  var weak = {"result": "success"}, strong = {};
   if (this._method === 'post') {
     weak.status = constants.http_status.created;
     weak.statusText = constants.http_status_text.created;
   } else {
     weak.status = constants.http_status.ok;
     weak.statusText = constants.http_status_text.ok;
-    if (this._method !== 'get') {
+    if (this._info._id) {
       weak.id = this._info._id;
-    } else {
-      weak._id = this._info._id;
     }
     if (/Attachment$/.test(this._method)) {
       weak.attachment = this._info._attachment;
     }
   }
+  weak.method = this._method;
 
-  if (a !== undefined && (typeof a !== 'object' || Array.isArray(a))) {
+  if (typeof a === 'string' || (typeof a === 'number' && isFinite(a))) {
     strong.status = constants.http_status[a];
     strong.statusText = constants.http_status_text[a];
     if (strong.status === undefined ||
@@ -56,11 +48,36 @@ IODeferred.prototype.resolve = function (a, b) {
   }
   dictUpdate(weak, strong);
   strong = undefined; // free memory
-  if (this._method !== 'get' && (typeof weak.id !== 'string' || !weak.id)) {
+  if (this._method === 'post' && (typeof weak.id !== 'string' || !weak.id)) {
     return this.reject(
       'internal_storage_error',
       'invalid response',
       'New document id have to be specified'
+    );
+  }
+  if (this._method === 'getAttachment') {
+    if (typeof weak.data === 'string') {
+      weak.data = new Blob([weak.data], {
+        "type": weak.content_type || weak.mimetype
+      });
+      delete weak.content_type;
+      delete weak.mimetype;
+    }
+    if (!(weak.data instanceof Blob)) {
+      return this.reject(
+        'internal_storage_error',
+        'invalid response',
+        'getAttachment method needs a Blob as returned "data".'
+      );
+    }
+  } else if (methodType(this._method) === 'reader' &&
+             this._method !== 'check' &&
+             (typeof weak.data !== 'object' ||
+              Object.getPrototypeOf(weak.data) !== Object.prototype)) {
+    return this.reject(
+      'internal_storage_error',
+      'invalid response',
+      this._method + ' method needs a dict as returnd "data".'
     );
   }
   //return super_resolve(deepClone(weak));
@@ -71,11 +88,18 @@ IODeferred.prototype.reject = function (a, b, c, d) {
   // reject(status, reason, message, {"custom": "value"});
   // reject(status, reason, {..});
   // reject(status, {..});
-  var weak = {}, strong = {};
+  var weak = {"result": "error"}, strong = {};
   weak.status = constants.http_status.unknown;
   weak.statusText = constants.http_status_text.unknown;
   weak.message = 'Command failed';
   weak.reason = 'fail';
+  weak.method = this._method;
+  if (this._info._id) {
+    weak.id = this._info._id;
+  }
+  if (/Attachment$/.test(this._method)) {
+    weak.attachment = this._info._attachment;
+  }
 
   if (typeof a !== 'object' || Array.isArray(a)) {
     strong.status = constants.http_status[a];
