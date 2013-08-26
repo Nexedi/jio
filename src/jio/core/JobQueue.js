@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global deepClone */
+/*global deepClone, dictFilter, uniqueJSONStringify */
 
 /**
  * Tool to manipulate a list of object containing at least one property: 'id'.
@@ -7,11 +7,71 @@
  *
  * @class JobQueue
  * @constructor
- * @param  {Array} An array of object
+ * @param  {Workspace} workspace The workspace where to store
+ * @param  {String} namespace The namespace to use in the workspace
+ * @param  {Array} job_keys An array of job keys to store
+ * @param  {Array} [array] An array of object
  */
-function JobQueue(array) {
-  this._array = array;
+function JobQueue(workspace, namespace, job_keys, array) {
+  this._workspace = workspace;
+  this._namespace = namespace;
+  this._job_keys = job_keys;
+  if (Array.isArray(array)) {
+    this._array = array;
+  } else {
+    this._array = [];
+  }
 }
+
+/**
+ * Store the job queue into the workspace.
+ *
+ * @method save
+ */
+JobQueue.prototype.save = function () {
+  var i, job_queue = deepClone(this._array);
+  for (i = 0; i < job_queue.length; i += 1) {
+    dictFilter(job_queue[i], this._job_keys);
+  }
+  if (this._array.length === 0) {
+    this._workspace.removeItem(this._namespace);
+  } else {
+    this._workspace.setItem(
+      this._namespace,
+      uniqueJSONStringify(job_queue)
+    );
+  }
+  return this;
+};
+
+/**
+ * Loads the job queue from the workspace.
+ *
+ * @method load
+ */
+JobQueue.prototype.load = function () {
+  var job_list;
+  try {
+    job_list = JSON.parse(this._workspace.getItem(this._namespace));
+  } catch (ignore) {}
+  if (!Array.isArray(job_list)) {
+    job_list = [];
+  }
+  this.clear();
+  new JobQueue(job_list).repair();
+  this.update(job_list);
+  return this;
+};
+
+/**
+ * Returns the array version of the job queue
+ *
+ * @method asArray
+ * @return {Array} The job queue as array
+ */
+JobQueue.prototype.asArray = function () {
+  return this._array;
+};
 
 /**
  * Removes elements which are not objects containing at least 'id' property.

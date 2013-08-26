@@ -7,7 +7,7 @@ function enableJobRecovery(jio, shared, options) {
   // - JobQueue enabled and before this
 
   // uses
-  // - shared.job_queue JobWorkspace
+  // - shared.job_queue JobQueue
 
   function numberOrDefault(number, default_value) {
     return (typeof number === 'number' &&
