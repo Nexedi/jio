@@ -220,6 +220,10 @@ function enableJobChecker(jio, shared, options) {
       "action": "wait"
     }];
 
+    if (options.clear_job_rules === true) {
+      shared.job_rules.length = 0;
+    }
+
     if (Array.isArray(options.job_rules)) {
       for (i = 0; i < options.job_rules.length; i += 1) {
         addJobRule(deepClone(options.job_rules[i]));
