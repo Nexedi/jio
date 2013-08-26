@@ -1,8 +1,8 @@
 /*jslint indent: 2, maxlen: 80, nomen: true, sloppy: true */
 /*global EventEmitter, deepClone, inherits, exports */
 /*global enableRestAPI, enableRestParamChecker, enableJobMaker, enableJobRetry,
-  enableJobChecker, enableJobQueue, enableJobRecovery, enableJobTimeout,
-  enableJobExecuter */
+  enableJobReference, enableJobChecker, enableJobQueue, enableJobRecovery,
+  enableJobTimeout, enableJobExecuter */
 
 function JIO(storage_spec, options) {
   JIO.super_.call(this);
