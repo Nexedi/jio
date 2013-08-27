@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, window, exports, jIO, ok, module, test, expect, deepEqual,
-  sinon, FileReader, Blob, setTimeout */
+/*global define, window, exports, require, jIO, fake_storage, ok, module, test,
+  expect, deepEqual, sinon, FileReader, Blob, setTimeout, localStorage */
 
 (function (dependencies, module) {
   "use strict";
@@ -8,89 +8,12 @@
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    return module(exports, jIO);
+    return module(require('fakestorage'), require('jio'));
   }
-  window.jio_tests = {};
-  module(window.jio_tests, jIO);
-}(['exports', 'jio', 'sinon_qunit'], function (exports, jIO) {
+  module(fake_storage, jIO);
+}(['fakestorage', 'jio', 'sinon_qunit'], function (fake_storage, jIO) {
   "use strict";
-  var JIO = jIO.JIO, fakestorage = {};
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Fake Storage
-
-  function FakeStorage(spec) {
-    this._id = spec.id;
-    if (typeof this._id !== 'string' || this._id.length <= 0) {
-      throw new TypeError(
-        "Initialization error: wrong id"
-      );
-    }
-  }
-
-  FakeStorage.createNamespace = function (
-    that,
-    method,
-    command,
-    param,
-    options
-  ) {
-    fakestorage[that._id + '/' + method] = {
-      param: param,
-      options: options,
-      success: function () {
-        var res = command.success.apply(command, arguments);
-        delete fakestorage[that._id + '/' + method];
-        return res;
-      },
-      error: function () {
-        var res = command.error.apply(command, arguments);
-        delete fakestorage[that._id + '/' + method];
-        return res;
-      },
-      retry: function () {
-        var res = command.retry.apply(command, arguments);
-        delete fakestorage[that._id + '/' + method];
-        return res;
-      },
-      notify: function () {
-        return command.notify.apply(command, arguments);
-      },
-      storage: function () {
-        return command.storage.apply(command, arguments);
-      },
-      end: function () {
-        return command.end.apply(command, arguments);
-      },
-      commit: function () {
-        return command.commit.apply(command, arguments);
-      },
-      free: function () {
-        delete fakestorage[that._id + '/' + method];
-      }
-    };
-  };
-
-  FakeStorage.makeMethod = function (method) {
-    return function (command, param, options) {
-      FakeStorage.createNamespace(this, method, command, param, options);
-    };
-  };
-
-  FakeStorage.prototype.post = FakeStorage.makeMethod('post');
-  FakeStorage.prototype.put = FakeStorage.makeMethod('put');
-  FakeStorage.prototype.get = FakeStorage.makeMethod('get');
-  FakeStorage.prototype.remove = FakeStorage.makeMethod('remove');
-  FakeStorage.prototype.putAttachment = FakeStorage.makeMethod('putAttachment');
-  FakeStorage.prototype.getAttachment = FakeStorage.makeMethod('getAttachment');
-  FakeStorage.prototype.removeAttachment =
-    FakeStorage.makeMethod('removeAttachment');
-  FakeStorage.prototype.check = FakeStorage.makeMethod('check');
-  FakeStorage.prototype.repair = FakeStorage.makeMethod('repair');
-  FakeStorage.prototype.allDocs = FakeStorage.makeMethod('allDocs');
-
-  jIO.addStorage('fake', FakeStorage);
-  exports.fakestorage = fakestorage;
+  var JIO = jIO.JIO, commands = fake_storage.commands;
 
   //////////////////////////////////////////////////////////////////////////////
   // Tests
@@ -167,15 +90,15 @@
     });
     count += 1;
     deepEqual(count, 1, "JIO post");
-    ok(!fakestorage['Asynchrony/post'], "Command not called yet");
+    ok(!commands['Asynchrony/post'], "Command not called yet");
     clock.tick(1);
     count += 1;
     deepEqual(count, 2, "Next instructions");
-    ok(fakestorage['Asynchrony/post'], "Command called");
-    fakestorage['Asynchrony/post'].notify();
+    ok(commands['Asynchrony/post'], "Command called");
+    commands['Asynchrony/post'].notify();
     count += 1;
     deepEqual(count, 4, "Next timer");
-    fakestorage['Asynchrony/post'].success({"id": "a"});
+    commands['Asynchrony/post'].success({"id": "a"});
     count += 1;
     deepEqual(count, 5, "Command success requested");
     clock.tick(1);
@@ -263,7 +186,7 @@
     });
     clock.tick(1);
     clock.tick(10000); // wait 10 seconds
-    fakestorage['1 No Respons/post'].free();
+    commands['1 No Respons/post'].free();
 
     jio = new JIO({
       "type": "fake",
@@ -289,11 +212,11 @@
     });
     clock.tick(1);
     clock.tick(4999); // wait 5 seconds
-    fakestorage['2 No Respons/post'].notify();
+    commands['2 No Respons/post'].notify();
     clock.tick(5000); // wait 5 seconds
     deepEqual(state, "Not called yet", "Check callback state.");
     clock.tick(5000); // wait 5 seconds
-    fakestorage['2 No Respons/post'].free();
+    commands['2 No Respons/post'].free();
 
     jio = new JIO({
       "type": "fake",
@@ -362,7 +285,7 @@
       }, "Invalid Post Response");
     });
     clock.tick(1);
-    fakestorage['1 Invalid Re/post'].success();
+    commands['1 Invalid Re/post'].success();
     clock.tick(1);
 
     jio = new JIO({
@@ -384,7 +307,7 @@
       }, "Invalid Post Error Response");
     });
     clock.tick(1);
-    fakestorage['2 Invalid Re/post'].error();
+    commands['2 Invalid Re/post'].error();
     clock.tick(1);
   });
 
@@ -420,7 +343,7 @@
       }, o.message);
     });
     clock.tick(1);
-    fakestorage['Valid Resp/post'].success({"id": "document id a"});
+    commands['Valid Resp/post'].success({"id": "document id a"});
     clock.tick(1);
 
     // Tests post command callbacks post(metadata).done(onSuccess).fail(onError)
@@ -438,7 +361,7 @@
       deepEqual(answer, "Should not fail", o.message);
     });
     clock.tick(1);
-    fakestorage['Valid Resp/post'].success({"id": "document id a"});
+    commands['Valid Resp/post'].success({"id": "document id a"});
     clock.tick(1);
 
     // Tests post command callbacks post(metadata, onResponse)
@@ -456,7 +379,7 @@
       }, o.message);
     });
     clock.tick(1);
-    fakestorage['Valid Resp/post'].success({"id": "document id a"});
+    commands['Valid Resp/post'].success({"id": "document id a"});
     clock.tick(1);
 
     // Tests post command callbacks post(metadata, onSuccess, onError) + error
@@ -478,7 +401,7 @@
       }, o.message);
     });
     clock.tick(1);
-    fakestorage['Valid Resp/post'].error('conflict');
+    commands['Valid Resp/post'].error('conflict');
     clock.tick(1);
 
     // Tests getAttachment command string response
@@ -497,7 +420,7 @@
         });
       });
     clock.tick(1);
-    fakestorage['Valid Resp/getAttachment'].success("ok", {
+    commands['Valid Resp/getAttachment'].success("ok", {
       "data": "document id a"
     });
     clock.tick(1);
@@ -510,13 +433,13 @@
     });
     clock.tick(1);
     o.answer = undefined;
-    fakestorage['Valid Resp/post'].notify();
+    commands['Valid Resp/post'].notify();
     o.answer = 'hoo';
-    fakestorage['Valid Resp/post'].notify(o.answer);
+    commands['Valid Resp/post'].notify(o.answer);
     o.answer = 'Forbidden!!!';
     o.message = 'Notification forbidden after success';
-    setTimeout(fakestorage['Valid Resp/post'].notify, 2);
-    fakestorage['Valid Resp/post'].success();
+    setTimeout(commands['Valid Resp/post'].notify, 2);
+    commands['Valid Resp/post'].success();
     clock.tick(2);
 
   });
@@ -571,45 +494,45 @@
     jio.post(o.request);
     clock.tick(1);
     deepEqual(
-      fakestorage["Metadata v/post"].param,
+      commands["Metadata v/post"].param,
       o.response,
       "Post"
     );
-    fakestorage["Metadata v/post"].success();
+    commands["Metadata v/post"].success();
     clock.tick(1);
 
     o.request._id = 'a';
     o.response._id = 'a';
     jio.put(o.request);
     clock.tick(1);
-    deepEqual(fakestorage["Metadata v/put"].param, o.response, "Put");
-    fakestorage["Metadata v/put"].success();
+    deepEqual(commands["Metadata v/put"].param, o.response, "Put");
+    commands["Metadata v/put"].success();
     clock.tick(1);
 
     jio.get({
       "_id": "a"
     });
     clock.tick(1);
-    deepEqual(fakestorage["Metadata v/get"].param, {
+    deepEqual(commands["Metadata v/get"].param, {
       "_id": "a"
     }, "Get");
-    fakestorage["Metadata v/get"].success();
+    commands["Metadata v/get"].success();
     clock.tick(1);
 
     jio.remove({
       "_id": "a"
     });
     clock.tick(1);
-    deepEqual(fakestorage["Metadata v/remove"].param, {
+    deepEqual(commands["Metadata v/remove"].param, {
       "_id": "a"
     }, "Remove");
-    fakestorage["Metadata v/remove"].success();
+    commands["Metadata v/remove"].success();
     clock.tick(1);
 
     jio.allDocs();
     clock.tick(1);
-    deepEqual(fakestorage["Metadata v/allDocs"].param, {}, "AllDocs");
-    fakestorage["Metadata v/allDocs"].success();
+    deepEqual(commands["Metadata v/allDocs"].param, {}, "AllDocs");
+    commands["Metadata v/allDocs"].success();
     clock.tick(1);
 
     o.request = {
@@ -620,13 +543,13 @@
     };
     jio.putAttachment(o.request);
     clock.tick(1);
-    ok(fakestorage["Metadata v/putAttachment"].param._blob instanceof Blob,
+    ok(commands["Metadata v/putAttachment"].param._blob instanceof Blob,
        "Put Attachment + check blob");
     deepEqual([
-      fakestorage["Metadata v/putAttachment"].param._id,
-      fakestorage["Metadata v/putAttachment"].param._attachment
+      commands["Metadata v/putAttachment"].param._id,
+      commands["Metadata v/putAttachment"].param._attachment
     ], ["a", "body"], "Put Attachment + check ids");
-    fakestorage["Metadata v/putAttachment"].success();
+    commands["Metadata v/putAttachment"].success();
     clock.tick(1);
 
     o.request._blob = new Blob(['d'], {"type": "e"});
@@ -634,13 +557,13 @@
     delete o.request._data;
     jio.putAttachment(o.request);
     clock.tick(1);
-    ok(fakestorage["Metadata v/putAttachment"].param._blob === o.request._blob,
+    ok(commands["Metadata v/putAttachment"].param._blob === o.request._blob,
        "Put Attachment with blob + check blob");
     deepEqual([
-      fakestorage["Metadata v/putAttachment"].param._id,
-      fakestorage["Metadata v/putAttachment"].param._attachment
+      commands["Metadata v/putAttachment"].param._id,
+      commands["Metadata v/putAttachment"].param._attachment
     ], ["a", "body"], "Put Attachment with blob + check ids");
-    fakestorage["Metadata v/putAttachment"].success();
+    commands["Metadata v/putAttachment"].success();
     clock.tick(1);
   });
 
@@ -674,17 +597,17 @@
       }, "Error response");
     });
     clock.tick(1);
-    fakestorage['1 Job Retry/get'].retry('internal_server_error');
+    commands['1 Job Retry/get'].retry('internal_server_error');
     clock.tick(1);
     deepEqual(state, "Not called yet", "Check callback state.");
 
     clock.tick(1999);
-    fakestorage['1 Job Retry/get'].retry('internal_server_error');
+    commands['1 Job Retry/get'].retry('internal_server_error');
     clock.tick(1);
     deepEqual(state, "Not called yet", "Check callback state.");
 
     clock.tick(3999);
-    fakestorage['1 Job Retry/get'].retry('internal_server_error');
+    commands['1 Job Retry/get'].retry('internal_server_error');
     clock.tick(1);
     deepEqual(state, "Called", "Check callback state.");
   });
@@ -735,7 +658,7 @@
     }, 'Job added, workspace have one job');
 
     clock.tick(1); // now: 1 ms
-    fakestorage["1 Job Manage/get"].success({"data": {"b": "c"}});
+    commands["1 Job Manage/get"].success({"data": {"b": "c"}});
     clock.tick(1); // now: 2 ms
 
     deepEqual(workspace, {}, 'Job ended, empty workspace');
@@ -757,7 +680,7 @@
     o.job1.created = new Date();
     o.job1.modified = new Date();
     clock.tick(1); // now: 3 ms
-    fakestorage["1 Job Manage/get"].storage({
+    commands["1 Job Manage/get"].storage({
       "type": "fake",
       "id": "2 Job Manage"
     }).get({"_id": "c"}).always(function (answer) {
@@ -790,14 +713,14 @@
     }, 'Job calls another job, workspace have two jobs');
 
     clock.tick(1);
-    fakestorage['1 Job Manage/get'].end();
+    commands['1 Job Manage/get'].end();
     deepEqual(workspace, {
       "jio/jobs/{\"id\":\"1 Job Manage\",\"type\":\"fake\"}": jIO.util.
         uniqueJSONStringify([o.job2])
     }, 'First Job ended, second still there');
 
-    fakestorage['1 Job Manage/get'].success({"data": {"c": "d"}});
-    fakestorage['2 Job Manage/get'].success({"data": {"d": "e"}});
+    commands['1 Job Manage/get'].success({"data": {"c": "d"}});
+    commands['2 Job Manage/get'].success({"data": {"d": "e"}});
 
     deepEqual(workspace, {}, 'No more job in the queue');
 
@@ -830,7 +753,7 @@
     // copy workspace when job is running
     workspace = jIO.util.deepClone(workspace);
     clock.tick(1); // now: 1 ms
-    fakestorage['Job Recove/post'].success({"id": "a"});
+    commands['Job Recove/post'].success({"id": "a"});
 
     // create instance with copied workspace
     jio = new JIO({
@@ -841,16 +764,16 @@
     });
 
     clock.tick(19998); // now: 19999 ms
-    if (fakestorage['Job Recove/post']) {
+    if (commands['Job Recove/post']) {
       ok(false, "Command called, job recovered to earlier");
     }
     clock.tick(1); // now: 20000 ms
-    if (!fakestorage['Job Recove/post']) {
+    if (!commands['Job Recove/post']) {
       ok(false, "Command not called, job recovery failed");
     } else {
       ok(true, "Command called, job recovery ok");
     }
-    fakestorage['Job Recove/post'].success({"id": "a"});
+    commands['Job Recove/post'].success({"id": "a"});
     clock.tick(1); // now: 20001 ms
 
     deepEqual(workspace, {}, 'No more job in the queue');
@@ -872,10 +795,10 @@
     jio.post({});
     clock.tick(1); // now: 1 ms
     // copy workspace when job is waiting
-    fakestorage['Job Recove/post'].retry();
+    commands['Job Recove/post'].retry();
     workspace = jIO.util.deepClone(workspace);
     clock.tick(2000); // now: 2001 ms
-    fakestorage['Job Recove/post'].success({"id": "a"});
+    commands['Job Recove/post'].success({"id": "a"});
 
     // create instance with copied workspace
     jio = new JIO({
@@ -886,16 +809,16 @@
     });
 
     clock.tick(17999); // now: 20000 ms
-    if (fakestorage['Job Recove/post']) {
+    if (commands['Job Recove/post']) {
       ok(false, "Command called, job recovered to earlier");
     }
     clock.tick(1); // now: 20001 ms
-    if (!fakestorage['Job Recove/post']) {
+    if (!commands['Job Recove/post']) {
       ok(false, "Command not called, job recovery failed");
     } else {
       ok(true, "Command called, job recovery ok");
     }
-    fakestorage['Job Recove/post'].success({"id": "a"});
+    commands['Job Recove/post'].success({"id": "a"});
     clock.tick(1); // now: 20002 ms
 
     deepEqual(workspace, {}, 'No more job in the queue');
@@ -930,7 +853,7 @@
     });
 
     clock.tick(1);
-    o.first_put_command = fakestorage["Job Update/put"];
+    o.first_put_command = commands["Job Update/put"];
     ok(o.first_put_command, "First command called");
     o.first_put_command.free();
 
@@ -945,7 +868,7 @@
     });
 
     clock.tick(1);
-    ok(fakestorage['Job Update/put'] === undefined,
+    ok(commands['Job Update/put'] === undefined,
        'Second command not called');
     o.first_put_command.success();
     clock.tick(1);
@@ -978,7 +901,7 @@
     });
 
     clock.tick(1);
-    o.first_put_command = fakestorage["Job Wait/put"];
+    o.first_put_command = commands["Job Wait/put"];
     ok(o.first_put_command, "First command called");
     o.first_put_command.free();
 
@@ -993,12 +916,12 @@
     });
 
     clock.tick(1);
-    ok(fakestorage['Job Wait/put'] === undefined,
+    ok(commands['Job Wait/put'] === undefined,
        'Second command not called yet');
     o.first_put_command.success();
     clock.tick(1);
-    ok(fakestorage['Job Wait/put'], 'Second command called');
-    fakestorage['Job Wait/put'].success();
+    ok(commands['Job Wait/put'], 'Second command called');
+    commands['Job Wait/put'].success();
     clock.tick(1);
 
     deepEqual(o.workspace, {}, 'No job in the queue');
