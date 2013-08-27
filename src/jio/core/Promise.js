@@ -358,13 +358,18 @@ Promise.prototype.defer = function (callback) {
   function createSolver() {
     return {
       "resolve": function () {
+        var array;
         if (that._state !== "resolved" && that._state !== "rejected") {
           that._state = "resolved";
           that._answers = arguments;
-          that._onResolve.forEach(function (callback) {
-            setTimeout(function () {
-              callback.apply(that, that._answers);
-            });
+          array = that._onResolve.slice();
+          setTimeout(function () {
+            var i;
+            for (i = 0; i < array.length; i += 1) {
+              try {
+                array[i].apply(that, that._answers);
+              } catch (ignore) {}
+            }
           });
           // free the memory
           that._onResolve = undefined;
@@ -373,13 +378,18 @@ Promise.prototype.defer = function (callback) {
         }
       },
       "reject": function () {
+        var array;
         if (that._state !== "resolved" && that._state !== "rejected") {
           that._state = "rejected";
           that._answers = arguments;
-          that._onReject.forEach(function (callback) {
-            setTimeout(function () {
-              callback.apply(that, that._answers);
-            });
+          array = that._onReject.slice();
+          setTimeout(function () {
+            var i;
+            for (i = 0; i < array.length; i += 1) {
+              try {
+                array[i].apply(that, that._answers);
+              } catch (ignore) {}
+            }
           });
           // free the memory
           that._onResolve = undefined;
@@ -389,19 +399,19 @@ Promise.prototype.defer = function (callback) {
       },
       "notify": function () {
         if (that._onProgress) {
-          var answers = arguments;
-          that._onProgress.forEach(function (callback) {
-            callback.apply(that, answers);
-          });
+          var i;
+          for (i = 0; i < that._onProgress.length; i += 1) {
+            try {
+              that._onProgress[i].apply(that, arguments);
+            } catch (ignore) {}
+          }
         }
       }
     };
   }
   this._state = "running";
   if (typeof callback === 'function') {
-    setTimeout(function () {
-      callback(createSolver());
-    });
+    callback(createSolver());
     return this;
   }
   return createSolver();
