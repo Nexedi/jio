@@ -311,6 +311,9 @@ function makeBlobDigest(blob) {
   fr.onerror = function () {
     deferred.reject();        // XXX
   };
+  fr.onprogress = function () {
+    deferred.notify();        // XXX
+  };
   fr.readAsBinaryString(blob);
   return deferred.promise();
 }
@@ -328,6 +331,9 @@ function blobAsBinaryString(blob) {
   };
   fr.onerror = function () {
     deferred.reject();        // XXX
+  };
+  fr.onprogress = function () {
+    deferred.notify();        // XXX
   };
   fr.readAsBinaryString(blob);
   return deferred.promise();
