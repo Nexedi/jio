@@ -440,53 +440,79 @@ Promise.prototype.defer = function (callback) {
  * @return {Promise} The new promise
  */
 Promise.prototype.then = function (onSuccess, onError, onProgress) {
-  var next = new Promise(), that = this;
+  var next = new Promise(), that = this, resolver = next.defer();
   switch (this._state) {
   case "resolved":
     if (typeof onSuccess === 'function') {
-      next.defer(function (resolver) {
+      setTimeout(function () {
         try {
-          resolver.resolve(onSuccess.apply(that, that._answers));
+          Promise.when(
+            onSuccess.apply(that, that._answers),
+            resolver.resolve,
+            resolver.reject
+          );
         } catch (e) {
           resolver.reject(e);
         }
+      });
+    } else {
+      setTimeout(function () {
+        resolver.resolve();
       });
     }
     break;
   case "rejected":
     if (typeof onError === 'function') {
-      next.defer(function (resolver) {
+      setTimeout(function () {
         try {
-          resolver.resolve(onError.apply(that, that._answers));
+          Promise.when(
+            onError.apply(that, that._answers),
+            resolver.reject,
+            resolver.reject
+          );
         } catch (e) {
           resolver.reject(e);
         }
+      });
+    } else {
+      setTimeout(function () {
+        resolver.reject.apply(resolver, that._answers);
       });
     }
     break;
   default:
     if (typeof onSuccess === 'function') {
       this._onResolve.push(function () {
-        var answers = arguments;
-        next.defer(function (resolver) {
-          try {
-            resolver.resolve(onSuccess.apply(that, answers));
-          } catch (e) {
-            resolver.reject(e);
-          }
-        });
+        try {
+          Promise.when(
+            onSuccess.apply(that, arguments),
+            resolver.resolve,
+            resolver.reject
+          );
+        } catch (e) {
+          resolver.reject(e);
+        }
+      });
+    } else {
+      this._onResolve.push(function () {
+        resolver.resolve();
       });
     }
     if (typeof onError === 'function') {
       this._onReject.push(function () {
-        var answers = arguments;
-        next.defer(function (resolver) {
-          try {
-            resolver.resolve(onError.apply(that, answers));
-          } catch (e) {
-            resolver.reject(e);
-          }
-        });
+        try {
+          Promise.when(
+            onError.apply(that, that._answers),
+            resolver.reject,
+            resolver.reject
+          );
+        } catch (e) {
+          resolver.reject(e);
+        }
+      });
+    } else {
+      this._onReject.push(function () {
+        resolver.reject.apply(resolver, that._answers);
       });
     }
     if (typeof onProgress === 'function') {
@@ -550,7 +576,9 @@ Promise.prototype.done = function (callback) {
   switch (this._state) {
   case "resolved":
     setTimeout(function () {
-      callback.apply(that, that._answers);
+      try {
+        callback.apply(that, that._answers);
+      } catch (ignore) {}
     });
     break;
   case "rejected":
@@ -583,7 +611,9 @@ Promise.prototype.fail = function (callback) {
   switch (this._state) {
   case "rejected":
     setTimeout(function () {
-      callback.apply(that, that._answers);
+      try {
+        callback.apply(that, that._answers);
+      } catch (ignore) {}
     });
     break;
   case "resolved":
@@ -646,7 +676,9 @@ Promise.prototype.always = function (callback) {
   case "resolved":
   case "rejected":
     setTimeout(function () {
-      callback.apply(that, that._answers);
+      try {
+        callback.apply(that, that._answers);
+      } catch (ignore) {}
     });
     break;
   default:
