@@ -393,7 +393,7 @@
    */
   test('Valid Responses & Callbacks', function () {
     var clock, jio, o = {};
-    expect(8);
+    expect(9);
     clock = sinon.useFakeTimers();
 
     jio = new JIO({
@@ -407,7 +407,10 @@
     // valid response.
     o.message = "Post Command: post(metadata).always(function (answer) {..}) " +
       "+ valid response.";
-    jio.post({}).always(function (answer) {
+    jio.post({}).done(function () {
+      o.called = 'done';
+    }).always(function (answer) {
+      ok(o.called === 'done', "Done callback called first");
       deepEqual(answer, {
         "id": "document id a",
         "method": "post",
