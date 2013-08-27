@@ -49,6 +49,26 @@ Promise.when = function (item, onSuccess, onError, onProgress) {
   return p;
 };
 
+/**
+ * error(value, [onError]): Promise
+ *
+ * Return value as first parameter of the promise answer. The method returns a
+ * rejected promise.
+ *
+ *     Promise.error('a').then(null, console.log); // shows 'a'
+ *
+ * @method error
+ * @static
+ * @param  {Any} value The value to use
+ * @param  {Function} [onError] the callback called on error
+ * @return {Promise} The promise
+ */
+Promise.error = function (value, onError) {
+  var p = new Promise().fail(onError);
+  p.defer().reject(value);
+  return p;
+};
+
 ////////////////////////////////////////////////////////////
 // http://wiki.commonjs.org/wiki/Promises/B
 // get(object, name)
