@@ -481,17 +481,17 @@
     // Tests getAttachment command string response
     jio.getAttachment({"_id": "a", "_attachment": "b"}).
       always(function (answer) {
+        ok(answer.data instanceof Blob,
+           "Get Attachment Command: Blob should be returned");
+        delete answer.data;
         deepEqual(JSON.parse(JSON.stringify(answer)), {
           "attachment": "b",
-          "data": {},
           "id": "a",
           "method": "getAttachment",
           "result": "success",
           "status": 200,
           "statusText": "Ok"
         });
-        ok(answer.data instanceof Blob,
-           "Get Attachment Command: Blob should be returned");
       });
     clock.tick(1);
     fakestorage['Valid Resp/getAttachment'].success("ok", {
