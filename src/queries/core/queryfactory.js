@@ -1,9 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global _export: true, ComplexQuery: true, SimpleQuery: true, Query: true,
-  parseStringToObject: true */
-
-
-var query_class_dict = {};
+/*global _export, ComplexQuery, SimpleQuery, Query, parseStringToObject,
+  query_class_dict */
 
 /**
  * Provides static methods to create Query object
