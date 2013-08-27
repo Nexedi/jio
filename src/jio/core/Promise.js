@@ -140,13 +140,13 @@ Promise.put = function (dict, property, value) {
  * @return {Promise} The promise
  */
 Promise.execute = function (callback) {
-  return new Promise().defer(function (solver) {
-    try {
-      solver.resolve(callback());
-    } catch (e) {
-      solver.reject(e);
-    }
-  });
+  var p = new Promise(), solver = p.defer();
+  try {
+    Promise.when(callback(), solver.resolve, solver.reject);
+  } catch (e) {
+    solver.reject(e);
+  }
+  return p;
 };
 
 /**
@@ -164,7 +164,7 @@ Promise.execute = function (callback) {
  * @return {Promise} The promise
  */
 Promise.all = function (items) {
-  var array = [], count = 0, next = new Promise(), solver;
+  var array = [], count = 0, next = new Promise(), solver, i;
   solver = next.defer();
   function succeed(i) {
     return function (answer) {
@@ -176,9 +176,9 @@ Promise.all = function (items) {
       return solver.resolve(array);
     };
   }
-  items.forEach(function (item, i) {
-    Promise.when(item).done(succeed(i)).fail(succeed(i));
-  });
+  for (i = 0; i < items.length; i += 1) {
+    Promise.when(items[i], succeed(i), succeed(i));
+  }
   return next;
 };
 
@@ -201,14 +201,14 @@ Promise.allOrNone = function (items) {
   var array = [], count = 0, next = new Promise(), solver;
   solver = next.defer();
   items.forEach(function (item, i) {
-    Promise.when(item).done(function (answer) {
+    Promise.when(item, function (answer) {
       array[i] = answer;
       count += 1;
       if (count !== items.length) {
         return;
       }
       return solver.resolve(array);
-    }).fail(function (answer) {
+    }, function (answer) {
       return solver.reject(answer);
     });
   });
@@ -230,18 +230,17 @@ Promise.allOrNone = function (items) {
  * @return {Promise} The promise
  */
 Promise.any = function (items) {
-  var count = 0, next = new Promise(), solver;
+  var count = 0, next = new Promise(), solver, i;
   solver = next.defer();
-  items.forEach(function (item) {
-    Promise.when(item).done(function (answer) {
-      return solver.resolve(answer);
-    }).fail(function (answer) {
-      count += 1;
-      if (count === items.length) {
-        return solver.reject(answer);
-      }
-    });
-  });
+  function onError(answer) {
+    count += 1;
+    if (count === items.length) {
+      solver.reject(answer);
+    }
+  }
+  for (i = 0; i < items.length; i += 1) {
+    Promise.when(items[i], solver.resolve, onError);
+  }
   return next;
 };
 
@@ -259,10 +258,10 @@ Promise.any = function (items) {
  * @return {Promise} The promise
  */
 Promise.first = function (items) { // *promises
-  var next = new Promise(), solver = next.defer();
-  items.forEach(function (item) {
-    Promise.when(item).done(solver.resolve).fail(solver.reject);
-  });
+  var next = new Promise(), solver = next.defer(), i;
+  for (i = 0; i < items.length; i += 1) {
+    Promise.when(items[i], solver.resolve, solver.reject);
+  }
   return next;
 };
 
@@ -325,10 +324,10 @@ Promise.timeout = function (item, timeout) {
   i = setTimeout(function () {
     solver.reject.apply(next, [new Error("Timeout")]);
   }, timeout);
-  Promise.when(item).done(function () {
+  Promise.when(item, function () {
     clearTimeout(i);
     solver.resolve.apply(next, arguments);
-  }).fail(function () {
+  }, function () {
     clearTimeout(i);
     solver.reject.apply(next, arguments);
   });
