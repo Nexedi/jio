@@ -65,6 +65,8 @@ module.exports = function (grunt) {
           'src/queries/parser-begin.js',
           'src/queries/build/parser.js',
           'src/queries/parser-end.js',
+          'src/queries/core/globals.js',
+          'src/queries/core/tools.js',
           'src/queries/core/**/*.js',
           'src/queries/end.js'
         ],
