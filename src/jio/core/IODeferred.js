@@ -77,7 +77,7 @@ IODeferred.prototype.resolve = function (a, b) {
     return this.reject(
       'internal_storage_error',
       'invalid response',
-      this._method + ' method needs a dict as returnd "data".'
+      this._method + ' method needs a dict as returned "data".'
     );
   }
   //return super_resolve(deepClone(weak));
