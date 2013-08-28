@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, exports, window, jIO */
+/*global define, exports, window, require, jIO */
 
 (function (dependencies, module) {
   "use strict";
@@ -7,13 +7,13 @@
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    module(exports);
+    module(exports, require('jio'));
   }
   if (typeof window === 'object') {
     window.fake_storage = {};
-    module(window.fake_storage);
+    module(window.fake_storage, jIO);
   }
-}(['exports'], function (exports) {
+}(['exports', 'jio'], function (exports, jIO) {
   "use strict";
 
   var fakestorage = {};
