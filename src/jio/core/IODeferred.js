@@ -58,7 +58,7 @@ IODeferred.prototype.resolve = function (a, b) {
   if (this._method === 'getAttachment') {
     if (typeof weak.data === 'string') {
       weak.data = new Blob([weak.data], {
-        "type": weak.content_type || weak.mimetype
+        "type": weak.content_type || weak.mimetype || ""
       });
       delete weak.content_type;
       delete weak.mimetype;
