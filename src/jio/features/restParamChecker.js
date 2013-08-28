@@ -75,7 +75,7 @@ function enableRestParamChecker(jio, shared) {
     if (!(param.kwargs._blob instanceof Blob) &&
         typeof param.kwargs._data === 'string') {
       param.kwargs._blob = new Blob([param.kwargs._data], {
-        "type": param.kwargs._content_type || param.kwargs._mimetype
+        "type": param.kwargs._content_type || param.kwargs._mimetype || ""
       });
       delete param.kwargs._data;
       delete param.kwargs._mimetype;
