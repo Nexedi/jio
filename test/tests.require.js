@@ -9,6 +9,9 @@
       "jio":         "../jio",
       "jio_tests":   "jio/tests",
 
+      "test_util":   "jio/util",
+      "fakestorage": "jio/fakestorage",
+
       "qunit":       "../lib/qunit/qunit",
       "sinon":       "../lib/sinon/sinon",
       "sinon_qunit": "../lib/sinon/sinon-qunit"
