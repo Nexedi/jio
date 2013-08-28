@@ -386,6 +386,7 @@
    */
   LocalStorage.prototype.allDocs = function (command, param, options) {
     var i, row, path_re, rows, document_list, document_object;
+    param.unused = true;
     rows = [];
     document_list = [];
     path_re = new RegExp(

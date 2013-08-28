@@ -243,7 +243,7 @@
           "result": "error",
           "status": 404,
           "statusText": "Not Found"
-        }, "GetAttachment from inexistent document")
+        }, "GetAttachment from inexistent document");
 
       }),
 
@@ -268,7 +268,7 @@
           "result": "error",
           "status": 404,
           "statusText": "Not Found"
-        }, "Get inexistent attachment")
+        }, "Get inexistent attachment");
 
       }),
 
@@ -563,7 +563,8 @@
               "_attachments": {
                 "aa": {
                   "content_type": "",
-                  "digest": "sha256-9834876dcfb05cb167a5c24953eba58c4ac89b1adf57f28f2f9d09af107ee8f0",
+                  "digest": "sha256-9834876dcfb05cb167a5c24953eba58c4" +
+                    "ac89b1adf57f28f2f9d09af107ee8f0",
                   "length": 3
                 }
               },
