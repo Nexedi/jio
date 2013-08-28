@@ -615,7 +615,7 @@
       // use a query
       return jio.allDocs({
         "query": "title: \"two\"",
-        "sort_on": [["title", "ascending"]]
+        "sort_on": [["date", "descending"]]
       });
 
     }).always(function (answer) {
