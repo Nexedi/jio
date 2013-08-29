@@ -13,6 +13,10 @@
       "test_util":   "jio/util",
       "fakestorage": "jio/fakestorage",
 
+      "complex_queries":    "../complex_queries",
+      "localstorage":       "../src/jio.storage/localstorage",
+      "localstorage_tests": "jio.storage/localstorage.tests",
+
       "qunit":       "../lib/qunit/qunit",
       "sinon":       "../lib/sinon/sinon",
       "sinon_qunit": "../lib/sinon/sinon-qunit"
@@ -25,6 +29,7 @@
 
   require([
     "sinon_qunit",
-    "jio_tests"
+    "jio_tests",
+    "localstorage_tests"
   ]);
 }());
