@@ -303,22 +303,6 @@ function uniqueJSONStringify(value, replacer) {
 }
 exports.util.uniqueJSONStringify = uniqueJSONStringify;
 
-function makeBlobDigest(blob) {
-  var deferred = new Deferred(), fr = new FileReader();
-  fr.onload = function () {
-    deferred.resolve('sha256-' + hex_sha256(fr.result));
-  };
-  fr.onerror = function () {
-    deferred.reject();        // XXX
-  };
-  fr.onprogress = function () {
-    deferred.notify();        // XXX
-  };
-  fr.readAsBinaryString(blob);
-  return deferred.promise();
-}
-exports.util.makeBlobDigest = makeBlobDigest;
-
 function makeBinaryStringDigest(string) {
   return 'sha256-' + hex_sha256(string);
 }
