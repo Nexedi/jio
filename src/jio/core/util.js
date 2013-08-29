@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, nomen: true, sloppy: true */
-/*global exports, Blob, FileReader, Deferred, hex_sha256 */
+/*global exports, Blob, FileReader, Deferred, hex_sha256, XMLHttpRequest */
 
 /**
  * Do not exports these tools unless they are not writable, not configurable.
@@ -317,6 +317,31 @@ function readBlobAsBinaryString(blob) {
   return deferred.promise();
 }
 exports.util.readBlobAsBinaryString = readBlobAsBinaryString;
+
+/**
+ * Send request with XHR and return a promise.
+ *
+ * @param  {String} method The request method
+ * @param  {String} url The url
+ * @param  {Any} [data] The data to send
+ * @param  {Function} [before_send] A function called just before send request.
+ *                    The first parameter of this function is the XHR object.
+ * @return {Promise} The promise
+ */
+function ajax(method, url, data, before_send) {
+  var xhr = new XMLHttpRequest(), deferred = new Deferred();
+  xhr.open(method, url, true);
+  xhr.responseType = "blob";
+  xhr.onload = deferred.resolve.bind(deferred);
+  xhr.onerror = deferred.reject.bind(deferred);
+  xhr.onprogress = deferred.notify.bind(deferred);
+  if (typeof before_send === 'function') {
+    before_send(xhr);
+  }
+  xhr.send(data);
+  return deferred.promise();
+}
+exports.util.ajax = ajax;
 
 /**
  * Acts like `Array.prototype.concat` but does not create a copy of the original
