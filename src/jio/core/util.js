@@ -324,21 +324,15 @@ function makeBinaryStringDigest(string) {
 }
 exports.util.makeBinaryStringDigest = makeBinaryStringDigest;
 
-function blobAsBinaryString(blob) {
+function readBlobAsBinaryString(blob) {
   var deferred = new Deferred(), fr = new FileReader();
-  fr.onload = function () {
-    deferred.resolve(fr.result);
-  };
-  fr.onerror = function () {
-    deferred.reject();        // XXX
-  };
-  fr.onprogress = function () {
-    deferred.notify();        // XXX
-  };
+  fr.onload = deferred.resolve.bind(deferred);
+  fr.onerror = deferred.reject.bind(deferred);
+  fr.onprogress = deferred.notify.bind(deferred);
   fr.readAsBinaryString(blob);
   return deferred.promise();
 }
-exports.util.blobAsBinaryString = blobAsBinaryString;
+exports.util.readBlobAsBinaryString = readBlobAsBinaryString;
 
 /**
  * Acts like `Array.prototype.concat` but does not create a copy of the original
