@@ -23,6 +23,20 @@ Metadata.prototype.format = function () {
   return this.update(this._dict);
 };
 
+Metadata.prototype.check = function () {
+  var k;
+  for (k in this._dict) {
+    if (this._dict.hasOwnProperty(k)) {
+      if (k[0] !== '_') {
+        if (!Metadata.checkValue(this._dict[k])) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+};
+
 Metadata.prototype.update = function (metadata) {
   var k;
   for (k in metadata) {
@@ -249,6 +263,52 @@ Metadata.normalizeValue = function (value) {
   if (Metadata.isDict(value)) {
     return Metadata.normalizeObject(value);
   }
+};
+
+Metadata.checkArray = function (value) {
+  var i;
+  for (i = 0; i < value.length; i += 1) {
+    if (Metadata.isDict(value[i])) {
+      if (!Metadata.checkObject(value[i])) {
+        return false;
+      }
+    } else if (!Metadata.isContent(value[i])) {
+      return false;
+    }
+  }
+  return true;
+};
+
+Metadata.checkObject = function (value) {
+  var i, ok = false;
+  for (i in value) {
+    if (value.hasOwnProperty(i)) {
+      if (Metadata.isContent(value[i])) {
+        if (i === 'content') {
+          ok = true;
+        }
+      } else {
+        return false;
+      }
+    }
+  }
+  if (ok === false) {
+    return false;
+  }
+  return true;
+};
+
+Metadata.checkValue = function (value) {
+  if (Metadata.isContent(value)) {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    return Metadata.checkArray(value);
+  }
+  if (Metadata.isDict(value)) {
+    return Metadata.checkObject(value);
+  }
+  return false;
 };
 
 exports.Metadata = Metadata;
