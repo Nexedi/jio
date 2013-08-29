@@ -220,26 +220,26 @@
 
     // the document already exists
     // download data
-    jIO.util.blobAsBinaryString(param._blob).then(function (data) {
+    jIO.util.readBlobAsBinaryString(param._blob).then(function (e) {
       doc._attachments = doc._attachments || {};
       doc._attachments[param._attachment] = {
         "content_type": param._blob.type,
-        "digest": jIO.util.makeBinaryStringDigest(data),
+        "digest": jIO.util.makeBinaryStringDigest(e.target.result),
         "length": param._blob.size
       };
 
       that._storage.setItem(that._localpath + "/" + param._id + "/" +
-                            param._attachment, data);
+                            param._attachment, e.target.result);
       that._storage.setItem(that._localpath + "/" + param._id, doc);
       command.success({"hash": doc._attachments[param._attachment].digest});
-    }, function () {
+    }, function (e) {
       command.error(
         "request_timeout",
         "blob error",
-        "Unable to download blob content"
+        "Error " + e.status + ", unable to get blob content"
       );
-    }, function () {
-      command.notify(50); // XXX get percentage
+    }, function (e) {
+      command.notify((e.loaded / e.total) * 100);
     });
   };
 
