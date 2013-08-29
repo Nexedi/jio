@@ -40,7 +40,7 @@
   /**
    * A useful tool to set/get json object into the localStorage
    */
-  exports.jsonlocalstorage = {
+  exports.json_local_storage = {
     clear: function () {
       return localStorage.clear();
     },
