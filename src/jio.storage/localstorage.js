@@ -4,7 +4,7 @@
  * http://www.gnu.org/licenses/lgpl.html
  */
 
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, regexp: true */
 /*global jIO, localStorage, setTimeout, complex_queries, window, define,
   exports, require */
 
@@ -449,6 +449,204 @@
         "rows": document_list
       }});
     }
+  };
+
+  /**
+   * Check the storage or a specific document
+   *
+   * @method check
+   * @param  {Object} command The JIO command
+   * @param  {Object} param The command parameters
+   * @param  {Object} options The command options
+   */
+  LocalStorage.prototype.check = function (command, param) {
+    this.genericRepair(command, param, false);
+  };
+
+  /**
+   * Repair the storage or a specific document
+   *
+   * @method repair
+   * @param  {Object} command The JIO command
+   * @param  {Object} param The command parameters
+   * @param  {Object} options The command options
+   */
+  LocalStorage.prototype.repair = function (command, param) {
+    this.genericRepair(command, param, true);
+  };
+
+  /**
+   * A generic method that manage check or repair command
+   *
+   * @method genericRepair
+   * @param  {Object} command The JIO command
+   * @param  {Object} param The command parameters
+   * @param  {Boolean} repair If true then repair else just check
+   */
+  LocalStorage.prototype.genericRepair = function (command, param, repair) {
+
+    var that = this, result;
+
+    function referenceAttachment(param, attachment) {
+      if (jIO.util.indexOf(param.referenced_attachments, attachment) !== -1) {
+        return;
+      }
+      var i = jIO.util.indexOf(param.unreferenced_attachments, attachment);
+      if (i !== -1) {
+        param.unreferenced_attachments.splice(i, 1);
+      }
+      param.referenced_attachments[param.referenced_attachments.length] =
+        attachment;
+    }
+
+    function attachmentFound(param, attachment) {
+      if (jIO.util.indexOf(param.referenced_attachments, attachment) !== -1) {
+        return;
+      }
+      if (jIO.util.indexOf(param.unreferenced_attachments, attachment) !== -1) {
+        return;
+      }
+      param.unreferenced_attachments[param.unreferenced_attachments.length] =
+        attachment;
+    }
+
+    function repairOne(param, repair) {
+      var i, doc, modified;
+      doc = that._storage.getItem(that._localpath + "/" + param._id);
+      if (doc === null) {
+        return; // OK
+      }
+
+      // check document type
+      if (typeof doc !== 'object') {
+        // wrong document
+        if (!repair) {
+          return {"error": true, "answers": [
+            "conflict",
+            "corrupted",
+            "Document is unrecoverable"
+          ]};
+        }
+        // delete the document
+        that._storage.removeItem(that._localpath + "/" + param._id);
+        return; // OK
+      }
+      // good document type
+      // repair json document
+      if (!repair) {
+        if (!(new jIO.Metadata(doc).check())) {
+          return {"error": true, "answers": [
+            "conflict",
+            "corrupted",
+            "Some metadata might be lost"
+          ]};
+        }
+      } else {
+        modified = jIO.util.uniqueJSONStringify(doc) !==
+          jIO.util.uniqueJSONStringify(new jIO.Metadata(doc).format()._dict);
+      }
+      if (doc._attachments !== undefined) {
+        if (typeof doc._attachments !== 'object') {
+          if (!repair) {
+            return {"error": true, "answers": [
+              "conflict",
+              "corrupted",
+              "Attachments are unrecoverable"
+            ]};
+          }
+          delete doc._attachments;
+          that._storage.setItem(that._localpath + "/" + param._id, doc);
+          return; // OK
+        }
+        for (i in doc._attachments) {
+          if (doc._attachments.hasOwnProperty(i)) {
+            // check attachment existence
+            if (that._storage.getItem(that._localpath + "/" + param._id + "/" +
+                                      i) !== 'string') {
+              if (!repair) {
+                return {"error": true, "answers": [
+                  "conflict",
+                  "missing attachment",
+                  "Attachment \"" + i + "\" of \"" + param._id + "\" is missing"
+                ]};
+              }
+              delete doc._attachments[i];
+              if (objectIsEmpty(doc._attachments)) {
+                delete doc._attachments;
+              }
+              modified = true;
+            } else {
+              // attachment exists
+              // check attachment metadata
+              // check length
+              referenceAttachment(param, param._id + "/" + doc._attachments[i]);
+              if (doc._attachments[i].length !== undefined &&
+                  typeof doc._attachments[i].length !== 'number') {
+                if (!repair) {
+                  return {"error": true, "answers": [
+                    "conflict",
+                    "corrupted",
+                    "Attachment metadata length corrupted"
+                  ]};
+                }
+                // It could take a long time to get the length, no repair.
+                // length can be omited
+                delete doc._attachments[i].length;
+              }
+              // It could take a long time to regenerate the hash, no check.
+              // Impossible to discover the attachment content type.
+            }
+          }
+        }
+      }
+      if (modified) {
+        that._storage.setItem(that._localpath + "/" + param._id, doc);
+      }
+      // OK
+    }
+
+    function repairAll(param, repair) {
+      var i, result;
+      for (i in that._database) {
+        if (that._database.hasOwnProperty(i)) {
+          // browsing every entry
+          if (i.slice(0, that._localpath.length) === that._localpath) {
+            // is part of the user space
+            if (/^[^\/]+\/[^\/]+$/.test(i.slice(that._localpath.length + 1))) {
+              // this is an attachment
+              attachmentFound(param, i.slice(that._localpath.length + 1));
+            } else if (/^[^\/]+$/.test(i.slice(that._localpath.length + 1))) {
+              // this is a document
+              param._id = i.slice(that._localpath.length + 1);
+              result = repairOne(param, repair);
+              if (result) {
+                return result;
+              }
+            } else {
+              // this is pollution
+              that._storage.removeItem(i);
+            }
+          }
+        }
+      }
+      // remove unreferenced attachments
+      for (i = 0; i < param.unreferenced_attachments.length; i += 1) {
+        that._storage.removeItem(that._localpath + "/" +
+                                 param.unreferenced_attachments[i]);
+      }
+    }
+
+    param.referenced_attachments = [];
+    param.unreferenced_attachments = [];
+    if (typeof param._id === 'string') {
+      result = repairOne(param, repair) || {};
+    } else {
+      result = repairAll(param, repair) || {};
+    }
+    if (result.error) {
+      return command.error.apply(command, result.answers || []);
+    }
+    command.success.apply(command, result.answers || []);
   };
 
   jIO.addStorage('local', LocalStorage);
