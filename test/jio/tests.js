@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global define, window, exports, require, jIO, fake_storage, ok, module, test,
-  expect, deepEqual, sinon, FileReader, Blob, setTimeout, localStorage */
+  expect, deepEqual, FileReader, Blob, setTimeout, localStorage */
 
 (function (dependencies, module) {
   "use strict";
@@ -73,7 +73,7 @@
     var workspace = {}, clock, jio, count = 0;
     expect(8);
 
-    clock = sinon.useFakeTimers();
+    clock = this.sandbox.useFakeTimers();
     jio = new JIO({
       "type": "fake",
       "id": "Asynchrony"
@@ -110,7 +110,7 @@
   test('Description Error', function () {
     var clock, jio;
     expect(2);
-    clock = sinon.useFakeTimers();
+    clock = this.sandbox.useFakeTimers();
     jio = new JIO({
       "type": "blue"
     }, {
@@ -163,7 +163,7 @@
   test('No Response or Response Timeout', function () {
     var clock, jio, state;
     expect(5);
-    clock = sinon.useFakeTimers();
+    clock = this.sandbox.useFakeTimers();
     jio = new JIO({
       "type": "fake",
       "id": "1 No Respons"
@@ -265,7 +265,7 @@
   test('Invalid Response', function () {
     var clock, jio;
     expect(2);
-    clock = sinon.useFakeTimers();
+    clock = this.sandbox.useFakeTimers();
     jio = new JIO({
       "type": "fake",
       "id": "1 Invalid Re"
@@ -317,7 +317,7 @@
   test('Valid Responses & Callbacks', function () {
     var clock, jio, o = {};
     expect(9);
-    clock = sinon.useFakeTimers();
+    clock = this.sandbox.useFakeTimers();
 
     jio = new JIO({
       "type": "fake",
@@ -449,7 +449,7 @@
    */
   test('Metadata values', function () {
     expect(9);
-    var o, clock = sinon.useFakeTimers(), jio = new JIO({
+    var o, clock = this.sandbox.useFakeTimers(), jio = new JIO({
       "type": "fake",
       "id": "Metadata v"
     }, {
@@ -573,7 +573,7 @@
   test("Job Retry", function () {
     var clock, jio, state;
     expect(4);
-    clock = sinon.useFakeTimers();
+    clock = this.sandbox.useFakeTimers();
 
     jio = new JIO({
       "type": "fake",
@@ -619,7 +619,7 @@
     var workspace = {}, clock, jio, o = {};
     expect(8);
 
-    clock = sinon.useFakeTimers();
+    clock = this.sandbox.useFakeTimers();
     jio = new JIO({
       "type": "fake",
       "id": "1 Job Manage"
@@ -734,7 +734,7 @@
     expect(4);
     var workspace, clock, jio;
 
-    clock = sinon.useFakeTimers();
+    clock = this.sandbox.useFakeTimers();
 
     //////////////////////////////
     // Running job recovery
@@ -832,7 +832,7 @@
   test('Job Update', function () {
     expect(5);
     var clock, jio, o = {};
-    clock = sinon.useFakeTimers();
+    clock = this.sandbox.useFakeTimers();
 
     o.workspace = {};
     jio = new JIO({
@@ -880,7 +880,7 @@
   test('Job Wait', function () {
     expect(6);
     var clock, jio, o = {};
-    clock = sinon.useFakeTimers();
+    clock = this.sandbox.useFakeTimers();
 
     o.workspace = {};
     jio = new JIO({
@@ -931,7 +931,7 @@
   test('Job Deny + Job condition addition', function () {
     expect(2);
     var clock, jio, workspace = {};
-    clock = sinon.useFakeTimers();
+    clock = this.sandbox.useFakeTimers();
 
     jIO.addJobRuleCondition('isGetMethod', function (job) {
       return job.method === 'get';
