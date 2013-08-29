@@ -12,7 +12,7 @@
     return module(require('complex_queries'));
   }
   module(complex_queries);
-}(['complex_queries', 'sinon_qunit'], function (complex_queries) {
+}(['complex_queries', 'qunit'], function (complex_queries) {
   "use strict";
 
   module('Complex Queries');
