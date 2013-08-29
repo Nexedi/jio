@@ -645,7 +645,7 @@
   });
 
   test("Check & Repair", function () {
-    expect(17);
+    expect(18);
     var o = {}, jio = jIO.createJIO({
       "type": "local",
       "username": "urepair",
@@ -676,14 +676,13 @@
           "jio/localstorage/urepair/arepair/cor",
           "blue"
         );
-
-        // put an unreferenced attachment
-        util.json_local_storage.setItem(
-          "jio/localstorage/urepair/arepair/unref/aa",
-          "attachment content"
-        );
       };
 
+      // put an unreferenced attachment
+      util.json_local_storage.setItem(
+        "jio/localstorage/urepair/arepair/unref/aa",
+        "attachment content"
+      );
       o.putCorruptedDocuments();
 
       return jIO.Promise.all([
@@ -868,6 +867,13 @@
     }).always(function (answers) {
 
       o.testGetAnswers(answers);
+
+    }).then(function () {
+
+      // unreferenced attachment must be removed
+      deepEqual(util.json_local_storage.getItem(
+        "jio/localstorage/urepair/arepair/unref/aa"
+      ), null, "Unreferenced attachment removed");
 
     }).always(start);
 
