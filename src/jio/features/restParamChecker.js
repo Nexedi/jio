@@ -53,13 +53,7 @@ function enableRestParamChecker(jio, shared) {
     new Metadata(param.kwargs).format();
   });
 
-  [
-    "put",
-    "get",
-    "remove",
-    "check",
-    "repair"
-  ].forEach(function (method) {
+  ["put", "get", "remove"].forEach(function (method) {
     shared.on(method, function (param) {
       if (!checkId(param)) {
         return;
@@ -102,14 +96,22 @@ function enableRestParamChecker(jio, shared) {
     }
   });
 
-  [
-    "getAttachment",
-    "removeAttachment"
-  ].forEach(function (method) {
+  ["getAttachment", "removeAttachment"].forEach(function (method) {
     shared.on(method, function (param) {
       if (!checkId(param)) {
         checkAttachmentId(param);
       }
     });
   });
+
+  ["check", "repair"].forEach(function (method) {
+    shared.on(method, function (param) {
+      if (param.kwargs._id !== undefined) {
+        if (!checkId(param)) {
+          return;
+        }
+      }
+    });
+  });
+
 }
