@@ -644,4 +644,233 @@
 
   });
 
+  test("Check & Repair", function () {
+    expect(17);
+    var o = {}, jio = jIO.createJIO({
+      "type": "local",
+      "username": "urepair",
+      "application_name": "arepair"
+    }, {
+      "workspace": {}
+    });
+
+    stop();
+
+    jIO.Promise.execute(function () {
+
+      o.putCorruptedDocuments = function () {
+        // put a document with a wrong attachment reference
+        util.json_local_storage.setItem(
+          "jio/localstorage/urepair/arepair/war",
+          {"_id": "war", "title": "b", "_attachments": {"aa": {}}}
+        );
+
+        // put a document with a wrong metadata
+        util.json_local_storage.setItem(
+          "jio/localstorage/urepair/arepair/meta",
+          {"_id": "meta", "title": ["b", ["c", {}], {"blue": "blue"}]}
+        );
+
+        // put a corrupted document
+        util.json_local_storage.setItem(
+          "jio/localstorage/urepair/arepair/cor",
+          "blue"
+        );
+
+        // put an unreferenced attachment
+        util.json_local_storage.setItem(
+          "jio/localstorage/urepair/arepair/unref/aa",
+          "attachment content"
+        );
+      };
+
+      o.putCorruptedDocuments();
+
+      return jIO.Promise.all([
+        jio.check({"_id": "war"}),
+        jio.check({"_id": "meta"}),
+        jio.check({"_id": "cor"}),
+        jio.check({"_id": "inexistent"})
+      ]);
+
+    }).always(function (answers) {
+
+      deepEqual(answers[0], {
+        "error": "conflict",
+        "id": "war",
+        "message": "Attachment \"aa\" of \"war\" is missing",
+        "method": "check",
+        "reason": "missing attachment",
+        "result": "error",
+        "status": 409,
+        "statusText": "Conflict"
+      }, "Check a document with one missing attachment");
+
+      deepEqual(answers[1], {
+        "error": "conflict",
+        "id": "meta",
+        "message": "Some metadata might be lost",
+        "method": "check",
+        "reason": "corrupted",
+        "result": "error",
+        "status": 409,
+        "statusText": "Conflict"
+      }, "Check document with wrong metadata");
+
+      deepEqual(answers[2], {
+        "error": "conflict",
+        "id": "cor",
+        "message": "Document is unrecoverable",
+        "method": "check",
+        "reason": "corrupted",
+        "result": "error",
+        "status": 409,
+        "statusText": "Conflict"
+      }, "Check corrupted document");
+
+      deepEqual(answers[3], {
+        "id": "inexistent",
+        "method": "check",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Check inexistent document");
+
+    }).then(function () {
+
+      return jIO.Promise.all([
+        jio.repair({"_id": "war"}),
+        jio.repair({"_id": "meta"}),
+        jio.repair({"_id": "cor"}),
+        jio.repair({"_id": "inexistent"})
+      ]);
+
+    }).always(function (answers) {
+
+      deepEqual(answers[0], {
+        "id": "war",
+        "method": "repair",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Repair a document with one missing attachment");
+
+      deepEqual(answers[1], {
+        "id": "meta",
+        "method": "repair",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Repair document with wrong metadata");
+
+      deepEqual(answers[2], {
+        "id": "cor",
+        "method": "repair",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Repair corrupted document");
+
+      deepEqual(answers[3], {
+        "id": "inexistent",
+        "method": "repair",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Repair inexistent document");
+
+    }).then(function () {
+
+      o.getCorruptedDocuments = function () {
+        return jIO.Promise.all([
+          jio.get({"_id": "war"}),
+          jio.get({"_id": "meta"}),
+          jio.get({"_id": "cor"}),
+          jio.get({"_id": "inexistent"})
+        ]);
+      };
+
+      return o.getCorruptedDocuments();
+
+    }).always(function (answers) {
+
+      o.testGetAnswers = function (answers) {
+
+        deepEqual(answers[0], {
+          "data": {
+            "_id": "war",
+            "title": "b"
+          },
+          "id": "war",
+          "method": "get",
+          "result": "success",
+          "status": 200,
+          "statusText": "Ok"
+        }, "Get repaired document with one missing attachment");
+
+        deepEqual(answers[1], {
+          "data": {
+            "_id": "meta",
+            "title": "b"
+          },
+          "id": "meta",
+          "method": "get",
+          "result": "success",
+          "status": 200,
+          "statusText": "Ok"
+        }, "Get repaired document with wrong metadata");
+
+        deepEqual(answers[2], {
+          "error": "not_found",
+          "id": "cor",
+          "message": "Cannot find document",
+          "method": "get",
+          "reason": "missing",
+          "result": "error",
+          "status": 404,
+          "statusText": "Not Found"
+        }, "Get repaired corrupted document");
+
+        deepEqual(answers[3], {
+          "error": "not_found",
+          "id": "inexistent",
+          "message": "Cannot find document",
+          "method": "get",
+          "reason": "missing",
+          "result": "error",
+          "status": 404,
+          "statusText": "Not Found"
+        }, "Get repaired inexistent document");
+
+      };
+
+      o.testGetAnswers(answers);
+
+    }).then(function () {
+
+      o.putCorruptedDocuments();
+
+      return jio.repair({});
+
+    }).always(function (answer) {
+
+      deepEqual(answer, {
+        "method": "repair",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Repair all the database");
+
+    }).then(function () {
+
+      return o.getCorruptedDocuments();
+
+    }).always(function (answers) {
+
+      o.testGetAnswers(answers);
+
+    }).always(start);
+
+  });
+
 }));
