@@ -117,6 +117,12 @@
     }
   };
 
+  /**
+   * The JIO LocalStorage extension
+   *
+   * @class LocalStorage
+   * @constructor
+   */
   function LocalStorage(spec) {
     if (typeof spec.username !== 'string' && !spec.username) {
       throw new TypeError("LocalStorage 'username' must be a string " +
