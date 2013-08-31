@@ -319,26 +319,43 @@ function readBlobAsBinaryString(blob) {
 exports.util.readBlobAsBinaryString = readBlobAsBinaryString;
 
 /**
- * Send request with XHR and return a promise.
+ * Send request with XHR and return a promise. xhr.onload: The promise is
+ * resolve when the status code is lower than 400 with the xhr object as first
+ * parameter. xhr.onerror: reject with xhr object as first
+ * parameter. xhr.onprogress: notifies the xhr object.
  *
- * @param  {String} method The request method
- * @param  {String} url The url
- * @param  {Any} [data] The data to send
- * @param  {Function} [before_send] A function called just before send request.
- *                    The first parameter of this function is the XHR object.
+ * @param  {Object} param The parameters
+ * @param  {String} [param.type="GET"] The request method
+ * @param  {String} [param.dataType=""] The data type to retrieve
+ * @param  {String} param.url The url
+ * @param  {Any} [param.data] The data to send
+ * @param  {Function} [param.beforeSend] A function called just before send
+ *   request. The first parameter of this function is the XHR object.
  * @return {Promise} The promise
  */
-function ajax(method, url, data, before_send) {
-  var xhr = new XMLHttpRequest(), deferred = new Deferred();
-  xhr.open(method, url, true);
-  xhr.responseType = "blob";
-  xhr.onload = deferred.resolve.bind(deferred);
+function ajax(param) {
+  var k, xhr = new XMLHttpRequest(), deferred = new Deferred();
+  xhr.open(param.type || "GET", param.url, true);
+  xhr.responseType = param.dataType || "";
+  if (typeof param.headers === 'object' && param.headers !== null) {
+    for (k in param.headers) {
+      if (param.headers.hasOwnProperty(k)) {
+        xhr.setRequestHeader(k, param.headers[k]);
+      }
+    }
+  }
+  xhr.onload = function (e) {
+    if (e.target.status >= 400) {
+      return deferred.reject(e);
+    }
+    deferred.resolve(e);
+  };
   xhr.onerror = deferred.reject.bind(deferred);
   xhr.onprogress = deferred.notify.bind(deferred);
-  if (typeof before_send === 'function') {
-    before_send(xhr);
+  if (typeof param.beforeSend === 'function') {
+    param.beforeSend(xhr);
   }
-  xhr.send(data);
+  xhr.send(param.data);
   return deferred.promise();
 }
 exports.util.ajax = ajax;
