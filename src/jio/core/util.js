@@ -1,5 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true, sloppy: true */
-/*global exports, Blob, FileReader, Deferred, hex_sha256, XMLHttpRequest */
+/*global exports, Blob, FileReader, Deferred, hex_sha256, XMLHttpRequest,
+  constants */
 
 /**
  * Do not exports these tools unless they are not writable, not configurable.
@@ -424,3 +425,14 @@ function methodType(method) {
     return 'unknown';
   }
 }
+
+/**
+ * Return 'success', 'error' or 'retry' according to a http status.
+ *
+ * @param  {Number} status The http status
+ * @return {String} The command action string
+ */
+function guessCommandFromStatus(status) {
+  return constants.http_action[status || 0];
+}
+exports.util.guessCommandFromStatus = guessCommandFromStatus;
