@@ -23,10 +23,13 @@ constants.dcmi_types = {
 // if (typeof dcmi_types[name] === 'string')   { is a DCMI type }
 
 constants.http_status_text = {
+  "0": "Unknown",
   "550": "Internal JIO Error",
   "551": "Internal Storage Error",
+  "Unknown": "Unknown",
   "Internal JIO Error": "Internal JIO Error",
   "Internal Storage Error": "Internal Storage Error",
+  "unknown": "Unknown",
   "internal_jio_error": "Internal JIO Error",
   "internal_storage_error": "Internal Storage Error",
 
@@ -125,10 +128,13 @@ constants.http_status_text = {
 };
 
 constants.http_status = {
+  "0": 0,
   "550": 550,
   "551": 551,
+  "Unknown": 0,
   "Internal JIO Error": 550,
   "Internal Storage Error": 551,
+  "unknown": 0,
   "internal_jio_error": 550,
   "internal_storage_error": 551,
 
@@ -227,10 +233,13 @@ constants.http_status = {
 };
 
 constants.http_action = {
+  "0": "error",
   "550": "error",
   "551": "error",
+  "Unknown": "error",
   "Internal JIO Error": "error",
   "Internal Storage Error": "error",
+  "unknown": "error",
   "internal_jio_error": "error",
   "internal_storage_error": "error",
 
