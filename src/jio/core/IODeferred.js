@@ -18,15 +18,18 @@ IODeferred.prototype.resolve = function (a, b) {
   if (this._method === 'post') {
     weak.status = constants.http_status.created;
     weak.statusText = constants.http_status_text.created;
+  } else if (this._method === 'remove' || this._method === 'removeAttachment') {
+    weak.status = constants.http_status.no_content;
+    weak.statusText = constants.http_status_text.no_content;
   } else {
     weak.status = constants.http_status.ok;
     weak.statusText = constants.http_status_text.ok;
-    if (this._info._id) {
-      weak.id = this._info._id;
-    }
-    if (/Attachment$/.test(this._method)) {
-      weak.attachment = this._info._attachment;
-    }
+  }
+  if (this._info._id) {
+    weak.id = this._info._id;
+  }
+  if (/Attachment$/.test(this._method)) {
+    weak.attachment = this._info._attachment;
   }
   weak.method = this._method;
 
