@@ -187,21 +187,23 @@
    * @param  {Object} options The command options
    */
   LocalStorage.prototype.put = function (command, metadata) {
-    var doc, tmp;
+    var doc, tmp, status;
     doc = this._storage.getItem(this._localpath + "/" + metadata._id);
     if (doc === null) {
       //  the document does not exist
       doc = jIO.util.deepClone(metadata);
       delete doc._attachments;
+      status = "created";
     } else {
       // the document already exists
       tmp = jIO.util.deepClone(metadata);
       tmp._attachments = doc._attachments;
       doc = tmp;
+      status = "ok";
     }
     // write
     this._storage.setItem(this._localpath + "/" + metadata._id, doc);
-    command.success();
+    command.success(status);
   };
 
   /**
@@ -213,7 +215,7 @@
    * @param  {Object} options The command options
    */
   LocalStorage.prototype.putAttachment = function (command, param) {
-    var that = this, doc;
+    var that = this, doc, status = "ok";
     doc = this._storage.getItem(this._localpath + "/" + param._id);
     if (doc === null) {
       //  the document does not exist
@@ -228,6 +230,9 @@
     // download data
     jIO.util.readBlobAsBinaryString(param._blob).then(function (e) {
       doc._attachments = doc._attachments || {};
+      if (doc._attachments[param._attachment]) {
+        status = "created";
+      }
       doc._attachments[param._attachment] = {
         "content_type": param._blob.type,
         "digest": jIO.util.makeBinaryStringDigest(e.target.result),
@@ -237,7 +242,8 @@
       that._storage.setItem(that._localpath + "/" + param._id + "/" +
                             param._attachment, e.target.result);
       that._storage.setItem(that._localpath + "/" + param._id, doc);
-      command.success({"hash": doc._attachments[param._attachment].digest});
+      command.success(status,
+                      {"hash": doc._attachments[param._attachment].digest});
     }, function (e) {
       command.error(
         "request_timeout",

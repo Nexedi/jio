@@ -153,8 +153,8 @@
         "id": "put1",
         "method": "put",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 201,
+        "statusText": "Created"
       }, "Creates a document");
 
     }).then(function () {
@@ -407,8 +407,8 @@
         "id": "a",
         "method": "removeAttachment",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "Remove existent attachment");
 
     }).then(function () {
@@ -443,8 +443,8 @@
         "id": "a",
         "method": "remove",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "Remove existent document");
 
     }).then(function () {
