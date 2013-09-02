@@ -168,6 +168,7 @@ Promise.all = function (items) {
   solver = next.defer();
   function succeed(i) {
     return function (answer) {
+      solver.notify(i);
       array[i] = answer;
       count += 1;
       if (count !== items.length) {
@@ -202,6 +203,7 @@ Promise.allOrNone = function (items) {
   solver = next.defer();
   items.forEach(function (item, i) {
     Promise.when(item, function (answer) {
+      solver.notify(i);
       array[i] = answer;
       count += 1;
       if (count !== items.length) {
@@ -209,6 +211,7 @@ Promise.allOrNone = function (items) {
       }
       return solver.resolve(array);
     }, function (answer) {
+      solver.notify(i);
       return solver.reject(answer);
     });
   });
