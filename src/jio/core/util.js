@@ -425,14 +425,3 @@ function methodType(method) {
     return 'unknown';
   }
 }
-
-/**
- * Return 'success', 'error' or 'retry' according to a http status.
- *
- * @param  {Number} status The http status
- * @return {String} The command action string
- */
-function guessCommandFromStatus(status) {
-  return constants.http_action[status || 0];
-}
-exports.util.guessCommandFromStatus = guessCommandFromStatus;
