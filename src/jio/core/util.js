@@ -319,6 +319,26 @@ function readBlobAsBinaryString(blob) {
 }
 exports.util.readBlobAsBinaryString = readBlobAsBinaryString;
 
+function readBlobAsArrayBuffer(blob) {
+  var deferred = new Deferred(), fr = new FileReader();
+  fr.onload = deferred.resolve.bind(deferred);
+  fr.onerror = deferred.reject.bind(deferred);
+  fr.onprogress = deferred.notify.bind(deferred);
+  fr.readAsArrayBuffer(blob);
+  return deferred.promise();
+}
+exports.util.readBlobAsArrayBuffer = readBlobAsArrayBuffer;
+
+function readBlobAsText(blob) {
+  var deferred = new Deferred(), fr = new FileReader();
+  fr.onload = deferred.resolve.bind(deferred);
+  fr.onerror = deferred.reject.bind(deferred);
+  fr.onprogress = deferred.notify.bind(deferred);
+  fr.readAsText(blob);
+  return deferred.promise();
+}
+exports.util.readBlobAsText = readBlobAsText;
+
 /**
  * Send request with XHR and return a promise. xhr.onload: The promise is
  * resolve when the status code is lower than 400 with the xhr object as first
