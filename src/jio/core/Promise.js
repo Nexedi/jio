@@ -169,7 +169,6 @@ Promise.all = function (items) {
   solver = next.defer();
   function succeed(i) {
     return function (answer) {
-      solver.notify(i);
       array[i] = answer;
       count += 1;
       if (count !== items.length) {
@@ -178,8 +177,13 @@ Promise.all = function (items) {
       return solver.resolve(array);
     };
   }
+  function notify(i) {
+    return function (answer) {
+      solver.notify(i, answer);
+    };
+  }
   for (i = 0; i < items.length; i += 1) {
-    Promise.when(items[i], succeed(i), succeed(i));
+    Promise.when(items[i], succeed(i), succeed(i), notify(i));
   }
   return next;
 };
@@ -204,7 +208,6 @@ Promise.allOrNone = function (items) {
   solver = next.defer();
   items.forEach(function (item, i) {
     Promise.when(item, function (answer) {
-      solver.notify(i);
       array[i] = answer;
       count += 1;
       if (count !== items.length) {
@@ -212,8 +215,9 @@ Promise.allOrNone = function (items) {
       }
       return solver.resolve(array);
     }, function (answer) {
-      solver.notify(i);
       return solver.reject(answer);
+    }, function (answer) {
+      solver.notify(i, answer);
     });
   });
   return next;
