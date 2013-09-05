@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
-/*global arrayExtend, setTimeout, indexOf, min */
+/*global arrayExtend, setTimeout, indexOf, min, constants */
 
 function enableJobRetry(jio, shared, options) {
 
@@ -58,6 +58,13 @@ function enableJobRetry(jio, shared, options) {
         defaultMaxRetry(param)
       );
     }
+    param.command.reject = function (status) {
+      if (constants.http_action[status || 0] === "retry") {
+        shared.emit('jobRetry', param, arguments);
+      } else {
+        shared.emit('jobFail', param, arguments);
+      }
+    };
     param.command.retry = function () {
       shared.emit('jobRetry', param, arguments);
     };
