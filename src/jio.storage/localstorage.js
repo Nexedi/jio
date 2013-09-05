@@ -243,7 +243,7 @@
                             param._attachment, e.target.result);
       that._storage.setItem(that._localpath + "/" + param._id, doc);
       command.success(status,
-                      {"hash": doc._attachments[param._attachment].digest});
+                      {"digest": doc._attachments[param._attachment].digest});
     }, function (e) {
       command.error(
         "request_timeout",
