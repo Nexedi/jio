@@ -519,7 +519,23 @@ Promise.prototype.then = function (onSuccess, onError, onProgress) {
       });
     }
     if (typeof onProgress === 'function') {
-      this._onProgress.push(onProgress);
+      this._onProgress.push(function () {
+        var result;
+        try {
+          result = onProgress.apply(that, arguments);
+          if (result === undefined) {
+            resolver.notify.apply(that, arguments);
+          } else {
+            resolver.notify(result);
+          }
+        } catch (e) {
+          resolver.notify.apply(that, arguments);
+        }
+      });
+    } else {
+      this._onProgress.push(function () {
+        resolver.notify.apply(resolver, arguments);
+      });
     }
     break;
   }
