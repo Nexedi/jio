@@ -315,7 +315,7 @@
 
         deepEqual(answer, {
           "attachment": "putattmt2",
-          "hash": "sha256-e3b0c44298fc1c149afbf4c8996fb9242" +
+          "digest": "sha256-e3b0c44298fc1c149afbf4c8996fb9242" +
             "7ae41e4649b934ca495991b7852b855", // hex_sha256("")
           "id": "putattmt1",
           "method": "putAttachment",
