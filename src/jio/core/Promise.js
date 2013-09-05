@@ -325,14 +325,14 @@ Promise.timeout = function (item, timeout) {
   var next = new Promise(), solver, i;
   solver = next.defer();
   i = setTimeout(function () {
-    solver.reject.apply(next, [new Error("Timeout")]);
+    solver.reject(new Error("Timeout"));
   }, timeout);
   Promise.when(item, function () {
     clearTimeout(i);
-    solver.resolve.apply(next, arguments);
+    solver.resolve.apply(solver, arguments);
   }, function () {
     clearTimeout(i);
-    solver.reject.apply(next, arguments);
+    solver.reject.apply(solver, arguments);
   });
   return next;
 };
