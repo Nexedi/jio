@@ -465,16 +465,20 @@ Promise.prototype.then = function (onSuccess, onError, onProgress) {
       });
     } else {
       setTimeout(function () {
-        resolver.resolve();
+        resolver.resolve.apply(resolver, that._answers);
       });
     }
     break;
   case "rejected":
     if (typeof onError === 'function') {
       setTimeout(function () {
+        var result = onError.apply(that, that._answers);
         // try {
+        if (result === undefined) {
+          return resolver.reject.apply(resolver, that._answers);
+        }
         Promise.when(
-          onError.apply(that, that._answers),
+          result,
           resolver.reject,
           resolver.reject
         );
@@ -504,7 +508,7 @@ Promise.prototype.then = function (onSuccess, onError, onProgress) {
       });
     } else {
       this._onResolve.push(function () {
-        resolver.resolve();
+        resolver.resolve.apply(resolver, arguments);
       });
     }
     if (typeof onError === 'function') {
