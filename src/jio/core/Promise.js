@@ -291,7 +291,7 @@ Promise.first = function (items) { // *promises
 Promise.delay = function (timeout, every) {
   var next = new Promise(), solver, ident, now = 0;
   solver = next.defer();
-  if (typeof every === 'number' && !isNaN(every)) {
+  if (typeof every === 'number' && isFinite(every)) {
     ident = setInterval(function () {
       now += every;
       solver.notify(now);
