@@ -199,7 +199,7 @@
       tmp = jIO.util.deepClone(metadata);
       tmp._attachments = doc._attachments;
       doc = tmp;
-      status = "ok";
+      status = "no_content";
     }
     // write
     this._storage.setItem(this._localpath + "/" + metadata._id, doc);
