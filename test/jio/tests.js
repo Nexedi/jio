@@ -847,8 +847,8 @@
         "id": "a",
         "method": "put",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "First put respond");
     });
 
@@ -862,8 +862,8 @@
         "id": "a",
         "method": "put",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "Second put respond");
     });
 
@@ -895,8 +895,8 @@
         "id": "a",
         "method": "put",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "First put respond");
     });
 
@@ -910,8 +910,8 @@
         "id": "a",
         "method": "put",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "Second put respond");
     });
 

@@ -186,8 +186,8 @@
         "id": "put1",
         "method": "put",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "Update the document");
 
     }).then(function () {
@@ -731,8 +731,8 @@
         "id": "inexistent",
         "method": "check",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "Check inexistent document");
 
     }).then(function () {
@@ -750,32 +750,32 @@
         "id": "war",
         "method": "repair",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "Repair a document with one missing attachment");
 
       deepEqual(answers[1], {
         "id": "meta",
         "method": "repair",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "Repair document with wrong metadata");
 
       deepEqual(answers[2], {
         "id": "cor",
         "method": "repair",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "Repair corrupted document");
 
       deepEqual(answers[3], {
         "id": "inexistent",
         "method": "repair",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "Repair inexistent document");
 
     }).then(function () {
@@ -856,8 +856,8 @@
       deepEqual(answer, {
         "method": "repair",
         "result": "success",
-        "status": 200,
-        "statusText": "Ok"
+        "status": 204,
+        "statusText": "No Content"
       }, "Repair all the database");
 
     }).then(function () {
