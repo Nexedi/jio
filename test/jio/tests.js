@@ -703,7 +703,7 @@
       "tried": 1,
       "state": "running",
       "modified": new Date(),
-      "max_retry": 3,
+      "max_retry": 2,
       "timeout": 10000,
       "id": 2
     };
