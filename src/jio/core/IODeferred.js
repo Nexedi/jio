@@ -18,7 +18,8 @@ IODeferred.prototype.resolve = function (a, b) {
   if (this._method === 'post') {
     weak.status = constants.http_status.created;
     weak.statusText = constants.http_status_text.created;
-  } else if (this._method === 'remove' || this._method === 'removeAttachment') {
+  } else if (methodType(this._method) === "writer" ||
+             this._method === "check") {
     weak.status = constants.http_status.no_content;
     weak.statusText = constants.http_status_text.no_content;
   } else {
