@@ -50,22 +50,28 @@ Promise.when = function (item, onSuccess, onError, onProgress) {
 };
 
 /**
- * error(value, [onError]): Promise
+ * error(item, [onError]): Promise
  *
- * Return value as first parameter of the promise answer. The method returns a
+ * Return an item as first parameter of the promise answer. The method returns a
  * rejected promise.
  *
  *     Promise.error('a').then(null, console.log); // shows 'a'
+ *     Promise.error(Promise.when('a')).then(null, console.log); // shows 'a'
  *
  * @method error
  * @static
- * @param  {Any} value The value to use
+ * @param  {Any} item The item to use
  * @param  {Function} [onError] the callback called on error
  * @return {Promise} The promise
  */
-Promise.error = function (value, onError) {
-  var p = new Promise().fail(onError);
-  p.defer().reject(value);
+Promise.error = function (item, onError) {
+  var p = new Promise().fail(onError), solver = p.defer();
+  Promise.when(
+    item,
+    solver.reject.bind(solver),
+    solver.reject.bind(solver),
+    solver.notify.bind(solver)
+  );
   return p;
 };
 
