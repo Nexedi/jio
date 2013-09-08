@@ -75,6 +75,32 @@ Promise.error = function (item, onError) {
   return p;
 };
 
+/**
+ * success(item, [onSuccess]): Promise
+ *
+ * Return an item as first parameter of the promise answer. The method returns a
+ * resolved promise.
+ *
+ *     Promise.success(errorPromise).then(console.log); // shows 'Error'
+ *     Promise.success(Promise.error('a')).then(console.log); // shows 'a'
+ *
+ * @method success
+ * @static
+ * @param  {Any} item The item to use
+ * @param  {Function} [onSuccess] the callback called on success
+ * @return {Promise} The promise
+ */
+Promise.success = function (item, onSuccess) {
+  var p = new Promise().done(onSuccess), solver = p.defer();
+  Promise.when(
+    item,
+    solver.resolve.bind(solver),
+    solver.resolve.bind(solver),
+    solver.notify.bind(solver)
+  );
+  return p;
+};
+
 ////////////////////////////////////////////////////////////
 // http://wiki.commonjs.org/wiki/Promises/B
 // get(object, name)
