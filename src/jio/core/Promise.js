@@ -120,11 +120,11 @@ Promise.success = function (item, onSuccess) {
  */
 Promise.get = function (dict, property) {
   var p = new Promise(), solver = p.defer();
-  // try {
-  solver.resolve(dict[property]);
-  // } catch (e) {
-  //   solver.reject(e);
-  // }
+  try {
+    solver.resolve(dict[property]);
+  } catch (e) {
+    solver.reject(e);
+  }
   return p;
 };
 
@@ -148,12 +148,12 @@ Promise.get = function (dict, property) {
  */
 Promise.put = function (dict, property, value) {
   var p = new Promise(), solver = p.defer();
-  // try {
-  dict[property] = value;
-  solver.resolve(dict[property]);
-  // } catch (e) {
-  //   solver.reject(e);
-  // }
+  try {
+    dict[property] = value;
+    solver.resolve(dict[property]);
+  } catch (e) {
+    solver.reject(e);
+  }
   return p;
 };
 
@@ -172,14 +172,13 @@ Promise.put = function (dict, property, value) {
  * @return {Promise} The promise
  */
 Promise.execute = function (callback) {
-  // var p = new Promise(), solver = p.defer();
-  // try {
-  //   Promise.when(callback(), solver.resolve, solver.reject);
-  // } catch (e) {
-  //   solver.reject(e);
-  // }
-  // return p;
-  return Promise.when(callback());
+  var p = new Promise(), solver = p.defer();
+  try {
+    Promise.when(callback(), solver.resolve, solver.reject);
+  } catch (e) {
+    solver.reject(e);
+  }
+  return p;
 };
 
 /**
@@ -406,9 +405,9 @@ Promise.prototype.defer = function (callback) {
           setTimeout(function () {
             var i;
             for (i = 0; i < array.length; i += 1) {
-              // try {
-              array[i].apply(that, that._answers);
-              // } catch (ignore) {}
+              try {
+                array[i].apply(that, that._answers);
+              } catch (ignore) {} // errors will never be retrieved by global
             }
           });
           // free the memory
@@ -426,9 +425,9 @@ Promise.prototype.defer = function (callback) {
           setTimeout(function () {
             var i;
             for (i = 0; i < array.length; i += 1) {
-              // try {
-              array[i].apply(that, that._answers);
-              // } catch (ignore) {}
+              try {
+                array[i].apply(that, that._answers);
+              } catch (ignore) {} // errors will never be retrieved by global
             }
           });
           // free the memory
@@ -441,9 +440,9 @@ Promise.prototype.defer = function (callback) {
         if (that._onProgress) {
           var i;
           for (i = 0; i < that._onProgress.length; i += 1) {
-            // try {
-            that._onProgress[i].apply(that, arguments);
-            // } catch (ignore) {}
+            try {
+              that._onProgress[i].apply(that, arguments);
+            } catch (ignore) {} // errors will never be retrieved by global
           }
         }
       }
@@ -485,15 +484,15 @@ Promise.prototype.then = function (onSuccess, onError, onProgress) {
   case "resolved":
     if (typeof onSuccess === 'function') {
       setTimeout(function () {
-        // try {
-        Promise.when(
-          onSuccess.apply(that, that._answers),
-          resolver.resolve,
-          resolver.reject
-        );
-        // } catch (e) {
-        //   resolver.reject(e);
-        // }
+        try {
+          Promise.when(
+            onSuccess.apply(that, that._answers),
+            resolver.resolve,
+            resolver.reject
+          );
+        } catch (e) {
+          resolver.reject(e);
+        }
       });
     } else {
       setTimeout(function () {
@@ -505,18 +504,18 @@ Promise.prototype.then = function (onSuccess, onError, onProgress) {
     if (typeof onError === 'function') {
       setTimeout(function () {
         var result = onError.apply(that, that._answers);
-        // try {
         if (result === undefined) {
           return resolver.reject.apply(resolver, that._answers);
         }
-        Promise.when(
-          result,
-          resolver.reject,
-          resolver.reject
-        );
-        // } catch (e) {
-        //   resolver.reject(e);
-        // }
+        try {
+          Promise.when(
+            result,
+            resolver.reject,
+            resolver.reject
+          );
+        } catch (e) {
+          resolver.reject(e);
+        }
       });
     } else {
       setTimeout(function () {
@@ -527,16 +526,16 @@ Promise.prototype.then = function (onSuccess, onError, onProgress) {
   default:
     if (typeof onSuccess === 'function') {
       this._onResolve.push(function () {
-        // try {
-        Promise.when(
-          onSuccess.apply(that, arguments),
-          resolver.resolve,
-          resolver.reject,
-          resolver.notify
-        );
-        // } catch (e) {
-        //   resolver.reject(e);
-        // }
+        try {
+          Promise.when(
+            onSuccess.apply(that, arguments),
+            resolver.resolve,
+            resolver.reject,
+            resolver.notify
+          );
+        } catch (e) {
+          resolver.reject(e);
+        }
       });
     } else {
       this._onResolve.push(function () {
@@ -545,15 +544,15 @@ Promise.prototype.then = function (onSuccess, onError, onProgress) {
     }
     if (typeof onError === 'function') {
       this._onReject.push(function () {
-        // try {
-        Promise.when(
-          onError.apply(that, that._answers),
-          resolver.reject,
-          resolver.reject
-        );
-        // } catch (e) {
-        //   resolver.reject(e);
-        // }
+        try {
+          Promise.when(
+            onError.apply(that, that._answers),
+            resolver.reject,
+            resolver.reject
+          );
+        } catch (e) {
+          resolver.reject(e);
+        }
       });
     } else {
       this._onReject.push(function () {
@@ -562,18 +561,17 @@ Promise.prototype.then = function (onSuccess, onError, onProgress) {
     }
     if (typeof onProgress === 'function') {
       this._onProgress.push(function () {
-        var result = onProgress.apply(that, arguments);
-        // var result;
-        // try {
-        // result = onProgress.apply(that, arguments);
-        if (result === undefined) {
+        var result;
+        try {
+          result = onProgress.apply(that, arguments);
+          if (result === undefined) {
+            resolver.notify.apply(that, arguments);
+          } else {
+            resolver.notify(result);
+          }
+        } catch (e) {
           resolver.notify.apply(that, arguments);
-        } else {
-          resolver.notify(result);
         }
-        // } catch (e) {
-        //   resolver.notify.apply(that, arguments);
-        // }
       });
     } else {
       this._onProgress.push(function () {
@@ -638,9 +636,9 @@ Promise.prototype.done = function (callback) {
   switch (this._state) {
   case "resolved":
     setTimeout(function () {
-      // try {
-      callback.apply(that, that._answers);
-      // } catch (ignore) {}
+      try {
+        callback.apply(that, that._answers);
+      } catch (ignore) {} // errors will never be retrieved by global
     });
     break;
   case "rejected":
@@ -673,9 +671,9 @@ Promise.prototype.fail = function (callback) {
   switch (this._state) {
   case "rejected":
     setTimeout(function () {
-      // try {
-      callback.apply(that, that._answers);
-      // } catch (ignore) {}
+      try {
+        callback.apply(that, that._answers);
+      } catch (ignore) {} // errors will never be retrieved by global
     });
     break;
   case "resolved":
@@ -738,9 +736,9 @@ Promise.prototype.always = function (callback) {
   case "resolved":
   case "rejected":
     setTimeout(function () {
-      // try {
-      callback.apply(that, that._answers);
-      // } catch (ignore) {}
+      try {
+        callback.apply(that, that._answers);
+      } catch (ignore) {} // errors will never be retrieved by global
     });
     break;
   default:
