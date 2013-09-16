@@ -719,6 +719,17 @@
   };
 
   /**
+   * never(): Promise
+   *
+   * Produces a promise that is never fulfilled.
+   *
+   * @return {Promise} A promise
+   */
+  exports.never = function () {
+    return new Promise();
+  };
+
+  /**
    * sleep(delay[, every]): Promise
    *
    * Resolve the promise after `timeout` milliseconds and notfies us every
