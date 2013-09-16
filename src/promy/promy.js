@@ -161,7 +161,7 @@
     this._onProgress = [];
     this._state = UNRESOLVED;
     if (typeof cancel === 'function') {
-      this.promise._cancel = cancel;
+      this._cancel = cancel;
     }
   }
 
