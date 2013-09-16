@@ -52,7 +52,7 @@ function enableRestAPI(jio, shared) { // (jio, shared, options)
     param.options = deepClone(type_dict.object.shift()) || {};
     //param.deferred = new IODeferred(method, param.kwargs, param.options);
     param.deferred = new Deferred();
-    promise = param.deferred.promise();
+    promise = param.deferred.promise;
     type_dict['function'] = type_dict['function'] || [];
     if (type_dict['function'].length === 1) {
       callback = type_dict['function'].shift();

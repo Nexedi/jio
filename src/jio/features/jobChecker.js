@@ -20,7 +20,7 @@ function enableJobChecker(jio, shared, options) {
 
   shared.job_rule_actions = {
     wait: function (original_job, new_job) {
-      original_job.deferred.promise().always(function () {
+      original_job.deferred.promise.always(function () {
         shared.emit('job', new_job);
       });
       new_job.state = 'waiting';
@@ -35,7 +35,7 @@ function enableJobChecker(jio, shared, options) {
         if (!original_job.deferred) {
           original_job.deferred = new_job.deferred;
         } else {
-          original_job.deferred.promise().
+          original_job.deferred.promise.
             done(new_job.command.resolve).
             fail(new_job.command.reject);
         }
