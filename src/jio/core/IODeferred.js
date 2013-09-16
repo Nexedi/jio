@@ -160,13 +160,11 @@ IODeferred.createFromDeferred = function (method, info, options, deferred) {
   //   fail(deferred.reject.bind(deferred)).
   //   progress(deferred.notify.bind(deferred));
   // // phantomjs doesn't like 'bind'...
-  iodeferred.promise().done(function () {
-    deferred.resolve.apply(deferred, arguments);
-  }).fail(function () {
-    deferred.reject.apply(deferred, arguments);
-  }).progress(function () {
-    deferred.notify.apply(deferred, arguments);
-  });
+  iodeferred.promise.then(
+    deferred.resolve.bind(deferred),
+    deferred.reject.bind(deferred),
+    deferred.notify.bind(deferred)
+  );
   return iodeferred;
 };
 

@@ -315,7 +315,7 @@ function readBlobAsBinaryString(blob) {
   fr.onerror = deferred.reject.bind(deferred);
   fr.onprogress = deferred.notify.bind(deferred);
   fr.readAsBinaryString(blob);
-  return deferred.promise();
+  return deferred.promise;
 }
 exports.util.readBlobAsBinaryString = readBlobAsBinaryString;
 
@@ -325,7 +325,7 @@ function readBlobAsArrayBuffer(blob) {
   fr.onerror = deferred.reject.bind(deferred);
   fr.onprogress = deferred.notify.bind(deferred);
   fr.readAsArrayBuffer(blob);
-  return deferred.promise();
+  return deferred.promise;
 }
 exports.util.readBlobAsArrayBuffer = readBlobAsArrayBuffer;
 
@@ -335,7 +335,7 @@ function readBlobAsText(blob) {
   fr.onerror = deferred.reject.bind(deferred);
   fr.onprogress = deferred.notify.bind(deferred);
   fr.readAsText(blob);
-  return deferred.promise();
+  return deferred.promise;
 }
 exports.util.readBlobAsText = readBlobAsText;
 
@@ -377,7 +377,7 @@ function ajax(param) {
     param.beforeSend(xhr);
   }
   xhr.send(param.data);
-  return deferred.promise();
+  return deferred.promise;
 }
 exports.util.ajax = ajax;
 
