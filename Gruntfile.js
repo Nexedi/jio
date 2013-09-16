@@ -14,6 +14,12 @@ module.exports = function (grunt) {
           errorsOnly: true
         }
       },
+      promy: {
+        src: ['src/promy/**/*.js'],
+        options: {
+          errorsOnly: true
+        }
+      },
       jio: {
         src: ['src/jio/**/*.js'],
         exclude: ['src/jio/intro.js', 'src/jio/outro.js'],
@@ -77,6 +83,10 @@ module.exports = function (grunt) {
       options: {
         banner: '/*! <%= pkg.name %> <%= pkg.version %> ' +
           '<%= grunt.template.today("yyyy-mm-dd") %> */\n'
+      },
+      promy: {
+        src: 'src/promy/promy.js',
+        dest: 'promy.min.js'
       },
       jio: {
         src: 'jio.js', // '<%= pkg.name %>.js'
