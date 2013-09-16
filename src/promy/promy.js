@@ -642,7 +642,9 @@
     function cancel() {
       var j;
       for (j = 0; j < promises.length; j += 1) {
-        promises[j].cancel();
+        if (typeof promises[j].cancel === 'function') {
+          promises[j].cancel();
+        }
       }
     }
     deferred = new Deferred(cancel);
@@ -691,7 +693,9 @@
     function cancel() {
       var j;
       for (j = 0; j < promises.length; j += 1) {
-        promises[j].cancel();
+        if (typeof promises[j].cancel === 'function') {
+          promises[j].cancel();
+        }
       }
     }
     deferred = new Deferred(cancel);
