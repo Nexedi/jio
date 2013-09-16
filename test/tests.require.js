@@ -6,6 +6,7 @@
 
   require.config({
     "paths": {
+      "promy":       "../src/promy/promy",
       "sha256":      "../src/sha256.amd",
       "jio":         "../jio",
       "jio_tests":   "jio/tests",
