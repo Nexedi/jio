@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global window, define, module, test_util, jIO, local_storage, test, ok,
+/*global window, define, module, test_util, promy, jIO, local_storage, test, ok,
   deepEqual, sinon, expect, stop, start, Blob */
 
 // define([module_name], [dependencies], module);
@@ -8,18 +8,66 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  module(test_util, jIO, local_storage);
+  module(test_util, promy, jIO, local_storage);
 }([
   'test_util',
+  'promy',
   'jio',
   'localstorage',
   'qunit'
-], function (util, jIO, local_storage) {
+], function (util, promy, jIO, local_storage) {
   "use strict";
 
   module("LocalStorage");
 
   local_storage.clear();
+
+  /**
+   * all(*promises): Promise
+   *
+   * Produces a promise that is resolved when all the given promises are
+   * fulfilled. The resolved value is an array of each of the answers of the
+   * given promises.
+   *
+   * @param  {Promise} *[promises] The promises to use
+   * @return {Promise} A new promise
+   */
+  function all() {
+    var promises, results = [], i, count = 0, deferred;
+    promises = Array.prototype.slice.call(arguments);
+    function cancel() {
+      var j;
+      for (j = 0; j < promises.length; j += 1) {
+        if (typeof promises[j].cancel === 'function') {
+          promises[j].cancel();
+        }
+      }
+    }
+    deferred = new promy.Deferred(cancel);
+    function succeed(j) {
+      return function (answer) {
+        results[j] = answer;
+        count += 1;
+        if (count !== promises.length) {
+          return;
+        }
+        deferred.resolve(results);
+      };
+    }
+    function notify(j) {
+      return function (answer) {
+        deferred.notify({
+          "promise": this,
+          "index": j,
+          "answer": answer
+        });
+      };
+    }
+    for (i = 0; i < promises.length; i += 1) {
+      promises[i].then(succeed(i), succeed(i), notify(i));
+    }
+    return deferred.promise;
+  }
 
   test("Post & Get", function () {
     expect(6);
@@ -33,14 +81,10 @@
 
     stop();
 
-    jIO.Promise.all([
+    all(
 
-      jIO.Promise.execute(function () {
-
-        // get inexistent document
-        return jio.get({"_id": "inexistent"});
-
-      }).always(function (answer) {
+      // get inexistent document
+      jio.get({"_id": "inexistent"}).always(function (answer) {
 
         deepEqual(answer, {
           "error": "not_found",
@@ -55,12 +99,9 @@
 
       }),
 
-      jIO.Promise.execute(function () {
+      // post without id
+      jio.post({}).always(function (answer) {
 
-        // post without id
-        return jio.post({});
-
-      }).always(function (answer) {
         var uuid = answer.id;
         delete answer.id;
         deepEqual(answer, {
@@ -126,7 +167,7 @@
 
       })
 
-    ]).always(start);
+    ).always(start);
 
   });
 
@@ -142,12 +183,8 @@
 
     stop();
 
-    jIO.Promise.execute(function () {
-
-      // put non empty document
-      return jio.put({"_id": "put1", "title": "myPut1"});
-
-    }).always(function (answer) {
+    // put non empty document
+    jio.put({"_id": "put1", "title": "myPut1"}).always(function (answer) {
 
       deepEqual(answer, {
         "id": "put1",
@@ -224,13 +261,12 @@
 
     stop();
 
-    jIO.Promise.all([
+    all(
 
-      jIO.Promise.execute(function () {
-
-        // get an attachment from an inexistent document
-        return jio.getAttachment({"_id": "inexistent", "_attachment": "a"});
-
+      // get an attachment from an inexistent document
+      jio.getAttachment({
+        "_id": "inexistent",
+        "_attachment": "a"
       }).always(function (answer) {
 
         deepEqual(answer, {
@@ -247,12 +283,8 @@
 
       }),
 
-      jIO.Promise.execute(function () {
-
-        // put a document then get an attachment from the empty document
-        return jio.put({"_id": "b"});
-
-      }).then(function () {
+      // put a document then get an attachment from the empty document
+      jio.put({"_id": "b"}).then(function () {
 
         return jio.getAttachment({"_id": "b", "_attachment": "inexistent"});
 
@@ -272,15 +304,11 @@
 
       }),
 
-      jIO.Promise.execute(function () {
-
-        // put an attachment to an inexistent document
-        return jio.putAttachment({
-          "_id": "inexistent",
-          "_attachment": "putattmt2",
-          "_data": ""
-        });
-
+      // put an attachment to an inexistent document
+      jio.putAttachment({
+        "_id": "inexistent",
+        "_attachment": "putattmt2",
+        "_data": ""
       }).always(function (answer) {
 
         deepEqual(answer, {
@@ -297,13 +325,9 @@
 
       }),
 
-      jIO.Promise.execute(function () {
-
-        // add a document to the storage
-        // don't need to be tested
-        return jio.put({"_id": "putattmt1", "title": "myPutAttmt1"});
-
-      }).then(function () {
+      // add a document to the storage
+      // don't need to be tested
+      jio.put({"_id": "putattmt1", "title": "myPutAttmt1"}).then(function () {
 
         return jio.putAttachment({
           "_id": "putattmt1",
@@ -327,10 +351,10 @@
       }).then(function () {
 
         // check document and attachment
-        return jIO.Promise.all([
+        return all(
           jio.get({"_id": "putattmt1"}),
           jio.getAttachment({"_id": "putattmt1", "_attachment": "putattmt2"})
-        ]);
+        );
 
         // XXX check attachment with a getAttachment
 
@@ -372,7 +396,7 @@
 
       })
 
-    ]).always(start);
+    ).always(start);
 
   });
 
@@ -388,11 +412,7 @@
 
     stop();
 
-    jIO.Promise.execute(function () {
-
-      return jio.put({"_id": "a"});
-
-    }).then(function () {
+    jio.put({"_id": "a"}).then(function () {
 
       return jio.putAttachment({"_id": "a", "_attachment": "b", "_data": "c"});
 
@@ -414,10 +434,10 @@
     }).then(function () {
 
       // Promise.all always return success
-      return jIO.Promise.all([jio.removeAttachment({
+      return all(jio.removeAttachment({
         "_id": "a",
         "_attachment": "b"
-      })]);
+      }));
 
     }).always(function (answers) {
 
@@ -480,30 +500,26 @@
 
     stop();
 
-    jIO.Promise.execute(function () {
+    o.date_a = new Date(0);
+    o.date_b = new Date();
 
-      o.date_a = new Date(0);
-      o.date_b = new Date();
-
-      // put some document before list them
-      return jIO.Promise.all([
-        jio.put({
+    // put some document before list them
+    all(
+      jio.put({
+        "_id": "a",
+        "title": "one",
+        "date": o.date_a
+      }).then(function () {
+        return jio.putAttachment({
           "_id": "a",
-          "title": "one",
-          "date": o.date_a
-        }).then(function () {
-          return jio.putAttachment({
-            "_id": "a",
-            "_attachment": "aa",
-            "_data": "aaa"
-          });
-        }),
-        jio.put({"_id": "b", "title": "two", "date": o.date_a}),
-        jio.put({"_id": "c", "title": "one", "date": o.date_b}),
-        jio.put({"_id": "d", "title": "two", "date": o.date_b})
-      ]);
-
-    }).then(function () {
+          "_attachment": "aa",
+          "_data": "aaa"
+        });
+      }),
+      jio.put({"_id": "b", "title": "two", "date": o.date_a}),
+      jio.put({"_id": "c", "title": "one", "date": o.date_b}),
+      jio.put({"_id": "d", "title": "two", "date": o.date_b})
+    ).then(function () {
 
       // get a list of documents
       return jio.allDocs();
@@ -656,43 +672,39 @@
 
     stop();
 
-    jIO.Promise.execute(function () {
-
-      o.putCorruptedDocuments = function () {
-        // put a document with a wrong attachment reference
-        util.json_local_storage.setItem(
-          "jio/localstorage/urepair/arepair/war",
-          {"_id": "war", "title": "b", "_attachments": {"aa": {}}}
-        );
-
-        // put a document with a wrong metadata
-        util.json_local_storage.setItem(
-          "jio/localstorage/urepair/arepair/meta",
-          {"_id": "meta", "title": ["b", ["c", {}], {"blue": "blue"}]}
-        );
-
-        // put a corrupted document
-        util.json_local_storage.setItem(
-          "jio/localstorage/urepair/arepair/cor",
-          "blue"
-        );
-      };
-
-      // put an unreferenced attachment
+    o.putCorruptedDocuments = function () {
+      // put a document with a wrong attachment reference
       util.json_local_storage.setItem(
-        "jio/localstorage/urepair/arepair/unref/aa",
-        "attachment content"
+        "jio/localstorage/urepair/arepair/war",
+        {"_id": "war", "title": "b", "_attachments": {"aa": {}}}
       );
-      o.putCorruptedDocuments();
 
-      return jIO.Promise.all([
-        jio.check({"_id": "war"}),
-        jio.check({"_id": "meta"}),
-        jio.check({"_id": "cor"}),
-        jio.check({"_id": "inexistent"})
-      ]);
+      // put a document with a wrong metadata
+      util.json_local_storage.setItem(
+        "jio/localstorage/urepair/arepair/meta",
+        {"_id": "meta", "title": ["b", ["c", {}], {"blue": "blue"}]}
+      );
 
-    }).always(function (answers) {
+      // put a corrupted document
+      util.json_local_storage.setItem(
+        "jio/localstorage/urepair/arepair/cor",
+        "blue"
+      );
+    };
+
+    // put an unreferenced attachment
+    util.json_local_storage.setItem(
+      "jio/localstorage/urepair/arepair/unref/aa",
+      "attachment content"
+    );
+    o.putCorruptedDocuments();
+
+    all(
+      jio.check({"_id": "war"}),
+      jio.check({"_id": "meta"}),
+      jio.check({"_id": "cor"}),
+      jio.check({"_id": "inexistent"})
+    ).always(function (answers) {
 
       deepEqual(answers[0], {
         "error": "conflict",
@@ -737,12 +749,12 @@
 
     }).then(function () {
 
-      return jIO.Promise.all([
+      return all(
         jio.repair({"_id": "war"}),
         jio.repair({"_id": "meta"}),
         jio.repair({"_id": "cor"}),
         jio.repair({"_id": "inexistent"})
-      ]);
+      );
 
     }).always(function (answers) {
 
@@ -781,12 +793,12 @@
     }).then(function () {
 
       o.getCorruptedDocuments = function () {
-        return jIO.Promise.all([
+        return all(
           jio.get({"_id": "war"}),
           jio.get({"_id": "meta"}),
           jio.get({"_id": "cor"}),
           jio.get({"_id": "inexistent"})
-        ]);
+        );
       };
 
       return o.getCorruptedDocuments();
