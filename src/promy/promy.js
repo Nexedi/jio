@@ -402,6 +402,26 @@
   };
 
   /**
+   * del(property): Promise
+   *
+   * Delete a property value from a promise response and return the property
+   * value as first parameter of the new Promise.
+   *
+   *     Deferred.when({'a': 'b'}).del('a').then(console.log);
+   *     // shows undefined
+   *
+   * @method del
+   * @param  {String} property The object property name
+   * @return {Promise} A new promise
+   */
+  Promise.prototype.del = function (property) {
+    return this.then(function (dict) {
+      delete dict[property];
+      return dict[property];
+    });
+  };
+
+  /**
    * p.done(callback): p
    *
    * Call the callback on resolve.
@@ -825,6 +845,33 @@
     var p = new Deferred();
     try {
       dict[property] = value;
+      p.resolve(dict[property]);
+    } catch (e) {
+      p.reject(e);
+    }
+    return p;
+  };
+
+  ////////////////////////////////////////////////////////////
+  // http://wiki.commonjs.org/wiki/Promises/B
+  // del(object, name)
+
+  /**
+   * del(dict, property): Promise
+   *
+   * Delete and return the dict property as first parameter of the promise
+   * answer.
+   *
+   *     Deferred.del({'a': 'b'}, 'a').then(console.log); // shows undefined
+   *
+   * @param  {Object} dict The object to use
+   * @param  {String} property The object property name
+   * @return {Promise} The promise
+   */
+  exports.del = function (dict, property) {
+    var p = new Deferred();
+    try {
+      delete dict[property];
       p.resolve(dict[property]);
     } catch (e) {
       p.reject(e);
