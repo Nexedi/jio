@@ -391,7 +391,7 @@
    *
    * @method put
    * @param  {String} property The object property name
-   * @param  {String} value The value to put
+   * @param  {Any} value The value to put
    * @return {Promise} A new promise
    */
   Promise.prototype.put = function (property, value) {
