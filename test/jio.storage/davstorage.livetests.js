@@ -113,7 +113,7 @@
 
     function list2DocumentsTest(answer) {
       if (answer && answer.data && Array.isArray(answer.data.rows)) {
-        answer.data.rows.sort(function (a, b) {
+        answer.data.rows.sort(function (a) {
           return a.id === "b" ? 1 : 0;
         });
       }

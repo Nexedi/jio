@@ -129,7 +129,7 @@
    * @return {String} The original name
    */
   function restoreName(secured_name) {
-  return decodeURI(secured_name.replace(/%3F/ig, '?').replace(/%2F/ig, '/'));
+    return decodeURI(secured_name.replace(/%3F/ig, '?').replace(/%2F/ig, '/'));
   }
 
   /**
@@ -181,7 +181,7 @@
    */
   var ajax = {
     "none": function (method, type, url, data) {
-      var headers;
+      var headers = {};
       if (method === "PROPFIND") {
         headers.Depth = "1";
       }
@@ -337,9 +337,9 @@
           textContent.split('/').slice(-1)[0];
         row.id = fileNameToIds(row.id);
         if (row.id.length !== 1) {
-         row = undefined;
+          row = undefined;
         } else {
-         row.id = row.id[0];
+          row.id = row.id[0];
         }
         if (row !== undefined) {
           rows[rows.length] = row;
