@@ -5,7 +5,7 @@
  */
 
 /*jslint indent: 2, maxlen: 80, nomen: true, regexp: true, unparam: true */
-/*global define, window, jIO, promy, btoa, DOMParser */
+/*global define, window, jIO, promy, btoa, DOMParser, Blob */
 
 // JIO Dav Storage Description :
 // {
@@ -609,6 +609,7 @@
           }};
         }
         delete o["Not Found"];
+        o.type = attachment.content_type || "application/octet-stream";
         o.notify_message = "Retrieving attachment";
         o.percentage = [30, 100];
         o.digest = attachment.digest;
@@ -616,7 +617,7 @@
       }.bind(this),
       success: function (e) {
         command.success(e.target.status, {
-          "data": e.target.response,
+          "data": new Blob([e.target.response], {"type": o.type}),
           "digest": o.digest
         });
       },
