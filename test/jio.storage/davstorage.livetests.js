@@ -45,7 +45,7 @@
    *   X-Requested-With, X-HTTP-Method-Override, Accept, Authorization,
    *   Depth"
    */
-  test("Scenario", 29, function () {
+  test("Scenario", 31, function () {
     ok(!(/^file:/.test(location.href)),
        "Should not work on file protocol: " + location.href);
 
@@ -322,6 +322,7 @@
         "statusText": "Ok"
       }, "Get first attachment");
       return jIO.util.readBlobAsText(blob).then(function (e) {
+        deepEqual(blob.type, "text/plain", "Check blob type");
         deepEqual(e.target.result, "aab", "Check blob text content");
       }, function (err) {
         deepEqual(err, "no error", "Check blob text content");
@@ -347,6 +348,7 @@
         "statusText": "Ok"
       }, "Get first attachment");
       return jIO.util.readBlobAsText(blob).then(function (e) {
+        deepEqual(blob.type, "text/plain", "Check blob type");
         deepEqual(e.target.result, "aba", "Check blob text content");
       }, function (err) {
         deepEqual(err, "no error", "Check blob text content");
