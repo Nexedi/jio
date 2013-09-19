@@ -311,9 +311,9 @@ exports.util.makeBinaryStringDigest = makeBinaryStringDigest;
 
 function readBlobAsBinaryString(blob) {
   var deferred = new Deferred(), fr = new FileReader();
-  fr.onload = deferred.resolve.bind(deferred);
-  fr.onerror = deferred.reject.bind(deferred);
-  fr.onprogress = deferred.notify.bind(deferred);
+  fr.addEventListener("load", deferred.resolve.bind(deferred));
+  fr.addEventListener("error", deferred.reject.bind(deferred));
+  fr.addEventListener("progress", deferred.notify.bind(deferred));
   fr.readAsBinaryString(blob);
   return deferred.promise;
 }
@@ -321,9 +321,9 @@ exports.util.readBlobAsBinaryString = readBlobAsBinaryString;
 
 function readBlobAsArrayBuffer(blob) {
   var deferred = new Deferred(), fr = new FileReader();
-  fr.onload = deferred.resolve.bind(deferred);
-  fr.onerror = deferred.reject.bind(deferred);
-  fr.onprogress = deferred.notify.bind(deferred);
+  fr.addEventListener("load", deferred.resolve.bind(deferred));
+  fr.addEventListener("error", deferred.reject.bind(deferred));
+  fr.addEventListener("progress", deferred.notify.bind(deferred));
   fr.readAsArrayBuffer(blob);
   return deferred.promise;
 }
@@ -331,9 +331,9 @@ exports.util.readBlobAsArrayBuffer = readBlobAsArrayBuffer;
 
 function readBlobAsText(blob) {
   var deferred = new Deferred(), fr = new FileReader();
-  fr.onload = deferred.resolve.bind(deferred);
-  fr.onerror = deferred.reject.bind(deferred);
-  fr.onprogress = deferred.notify.bind(deferred);
+  fr.addEventListener("load", deferred.resolve.bind(deferred));
+  fr.addEventListener("error", deferred.reject.bind(deferred));
+  fr.addEventListener("progress", deferred.notify.bind(deferred));
   fr.readAsText(blob);
   return deferred.promise;
 }
@@ -365,14 +365,14 @@ function ajax(param) {
       }
     }
   }
-  xhr.onload = function (e) {
+  xhr.addEventListener("load", function (e) {
     if (e.target.status >= 400) {
       return deferred.reject(e);
     }
     deferred.resolve(e);
-  };
-  xhr.onerror = deferred.reject.bind(deferred);
-  xhr.onprogress = deferred.notify.bind(deferred);
+  });
+  xhr.addEventListener("error", deferred.reject.bind(deferred));
+  xhr.addEventListener("progress", deferred.notify.bind(deferred));
   if (typeof param.beforeSend === 'function') {
     param.beforeSend(xhr);
   }
