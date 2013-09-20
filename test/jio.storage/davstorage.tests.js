@@ -430,7 +430,7 @@
     function createAttachmentTest(answer) {
       deepEqual(answer, {
         "attachment": "aa",
-        "digest": "sha256-9834876dcfb05cb167a5c24953eba58c4"+
+        "digest": "sha256-9834876dcfb05cb167a5c24953eba58c4" +
           "ac89b1adf57f28f2f9d09af107ee8f0",
         "id": "a",
         "method": "putAttachment",
@@ -449,7 +449,7 @@
         "_attachments": {
           "aa": {
             "content_type": "text/plain",
-            "digest": "sha256-9834876dcfb05cb167a5c24953eba58c4"+
+            "digest": "sha256-9834876dcfb05cb167a5c24953eba58c4" +
               "ac89b1adf57f28f2f9d09af107ee8f0",
             "length": 3
           }
