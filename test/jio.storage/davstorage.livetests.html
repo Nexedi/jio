@@ -12,9 +12,15 @@
   <script src="../../complex_queries.js"></script>
   <script src="../../src/jio.storage/davstorage.js"></script>
   <script src="../jio/util.js"></script>
-  <script src="davstorage.livetests.js"></script>
 </head>
 <body>
+  <script>
+var davstorage_spec = {};
+location.href.split('?')[1].split('&').forEach(function (item) {
+  davstorage_spec[item.split('=')[0]] = decodeURI(item.split('=').slice(1).join('=')).
+    replace(/%3A/ig, ':').replace(/%2F/ig, '/');
+});
+  </script>
   <h3>JIO initialization</h3>
   <form method="get" action="">
     <input type="hidden" name="type" value="dav"/>
@@ -26,5 +32,6 @@
   </form>
   <br />
   <div id="qunit"></div>
+  <script src="davstorage.tests.js"></script>
 </body>
 </html>
