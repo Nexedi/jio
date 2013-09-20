@@ -1,24 +1,28 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global module, test, stop, start, expect, ok, deepEqual, location, promy, jIO,
-  test_util, dav_storage, btoa */
+/*global module, test, stop, start, expect, ok, deepEqual, location, sinon,
+  davstorage_spec, promy, jIO, test_util, dav_storage, btoa */
 
 (function () {
   "use strict";
 
-  var spec = {};
-  location.href.split('?')[1].split('&').forEach(function (item) {
-    spec[item.split('=')[0]] = decodeURI(item.split('=').slice(1).join('=')).
-      replace(/%3A/ig, ':').replace(/%2F/ig, '/');
-  });
-  spec = dav_storage.createDescription(
-    spec.url,
-    spec.auth_type,
-    spec.realm,
-    spec.username,
-    spec.password
-  );
+  var spec, use_fake_server = true;
+  if (typeof davstorage_spec === 'object') {
+    use_fake_server = false;
+    spec = dav_storage.createDescription(
+      davstorage_spec.url,
+      davstorage_spec.auth_type,
+      davstorage_spec.realm,
+      davstorage_spec.username,
+      davstorage_spec.password
+    );
+  } else {
+    spec = dav_storage.createDescription(
+      "http://localhost",
+      "none"
+    );
+  }
 
-  module("Dav Storage Live");
+  module("Dav Storage");
 
   function success(promise) {
     var deferred = new promy.Deferred();
@@ -45,18 +49,39 @@
    *   X-Requested-With, X-HTTP-Method-Override, Accept, Authorization,
    *   Depth"
    */
-  test("Scenario", 31, function () {
-    ok(!(/^file:/.test(location.href)),
-       "Should not work on file protocol: " + location.href);
+  test("Scenario", 30, function () {
 
-    var shared = {}, jio = jIO.createJIO(spec, {
+    var server, responses = [], shared = {}, jio = jIO.createJIO(spec, {
       "workspace": {},
       "max_retry": 2
     });
 
     stop();
 
+    if (use_fake_server) {
+      /*jslint regexp: true */
+      server = sinon.fakeServer.create();
+      server.autoRespond = true;
+      server.autoRespondAfter = 5;
+      server.respondWith(/.*/, function (xhr) {
+        var response = responses.shift();
+        if (response) {
+          return xhr.respond.apply(xhr, response);
+        }
+        ok(false, "No response associated to the latest request!");
+      });
+    } else {
+      responses.push = function () {
+        return;
+      };
+      server = {restore: function () {
+        return;
+      }};
+    }
+
     function postNewDocument() {
+      responses.push([404, {}, '']); // GET
+      responses.push([201, {}, '']); // PUT
       return jio.post({"title": "Unique ID"});
     }
 
@@ -76,6 +101,12 @@
     }
 
     function getCreatedDocument() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": shared.created_document_id,
+        "title": "Unique ID"
+      })]); // GET
       return jio.get({"_id": shared.created_document_id});
     }
 
@@ -94,6 +125,8 @@
     }
 
     function postSpecificDocument() {
+      responses.push([404, {}, '']); // GET
+      responses.push([201, {}, '']); // PUT
       return jio.post({"_id": "b", "title": "Bee"});
     }
 
@@ -108,6 +141,93 @@
     }
 
     function listDocuments() {
+      responses.push([
+        207,
+        {"Content-Type": "text/xml"},
+        '<?xml version="1.0" encoding="utf-8"?>' +
+          '<D:multistatus xmlns:D="DAV:">' +
+          '<D:response xmlns:lp2="http://apache.' +
+          'org/dav/props/" xmlns:lp1="DAV:">' +
+          '<D:href>/uploads/</D:href>' +
+          '<D:propstat>' +
+          '<D:prop>' +
+          '<lp1:resourcetype><D:collection/></lp1:resourcetype>' +
+          '<lp1:creationdate>2013-09-19T11:54:43Z</lp1:creationdate>' +
+          '<lp1:getlastmodified>Thu, 19 Sep 2013 11:54:43 GMT' +
+          '</lp1:getlastmodified>' +
+          '<lp1:getetag>"240be-1000-4e6bb383e5fbb"</lp1:getetag>' +
+          '<D:supportedlock>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:exclusive/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:shared/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '</D:supportedlock>' +
+          '<D:lockdiscovery/>' +
+          '<D:getcontenttype>httpd/unix-directory</D:getcontenttype>' +
+          '</D:prop>' +
+          '<D:status>HTTP/1.1 200 OK</D:status>' +
+          '</D:propstat>' +
+          '</D:response>' +
+          '<D:response xmlns:lp2="http://apache.org/dav/props/" ' +
+          'xmlns:lp1="DAV:">' +
+          '<D:href>/uploads/' + shared.created_document_id + '</D:href>' +
+          '<D:propstat>' +
+          '<D:prop>' +
+          '<lp1:resourcetype/>' +
+          '<lp1:creationdate>2013-09-19T11:54:43Z</lp1:creationdate>' +
+          '<lp1:getcontentlength>66</lp1:getcontentlength>' +
+          '<lp1:getlastmodified>Thu, 19 Sep 2013 11:54:43 GMT' +
+          '</lp1:getlastmodified>' +
+          '<lp1:getetag>"20529-42-4e6bb383d0d30"</lp1:getetag>' +
+          '<lp2:executable>F</lp2:executable>' +
+          '<D:supportedlock>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:exclusive/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:shared/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '</D:supportedlock>' +
+          '<D:lockdiscovery/>' +
+          '</D:prop>' +
+          '<D:status>HTTP/1.1 200 OK</D:status>' +
+          '</D:propstat>' +
+          '</D:response>' +
+          '<D:response xmlns:lp2="http://apache.org/dav/props/" ' +
+          'xmlns:lp1="DAV:">' +
+          '<D:href>/uploads/b</D:href>' +
+          '<D:propstat>' +
+          '<D:prop>' +
+          '<lp1:resourcetype/>' +
+          '<lp1:creationdate>2013-09-19T11:54:43Z</lp1:creationdate>' +
+          '<lp1:getcontentlength>25</lp1:getcontentlength>' +
+          '<lp1:getlastmodified>Thu, 19 Sep 2013 11:54:43 GMT' +
+          '</lp1:getlastmodified>' +
+          '<lp1:getetag>"20da3-19-4e6bb383e5fbb"</lp1:getetag>' +
+          '<lp2:executable>F</lp2:executable>' +
+          '<D:supportedlock>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:exclusive/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:shared/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '</D:supportedlock>' +
+          '<D:lockdiscovery/>' +
+          '</D:prop>' +
+          '<D:status>HTTP/1.1 200 OK</D:status>' +
+          '</D:propstat>' +
+          '</D:response>' +
+          '</D:multistatus>'
+      ]); // PROPFIND
       return jio.allDocs();
     }
 
@@ -136,6 +256,13 @@
     }
 
     function removeCreatedDocument() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": shared.created_document_id,
+        "title": "Unique ID"
+      })]); // GET
+      responses.push([204, {}, '']); // DELETE
       return jio.remove({"_id": shared.created_document_id});
     }
 
@@ -150,6 +277,13 @@
     }
 
     function removeSpecificDocument() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "b",
+        "title": "Bee"
+      })]); // GET
+      responses.push([204, {}, '']); // DELETE
       return jio.remove({"_id": "b"});
     }
 
@@ -164,6 +298,39 @@
     }
 
     function listEmptyStorage() {
+      responses.push([
+        207,
+        {"Content-Type": "text/xml"},
+        '<?xml version="1.0" encoding="utf-8"?>' +
+          '<D:multistatus xmlns:D="DAV:">' +
+          '<D:response xmlns:lp2="http://apache.org/dav/props/" ' +
+          'xmlns:lp1="DAV:">' +
+          '<D:href>/uploads/</D:href>' +
+          '<D:propstat>' +
+          '<D:prop>' +
+          '<lp1:resourcetype><D:collection/></lp1:resourcetype>' +
+          '<lp1:creationdate>2013-09-19T11:54:43Z</lp1:creationdate>' +
+          '<lp1:getlastmodified>Thu, 19 Sep 2013 11:54:43 GMT' +
+          '</lp1:getlastmodified>' +
+          '<lp1:getetag>"240be-1000-4e6bb3840a9ac"</lp1:getetag>' +
+          '<D:supportedlock>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:exclusive/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:shared/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '</D:supportedlock>' +
+          '<D:lockdiscovery/>' +
+          '<D:getcontenttype>httpd/unix-directory</D:getcontenttype>' +
+          '</D:prop>' +
+          '<D:status>HTTP/1.1 200 OK</D:status>' +
+          '</D:propstat>' +
+          '</D:response>' +
+          '</D:multistatus>'
+      ]); // PROPFIND
       return jio.allDocs();
     }
 
@@ -181,6 +348,8 @@
     }
 
     function putNewDocument() {
+      responses.push([404, {}, '']); // GET
+      responses.push([201, {}, '']); // PUT
       return jio.put({"_id": "a", "title": "Hey"});
     }
 
@@ -195,6 +364,12 @@
     }
 
     function getCreatedDocument2() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hey"
+      })]); // GET
       return jio.get({"_id": "a"});
     }
 
@@ -213,6 +388,12 @@
     }
 
     function postSameDocument() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hey"
+      })]); // GET
       return success(jio.post({"_id": "a", "title": "Hoo"}));
     }
 
@@ -230,6 +411,14 @@
     }
 
     function createAttachment() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hey"
+      })]); // GET
+      responses.push([201, {}, '']); // PUT (attachment)
+      responses.push([204, {}, '']); // PUT (metadata)
       return jio.putAttachment({
         "_id": "a",
         "_attachment": "aa",
@@ -241,6 +430,8 @@
     function createAttachmentTest(answer) {
       deepEqual(answer, {
         "attachment": "aa",
+        "digest": "sha256-9834876dcfb05cb167a5c24953eba58c4"+
+          "ac89b1adf57f28f2f9d09af107ee8f0",
         "id": "a",
         "method": "putAttachment",
         "result": "success",
@@ -250,6 +441,22 @@
     }
 
     function updateAttachment() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hey",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-9834876dcfb05cb167a5c24953eba58c4"+
+              "ac89b1adf57f28f2f9d09af107ee8f0",
+            "length": 3
+          }
+        }
+      })]); // GET
+      responses.push([204, {}, '']); // PUT (attachment)
+      responses.push([204, {}, '']); // PUT (metadata)
       return jio.putAttachment({
         "_id": "a",
         "_attachment": "aa",
@@ -261,6 +468,8 @@
     function updateAttachmentTest(answer) {
       deepEqual(answer, {
         "attachment": "aa",
+        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+          "0728e095ff24218119d51bd22475363",
         "id": "a",
         "method": "putAttachment",
         "result": "success",
@@ -270,6 +479,22 @@
     }
 
     function createAnotherAttachment() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hey",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          }
+        }
+      })]); // GET
+      responses.push([201, {}, '']); // PUT (attachment)
+      responses.push([204, {}, '']); // PUT (metadata)
       return jio.putAttachment({
         "_id": "a",
         "_attachment": "ab",
@@ -281,6 +506,8 @@
     function createAnotherAttachmentTest(answer) {
       deepEqual(answer, {
         "attachment": "ab",
+        "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+          "ed343e6c739e54131fcb3a56e4bc1bd",
         "id": "a",
         "method": "putAttachment",
         "result": "success",
@@ -290,6 +517,27 @@
     }
 
     function updateLastDocument() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hey",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          },
+          "ab": {
+            "content_type": "text/plain",
+            "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+              "ed343e6c739e54131fcb3a56e4bc1bd",
+            "length": 3
+          }
+        }
+      })]); // GET
+      responses.push([204, {}, '']); // PUT
       return jio.put({"_id": "a", "title": "Hoo"});
     }
 
@@ -304,6 +552,29 @@
     }
 
     function getFirstAttachment() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hoo",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          },
+          "ab": {
+            "content_type": "text/plain",
+            "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+              "ed343e6c739e54131fcb3a56e4bc1bd",
+            "length": 3
+          }
+        }
+      })]); // GET
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, "aab"]); // GET
       return jio.getAttachment({"_id": "a", "_attachment": "aa"});
     }
 
@@ -599,7 +870,9 @@
       // check 204
       //then(checkDocument).done(checkDocumentTest).
       //then(checkStorage).done(checkStorageTest).
-      fail(unexpectedError).always(start);
+      fail(unexpectedError).
+      always(start).
+      always(server.restore.bind(server));
 
   });
 
