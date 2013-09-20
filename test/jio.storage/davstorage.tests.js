@@ -601,6 +601,29 @@
     }
 
     function getSecondAttachment() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hoo",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          },
+          "ab": {
+            "content_type": "text/plain",
+            "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+              "ed343e6c739e54131fcb3a56e4bc1bd",
+            "length": 3
+          }
+        }
+      })]); // GET
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, "aba"]); // GET
       return jio.getAttachment({"_id": "a", "_attachment": "ab"});
     }
 
@@ -627,6 +650,26 @@
     }
 
     function getLastDocument() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hoo",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          },
+          "ab": {
+            "content_type": "text/plain",
+            "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+              "ed343e6c739e54131fcb3a56e4bc1bd",
+            "length": 3
+          }
+        }
+      })]); // GET
       return jio.get({"_id": "a"});
     }
 
@@ -659,6 +702,28 @@
     }
 
     function removeSecondAttachment() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hoo",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          },
+          "ab": {
+            "content_type": "text/plain",
+            "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+              "ed343e6c739e54131fcb3a56e4bc1bd",
+            "length": 3
+          }
+        }
+      })]); // GET
+      responses.push([204, {}, '']); // PUT
+      responses.push([204, {}, '']); // DELETE
       return jio.removeAttachment({"_id": "a", "_attachment": "ab"});
     }
 
@@ -674,6 +739,20 @@
     }
 
     function getInexistentSecondAttachment() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hoo",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          }
+        }
+      })]); // GET
       return success(jio.getAttachment({"_id": "a", "_attachment": "ab"}));
     }
 
@@ -692,6 +771,20 @@
     }
 
     function getOneAttachmentDocument() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hoo",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          }
+        }
+      })]); // GET
       return jio.get({"_id": "a"});
     }
 
@@ -718,6 +811,20 @@
     }
 
     function removeSecondAttachmentAgain() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hoo",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          }
+        }
+      })]); // GET
       return success(jio.removeAttachment({"_id": "a", "_attachment": "ab"}));
     }
 
@@ -736,6 +843,22 @@
     }
 
     function removeDocument() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hoo",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          }
+        }
+      })]); // GET
+      responses.push([204, {}, '']); // DELETE (metadata)
+      responses.push([204, {}, '']); // DELETE (attachment aa)
       return jio.remove({"_id": "a"});
     }
 
@@ -750,6 +873,7 @@
     }
 
     function getInexistentFirstAttachment() {
+      responses.push([404, {}, '']); // GET
       return success(jio.getAttachment({"_id": "a", "_attachment": "aa"}));
     }
 
@@ -768,6 +892,7 @@
     }
 
     function getInexistentDocument() {
+      responses.push([404, {}, '']); // GET
       return success(jio.get({"_id": "a"}));
     }
 
@@ -785,6 +910,7 @@
     }
 
     function removeInexistentDocument() {
+      responses.push([404, {}, '']); // GET
       return success(jio.remove({"_id": "a"}));
     }
 
