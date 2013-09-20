@@ -397,7 +397,7 @@
    * @param  {Object} options The command options
    */
   LocalStorage.prototype.allDocs = function (command, param, options) {
-    var i, row, path_re, rows, document_list, document_object;
+    var i, row, path_re, rows, document_list, document_object, delete_id;
     param.unused = true;
     rows = [];
     document_list = [];
@@ -434,7 +434,10 @@
         }
       }
       options.select_list = options.select_list || [];
-      options.select_list.push("_id");
+      if (options.select_list.indexOf("_id") === -1) {
+        options.select_list.push("_id");
+        delete_id = true;
+      }
       if (options.include_docs === true) {
         document_object = {};
         document_list.forEach(function (meta) {
@@ -452,7 +455,9 @@
           o.doc = document_object[value._id];
           delete document_object[value._id];
         }
-        delete value._id;
+        if (delete_id) {
+          delete value._id;
+        }
         o.value = value;
         return o;
       });
