@@ -522,7 +522,9 @@
         return this._put(o.remote_metadata);
       }.bind(this),
       success: function (e) {
-        command.success(e.target.status);
+        command.success(e.target.status, {
+          "digest": o.remote_metadata._attachments[param._attachment].digest
+        });
       },
       reject: function (e) {
         command.reject(
