@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global module, test, stop, start, expect, ok, deepEqual, location, sinon,
-  davstorage_spec, promy, jIO, test_util, dav_storage, btoa */
+  davstorage_spec, RSVP, jIO, test_util, dav_storage, btoa */
 
 (function () {
   "use strict";
@@ -25,13 +25,11 @@
   module("Dav Storage");
 
   function success(promise) {
-    var deferred = new promy.Deferred();
-    promise.then(
-      deferred.resolve.bind(deferred),
-      deferred.resolve.bind(deferred),
-      deferred.notify.bind(deferred)
-    );
-    return deferred.promise;
+    return new RSVP.Promise(function (resolve, reject, notify) {
+      promise.then(resolve, resolve, notify);
+    }, function () {
+      promise.cancel();
+    });
   }
 
   /**
@@ -940,59 +938,57 @@
 
     // # Post new documents, list them and remove them
     // post a 201
-    postNewDocument().done(postNewDocumentTest).
+    postNewDocument().then(postNewDocumentTest).
       // get 200
-      then(getCreatedDocument).done(getCreatedDocumentTest).
+      then(getCreatedDocument).then(getCreatedDocumentTest).
       // post b 201
-      then(postSpecificDocument).done(postSpecificDocumentTest).
+      then(postSpecificDocument).then(postSpecificDocumentTest).
       // allD 200 2 documents
-      then(listDocuments).done(list2DocumentsTest).
+      then(listDocuments).then(list2DocumentsTest).
       // remove a 204
-      then(removeCreatedDocument).done(removeCreatedDocumentTest).
+      then(removeCreatedDocument).then(removeCreatedDocumentTest).
       // remove b 204
-      then(removeSpecificDocument).done(removeSpecificDocumentTest).
+      then(removeSpecificDocument).then(removeSpecificDocumentTest).
       // allD 200 empty storage
-      then(listEmptyStorage).done(listEmptyStorageTest).
+      then(listEmptyStorage).then(listEmptyStorageTest).
       // # Create and update documents, and some attachment and remove them
       // put 201
-      then(putNewDocument).done(putNewDocumentTest).
+      then(putNewDocument).then(putNewDocumentTest).
       // get 200
-      then(getCreatedDocument2).done(getCreatedDocument2Test).
+      then(getCreatedDocument2).then(getCreatedDocument2Test).
       // post 409
-      then(postSameDocument).done(postSameDocumentTest).
+      then(postSameDocument).then(postSameDocumentTest).
       // putA a 204
-      then(createAttachment).done(createAttachmentTest).
+      then(createAttachment).then(createAttachmentTest).
       // putA a 204
-      then(updateAttachment).done(updateAttachmentTest).
+      then(updateAttachment).then(updateAttachmentTest).
       // putA b 204
-      then(createAnotherAttachment).done(createAnotherAttachmentTest).
+      then(createAnotherAttachment).then(createAnotherAttachmentTest).
       // put 204
-      then(updateLastDocument).done(updateLastDocumentTest).
+      then(updateLastDocument).then(updateLastDocumentTest).
       // getA a 200
-      then(getFirstAttachment).
-      then(getFirstAttachmentTest).
+      then(getFirstAttachment).then(getFirstAttachmentTest).
       // getA b 200
-      then(getSecondAttachment).
-      then(getSecondAttachmentTest).
+      then(getSecondAttachment).then(getSecondAttachmentTest).
       // get 200
-      then(getLastDocument).done(getLastDocumentTest).
+      then(getLastDocument).then(getLastDocumentTest).
       // removeA b 204
-      then(removeSecondAttachment).done(removeSecondAttachmentTest).
+      then(removeSecondAttachment).then(removeSecondAttachmentTest).
       // getA b 404
       then(getInexistentSecondAttachment).
-      done(getInexistentSecondAttachmentTest).
+      then(getInexistentSecondAttachmentTest).
       // get 200
-      then(getOneAttachmentDocument).done(getOneAttachmentDocumentTest).
+      then(getOneAttachmentDocument).then(getOneAttachmentDocumentTest).
       // removeA b 404
-      then(removeSecondAttachmentAgain).done(removeSecondAttachmentAgainTest).
+      then(removeSecondAttachmentAgain).then(removeSecondAttachmentAgainTest).
       // remove 204
-      then(removeDocument).done(removeDocumentTest).
+      then(removeDocument).then(removeDocumentTest).
       // getA a 404
-      then(getInexistentFirstAttachment).done(getInexistentFirstAttachmentTest).
+      then(getInexistentFirstAttachment).then(getInexistentFirstAttachmentTest).
       // get 404
-      then(getInexistentDocument).done(getInexistentDocumentTest).
+      then(getInexistentDocument).then(getInexistentDocumentTest).
       // remove 404
-      then(removeInexistentDocument).done(removeInexistentDocumentTest).
+      then(removeInexistentDocument).then(removeInexistentDocumentTest).
       // check 204
       //then(checkDocument).done(checkDocumentTest).
       //then(checkStorage).done(checkStorageTest).
