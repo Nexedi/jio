@@ -5,7 +5,7 @@
  */
 
 /*jslint indent: 2, maxlen: 80, nomen: true, regexp: true, unparam: true */
-/*global define, window, jIO, promy, btoa, DOMParser, Blob */
+/*global define, window, jIO, RSVP, btoa, DOMParser, Blob */
 
 // JIO Dav Storage Description :
 // {
@@ -45,8 +45,8 @@
     return define(dependencies, module);
   }
   window.dav_storage = {};
-  module(window.dav_storage, promy, jIO);
-}(['exports', 'promy', 'jio'], function (exports, promy, jIO) {
+  module(window.dav_storage, RSVP, jIO);
+}(['exports', 'rsvp', 'jio'], function (exports, RSVP, jIO) {
   "use strict";
 
   /**
@@ -167,13 +167,11 @@
   }
 
   function promiseSucceed(promise) {
-    var deferred = new promy.Deferred();
-    promise.then(
-      deferred.resolve.bind(deferred),
-      deferred.resolve.bind(deferred),
-      deferred.notify.bind(deferred)
-    );
-    return deferred.promise;
+    return new RSVP.Promise(function (resolve, reject, notify) {
+      promise.then(resolve, reject, notify);
+    }, function () {
+      promise.cancel();
+    });
   }
 
   /**
@@ -265,7 +263,7 @@
         return {"target": {
           "status": e.target.status,
           "statusText": e.target.statusText,
-          "response": JSON.parse(e.target.response)
+          "response": JSON.parse(e.target.responseText)
         }};
       } catch (err) {
         throw {"target": {
@@ -284,6 +282,13 @@
       null,
       this._login
     );
+    // .then(function (v) { // for sinon js compatibility
+    //   return {"target": {
+    //     "status": v.target.status,
+    //     "statusText": v.target.statusText,
+    //     "response": new Blob([v.target.responseText])
+    //   }};
+    // });
   };
 
   DavStorage.prototype._remove = function (param) {
@@ -316,7 +321,7 @@
       this._login
     ).then(function (e) {
       var i, rows = [], row, responses = new DOMParser().parseFromString(
-        e.target.response,
+        e.target.responseText,
         "text/xml"
       ).querySelectorAll(
         "D\\:response, response"
@@ -401,8 +406,7 @@
         o.notify_message = "Updating metadata";
         o.error_message = "DavStorage, unable to update document.";
         o.percentage = [30, 100];
-        this._put(metadata).progress(o.notifyProgress).
-          done(o.success).fail(o.reject);
+        this._put(metadata).then(o.success, o.reject, o.notifyProgress);
       }.bind(this),
       errorDocumentExists: function (e) {
         command.error(
@@ -422,8 +426,7 @@
         o.percentage = [30, 100];
         o.notify_message = "Updating metadata";
         o.error_message = "DavStorage, unable to create document.";
-        this._put(metadata).progress(o.notifyProgress).
-          done(o.success).fail(o.reject);
+        this._put(metadata).then(o.success, o.reject, o.notifyProgress);
       }.bind(this),
       success: function (e) {
         command.success(e.target.status, {"id": metadata._id});
@@ -437,9 +440,11 @@
       }
     };
 
-    this._get(metadata).progress(o.notifyProgress).
-      done(method === 'post' ? o.errorDocumentExists : o.putMetadata).
-      fail(o.putMetadataIfPossible);
+    this._get(metadata).then(
+      method === 'post' ? o.errorDocumentExists : o.putMetadata,
+      o.putMetadataIfPossible,
+      o.notifyProgress
+    );
   };
 
   /**
@@ -481,9 +486,6 @@
       percentage: [0, 30],
       notify_message: "Getting metadata",
       notifyProgress: function (e) {
-        if (e === null) {
-          return;
-        }
         command.notify({
           "method": "putAttachment",
           "message": o.notify_message,
@@ -498,15 +500,15 @@
         o.percentage = [30, 70];
         o.notify_message = "Putting attachment";
         o.remote_metadata = e.target.response;
-        return promy.join(
+        return RSVP.all([
           this._putAttachment(param),
           jIO.util.readBlobAsBinaryString(param._blob)
-        ).then(null, null, function (e) {
+        ]).then(null, null, function (e) {
           // propagate only putAttachment progress
           if (e.index === 0) {
-            return e.answer;
+            return e.value;
           }
-          return null;
+          throw null;
         });
       }.bind(this),
       putMetadata: function (answers) {
@@ -538,7 +540,7 @@
     this._get(param).
       then(o.putAttachmentAndReadBlob).
       then(o.putMetadata).
-      done(o.success).fail(o.reject).progress(o.notifyProgress);
+      then(o.success, o.reject, o.notifyProgress);
   };
 
   /**
@@ -572,8 +574,7 @@
       }
     };
 
-    this._get(param).
-      done(o.success).fail(o.reject).progress(o.notifyGetProgress);
+    this._get(param).then(o.success, o.reject, o.notifyGetProgress);
   };
 
   /**
@@ -634,7 +635,7 @@
 
     this._get(param).
       then(o.getAttachment).
-      done(o.success).fail(o.reject).progress(o.notifyProgress);
+      then(o.success, o.reject, o.notifyProgress);
   };
 
   /**
@@ -691,8 +692,8 @@
         }
         o.count = 0;
         o.nb_requests = requests.length;
-        return promy.join.apply(null, requests).then(null, null, function (e) {
-          if (e.answer.loaded === e.answer.total) {
+        return RSVP.all(requests).then(null, null, function (e) {
+          if (e.value.loaded === e.value.total) {
             o.count += 1;
             command.notify({
               "method": "remove",
@@ -723,7 +724,7 @@
     this._get(param).
       then(o.removeDocument).
       then(o.removeAllAttachments).
-      done(o.success).fail(o.reject).progress(o.notifyProgress);
+      then(o.success, o.reject, o.notifyProgress);
   };
 
   /**
@@ -797,7 +798,7 @@
     this._get(param).
       then(o.updateMetadata).
       then(o.removeAttachment).
-      done(o.success).fail(o.reject).progress(o.notifyProgress);
+      then(o.success, o.reject, o.notifyProgress);
   };
 
   /**
@@ -843,8 +844,8 @@
         o.nb_requests = requests.length;
         o.error_message = "DavStorage, an error occured while " +
           "getting document metadata";
-        return promy.join.apply(null, requests).then(null, null, function (e) {
-          if (e.answer.loaded === e.answer.total) {
+        return RSVP.all(requests).then(null, null, function (e) {
+          if (e.value.loaded === e.value.total) {
             o.count += 1;
             command.notify({
               "method": "allDocs",
@@ -857,7 +858,7 @@
               )
             });
           }
-          return null;
+          throw null;
         });
       }.bind(this),
       success: function () {
@@ -876,7 +877,7 @@
 
     this._allDocs(param, options).
       then(o.getAllMetadataIfNecessary).
-      done(o.success).fail(o.reject).progress(o.notifyProgress);
+      then(o.success, o.reject, o.notifyProgress);
   };
 
   jIO.addStorage('dav', DavStorage);
