@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global window, define, module, test_util, promy, jIO, local_storage, test, ok,
+/*global window, define, module, test_util, RSVP, jIO, local_storage, test, ok,
   deepEqual, sinon, expect, stop, start, Blob */
 
 // define([module_name], [dependencies], module);
@@ -8,14 +8,14 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  module(test_util, promy, jIO, local_storage);
+  module(test_util, RSVP, jIO, local_storage);
 }([
   'test_util',
-  'promy',
+  'rsvp',
   'jio',
   'localstorage',
   'qunit'
-], function (util, promy, jIO, local_storage) {
+], function (util, RSVP, jIO, local_storage) {
   "use strict";
 
   module("LocalStorage");
@@ -23,18 +23,17 @@
   local_storage.clear();
 
   /**
-   * all(*promises): Promise
+   * all(promises): Promise
    *
    * Produces a promise that is resolved when all the given promises are
    * fulfilled. The resolved value is an array of each of the answers of the
    * given promises.
    *
-   * @param  {Promise} *[promises] The promises to use
+   * @param  {Array} promises The promises to use
    * @return {Promise} A new promise
    */
-  function all() {
-    var promises, results = [], i, count = 0, deferred;
-    promises = Array.prototype.slice.call(arguments);
+  function all(promises) {
+    var results = [], i, count = 0;
     function cancel() {
       var j;
       for (j = 0; j < promises.length; j += 1) {
@@ -43,30 +42,31 @@
         }
       }
     }
-    deferred = new promy.Deferred(cancel);
-    function succeed(j) {
-      return function (answer) {
-        results[j] = answer;
-        count += 1;
-        if (count !== promises.length) {
-          return;
-        }
-        deferred.resolve(results);
-      };
-    }
-    function notify(j) {
-      return function (answer) {
-        deferred.notify({
-          "promise": this,
-          "index": j,
-          "answer": answer
-        });
-      };
-    }
-    for (i = 0; i < promises.length; i += 1) {
-      promises[i].then(succeed(i), succeed(i), notify(i));
-    }
-    return deferred.promise;
+    return new RSVP.Promise(function (resolve, reject, notify) {
+      /*jslint unparam: true */
+      function succeed(j) {
+        return function (answer) {
+          results[j] = answer;
+          count += 1;
+          if (count !== promises.length) {
+            return;
+          }
+          resolve(results);
+        };
+      }
+      function notified(j) {
+        return function (answer) {
+          notify({
+            "promise": promises[j],
+            "index": j,
+            "notified": answer
+          });
+        };
+      }
+      for (i = 0; i < promises.length; i += 1) {
+        promises[i].then(succeed(i), succeed(i), notified(i));
+      }
+    }, cancel);
   }
 
   test("Post & Get", function () {
@@ -81,7 +81,7 @@
 
     stop();
 
-    all(
+    all([
 
       // get inexistent document
       jio.get({"_id": "inexistent"}).always(function (answer) {
@@ -167,7 +167,7 @@
 
       })
 
-    ).always(start);
+    ]).always(start);
 
   });
 
@@ -261,7 +261,7 @@
 
     stop();
 
-    all(
+    all([
 
       // get an attachment from an inexistent document
       jio.getAttachment({
@@ -351,10 +351,10 @@
       }).then(function () {
 
         // check document and attachment
-        return all(
+        return all([
           jio.get({"_id": "putattmt1"}),
           jio.getAttachment({"_id": "putattmt1", "_attachment": "putattmt2"})
-        );
+        ]);
 
         // XXX check attachment with a getAttachment
 
@@ -396,7 +396,7 @@
 
       })
 
-    ).always(start);
+    ]).always(start);
 
   });
 
@@ -434,10 +434,10 @@
     }).then(function () {
 
       // Promise.all always return success
-      return all(jio.removeAttachment({
+      return all([jio.removeAttachment({
         "_id": "a",
         "_attachment": "b"
-      }));
+      })]);
 
     }).always(function (answers) {
 
@@ -504,7 +504,7 @@
     o.date_b = new Date();
 
     // put some document before list them
-    all(
+    all([
       jio.put({
         "_id": "a",
         "title": "one",
@@ -519,7 +519,7 @@
       jio.put({"_id": "b", "title": "two", "date": o.date_a}),
       jio.put({"_id": "c", "title": "one", "date": o.date_b}),
       jio.put({"_id": "d", "title": "two", "date": o.date_b})
-    ).then(function () {
+    ]).then(function () {
 
       // get a list of documents
       return jio.allDocs();
@@ -699,12 +699,12 @@
     );
     o.putCorruptedDocuments();
 
-    all(
+    all([
       jio.check({"_id": "war"}),
       jio.check({"_id": "meta"}),
       jio.check({"_id": "cor"}),
       jio.check({"_id": "inexistent"})
-    ).always(function (answers) {
+    ]).always(function (answers) {
 
       deepEqual(answers[0], {
         "error": "conflict",
@@ -749,12 +749,12 @@
 
     }).then(function () {
 
-      return all(
+      return all([
         jio.repair({"_id": "war"}),
         jio.repair({"_id": "meta"}),
         jio.repair({"_id": "cor"}),
         jio.repair({"_id": "inexistent"})
-      );
+      ]);
 
     }).always(function (answers) {
 
@@ -793,12 +793,12 @@
     }).then(function () {
 
       o.getCorruptedDocuments = function () {
-        return all(
+        return all([
           jio.get({"_id": "war"}),
           jio.get({"_id": "meta"}),
           jio.get({"_id": "cor"}),
           jio.get({"_id": "inexistent"})
-        );
+        ]);
       };
 
       return o.getCorruptedDocuments();
