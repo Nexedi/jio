@@ -1,6 +1,7 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global define, window, exports, require, jIO, fake_storage, ok, module, test,
-  expect, deepEqual, FileReader, Blob, setTimeout, localStorage */
+  stop, start, deepEqual, FileReader, Blob, setTimeout, clearTimeout,
+  localStorage */
 
 (function (dependencies, module) {
   "use strict";
@@ -13,31 +14,23 @@
   module(fake_storage, jIO);
 }(['fakestorage', 'jio', 'sinon_qunit'], function (fake_storage, jIO) {
   "use strict";
-  var JIO = jIO.JIO, commands = fake_storage.commands;
+  var test_name, JIO = jIO.JIO, commands = fake_storage.commands;
 
   //////////////////////////////////////////////////////////////////////////////
   // Tests
 
   module('JIO');
 
-  /**
-   * Tests the instance initialization
-   */
-  test('Init', function () {
-    expect(1);
-    var workspace = {}, jio = new JIO(undefined, {
-      "workspace": workspace
+  test('should initialize itself without error', 1, function () {
+    var jio = new JIO(undefined, {
+      "workspace": {}
     });
 
     // tests if jio is an object
-    ok(typeof jio === 'object', 'Init ok!');
+    ok(typeof jio === 'object', 'instance is an object');
   });
 
-  /**
-   * Tests a wrong command
-   */
-  test('Wrong parameters', function () {
-    expect(2);
+  test('should throw error when giving no parameter to `post`', 1, function () {
     var result, jio = new JIO({
       "type": "fake",
       "id": "Wrong para"
@@ -56,6 +49,16 @@
       "TypeError: JIO().post(): Argument 1 is not of type 'object'",
       "Wrong parameter"
     );
+  });
+
+  test_name = 'should not throw error when giving no param to `allDocs`';
+  test(test_name, 1, function () {
+    var result, jio = new JIO({
+      "type": "fake",
+      "id": "Good para"
+    }, {
+      "workspace": {}
+    });
 
     try {
       jio.allDocs(); // allDocs([options], [callbacks]);
@@ -66,59 +69,16 @@
     deepEqual(result, "No error thrown", "Good parameter");
   });
 
-  /**
-   * Tests asynchrony
-   */
-  test("Asynchrony", function () {
-    var workspace = {}, clock, jio, count = 0;
-    expect(8);
-
-    clock = this.sandbox.useFakeTimers();
-    jio = new JIO({
-      "type": "fake",
-      "id": "Asynchrony"
-    }, {
-      "workspace": workspace
-    });
-
-    jio.post({}).done(function () {
-      count += 1;
-      deepEqual(count, 6, "Command done");
-    }).progress(function () {
-      count += 1;
-      deepEqual(count, 3, "Command notifiy");
-    });
-    count += 1;
-    deepEqual(count, 1, "JIO post");
-    ok(!commands['Asynchrony/post'], "Command not called yet");
-    clock.tick(1);
-    count += 1;
-    deepEqual(count, 2, "Next instructions");
-    ok(commands['Asynchrony/post'], "Command called");
-    commands['Asynchrony/post'].notify();
-    count += 1;
-    deepEqual(count, 4, "Next timer");
-    commands['Asynchrony/post'].success({"id": "a"});
-    count += 1;
-    deepEqual(count, 5, "Command success requested");
-    clock.tick(1);
-  });
-
-  /**
-   * Tests a storage initialization error
-   */
-  test('Description Error', function () {
-    var clock, jio;
-    expect(2);
-    clock = this.sandbox.useFakeTimers();
-    jio = new JIO({
+  test('should return an error when a storage type is given', 1, function () {
+    var jio = new JIO({
       "type": "blue"
     }, {
       "workspace": {}
     });
 
-    // Tests wrong storage type
+    stop();
     jio.post({}).always(function (answer) {
+      start();
       deepEqual(answer, {
         "error": "internal_storage_error",
         "message": "Check if the storage description respects the " +
@@ -129,19 +89,21 @@
         "result": "error",
         "status": 551,
         "statusText": "Internal Storage Error"
-      }, "Unknown storage");
+      }, "Unknown storage error");
     });
-    clock.tick(1);
+  });
 
-    // Tests wrong storage description
-    jio = new JIO({
+  test('should return an error when a description is given', 1, function () {
+    var jio = new JIO({
       "type": "fake",
       "id": ""
     }, {
       "workspace": {}
     });
 
+    stop();
     jio.post({}).always(function (answer) {
+      start();
       deepEqual(answer, {
         "error": "internal_storage_error",
         "message": "Check if the storage description respects the " +
@@ -154,126 +116,194 @@
         "statusText": "Internal Storage Error"
       }, "Initialization error");
     });
-    clock.tick(1);
   });
 
-  /**
-   * Tests a command which does not respond
-   */
-  test('No Response or Response Timeout', function () {
-    var clock, jio, state;
-    expect(5);
-    clock = this.sandbox.useFakeTimers();
-    jio = new JIO({
+  test('should fail after default command timeout', 2, function () {
+    var i, called = false, jio = new JIO({
       "type": "fake",
       "id": "1 No Respons"
     }, {
       "workspace": {}
     });
 
-    // tests default timeout
+    stop();
     jio.post({}).always(function (answer) {
+      var message = (answer && answer.message) || "Timeout";
+      called = true;
+      if (i !== undefined) {
+        start();
+        clearTimeout(i);
+      }
+      delete answer.message;
       deepEqual(answer, {
         "error": "request_timeout",
-        "message": "Operation canceled after around " +
-          "10000 milliseconds of inactivity.",
         "method": "post",
         "result": "error",
         "reason": "timeout",
         "status": 408,
         "statusText": "Request Timeout"
-      }, "Timeout error (default timeout)");
+      }, message);
     });
-    clock.tick(1);
-    clock.tick(10000); // wait 10 seconds
-    commands['1 No Respons/post'].free();
 
-    jio = new JIO({
+    setTimeout(function () {
+      ok(!called, "callback " + (called ? "" : "not") + " called");
+    }, 9999);
+
+    setTimeout(function () {
+      commands['1 No Respons/post'].free();
+    }, 100);
+
+    i = setTimeout(function () {
+      i = undefined;
+      start();
+      ok(false, "No response");
+    }, 11000);
+  });
+
+  test('should fail after storage inactivity timeout', 2, function () {
+    var i, called = false, jio = new JIO({
       "type": "fake",
       "id": "2 No Respons"
     }, {
       "workspace": {}
     });
 
-    // tests storage timeout
-    state = "Not called yet";
+    stop();
     jio.post({}).always(function (answer) {
-      state = "Called";
+      var message = (answer && answer.message) || "Timeout";
+      called = true;
+      if (i !== undefined) {
+        start();
+        clearTimeout(i);
+      }
+      delete answer.message;
       deepEqual(answer, {
         "error": "request_timeout",
-        "message": "Operation canceled after around " +
-          "10000 milliseconds of inactivity.",
         "method": "post",
         "result": "error",
         "reason": "timeout",
         "status": 408,
         "statusText": "Request Timeout"
-      }, "Timeout error (storage timeout reset)");
+      }, message);
     });
-    clock.tick(1);
-    clock.tick(4999); // wait 5 seconds
-    commands['2 No Respons/post'].notify();
-    clock.tick(5000); // wait 5 seconds
-    deepEqual(state, "Not called yet", "Check callback state.");
-    clock.tick(5000); // wait 5 seconds
-    commands['2 No Respons/post'].free();
+    setTimeout(function () {
+      commands['2 No Respons/post'].notify();
+    }, 5000);
 
-    jio = new JIO({
+    setTimeout(function () {
+      commands['2 No Respons/post'].free();
+    }, 6000);
+
+    setTimeout(function () {
+      ok(!called, "callback " + (called ? "" : "not") + " called");
+    }, 14999);
+
+    i = setTimeout(function () {
+      i = undefined;
+      start();
+      ok(false, "No response");
+    }, 16000);
+
+  });
+
+  test('should fail after jio option default timeout', 2, function () {
+    var i, called = false, jio = new JIO({
       "type": "fake",
       "id": "3 No Respons"
     }, {
       "workspace": {},
-      "default_timeout": 2
+      "default_timeout": 2000
     });
 
-    // tests jio option timeout
+    stop();
     jio.post({}).always(function (answer) {
+      var message = (answer && answer.message) || "Timeout";
+      called = true;
+      if (i !== undefined) {
+        start();
+        clearTimeout(i);
+      }
+      delete answer.message;
       deepEqual(answer, {
         "error": "request_timeout",
-        "message": "Operation canceled after around " +
-          "2 milliseconds of inactivity.",
         "method": "post",
         "result": "error",
         "reason": "timeout",
         "status": 408,
         "statusText": "Request Timeout"
-      }, "Timeout error (specific default timeout)");
+      }, message);
     });
-    clock.tick(1);
-    clock.tick(1);
 
-    // tests command option timeout
-    jio.post({}, {"timeout": 50}).always(function (answer) {
-      deepEqual(answer, {
-        "error": "request_timeout",
-        "message": "Operation canceled after around " +
-          "50 milliseconds of inactivity.",
-        "method": "post",
-        "result": "error",
-        "reason": "timeout",
-        "status": 408,
-        "statusText": "Request Timeout"
-      }, "Timeout error (command timeout)");
-    });
-    clock.tick(1);
-    clock.tick(49);
+    setTimeout(function () {
+      commands['3 No Respons/post'].free();
+    }, 100);
+
+    setTimeout(function () {
+      ok(!called, "callback " + (called ? "" : "not") + " called");
+    }, 1999);
+
+    i = setTimeout(function () {
+      i = undefined;
+      start();
+      ok(false, "No response");
+    }, 3000);
   });
 
-  /**
-   * Tests wrong responses
-   */
-  test('Invalid Response', function () {
-    var clock, jio;
-    expect(2);
-    clock = this.sandbox.useFakeTimers();
-    jio = new JIO({
+  test('should fail after command option timeout', 2, function () {
+    var i, called = false, jio = new JIO({
+      "type": "fake",
+      "id": "4 No Respons"
+    }, {
+      "workspace": {},
+      "default_timeout": 2000
+    });
+
+    stop();
+    jio.post({}, {"timeout": 3000}).always(function (answer) {
+      var message = (answer && answer.message) || "Timeout";
+      called = true;
+      if (i !== undefined) {
+        start();
+        clearTimeout(i);
+      }
+      delete answer.message;
+      deepEqual(answer, {
+        "error": "request_timeout",
+        "method": "post",
+        "result": "error",
+        "reason": "timeout",
+        "status": 408,
+        "statusText": "Request Timeout"
+      }, message);
+    });
+
+    setTimeout(function () {
+      commands['4 No Respons/post'].free();
+    }, 1000);
+
+    setTimeout(function () {
+      ok(!called, "callback " + (called ? "" : "not") + " called");
+    }, 2999);
+
+    i = setTimeout(function () {
+      i = undefined;
+      start();
+      ok(false, "No response");
+    }, 4000);
+
+  });
+
+  test('should fail when command succeed with a bad response', 1, function () {
+    var jio = new JIO({
       "type": "fake",
       "id": "1 Invalid Re"
     }, {
       "workspace": {}
     });
 
+    stop();
     jio.post({}).always(function (answer) {
+      start();
       deepEqual(answer, {
         "error": "internal_storage_error",
         "message": "New document id have to be specified",
@@ -282,20 +312,24 @@
         "reason": "invalid response",
         "status": 551,
         "statusText": "Internal Storage Error"
-      }, "Invalid Post Response");
+      }, "response");
     });
-    clock.tick(1);
-    commands['1 Invalid Re/post'].success();
-    clock.tick(1);
+    setTimeout(function () {
+      commands['1 Invalid Re/post'].success();
+    }, 50);
+  });
 
-    jio = new JIO({
+  test('should fail when command end with a bad error', 1, function () {
+    var jio = new JIO({
       "type": "fake",
       "id": "2 Invalid Re"
     }, {
       "workspace": {}
     });
 
+    stop();
     jio.post({}).always(function (answer) {
+      start();
       deepEqual(answer, {
         "error": "internal_storage_error",
         "message": "Unknown status \"undefined\"",
@@ -304,109 +338,49 @@
         "result": "error",
         "status": 551,
         "statusText": "Internal Storage Error"
-      }, "Invalid Post Error Response");
+      }, "response");
     });
-    clock.tick(1);
-    commands['2 Invalid Re/post'].error();
-    clock.tick(1);
+    setTimeout(function () {
+      commands['2 Invalid Re/post'].error();
+    }, 50);
   });
 
-  /**
-   * Tests valid responses
-   */
-  test('Valid Responses & Callbacks', function () {
-    var clock, jio, o = {};
-    expect(9);
-    clock = this.sandbox.useFakeTimers();
-
-    jio = new JIO({
+  test('should succeed when giving a good `post` response', 1, function () {
+    var jio = new JIO({
       "type": "fake",
-      "id": "Valid Resp"
+      "id": "Valid post"
     }, {
       "workspace": {}
     });
 
-    // Tests post command callbacks post(metadata).always(onResponse) +
-    // valid response.
-    o.message = "Post Command: post(metadata).always(function (answer) {..}) " +
-      "+ valid response.";
-    jio.post({}).done(function () {
-      o.called = 'done';
-    }).always(function (answer) {
-      ok(o.called === 'done', "Done callback called first");
+    stop();
+    jio.post({}).always(function (answer) {
+      start();
       deepEqual(answer, {
         "id": "document id a",
         "method": "post",
         "result": "success",
         "status": 201,
         "statusText": "Created"
-      }, o.message);
+      }, "response");
     });
-    clock.tick(1);
-    commands['Valid Resp/post'].success({"id": "document id a"});
-    clock.tick(1);
+    setTimeout(function () {
+      commands['Valid post/post'].success({"id": "document id a"});
+    }, 50);
+  });
 
-    // Tests post command callbacks post(metadata).done(onSuccess).fail(onError)
-    o.message = "Post Command: post(metadata).done(function (answer) {..})." +
-      "fail(function (answer) {..})";
-    jio.post({}).done(function (answer) {
-      deepEqual(answer, {
-        "id": "document id a",
-        "method": "post",
-        "result": "success",
-        "status": 201,
-        "statusText": "Created"
-      }, o.message);
-    }).fail(function (answer) {
-      deepEqual(answer, "Should not fail", o.message);
+  test('`getAttachment` should respond blob', 2, function () {
+    var jio = new JIO({
+      "type": "fake",
+      "id": "Valid getA"
+    }, {
+      "workspace": {}
     });
-    clock.tick(1);
-    commands['Valid Resp/post'].success({"id": "document id a"});
-    clock.tick(1);
 
-    // Tests post command callbacks post(metadata, onResponse)
-    o.message = "Post Command: post(metadata, function (err, response) {..})";
-    jio.post({}, function (err, response) {
-      if (err) {
-        return deepEqual(err, "Should not fail", o.message);
-      }
-      deepEqual(response, {
-        "id": "document id a",
-        "method": "post",
-        "result": "success",
-        "status": 201,
-        "statusText": "Created"
-      }, o.message);
-    });
-    clock.tick(1);
-    commands['Valid Resp/post'].success({"id": "document id a"});
-    clock.tick(1);
-
-    // Tests post command callbacks post(metadata, onSuccess, onError) + error
-    // response.
-    o.message = "Post Command: post(metadata, function (response) {..}, " +
-      "function (err) {..}) + valid error response.";
-
-    jio.post({}, function (response) {
-      deepEqual(response, "Should fail", o.message);
-    }, function (err) {
-      deepEqual(err, {
-        "status": 409,
-        "statusText": "Conflict",
-        "method": "post",
-        "error": "conflict",
-        "reason": "unknown",
-        "result": "error",
-        "message": ""
-      }, o.message);
-    });
-    clock.tick(1);
-    commands['Valid Resp/post'].error('conflict');
-    clock.tick(1);
-
-    // Tests getAttachment command string response
+    stop();
     jio.getAttachment({"_id": "a", "_attachment": "b"}).
       always(function (answer) {
+        start();
         ok(answer.data instanceof Blob,
            "Get Attachment Command: Blob should be returned");
         delete answer.data;
@@ -419,46 +393,50 @@
           "statusText": "Ok"
         });
       });
-    clock.tick(1);
-    commands['Valid Resp/getAttachment'].success("ok", {
-      "data": "document id a"
-    });
-    clock.tick(1);
-
-    // Tests notify responses
-    o.notified = true;
-    o.message = "Synchronous Notify";
-    jio.post({}).progress(function (answer) {
-      deepEqual(answer, o.answer, o.message);
-    });
-    clock.tick(1);
-    o.answer = undefined;
-    commands['Valid Resp/post'].notify();
-    o.answer = 'hoo';
-    commands['Valid Resp/post'].notify(o.answer);
-    o.answer = 'Forbidden!!!';
-    o.message = 'Notification forbidden after success';
-    setTimeout(commands['Valid Resp/post'].notify, 2);
-    commands['Valid Resp/post'].success();
-    clock.tick(2);
-
+    setTimeout(function () {
+      commands['Valid getA/getAttachment'].success("ok", {
+        "data": "document id a"
+      });
+    }, 50);
   });
 
-  /**
-   * Tests metadata values
-   */
-  test('Metadata values', function () {
-    expect(9);
-    var o, clock = this.sandbox.useFakeTimers(), jio = new JIO({
+  test('should be notified by the command', 4, function () {
+    var i = 0, jio = new JIO({
+      "type": "fake",
+      "id": "Valid noti"
+    }, {
+      "workspace": {}
+    });
+
+    stop();
+    jio.put({"_id": "a"}).then(function () {
+      start();
+    }, function (answer) {
+      start();
+      deepEqual(answer, "Error", "should not fail");
+    }, function (answer) {
+      deepEqual(answer, i, "notified");
+      ok(i < 3, (i < 3 ? "" : "not ") + "called before success");
+      i += 1;
+    });
+    setTimeout(function () {
+      var notify = commands['Valid noti/put'].notify;
+      notify(0);
+      notify(1);
+      commands['Valid noti/put'].success();
+      notify(2);
+    }, 50);
+  });
+
+  test('metadata values should be formatted on `post`', 1, function () {
+    var request, response, jio = new JIO({
       "type": "fake",
       "id": "Metadata v"
     }, {
       "workspace": {}
     });
 
-    o = {};
-
-    o.request = {
+    request = {
       "_id": undefined,
       "number": -13,
       "date": new Date(0),
@@ -480,7 +458,7 @@
       "wrong_array": [{}, null, {"blue": "green"}]
     };
 
-    o.response = {
+    response = {
       "number": -13,
       "date": new Date(0).toJSON(),
       "boolean": true,
@@ -491,90 +469,134 @@
       "toJSON": "hey!"
     };
 
-    jio.post(o.request);
-    clock.tick(1);
-    deepEqual(
-      commands["Metadata v/post"].param,
-      o.response,
-      "Post"
-    );
-    commands["Metadata v/post"].success();
-    clock.tick(1);
+    stop();
+    jio.post(request);
+    setTimeout(function () {
+      start();
+      deepEqual(
+        commands["Metadata v/post"].param,
+        response,
+        "Post"
+      );
+      commands["Metadata v/post"].success();
+    }, 50);
 
-    o.request._id = 'a';
-    o.response._id = 'a';
-    jio.put(o.request);
-    clock.tick(1);
-    deepEqual(commands["Metadata v/put"].param, o.response, "Put");
-    commands["Metadata v/put"].success();
-    clock.tick(1);
+    // o.request._id = 'a';
+    // o.response._id = 'a';
+    // jio.put(o.request);
+    // clock.tick(1);
+    // deepEqual(commands["Metadata v/put"].param, o.response, "Put");
+    // commands["Metadata v/put"].success();
+    // clock.tick(1);
 
-    jio.get({
-      "_id": "a"
+    // jio.get({
+    //   "_id": "a"
+    // });
+    // clock.tick(1);
+    // deepEqual(commands["Metadata v/get"].param, {
+    //   "_id": "a"
+    // }, "Get");
+    // commands["Metadata v/get"].success();
+    // clock.tick(1);
+
+    // jio.remove({
+    //   "_id": "a"
+    // });
+    // clock.tick(1);
+    // deepEqual(commands["Metadata v/remove"].param, {
+    //   "_id": "a"
+    // }, "Remove");
+    // commands["Metadata v/remove"].success();
+    // clock.tick(1);
+
+  });
+
+  test('data should be converted to blob on `putAttachment`', 3, function () {
+    var request, jio = new JIO({
+      "type": "fake",
+      "id": "Metadata v"
+    }, {
+      "workspace": {}
     });
-    clock.tick(1);
-    deepEqual(commands["Metadata v/get"].param, {
-      "_id": "a"
-    }, "Get");
-    commands["Metadata v/get"].success();
-    clock.tick(1);
 
-    jio.remove({
-      "_id": "a"
-    });
-    clock.tick(1);
-    deepEqual(commands["Metadata v/remove"].param, {
-      "_id": "a"
-    }, "Remove");
-    commands["Metadata v/remove"].success();
-    clock.tick(1);
-
-    jio.allDocs();
-    clock.tick(1);
-    deepEqual(commands["Metadata v/allDocs"].param, {}, "AllDocs");
-    commands["Metadata v/allDocs"].success();
-    clock.tick(1);
-
-    o.request = {
+    request = {
       "_id": "a",
       "_attachment": "body",
       "_data": "b",
       "_mimetype": "c"
     };
-    jio.putAttachment(o.request);
-    clock.tick(1);
-    ok(commands["Metadata v/putAttachment"].param._blob instanceof Blob,
-       "Put Attachment + check blob");
-    deepEqual([
-      commands["Metadata v/putAttachment"].param._id,
-      commands["Metadata v/putAttachment"].param._attachment
-    ], ["a", "body"], "Put Attachment + check ids");
-    commands["Metadata v/putAttachment"].success();
-    clock.tick(1);
 
-    o.request._blob = new Blob(['d'], {"type": "e"});
-    delete o.request._mimetype;
-    delete o.request._data;
-    jio.putAttachment(o.request);
-    clock.tick(1);
-    ok(commands["Metadata v/putAttachment"].param._blob === o.request._blob,
-       "Put Attachment with blob + check blob");
-    deepEqual([
-      commands["Metadata v/putAttachment"].param._id,
-      commands["Metadata v/putAttachment"].param._attachment
-    ], ["a", "body"], "Put Attachment with blob + check ids");
-    commands["Metadata v/putAttachment"].success();
-    clock.tick(1);
+    stop();
+    jio.putAttachment(request);
+    setTimeout(function () {
+      start();
+      ok(commands["Metadata v/putAttachment"].param._blob instanceof Blob,
+         "param._blob should be a blob");
+      deepEqual(
+        commands["Metadata v/putAttachment"].param._blob.type,
+        "c",
+        "param._blob type should be equal to request._mimetype"
+      );
+      deepEqual([
+        commands["Metadata v/putAttachment"].param._id,
+        commands["Metadata v/putAttachment"].param._attachment
+      ], ["a", "body"], "param._id and param._attachment exist");
+      commands["Metadata v/putAttachment"].success();
+    }, 50);
   });
 
-  /**
-   * Tests job retry
-   */
-  test("Job Retry", function () {
-    var clock, jio, state;
-    expect(4);
-    clock = this.sandbox.useFakeTimers();
+  test('blob should be given to param on `putAttachment`', 3, function () {
+    var request = {}, jio = new JIO({
+      "type": "fake",
+      "id": "Metadata 2"
+    }, {
+      "workspace": {}
+    });
 
+    request._id = "a";
+    request._attachment = "body";
+    request._blob = new Blob(['d'], {"type": "e"});
+
+    stop();
+    jio.putAttachment(request);
+    setTimeout(function () {
+      start();
+      ok(commands["Metadata 2/putAttachment"].param._blob === request._blob,
+         "param._blob should be the given blob");
+      deepEqual(
+        commands["Metadata 2/putAttachment"].param._blob.type,
+        "e",
+        "param._blob type should be equal to request._mimetype"
+      );
+      deepEqual([
+        commands["Metadata 2/putAttachment"].param._id,
+        commands["Metadata 2/putAttachment"].param._attachment
+      ], ["a", "body"], "param._id and param._attachment exist");
+      commands["Metadata 2/putAttachment"].success();
+    }, 50);
+
+  });
+
+  test('no param should be given to `allDocs`', 1, function () {
+    var jio = new JIO({
+      "type": "fake",
+      "id": "Metadata v"
+    }, {
+      "workspace": {}
+    });
+
+    stop();
+    jio.allDocs();
+    setTimeout(function () {
+      start();
+      deepEqual(commands["Metadata v/allDocs"].param, {}, "No param given");
+      commands["Metadata v/allDocs"].success();
+    }, 50);
+
+  });
+
+  test("job should respond 3 retries to return an error", 4, function () {
+    var jio, state;
     jio = new JIO({
       "type": "fake",
       "id": "1 Job Retry"
@@ -582,6 +604,7 @@
       "workspace": {}
     });
 
+    stop();
     state = "Not called yet";
     jio.get({"_id": "a"}).always(function (answer) {
       state = "Called";
@@ -596,30 +619,29 @@
         "statusText": "Internal Server Error"
       }, "Error response");
     });
-    clock.tick(1);
-    commands['1 Job Retry/get'].retry('internal_server_error');
-    clock.tick(1);
-    deepEqual(state, "Not called yet", "Check callback state.");
-
-    clock.tick(1999);
-    commands['1 Job Retry/get'].retry('internal_server_error');
-    clock.tick(1);
-    deepEqual(state, "Not called yet", "Check callback state.");
-
-    clock.tick(3999);
-    commands['1 Job Retry/get'].retry('internal_server_error');
-    clock.tick(1);
-    deepEqual(state, "Called", "Check callback state.");
+    setTimeout(function () {
+      commands['1 Job Retry/get'].retry('internal_server_error');
+    }, 50); // wait 50 ms
+    setTimeout(function () {
+      deepEqual(state, "Not called yet", "Check callback state.");
+    }, 100); // wait 50 ms
+    setTimeout(function () {
+      commands['1 Job Retry/get'].retry('internal_server_error');
+    }, 2150); // wait 2050 ms
+    setTimeout(function () {
+      deepEqual(state, "Not called yet", "Check callback state.");
+    }, 2200); // wait 50 ms
+    setTimeout(function () {
+      commands['1 Job Retry/get'].retry('internal_server_error');
+    }, 6250); // wait 4050 ms
+    setTimeout(function () {
+      start();
+      deepEqual(state, "Called", "Check callback state.");
+    }, 6300); // wait 50 ms
   });
 
-  /**
-   * Tests job management
-   */
-  test("Job Management", function () {
-    var workspace = {}, clock, jio, o = {};
-    expect(8);
-
-    clock = this.sandbox.useFakeTimers();
+  test("Job Management", 8, function () {
+    var tmp, workspace = {}, jio, o = {};
     jio = new JIO({
       "type": "fake",
       "id": "1 Job Manage"
@@ -627,8 +649,9 @@
       "workspace": workspace
     });
 
+    stop();
     // Launch a get command, check the workspace and then respond
-    jio.get({"_id": "a"}, {"max_retry": 2, "timeout": 12}).
+    jio.get({"_id": "a"}, {"max_retry": 2, "timeout": 1200}).
       always(function (answer) {
         deepEqual(answer, {
           "id": "a",
@@ -641,100 +664,103 @@
       });
     o.job1 = {
       "kwargs": {"_id": "a"},
-      "options": {"max_retry": 2, "timeout": 12},
+      "options": {"max_retry": 2, "timeout": 1200},
       "storage_spec": {"type": "fake", "id": "1 Job Manage"},
       "method": "get",
-      "created": new Date(),
+      //"created": new Date(),
       "tried": 1,
       "state": "running",
-      "modified": new Date(),
+      //"modified": new Date(),
       "max_retry": 2,
-      "timeout": 12,
+      "timeout": 1200,
       "id": 1
     };
-    deepEqual(workspace, {
-      "jio/jobs/{\"id\":\"1 Job Manage\",\"type\":\"fake\"}": jIO.util.
-        uniqueJSONStringify([o.job1])
-    }, 'Job added, workspace have one job');
+    tmp = workspace["jio/jobs/{\"id\":\"1 Job Manage\",\"type\":\"fake\"}"];
+    tmp = JSON.parse(tmp);
+    delete tmp[0].created;
+    delete tmp[0].modified;
+    deepEqual(tmp, [o.job1], 'workspace have one job');
 
-    clock.tick(1); // now: 1 ms
-    commands["1 Job Manage/get"].success({"data": {"b": "c"}});
-    clock.tick(1); // now: 2 ms
+    setTimeout(function () {
+      commands["1 Job Manage/get"].success({"data": {"b": "c"}});
+    }, 50); // wait 50 ms
+    setTimeout(function () {
+      deepEqual(workspace, {}, 'Job ended, empty workspace');
 
-    deepEqual(workspace, {}, 'Job ended, empty workspace');
-
-    // Launch a get command which launches another get command
-    // check workspace after every command and respond
-    jio.get({"_id": "b"}, {"max_retry": 2, "timeout": 12}).
-      always(function (answer) {
+      // Launch a get command which launches another get command
+      // check workspace after every command and respond
+      jio.get({"_id": "b"}, {"max_retry": 2, "timeout": 1200}).
+        always(function (answer) {
+          deepEqual(answer, {
+            "id": "b",
+            "method": "get",
+            "result": "success",
+            "status": 200,
+            "statusText": "Ok",
+            "data": {"c": "d"}
+          }, "First job respond");
+        });
+      o.job1.kwargs._id = 'b';
+      // o.job1.created = new Date();
+      // o.job1.modified = new Date();
+    }, 100); // wait 50 ms
+    setTimeout(function () {
+      commands["1 Job Manage/get"].storage({
+        "type": "fake",
+        "id": "2 Job Manage"
+      }).get({"_id": "c"}).always(function (answer) {
+        start();
         deepEqual(answer, {
-          "id": "b",
+          "id": "c",
           "method": "get",
           "result": "success",
           "status": 200,
           "statusText": "Ok",
-          "data": {"c": "d"}
-        }, "First job respond");
+          "data": {"d": "e"}
+        }, "Second job respond");
       });
-    o.job1.kwargs._id = 'b';
-    o.job1.created = new Date();
-    o.job1.modified = new Date();
-    clock.tick(1); // now: 3 ms
-    commands["1 Job Manage/get"].storage({
-      "type": "fake",
-      "id": "2 Job Manage"
-    }).get({"_id": "c"}).always(function (answer) {
-      deepEqual(answer, {
-        "id": "c",
+
+      o.job2 = {
+        "kwargs": {"_id": "c"},
+        "options": {},
+        "storage_spec": {"type": "fake", "id": "2 Job Manage"},
         "method": "get",
-        "result": "success",
-        "status": 200,
-        "statusText": "Ok",
-        "data": {"d": "e"}
-      }, "Second job respond");
-    });
+        //"created": new Date(),
+        "tried": 1,
+        "state": "running",
+        //"modified": new Date(),
+        "max_retry": 2,
+        "timeout": 10000,
+        "id": 2
+      };
+      tmp = workspace["jio/jobs/{\"id\":\"1 Job Manage\",\"type\":\"fake\"}"];
+      tmp = JSON.parse(tmp);
+      delete tmp[0].created;
+      delete tmp[0].modified;
+      delete tmp[1].created;
+      delete tmp[1].modified;
+      deepEqual(tmp, [
+        o.job1,
+        o.job2
+      ], 'Job calls another job, workspace have two jobs');
+    }, 150); // wait 50 ms
+    setTimeout(function () {
+      commands['1 Job Manage/get'].end();
+      tmp = workspace["jio/jobs/{\"id\":\"1 Job Manage\",\"type\":\"fake\"}"];
+      tmp = JSON.parse(tmp);
+      delete tmp[0].created;
+      delete tmp[0].modified;
+      deepEqual(tmp, [o.job2], 'First Job ended, second still there');
 
-    o.job2 = {
-      "kwargs": {"_id": "c"},
-      "options": {},
-      "storage_spec": {"type": "fake", "id": "2 Job Manage"},
-      "method": "get",
-      "created": new Date(),
-      "tried": 1,
-      "state": "running",
-      "modified": new Date(),
-      "max_retry": 2,
-      "timeout": 10000,
-      "id": 2
-    };
-    deepEqual(workspace, {
-      "jio/jobs/{\"id\":\"1 Job Manage\",\"type\":\"fake\"}": jIO.util.
-        uniqueJSONStringify([o.job1, o.job2])
-    }, 'Job calls another job, workspace have two jobs');
+      commands['1 Job Manage/get'].success({"data": {"c": "d"}});
+      commands['2 Job Manage/get'].success({"data": {"d": "e"}});
 
-    clock.tick(1);
-    commands['1 Job Manage/get'].end();
-    deepEqual(workspace, {
-      "jio/jobs/{\"id\":\"1 Job Manage\",\"type\":\"fake\"}": jIO.util.
-        uniqueJSONStringify([o.job2])
-    }, 'First Job ended, second still there');
-
-    commands['1 Job Manage/get'].success({"data": {"c": "d"}});
-    commands['2 Job Manage/get'].success({"data": {"d": "e"}});
-
-    deepEqual(workspace, {}, 'No more job in the queue');
-
-    clock.tick(1); // success 1 and 2
+      deepEqual(workspace, {}, 'No more job in the queue');
+    }, 200); // wait 50 ms
   });
 
-  /**
-   * Test job recovery
-   */
-  test('Job Recovery', function () {
-    expect(4);
-    var workspace, clock, jio;
-
-    clock = this.sandbox.useFakeTimers();
+  test('job state running, job recovery', 2, function () {
+    var workspace, jio;
 
     //////////////////////////////
     // Running job recovery
@@ -748,13 +774,14 @@
       "workspace": workspace
     });
 
+    stop();
     // create a job
     jio.post({});
     // copy workspace when job is running
     workspace = jIO.util.deepClone(workspace);
-    clock.tick(1); // now: 1 ms
-    commands['Job Recove/post'].success({"id": "a"});
-
+    setTimeout(function () {
+      commands['Job Recove/post'].success({"id": "a"});
+    }, 50);
     // create instance with copied workspace
     jio = new JIO({
       "type": "fake",
@@ -763,22 +790,29 @@
       "workspace": workspace
     });
 
-    clock.tick(19998); // now: 19999 ms
-    if (commands['Job Recove/post']) {
-      ok(false, "Command called, job recovered to earlier");
-    }
-    clock.tick(1); // now: 20000 ms
-    if (!commands['Job Recove/post']) {
-      ok(false, "Command not called, job recovery failed");
-    } else {
-      ok(true, "Command called, job recovery ok");
-    }
-    commands['Job Recove/post'].success({"id": "a"});
-    clock.tick(1); // now: 20001 ms
+    setTimeout(function () {
+      if (commands['Job Recove/post']) {
+        ok(false, "Command called, job recovered to earlier");
+      }
+    }, 19999);
 
-    deepEqual(workspace, {}, 'No more job in the queue');
-    clock.tick(79999); // now: 100000 ms
+    setTimeout(function () {
+      if (!commands['Job Recove/post']) {
+        ok(false, "Command not called, job recovery failed");
+      } else {
+        ok(true, "Command called, job recovery ok");
+      }
+      commands['Job Recove/post'].success({"id": "a"});
+    }, 20050);
 
+    setTimeout(function () {
+      start();
+      deepEqual(workspace, {}, 'No more job in the queue');
+    }, 20100);
+  });
+
+  test('job state waiting for time, job recovery', 2, function () {
+    var workspace, jio;
     //////////////////////////////
     // Waiting for time job recovery
 
@@ -786,53 +820,60 @@
     // create instance
     jio = new JIO({
       "type": "fake",
-      "id": "Job Recove"
+      "id": "Job Recovw"
     }, {
       "workspace": workspace
     });
 
+    stop();
     // create a job
     jio.post({});
-    clock.tick(1); // now: 1 ms
-    // copy workspace when job is waiting
-    commands['Job Recove/post'].retry();
-    workspace = jIO.util.deepClone(workspace);
-    clock.tick(2000); // now: 2001 ms
-    commands['Job Recove/post'].success({"id": "a"});
+    setTimeout(function () {
+      // copy workspace when job is waiting
+      commands['Job Recovw/post'].retry();
+      workspace = jIO.util.deepClone(workspace);
+    }, 50);
+    setTimeout(function () {
+      commands['Job Recovw/post'].success({"id": "a"});
+    }, 2100);
 
     // create instance with copied workspace
-    jio = new JIO({
-      "type": "fake",
-      "id": "Job Recove"
-    }, {
-      "workspace": workspace
-    });
+    setTimeout(function () {
+      jio = new JIO({
+        "type": "fake",
+        "id": "Job Recovw"
+      }, {
+        "workspace": workspace
+      });
 
-    clock.tick(17999); // now: 20000 ms
-    if (commands['Job Recove/post']) {
-      ok(false, "Command called, job recovered to earlier");
-    }
-    clock.tick(1); // now: 20001 ms
-    if (!commands['Job Recove/post']) {
-      ok(false, "Command not called, job recovery failed");
-    } else {
-      ok(true, "Command called, job recovery ok");
-    }
-    commands['Job Recove/post'].success({"id": "a"});
-    clock.tick(1); // now: 20002 ms
+      setTimeout(function () {
+        if (commands['Job Recovw/post']) {
+          ok(false, "Command called, job recovered to earlier");
+        }
+      }, 19999);
 
-    deepEqual(workspace, {}, 'No more job in the queue');
-    clock.tick(79998); // now: 100000 ms
+      setTimeout(function () {
+        if (!commands['Job Recovw/post']) {
+          ok(false, "Command not called, job recovery failed");
+        } else {
+          ok(true, "Command called, job recovery ok");
+        }
+        commands['Job Recovw/post'].success({"id": "a"});
+      }, 20050);
+
+      setTimeout(function () {
+        start();
+        deepEqual(workspace, {}, 'No more job in the queue');
+      }, 20100);
+    }, 51);
 
     //////////////////////////////
     // XXX Waiting for jobs job recovery
 
   });
 
-  test('Job Update', function () {
-    expect(5);
-    var clock, jio, o = {};
-    clock = this.sandbox.useFakeTimers();
+  test('Job Update', 5, function () {
+    var jio, o = {};
 
     o.workspace = {};
     jio = new JIO({
@@ -842,6 +883,7 @@
       "workspace": o.workspace
     });
 
+    stop();
     jio.put({"_id": "a"}).always(function (answer) {
       deepEqual(answer, {
         "id": "a",
@@ -852,35 +894,39 @@
       }, "First put respond");
     });
 
-    clock.tick(1);
-    o.first_put_command = commands["Job Update/put"];
-    ok(o.first_put_command, "First command called");
-    o.first_put_command.free();
+    setTimeout(function () {
+      o.first_put_command = commands["Job Update/put"];
+      ok(o.first_put_command, "First command called");
+      o.first_put_command.free();
+    }, 50);
 
-    jio.put({"_id": "a"}).always(function (answer) {
-      deepEqual(answer, {
-        "id": "a",
-        "method": "put",
-        "result": "success",
-        "status": 204,
-        "statusText": "No Content"
-      }, "Second put respond");
-    });
+    setTimeout(function () {
+      jio.put({"_id": "a"}).always(function (answer) {
+        deepEqual(answer, {
+          "id": "a",
+          "method": "put",
+          "result": "success",
+          "status": 204,
+          "statusText": "No Content"
+        }, "Second put respond");
+      });
+    }, 51);
 
-    clock.tick(1);
-    ok(commands['Job Update/put'] === undefined,
-       'Second command not called');
-    o.first_put_command.success();
-    clock.tick(1);
+    setTimeout(function () {
+      ok(commands['Job Update/put'] === undefined,
+         'Second command not called');
+      o.first_put_command.success();
+    }, 100);
 
-    deepEqual(o.workspace, {}, 'No job in the queue');
+    setTimeout(function () {
+      start();
+      deepEqual(o.workspace, {}, 'No job in the queue');
+    }, 150);
 
   });
 
-  test('Job Wait', function () {
-    expect(6);
-    var clock, jio, o = {};
-    clock = this.sandbox.useFakeTimers();
+  test('Job Wait', 6, function () {
+    var jio, o = {};
 
     o.workspace = {};
     jio = new JIO({
@@ -890,6 +936,7 @@
       "workspace": o.workspace
     });
 
+    stop();
     jio.put({"_id": "a"}).always(function (answer) {
       deepEqual(answer, {
         "id": "a",
@@ -900,38 +947,43 @@
       }, "First put respond");
     });
 
-    clock.tick(1);
-    o.first_put_command = commands["Job Wait/put"];
-    ok(o.first_put_command, "First command called");
-    o.first_put_command.free();
+    setTimeout(function () {
+      o.first_put_command = commands["Job Wait/put"];
+      ok(o.first_put_command, "First command called");
+      o.first_put_command.free();
+    }, 50);
 
-    jio.put({"_id": "a", "a": "b"}).always(function (answer) {
-      deepEqual(answer, {
-        "id": "a",
-        "method": "put",
-        "result": "success",
-        "status": 204,
-        "statusText": "No Content"
-      }, "Second put respond");
-    });
+    setTimeout(function () {
+      jio.put({"_id": "a", "a": "b"}).always(function (answer) {
+        deepEqual(answer, {
+          "id": "a",
+          "method": "put",
+          "result": "success",
+          "status": 204,
+          "statusText": "No Content"
+        }, "Second put respond");
+      });
+    }, 51);
 
-    clock.tick(1);
-    ok(commands['Job Wait/put'] === undefined,
-       'Second command not called yet');
-    o.first_put_command.success();
-    clock.tick(1);
-    ok(commands['Job Wait/put'], 'Second command called');
-    commands['Job Wait/put'].success();
-    clock.tick(1);
+    setTimeout(function () {
+      ok(commands['Job Wait/put'] === undefined,
+         'Second command not called yet');
+      o.first_put_command.success();
+    }, 100);
 
-    deepEqual(o.workspace, {}, 'No job in the queue');
+    setTimeout(function () {
+      ok(commands['Job Wait/put'], 'Second command called');
+      commands['Job Wait/put'].success();
+    }, 150);
 
+    setTimeout(function () {
+      start();
+      deepEqual(o.workspace, {}, 'No job in the queue');
+    }, 200);
   });
 
-  test('Job Deny + Job condition addition', function () {
-    expect(2);
-    var clock, jio, workspace = {};
-    clock = this.sandbox.useFakeTimers();
+  test('Job Deny + Job condition addition', 2, function () {
+    var jio, workspace = {};
 
     jIO.addJobRuleCondition('isGetMethod', function (job) {
       return job.method === 'get';
@@ -950,6 +1002,7 @@
       }]
     });
 
+    stop();
     jio.get({"_id": "a"}).always(function (answer) {
       deepEqual(answer, {
         "error": "precondition_failed",
@@ -963,10 +1016,10 @@
       }, "Get respond");
     });
 
-    clock.tick(1);
-
-    deepEqual(workspace, {}, 'No job in the queue');
+    setTimeout(function () {
+      start();
+      deepEqual(workspace, {}, 'No job in the queue');
+    }, 50);
 
   });
-
 }));

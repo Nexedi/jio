@@ -1,5 +1,6 @@
 /*jslint indent: 2, maxlen: 80 */
-/*global define, exports, window, localStorage, ok, deepEqual, sinon */
+/*global define, exports, window, require, localStorage, start, ok, deepEqual,
+  sinon */
 
 (function (dependencies, module) {
   "use strict";
@@ -7,13 +8,13 @@
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    module(exports);
+    module(exports, require('sinon_qunit'));
   }
   if (typeof window === 'object') {
     window.test_util = {};
     module(window.test_util);
   }
-}(['exports'], function (exports) {
+}(['exports', 'sinon_qunit'], function (exports) {
   "use strict";
 
   //////////////////////////////////////////////////////////////////////////////

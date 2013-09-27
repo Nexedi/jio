@@ -6,7 +6,7 @@
 
   require.config({
     "paths": {
-      "promy":       "../src/promy/promy",
+      "rsvp":       "../lib/rsvp/rsvp-custom.amd",
       "sha256":      "../src/sha256.amd",
       "jio":         "../jio",
       "jio_tests":   "jio/tests",
