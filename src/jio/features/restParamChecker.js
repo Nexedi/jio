@@ -1,10 +1,10 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
-/*global Blob, IODeferred, Metadata */
+/*global Blob, restCommandRejecter, Metadata */
 
 function enableRestParamChecker(jio, shared) {
 
   // dependencies
-  // - param.deferred
+  // - param.solver
   // - param.kwargs
 
   // checks the kwargs and convert value if necessary
@@ -17,12 +17,12 @@ function enableRestParamChecker(jio, shared) {
 
   function checkId(param) {
     if (typeof param.kwargs._id !== 'string' || param.kwargs._id === '') {
-      IODeferred.createFromParam(param).reject(
+      restCommandRejecter(param, [
         'bad_request',
         'wrong document id',
         'Document id must be a non empty string.'
-      );
-      delete param.deferred;
+      ]);
+      delete param.solver;
       return false;
     }
     return true;
@@ -31,12 +31,12 @@ function enableRestParamChecker(jio, shared) {
   function checkAttachmentId(param) {
     if (typeof param.kwargs._attachment !== 'string' ||
         param.kwargs._attachment === '') {
-      IODeferred.createFromParam(param).reject(
+      restCommandRejecter(param, [
         'bad_request',
         'wrong attachment id',
         'Attachment id must be a non empty string.'
-      );
-      delete param.deferred;
+      ]);
+      delete param.solver;
       return false;
     }
     return true;
@@ -84,15 +84,15 @@ function enableRestParamChecker(jio, shared) {
       delete param.kwargs._mimetype;
       delete param.kwargs._content_type;
     } else {
-      IODeferred.createFromParam(param).reject(
+      restCommandRejecter(param, [
         'bad_request',
         'wrong attachment',
         'Attachment information must be like {"_id": document id, ' +
           '"_attachment": attachment name, "_data": string, ["_mimetype": ' +
           'content type]} or {"_id": document id, "_attachment": ' +
           'attachment name, "_blob": Blob}'
-      );
-      delete param.deferred;
+      ]);
+      delete param.solver;
     }
   });
 

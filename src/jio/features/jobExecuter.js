@@ -1,5 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
-/*global setTimeout, Job, createStorage, deepClone, IODeferred, min */
+/*global setTimeout, Job, createStorage, deepClone, min, restCommandResolver,
+  restCommandRejecter */
 
 function enableJobExecuter(jio, shared) { // , options) {
 
@@ -46,44 +47,30 @@ function enableJobExecuter(jio, shared) { // , options) {
   });
 
   shared.on('jobDone', function (param, args) {
-    var d;
     if (param.state === 'running') {
       param.state = 'done';
       param.modified = new Date();
       shared.emit('jobEnd', param);
-      if (param.deferred) {
-        d = IODeferred.createFromDeferred(
-          param.method,
-          param.kwargs,
-          param.options,
-          param.deferred
-        );
-        d.resolve.apply(d, args);
+      if (param.solver) {
+        restCommandResolver(param, args);
       }
     }
   });
 
   shared.on('jobFail', function (param, args) {
-    var d;
     if (param.state === 'running') {
       param.state = 'fail';
       param.modified = new Date();
       shared.emit('jobEnd', param);
-      if (param.deferred) {
-        d = IODeferred.createFromDeferred(
-          param.method,
-          param.kwargs,
-          param.options,
-          param.deferred
-        );
-        d.reject.apply(d, args);
+      if (param.solver) {
+        restCommandRejecter(param, args);
       }
     }
   });
 
   shared.on('jobNotify', function (param, args) {
-    if (param.state === 'running' && param.deferred) {
-      param.deferred.notify.apply(param.deferred, args);
+    if (param.state === 'running' && param.solver) {
+      param.solver.notify(args[0]);
     }
   });
 }

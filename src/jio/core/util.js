@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, nomen: true, sloppy: true */
-/*global exports, Blob, FileReader, Deferred, hex_sha256, XMLHttpRequest,
+/*global exports, Blob, FileReader, RSVP, hex_sha256, XMLHttpRequest,
   constants */
 
 /**
@@ -310,32 +310,41 @@ function makeBinaryStringDigest(string) {
 exports.util.makeBinaryStringDigest = makeBinaryStringDigest;
 
 function readBlobAsBinaryString(blob) {
-  var deferred = new Deferred(), fr = new FileReader();
-  fr.addEventListener("load", deferred.resolve.bind(deferred));
-  fr.addEventListener("error", deferred.reject.bind(deferred));
-  fr.addEventListener("progress", deferred.notify.bind(deferred));
-  fr.readAsBinaryString(blob);
-  return deferred.promise;
+  var fr = new FileReader();
+  return new RSVP.Promise(function (resolve, reject, notify) {
+    fr.addEventListener("load", resolve);
+    fr.addEventListener("error", reject);
+    fr.addEventListener("progress", notify);
+    fr.readAsBinaryString(blob);
+  }, function () {
+    fr.abort();
+  });
 }
 exports.util.readBlobAsBinaryString = readBlobAsBinaryString;
 
 function readBlobAsArrayBuffer(blob) {
-  var deferred = new Deferred(), fr = new FileReader();
-  fr.addEventListener("load", deferred.resolve.bind(deferred));
-  fr.addEventListener("error", deferred.reject.bind(deferred));
-  fr.addEventListener("progress", deferred.notify.bind(deferred));
-  fr.readAsArrayBuffer(blob);
-  return deferred.promise;
+  var fr = new FileReader();
+  return new RSVP.Promise(function (resolve, reject, notify) {
+    fr.addEventListener("load", resolve);
+    fr.addEventListener("error", reject);
+    fr.addEventListener("progress", notify);
+    fr.readAsArrayBuffer(blob);
+  }, function () {
+    fr.abort();
+  });
 }
 exports.util.readBlobAsArrayBuffer = readBlobAsArrayBuffer;
 
 function readBlobAsText(blob) {
-  var deferred = new Deferred(), fr = new FileReader();
-  fr.addEventListener("load", deferred.resolve.bind(deferred));
-  fr.addEventListener("error", deferred.reject.bind(deferred));
-  fr.addEventListener("progress", deferred.notify.bind(deferred));
-  fr.readAsText(blob);
-  return deferred.promise;
+  var fr = new FileReader();
+  return new RSVP.Promise(function (resolve, reject, notify) {
+    fr.addEventListener("load", resolve);
+    fr.addEventListener("error", reject);
+    fr.addEventListener("progress", notify);
+    fr.readAsText(blob);
+  }, function () {
+    fr.abort();
+  });
 }
 exports.util.readBlobAsText = readBlobAsText;
 
@@ -355,29 +364,33 @@ exports.util.readBlobAsText = readBlobAsText;
  * @return {Promise} The promise
  */
 function ajax(param) {
-  var k, xhr = new XMLHttpRequest(), deferred = new Deferred();
-  xhr.open(param.type || "GET", param.url, true);
-  xhr.responseType = param.dataType || "";
-  if (typeof param.headers === 'object' && param.headers !== null) {
-    for (k in param.headers) {
-      if (param.headers.hasOwnProperty(k)) {
-        xhr.setRequestHeader(k, param.headers[k]);
+  var xhr = new XMLHttpRequest();
+  return new RSVP.Promise(function (resolve, reject, notify) {
+    var k;
+    xhr.open(param.type || "GET", param.url, true);
+    xhr.responseType = param.dataType || "";
+    if (typeof param.headers === 'object' && param.headers !== null) {
+      for (k in param.headers) {
+        if (param.headers.hasOwnProperty(k)) {
+          xhr.setRequestHeader(k, param.headers[k]);
+        }
       }
     }
-  }
-  xhr.addEventListener("load", function (e) {
-    if (e.target.status >= 400) {
-      return deferred.reject(e);
+    xhr.addEventListener("load", function (e) {
+      if (e.target.status >= 400) {
+        return reject(e);
+      }
+      resolve(e);
+    });
+    xhr.addEventListener("error", reject);
+    xhr.addEventListener("progress", notify);
+    if (typeof param.beforeSend === 'function') {
+      param.beforeSend(xhr);
     }
-    deferred.resolve(e);
+    xhr.send(param.data);
+  }, function () {
+    xhr.abort();
   });
-  xhr.addEventListener("error", deferred.reject.bind(deferred));
-  xhr.addEventListener("progress", deferred.notify.bind(deferred));
-  if (typeof param.beforeSend === 'function') {
-    param.beforeSend(xhr);
-  }
-  xhr.send(param.data);
-  return deferred.promise;
 }
 exports.util.ajax = ajax;
 

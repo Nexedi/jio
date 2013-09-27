@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
-/*global arrayInsert, indexOf, deepClone, defaults, IODeferred */
+/*global arrayInsert, indexOf, deepClone, defaults, restCommandRejecter */
 
 // creates
 // - some defaults job rule actions
@@ -8,11 +8,12 @@ function enableJobChecker(jio, shared, options) {
 
   // dependencies
   // - shared.jobs Object Array
+  // - param.promise Object
 
   // creates
   // - shared.job_rules Array
 
-  // uses 'job' events
+  // uses 'job' event
 
   var i;
 
@@ -20,24 +21,25 @@ function enableJobChecker(jio, shared, options) {
 
   shared.job_rule_actions = {
     wait: function (original_job, new_job) {
-      original_job.deferred.promise.always(function () {
+      original_job.promise.always(function () {
         shared.emit('job', new_job);
       });
       new_job.state = 'waiting';
       new_job.modified = new Date();
     },
     update: function (original_job, new_job) {
-      if (!new_job.deferred) {
+      if (!new_job.solver) {
         // promise associated to the job
         new_job.state = 'done';
         shared.emit('jobDone', new_job);
       } else {
-        if (!original_job.deferred) {
-          original_job.deferred = new_job.deferred;
+        if (!original_job.solver) {
+          original_job.solver = new_job.solver;
         } else {
-          original_job.deferred.promise.
-            done(new_job.command.resolve).
-            fail(new_job.command.reject);
+          original_job.promise.then(
+            new_job.command.resolve,
+            new_job.command.reject
+          );
         }
       }
       new_job.state = 'running';
@@ -46,11 +48,11 @@ function enableJobChecker(jio, shared, options) {
     deny: function (original_job, new_job) {
       new_job.state = 'fail';
       new_job.modified = new Date();
-      IODeferred.createFromParam(new_job).reject(
+      restCommandRejecter(new_job, [
         'precondition_failed',
         'command denied',
         'Command rejected by the job checker.'
-      );
+      ]);
     }
   };
 

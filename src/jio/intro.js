@@ -4,11 +4,11 @@
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    return module(exports, require('promy'), require('sha256'));
+    return module(exports, require('rsvp'), require('sha256'));
   }
   window.jIO = {};
-  module(window.jIO, promy, {hex_sha256: hex_sha256});
-}(['exports', 'promy', 'sha256'], function (exports, promy, sha256) {
+  module(window.jIO, RSVP, {hex_sha256: hex_sha256});
+}(['exports', 'rsvp', 'sha256'], function (exports, RSVP, sha256) {
   "use strict";
 
-  var hex_sha256 = sha256.hex_sha256, Deferred = promy.Deferred;
+  var hex_sha256 = sha256.hex_sha256;
