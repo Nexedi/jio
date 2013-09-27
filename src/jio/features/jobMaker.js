@@ -58,7 +58,7 @@ function enableJobMaker(jio, shared, options) {
 
   shared.rest_method_names.forEach(function (method) {
     shared.on(method, function (param) {
-      if (param.deferred) {
+      if (param.solver) {
         // params are good
         shared.emit('job', param);
       }

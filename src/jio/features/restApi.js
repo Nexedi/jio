@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true */
-/*global arrayValuesToTypeDict, dictClear, Deferred, deepClone */
+/*global arrayValuesToTypeDict, dictClear, RSVP, deepClone */
 
 // adds methods to JIO
 // - post
@@ -18,7 +18,12 @@
 // - method string
 // - kwargs object
 // - options object
-// - command object
+// - solver object
+// - solver.resolve function
+// - solver.reject function
+// - solver.notify function
+// - cancellers object
+// - promise object
 
 function enableRestAPI(jio, shared) { // (jio, shared, options)
 
@@ -36,7 +41,7 @@ function enableRestAPI(jio, shared) { // (jio, shared, options)
   ];
 
   function prepareParamAndEmit(method, storage_spec, args) {
-    var promise, callback, type_dict, param = {};
+    var callback, type_dict, param = {};
     type_dict = arrayValuesToTypeDict(Array.prototype.slice.call(args));
     type_dict.object = type_dict.object || [];
     if (method !== 'allDocs') {
@@ -49,31 +54,38 @@ function enableRestAPI(jio, shared) { // (jio, shared, options)
     } else {
       param.kwargs = {};
     }
+    param.solver = {};
     param.options = deepClone(type_dict.object.shift()) || {};
-    //param.deferred = new IODeferred(method, param.kwargs, param.options);
-    param.deferred = new Deferred();
-    promise = param.deferred.promise;
+    param.promise = new RSVP.Promise(function (resolve, reject, notify) {
+      param.solver.resolve = resolve;
+      param.solver.reject = reject;
+      param.solver.notify = notify;
+    }, function () {
+      var k;
+      for (k in param.cancellers) {
+        if (param.cancellers.hasOwnProperty(k)) {
+          param.cancellers[k]();
+        }
+      }
+    });
     type_dict['function'] = type_dict['function'] || [];
     if (type_dict['function'].length === 1) {
-      callback = type_dict['function'].shift();
-      promise.done(function (answer) {
+      callback = type_dict['function'][0];
+      param.promise.then(function (answer) {
         callback(undefined, answer);
-      });
-      promise.fail(function (answer) {
+      }, function (answer) {
         callback(answer, undefined);
       });
     } else if (type_dict['function'].length > 1) {
-      promise.done(type_dict['function'].shift());
-      promise.fail(type_dict['function'].shift());
-      if (type_dict['function'].length === 1) {
-        promise.always(type_dict['function'].shift());
-      }
+      param.promise.then(type_dict['function'][0],
+                         type_dict['function'][1],
+                         type_dict['function'][2]);
     }
     type_dict = dictClear(type_dict);
     param.storage_spec = storage_spec;
     param.method = method;
     shared.emit(method, param);
-    return promise;
+    return param.promise;
   }
 
   shared.createRestApi = function (storage_spec, that) {
