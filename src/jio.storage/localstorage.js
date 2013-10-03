@@ -671,26 +671,49 @@
   //////////////////////////////////////////////////////////////////////
   // Tools
 
+  function createLocalDescription(username, application_name) {
+    if (typeof username !== 'string') {
+      throw new TypeError("LocalStorage username must be a string");
+    }
+    var description = {
+      "type": "local",
+      "username": username
+    };
+    if (typeof application_name === 'string') {
+      description.application_name = application_name;
+    }
+    return description;
+  }
+
+  function createMemoryDescription(username, application_name) {
+    var description = createLocalDescription(username, application_name);
+    description.mode = "memory";
+    return description;
+  }
+
   /**
    * Tool to help users to create local storage description for JIO
    *
    * @param  {String} username The username
    * @param  {String} [application_name] The application_name
+   * @param  {String} [mode="localStorage"] Use localStorage or memory
    * @return {Object} The storage description
    */
-  function createDescription(username, application_name) {
-    var description = {
-      "type": "local",
-      "username": username.toString()
-    };
-    if (application_name !== undefined) {
-      description.application_name = application_name.toString();
+  function createDescription(username, application_name, mode) {
+    if (mode === undefined || mode.toString() === 'localStorage') {
+      return createLocalDescription(username, application_name);
     }
-    return description;
+    if (mode.toString() === 'memory') {
+      return createMemoryDescription(username, application_name);
+    }
+    throw new TypeError("Unknown LocalStorage '" + mode.toString() + "' mode");
   }
-  exports.createDescription = createDescription;
 
-  function clear() {
+  exports.createDescription = createDescription;
+  exports.createLocalDescription = createLocalDescription;
+  exports.createMemoryDescription = createMemoryDescription;
+
+  function clearLocalStorage() {
     var k;
     for (k in localStorage) {
       if (localStorage.hasOwnProperty(k)) {
@@ -700,12 +723,13 @@
       }
     }
   }
-  exports.clear = clear;
-  exports.clearLocalStorage = clear;
 
   function clearMemoryStorage() {
     jIO.util.dictClear(ram);
   }
+
+  exports.clear = clearLocalStorage;
+  exports.clearLocalStorage = clearLocalStorage;
   exports.clearMemoryStorage = clearMemoryStorage;
 
 }));
