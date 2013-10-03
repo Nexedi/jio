@@ -18,6 +18,7 @@
     "cloud"
   ],
   "devDependencies": {
+    "jscc-node": "0.3.x",
     "grunt": "0.4.x",
     "grunt-contrib-concat": "0.3.x",
     "grunt-contrib-uglify": "0.2.x",
