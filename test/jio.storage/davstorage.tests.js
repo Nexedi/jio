@@ -26,6 +26,7 @@
 
   function success(promise) {
     return new RSVP.Promise(function (resolve, reject, notify) {
+      /*jslint unparam: true*/
       promise.then(resolve, resolve, notify);
     }, function () {
       promise.cancel();
