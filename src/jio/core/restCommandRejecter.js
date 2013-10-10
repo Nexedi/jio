@@ -51,6 +51,10 @@ function restCommandRejecter(param, args) {
 
   if (typeof a === 'object' && !Array.isArray(a)) {
     dictUpdate(weak, a);
+    if (a instanceof Error) {
+      weak.reason = a.message;
+      weak.error = a.name;
+    }
   }
 
   dictUpdate(weak, strong);
