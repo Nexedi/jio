@@ -2171,6 +2171,10 @@ function restCommandRejecter(param, args) {
 
   if (typeof a === 'object' && !Array.isArray(a)) {
     dictUpdate(weak, a);
+    if (a instanceof Error) {
+      weak.reason = a.message;
+      weak.error = a.name;
+    }
   }
 
   dictUpdate(weak, strong);
@@ -2798,7 +2802,7 @@ function enableJobRecovery(jio, shared, options) {
       var job;
       shared.job_queue.load();
       job = shared.job_queue.get(id);
-      if (job.modified === modified) {
+      if (job && job.modified === modified) {
         // job not modified, no one takes care of it
         recoverJob(job);
       }
