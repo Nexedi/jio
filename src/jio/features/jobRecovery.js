@@ -31,7 +31,7 @@ function enableJobRecovery(jio, shared, options) {
       var job;
       shared.job_queue.load();
       job = shared.job_queue.get(id);
-      if (job.modified === modified) {
+      if (job && job.modified === modified) {
         // job not modified, no one takes care of it
         recoverJob(job);
       }
