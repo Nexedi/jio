@@ -9,8 +9,8 @@
  */
 function Metadata(metadata) {
   if (arguments.length > 0) {
-    if (typeof metadata !== 'object' ||
-        Object.getPrototypeOf(metadata || []) !== Object.prototype) {
+    if (metadata === null || typeof metadata !== 'object' ||
+        Array.isArray(metadata)) {
       throw new TypeError("Metadata(): Optional argument 1 is not an object");
     }
     this._dict = metadata;
