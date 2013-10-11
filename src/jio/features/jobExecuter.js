@@ -4,19 +4,28 @@
 
 function enableJobExecuter(jio, shared) { // , options) {
 
-  // uses 'job', 'jobDone', 'jobFail' and 'jobNotify' events
-  // emits 'jobRun' and 'jobEnd' events
+  // uses 'job:new' events
+  // uses actions 'job:resolve', 'job:reject' and 'job:notify'
 
-  // listeners
+  // emits 'job:modified', 'job:started', 'job:resolved',
+  // 'job:rejected', 'job:notified' and 'job:end' events
+  // emits action 'job:start'
 
-  shared.on('job', function (param) {
+  function startJobIfReady(job) {
+    if (job.state === 'ready') {
+      shared.emit('job:start', job);
+    }
+  }
+
+  function executeJobIfReady(param) {
     var storage;
     if (param.state === 'ready') {
       param.tried += 1;
       param.started = new Date();
       param.state = 'running';
       param.modified = new Date();
-      shared.emit('jobRun', param);
+      shared.emit('job:modified', param);
+      shared.emit('job:started', param);
       try {
         storage = createStorage(deepClone(param.storage_spec));
       } catch (e) {
@@ -44,33 +53,47 @@ function enableJobExecuter(jio, shared) { // , options) {
         );
       });
     }
-  });
+  }
 
-  shared.on('jobDone', function (param, args) {
-    if (param.state === 'running') {
-      param.state = 'done';
-      param.modified = new Date();
-      shared.emit('jobEnd', param);
-      if (param.solver) {
-        restCommandResolver(param, args);
+  function endAndResolveIfRunning(job, args) {
+    if (job.state === 'running') {
+      job.state = 'done';
+      job.modified = new Date();
+      shared.emit('job:modified', job);
+      if (job.solver) {
+        restCommandResolver(job, args);
       }
+      shared.emit('job:resolved', job, args);
+      shared.emit('job:end', job);
     }
-  });
+  }
 
-  shared.on('jobFail', function (param, args) {
-    if (param.state === 'running') {
-      param.state = 'fail';
-      param.modified = new Date();
-      shared.emit('jobEnd', param);
-      if (param.solver) {
-        restCommandRejecter(param, args);
+  function endAndRejectIfRunning(job, args) {
+    if (job.state === 'running') {
+      job.state = 'fail';
+      job.modified = new Date();
+      shared.emit('job:modified', job);
+      if (job.solver) {
+        restCommandRejecter(job, args);
       }
+      shared.emit('job:rejected', job, args);
+      shared.emit('job:end', job);
     }
-  });
+  }
 
-  shared.on('jobNotify', function (param, args) {
-    if (param.state === 'running' && param.solver) {
-      param.solver.notify(args[0]);
+  function notifyJobIfRunning(job, args) {
+    if (job.state === 'running' && job.solver) {
+      job.solver.notify(args[0]);
+      shared.emit('job:notified', job, args);
     }
-  });
+  }
+
+  // listeners
+
+  shared.on('job:new', startJobIfReady);
+  shared.on('job:start', executeJobIfReady);
+
+  shared.on('job:resolve', endAndResolveIfRunning);
+  shared.on('job:reject', endAndRejectIfRunning);
+  shared.on('job:notify', notifyJobIfRunning);
 }

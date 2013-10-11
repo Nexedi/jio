@@ -9,20 +9,23 @@ function enableJobRecovery(jio, shared, options) {
   // uses
   // - shared.job_queue JobQueue
 
+  // emits 'job:new' event
+
   function numberOrDefault(number, default_value) {
     return (typeof number === 'number' &&
             isFinite(number) ? number : default_value);
   }
 
   function recoverJob(param) {
+    shared.job_queue.load();
     shared.job_queue.remove(param.id);
     delete param.id;
-    if (methodType(param.method) === 'writer' ||
-        param.state === 'ready' ||
-        param.state === 'running' ||
-        param.state === 'waiting') {
+    if (methodType(param.method) === 'writer' &&
+        (param.state === 'ready' ||
+         param.state === 'running' ||
+         param.state === 'waiting')) {
       shared.job_queue.save();
-      shared.emit('job', param);
+      shared.emit('job:new', param);
     }
   }
 

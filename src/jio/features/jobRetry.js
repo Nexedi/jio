@@ -27,9 +27,9 @@ function enableJobRetry(jio, shared, options) {
   // - param.options object
   // - param.command object
 
-  // uses 'job' and 'jobRetry' events
-  // emits 'job', 'jobFail' and 'jobStateChange' events
-  // job can emit 'jobRetry'
+  // uses 'job:new' and 'job:retry' events
+  // emits action 'job:start' event
+  // emits 'job:retry', 'job:reject', 'job:modified' and 'job:stopped' events
 
   shared.job_keys = arrayExtend(shared.job_keys || [], ["max_retry"]);
 
@@ -73,9 +73,7 @@ function enableJobRetry(jio, shared, options) {
     2
   );
 
-  // listeners
-
-  shared.on('job', function (param) {
+  function initJob(param) {
     if (typeof param.max_retry !== 'number' || param.max_retry < 0) {
       param.max_retry = positiveNumberOrDefault(
         param.options.max_retry,
@@ -84,32 +82,40 @@ function enableJobRetry(jio, shared, options) {
     }
     param.command.reject = function (status) {
       if (constants.http_action[status || 0] === "retry") {
-        shared.emit('jobRetry', param, arguments);
+        shared.emit('job:retry', param, arguments);
       } else {
-        shared.emit('jobFail', param, arguments);
+        shared.emit('job:reject', param, arguments);
       }
     };
     param.command.retry = function () {
-      shared.emit('jobRetry', param, arguments);
+      shared.emit('job:retry', param, arguments);
     };
-  });
+  }
 
-  shared.on('jobRetry', function (param, args) {
+  function retryIfRunning(param, args) {
     if (param.state === 'running') {
       if (param.max_retry === undefined ||
           param.max_retry === null ||
           param.max_retry >= param.tried) {
         param.state = 'waiting';
         param.modified = new Date();
-        shared.emit('jobStop', param);
+        shared.emit('job:modified', param);
+        shared.emit('job:stopped', param);
         setTimeout(function () {
           param.state = 'ready';
           param.modified = new Date();
-          shared.emit('job', param);
+          shared.emit('job:modified', param);
+          shared.emit('job:start', param);
         }, min(10000, param.tried * 2000));
       } else {
-        shared.emit('jobFail', param, args);
+        shared.emit('job:reject', param, args);
       }
     }
-  });
+  }
+
+  // listeners
+
+  shared.on('job:new', initJob);
+
+  shared.on('job:retry', retryIfRunning);
 }

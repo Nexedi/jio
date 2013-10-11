@@ -13,7 +13,9 @@ function enableJobTimeout(jio, shared, options) {
   // - param.timeout_ident Timeout
   // - param.state string 'running'
 
-  // uses 'job', 'jobDone', 'jobFail', 'jobRetry' and 'jobNotify' events
+  // uses 'job:new', 'job:stopped', 'job:started',
+  // 'job:notified' and 'job:end' events
+  // emits 'job:modified' event
 
   shared.job_keys = arrayExtend(shared.job_keys || [], ["timeout"]);
 
@@ -38,34 +40,39 @@ function enableJobTimeout(jio, shared, options) {
     };
   }
 
-  // listeners
-
-  shared.on('job', function (param) {
-    if (typeof param.timeout !== 'number' || param.timeout < 0) {
-      param.timeout = positiveNumberOrDefault(
-        param.options.timeout,
+  function initJob(job) {
+    if (typeof job.timeout !== 'number' || job.timeout < 0) {
+      job.timeout = positiveNumberOrDefault(
+        job.options.timeout,
         default_timeout
       );
     }
-    param.modified = new Date();
-  });
+    job.modified = new Date();
+    shared.emit('job:modified', job);
+  }
 
-  ["jobDone", "jobFail", "jobRetry"].forEach(function (event) {
-    shared.on(event, function (param) {
-      clearTimeout(param.timeout_ident);
-      delete param.timeout_ident;
-    });
-  });
+  function clearJobTimeout(job) {
+    clearTimeout(job.timeout_ident);
+    delete job.timeout_ident;
+  }
 
-  ["jobRun", "jobNotify", "jobEnd"].forEach(function (event) {
-    shared.on(event, function (param) {
-      clearTimeout(param.timeout_ident);
-      if (param.state === 'running' && param.timeout > 0) {
-        param.timeout_ident = setTimeout(timeoutReject(param), param.timeout);
-        param.modified = new Date();
-      } else {
-        delete param.timeout_ident;
-      }
-    });
-  });
+  function restartJobTimeoutIfRunning(job) {
+    clearTimeout(job.timeout_ident);
+    if (job.state === 'running' && job.timeout > 0) {
+      job.timeout_ident = setTimeout(timeoutReject(job), job.timeout);
+      job.modified = new Date();
+    } else {
+      delete job.timeout_ident;
+    }
+  }
+
+  // listeners
+
+  shared.on('job:new', initJob);
+
+  shared.on("job:stopped", clearJobTimeout);
+  shared.on("job:end", clearJobTimeout);
+
+  shared.on("job:started", restartJobTimeoutIfRunning);
+  shared.on("job:notified", restartJobTimeoutIfRunning);
 }

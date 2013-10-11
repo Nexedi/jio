@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
 /*global arrayExtend, localStorage, Workspace, uniqueJSONStringify, JobQueue,
-  constants, indexOf */
+  constants, indexOf, setTimeout, clearTimeout */
 
 function enableJobQueue(jio, shared, options) {
 
@@ -16,8 +16,56 @@ function enableJobQueue(jio, shared, options) {
   // - shared.workspace Workspace
   // - shared.job_queue JobQueue
 
-  // uses 'job', 'jobRun', 'jobStop', 'jobEnd' events
-  // emits 'jobEnd' events
+  // uses 'job:new', 'job:started', 'job:stopped', 'job:modified',
+  // 'job:notified', 'job:end' events
+
+  // emits 'job:end' event
+
+  function postJobIfReady(param) {
+    if (!param.stored && param.state === 'ready') {
+      clearTimeout(param.queue_ident);
+      delete param.queue_ident;
+      shared.job_queue.load();
+      shared.job_queue.post(param);
+      shared.job_queue.save();
+      param.stored = true;
+    }
+  }
+
+  function deferredPutJob(param) {
+    if (param.queue_ident === undefined) {
+      param.queue_ident = setTimeout(function () {
+        delete param.queue_ident;
+        if (param.stored) {
+          shared.job_queue.load();
+          shared.job_queue.put(param);
+          shared.job_queue.save();
+        }
+      });
+    }
+  }
+
+  function removeJob(param) {
+    clearTimeout(param.queue_ident);
+    delete param.queue_ident;
+    if (param.stored) {
+      shared.job_queue.load();
+      shared.job_queue.remove(param.id);
+      shared.job_queue.save();
+      delete param.stored;
+      delete param.id;
+    }
+  }
+
+  function initJob(param) {
+    if (!param.command.end) {
+      param.command.end = function () {
+        shared.emit('job:end', param);
+      };
+    }
+  }
+
+  shared.on('job:new', initJob);
 
   if (options.job_management !== false) {
 
@@ -39,51 +87,17 @@ function enableJobQueue(jio, shared, options) {
       shared.job_keys
     );
 
-    shared.on('job', function (param) {
-      if (indexOf(param.state, ['fail', 'done']) === -1) {
-        if (!param.stored) {
-          shared.job_queue.load();
-          shared.job_queue.post(param);
-          shared.job_queue.save();
-          param.stored = true;
-        }
-      }
-    });
+    // Listeners
 
-    ['jobRun', 'jobStop'].forEach(function (event) {
-      shared.on(event, function (param) {
-        if (param.stored) {
-          shared.job_queue.load();
-          if (param.state === 'done' || param.state === 'fail') {
-            if (shared.job_queue.remove(param.id)) {
-              shared.job_queue.save();
-              delete param.storad;
-            }
-          } else {
-            shared.job_queue.put(param);
-            shared.job_queue.save();
-          }
-        }
-      });
-    });
+    shared.on('job:new', postJobIfReady);
 
-    shared.on('jobEnd', function (param) {
-      if (param.stored) {
-        shared.job_queue.load();
-        if (shared.job_queue.remove(param.id)) {
-          shared.job_queue.save();
-        }
-      }
-    });
+    shared.on('job:started', deferredPutJob);
+    shared.on('job:stopped', deferredPutJob);
+    shared.on('job:modified', deferredPutJob);
+    shared.on('job:notified', deferredPutJob);
+
+    shared.on('job:end', removeJob);
 
   }
-
-  shared.on('job', function (param) {
-    if (!param.command.end) {
-      param.command.end = function () {
-        shared.emit('jobEnd', param);
-      };
-    }
-  });
 
 }

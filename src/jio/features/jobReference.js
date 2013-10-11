@@ -6,17 +6,17 @@ function enableJobReference(jio, shared, options) {
   // creates
   // - shared.jobs Object Array
 
-  // uses 'job', 'jobEnd' events
+  // uses 'job:new' and 'job:end' events
 
   shared.jobs = [];
 
   var job_references = new ReferenceArray(shared.jobs);
 
-  shared.on('job', function (param) {
+  shared.on('job:new', function (param) {
     job_references.put(param);
   });
 
-  shared.on('jobEnd', function (param) {
+  shared.on('job:end', function (param) {
     job_references.remove(param);
   });
 }
