@@ -668,8 +668,8 @@
       "storage_spec": {"type": "fake", "id": "1 Job Manage"},
       "method": "get",
       //"created": new Date(),
-      "tried": 1,
-      "state": "running",
+      "tried": 0, // deferred writing 1
+      "state": "ready", // deferred writing "running"
       //"modified": new Date(),
       "max_retry": 2,
       "timeout": 1200,
@@ -683,7 +683,7 @@
 
     setTimeout(function () {
       commands["1 Job Manage/get"].success({"data": {"b": "c"}});
-    }, 50); // wait 50 ms
+    }, 100); // wait 100 ms
     setTimeout(function () {
       deepEqual(workspace, {}, 'Job ended, empty workspace');
 
@@ -703,7 +703,7 @@
       o.job1.kwargs._id = 'b';
       // o.job1.created = new Date();
       // o.job1.modified = new Date();
-    }, 100); // wait 50 ms
+    }, 200); // wait 100 ms
     setTimeout(function () {
       commands["1 Job Manage/get"].storage({
         "type": "fake",
@@ -720,19 +720,23 @@
         }, "Second job respond");
       });
 
+      o.job1.tried = 1;
+      o.job1.state = 'running';
+
       o.job2 = {
         "kwargs": {"_id": "c"},
         "options": {},
         "storage_spec": {"type": "fake", "id": "2 Job Manage"},
         "method": "get",
         //"created": new Date(),
-        "tried": 1,
-        "state": "running",
+        "tried": 0, // deferred writing 1
+        "state": "ready", // deferred writing "running"
         //"modified": new Date(),
         "max_retry": 2,
         "timeout": 10000,
         "id": 2
       };
+
       tmp = workspace["jio/jobs/{\"id\":\"1 Job Manage\",\"type\":\"fake\"}"];
       tmp = JSON.parse(tmp);
       delete tmp[0].created;
@@ -743,20 +747,24 @@
         o.job1,
         o.job2
       ], 'Job calls another job, workspace have two jobs');
-    }, 150); // wait 50 ms
+    }, 300); // wait 100 ms
     setTimeout(function () {
       commands['1 Job Manage/get'].end();
       tmp = workspace["jio/jobs/{\"id\":\"1 Job Manage\",\"type\":\"fake\"}"];
       tmp = JSON.parse(tmp);
       delete tmp[0].created;
       delete tmp[0].modified;
+
+      o.job2.tried = 1;
+      o.job2.state = 'running';
+
       deepEqual(tmp, [o.job2], 'First Job ended, second still there');
 
       commands['1 Job Manage/get'].success({"data": {"c": "d"}});
       commands['2 Job Manage/get'].success({"data": {"d": "e"}});
 
       deepEqual(workspace, {}, 'No more job in the queue');
-    }, 200); // wait 50 ms
+    }, 400); // wait 100 ms
   });
 
   test('job state running, job recovery', 2, function () {
@@ -831,8 +839,11 @@
     setTimeout(function () {
       // copy workspace when job is waiting
       commands['Job Recovw/post'].retry();
-      workspace = jIO.util.deepClone(workspace);
+
     }, 50);
+    setTimeout(function () {
+      workspace = jIO.util.deepClone(workspace);
+    }, 100);
     setTimeout(function () {
       commands['Job Recovw/post'].success({"id": "a"});
     }, 2100);
@@ -850,7 +861,7 @@
         if (commands['Job Recovw/post']) {
           ok(false, "Command called, job recovered to earlier");
         }
-      }, 19999);
+      }, 19889); // need to wait around 19900 ms
 
       setTimeout(function () {
         if (!commands['Job Recovw/post']) {
@@ -865,7 +876,7 @@
         start();
         deepEqual(workspace, {}, 'No more job in the queue');
       }, 20100);
-    }, 51);
+    }, 150);
 
     //////////////////////////////
     // XXX Waiting for jobs job recovery

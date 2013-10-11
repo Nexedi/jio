@@ -20,10 +20,16 @@ function enableJobMaker(jio, shared, options) {
   // - param.options object
   // - param.command object
 
-  // uses method events
-  // add emits 'job' events
+  // list of job events:
+  // - Job existence -> new, end
+  // - Job execution -> started, stopped
+  // - Job resolution -> resolved, rejected, notified, cancelled
+  // - Job modification -> modified
 
-  // the job can emit 'jobDone', 'jobFail' and 'jobNotify'
+  // emits actions 'job:resolve', 'job:reject' and 'job:notify'
+
+  // uses `rest method` events
+  // emits 'job:new' event
 
   shared.job_keys = arrayExtend(shared.job_keys || [], [
     "created",
@@ -36,48 +42,49 @@ function enableJobMaker(jio, shared, options) {
     "options"
   ]);
 
-  function addCommandToJob(param) {
-    param.command = {};
-    param.command.resolve = function () {
-      shared.emit('jobDone', param, arguments);
+  function addCommandToJob(job) {
+    job.command = {};
+    job.command.resolve = function () {
+      shared.emit('job:resolve', job, arguments);
     };
-    param.command.success = param.command.resolve;
-    param.command.reject = function () {
-      shared.emit('jobFail', param, arguments);
+    job.command.success = job.command.resolve;
+    job.command.reject = function () {
+      shared.emit('job:reject', job, arguments);
     };
-    param.command.error = param.command.reject;
-    param.command.notify = function () {
-      shared.emit('jobNotify', param, arguments);
+    job.command.error = job.command.reject;
+    job.command.notify = function () {
+      shared.emit('job:notify', job, arguments);
     };
-    param.command.storage = function () {
+    job.command.storage = function () {
       return shared.createRestApi.apply(null, arguments);
     };
+  }
+
+  function createJobFromRest(param) {
+    if (param.solver) {
+      // rest parameters are good
+      shared.emit('job:new', param);
+    }
+  }
+
+  function initJob(job) {
+    job.state = 'ready';
+    if (typeof job.tried !== 'number' || !isFinite(job.tried)) {
+      job.tried = 0;
+    }
+    if (!job.created) {
+      job.created = new Date();
+    }
+    addCommandToJob(job);
+    job.modified = new Date();
   }
 
   // listeners
 
   shared.rest_method_names.forEach(function (method) {
-    shared.on(method, function (param) {
-      if (param.solver) {
-        // params are good
-        shared.emit('job', param);
-      }
-    });
+    shared.on(method, createJobFromRest);
   });
 
-  shared.on('job', function (param) {
-    // new or recovered job
-    param.state = 'ready';
-    if (typeof param.tried !== 'number' || !isFinite(param.tried)) {
-      param.tried = 0;
-    }
-    if (!param.created) {
-      param.created = new Date();
-    }
-    if (!param.command) {
-      addCommandToJob(param);
-    }
-    param.modified = new Date();
-  });
+  shared.on('job:new', initJob);
 
 }

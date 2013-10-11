@@ -13,7 +13,9 @@ function enableJobChecker(jio, shared, options) {
   // creates
   // - shared.job_rules Array
 
-  // uses 'job' event
+  // uses 'job:new' event
+  // emits 'job:modified', 'job:start', 'job:resolved',
+  // 'job:end', 'job:reject' events
 
   var i;
 
@@ -22,33 +24,39 @@ function enableJobChecker(jio, shared, options) {
   shared.job_rule_actions = {
     wait: function (original_job, new_job) {
       original_job.promise.always(function () {
-        shared.emit('job', new_job);
+        new_job.state = 'ready';
+        new_job.modified = new Date();
+        shared.emit('job:modified', new_job);
+        shared.emit('job:start', new_job);
       });
       new_job.state = 'waiting';
       new_job.modified = new Date();
+      shared.emit('job:modified', new_job);
     },
     update: function (original_job, new_job) {
       if (!new_job.solver) {
         // promise associated to the job
         new_job.state = 'done';
-        shared.emit('jobDone', new_job);
+        shared.emit('job:resolved', new_job, []); // XXX why resolve?
+        shared.emit('job:end', new_job);
       } else {
         if (!original_job.solver) {
           original_job.solver = new_job.solver;
         } else {
           original_job.promise.then(
             new_job.command.resolve,
-            new_job.command.reject
+            new_job.command.reject,
+            new_job.command.notify
           );
         }
       }
       new_job.state = 'running';
       new_job.modified = new Date();
+      shared.emit('job:modified', new_job);
     },
     deny: function (original_job, new_job) {
-      new_job.state = 'fail';
-      new_job.modified = new Date();
-      restCommandRejecter(new_job, [
+      new_job.state = "running";
+      shared.emit('job:reject', new_job, [
         'precondition_failed',
         'command denied',
         'Command rejected by the job checker.'
@@ -170,7 +178,7 @@ function enableJobChecker(jio, shared, options) {
           }
         } else {
           // browsing jobs
-          for (j = 0; j < shared.jobs.length; j += 1) {
+          for (j = shared.jobs.length - 1; j >= 0; j -= 1) {
             if (shared.jobs[j] !== job) {
               if (
                 jobsRespectConditions(
@@ -235,7 +243,7 @@ function enableJobChecker(jio, shared, options) {
       }
     }
 
-    shared.on('job', checkJob);
+    shared.on('job:new', checkJob);
 
   }
 
