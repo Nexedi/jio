@@ -444,7 +444,6 @@ defaults.job_rule_conditions = {};
    * @return {Boolean} True if ids exist, else false
    */
   function haveDocumentIds(a, b) {
-    console.log(JSON.stringify(a.kwargs), JSON.stringify(b.kwargs));
     if (typeof a.kwargs._id !== "string" || a.kwargs._id === "") {
       return false;
     }
