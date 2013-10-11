@@ -388,6 +388,23 @@ defaults.job_rule_conditions = {};
   }
 
   /**
+   * Compare two jobs and test if they use metadata only
+   *
+   * @param  {Object} a The first job to compare
+   * @param  {Object} b The second job to compare
+   * @return {Boolean} True if equal, else false
+   */
+  function useMetadataOnly(a, b) {
+    if (['post', 'put', 'get', 'remove', 'allDocs'].indexOf(a.method) === -1) {
+      return false;
+    }
+    if (['post', 'put', 'get', 'remove', 'allDocs'].indexOf(b.method) === -1) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * Compare two jobs and test if they are readers
    *
    * @param  {Object} a The first job to compare
@@ -466,6 +483,7 @@ defaults.job_rule_conditions = {};
     "sameStorageDescription": sameStorageDescription,
     "areWriters": areWriters,
     "areReaders": areReaders,
+    "useMetadataOnly": useMetadataOnly,
     "sameMethod": sameMethod,
     "sameDocumentId": sameDocumentId,
     "sameParameters": sameParameters,
