@@ -213,10 +213,11 @@ function enableJobChecker(jio, shared, options) {
       ],
       "action": "update"
     }, {
-      "code_name": "writers update",
+      "code_name": "metadata writers update",
       "conditions": [
         "sameStorageDescription",
         "areWriters",
+        "useMetadataOnly",
         "sameMethod",
         "haveDocumentIds",
         "sameParameters"
