@@ -422,6 +422,23 @@ defaults.job_rule_conditions = {};
   }
 
   /**
+   * Test if the jobs have a document id.
+   *
+   * @param  {Object} a The first job to test
+   * @param  {Object} b The second job to test
+   * @return {Boolean} True if ids exist, else false
+   */
+  function haveDocumentIds(a, b) {
+    if (typeof a.kwargs._id !== "string" || a.kwargs._id === "") {
+      return false;
+    }
+    if (typeof b.kwargs._id !== "string" || b.kwargs._id === "") {
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * Compare two jobs and test if their kwargs are equal
    *
    * @param  {Object} a The first job to compare
@@ -452,7 +469,8 @@ defaults.job_rule_conditions = {};
     "sameMethod": sameMethod,
     "sameDocumentId": sameDocumentId,
     "sameParameters": sameParameters,
-    "sameOptions": sameOptions
+    "sameOptions": sameOptions,
+    "haveDocumentIds": haveDocumentIds
   };
 
 }());
