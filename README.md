@@ -3,8 +3,6 @@
 **jIO is a client-side JavaScript library to manage documents across multiple
   storages.**
 
-<!-- \index-and-table 3 -->
-
 ### Getting Started
 
 To set up jIO include jio.js, dependencies and the connectors for the storages
@@ -12,18 +10,20 @@ you want to use in your page header (note that more dependencies may be required
 depending on type of storages being used):
 
     <!-- jio + dependency -->
-    <script src="md5.js"></script>
-    <script src="complex-queries.js"></script>
+    <script src="sha256.amd.js"></script>
+    <script src="rsvp-custom.js"></script>
     <script src="jio.js"></script>
+
     <!-- jio storage libraries -->
-    <script src="localstorage.js">
-    <script src="revisionstorage.js">
+    <script src="complex-queries.js"></script>
+    <script src="localstorage.js"></script>
+
     <script ...>
 
 Then create your jIO instance like this:
 
     // create a new jio (type = localStorage)
-    var jio_instance = jIO.newJio({
+    var jio_instance = jIO.createJIO({
       "type": "local",
       "username": "your_username",
       "application_name": "your_application_name"
@@ -32,74 +32,109 @@ Then create your jIO instance like this:
 ### Documents and Methods
 
 Documents are JSON strings that contain *meta-data* (properties, like a filename)
-and *attachments* (optional content, for example a base64 encoded image).
+and *attachments* (optional content, for example *image.jpg*).
 
 jIO exposes the following methods to *create*, *read*, *update* and *delete* documents
 (for more information, including revision management and available options for
 each method, please refer to the documentation):
 
     // create and store new document
-    jio_instance.post({"title": "some title"}, function (err, response) {
-      // console.log(response):
-      // {"ok": "true", "id": "cabc9...826" } // Generated id
-    });
+    jio_instance.post({"title": "some title"}).
+      then(function (response) {
+        // console.log(response):
+        // {
+        //   "result": "success",
+        //   "id": "404aef5e-22cc-4a64-a292-37776c6464a3" // Generated id
+        //   ...
+        // }
+      });
 
     // create or update an existing document
-    jio_instance.put({"_id": "my_document", "title": "New Title"}, function (err, response) {
-      // console.log(response):
-      // {"ok": "true", "id": "my_document"}
-    });
+    jio_instance.put({"_id": "my_document", "title": "New Title"}).
+      then(function (response) {
+        // console.log(response):
+        // {
+        //   "result": "success",
+        //   "id": "my_document",
+        //   ...
+        // }
+      });
 
     // add an attachement to a document
     jio_instance.putAttachment({"_id": "my_document", "_attachment": "its_attachment",
-                                "_data":"abc", "_mimetype": "text/plain"}, function (err, response) {
-      // console.log(response):
-      // {"ok":"true", "id": "my_document", "attachment": "its_attachment"}
-    });
+                                "_data": "abc", "_mimetype": "text/plain"}).
+      then(function (response) {
+        // console.log(response):
+        // {
+        //   "result": "success",
+        //   "id": "my_document",
+        //   "attachment": "its_attachment"
+        //   ...
+        // }
+      });
 
     // read a document
-    jio_instance.get({"_id": "my_document"}, function (err, response) {
-      // console.log(response);
-      // {
-      //   "_id": "my_document",
-      //   "title": "New Title",
-      //   "_attachments": {
-      //     "its_attachment": {
-      //       "length": 3,
-      //       "digest": "md5-e7248fce8990089e402b00f89dc8d14d",
-      //       "content_type": "text/plain"
-      //     }
-      //   }
-      // }
-    });
+    jio_instance.get({"_id": "my_document"}).
+      then(function (response) {
+        // console.log(response);
+        // {
+        //   "data": {
+        //     "_id": "my_document",
+        //     "title": "New Title",
+        //     "_attachments": {
+        //       "its_attachment": {
+        //         "length": 3,
+        //         "digest": "sha256-ba7816bf8f1cfea414140de5dae2223b0361a396177a9cb410ff61f2015ad",
+        //         "content_type": "text/plain"
+        //       }
+        //     }
+        //   },
+        //   ...
+        // }
+      });
 
     // read an attachement
-    jio_instance.getAttachment({"_id": "my_document", "_attachment": "its_attachment"}, function (err, response) {
-      // console.log(response);
-      // "<Base64 Image>"
-    });
+    jio_instance.getAttachment({"_id": "my_document", "_attachment": "its_attachment"}).
+      then(function (response) {
+        // console.log(response);
+        // {
+        //   "data": Blob, // contains the attachment data + content type
+        //   ...
+        // }
+      });
 
     // delete a document and its attachment(s)
-    jio_instance.remove({"_id": "my_document"}, function (err, response) {
-      // console.log(response):
-      // {"ok": "true", "id": "my_document"}
-    });
+    jio_instance.remove({"_id": "my_document"}).
+      then(function (response) {
+        // console.log(response):
+        // {
+        //   "result": "success",
+        //   "id": "my_document"
+        // }
+      });
 
     // delete an attachement
-    jio_instance.removeAttachment({"_id": "my_document", "_attachment": "its_attachment"}, function (err, response) {
-      // console.log(response):
-      // {"ok": true, "id": "my_document", "attachment": "its_attachment"}
-    });
+    jio_instance.removeAttachment({"_id": "my_document", "_attachment": "its_attachment"}).
+      then(function (response) {
+        // console.log(response):
+        // {
+        //   "result": "success",
+        //   "id": "my_document",
+        //   "attachment": "its_attachment"
+        // }
+      });
 
     // get all documents
-    jio_instance.allDocs(function (err, response){
+    jio_instance.allDocs().then(function (response) {
       // console.log(response):
       // {
-      //   "total_rows": 1,
-      //   "rows": [{
-      //     "id": "my_document",
-      //     "value": {}
-      //   }]
+      //   "data": {
+      //     "total_rows": 1,
+      //     "rows": [{
+      //       "id": "my_document",
+      //       "value": {}
+      //     }]
+      //   }
       // }
     });
 
@@ -107,39 +142,51 @@ each method, please refer to the documentation):
 ### Example
 
 This is an example of how to store a video file with one attachment in local
-storage . Note that attachments should best be added inside one of the available
-document callback methods (success & error or callback)
+storage. Note that attachments should be added after document creation.
 
     // create a new localStorage
-    var jio_instance = jIO.newJio({
-      "type":"local",
-      "username":"user",
-      "application_name":"app"
+    var jio_instance = jIO.createJIO({
+      "type": "local",
+      "username": "user",
+      "application_name": "app"
     });
+
+    var my_video_blob = new Blob([my_video_binary_string], {
+      "type": "video/ogg"
+    });
+
     // post the document
     jio_instance.post({
       "_id"         : "myVideo",
       "title"       : "My Video",
-      "videoCodec"  : "vorbis",
+      "format"      : ["video/ogg", "vorbis", "HD"],
       "language"    : "en",
       "description" : "Images Compilation"
-    }, function (err, response) {
-      if (err) {
+    }).then(function (response) {
+
+      // add video attachment
+      return jio_instance.putAttachment({
+        "_id": "myVideo",
+        "_attachment": "video.ogv",
+        "_data": my_video_blob,
+      });
+
+    }).then(function (response) {
+
+      alert('Video Stored');
+
+    }, function (err) {
+
+      if (err.method === "post") {
         alert('Error when posting the document description');
       } else {
-        // if successful, add video attachment (base64 encoded)
-        jio_instance.putAttachment({
-          "_id": "myVideo/video",
-          "_data": Base64(my_video),
-          "_mimetype":"video/ogg"
-        }, function (err, response) {
-          if (err) {
-            alert('Error when attaching the video');
-          } else {
-            alert('Video Stored');
-          }
-        });
+        alert('Error when attaching the video');
       }
+
+    }, function (progression) {
+
+      console.log(progression);
+
     });
 
 ### Storage Locations
@@ -153,106 +200,102 @@ The following storages are currently supported:
 - LocalStorage (browser local storage)
 
         // initialize a local storage
-        var jio_instance = jIO.newJio({
+        var jio_instance = jIO.createJIO({
           "type" : "local",
           "username" : "me"
         });
 
-- DAVStorage (connect to webDAV)
+- DAVStorage (connect to webDAV, more information on the
+  [documentation](https://www.j-io.org/documentation/jio-documentation/))
 
-        // initialize a webDAV storage
-        var jio_instance = jIO.newJio({
-          "type" : "dav",
-          "url" : "http://my.dav.srv/uploads",
-          "auth_type": "basic",
-          "username" : "me",
-          "password" : "pwd"
+        // initialize a webDAV storage (without authentication)
+        var jio_instance = jIO.createJIO({
+          "type": "dav",
+          "url": "http://my.dav.srv/uploads"
         });
 
-- xWiki storage (connect to xWiki)
+<!-- - xWiki storage (connect to xWiki) -->
 
-        // initialize a connection to xWiki
-        var jio_instance = jIO.newJio({
-          "type": "xwiki",
-          "xwikiurl": "http://my.site.com/xwiki",
-          "username": "me",
-          "password": "pwd"
-        });
+<!--         // initialize a connection to xWiki -->
+<!--         var jio_instance = jIO.createJIO({ -->
+<!--           "type": "xwiki", -->
+<!--           "xwikiurl": "http://my.site.com/xwiki", -->
+<!--           "username": "me", -->
+<!--           "password": "pwd" -->
+<!--         }); -->
 
-- S3 storage (connect to S3)
+<!-- - S3 storage (connect to S3) -->
 
-        // initialize a connection to S3 storage
-        var jio_instance = jIO.newJio({
-          "type": "s3",
-          "AWSIdentifier": "AWS Identifier ID",
-          "password": "AWS Secret key",
-          "server": "Destination bucket"
-        });
+<!--         // initialize a connection to S3 storage -->
+<!--         var jio_instance = jIO.createJIO({ -->
+<!--           "type": "s3", -->
+<!--           "AWSIdentifier": "AWS Identifier ID", -->
+<!--           "password": "AWS Secret key", -->
+<!--           "server": "Destination bucket" -->
+<!--         }); -->
 
-- IndexStorage (maintains indices of documents in a substorage)
+<!-- - IndexStorage (maintains indices of documents in a substorage) -->
 
-        // initialize an indexStorage (for a local storage)
-        var jio_instance = jIO.newJio({
-          "type": "indexed",
-          "sub_storage": {
-            "type": "local" // for instance
-            "username": "me"
-          },
-          "indices": [{
-            "id": "index_database.json",
-            "index": ["title", "author", "subject", "posted_date"]
-          }, {
-            ...
-          }]
-        });
+<!--         // initialize an indexStorage (for a local storage) -->
+<!--         var jio_instance = jIO.createJIO({ -->
+<!--           "type": "indexed", -->
+<!--           "sub_storage": { -->
+<!--             "type": "local" // for instance -->
+<!--             "username": "me" -->
+<!--           }, -->
+<!--           "indices": [{ -->
+<!--             "id": "index_database.json", -->
+<!--             "index": ["title", "author", "subject", "posted_date"] -->
+<!--           }] -->
+<!--         }); -->
 
-- SplitStorage (simply split data into several parts):
+<!-- - SplitStorage (simply split data into several parts): -->
 
-        // initialize a splitStorage
-        var jio_instance = jIO.newJio({
-          "type": "split",
-          "storage_list": [<storage description>, ...]
-        });
+<!--         // initialize a splitStorage -->
+<!--         var jio_instance = jIO.createJIO({ -->
+<!--           "type": "split", -->
+<!--           "storage_list": [<storage description>, ...] -->
+<!--         }); -->
 
-- Revision Storage (add revision management to a substorage)
+<!-- - Revision Storage (add revision management to a substorage) -->
 
-        // initialize a revison storage on a local storage
-        // (revision-format 1-9ccd039de0674d935f3c6bae61afc9b7038d1df97d586507aa62336a02f9ee2a)
-        var jio_instance = jIO.newJio({
-          "type": "revision",
-          "sub_storage": {
-            "type": "local",
-            "username": "me"
-          }
-        });
+<!--         // initialize a revison storage on a local storage -->
+<!--         // (revision-format 1-9ccd039de0674d935f3c6bae61afc9b7038d1df97d586507aa62336a02f9ee2a) -->
+<!--         var jio_instance = jIO.createJIO({ -->
+<!--           "type": "revision", -->
+<!--           "sub_storage": { -->
+<!--             "type": "local", -->
+<!--             "username": "me" -->
+<!--           } -->
+<!--         }); -->
 
-- Replicate Revision Storage (replicate documents across multiple storages)
+<!-- - Replicate Revision Storage (replicate documents across multiple storages) -->
 
-        // initialize a replicate revision storage (with local and webDAV as substorages)
-        var jio_instance = jIO.newJio({
-          "type": "replicaterevision",
-          "storage_list": [{
-            "type": "revision",
-            "sub_storage": {
-              "type": "local",
-              "username": "me"
-            }
-           }, {
-            "type": "revision",
-            "sub_storage": {
-              "type" : "dav",
-              "auth_type": "basic",
-              "username" : "me",
-              "password" : "pwd",
-              "url" : "http://my.dav.srv/uploads"
-            }
-          }]
-        });
+<!--         // initialize a replicate revision storage (with local and webDAV as substorages) -->
+<!--         var jio_instance = jIO.createJIO({ -->
+<!--           "type": "replicaterevision", -->
+<!--           "storage_list": [{ -->
+<!--             "type": "revision", -->
+<!--             "sub_storage": { -->
+<!--               "type": "local", -->
+<!--               "username": "me" -->
+<!--             } -->
+<!--            }, { -->
+<!--             "type": "revision", -->
+<!--             "sub_storage": { -->
+<!--               "type" : "dav", -->
+<!--               "auth_type": "basic", -->
+<!--               "username" : "me", -->
+<!--               "password" : "pwd", -->
+<!--               "url" : "http://my.dav.srv/uploads" -->
+<!--             } -->
+<!--           }] -->
+<!--         }); -->
 
-- And more!
+- [And more!](https://www.j-io.org/documentation/jio-documentation#List of Available Storages)
 
 For more information on the specific storages including guidelines on how to
-create your own connector, please also refer to the documentation.
+create your own connector, please also refer to the [documentation](https://www.j-io.org/documentation/jio-documentation).
 
 ### Complex Queries
 
@@ -271,7 +314,7 @@ server-side):
       "sort_on": [[<string A>, 'descending']],
       // fields to return in response
       "select_list": [<string A>, <string B>]
-    }, function (err, response) {
+    }).then(function (response) {
       // console.log(response):
       // {
       //   "total_rows": 1,
@@ -318,4 +361,5 @@ when the page is reloaded after a browser crash.
 ### Copyright and license
 
 jIO is an open-source library and is licensed under the LGPL license. More
-information on LGPL can be found [here](http://en.wikipedia.org/wiki/GNU_Lesser_General_Public_License).
+information on LGPL can be found
+[here](http://en.wikipedia.org/wiki/GNU_Lesser_General_Public_License).
