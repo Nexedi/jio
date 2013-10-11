@@ -210,6 +210,7 @@ function enableJobChecker(jio, shared, options) {
         "sameStorageDescription",
         "areWriters",
         "sameMethod",
+        "haveDocumentIds",
         "sameParameters"
       ],
       "action": "update"
@@ -218,6 +219,7 @@ function enableJobChecker(jio, shared, options) {
       "conditions": [
         "sameStorageDescription",
         "areWriters",
+        "haveDocumentIds",
         "sameDocumentId"
       ],
       "action": "wait"
