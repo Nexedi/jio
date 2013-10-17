@@ -936,7 +936,7 @@
       // put 201
   putNewDocument().then(putNewDocumentTest).
       // get 200
-      //then(getCreatedDocument2).then(getCreatedDocument2Test).
+      then(getCreatedDocument2).then(getCreatedDocument2Test).
       // post 409
       //then(postSameDocument).then(postSameDocumentTest).
       // putA a 204

@@ -312,11 +312,14 @@
               break;
             case 'GET':
               if (jio === true) {
-                if (typeof this.responseText !== 'string') {
+                console.log(http);
+                console.log(obj);
+                console.log(typeof this.responseText);
+                if (typeof this.responseText === 'string') {
                   response = JSON.parse(this.responseText);
-                  response._attachments = response._attachments || {};
-                  delete response._attachments;
-                  //command.success(JSON.stringify(response));
+                  //response._attachments = response._attachments || {};
+                  //delete response._attachments;
+                  command.success(this.status,{'data':response});
                 } else {
                   if (isAttachment === true) {
                     //command.success(this.responseText);
@@ -618,10 +621,11 @@
      **/
 
     that.put = function (command, metadata, options) {
-      var doc, docId, mime;
+      var doc, docId, mime, created;
       doc = metadata;
       docId = doc._id;
       mime = 'text/plain; charset=UTF-8';
+      created = false;
       //pas d'attachment dans un put simple
       function putDocument() {
         var attachId, data, isJIO;
@@ -645,6 +649,7 @@
             doc._attachments = response._attachments;
           }
           putDocument();
+          //TODO : control non existing document to throw a 201 http code
         }
         );
     };
