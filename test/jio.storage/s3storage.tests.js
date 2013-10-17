@@ -940,7 +940,7 @@
       // post 409
       //then(postSameDocument).then(postSameDocumentTest).
       // putA a 204
-      //then(createAttachment).then(createAttachmentTest).
+      then(createAttachment).then(createAttachmentTest).
       // putA a 204
       //then(updateAttachment).then(updateAttachmentTest).
       // putA b 204

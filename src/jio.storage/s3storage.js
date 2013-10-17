@@ -20,6 +20,12 @@
     var evt, that, priv = {};
     that = this;
 
+    //nomenclature param
+
+    // param._id,
+    //       ._attachment,
+    //       ._blob
+
     // attributes
     priv.username = spec.username || '';
     priv.AWSIdentifier = spec.AWSIdentifier || '';
@@ -33,6 +39,7 @@
           authenticated-read,
           bucket-owner-read,
           bucket-owner-full-control" <||*/
+
     priv.acl = spec.acl || '';
     priv.actionStatus = spec.actionStatus || '';
     priv.contenTType = spec.contenTType || '';
@@ -417,30 +424,6 @@
       return doc;
     };
 
-    priv.createError = function (status, message, reason) {
-      var error = {
-        "status": status,
-        "message": message,
-        "reason": reason
-      };
-      switch (status) {
-      case 404:
-        error.statusText = "Not found";
-        break;
-      case 405:
-        error.statusText = "Method Not Allowed";
-        break;
-      case 409:
-        error.statusText = "Conflicts";
-        break;
-      case 24:
-        error.statusText = "Corrupted Document";
-        break;
-      }
-      error.error = error.statusText.toLowerCase().split(" ").join("_");
-      return error;
-    };
-
     that.encodeAuthorization = function (key, mime) {
       //GET oriented method
       var requestUTC, httpVerb, StringToSign, Signature;
@@ -654,28 +637,38 @@
         );
     };
 
-    that.putAttachment = function (command) {
-      var mon_document,
+    that.putAttachment = function (command,param,options) {
+      var my_document,
         docId,
         attachId,
         mime,
         attachment_id,
         attachment_data,
-        attachment_md5,
+        attachment_digest,
         attachment_mimetype,
         attachment_length;
 
-      mon_document = null;
-      docId = command.getDocId();
-      attachId = command.getAttachmentId() || '';
+      my_document = null;
+      docId = param._id;
+      attachId = param._attachment;
       mime = 'text/plain; charset=UTF-8';
       //récupération des variables de l'attachement
 
-      attachment_id = command.getAttachmentId();
-      attachment_data = command.getAttachmentData();
-      attachment_md5 = command.md5SumAttachmentData();
-      attachment_mimetype = command.getAttachmentMimeType();
-      attachment_length = command.getAttachmentLength();
+
+      attachment_id = param._attachment;
+      attachment_data = param._blob;
+      console.log(param._blob);
+
+      jIO.util.readBlobAsBinaryString(param._blob).then(function (e) {
+
+        console.log('readBlobAsBinaryString');
+        var binary_string = e.target.result;
+        console.log(binary_string);
+        console.dir(jIO.util);
+        attachment_digest = jIO.util.makeBinaryStringDigest(binary_string);
+        console.log(attachment_digest);
+      //attachment_mimetype = param._blob.type;
+      //attachment_length = param._blob.size;
 
       function putAttachment() {
         that.XHRwrapper(command,
@@ -689,51 +682,56 @@
           function (reponse) {
             command.success({
               // response
-              "ok": true,
-              "id": docId,
-              "attachment": attachId
-              //"rev": current_revision
+              "digest": attachment_digest
             });
           }
           );
       }
 
+
+      console.log('breakpoint2');
+
       function putDocument() {
+        console.log('putDoc');
         var attachment_obj, data, doc;
         attachment_obj = {
           //"revpos": 3, // optional
-          "digest": attachment_md5,
+          "digest": attachment_digest,
           "content_type": attachment_mimetype,
           "length": attachment_length
         };
-        data = JSON.parse(mon_document);
+        data = JSON.parse(my_document);
 
         doc = priv.updateMeta(data, docId, attachId, "add", attachment_obj);
 
         that.XHRwrapper(command, docId, '', 'PUT', mime, doc, false, false,
-          function (reponse) {
+          function (response) {
+            console.log(response);
             putAttachment();
           }
           );
       }
 
       function getDocument() {
+        console.log('getDoc');
         //XHRwrapper(command,'PUT','text/plain; charset=UTF-8',true);
         that.XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
           function (reponse) {
             if (reponse === '404') {
-              return command.error(priv.createError(
+              return command.error(
                 404,
-                "Cannot find document",
-                "Document does not exist"
-              ));
+                "Document does not exist",
+                "Cannot find document"
+              );
             }
-            mon_document = reponse;
+            my_document = reponse;
             putDocument();
           }
           );
       }
       getDocument();
+
+}).then(console.log, console.error);
     };
 
     /**
@@ -787,7 +785,7 @@
     };
 
     that.removeAttachment = function (command) {
-      var mon_document,
+      var my_document,
         docId,
         attachId,
         mime,
@@ -797,7 +795,7 @@
         attachment_mimetype,
         attachment_length;
 
-      mon_document = null;
+      my_document = null;
       docId = command.getDocId();
       attachId = command.getAttachmentId() || '';
       mime = 'text/plain; charset=UTF-8';
@@ -818,7 +816,7 @@
 
       function putDocument() {
         var data, doc;
-        data = JSON.parse(mon_document);
+        data = JSON.parse(my_document);
         doc = priv.updateMeta(data, docId, attachId, "remove", '');
         that.XHRwrapper(command, docId, '', 'PUT', mime, doc,
           false, false, function (reponse) {
@@ -830,7 +828,7 @@
       function getDocument() {
         that.XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
           function (reponse) {
-            mon_document = reponse;
+            my_document = reponse;
             putDocument();
           }
           );
@@ -845,8 +843,8 @@
     **/
 
     that.allDocs = function (command) {
-      var mon_document, mime;
-      mon_document = null;
+      var my_document, mime;
+      my_document = null;
       mime = 'text/plain; charset=UTF-8';
 
       function makeJSON() {
@@ -866,7 +864,7 @@
           parse,
           checkCounter;
 
-        keys = $(mon_document).find('Key');
+        keys = $(my_document).find('Key');
 
         resultTable = [];
         counter = 0;
@@ -979,7 +977,7 @@
         //XHRwrapper(command,'PUT','text/plain; charset=UTF-8',true);
         that.XHRwrapper(command, '', '', 'GET', mime, '', false, false,
           function (reponse) {
-            mon_document = reponse;
+            my_document = reponse;
             makeJSON();
           }
           );
