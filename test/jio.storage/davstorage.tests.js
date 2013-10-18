@@ -59,16 +59,82 @@
 
     if (use_fake_server) {
       /*jslint regexp: true */
-      server = sinon.fakeServer.create();
-      server.autoRespond = true;
-      server.autoRespondAfter = 5;
-      server.respondWith(/.*/, function (xhr) {
-        var response = responses.shift();
-        if (response) {
-          return xhr.respond.apply(xhr, response);
+      // server = sinon.fakeServer.create();
+      // server.autoRespond = true;
+      // server.autoRespondAfter = 5;
+      // server.respondWith(/.*/, function (xhr) {
+      //   var response = responses.shift();
+      //   if (response) {
+      //     return xhr.respond.apply(xhr, response);
+      //   }
+      //   ok(false, "No response associated to the latest request!");
+      // });
+      //////////////////////////////
+      // Awaiting for some sinon js improvements to manage 'blob' xhr response
+      // type.  This hack overrides the jIO util ajax method which is used by
+      // dav storage connector to do http requests.  To restore the sinon js
+      // fake server, just uncomment the above lines.
+      server = {restore: function () {
+        return;
+      }};
+      jIO.util.ajax = function (param) {
+        var timeout, xhr = {}, response = responses.shift(), statusTexts = {
+          "404": "Not Found"
+        };
+        if (!Array.isArray(response)) {
+          setTimeout(function () {
+            throw new ReferenceError("Fake server, no response set for " +
+                                     JSON.stringify(param, null, '  '));
+          });
         }
-        ok(false, "No response associated to the latest request!");
-      });
+        xhr.readyState = 1;
+        xhr.setRequestHeader = function () {
+          return;
+        };
+        xhr.getResponseHeader = function (name) {
+          return response[1][name];
+        };
+        return new RSVP.Promise(function (resolve, reject, notify) {
+          var k;
+          xhr.readyState = 4;
+          xhr.status = response[0];
+          xhr.statusText = statusTexts[response[0]];
+          xhr.responseType = param.dataType || "";
+          timeout = setTimeout(function () {
+            /*global Blob*/
+            if (xhr.responseType === 'blob') {
+              xhr.response = new Blob([response[2]], {
+                "type": response[1]["Content-Type"] ||
+                  response[1]["Content-type"] ||
+                  response[1]["content-type"] || ''
+              });
+            } else if (xhr.responseType === 'json') {
+              xhr.responseText = response[2];
+              try {
+                xhr.response = JSON.parse(xhr.responseText);
+              } catch (e) { // XXX
+                xhr.responseText = undefined;
+                xhr.status = 0;
+                xhr.statusText = "Parse Error"; // XXX
+              }
+            } else {
+              xhr.response = xhr.responseText = response[2];
+            }
+            // XXX ArrayBuffer
+            if (xhr.status >= 400 || xhr.status === 0) {
+              return reject({"target": xhr});
+            }
+            resolve({"target": xhr});
+          }, 10);
+          // XXX on error (if necessary)
+          // XXX on progress
+          if (typeof param.beforeSend === 'function') {
+            param.beforeSend(xhr);
+          }
+        }, function () {
+          clearTimeout(timeout);
+        });
+      };
     } else {
       responses.push = function () {
         return;
