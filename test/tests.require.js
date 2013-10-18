@@ -20,6 +20,9 @@
       "localstorage":       "../src/jio.storage/localstorage",
       "localstorage_tests": "jio.storage/localstorage.tests",
 
+      "davstorage":       "../src/jio.storage/davstorage",
+      "davstorage_tests": "jio.storage/davstorage.tests",
+
       "qunit":       "../lib/qunit/qunit",
       "sinon":       "../lib/sinon/sinon",
       "sinon_qunit": "../lib/sinon/sinon-qunit"
@@ -34,6 +37,7 @@
     "sinon_qunit",
     "jio_tests",
     "complex_queries_tests",
-    "localstorage_tests"
+    "localstorage_tests",
+    "davstorage_tests"
   ]);
 }());
