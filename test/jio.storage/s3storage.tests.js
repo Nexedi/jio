@@ -563,8 +563,8 @@
       deepEqual(answer, {
         "attachment": "aa",
         "data": "<blob>",
-        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
-          "0728e095ff24218119d51bd22475363",
+        "digest": "sha256-9834876dcfb05cb167a5c24953eba58c4"+
+        "ac89b1adf57f28f2f9d09af107ee8f0",
         "id": "a",
         "method": "getAttachment",
         "result": "success",
@@ -573,7 +573,7 @@
       }, "Get first attachment");
       return jIO.util.readBlobAsText(blob).then(function (e) {
         deepEqual(blob.type, "text/plain", "Check blob type");
-        deepEqual(e.target.result, "aab", "Check blob text content");
+        deepEqual(e.target.result, "aaa", "Check blob text content");
       }, function (err) {
         deepEqual(err, "no error", "Check blob text content");
       });
@@ -948,7 +948,7 @@
       // put 204
       //then(updateLastDocument).then(updateLastDocumentTest).
       // getA a 200
-      //then(getFirstAttachment).then(getFirstAttachmentTest).
+      then(getFirstAttachment).then(getFirstAttachmentTest).
       // getA b 200
       //then(getSecondAttachment).then(getSecondAttachmentTest).
       // get 200

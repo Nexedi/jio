@@ -17,7 +17,7 @@
   var b64_hmac_sha1 = sha1.b64_hmac_sha1;
 
   jIO.addStorage("s3", function (spec, my) {
-    var evt, that, priv = {};
+    var evt, that, priv = {}, lastDigest;
     that = this;
 
     //nomenclature param
@@ -319,24 +319,23 @@
               break;
             case 'GET':
               if (jio === true) {
-                console.log(http);
-                console.log(obj);
-                console.log(typeof this.responseText);
-                if (typeof this.responseText === 'string') {
+                if (isAttachment === true) {
+                      //méthode that.getAttachment
+                      console.log(this);
+                      response = this.response;
+                      console.log(response);
+                      command.success(this.status,{'data':response,'digest':lastDigest});
+                  } 
+                //n'est pas un attachment
+                else {
+                  //méthode that.get
                   response = JSON.parse(this.responseText);
-                  //response._attachments = response._attachments || {};
-                  //delete response._attachments;
                   command.success(this.status,{'data':response});
-                } else {
-                  if (isAttachment === true) {
-                    //command.success(this.responseText);
-                  } else {
-                    //command.success(JSON.parse(this.responseText));
                   }
-                }
               } else {
                 callback(this.responseText);
               }
+
               break;
             case 'DELETE':
               if (jio === true) {
@@ -479,7 +478,13 @@
         + ":"
         + Signature);
       xhr.setRequestHeader("Content-Type", mime);
-      xhr.responseType = 'text';
+      
+      if (http == 'GET' && jio == true && is_attachment == true){
+        xhr.responseType = 'blob';
+      } else {
+        //défaut
+        xhr.responseType = 'text';
+      }
 
       xhr_onreadystatechange(docId,
         command,
@@ -588,13 +593,35 @@
       that.XHRwrapper(command, docId, '', 'GET', mime, '', isJIO, false);
     };
 
-    that.getAttachment = function (command) {
+    that.getAttachment = function (command,param,option) {      
       var docId, attachId, isJIO, mime;
-      docId = command.getDocId();
-      attachId = command.getAttachmentId();
-      isJIO = true;
-      mime = 'text/plain; charset=UTF-8';
-      that.XHRwrapper(command, docId, attachId, 'GET', mime, '', isJIO, true);
+
+      function getTheAttachment(){
+        docId = param._id;
+        attachId = param._attachment;
+        isJIO = true;
+        mime = 'text/plain; charset=UTF-8';
+        that.XHRwrapper(command, docId, attachId, 'GET', mime, '', isJIO, true);
+      }
+
+      function getDoc(){
+        docId = param._id;
+        isJIO = false;
+        mime = 'text/plain; charset=UTF-8';
+        that.XHRwrapper(command, docId, '', 'GET', mime, '', isJIO, false,        
+          function (response) {
+            lastDigest = JSON.parse(response)["_attachments"][param._attachment]['digest'];
+            getTheAttachment();
+        });
+      }
+
+      getDoc();
+
+        //docId = param._id;
+        //attachId = param._attachment;
+        //isJIO = true;
+        //mime = 'text/plain; charset=UTF-8';
+        //that.XHRwrapper(command, docId, attachId, 'GET', mime, '', isJIO, true);
     };
 
     /**
@@ -651,24 +678,15 @@
       my_document = null;
       docId = param._id;
       attachId = param._attachment;
-      mime = 'text/plain; charset=UTF-8';
-      //récupération des variables de l'attachement
-
+      mime = param._blob.type;
 
       attachment_id = param._attachment;
       attachment_data = param._blob;
       console.log(param._blob);
 
       jIO.util.readBlobAsBinaryString(param._blob).then(function (e) {
-
-        console.log('readBlobAsBinaryString');
         var binary_string = e.target.result;
-        console.log(binary_string);
-        console.dir(jIO.util);
         attachment_digest = jIO.util.makeBinaryStringDigest(binary_string);
-        console.log(attachment_digest);
-      //attachment_mimetype = param._blob.type;
-      //attachment_length = param._blob.size;
 
       function putAttachment() {
         that.XHRwrapper(command,
@@ -688,11 +706,7 @@
           );
       }
 
-
-      console.log('breakpoint2');
-
       function putDocument() {
-        console.log('putDoc');
         var attachment_obj, data, doc;
         attachment_obj = {
           //"revpos": 3, // optional
@@ -706,32 +720,28 @@
 
         that.XHRwrapper(command, docId, '', 'PUT', mime, doc, false, false,
           function (response) {
-            console.log(response);
             putAttachment();
           }
           );
       }
 
       function getDocument() {
-        console.log('getDoc');
-        //XHRwrapper(command,'PUT','text/plain; charset=UTF-8',true);
         that.XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
-          function (reponse) {
-            if (reponse === '404') {
+          function (response) {
+            if (response === '404') {
               return command.error(
                 404,
                 "Document does not exist",
                 "Cannot find document"
               );
             }
-            my_document = reponse;
+            my_document = response;
             putDocument();
           }
           );
       }
       getDocument();
-
-}).then(console.log, console.error);
+    });
     };
 
     /**
