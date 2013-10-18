@@ -590,7 +590,7 @@
       error_message: "DavStorage, unable to get attachment.",
       percentage: [0, 30],
       notify_message: "Getting metedata",
-      "Not Found": "missing document",
+      "404": "missing document", // Not Found
       notifyProgress: function (e) {
         command.notify({
           "method": "getAttachment",
@@ -605,13 +605,13 @@
       getAttachment: function (e) {
         var attachment = e.target.response._attachments &&
           e.target.response._attachments[param._attachment];
+        delete o["404"];
         if (typeof attachment !== 'object' || attachment === null) {
           throw {"target": {
             "status": 404,
             "statusText": "missing attachment"
           }};
         }
-        delete o["Not Found"];
         o.type = attachment.content_type || "application/octet-stream";
         o.notify_message = "Retrieving attachment";
         o.percentage = [30, 100];
@@ -627,7 +627,7 @@
       reject: function (e) {
         command.reject(
           e.target.status,
-          o[e.target.statusText] || e.target.statusText,
+          o[e.target.status] || e.target.statusText,
           o.error_message
         );
       }
