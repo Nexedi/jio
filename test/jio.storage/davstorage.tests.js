@@ -1,8 +1,21 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global module, test, stop, start, expect, ok, deepEqual, location, sinon,
-  davstorage_spec, RSVP, jIO, test_util, dav_storage, btoa */
+  davstorage_spec, RSVP, jIO, test_util, dav_storage, btoa, define */
 
-(function () {
+// define([module_name], [dependencies], module);
+(function (dependencies, module) {
+  "use strict";
+  if (typeof define === 'function' && define.amd) {
+    return define(dependencies, module);
+  }
+  module(test_util, RSVP, jIO, dav_storage);
+}([
+  'test_util',
+  'rsvp',
+  'jio',
+  'davstorage',
+  'qunit'
+], function (util, RSVP, jIO, dav_storage) {
   "use strict";
 
   var spec, use_fake_server = true;
@@ -160,7 +173,7 @@
         "status": 201,
         "statusText": "Created"
       }, "Post a new document");
-      ok(test_util.isUuid(uuid), "New document id should look like " +
+      ok(util.isUuid(uuid), "New document id should look like " +
          "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + uuid);
       shared.created_document_id = uuid;
     }
@@ -1065,4 +1078,4 @@
 
   });
 
-}());
+}));
