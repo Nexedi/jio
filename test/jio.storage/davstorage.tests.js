@@ -1,6 +1,7 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global module, test, stop, start, expect, ok, deepEqual, location, sinon,
-  davstorage_spec, RSVP, jIO, test_util, dav_storage, btoa, define */
+  davstorage_spec, RSVP, jIO, test_util, dav_storage, btoa, define,
+  setTimeout, clearTimeout */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -107,8 +108,7 @@
         xhr.getResponseHeader = function (name) {
           return response[1][name];
         };
-        return new RSVP.Promise(function (resolve, reject, notify) {
-          var k;
+        return new RSVP.Promise(function (resolve, reject) {
           xhr.readyState = 4;
           xhr.status = response[0];
           xhr.statusText = statusTexts[response[0]];
