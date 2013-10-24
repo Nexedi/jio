@@ -1538,7 +1538,9 @@ function select(select_option, list, clone) {
   for (i = 0; i < list.length; i += 1) {
     new_item = {};
     for (j = 0; j < select_option.length; j += 1) {
-      new_item[select_option[j]] = list[i][select_option[j]];
+      if (list[i].hasOwnProperty([select_option[j]])) {
+        new_item[select_option[j]] = list[i][select_option[j]];
+      }
     }
     for (j in new_item) {
       if (new_item.hasOwnProperty(j)) {
