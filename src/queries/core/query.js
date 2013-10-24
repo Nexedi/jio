@@ -79,7 +79,7 @@ Query.prototype.exec = function (item_list, option) {
     option.wildcard_character = '%';
   }
   while (i < item_list.length) {
-    if (!this.match(item_list[i], option.wildcard_character)) {
+    if (!item_list[i] || !this.match(item_list[i], option.wildcard_character)) {
       item_list.splice(i, 1);
     } else {
       i += 1;
