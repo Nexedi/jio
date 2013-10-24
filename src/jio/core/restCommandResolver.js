@@ -6,7 +6,38 @@ function restCommandResolver(param, args) {
   // resolve('ok', {"custom": "value"});
   // resolve(200, {...});
   // resolve({...});
-  var a = args[0], b = args[1], weak = {"result": "success"}, strong = {};
+  var a = args[0], b = args[1], weak = {}, strong = {"result": "success"};
+
+  // parsing first parameter if is a number or a string
+  if (typeof a === 'string' || (typeof a === 'number' && isFinite(a))) {
+    strong.status = constants.http_status[a];
+    strong.statusText = constants.http_status_text[a];
+    if (strong.status === undefined || strong.statusText === undefined) {
+      return restCommandRejecter(param, [
+        'internal_storage_error',
+        'invalid response',
+        'Unknown status "' + a + '"'
+      ]);
+    }
+    a = b;
+  }
+  // parsing second parameter if is an object
+  if (typeof a === 'object' && a !== null && !Array.isArray(a)) {
+    dictUpdate(weak, a);
+    if ((a.statusText || a.status >= 0) && !strong.statusText) {
+      strong.status = constants.http_status[a.statusText || a.status];
+      strong.statusText = constants.http_status_text[a.statusText || a.status];
+      if (strong.status === undefined || strong.statusText === undefined) {
+        return restCommandRejecter(param, [
+          'internal_storage_error',
+          'invalid response',
+          'Unknown status "' + (a.statusText || a.status) + '"'
+        ]);
+      }
+    }
+  }
+
+  // creating defaults
   if (param.method === 'post') {
     weak.status = constants.http_status.created;
     weak.statusText = constants.http_status_text.created;
@@ -26,22 +57,6 @@ function restCommandResolver(param, args) {
   }
   weak.method = param.method;
 
-  if (typeof a === 'string' || (typeof a === 'number' && isFinite(a))) {
-    strong.status = constants.http_status[a];
-    strong.statusText = constants.http_status_text[a];
-    if (strong.status === undefined ||
-        strong.statusText === undefined) {
-      return restCommandRejecter(param, [
-        'internal_storage_error',
-        'invalid response',
-        'Unknown status "' + a + '"'
-      ]);
-    }
-    a = b;
-  }
-  if (typeof a === 'object' && !Array.isArray(a)) {
-    dictUpdate(weak, a);
-  }
   dictUpdate(weak, strong);
   strong = undefined; // free memory
   if (param.method === 'post' && (typeof weak.id !== 'string' || !weak.id)) {
