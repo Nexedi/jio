@@ -3,9 +3,6 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  if (typeof exports === 'object') {
-    return module(exports, require('rsvp'), require('sha256'));
-  }
   window.jIO = {};
   module(window.jIO, RSVP, {hex_sha256: hex_sha256});
 }(['exports', 'rsvp', 'sha256'], function (exports, RSVP, sha256) {
@@ -81,6 +78,7 @@ constants.http_status_text = {
   "507": "Insufficient Storage",
 
   "Ok": "Ok",
+  "OK": "Ok",
   "Created": "Created",
   "No Content": "No Content",
   "Reset Content": "Reset Content",
@@ -189,6 +187,7 @@ constants.http_status = {
   "507": 507,
 
   "Ok": 200,
+  "OK": 200,
   "Created": 201,
   "No Content": 204,
   "Reset Content": 205,
@@ -297,6 +296,7 @@ constants.http_action = {
   "507": "error",
 
   "Ok": "success",
+  "OK": "success",
   "Created": "success",
   "No Content": "success",
   "Reset Content": "success",
@@ -2161,71 +2161,103 @@ function restCommandRejecter(param, args) {
   // reject(status, reason, message, {"custom": "value"});
   // reject(status, reason, {..});
   // reject(status, {..});
-  var a = args[0], b = args[1], c = args[2], d = args[3], weak, strong;
-  weak = {"result": "error"};
-  strong = {};
-  weak.status = constants.http_status.unknown;
-  weak.statusText = constants.http_status_text.unknown;
-  weak.message = 'Command failed';
-  weak.reason = 'fail';
-  weak.method = param.method;
+  var arg, current_priority, priority = [
+    // 0 - custom parameter values
+    {},
+    // 1 - default values
+    {
+      "status": constants.http_status.unknown,
+      "statusText": constants.http_status_text.unknown,
+      "message": "Command failed",
+      "reason": "unknown"
+    },
+    // 2 - status, reason, message parameters
+    {},
+    // 3 - never change
+    {"result": "error", "method": param.method}
+  ];
+  args = Array.prototype.slice.call(args);
+  arg = args.shift();
+
+  // priority 3 - never change
+  current_priority = priority[3];
   if (param.kwargs._id) {
-    weak.id = param.kwargs._id;
+    current_priority.id = param.kwargs._id;
   }
   if (/Attachment$/.test(param.method)) {
-    weak.attachment = param.kwargs._attachment;
+    current_priority.attachment = param.kwargs._attachment;
   }
 
-  if (typeof a !== 'object' || Array.isArray(a)) {
-    strong.status = constants.http_status[a];
-    strong.statusText = constants.http_status_text[a];
-    if (strong.status === undefined ||
-        strong.statusText === undefined) {
-      return restCommandRejecter(param, [
-        // can create infernal loop if 'internal_storage_error' is not defined
-        // in the constants
-        'internal_storage_error',
-        'invalid response',
-        'Unknown status "' + a + '"'
-      ]);
+  // priority 2 - status, reason, message parameters
+  current_priority = priority[2];
+  // parsing first parameter if is not an object
+  if (typeof arg !== 'object' || arg === null || Array.isArray(arg)) {
+    // first parameter is mandatory
+    current_priority.status = arg;
+    arg = args.shift();
+  }
+  // parsing second parameter if is not an object
+  if (typeof arg !== 'object' || arg === null || Array.isArray(arg)) {
+    if (arg !== undefined) {
+      current_priority.reason = arg;
     }
-    a = b;
-    b = c;
-    c = d;
+    arg = args.shift();
+  }
+  // parsing third parameter if is not an object
+  if (typeof arg !== 'object' || arg === null || Array.isArray(arg)) {
+    if (arg !== undefined) {
+      current_priority.message = arg;
+    }
+    arg = args.shift();
   }
 
-  if (typeof a !== 'object' || Array.isArray(a)) {
-    strong.reason = a;
-    a = b;
-    b = c;
-  }
-
-  if (typeof a !== 'object' || Array.isArray(a)) {
-    strong.message = a;
-    a = b;
-  }
-
-  if (typeof a === 'object' && !Array.isArray(a)) {
-    dictUpdate(weak, a);
-    if (a instanceof Error) {
-      weak.reason = a.message;
-      weak.error = a.name;
+  // priority 0 - custom values
+  current_priority = priority[0];
+  // parsing fourth parameter if is an object
+  if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+    dictUpdate(current_priority, arg);
+    if (arg.hasOwnProperty('reason')) {
+      current_priority.reason = arg.reason;
+    }
+    if (arg.hasOwnProperty('message')) {
+      current_priority.message = arg.message;
+    }
+    if ((arg.statusText || arg.status >= 0)) {
+      current_priority.status = arg.statusText || arg.status;
+    }
+    if (arg instanceof Error) {
+      current_priority.reason = arg.message || "";
+      current_priority.error = arg.name;
     }
   }
 
-  dictUpdate(weak, strong);
-  strong = undefined;
-  if (weak.error === undefined) {
-    weak.error = weak.statusText.toLowerCase().replace(/ /g, '_').
+  // merge priority dicts
+  for (current_priority = priority.length - 1;
+       current_priority > 0;
+       current_priority -= 1) {
+    dictUpdate(priority[current_priority - 1], priority[current_priority]);
+  }
+  priority = priority[0];
+
+  // check status
+  priority.statusText = constants.http_status_text[priority.status];
+  if (priority.statusText === undefined) {
+    return restCommandRejecter(param, [
+      // can create infernal loop if 'internal_storage_error' is not defined in
+      // the constants
+      'internal_storage_error',
+      'invalid response',
+      'Unknown status "' + priority.status + '"'
+    ]);
+  }
+  priority.status = constants.http_status[priority.statusText];
+
+  // set default priority error if not already set
+  if (priority.error === undefined) {
+    priority.error = priority.statusText.toLowerCase().replace(/ /g, '_').
       replace(/[^_a-z]/g, '');
   }
-  if (typeof weak.message !== 'string') {
-    weak.message = "";
-  }
-  if (typeof weak.reason !== 'string') {
-    weak.reason = "unknown";
-  }
-  return param.solver.reject(deepClone(weak));
+  return param.solver.reject(deepClone(priority));
 }
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
@@ -2236,77 +2268,118 @@ function restCommandResolver(param, args) {
   // resolve('ok', {"custom": "value"});
   // resolve(200, {...});
   // resolve({...});
-  var a = args[0], b = args[1], weak = {"result": "success"}, strong = {};
-  if (param.method === 'post') {
-    weak.status = constants.http_status.created;
-    weak.statusText = constants.http_status_text.created;
-  } else if (methodType(param.method) === "writer" ||
-             param.method === "check") {
-    weak.status = constants.http_status.no_content;
-    weak.statusText = constants.http_status_text.no_content;
-  } else {
-    weak.status = constants.http_status.ok;
-    weak.statusText = constants.http_status_text.ok;
-  }
+  var arg, current_priority, priority = [
+    // 0 - custom parameter values
+    {},
+    // 1 - default values
+    {},
+    // 2 - status parameter
+    {},
+    // 3 - never change
+    {"result": "success", "method": param.method}
+  ];
+  args = Array.prototype.slice.call(args);
+  arg = args.shift();
+
+  // priority 3 - never change
+  current_priority = priority[3];
   if (param.kwargs._id) {
-    weak.id = param.kwargs._id;
+    current_priority.id = param.kwargs._id;
   }
   if (/Attachment$/.test(param.method)) {
-    weak.attachment = param.kwargs._attachment;
+    current_priority.attachment = param.kwargs._attachment;
   }
-  weak.method = param.method;
 
-  if (typeof a === 'string' || (typeof a === 'number' && isFinite(a))) {
-    strong.status = constants.http_status[a];
-    strong.statusText = constants.http_status_text[a];
-    if (strong.status === undefined ||
-        strong.statusText === undefined) {
-      return restCommandRejecter(param, [
-        'internal_storage_error',
-        'invalid response',
-        'Unknown status "' + a + '"'
-      ]);
+  // priority 1 - default values
+  current_priority = priority[1];
+  if (param.method === 'post') {
+    current_priority.status = constants.http_status.created;
+    current_priority.statusText = constants.http_status_text.created;
+  } else if (methodType(param.method) === "writer" ||
+             param.method === "check") {
+    current_priority.status = constants.http_status.no_content;
+    current_priority.statusText = constants.http_status_text.no_content;
+  } else {
+    current_priority.status = constants.http_status.ok;
+    current_priority.statusText = constants.http_status_text.ok;
+  }
+
+  // priority 2 - status parameter
+  current_priority = priority[2];
+  // parsing first parameter if is not an object
+  if (typeof arg !== 'object' || arg === null || Array.isArray(arg)) {
+    if (arg !== undefined) {
+      current_priority.status = arg;
     }
-    a = b;
+    arg = args.shift();
   }
-  if (typeof a === 'object' && !Array.isArray(a)) {
-    dictUpdate(weak, a);
+
+  // priority 0 - custom values
+  current_priority = priority[0];
+  // parsing second parameter if is an object
+  if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+    dictUpdate(current_priority, arg);
   }
-  dictUpdate(weak, strong);
-  strong = undefined; // free memory
-  if (param.method === 'post' && (typeof weak.id !== 'string' || !weak.id)) {
+
+  // merge priority dicts
+  for (current_priority = priority.length - 1;
+       current_priority > 0;
+       current_priority -= 1) {
+    dictUpdate(priority[current_priority - 1], priority[current_priority]);
+  }
+  priority = priority[0];
+
+  // check document id if post method
+  if (param.method === 'post' &&
+      (typeof priority.id !== 'string' || !priority.id)) {
     return restCommandRejecter(param, [
       'internal_storage_error',
       'invalid response',
       'New document id have to be specified'
     ]);
   }
+
+  // check status
+  priority.statusText = constants.http_status_text[priority.status];
+  if (priority.statusText === undefined) {
+    return restCommandRejecter(param, [
+      'internal_storage_error',
+      'invalid response',
+      'Unknown status "' + priority.status + '"'
+    ]);
+  }
+  priority.status = constants.http_status[priority.statusText];
+
+  // check data for get Attachment
   if (param.method === 'getAttachment') {
-    if (typeof weak.data === 'string') {
-      weak.data = new Blob([weak.data], {
-        "type": weak.content_type || weak.mimetype || ""
+    if (typeof priority.data === 'string') {
+      priority.data = new Blob([priority.data], {
+        "type": priority.content_type || priority.mimetype || ""
       });
-      delete weak.content_type;
-      delete weak.mimetype;
+      delete priority.content_type;
+      delete priority.mimetype;
     }
-    if (!(weak.data instanceof Blob)) {
+    if (!(priority.data instanceof Blob)) {
       return restCommandRejecter(param, [
         'internal_storage_error',
         'invalid response',
         'getAttachment method needs a Blob as returned "data".'
       ]);
     }
+    // check data for readers (except check method)
   } else if (methodType(param.method) === 'reader' &&
              param.method !== 'check' &&
-             (typeof weak.data !== 'object' ||
-              Object.getPrototypeOf(weak.data) !== Object.prototype)) {
+             (typeof priority.data !== 'object' ||
+              priority.data === null ||
+              Object.getPrototypeOf(priority.data) !== Object.prototype)) {
     return restCommandRejecter(param, [
       'internal_storage_error',
       'invalid response',
       param.method + ' method needs a dict as returned "data".'
     ]);
   }
-  return param.solver.resolve(deepClone(weak));
+
+  return param.solver.resolve(deepClone(priority));
 }
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
