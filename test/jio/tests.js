@@ -620,7 +620,7 @@
       deepEqual(answer, {
         "error": "internal_server_error",
         "id": "a",
-        "message": "",
+        "message": "Command failed",
         "method": "get",
         "reason": "unknown",
         "result": "error",
