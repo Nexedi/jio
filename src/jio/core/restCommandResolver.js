@@ -6,90 +6,116 @@ function restCommandResolver(param, args) {
   // resolve('ok', {"custom": "value"});
   // resolve(200, {...});
   // resolve({...});
-  var a = args[0], b = args[1], weak = {}, strong = {"result": "success"};
+  var arg, current_priority, priority = [
+    // 0 - custom parameter values
+    {},
+    // 1 - default values
+    {},
+    // 2 - status parameter
+    {},
+    // 3 - never change
+    {"result": "success", "method": param.method}
+  ];
+  args = Array.prototype.slice.call(args);
+  arg = args.shift();
 
-  // parsing first parameter if is a number or a string
-  if (typeof a === 'string' || (typeof a === 'number' && isFinite(a))) {
-    strong.status = constants.http_status[a];
-    strong.statusText = constants.http_status_text[a];
-    if (strong.status === undefined || strong.statusText === undefined) {
-      return restCommandRejecter(param, [
-        'internal_storage_error',
-        'invalid response',
-        'Unknown status "' + a + '"'
-      ]);
-    }
-    a = b;
-  }
-  // parsing second parameter if is an object
-  if (typeof a === 'object' && a !== null && !Array.isArray(a)) {
-    dictUpdate(weak, a);
-    if ((a.statusText || a.status >= 0) && !strong.statusText) {
-      strong.status = constants.http_status[a.statusText || a.status];
-      strong.statusText = constants.http_status_text[a.statusText || a.status];
-      if (strong.status === undefined || strong.statusText === undefined) {
-        return restCommandRejecter(param, [
-          'internal_storage_error',
-          'invalid response',
-          'Unknown status "' + (a.statusText || a.status) + '"'
-        ]);
-      }
-    }
-  }
-
-  // creating defaults
-  if (param.method === 'post') {
-    weak.status = constants.http_status.created;
-    weak.statusText = constants.http_status_text.created;
-  } else if (methodType(param.method) === "writer" ||
-             param.method === "check") {
-    weak.status = constants.http_status.no_content;
-    weak.statusText = constants.http_status_text.no_content;
-  } else {
-    weak.status = constants.http_status.ok;
-    weak.statusText = constants.http_status_text.ok;
-  }
+  // priority 3 - never change
+  current_priority = priority[3];
   if (param.kwargs._id) {
-    weak.id = param.kwargs._id;
+    current_priority.id = param.kwargs._id;
   }
   if (/Attachment$/.test(param.method)) {
-    weak.attachment = param.kwargs._attachment;
+    current_priority.attachment = param.kwargs._attachment;
   }
-  weak.method = param.method;
 
-  dictUpdate(weak, strong);
-  strong = undefined; // free memory
-  if (param.method === 'post' && (typeof weak.id !== 'string' || !weak.id)) {
+  // priority 1 - default values
+  current_priority = priority[1];
+  if (param.method === 'post') {
+    current_priority.status = constants.http_status.created;
+    current_priority.statusText = constants.http_status_text.created;
+  } else if (methodType(param.method) === "writer" ||
+             param.method === "check") {
+    current_priority.status = constants.http_status.no_content;
+    current_priority.statusText = constants.http_status_text.no_content;
+  } else {
+    current_priority.status = constants.http_status.ok;
+    current_priority.statusText = constants.http_status_text.ok;
+  }
+
+  // priority 2 - status parameter
+  current_priority = priority[2];
+  // parsing first parameter if is not an object
+  if (typeof arg !== 'object' || arg === null || Array.isArray(arg)) {
+    if (arg !== undefined) {
+      current_priority.status = arg;
+    }
+    arg = args.shift();
+  }
+
+  // priority 0 - custom values
+  current_priority = priority[0];
+  // parsing second parameter if is an object
+  if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+    dictUpdate(current_priority, arg);
+  }
+
+  // merge priority dicts
+  for (current_priority = priority.length - 1;
+       current_priority > 0;
+       current_priority -= 1) {
+    dictUpdate(priority[current_priority - 1], priority[current_priority]);
+  }
+  priority = priority[0];
+
+  // check document id if post method
+  if (param.method === 'post' &&
+      (typeof priority.id !== 'string' || !priority.id)) {
     return restCommandRejecter(param, [
       'internal_storage_error',
       'invalid response',
       'New document id have to be specified'
     ]);
   }
+
+  // check status
+  priority.statusText = constants.http_status_text[priority.status];
+  if (priority.statusText === undefined) {
+    return restCommandRejecter(param, [
+      'internal_storage_error',
+      'invalid response',
+      'Unknown status "' + priority.status + '"'
+    ]);
+  }
+  priority.status = constants.http_status[priority.statusText];
+
+  // check data for get Attachment
   if (param.method === 'getAttachment') {
-    if (typeof weak.data === 'string') {
-      weak.data = new Blob([weak.data], {
-        "type": weak.content_type || weak.mimetype || ""
+    if (typeof priority.data === 'string') {
+      priority.data = new Blob([priority.data], {
+        "type": priority.content_type || priority.mimetype || ""
       });
-      delete weak.content_type;
-      delete weak.mimetype;
+      delete priority.content_type;
+      delete priority.mimetype;
     }
-    if (!(weak.data instanceof Blob)) {
+    if (!(priority.data instanceof Blob)) {
       return restCommandRejecter(param, [
         'internal_storage_error',
         'invalid response',
         'getAttachment method needs a Blob as returned "data".'
       ]);
     }
+    // check data for readers (except check method)
   } else if (methodType(param.method) === 'reader' &&
              param.method !== 'check' &&
-             (typeof weak.data !== 'object' ||
-              Object.getPrototypeOf(weak.data) !== Object.prototype)) {
+             (typeof priority.data !== 'object' ||
+              priority.data === null ||
+              Object.getPrototypeOf(priority.data) !== Object.prototype)) {
     return restCommandRejecter(param, [
       'internal_storage_error',
       'invalid response',
       param.method + ' method needs a dict as returned "data".'
     ]);
   }
-  return param.solver.resolve(deepClone(weak));
+
+  return param.solver.resolve(deepClone(priority));
 }
