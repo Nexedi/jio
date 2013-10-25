@@ -19,7 +19,7 @@
   //////////////////////////////////////////////////////////////////////////////
   // Tests
 
-  module('JIO');
+  module('JIO and storages descriptions');
 
   test('should initialize itself without error', 1, function () {
     var jio = new JIO(undefined, {
@@ -30,46 +30,8 @@
     ok(typeof jio === 'object', 'instance is an object');
   });
 
-  test('should throw error when giving no parameter to `post`', 1, function () {
-    var result, jio = new JIO({
-      "type": "fake",
-      "id": "Wrong para"
-    }, {
-      "workspace": {}
-    });
-
-    try {
-      jio.post(); // post(kwargs, [options], [callbacks]);
-      result = "No error thrown";
-    } catch (e1) {
-      result = e1.name + ": " + e1.message;
-    }
-    deepEqual(
-      result,
-      "TypeError: JIO().post(): Argument 1 is not of type 'object'",
-      "Wrong parameter"
-    );
-  });
-
-  test_name = 'should not throw error when giving no param to `allDocs`';
+  test_name = 'should return an error when a wrong storage type is given';
   test(test_name, 1, function () {
-    var result, jio = new JIO({
-      "type": "fake",
-      "id": "Good para"
-    }, {
-      "workspace": {}
-    });
-
-    try {
-      jio.allDocs(); // allDocs([options], [callbacks]);
-      result = "No error thrown";
-    } catch (e2) {
-      result = e2.name + ": " + e2.message;
-    }
-    deepEqual(result, "No error thrown", "Good parameter");
-  });
-
-  test('should return an error when a storage type is given', 1, function () {
     var jio = new JIO({
       "type": "blue"
     }, {
@@ -117,6 +79,8 @@
       }, "Initialization error");
     });
   });
+
+  module('JIO timeout');
 
   test('should fail after default command timeout', 2, function () {
     var i, called = false, jio = new JIO({
@@ -293,6 +257,8 @@
 
   });
 
+  module('JIO responses');
+
   test('should fail when command succeed with a bad response', 1, function () {
     var jio = new JIO({
       "type": "fake",
@@ -413,7 +379,7 @@
       start();
     }, function (answer) {
       start();
-      deepEqual(answer, "Error", "should not fail");
+      deepEqual(answer, "No error", "should not fail");
     }, function (answer) {
       deepEqual(answer, i, "notified");
       ok(i < 3, (i < 3 ? "" : "not ") + "called before success");
@@ -426,6 +392,47 @@
       commands['Valid noti/put'].success();
       notify(2);
     }, 50);
+  });
+
+  module('JIO parameters');
+
+  test('should throw error when giving no parameter to `post`', 1, function () {
+    var result, jio = new JIO({
+      "type": "fake",
+      "id": "Wrong para"
+    }, {
+      "workspace": {}
+    });
+
+    try {
+      jio.post(); // post(kwargs, [options], [callbacks]);
+      result = "No error thrown";
+    } catch (e1) {
+      result = e1.name + ": " + e1.message;
+    }
+    deepEqual(
+      result,
+      "TypeError: JIO().post(): Argument 1 is not of type 'object'",
+      "Wrong parameter"
+    );
+  });
+
+  test_name = 'should not throw error when giving no param to `allDocs`';
+  test(test_name, 1, function () {
+    var result, jio = new JIO({
+      "type": "fake",
+      "id": "Good para"
+    }, {
+      "workspace": {}
+    });
+
+    try {
+      jio.allDocs(); // allDocs([options], [callbacks]);
+      result = "No error thrown";
+    } catch (e2) {
+      result = e2.name + ": " + e2.message;
+    }
+    deepEqual(result, "No error thrown", "Good parameter");
   });
 
   test('metadata values should be formatted on `post`', 1, function () {
@@ -594,6 +601,8 @@
     }, 50);
 
   });
+
+  module('JIO job management');
 
   test("job should respond 3 retries to return an error", 4, function () {
     var jio, state;
