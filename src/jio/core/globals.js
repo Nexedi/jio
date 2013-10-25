@@ -66,6 +66,7 @@ constants.http_status_text = {
   "507": "Insufficient Storage",
 
   "Ok": "Ok",
+  "OK": "Ok",
   "Created": "Created",
   "No Content": "No Content",
   "Reset Content": "Reset Content",
@@ -174,6 +175,7 @@ constants.http_status = {
   "507": 507,
 
   "Ok": 200,
+  "OK": 200,
   "Created": 201,
   "No Content": 204,
   "Reset Content": 205,
@@ -282,6 +284,7 @@ constants.http_action = {
   "507": "error",
 
   "Ok": "success",
+  "OK": "success",
   "Created": "success",
   "No Content": "success",
   "Reset Content": "success",
