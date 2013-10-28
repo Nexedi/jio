@@ -682,10 +682,13 @@
 
   /**
    * Gets a document list from the substorage
-   * Options:
-   * - {boolean} include_docs Also retrieve the actual document content.
+   *
    * @method allDocs
-   * @param  {object} command The JIO command
+   * @param  {Object} command The JIO command
+   * @param  {Object} param The command parameters
+   * @param  {Object} option The command option
+   * @param  {Boolean} [option.include_docs=false] Also retrieve the actual
+   *                   document content.
    */
   IndexStorage.prototype.allDocs = function (command, param, option) { // XXX
     /*jslint unparam: true */
