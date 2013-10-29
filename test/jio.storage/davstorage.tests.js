@@ -1074,7 +1074,9 @@
       //then(checkStorage).done(checkStorageTest).
       fail(unexpectedError).
       always(start).
-      always(server.restore.bind(server));
+      always(function () {
+        server.restore();
+      });
 
   });
 

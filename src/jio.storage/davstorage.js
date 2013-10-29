@@ -386,7 +386,7 @@
 
   DavStorage.prototype.postOrPut = function (method, command, metadata) {
     metadata._id = metadata._id || jIO.util.generateUuid();
-    var o = {
+    var that = this, o = {
       error_message: "DavStorage, unable to get metadata.",
       notify_message: "Getting metadata",
       percentage: [0, 30],
@@ -406,8 +406,8 @@
         o.notify_message = "Updating metadata";
         o.error_message = "DavStorage, unable to update document.";
         o.percentage = [30, 100];
-        this._put(metadata).then(o.success, o.reject, o.notifyProgress);
-      }.bind(this),
+        that._put(metadata).then(o.success, o.reject, o.notifyProgress);
+      },
       errorDocumentExists: function (e) {
         command.error(
           "conflict",
@@ -426,8 +426,8 @@
         o.percentage = [30, 100];
         o.notify_message = "Updating metadata";
         o.error_message = "DavStorage, unable to create document.";
-        this._put(metadata).then(o.success, o.reject, o.notifyProgress);
-      }.bind(this),
+        that._put(metadata).then(o.success, o.reject, o.notifyProgress);
+      },
       success: function (e) {
         command.success(e.target.status, {"id": metadata._id});
       },
@@ -481,7 +481,7 @@
    * @param  {Object} options The command options
    */
   DavStorage.prototype.putAttachment = function (command, param) {
-    var o = {
+    var that = this, o = {
       error_message: "DavStorage unable to put attachment",
       percentage: [0, 30],
       notify_message: "Getting metadata",
@@ -501,7 +501,7 @@
         o.notify_message = "Putting attachment";
         o.remote_metadata = e.target.response;
         return RSVP.all([
-          this._putAttachment(param),
+          that._putAttachment(param),
           jIO.util.readBlobAsBinaryString(param._blob)
         ]).then(null, null, function (e) {
           // propagate only putAttachment progress
@@ -510,7 +510,7 @@
           }
           throw null;
         });
-      }.bind(this),
+      },
       putMetadata: function (answers) {
         o.percentage = [70, 100];
         o.notify_message = "Updating metadata";
@@ -521,8 +521,8 @@
           "digest": jIO.util.makeBinaryStringDigest(answers[1].target.result),
           "content_type": param._blob.type
         };
-        return this._put(o.remote_metadata);
-      }.bind(this),
+        return that._put(o.remote_metadata);
+      },
       success: function (e) {
         command.success(e.target.status, {
           "digest": o.remote_metadata._attachments[param._attachment].digest
@@ -586,7 +586,7 @@
    * @param  {Object} options The command options
    */
   DavStorage.prototype.getAttachment = function (command, param) {
-    var o = {
+    var that = this, o = {
       error_message: "DavStorage, unable to get attachment.",
       percentage: [0, 30],
       notify_message: "Getting metedata",
@@ -616,8 +616,8 @@
         o.notify_message = "Retrieving attachment";
         o.percentage = [30, 100];
         o.digest = attachment.digest;
-        return this._getAttachment(param);
-      }.bind(this),
+        return that._getAttachment(param);
+      },
       success: function (e) {
         command.success(e.target.status, {
           "data": new Blob([e.target.response], {"type": o.type}),
@@ -647,7 +647,7 @@
    * @param  {Object} options The command options
    */
   DavStorage.prototype.remove = function (command, param) {
-    var o = {
+    var that = this, o = {
       error_message: "DavStorage, unable to get metadata.",
       notify_message: "Getting metadata",
       percentage: [0, 70],
@@ -669,8 +669,8 @@
         o.percentage = [70, 80];
         o.notify_message = "Removing document";
         o.error_message = "DavStorage, unable to remove document";
-        return this._remove(param);
-      }.bind(this),
+        return that._remove(param);
+      },
       removeAllAttachments: function (e) {
         var k, requests = [], attachments;
         attachments = o.get_result.target.response._attachments;
@@ -679,7 +679,7 @@
           for (k in attachments) {
             if (attachments.hasOwnProperty(k)) {
               requests[requests.length] = promiseSucceed(
-                this._removeAttachment({
+                that._removeAttachment({
                   "_id": param._id,
                   "_attachment": k
                 })
@@ -708,7 +708,7 @@
           }
           return null;
         });
-      }.bind(this),
+      },
       success: function () {
         command.success(o.remove_result.target.status);
       },
@@ -736,7 +736,7 @@
    * @param  {Object} options The command options
    */
   DavStorage.prototype.removeAttachment = function (command, param) {
-    var o = {
+    var that = this, o = {
       error_message: "DavStorage, an error occured while getting metadata.",
       percentage: [0, 40],
       notify_message: "Getting metadata",
@@ -774,15 +774,15 @@
         o.notify_message = "Updating metadata";
         o.error_message = "DavStorage, an error occured " +
           "while updating metadata.";
-        return this._put(doc);
-      }.bind(this),
+        return that._put(doc);
+      },
       removeAttachment: function () {
         o.percentage = [80, 100];
         o.notify_message = "Removing attachment";
         o.error_message = "DavStorage, an error occured " +
           "while removing attachment.";
-        return this._removeAttachment(param);
-      }.bind(this),
+        return that._removeAttachment(param);
+      },
       success: function (e) {
         command.success(e.status);
       },
@@ -812,7 +812,7 @@
    *   Also retrieve the actual document content.
    */
   DavStorage.prototype.allDocs = function (command, param, options) {
-    var o = {
+    var that = this, o = {
       error_message: "DavStorage, an error occured while " +
         "retrieving document list",
       max_percentage: options.include_docs === true ? 20 : 100,
@@ -834,7 +834,7 @@
         }
 
         e.target.response.data.rows.forEach(function (row) {
-          requests[requests.length] = this._get({"_id": row.id}).
+          requests[requests.length] = that._get({"_id": row.id}).
             done(function (e) {
               row.doc = e.target.response;
             });
@@ -860,7 +860,7 @@
           }
           throw null;
         });
-      }.bind(this),
+      },
       success: function () {
         command.success(o.alldocs_result.target.status, {
           "data": o.alldocs_result.target.response
