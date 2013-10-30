@@ -142,7 +142,7 @@
   function idsToFileName(doc_id, attachment_id) {
     doc_id = secureName(doc_id).replace(/\./g, '_.');
     if (typeof attachment_id === "string") {
-      attachment_id = secureName(attachment_id).replace(/\./g, '_.');
+      attachment_id = secureName(attachment_id);
       return doc_id + "." + attachment_id;
     }
     return doc_id;
@@ -155,15 +155,21 @@
    * @return {Array} ["document id", "attachment id"] or ["document id"]
    */
   function fileNameToIds(file_name) {
-    return file_name.replace(/.\.(?:\.)?/g, function (substr) {
-      if (substr[0] === '_') {
-        if (substr[2] === '.') {
-          return '. ';
-        }
-        return '.';
+    /*jslint regexp: true */
+    file_name = /^((?:_\.|[^\.])*)(?:\.(.*))?$/.exec(file_name);
+    if (file_name === null ||
+        (file_name[1] &&
+         file_name[1].length === 0)) {
+      return [];
+    }
+    if (file_name[2]) {
+      if (file_name[2].length > 0) {
+        return [restoreName(file_name[1].replace(/_\./g, '.')),
+                restoreName(file_name[2])];
       }
-      return substr[0] + ' ';
-    }).split(' ').map(restoreName);
+      return [];
+    }
+    return [restoreName(file_name[1].replace(/_\./g, '.'))];
   }
 
   function promiseSucceed(promise) {
