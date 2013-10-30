@@ -15,16 +15,18 @@ function restCommandRejecter(param, args) {
       "message": "Command failed",
       "reason": "unknown"
     },
-    // 2 - status, reason, message parameters
+    // 2 - status, reason, message properties
     {},
-    // 3 - never change
+    // 3 - status, reason, message parameters
+    {},
+    // 4 - never change
     {"result": "error", "method": param.method}
   ];
   args = Array.prototype.slice.call(args);
   arg = args.shift();
 
-  // priority 3 - never change
-  current_priority = priority[3];
+  // priority 4 - never change
+  current_priority = priority[4];
   if (param.kwargs._id) {
     current_priority.id = param.kwargs._id;
   }
@@ -32,8 +34,8 @@ function restCommandRejecter(param, args) {
     current_priority.attachment = param.kwargs._attachment;
   }
 
-  // priority 2 - status, reason, message parameters
-  current_priority = priority[2];
+  // priority 3 - status, reason, message parameters
+  current_priority = priority[3];
   // parsing first parameter if is not an object
   if (typeof arg !== 'object' || arg === null || Array.isArray(arg)) {
     // first parameter is mandatory
@@ -55,11 +57,12 @@ function restCommandRejecter(param, args) {
     arg = args.shift();
   }
 
-  // priority 0 - custom values
-  current_priority = priority[0];
   // parsing fourth parameter if is an object
   if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
-    dictUpdate(current_priority, arg);
+    // priority 0 - custom values
+    dictUpdate(priority[0], arg);
+    // priority 2 - status, reason, message properties
+    current_priority = priority[2];
     if (arg.hasOwnProperty('reason')) {
       current_priority.reason = arg.reason;
     }
