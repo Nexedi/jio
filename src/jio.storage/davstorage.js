@@ -113,6 +113,46 @@
   exports.createDescription = createDescription;
 
   /**
+   * sequence(thens): Promise
+   *
+   * Executes a sequence of *then* callbacks. It acts like
+   * `smth().then(callback).then(callback)...`. The first callback is called
+   * with no parameter.
+   *
+   * Elements of `thens` array can be a function or an array contaning at most
+   * three *then* callbacks: *onFulfilled*, *onRejected*, *onNotified*.
+   *
+   * When `cancel()` is executed, each then promises are cancelled at the same
+   * time.
+   *
+   * @param  {Array} thens An array of *then* callbacks
+   * @return {Promise} A new promise
+   */
+  function sequence(thens) {
+    var promises = [];
+    return new RSVP.Promise(function (resolve, reject, notify) {
+      var i;
+      promises[0] = new RSVP.Promise(function (resolve) {
+        resolve();
+      });
+      for (i = 0; i < thens.length; i += 1) {
+        if (Array.isArray(thens[i])) {
+          promises[i + 1] = promises[i].
+            then(thens[i][0], thens[i][1], thens[i][2]);
+        } else {
+          promises[i + 1] = promises[i].then(thens[i]);
+        }
+      }
+      promises[i].then(resolve, reject, notify);
+    }, function () {
+      var i;
+      for (i = 0; i < promises.length; i += 1) {
+        promises[i].cancel();
+      }
+    });
+  }
+
+  /**
    * Changes spaces to %20, / to %2f, % to %25 and ? to %3f
    *
    * @param  {String} name The name to secure
@@ -884,6 +924,296 @@
     this._allDocs(param, options).
       then(o.getAllMetadataIfNecessary).
       then(o.success, o.reject, o.notifyProgress);
+  };
+
+  /**
+   * Check the storage or a specific document
+   *
+   * @method check
+   * @param  {Object} command The JIO command
+   * @param  {Object} param The command parameters
+   * @param  {Object} options The command options
+   */
+  DavStorage.prototype.check = function (command, param) {
+    this.genericRepair(command, param, false);
+  };
+
+  /**
+   * Repair the storage or a specific document
+   *
+   * @method repair
+   * @param  {Object} command The JIO command
+   * @param  {Object} param The command parameters
+   * @param  {Object} options The command options
+   */
+  DavStorage.prototype.repair = function (command, param) {
+    this.genericRepair(command, param, true);
+  };
+
+  /**
+   * A generic method that manage check or repair command
+   *
+   * @method genericRepair
+   * @param  {Object} command The JIO command
+   * @param  {Object} param The command parameters
+   * @param  {Boolean} repair If true then repair else just check
+   */
+  DavStorage.prototype.genericRepair = function (command, param, repair) {
+
+    var that = this, repair_promise, command_promise;
+
+    // returns a jio object
+    function getAllFile() {
+      return sequence([function () {
+        return ajax[that._auth_type](
+          "PROPFIND",
+          "text",
+          that._url + '/',
+          null,
+          that._login
+        );
+      }, [function (e) { // on success
+        var i, length, rows = new DOMParser().parseFromString(
+          e.target.responseText,
+          "text/xml"
+        ).querySelectorAll(
+          "D\\:response, response"
+        );
+        if (rows.length === 1) {
+          return {"status": 200, "data": []};
+        }
+        // exclude parent folder and browse
+        rows = [].slice.call(rows);
+        rows.shift();
+        length = rows.length;
+        for (i = 0; i < length; i += 1) {
+          rows[i] = rows[i].querySelector("D\\:href, href").
+            textContent.split('/').slice(-1)[0];
+        }
+        return {"data": rows, "status": 200};
+        // rows -> [
+        //   'file_path_1',
+        //   ...
+        // ]
+      }, function (e) { // on error
+        // convert into jio error object
+        // then propagate
+        throw {"status": e.target.status,
+               "reason": e.target.statusText};
+      }]]);
+    }
+
+    // returns jio object
+    function repairOne(shared, repair) {
+      var modified = false, document_id = shared._id;
+      return sequence([function () {
+        return that._get({"_id": document_id});
+      }, [function (event) {
+        var attachment_id, metadata = event.target.response;
+
+        // metadata should be an object
+        if (typeof metadata !== 'object' || metadata === null ||
+            Array.isArray(metadata)) {
+          if (!repair) {
+            throw {
+              "status": "conflict",
+              "reason": "corrupted",
+              "message": "Bad metadata found in document \"" +
+                document_id + "\""
+            };
+          }
+          return {};
+        }
+
+        // check metadata content
+        if (!repair) {
+          if (!(new jIO.Metadata(metadata).check())) {
+            return {
+              "status": "conflict",
+              "reason": "corrupted",
+              "message": "Some metadata might be lost"
+            };
+          }
+        } else {
+          modified = (
+            jIO.util.uniqueJSONStringify(metadata) !==
+              jIO.util.uniqueJSONStringify(
+                new jIO.Metadata(metadata).format()._dict
+              )
+          );
+        }
+
+        // check metadata id
+        if (metadata._id !== document_id) {
+          // metadata id is different than file
+          // this is not a critical thing
+          modified = true;
+          metadata._id = document_id;
+        }
+
+        // check attachment metadata container
+        if (metadata._attachments &&
+            (typeof metadata._attachments !== 'object' ||
+             Array.isArray(metadata._attachments))) {
+          // is not undefined nor object
+          if (!repair) {
+            throw {
+              "status": "conflict",
+              "reason": "corrupted",
+              "message": "Bad attachment metadata found in document \"" +
+                document_id + "\""
+            };
+          }
+          delete metadata._attachments;
+          modified = true;
+        }
+
+        // check every attachment metadata
+        if (metadata._attachments) {
+          for (attachment_id in metadata._attachments) {
+            if (metadata._attachments.hasOwnProperty(attachment_id)) {
+              // check attachment metadata type
+              if (typeof metadata._attachments[attachment_id] !== 'object' ||
+                  metadata._attachments[attachment_id] === null ||
+                  Array.isArray(metadata._attachments[attachment_id])) {
+                // is not object
+                if (!repair) {
+                  throw {
+                    "status": "conflict",
+                    "reason": "corrupted",
+                    "message": "Bad attachment metadata found in document \"" +
+                      document_id + "\", attachment \"" +
+                      attachment_id + "\""
+                  };
+                }
+                metadata._attachments[attachment_id] = {};
+                modified = true;
+              }
+              // check attachment existency if all attachment are listed
+              if (shared.referenced_dict) {
+                if (shared.unreferenced_dict[metadata._id] &&
+                    shared.unreferenced_dict[metadata._id][attachment_id]) {
+                  // attachment seams to exist but is not referenced
+                  shared.referenced_dict[metadata._id] =
+                    shared.referenced_dict[metadata._id] || {};
+                  shared.referenced_dict[metadata._id][attachment_id] = true;
+                  delete shared.unreferenced_dict[metadata._id][attachment_id];
+                } else if (
+                  !(shared.referenced_dict[metadata._id] &&
+                    shared.referenced_dict[metadata._id][attachment_id])
+                ) {
+                  // attachment doesn't exist, remove attachment id
+                  if (!repair) {
+                    throw {
+                      "status": "conflict",
+                      "reason": "attachment missing",
+                      "message": "Attachment \"" +
+                        attachment_id + "\" from document \"" +
+                        document_id + "\" is missing"
+                    };
+                  }
+                  delete metadata._attachments[attachment_id];
+                  modified = true;
+                }
+              }
+            }
+          }
+        }
+        return {
+          "modified": modified,
+          "metadata": metadata
+        };
+      }, function (event) { // on error
+        // convert into jio error object
+        // then propagate
+        throw {"status": event.target.status,
+               "reason": event.target.statustext};
+      }], function (dict) {
+        if (dict.modified) {
+          return this._put(dict.metadata);
+        }
+        return null;
+      }, function () {
+        return "no_content";
+      }]);
+    }
+
+    // returns jio object
+    function repairAll(shared, repair) {
+      return sequence([function () {
+        return getAllFile();
+      }, function (answer) {
+        var index, data = answer.data, length = data.length, id_list,
+          document_list = [];
+        for (index = 0; index < length; index += 1) {
+          // parsing all files
+          id_list = fileNameToIds(data[index]);
+          if (id_list.length === 1) {
+            // this is a document
+            document_list[document_list.length] = id_list[0];
+          } else if (id_list.length === 2) {
+            // this is an attachment
+            // reference it
+            shared.unreferenced_dict[id_list[0]] =
+              shared.unreferenced_dict[id_list[0]] || {};
+            shared.unreferenced_dict[id_list[0]][id_list[1]] = true;
+          } else {
+            shared.unknown_file_list.push(data[index]);
+          }
+        }
+        length = document_list.length;
+        for (index = 0; index < length; index += 1) {
+          shared._id = document_list[index];
+          document_list[index] = repairOne(shared, repair);
+        }
+
+        function fileRemover(name) {
+          return function () {
+            return ajax[that._auth_type](
+              "DELETE",
+              null,
+              that._url + '/' + name + "?_=" + Date.now(),
+              null,
+              that._login
+            );
+          };
+        }
+
+        function errorEventConverter(event) {
+          throw {"status": event.target.status,
+                 "reason": event.target.statusText};
+        }
+
+        length = shared.unknown_file_list.length;
+        for (index = 0; index < length; index += 1) {
+          document_list.push(sequence([
+            fileRemover(shared.unknown_file_list[index]),
+            [null, errorEventConverter]
+          ]));
+        }
+
+        return RSVP.all(document_list);
+      }, function () {
+        return "no_content";
+      }]);
+    }
+
+    if (typeof param._id === 'string') {
+      repair_promise = repairOne(param, repair);
+    } else {
+      param.referenced_attachment_path_dict = {};
+      param.unreferenced_attachment_path_dict = {};
+      param.unknown_file_list = [];
+      repair_promise = repairAll(param, repair);
+    }
+
+    command_promise = sequence([function () {
+      return repair_promise;
+    }, [command.success, command.error]]);
+
+    command.oncancel = function () {
+      command_promise.cancel();
+    };
   };
 
   jIO.addStorage('dav', DavStorage);

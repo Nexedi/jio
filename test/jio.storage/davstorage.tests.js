@@ -62,7 +62,7 @@
    *   X-Requested-With, X-HTTP-Method-Override, Accept, Authorization,
    *   Depth"
    */
-  test("Scenario", 30, function () {
+  test("Scenario", 32, function () {
 
     var server, responses = [], shared = {}, jio = jIO.createJIO(spec, {
       "workspace": {},
@@ -216,6 +216,138 @@
         "status": 201,
         "statusText": "Created"
       }, "Post specific document");
+    }
+
+    function checkDocument() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "b",
+        "title": "Bee"
+      })]); // GET
+      return jio.check({"_id": "b"});
+    }
+
+    function checkDocumentTest(answer) {
+      deepEqual(answer, {
+        "id": "b",
+        "method": "check",
+        "result": "success",
+        "status": 204,
+        "statusText": "No Content"
+      }, "Check specific document");
+    }
+
+    function checkStorage() {
+      responses.push([
+        207,
+        {"Content-Type": "text/xml"},
+        '<?xml version="1.0" encoding="utf-8"?>' +
+          '<D:multistatus xmlns:D="DAV:">' +
+          '<D:response xmlns:lp1="DAV:" ' +
+          'xmlns:lp2="http://apache.org/dav/props/">' +
+          '<D:href>/uploads/</D:href>' +
+          '<D:propstat>' +
+          '<D:prop>' +
+          '<lp1:resourcetype><D:collection/></lp1:resourcetype>' +
+          '<lp1:creationdate>2013-10-30T17:19:46Z</lp1:creationdate>' +
+          '<lp1:getlastmodified>Wed, 30 Oct 2013 17:19:46 GMT' +
+          '</lp1:getlastmodified>' +
+          '<lp1:getetag>"240be-1000-4e9f88a305c4e"</lp1:getetag>' +
+          '<D:supportedlock>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:exclusive/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:shared/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '</D:supportedlock>' +
+          '<D:lockdiscovery/>' +
+          '<D:getcontenttype>httpd/unix-directory</D:getcontenttype>' +
+          '</D:prop>' +
+          '<D:status>HTTP/1.1 200 OK</D:status>' +
+          '</D:propstat>' +
+          '</D:response>' +
+          '<D:response xmlns:lp1="DAV:" ' +
+          'xmlns:lp2="http://apache.org/dav/props/">' +
+          '<D:href>/uploads/' + shared.created_document_id + '</D:href>' +
+          '<D:propstat>' +
+          '<D:prop>' +
+          '<lp1:resourcetype/>' +
+          '<lp1:creationdate>2013-10-30T17:19:46Z</lp1:creationdate>' +
+          '<lp1:getcontentlength>66</lp1:getcontentlength>' +
+          '<lp1:getlastmodified>Wed, 30 Oct 2013 17:19:46 GMT' +
+          '</lp1:getlastmodified>' +
+          '<lp1:getetag>"20568-42-4e9f88a2ea198"</lp1:getetag>' +
+          '<lp2:executable>F</lp2:executable>' +
+          '<D:supportedlock>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:exclusive/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:shared/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '</D:supportedlock>' +
+          '<D:lockdiscovery/>' +
+          '</D:prop>' +
+          '<D:status>HTTP/1.1 200 OK</D:status>' +
+          '</D:propstat>' +
+          '</D:response>' +
+          '<D:response xmlns:lp1="DAV:" ' +
+          'xmlns:lp2="http://apache.org/dav/props/">' +
+          '<D:href>/uploads/b</D:href>' +
+          '<D:propstat>' +
+          '<D:prop>' +
+          '<lp1:resourcetype/>' +
+          '<lp1:creationdate>2013-10-30T17:19:46Z</lp1:creationdate>' +
+          '<lp1:getcontentlength>25</lp1:getcontentlength>' +
+          '<lp1:getlastmodified>Wed, 30 Oct 2013 17:19:46 GMT' +
+          '</lp1:getlastmodified>' +
+          '<lp1:getetag>"21226-19-4e9f88a305c4e"</lp1:getetag>' +
+          '<lp2:executable>F</lp2:executable>' +
+          '<D:supportedlock>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:exclusive/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '<D:lockentry>' +
+          '<D:lockscope><D:shared/></D:lockscope>' +
+          '<D:locktype><D:write/></D:locktype>' +
+          '</D:lockentry>' +
+          '</D:supportedlock>' +
+          '<D:lockdiscovery/>' +
+          '</D:prop>' +
+          '<D:status>HTTP/1.1 200 OK</D:status>' +
+          '</D:propstat>' +
+          '</D:response>' +
+          '</D:multistatus>'
+      ]); // PROPFIND
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": shared.created_document_id,
+        "title": "Unique ID"
+      })]); // GET
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "b",
+        "title": "Bee"
+      })]); // GET
+      return jio.check({});
+    }
+
+    function checkStorageTest(answer) {
+      deepEqual(answer, {
+        "method": "check",
+        "result": "success",
+        "status": 204,
+        "statusText": "No Content"
+      }, "Check storage state");
     }
 
     function listDocuments() {
@@ -1023,6 +1155,10 @@
       then(getCreatedDocument).then(getCreatedDocumentTest).
       // post b 201
       then(postSpecificDocument).then(postSpecificDocumentTest).
+      // check b 204
+      then(checkDocument).then(checkDocumentTest).
+      // check storage 204
+      then(checkStorage).then(checkStorageTest).
       // allD 200 2 documents
       then(listDocuments).then(list2DocumentsTest).
       // remove a 204
@@ -1069,9 +1205,7 @@
       then(getInexistentDocument).then(getInexistentDocumentTest).
       // remove 404
       then(removeInexistentDocument).then(removeInexistentDocumentTest).
-      // check 204
-      //then(checkDocument).done(checkDocumentTest).
-      //then(checkStorage).done(checkStorageTest).
+      // end
       fail(unexpectedError).
       always(start).
       always(function () {
