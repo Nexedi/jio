@@ -215,7 +215,7 @@
    * @param  {Object} options The command options
    */
   LocalStorage.prototype.putAttachment = function (command, param) {
-    var that = this, doc, status = "ok";
+    var that = this, doc, status = "created";
     doc = this._storage.getItem(this._localpath + "/" + param._id);
     if (doc === null) {
       //  the document does not exist
@@ -231,7 +231,7 @@
     jIO.util.readBlobAsBinaryString(param._blob).then(function (e) {
       doc._attachments = doc._attachments || {};
       if (doc._attachments[param._attachment]) {
-        status = "created";
+        status = "no_content";
       }
       doc._attachments[param._attachment] = {
         "content_type": param._blob.type,

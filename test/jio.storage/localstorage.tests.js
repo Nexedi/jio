@@ -344,8 +344,8 @@
           "id": "putattmt1",
           "method": "putAttachment",
           "result": "success",
-          "status": 200,
-          "statusText": "Ok"
+          "status": 201,
+          "statusText": "Created"
         }, "PutAttachment to a document, without data");
 
       }).then(function () {
