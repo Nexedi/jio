@@ -69,7 +69,7 @@
 
   module("IndexStorage");
 
-  test("Scenario", function () {
+  test("Scenario", 38, function () {
 
     var LOCAL_STORAGE_SPEC = local_storage.createDescription(
       'indexstorage tests',
@@ -458,7 +458,7 @@
     function listEmptyIndexesTest(answers) {
       deepEqual(answers[0], {
         "data": {
-          "total_rows": 7000,
+          "total_rows": 0,
           "rows": []
         },
         "method": "allDocs",
@@ -469,72 +469,413 @@
 
       deepEqual(answers[1], {
         "data": {
-          "total_rows": 7000,
+          "total_rows": 0,
           "rows": []
         },
         "method": "allDocs",
         "result": "success",
-        "status": 204,
-        "statusText": "No Content"
+        "status": 200,
+        "statusText": "Ok"
       }, "List empty indexes 'title'");
 
       deepEqual(answers[2], {
         "data": {
-          "total_rows": 7000,
+          "total_rows": 0,
           "rows": []
         },
         "method": "allDocs",
         "result": "success",
-        "status": 204,
-        "statusText": "No Content"
+        "status": 200,
+        "statusText": "Ok"
       }, "List empty indexes 'title', 'year'");
 
       deepEqual(answers[3], {
         "data": {
-          "total_rows": 7000,
+          "total_rows": 0,
           "rows": []
         },
         "method": "allDocs",
         "result": "success",
-        "status": 204,
-        "statusText": "No Content"
+        "status": 200,
+        "statusText": "Ok"
       }, "List empty indexes 'author'");
 
       deepEqual(answers[4], {
         "data": {
-          "total_rows": 7000,
+          "total_rows": 0,
           "rows": []
         },
         "method": "allDocs",
         "result": "success",
-        "status": 204,
-        "statusText": "No Content"
+        "status": 200,
+        "statusText": "Ok"
       }, "List default empty indexes");
     }
 
-    // // XXX the 2 following functions should be replaced by the 2 commented
-    // // previous ones (which don't work yet)
-    // function removeCreatedDocuments() {
-    //   return sequence([function () {
-    //     return jio_index.remove({"_id": shared.created_document_id});
-    //   }, function () {
-    //     return jio_index.remove({"_id": "b"});
-    //   }, function () {
-    //     return jio_index.remove({"_id": "ce"});
-    //   }, function () {
-    //     return jio_index.remove({"_id": "dee"});
-    //   }]);
-    // }
+    function putNewDocument() {
+      return jio_index.put({"_id": "a", "title": "Hey"});
+    }
 
-    // function removeCreatedDocumentsTest(last_answer) {
-    //   deepEqual(last_answer, {
-    //     "id": "dee",
-    //     "method": "remove",
-    //     "result": "success",
-    //     "status": 204,
-    //     "statusText": "No Content"
-    //   }, "Remove first document, 'b', 'ce' and 'dee' (testing 'dee' only)");
-    // }
+    function putNewDocumentTest(answer) {
+      deepEqual(answer, {
+        "id": "a",
+        "method": "put",
+        "result": "success",
+        "status": 201,
+        "statusText": "Created"
+      }, "Put new document");
+    }
+
+    function getCreatedDocument2() {
+      return jio_index.get({"_id": "a"});
+    }
+
+    function getCreatedDocument2Test(answer) {
+      deepEqual(answer, {
+        "data": {
+          "_id": "a",
+          "title": "Hey"
+        },
+        "id": "a",
+        "method": "get",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Get new document");
+    }
+
+    function postSameDocument() {
+      return success(jio_index.post({"_id": "a", "title": "Hoo"}));
+    }
+
+    function postSameDocumentTest(answer) {
+      deepEqual(answer, {
+        "error": "conflict",
+        "id": "a",
+        "message": "Cannot create a new document",
+        "method": "post",
+        "reason": "document exists",
+        "result": "error",
+        "status": 409,
+        "statusText": "Conflict"
+      }, "Unable to post the same document (conflict)");
+    }
+
+    function createAttachment() {
+      return jio_index.putAttachment({
+        "_id": "a",
+        "_attachment": "aa",
+        "_data": "aaa",
+        "_content_type": "text/plain"
+      });
+    }
+
+    function createAttachmentTest(answer) {
+      deepEqual(answer, {
+        "attachment": "aa",
+        "digest": "sha256-9834876dcfb05cb167a5c24953eba58c4" +
+          "ac89b1adf57f28f2f9d09af107ee8f0",
+        "id": "a",
+        "method": "putAttachment",
+        "result": "success",
+        "status": 201,
+        "statusText": "Created"
+      }, "Create new attachment");
+    }
+
+    function updateAttachment() {
+      return jio_index.putAttachment({
+        "_id": "a",
+        "_attachment": "aa",
+        "_data": "aab",
+        "_content_type": "text/plain"
+      });
+    }
+
+    function updateAttachmentTest(answer) {
+      deepEqual(answer, {
+        "attachment": "aa",
+        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+          "0728e095ff24218119d51bd22475363",
+        "id": "a",
+        "method": "putAttachment",
+        "result": "success",
+        "status": 204,
+        "statusText": "No Content"
+      }, "Update last attachment");
+    }
+
+    function createAnotherAttachment() {
+      return jio_index.putAttachment({
+        "_id": "a",
+        "_attachment": "ab",
+        "_data": "aba",
+        "_content_type": "text/plain"
+      });
+    }
+
+    function createAnotherAttachmentTest(answer) {
+      deepEqual(answer, {
+        "attachment": "ab",
+        "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+          "ed343e6c739e54131fcb3a56e4bc1bd",
+        "id": "a",
+        "method": "putAttachment",
+        "result": "success",
+        "status": 201,
+        "statusText": "Created"
+      }, "Create another attachment");
+    }
+
+    function updateLastDocument() {
+      return jio_index.put({"_id": "a", "title": "Hoo"});
+    }
+
+    function updateLastDocumentTest(answer) {
+      deepEqual(answer, {
+        "id": "a",
+        "method": "put",
+        "result": "success",
+        "status": 204,
+        "statusText": "No Content"
+      }, "Update document metadata");
+    }
+
+    function getFirstAttachment() {
+      return jio_index.getAttachment({"_id": "a", "_attachment": "aa"});
+    }
+
+    function getFirstAttachmentTest(answer) {
+      var blob = answer.data;
+      answer.data = "<blob>";
+      deepEqual(answer, {
+        "attachment": "aa",
+        "data": "<blob>",
+        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+          "0728e095ff24218119d51bd22475363",
+        "id": "a",
+        "method": "getAttachment",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Get first attachment");
+      return jIO.util.readBlobAsText(blob).then(function (e) {
+        deepEqual(blob.type, "text/plain", "Check blob type");
+        deepEqual(e.target.result, "aab", "Check blob text content");
+      }, function (err) {
+        deepEqual(err, "no error", "Check blob text content");
+      });
+    }
+
+    function getSecondAttachment() {
+      return jio_index.getAttachment({"_id": "a", "_attachment": "ab"});
+    }
+
+    function getSecondAttachmentTest(answer) {
+      var blob = answer.data;
+      answer.data = "<blob>";
+      deepEqual(answer, {
+        "attachment": "ab",
+        "data": "<blob>",
+        "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+          "ed343e6c739e54131fcb3a56e4bc1bd",
+        "id": "a",
+        "method": "getAttachment",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Get first attachment");
+      return jIO.util.readBlobAsText(blob).then(function (e) {
+        deepEqual(blob.type, "text/plain", "Check blob type");
+        deepEqual(e.target.result, "aba", "Check blob text content");
+      }, function (err) {
+        deepEqual(err, "no error", "Check blob text content");
+      });
+    }
+
+    function getLastDocument() {
+      return jio_index.get({"_id": "a"});
+    }
+
+    function getLastDocumentTest(answer) {
+      deepEqual(answer, {
+        "data": {
+          "_id": "a",
+          "title": "Hoo",
+          "_attachments": {
+            "aa": {
+              "content_type": "text/plain",
+              "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+                "0728e095ff24218119d51bd22475363",
+              "length": 3
+            },
+            "ab": {
+              "content_type": "text/plain",
+              "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+                "ed343e6c739e54131fcb3a56e4bc1bd",
+              "length": 3
+            }
+          }
+        },
+        "id": "a",
+        "method": "get",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Get last document metadata");
+    }
+
+    function removeSecondAttachment() {
+      return jio_index.removeAttachment({"_id": "a", "_attachment": "ab"});
+    }
+
+    function removeSecondAttachmentTest(answer) {
+      deepEqual(answer, {
+        "attachment": "ab",
+        "id": "a",
+        "method": "removeAttachment",
+        "result": "success",
+        "status": 204,
+        "statusText": "No Content"
+      }, "Remove second document");
+    }
+
+    function getInexistentSecondAttachment() {
+      return success(jio_index.getAttachment({
+        "_id": "a",
+        "_attachment": "ab"
+      }));
+    }
+
+    function getInexistentSecondAttachmentTest(answer) {
+      deepEqual(answer, {
+        "attachment": "ab",
+        "error": "not_found",
+        "id": "a",
+        "message": "Cannot find attachment",
+        "method": "getAttachment",
+        "reason": "missing attachment",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "Get inexistent second attachment");
+    }
+
+    function getOneAttachmentDocument() {
+      return jio_index.get({"_id": "a"});
+    }
+
+    function getOneAttachmentDocumentTest(answer) {
+      deepEqual(answer, {
+        "data": {
+          "_attachments": {
+            "aa": {
+              "content_type": "text/plain",
+              "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+                "0728e095ff24218119d51bd22475363",
+              "length": 3
+            }
+          },
+          "_id": "a",
+          "title": "Hoo"
+        },
+        "id": "a",
+        "method": "get",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Get document metadata");
+    }
+
+    function removeSecondAttachmentAgain() {
+      return success(jio_index.removeAttachment({
+        "_id": "a",
+        "_attachment": "ab"
+      }));
+    }
+
+    function removeSecondAttachmentAgainTest(answer) {
+      deepEqual(answer, {
+        "attachment": "ab",
+        "error": "not_found",
+        "id": "a",
+        "message": "Attachment not found",
+        "method": "removeAttachment",
+        "reason": "missing attachment",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "Remove inexistent attachment");
+    }
+
+    function removeDocument() {
+      return jio_index.remove({"_id": "a"});
+    }
+
+    function removeDocumentTest(answer) {
+      deepEqual(answer, {
+        "id": "a",
+        "method": "remove",
+        "result": "success",
+        "status": 204,
+        "statusText": "No Content"
+      }, "Remove document and its attachments");
+    }
+
+    function getInexistentFirstAttachment() {
+      return success(jio_index.getAttachment({
+        "_id": "a",
+        "_attachment": "aa"
+      }));
+    }
+
+    function getInexistentFirstAttachmentTest(answer) {
+      deepEqual(answer, {
+        "attachment": "aa",
+        "error": "not_found",
+        "id": "a",
+        "message": "Cannot find document",
+        "method": "getAttachment",
+        "reason": "missing document",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "Get inexistent first attachment");
+    }
+
+    function getInexistentDocument() {
+      return success(jio_index.get({"_id": "a"}));
+    }
+
+    function getInexistentDocumentTest(answer) {
+      deepEqual(answer, {
+        "error": "not_found",
+        "id": "a",
+        "message": "Cannot find document",
+        "method": "get",
+        "reason": "missing",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "Get inexistent document");
+    }
+
+    function removeInexistentDocument() {
+      return success(jio_index.remove({"_id": "a"}));
+    }
+
+    function removeInexistentDocumentTest(answer) {
+      deepEqual(answer, {
+        "error": "not_found",
+        "id": "a",
+        "message": "Document not found",
+        "method": "remove",
+        "reason": "missing",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "Remove already removed document");
+    }
 
     function unexpectedError(error) {
       if (error instanceof Error) {
@@ -578,45 +919,44 @@
       // allD 200 empty indexes
       then(listEmptyIndexes).then(listEmptyIndexesTest).
 
-      // // # Create and update documents, and some attachment and remove them
-      // // put 201
-      // then(putNewDocument).then(putNewDocumentTest).
-      // // get 200
-      // then(getCreatedDocument2).then(getCreatedDocument2Test).
-      // // post 409
-      // then(postSameDocument).then(postSameDocumentTest).
-      // // putA a 204
-      // then(createAttachment).then(createAttachmentTest).
-      // // putA a 204
-      // then(updateAttachment).then(updateAttachmentTest).
-      // // putA b 204
-      // then(createAnotherAttachment).then(createAnotherAttachmentTest).
-      // // put 204
-      // then(updateLastDocument).then(updateLastDocumentTest).
-      // // getA a 200
-      // then(getFirstAttachment).then(getFirstAttachmentTest).
-      // // getA b 200
-      // then(getSecondAttachment).then(getSecondAttachmentTest).
-      // // get 200
-      // then(getLastDocument).then(getLastDocumentTest).
-      // // removeA b 204
-      // then(removeSecondAttachment).then(removeSecondAttachmentTest).
-      // // getA b 404
-      // then(getInexistentSecondAttachment).
-      // then(getInexistentSecondAttachmentTest).
-      // // get 200
-      // then(getOneAttachmentDocument).then(getOneAttachmentDocumentTest).
-      // // removeA b 404
-      //then(removeSecondAttachmentAgain).then(removeSecondAttachmentAgainTest).
-      // // remove 204
-      // then(removeDocument).then(removeDocumentTest).
-      // // getA a 404
-      //then(getInexistentFirstAttachment)
-      //.then(getInexistentFirstAttachmentTest).
-      // // get 404
-      // then(getInexistentDocument).then(getInexistentDocumentTest).
-      // // remove 404
-      // then(removeInexistentDocument).then(removeInexistentDocumentTest).
+      // # Create and update documents, and some attachment and remove them
+      // put 201
+      then(putNewDocument).then(putNewDocumentTest).
+      // get 200
+      then(getCreatedDocument2).then(getCreatedDocument2Test).
+      // post 409
+      then(postSameDocument).then(postSameDocumentTest).
+      // putA a 204
+      then(createAttachment).then(createAttachmentTest).
+      // putA a 204
+      then(updateAttachment).then(updateAttachmentTest).
+      // putA b 204
+      then(createAnotherAttachment).then(createAnotherAttachmentTest).
+      // put 204
+      then(updateLastDocument).then(updateLastDocumentTest).
+      // getA a 200
+      then(getFirstAttachment).then(getFirstAttachmentTest).
+      // getA b 200
+      then(getSecondAttachment).then(getSecondAttachmentTest).
+      // get 200
+      then(getLastDocument).then(getLastDocumentTest).
+      // removeA b 204
+      then(removeSecondAttachment).then(removeSecondAttachmentTest).
+      // getA b 404
+      then(getInexistentSecondAttachment).
+      then(getInexistentSecondAttachmentTest).
+      // get 200
+      then(getOneAttachmentDocument).then(getOneAttachmentDocumentTest).
+      // removeA b 404
+      then(removeSecondAttachmentAgain).then(removeSecondAttachmentAgainTest).
+      // remove 204
+      then(removeDocument).then(removeDocumentTest).
+      // getA a 404
+      then(getInexistentFirstAttachment).then(getInexistentFirstAttachmentTest).
+      // get 404
+      then(getInexistentDocument).then(getInexistentDocumentTest).
+      // remove 404
+      then(removeInexistentDocument).then(removeInexistentDocumentTest).
       // // check 204
       // //then(checkDocument).done(checkDocumentTest).
       // //then(checkStorage).done(checkStorageTest).
