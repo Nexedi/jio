@@ -388,6 +388,8 @@
         deepEqual(answers[1], {
           "attachment": "putattmt2",
           "id": "putattmt1",
+          "digest": "sha256-e3b0c44298fc1c149afbf4c8996fb9242" +
+            "7ae41e4649b934ca495991b7852b855",
           "method": "getAttachment",
           "result": "success",
           "status": 200,

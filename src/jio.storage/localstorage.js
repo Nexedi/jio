@@ -311,6 +311,7 @@
         this._localpath + "/" + param._id +
           "/" + param._attachment
       ) || "",
+      "digest": doc._attachments[param._attachment].digest,
       "content_type": doc._attachments[param._attachment].content_type || ""
     });
   };
