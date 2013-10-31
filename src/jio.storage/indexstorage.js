@@ -856,7 +856,7 @@
   //   );
   // };
 
-  jIO.addStorage("indexed", IndexStorage);
+  jIO.addStorage("index", IndexStorage);
 
   exports.createDescription = function () {
     // XXX

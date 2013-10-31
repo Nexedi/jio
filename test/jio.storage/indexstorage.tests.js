@@ -76,7 +76,7 @@
       'scenario',
       'memory'
     ), INDEX_STORAGE_SPEC = {
-      "type": "indexed",
+      "type": "index",
       "indices": [
         {"id": "A", "index": ["contributor"], "metadata": {
           "title": "Database - A"
