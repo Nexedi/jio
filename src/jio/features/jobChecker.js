@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
-/*global arrayInsert, indexOf, deepClone, defaults, restCommandRejecter */
+/*global arrayInsert, deepClone, defaults */
 
 // creates
 // - some defaults job rule actions
@@ -89,7 +89,7 @@ function enableJobChecker(jio, shared, options) {
       // wrong single property
       return;
     }
-    if (indexOf(job_rule.action, shared.job_rule_action_names) === -1) {
+    if (shared.job_rule_action_names.indexOf(job_rule.action) === -1) {
       // wrong action
       return;
     }

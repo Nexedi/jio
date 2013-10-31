@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
-/*global arrayExtend, setTimeout, methodType, min, constants */
+/*global arrayExtend, setTimeout, methodType, constants */
 
 function enableJobRetry(jio, shared, options) {
 
@@ -106,7 +106,7 @@ function enableJobRetry(jio, shared, options) {
           param.modified = new Date();
           shared.emit('job:modified', param);
           shared.emit('job:start', param);
-        }, min(10000, param.tried * 2000));
+        }, Math.min(10000, param.tried * 2000));
       } else {
         shared.emit('job:reject', param, args);
       }

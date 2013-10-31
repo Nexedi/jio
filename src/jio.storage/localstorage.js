@@ -506,10 +506,10 @@
     var that = this, result;
 
     function referenceAttachment(param, attachment) {
-      if (jIO.util.indexOf(param.referenced_attachments, attachment) !== -1) {
+      if (param.referenced_attachments.indexOf(attachment) !== -1) {
         return;
       }
-      var i = jIO.util.indexOf(param.unreferenced_attachments, attachment);
+      var i = param.unreferenced_attachments.indexOf(attachment);
       if (i !== -1) {
         param.unreferenced_attachments.splice(i, 1);
       }
@@ -518,10 +518,10 @@
     }
 
     function attachmentFound(param, attachment) {
-      if (jIO.util.indexOf(param.referenced_attachments, attachment) !== -1) {
+      if (param.referenced_attachments.indexOf(attachment) !== -1) {
         return;
       }
-      if (jIO.util.indexOf(param.unreferenced_attachments, attachment) !== -1) {
+      if (param.unreferenced_attachments.indexOf(attachment) !== -1) {
         return;
       }
       param.unreferenced_attachments[param.unreferenced_attachments.length] =

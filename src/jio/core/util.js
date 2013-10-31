@@ -161,24 +161,6 @@ function dictFilter(dict, keys) {
 exports.util.dictFilter = dictFilter;
 
 /**
- * A faster version of `array.indexOf(value)` -> `indexOf(value, array)`
- *
- * @param  {Any} value The value to search for
- * @param  {Array} array The array to browse
- * @return {Number} index of value, -1 otherwise
- */
-function indexOf(value, array) {
-  var i;
-  for (i = 0; i < array.length; i += 1) {
-    if (array[i] === value) {
-      return i;
-    }
-  }
-  return -1;
-}
-exports.util.indexOf = indexOf;
-
-/**
  * Gets all elements of an array and classifies them in a dict of array.
  * Dict keys are element types, and values are list of element of type 'key'.
  *
@@ -216,40 +198,6 @@ function generateUuid() {
     S4() + S4() + S4();
 }
 exports.util.generateUuid = generateUuid;
-
-/**
- * Returns the number with the lowest value
- *
- * @param  {Number} *values The values to compare
- * @return {Number} The minimum
- */
-function min() {
-  var i, val;
-  for (i = 1; i < arguments.length; i += 1) {
-    if (val === undefined || val > arguments[i]) {
-      val = arguments[i];
-    }
-  }
-  return val;
-}
-exports.util.min = min;
-
-/**
- * Returns the number with the greatest value
- *
- * @param  {Number} *values The values to compare
- * @return {Number} The maximum
- */
-function max() {
-  var i, val;
-  for (i = 1; i < arguments.length; i += 1) {
-    if (val === undefined || val < arguments[i]) {
-      val = arguments[i];
-    }
-  }
-  return val;
-}
-exports.util.max = max;
 
 /**
  * JSON stringify a value. Dict keys are sorted in order to make a kind of

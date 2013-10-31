@@ -746,7 +746,7 @@
               "message": "Removing all associated attachments",
               "loaded": o.count,
               "total": o.nb_requests,
-              "percentage": jIO.util.min(
+              "percentage": Math.min(
                 o.count / o.nb_requests * 20 + 80,
                 100
               )
@@ -898,7 +898,7 @@
               "message": "Getting all documents metadata",
               "loaded": o.count,
               "total": o.nb_requests,
-              "percentage": jIO.util.min(
+              "percentage": Math.min(
                 o.count / o.nb_requests * 80 + 20,
                 100
               )

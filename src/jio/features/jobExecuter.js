@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
-/*global setTimeout, Job, createStorage, deepClone, min, restCommandResolver,
+/*global setTimeout, Job, createStorage, deepClone, restCommandResolver,
   restCommandRejecter */
 
 function enableJobExecuter(jio, shared) { // , options) {

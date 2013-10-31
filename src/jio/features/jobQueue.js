@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
 /*global arrayExtend, localStorage, Workspace, uniqueJSONStringify, JobQueue,
-  constants, indexOf, setTimeout, clearTimeout */
+  constants, setTimeout, clearTimeout */
 
 function enableJobQueue(jio, shared, options) {
 
