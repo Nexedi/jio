@@ -509,13 +509,18 @@
       });
     }
     function createDatabaseAndPutAttachmentIfPossible(err) {
+      var metadata;
       if (err.status === 404) {
+        metadata = {"_id": index.id};
+        if (typeof index.metadata === 'object' &&
+            // adding metadata
+            index.metadata !== null &&
+            !Array.isArray(index.metadata)) {
+          metadata = jIO.util.dictUpdate(metadata, index.metadata);
+        }
         return command.storage(
           index.sub_storage || that._sub_storage
-        ).post({
-          "_id": index.id
-          // XXX add metadata to document if necessary
-        }).then(putAttachment, null, function () {
+        ).post(metadata).then(putAttachment, null, function () {
           throw null; // stop post progress propagation
         });
       }

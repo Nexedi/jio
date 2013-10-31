@@ -69,7 +69,7 @@
 
   module("IndexStorage");
 
-  test("Scenario", 38, function () {
+  test("Scenario", 39, function () {
 
     var LOCAL_STORAGE_SPEC = local_storage.createDescription(
       'indexstorage tests',
@@ -78,7 +78,9 @@
     ), INDEX_STORAGE_SPEC = {
       "type": "indexed",
       "indices": [
-        {"id": "A", "index": ["contributor"]},
+        {"id": "A", "index": ["contributor"], "metadata": {
+          "title": "Database - A"
+        }},
         {"id": "B", "index": ["author"]},
         {"id": "C", "index": ["title"]},
         {"id": "D", "index": ["title", "year"]}
@@ -376,6 +378,32 @@
         "status": 200,
         "statusText": "Ok"
       }, "List 8 documents from local (4 document + 4 databases)");
+    }
+
+    function getDatabaseMetadata() {
+      return jio_local.get({"_id": "A"});
+    }
+
+    function getDatabaseMetadataTest(answer) {
+      deepEqual(answer, {
+        "data": {
+          "_attachments": {
+            "body": {
+              "content_type": "application/json",
+              "digest": "sha256-365910ba219365b68e3431f9762eef21f" +
+                "77cd390dbcc55d827d42555c66340a6",
+              "length": 105
+            }
+          },
+          "_id": "A",
+          "title": "Database - A"
+        },
+        "id": "A",
+        "method": "get",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Check one index database metadata");
     }
 
     // function removeCreatedDocuments() {
@@ -914,6 +942,8 @@
       then(listDocumentsFromNothingTest).
       // allD 200 8 documents from local
       then(listDocumentsFromLocal).then(listDocumentsFromLocalTest).
+      // get 200 database to check metadatas from local
+      then(getDatabaseMetadata).then(getDatabaseMetadataTest).
       // remove a b ce dee 204
       then(removeCreatedDocuments).then(removeCreatedDocumentsTest).
       // allD 200 empty indexes
