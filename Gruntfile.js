@@ -89,8 +89,10 @@ module.exports = function (grunt) {
     },
     qunit: {
       // grunt doesn't like requirejs
-      // phantomjs daesn't know Blobs !!
-      files: ['test/tests.html']
+      files: ['test/tests.html'],
+      options: {
+        timeout: 30000 // if no test occurs for 30 seconds, then timeout
+      }
     }
   });
 
@@ -99,7 +101,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-qunit');
 
-  grunt.registerTask('default', ['jslint', 'concat', 'uglify']); //, 'qunit']);
+  grunt.registerTask('default', ['jslint', 'concat', 'uglify', 'qunit']);
 
   grunt.registerTask('lint', ['jslint']);
   grunt.registerTask('build', ['concat', 'uglify']);
