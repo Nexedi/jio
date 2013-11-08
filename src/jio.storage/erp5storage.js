@@ -38,8 +38,8 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  module(jIO, jQuery);
-}(['jio', 'jquery'], function (jIO, $) {
+  module(jIO, jQuery, complex_queries);
+}(['jio', 'jquery', 'complex_queries'], function (jIO, $, complex_queries) {
   "use strict";
 
   function ERP5Storage(spec) {
