@@ -394,10 +394,11 @@
   };
 
   ReplicateStorage.prototype.allDocs = function (command, param, option) {
+    /*jslint unparam: true */
     var promise_list = [], index, length = this._storage_list.length;
     for (index = 0; index < length; index += 1) {
       promise_list[index] =
-        command.storage(this._storage_list[index]).allDocs(param, option);
+        command.storage(this._storage_list[index]).allDocs(option);
     }
     sequence([function () {
       return last(promise_list);
