@@ -671,24 +671,6 @@ function dictFilter(dict, keys) {
 exports.util.dictFilter = dictFilter;
 
 /**
- * A faster version of `array.indexOf(value)` -> `indexOf(value, array)`
- *
- * @param  {Any} value The value to search for
- * @param  {Array} array The array to browse
- * @return {Number} index of value, -1 otherwise
- */
-function indexOf(value, array) {
-  var i;
-  for (i = 0; i < array.length; i += 1) {
-    if (array[i] === value) {
-      return i;
-    }
-  }
-  return -1;
-}
-exports.util.indexOf = indexOf;
-
-/**
  * Gets all elements of an array and classifies them in a dict of array.
  * Dict keys are element types, and values are list of element of type 'key'.
  *
@@ -726,40 +708,6 @@ function generateUuid() {
     S4() + S4() + S4();
 }
 exports.util.generateUuid = generateUuid;
-
-/**
- * Returns the number with the lowest value
- *
- * @param  {Number} *values The values to compare
- * @return {Number} The minimum
- */
-function min() {
-  var i, val;
-  for (i = 1; i < arguments.length; i += 1) {
-    if (val === undefined || val > arguments[i]) {
-      val = arguments[i];
-    }
-  }
-  return val;
-}
-exports.util.min = min;
-
-/**
- * Returns the number with the greatest value
- *
- * @param  {Number} *values The values to compare
- * @return {Number} The maximum
- */
-function max() {
-  var i, val;
-  for (i = 1; i < arguments.length; i += 1) {
-    if (val === undefined || val < arguments[i]) {
-      val = arguments[i];
-    }
-  }
-  return val;
-}
-exports.util.max = max;
 
 /**
  * JSON stringify a value. Dict keys are sorted in order to make a kind of
@@ -2391,7 +2339,7 @@ function restCommandResolver(param, args) {
 }
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
-/*global arrayInsert, indexOf, deepClone, defaults, restCommandRejecter */
+/*global arrayInsert, deepClone, defaults */
 
 // creates
 // - some defaults job rule actions
@@ -2481,7 +2429,7 @@ function enableJobChecker(jio, shared, options) {
       // wrong single property
       return;
     }
-    if (indexOf(job_rule.action, shared.job_rule_action_names) === -1) {
+    if (shared.job_rule_action_names.indexOf(job_rule.action) === -1) {
       // wrong action
       return;
     }
@@ -2647,7 +2595,7 @@ function enableJobChecker(jio, shared, options) {
 }
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
-/*global setTimeout, Job, createStorage, deepClone, min, restCommandResolver,
+/*global setTimeout, Job, createStorage, deepClone, restCommandResolver,
   restCommandRejecter */
 
 function enableJobExecuter(jio, shared) { // , options) {
@@ -2839,7 +2787,7 @@ function enableJobMaker(jio, shared, options) {
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
 /*global arrayExtend, localStorage, Workspace, uniqueJSONStringify, JobQueue,
-  constants, indexOf, setTimeout, clearTimeout */
+  constants, setTimeout, clearTimeout */
 
 function enableJobQueue(jio, shared, options) {
 
@@ -3041,7 +2989,7 @@ function enableJobReference(jio, shared, options) {
 }
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, unparam: true */
-/*global arrayExtend, setTimeout, methodType, min, constants */
+/*global arrayExtend, setTimeout, methodType, constants */
 
 function enableJobRetry(jio, shared, options) {
 
@@ -3148,7 +3096,7 @@ function enableJobRetry(jio, shared, options) {
           param.modified = new Date();
           shared.emit('job:modified', param);
           shared.emit('job:start', param);
-        }, min(10000, param.tried * 2000));
+        }, Math.min(10000, param.tried * 2000));
       } else {
         shared.emit('job:reject', param, args);
       }
