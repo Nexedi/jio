@@ -7,6 +7,15 @@
     "Tristan Cavelier <tristan.cavelier@tiolive.com>",
     "Sven Franck <sven.franck@nexedi.com>"
   ],
+  "description": "Client-side JavaScript library to manage documents across multiple storages",
+  "main": "jio.js",
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "grunt test"
+  },
   "repository": {
     "type": "git",
     "url": "http://git.erp5.org/repos/jio.git"
