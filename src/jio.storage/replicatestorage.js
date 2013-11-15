@@ -41,6 +41,7 @@
 
   var Promise = require('rsvp').Promise,
     all = require('rsvp').all,
+    dictUpdate = require('jio').util.dictUpdate,
     addStorageFunction = require('jio').addStorage;
 
   /**
@@ -105,44 +106,44 @@
     });
   }
 
-  /**
-   * Awaits for an answer from one promise only. Promises are cancelled only
-   * by calling `first(promise_list).cancel()`.
-   *
-   *     first(promise_list): Promise
-   *
-   * @param  {Array} promise_list An array of promises
-   * @return {Promise} A new promise
-   */
-  function first(promise_list) {
-    var length = promise_list.length;
-    promise_list = promise_list.slice();
-    return new Promise(function (resolve, reject, notify) {
-      var index, count = 0;
-      function rejecter(answer) {
-        count += 1;
-        if (count === length) {
-          return reject(answer);
-        }
-      }
-      function notifier(index) {
-        return function (notification) {
-          notify({
-            "index": index,
-            "value": notification
-          });
-        };
-      }
-      for (index = 0; index < length; index += 1) {
-        promise_list[index].then(resolve, rejecter, notifier(index));
-      }
-    }, function () {
-      var index;
-      for (index = 0; index < length; index += 1) {
-        promise_list[index].cancel();
-      }
-    });
-  }
+  // /**
+  //  * Awaits for an answer from one promise only. Promises are cancelled only
+  //  * by calling `first(promise_list).cancel()`.
+  //  *
+  //  *     first(promise_list): Promise
+  //  *
+  //  * @param  {Array} promise_list An array of promises
+  //  * @return {Promise} A new promise
+  //  */
+  // function first(promise_list) {
+  //   var length = promise_list.length;
+  //   promise_list = promise_list.slice();
+  //   return new Promise(function (resolve, reject, notify) {
+  //     var index, count = 0;
+  //     function rejecter(answer) {
+  //       count += 1;
+  //       if (count === length) {
+  //         return reject(answer);
+  //       }
+  //     }
+  //     function notifier(index) {
+  //       return function (notification) {
+  //         notify({
+  //           "index": index,
+  //           "value": notification
+  //         });
+  //       };
+  //     }
+  //     for (index = 0; index < length; index += 1) {
+  //       promise_list[index].then(resolve, rejecter, notifier(index));
+  //     }
+  //   }, function () {
+  //     var index;
+  //     for (index = 0; index < length; index += 1) {
+  //       promise_list[index].cancel();
+  //     }
+  //   });
+  // }
 
   /**
    * Responds with the last resolved promise answer recieved. If all promises
@@ -306,7 +307,7 @@
       );
     }
     sequence([function () {
-      return first(promise_list);
+      return last(promise_list);
     }, [command.success, command.error]]);
   };
 
@@ -325,7 +326,7 @@
         command.storage(this._storage_list[index]).put(metadata, option);
     }
     sequence([function () {
-      return first(promise_list);
+      return last(promise_list);
     }, [command.success, command.error]]);
   };
 
@@ -349,7 +350,7 @@
       );
     }
     sequence([function () {
-      return first(promise_list);
+      return last(promise_list);
     }, [command.success, command.error]]);
   };
 
@@ -398,10 +399,37 @@
     var promise_list = [], index, length = this._storage_list.length;
     for (index = 0; index < length; index += 1) {
       promise_list[index] =
-        command.storage(this._storage_list[index]).allDocs(option);
+        success(command.storage(this._storage_list[index]).allDocs(option));
     }
     sequence([function () {
-      return last(promise_list);
+      return all(promise_list);
+    }, function (answers) {
+      // merge responses
+      var i, j, k, found, rows;
+      // browsing answers
+      for (i = 0; i < answers.length; i += 1) {
+        if (answers[i].result === "success") {
+          if (!rows) {
+            rows = answers[i].data.rows;
+          } else {
+            // browsing answer rows
+            for (j = 0; j < answers[i].data.rows.length; j += 1) {
+              found = false;
+              // browsing result rows
+              for (k = 0; k < rows.length; k += 1) {
+                if (rows[k].id === answers[i].data.rows[j].id) {
+                  found = true;
+                  break;
+                }
+              }
+              if (!found) {
+                rows.push(answers[i].data.rows[j]);
+              }
+            }
+          }
+        }
+      }
+      return {"data": {"total_rows": (rows || []).length, "rows": rows || []}};
     }, [command.success, command.error]]);
   };
 
@@ -433,10 +461,9 @@
     }, function (answers) {
       var i, list = [], winner = null;
       for (i = 0; i < answers.length; i += 1) {
-        console.log(i, answers[i].result, answers[i].data || answers[i].status);
         if (answers[i].result === "success") {
           if (isDate(answers[i].data.modified)) {
-            list[i] = answers.data;
+            list[i] = answers[i].data;
             if (winner === null ||
                 new Date(winner.modified) <
                 new Date(answers[i].data.modified)) {
@@ -449,11 +476,9 @@
       }
       for (i = 0; i < list.length; i += 1) {
         if (list[i] && new Date(list[i].modified) < new Date(winner.modified)) {
-          console.log('put', i, winner);
           list[i] = success(command.storage(that._storage_list[i]).put(winner));
         } else if (list[i] === 0) {
-          console.log('post', i, winner);
-          list[i] = jIO.util.dictUpdate({}, winner);
+          list[i] = dictUpdate({}, winner);
           delete list[i]._id;
           list[i] =
             success(command.storage(that._storage_list[i]).post(list[i]));
