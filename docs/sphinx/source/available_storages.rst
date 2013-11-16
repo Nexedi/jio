@@ -121,7 +121,7 @@ Here is the description:
 GIDStorage
 ^^^^^^^^^^
 
-`Full description here <http://www.j-io.org/P-JIO-GIDStorage>`_.
+:ref:`Full description here <gid-storage>`.
 
 Updating to v2.0
 

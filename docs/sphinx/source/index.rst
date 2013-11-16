@@ -15,6 +15,7 @@ Contents:
     manage_documents
     revision_storages
     available_storages
+    gid_storage
     complex_queries
     metadata
     developers
