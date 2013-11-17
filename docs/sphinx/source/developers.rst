@@ -21,7 +21,7 @@ plus the storages and dependencies you need and you will be good to go.
 Naming Conventions
 ------------------
 
-All the code follows this `Javascript Naming Conventions <http://www.j-io.org/Javascript-Naming_Conventions>`_.
+All the code follows this :ref:`Javascript Naming Conventions <naming-conventions>`.
 
 How to design your own jIO Storage Library
 ------------------------------------------

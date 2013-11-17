@@ -222,8 +222,112 @@ JSON Schemas and Grammar
 
 Below you can find schemas for constructing complex queries
 
-* `Complex Queries JSON Schema <http://www.j-io.org/jio-Complex.Queries.JSON.Schema>`_
-* `Simple Queries JSON Schema <http://www.j-io.org/jio-Simple.Queries.JSON.Schema>`_
-* `Complex Queries Grammar <http://www.j-io.org/jio-Complex.Queries.Grammar>`_
+* Complex Queries JSON Schema:
+
+  .. code-block:: javascript
+
+    {
+      "id": "ComplexQuery",
+      "properties": {
+        "type": {
+          "type": "string",
+          "format": "complex",
+          "default": "complex",
+          "description": "The type is used to recognize the query type."
+        },
+        "operator": {
+          "type": "string",
+          "format": "(AND|OR|NOT)",
+          "required": true,
+          "description": "Can be 'AND', 'OR' or 'NOT'."
+        },
+        "query_list": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "required": true,
+          "default": [],
+          "description": "query_list is a list of queries which can be in serialized format of in object format."
+        }
+      }
+    }
+  
+  
+* Simple Queries JSON Schema:
+
+  .. code-block:: javascript
+
+    {
+      "id": "SimpleQuery",
+      "properties": {
+        "type": {
+          "type": "string",
+          "format": "simple",
+          "default": "simple",
+          "description": "The type is used to recognize the query type."
+        },
+        "operator": {
+          "type": "string",
+          "default": "=",
+          "format": "(>=?|<=?|!?=)",
+          "description": "The operator used to compare."
+        },
+        "id": {
+          "type": "string",
+          "default": "",
+          "description": "The column id."
+        },
+        "value": {
+          "type": "string",
+          "default": "",
+          "description": "The value we want to search."
+        }
+      }
+    }
+
+
+
+* Complex Queries Grammar::
+
+    search_text
+        : and_expression
+        | and_expression search_text
+        | and_expression OR search_text
+  
+    and_expression
+        : boolean_expression
+        | boolean_expression AND and_expression
+  
+    boolean_expression
+        : NOT expression
+        | expression
+  
+    expression
+        : ( search_text )
+        | COLUMN expression
+        | value
+  
+    value
+        : OPERATOR string
+        | string
+  
+    string
+        : WORD
+        | STRING
+  
+    terminal:
+        OR               -> /OR[ ]/
+        AND              -> /AND[ ]/
+        NOT              -> /NOT[ ]/
+        COLUMN           -> /[^><= :\(\)"][^ :\(\)"]*:/
+        STRING           -> /"(\\.|[^\\"])*"/
+        WORD             -> /[^><= :\(\)"][^ :\(\)"]*/
+        OPERATOR         -> /(>=?|<=?|!?=)/
+        LEFT_PARENTHESE  -> /\(/
+        RIGHT_PARENTHESE -> /\)/
+  
+    ignore: " "
+
 
 

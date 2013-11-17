@@ -19,6 +19,7 @@ Contents:
     complex_queries
     metadata
     developers
+    naming_conventions
     authors
     license
 
