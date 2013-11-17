@@ -4,15 +4,26 @@ For developers
 Quick start
 -----------
 
-To get started with jIO, clone one of the repositories link in `Download & Fork <https://www.j-io.org/download-and-fork>`_ tab.
+To get started with jIO, clone one of the repositories link in :ref:`Download & Fork <download-fork>` tab.
 
 To build your library you have to:
 
 * Install `NodeJS <http://nodejs.org/>`_ (including NPM)
-* Install Grunt command line with npm. ``# npm -g install grunt-cli``
-* Install dev dependencies. ``$ npm install``
-* Compile JS/CC parser. ``$ make`` (until we found how to compile it with grunt)
-* And run build. ``$ grunt``
+* Install Grunt command line with npm.
+
+  ``# npm -g install grunt-cli``
+
+* Install dev dependencies.
+  
+  ``$ npm install``
+
+* Compile JS/CC parser.
+  
+  ``$ make`` (until we found how to compile it with grunt)
+
+* And run build.
+  
+  ``$ grunt``
 
 The repository also includes the built ready-to-use files, so in case you do
 not want to build jIO yourself, just use *jio.js* as well as *complex_queries.js*

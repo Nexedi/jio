@@ -35,7 +35,7 @@ This walkthrough is designed to get you started using a basic jIO instance.
 
 #.  Download jIO core, the storages you want to use as well as the
     complex-queries scripts as well as the dependencies required for the storages
-    you intend to use.  `[Download & Fork] <https://www.j-io.org/download-and-fork>`_
+    you intend to use.  :ref:`[Download & Fork] <download-fork>`
 
 #.  Add the scripts to your HTML page in the following order:
 

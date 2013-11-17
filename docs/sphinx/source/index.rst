@@ -12,6 +12,7 @@ Contents:
     :maxdepth: 2
 
     introduction
+    download
     manage_documents
     revision_storages
     available_storages
