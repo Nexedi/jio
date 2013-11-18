@@ -3,6 +3,7 @@
    :language: javascript
 
 .. _metadata-head:
+
 Metadata
 ========
 
@@ -27,7 +28,7 @@ way to save documents and to get them). So we must use metadata for
 *interoperability reasons*. Interoperability is the ability of diverse systems
 and organizations to work together.
 
-How to format metadata with JIO
+How to format metadata with jIO
 -------------------------------
 
 See below XML and its JSON equivalent:
@@ -60,7 +61,7 @@ List of metadata to use
 Identification
 ^^^^^^^^^^^^^^
 
-* **"_id"**, a specific JIO metadata which helps the storage to find a document
+* **"_id"**, a specific jIO metadata which helps the storage to find a document
   (can be a real path name, a dc:identifier, a uuid, ...). **String Only**
 
 * **"identifer"**, :js:`{"identifier": "http://domain/jio_home_page"}, {"identifier": "urn:ISBN:978-1-2345-6789-X"},
@@ -131,18 +132,18 @@ Intellectual property
 Content
 ^^^^^^^
 
-* **"title"**, :js:`{"title": "JIO Home Page"}`
+* **"title"**, :js:`{"title": "jIO Home Page"}`
 
   the name given to the resource. Typically, a Title will be a name by which the resource is formally known.
 
-* **"subject"**, :js:`{"subject": "JIO"}, {"subject": ["JIO", "basics"]}`
+* **"subject"**, :js:`{"subject": "jIO"}, {"subject": ["jIO", "basics"]}`
 
   the topic of the content of the resource. Typically, a Subject will be
   expressed as keywords or key phrases or classification codes that describe the
   topic of the resource. Recommended best practice is to select a value from a
   controlled vocabulary or formal classification scheme.
 
-* **"description"**, :js:`{"description": "Simple guide to show the basics of JIO"}, {"description": {"lang": "fr", "content": "Ma description"}}`
+* **"description"**, :js:`{"description": "Simple guide to show the basics of jIO"}, {"description": {"lang": "fr", "content": "Ma description"}}`
 
   an account of the content of the resource. Description may include but is not
   limited to: an abstract, table of contents, reference to a graphical
@@ -199,7 +200,7 @@ Content
 Examples
 --------
 
-Posting a webpage for JIO
+Posting a webpage for jIO
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: javascript
@@ -211,16 +212,16 @@ Posting a webpage for JIO
     "date"        : new Date(),
     "type"        : "Text",
     "creator"     : ["Nexedi", "Tristan Cavelier", "Sven Franck"],
-    "title"       : "JIO Home Page",
-    "subject"     : ["JIO", "basics"],
-    "description" : "Simple guide to show the basics of JIO",
+    "title"       : "jIO Home Page",
+    "subject"     : ["jIO", "basics"],
+    "description" : "Simple guide to show the basics of jIO",
     "category"    : ["resilience/jio", "webpage"],
     "language"    : "en"
   }, callbacks); // send content as attachment
 
 
 
-Posting JIO library
+Posting jIO library
 ^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: javascript
@@ -236,7 +237,7 @@ Posting JIO library
     "rights"      :
       "https://www.j-io.org/documentation/jio-documentation/#copyright-and-license",
     "title"       : "Javascript Input/Output",
-    "subject"     : "JIO",
+    "subject"     : "jIO",
     "category"    : ["resilience/javascript", "javascript/library/io"]
     "description" : "jIO is a client-side JavaScript library to manage " +
                     "documents across multiple storages."
@@ -355,14 +356,14 @@ With complex query:
   jio.allDocs({"query": "creator: \"someone\""}, callbacks);
 
 
-Getting all documents about JIO in the resilience project
+Getting all documents about jIO in the resilience project
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 With complex query:
 
 .. code-block:: javascript
 
-  jio.allDocs({"query": "subject: \"JIO\" AND category: \"resilience\""}, callbacks);
+  jio.allDocs({"query": "subject: \"jIO\" AND category: \"resilience\""}, callbacks);
 
 
 

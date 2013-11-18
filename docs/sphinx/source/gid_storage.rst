@@ -1,7 +1,7 @@
 
 .. _gid-storage:
 
-JIO GIDStorage
+jIO GIDStorage
 ==============
 
 A storage to enable interoperability between all kind of storages.

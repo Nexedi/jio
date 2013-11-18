@@ -9,7 +9,7 @@
 List of Available Storages
 ==========================
 
-JIO saves his job queue in a workspace which is localStorage by default.
+jIO saves his job queue in a workspace which is localStorage by default.
 Provided storage descriptions are also stored, and it can be dangerous to
 store passwords.
 
@@ -144,7 +144,7 @@ Revision Based Handlers
 A revision based handler is a storage which is able to do some document
 versioning using simple storages listed above.
 
-On JIO command parameter, ``_id`` is still used to identify a document, but
+On jIO command parameter, ``_id`` is still used to identify a document, but
 another id ``_rev`` must be defined to use a specific revision of this document.
 
 On command responses, you will find another field ``rev`` which will represent the

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# JIO documentation build configuration file, created by
+# jIO documentation build configuration file, created by
 # sphinx-quickstart on Fri Nov 15 11:55:08 2013.
 #
 # This file is execfile()d with the current directory set to its containing dir.
@@ -42,7 +42,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'JIO'
+project = u'jIO'
 copyright = u'2013, Nexedi'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -167,7 +167,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'JIOdoc'
+htmlhelp_basename = 'jIOdoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -186,7 +186,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'JIO.tex', u'JIO Documentation',
+  ('index', 'jIO.tex', u'jIO Documentation',
    u'Nexedi', 'manual'),
 ]
 
@@ -216,7 +216,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'jio', u'JIO Documentation',
+    ('index', 'jio', u'jIO Documentation',
      [u'Nexedi'], 1)
 ]
 
@@ -230,8 +230,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'JIO', u'JIO Documentation',
-   u'Nexedi', 'JIO', 'One line description of project.',
+  ('index', 'jIO', u'jIO Documentation',
+   u'Nexedi', 'jIO', 'One line description of project.',
    'Miscellaneous'),
 ]
 

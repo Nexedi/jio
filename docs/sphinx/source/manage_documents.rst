@@ -1,7 +1,7 @@
 How to manage documents?
 ========================
 
-JIO is mapped after the CouchDB API and extends them to provide unified, scalable
+jIO is mapped after the CouchDB API and extends them to provide unified, scalable
 and high performance access via Javascript to a wide variety of different
 storage backends.
 
@@ -121,10 +121,10 @@ see how method calls should be made with either of these storages.
 Promises
 --------
 
-Each JIO methods returns a Promise object, which allows us to get responses into
+Each jIO methods returns a Promise object, which allows us to get responses into
 callback parameters and to chain callbacks with other returned values.
 
-JIO uses a custom version of `RSVP.js <https://github.com/tildeio/rsvp.js>`_, adding canceler and progression features.
+jIO uses a custom version of `RSVP.js <https://github.com/tildeio/rsvp.js>`_, adding canceler and progression features.
 
 You can read more about promises:
 
@@ -136,7 +136,7 @@ You can read more about promises:
 Method Options and Callback Responses
 -------------------------------------
 
-To retrieve JIO responses, you have to provide callbacks like this:
+To retrieve jIO responses, you have to provide callbacks like this:
 
 .. code-block:: javascript
 
@@ -144,11 +144,11 @@ To retrieve JIO responses, you have to provide callbacks like this:
         then([responseCallback], [errorCallback], [progressionCallback]);
 
 
-* On command success, responseCallback will be called with the JIO response as first parameter.
-* On command error, errorCallback will be called with the JIO error as first parameter.
+* On command success, responseCallback will be called with the jIO response as first parameter.
+* On command error, errorCallback will be called with the jIO error as first parameter.
 * On command notification, progressionCallback will be called with the storage notification.
 
-Here is a list of responses returned by JIO according to methods and options:
+Here is a list of responses returned by jIO according to methods and options:
 
 
 ==================   ===============================   ======================================

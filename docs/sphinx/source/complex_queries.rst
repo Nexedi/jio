@@ -1,4 +1,4 @@
-JIO Complex Queries
+jIO Complex Queries
 ===================
 
 What are Complex Queries?

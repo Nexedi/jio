@@ -7,7 +7,7 @@ Why Conflicts can Occur
 
 Using jIO you can store documents in multiple storage locations. With
 increasing number of users working on a document and some storages not being
-available or responding too slow, conflicts are more likely to occur. JIO
+available or responding too slow, conflicts are more likely to occur. jIO
 defines a conflict as multiple versions of a document existing in a storage
 tree and a user trying to save on a version that does not match the latest
 version of the document.

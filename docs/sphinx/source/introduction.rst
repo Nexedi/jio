@@ -8,7 +8,7 @@ Introduction
 What is jIO?
 ------------
 
-JIO is a JavaScript library that allows to manage JSON documents on local or
+jIO is a JavaScript library that allows to manage JSON documents on local or
 remote storages in asynchronous fashion. jIO is an abstracted API mapped after
 CouchDB, that offers connectors to multiple storages, special handlers to
 enhance functionality (replication, revisions, indexing) and a query module to
@@ -19,12 +19,12 @@ How does it work?
 
 .. XXX three parts?
 
-JIO is separated into three parts - jIO core and storage library(ies). The core
+jIO is separated into three parts - jIO core and storage library(ies). The core
 is using storage libraries (connectors) to interact with the associated remote
 storage servers. Some queries can be used on top of the jIO allDocs method to
 query documents based on defined criteria.
 
-JIO uses a job management system, so every method called adds a job into a
+jIO uses a job management system, so every method called adds a job into a
 queue. The queue is copied in the browser's local storage (by default), so it
 can be restored in case of a browser crash. Jobs are being invoked
 asynchronously with ongoing jobs not being able to re-trigger to prevent

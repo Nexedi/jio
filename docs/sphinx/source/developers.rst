@@ -76,26 +76,26 @@ Create 10 methods: ``post``, ``put``, ``putAttachment``, ``get``, ``getAttachmen
 
 (To help you design your methods, some tools are provided by jIO.util.)
 
-The first parameter command provides some methods to act on the JIO job:
+The first parameter command provides some methods to act on the jIO job:
 
-* ``success``, to tell JIO that the job is successfully terminated
+* ``success``, to tell jIO that the job is successfully terminated
 
   ``command.success(status[Text], [{custom key to add to the response}]);``
 
 * ``resolve``, is equal to success
 
-* ``error``, to tell JIO that the job cannot be done
+* ``error``, to tell jIO that the job cannot be done
 
   ``command.error(status[Text], [reason], [message], [{custom key to add to the response}])``
 
-* ``retry``, to tell JIO that the job cannot be done now, but can be retried later. (same API than error)
+* ``retry``, to tell jIO that the job cannot be done now, but can be retried later. (same API than error)
 
-* ``reject``, to tell JIO that the job cannot be done, let JIO to decide whether to retry or not. (same API than error)
+* ``reject``, to tell jIO that the job cannot be done, let jIO to decide whether to retry or not. (same API than error)
 
 
-The second parameter ``metadata`` or ``param`` is the first parameter provided by the JIO user.
+The second parameter ``metadata`` or ``param`` is the first parameter provided by the jIO user.
 
-The third parameter ``option`` is the option parameter provided by the JIO user.
+The third parameter ``option`` is the option parameter provided by the jIO user.
 
 Methods should return the following objects:
 
