@@ -11,7 +11,7 @@ allDocs method can use complex queries.
 
 A query can either be a string (using a specific language useful for writing
 queries), or it can be a tree of objects (useful to browse queries). To handle
-complex queries, jIO uses a parsed grammar file which is complied using `JSCC <http://jscc.phorward-software.com/>`_.
+complex queries, jIO uses a parsed grammar file which is compiled using `JSCC <http://jscc.phorward-software.com/>`_.
 
 Why use Complex Queries?
 ------------------------
@@ -20,7 +20,7 @@ Complex queries can be used similar to database queries. So they are useful to:
 
 * search a specific document
 * sort a list of documents in a certain order
-* avoid retreiving a list of ten thousand documents
+* avoid retrieving a list of ten thousand documents
 * limit the list to show only xy documents by page
 
 For some storages (like localStorage), complex queries can be a powerful tool
@@ -73,6 +73,8 @@ Complex queries can be triggered by including the option named query in the allD
 
 How to use Complex Queries outside jIO?
 ---------------------------------------
+
+.. XXX 404 on complex_example.html
 
 Complex Queries provides an API - which namespace is complex_queries. Please
 also refer to the `Complex Queries sample page <http://git.erp5.org/gitweb/jio.git/blob/HEAD:/examples/complex_example.html?js=1>`_
@@ -140,13 +142,13 @@ Complex Queries in storage connectors
 The query exec method must only be used if the server is not able to pre-select
 documents. As mentioned before, you could use an indexStorage to maintain
 indices with key information on all documents in a storage. This index file
-will then be used to run queries on if all fields, required in the query answer
+will then be used to run queries, if all of the fields required in the query answer
 are available in the index.
 
 Matching properties
 ^^^^^^^^^^^^^^^^^^^
 
-Complex Queries select items which exactly match with the value given in the
+Complex Queries select items which exactly match the value given in the
 query. You can use wildcards ('%' is the default wildcard character), and you
 can change the wildcard character in the query options object. If you don't
 want to use a wildcard, just set the wildcard character to an empty string.
@@ -171,7 +173,7 @@ have their own default properties to keep their own behavior.
 Convert Complex Queries into another type
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Example, convert Query object into human readable string:
+Example, convert Query object into a human readable string:
 
 .. code-block:: javascript
 
@@ -220,7 +222,7 @@ Example, convert Query object into human readable string:
 JSON Schemas and Grammar
 ------------------------
 
-Below you can find schemas for constructing complex queries
+Below you can find schemas for constructing queries.
 
 * Complex Queries JSON Schema:
 
@@ -328,6 +330,5 @@ Below you can find schemas for constructing complex queries
         RIGHT_PARENTHESE -> /\)/
   
     ignore: " "
-
 
 

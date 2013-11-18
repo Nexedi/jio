@@ -4,9 +4,9 @@ For developers
 Quick start
 -----------
 
-To get started with jIO, clone one of the repositories link in :ref:`Download & Fork <download-fork>` tab.
+To get started with jIO, clone one of the repositories linked in :ref:`Download & Fork <download-fork>`.
 
-To build your library you have to:
+To build the library you have to:
 
 * Install `NodeJS <http://nodejs.org/>`_ (including NPM)
 * Install Grunt command line with npm.
@@ -19,9 +19,9 @@ To build your library you have to:
 
 * Compile JS/CC parser.
   
-  ``$ make`` (until we found how to compile it with grunt)
+  ``$ make`` (until we find how to compile it with grunt)
 
-* And run build.
+* Run build.
   
   ``$ grunt``
 
@@ -32,7 +32,7 @@ plus the storages and dependencies you need and you will be good to go.
 Naming Conventions
 ------------------
 
-All the code follows this :ref:`Javascript Naming Conventions <naming-conventions>`.
+All the code follows these :ref:`JavaScript Naming Conventions <naming-conventions>`.
 
 How to design your own jIO Storage Library
 ------------------------------------------
@@ -74,7 +74,7 @@ Create 10 methods: ``post``, ``put``, ``putAttachment``, ``get``, ``getAttachmen
 
 
 
-(To help you to design your methods, some tools are provided by jIO.util.)
+(To help you design your methods, some tools are provided by jIO.util.)
 
 The first parameter command provides some methods to act on the JIO job:
 
@@ -90,14 +90,14 @@ The first parameter command provides some methods to act on the JIO job:
 
 * ``retry``, to tell JIO that the job cannot be done now, but can be retried later. (same API than error)
 
-* ``reject``, to tell JIO that the job cannot be done, let JIO to decide to retry or not. (same API than error)
+* ``reject``, to tell JIO that the job cannot be done, let JIO to decide whether to retry or not. (same API than error)
 
 
-The second parameter ``metadata`` or ``param`` is the first parameter given by the JIO user.
+The second parameter ``metadata`` or ``param`` is the first parameter provided by the JIO user.
 
-The third parameter ``option`` is the option parameter given by the JIO user.
+The third parameter ``option`` is the option parameter provided by the JIO user.
 
-Detail of what should return a method:
+Methods should return the following objects:
 
 * post --> success("created", {"id": new_generated_id})
 
@@ -123,7 +123,7 @@ Detail of what should return a method:
     // or
     error("conflict", "corrupted", "incoherent document or storage")
 
-  repair -->
+* repair -->
 
   .. code-block:: javascript
 
@@ -134,9 +134,9 @@ Detail of what should return a method:
     error("conflict", "corrupted", "impossible to repair document or storage")
     // DON'T DESIGN STORAGES IF THEIR IS NO WAY TO REPAIR INCOHERENT STATES
 
-After setting up all methods, your storage must be added to jIO. This is done
-using the ``jIO.addStorage()`` method, which requires two parameters: the storage
-type (string) add a constructor (function). It is called like this:
+After creating all methods, your storage must be added to jIO. This is done
+with the ``jIO.addStorage()`` method, which requires two parameters: the storage
+type (string) and a constructor (function). It is called like this:
 
 .. code-block:: javascript
 
@@ -145,18 +145,19 @@ type (string) add a constructor (function). It is called like this:
 
 
 Please refer to *localstorage.js* implementation for a good example on how to
-setup a storage and what methods are required. Also keep in mind, that jIO is a
-job-based library, so whenever you trigger a method, a job is created, which
-after being processed returns a response.
+setup a storage and what methods are required.
+
+Also keep in mind that jIO is a job-based library: whenever you trigger a method,
+a job is created, which will later return a response, after being processed.
 
 Job rules
 ---------
 
-jIO job manager will follow several rules set at the creation of a new jIO
+The jIO job manager follows several rules set at the creation of a new jIO
 instance. When you try to call a method, jIO will create a job and will make
 sure the job is really necessary and will be executed. Thanks to these job
 rules, jIO knows what to do with the new job before adding it to the queue. You
-can add your own rules like this:
+can also add your own rules, as we're going to see now.
 
 These are the jIO **default rules**:
 
@@ -212,14 +213,14 @@ The following condition function can be used:
 * ``useMetadataOnly`` - check if the commands are ``post``, ``put``, ``get``, ``remove`` or ``allDocs``.
 * ``sameMethod`` - check if the commands are equal.
 * ``sameDocumentId`` - check if the document ids are equal.
-* ``sameParameters`` - check if the metadata or param are equal in deep.
+* ``sameParameters`` - check if the metadata or param are equal (deep comparison).
 * ``sameOptions`` - check if the command options are equal.
-* ``haveDocumentIds`` - test if the two commands contain document ids
+* ``haveDocumentIds`` - test if the two commands contain document ids.
 
 Create Job Condition
 --------------------
 
-You can create 2 types of function: job condition, and job comparison.
+You can create two types of function: job condition, and job comparison.
 
 .. code-block:: javascript
 
@@ -267,7 +268,7 @@ You just have to define job rules in the jIO options:
 Clear/Replace default job rules
 -------------------------------
 
-If a job which code_name is equal to readers update, then add this rule will replace it:
+If a job's ``code_name`` is equal to ``readers update``, then adding this rule will replace it:
 
 .. code-block:: javascript
 
@@ -286,7 +287,7 @@ If a job which code_name is equal to readers update, then add this rule will rep
       }]
     });
 
-Or you can just clear all rules before adding other ones:
+Or you can just clear all rules before adding new ones:
 
 .. code-block:: javascript
 

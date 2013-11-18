@@ -12,15 +12,17 @@ This document defines JavaScript naming conventions, which are split into essent
 Essential Conventions
 ---------------------
 
-Essential conventions include generic patterns that should be adhered in order to write *readable*, *consistent* and *maintainable* code.
+Essential conventions include generic patterns that should be adhered to in order to write *readable*, *consistent* and *maintainable* code.
 
 Minimizing Globals
 ^^^^^^^^^^^^^^^^^^
 
-Variable declarations should always be made using *var* to not declare them as
+Variable declarations should always be done using *var* to not declare them as
 global variables. This avoids conflicts from using a variable name across
-different functions as well as conflicts with global variables declared by 3rd
+different functions as well as conflicts with global variables declared by third
 party plugins.
+
+.. XXX always pub good+bad or bad+good examples in the same order
 
 Good Example
 
@@ -52,37 +54,37 @@ writing code.
 
 Before validating your code in JSLint, you should use a code
 beautifier to fix basic syntax errors (like indentation) automatically. There
-are a number of beautifiers available online. The following seem to be the best
-working:
+are a number of beautifiers available online. The following ones seem to work best:
 
 * `JSbeautifier.org <http://jsbeautifier.org/>`_
 * `JS-Beautify <http://alexis.m2osw.com/js-beautify/>`_
 
-Here, javascript sources have to begin with this header: :js:`/*jslint indent: 2,
+In this project, JavaScript sources have to begin with the header: :js:`/*jslint indent: 2,
 maxlen: 80, nomen: true */`, which means it uses two spaces indentation, 80
-maximum characters by line and allow the use of '_' as first variable name
-character. Other JSLint options can be added in sub functions if necessary;
-Allowed options are:
+maximum characters per line and the use of '_' as first character in a variable name is allowed.
+Other JSLint options can be added in sub functions if necessary.
+
+Some allowed options are:
 
 * ``ass: true`` if assignment should be allowed outside of statement position.
 * ``bitwise: true`` if bitwise operators should be allowed.
 * ``continue: true`` if the continue statement should be allowed.
 * ``newcap: true`` if Initial Caps with constructor function is optional.
 * ``regexp: true`` if ``.`` and ``[^...]`` should be allowed in RegExp literals. They match more material than might be expected, allowing attackers to confuse applications. These forms should not be used when validating in secure applications.
-* ``unparam: true`` if warnings should not be given for unused parameters.
+* ``unparam: true`` if warnings should be silenced for unused parameters.
 
 
 Coding Conventions
 ------------------
 
-Coding conventions include generic patterns that ensure that written code adheres to certain formatting conventions.
+Coding conventions include generic patterns that ensure that written code follows certain formatting conventions.
 
 
 Uses two-space indentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Tabs and 2-space indentation are being used equally. Since a lot of errors on
-JSLint often result from mixed use of space and tab using 2 spaces throughout
+JSLint often result from mixed use of space and tab, using 2 spaces throughout
 prevents these errors up front.
 
 
@@ -189,7 +191,7 @@ Good Example
 Closing Brace Location
 ^^^^^^^^^^^^^^^^^^^^^^
 
-The closing brace should be on the same indent as the original function call.
+The closing brace should be on the same indent level as the original function call.
 
 Bad Example
 
@@ -249,7 +251,7 @@ Naming conventions include generic patterns for setting names and identifiers th
 Constructors
 ^^^^^^^^^^^^
 
-A constructor function starting with new should always start with a capital letter
+Constructor functions (called with the ``new`` statement) should always start with a capital letter:
 
 .. code-block:: javascript
 
@@ -299,7 +301,7 @@ Follow the camel case convention, typing the words in lower-case, only capitaliz
 Variables
 ^^^^^^^^^
 
-Variables with multiple words should always use an underscore between words.
+Variable names with multiple words should always use an underscore between them.
 
 .. code-block:: javascript
 
@@ -325,7 +327,9 @@ Example
   var value_list = getObjectOrArray();
   // value_list can be an object which can be cast into an array
 
-To use camelCase, when sometimes it is impossible to declare a function directly, the function variable name should match some patterns which shows that it is a function.
+To use camelCase, when sometimes it is not possible to declare a function
+directly, the function variable name should match some pattern which shows
+that it is a function.
 
 .. code-block:: javascript
 
@@ -402,7 +406,7 @@ Bad Example
 No Abbreviations
 ^^^^^^^^^^^^^^^^
 
-Abbreviations should not be used to avoid confusion
+Abbreviations should not be used to avoid confusion.
 
 Good Example
 
@@ -422,7 +426,7 @@ Bad Example
 No Plurals
 ^^^^^^^^^^
 
-Plurals should not be used when assigning names
+Plurals should not be used as variable names.
 
 .. code-block:: javascript
 
@@ -436,7 +440,8 @@ Plurals should not be used when assigning names
 Use Comments
 ^^^^^^^^^^^^
 
-Should be used with reason but include enough information so that a reader can get a first grasp of what a part of code is supposed to do.
+Comments should be used within reason but include enough information so that a
+reader can get a first grasp of what a part of code is supposed to do.
 
 Good Example
 
@@ -463,9 +468,9 @@ Bad Example
 Documentation
 ^^^^^^^^^^^^^
 
-You can use `YUIDoc <http://yuilibrary.com/projects/yuidoc>`_ and their custom comment
+You can use `YUIDoc <http://yuilibrary.com/projects/yuidoc>`_ and its custom comment
 tags together with Node.js to generate the documentation from the script file
-itself. Comments will look something like this:
+itself. Comments should look like this:
 
 Good Example
 
@@ -495,12 +500,10 @@ Bad Example
 Additional Readings
 -------------------
 
-Resources, additional reading materials and links used
+Resources, additional reading materials and links:
 
 * `Javascript Patterns <http://shop.oreilly.com/product/9780596806767.do>`_, main ressource used.
 * `JSLint <http://www.jslint.com/>`_, code quality.
 * `YUIDoc <http://yuilibrary.com/projects/yuidoc>`_, generate documentation from code.
-
-
 
 

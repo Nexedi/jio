@@ -124,7 +124,9 @@ update is executed.
        // response.data.email -> "me_again@web.com"
      });
 
-   When multiple versions of a document are available, jIO returns the lastest, left-most version on the document tree (2-375... and labels all other versions as conflicting 2-068...).
+   When multiple versions of a document are available, jIO returns the latest,
+   left-most version on the document tree (2-375... and labels all other
+   versions as conflicting 2-068...).
 
 #. Retrieve conflicts by setting option
 
@@ -156,6 +158,6 @@ update is executed.
    When deleting the conflicting version of your namecard, jIO removes this
    version from all storages and sets the document tree leaf of this version to
    deleted. All storages now contain just a single version of your namecard
-   (2-3753...). Note, that the on the document tree, removing a revison will
+   (2-3753...). Note that, on the document tree, removing a revison will
    create a new revision with status set to *deleted*.
 

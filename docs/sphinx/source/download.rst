@@ -43,6 +43,8 @@ Revision based storage handlers:
 Minified version
 ----------------
 
+.. XXX this sounds harsh. Can we provide it or at least be more explicit?
+
 To get the minified version of the jIO library, you have to build it yourself. See documentation.
 
 Fork

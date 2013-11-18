@@ -60,7 +60,7 @@ List of metadata to use
 Identification
 ^^^^^^^^^^^^^^
 
-* **"_id"**, a specific JIO metadata which helps the storage to find a documents
+* **"_id"**, a specific JIO metadata which helps the storage to find a document
   (can be a real path name, a dc:identifier, a uuid, ...). **String Only**
 
 * **"identifer"**, :js:`{"identifier": "http://domain/jio_home_page"}, {"identifier": "urn:ISBN:978-1-2345-6789-X"},
@@ -101,7 +101,7 @@ Intellectual property
 
 * **"creator"**, :js:`{"creator": "Tristan Cavelier"}, {"creator": ["Tristan Cavelier", "Sven Franck"]}`
 
-  an entity primarily responsible for making the content of the resource.
+  an entity primarily responsible for creating the content of the resource.
   Examples of a Creator include a person, an organization, or a service.
   Typically the name of the Creator should be used to indicate the entity.
 
@@ -150,7 +150,7 @@ Content
 
 * **"language"**, :js:`{"language": "en"}`
 
-  a language of the intellectual content of the resource. Recommended best
+  the language of the intellectual content of the resource. Recommended best
   practice for the values of the Language element is defined by `RFC 3066 <http://www.ietf.org/rfc/rfc3066.txt>`_
   which, in conjunction with `ISO 639 <http://www.oasis-open.org/cover/iso639a.html>`_, defines two- and
   three-letter primary language tags with optional subtags. Examples include "en"
@@ -192,6 +192,8 @@ Content
   for e-commerce use.
 
 * **custom**, :js:`{custom1: value1, custom2: value2, ...}`
+
+.. XXX short description here
 
 
 Examples
@@ -426,9 +428,4 @@ Sources
 
   * https://en.wikipedia.org/wiki/Internet_media_type
   * https://www.iana.org/assignments/media-types
-
-
-
-
-
 

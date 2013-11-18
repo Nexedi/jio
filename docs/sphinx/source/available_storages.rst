@@ -5,16 +5,17 @@
 
 
 .. _list-of-available-storages:
+
 List of Available Storages
 ==========================
 
-JIO save his job queue in a workspace which is localStorage by default.
-Provided storage descirption are also stored, and it can be dangerous if we
+JIO saves his job queue in a workspace which is localStorage by default.
+Provided storage descriptions are also stored, and it can be dangerous to
 store passwords.
 
 The best way to create a storage description is to use the (often) provided
 tool given by the storage library. The returned description is secured to avoid
-clear readable password. (enciphered password for instance)
+clear readable password. (encrypted password for instance)
 
 When building storage trees, there is no limit on the number of storages you
 can use. The only thing you have to be aware of is compatability of simple and
@@ -58,6 +59,8 @@ The tool dav_storage.createDescription generates a dav storage description for
    dav_storage.createDescription(url, auth_type, [realm], [username], [password]);
 
 All parameters are strings.
+
+.. XXX simplify here
 
 Only ``url`` and ``auth_type`` are required. If ``auth_type`` is equal to "none",
 then ``realm``, ``username`` and ``password`` are useless. ``username`` and ``password`` become
@@ -139,7 +142,7 @@ Revision Based Handlers
 -----------------------
 
 A revision based handler is a storage which is able to do some document
-versionning using simple storages listed above.
+versioning using simple storages listed above.
 
 On JIO command parameter, ``_id`` is still used to identify a document, but
 another id ``_rev`` must be defined to use a specific revision of this document.
@@ -148,8 +151,8 @@ On command responses, you will find another field ``rev`` which will represent t
 new revision produced by your action. All the document history is kept unless
 you decide to delete older revisions.
 
-Another fields ``conflicts``, ``revisions`` and ``revs_info`` can be returned if the
-options **conflicts: true**, **revs: true** and **revs_info: true** are set.
+Other fields ``conflicts``, ``revisions`` and ``revs_info`` can be returned if the
+options **conflicts: true**, **revs: true** or **revs_info: true** are set.
 
 Revision Storage
 ^^^^^^^^^^^^^^^^
@@ -160,6 +163,5 @@ Replicate Revision Storage
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Updating to v2.0
-
 
 

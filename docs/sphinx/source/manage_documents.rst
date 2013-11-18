@@ -1,25 +1,26 @@
 How to manage documents?
 ========================
 
-JIO is mapped after the CouchDB API and extends it to provide unified, scalable
+JIO is mapped after the CouchDB API and extends them to provide unified, scalable
 and high performance access via Javascript to a wide variety of different
 storage backends.
 
-If you are unfamiliar with Apache `CouchDB <http://couchdb.apache.org/>`_:
+If you are unfamiliar with `Apache CouchDB <http://couchdb.apache.org/>`_:
 it is a scalable, fault-tolerant, and schema-free document-oriented database.
-It's used in large and small organizations for a variety of applications where
-traditional SQL databases aren't the best solution for the problem at hand.
-CouchDB provides a RESTful HTTP/JSON API accessible from many programming
-libraries and tools (like 'curl' or 'Pouchdb') and has it's own conflict management system.
+It is used in large and small organizations for a variety of applications where
+traditional SQL databases are not the best solution for the problem at hand.
+CouchDB provides a RESTful HTTP/JSON API accessible by many programming
+libraries and tools (like `curl <http://curl.haxx.se/>`_ or `Pouchdb <http://pouchdb.com/>`_)
+and has its own conflict management system.
 
 What is a document?
 -------------------
 
-A document an association with metadata and attachment(s). The metadata are the
-properties of the document and the attachments are the binaries of the content
+A document is an association of metadata and attachment(s). The metadata is the
+set of properties of the document and the attachments are the binaries of the content
 of the document.
 
-In jIO, metadata are just a dictionnary with keys and values (JSON object), and
+In jIO, metadata is just a dictionnary with keys and values (JSON object), and
 attachments are just simple strings.
 
 .. code-block:: javascript
@@ -60,7 +61,7 @@ Basic Methods
 
 Below you can find sample calls of the main jIO methods. All examples are using
 revisions (as in revision storage or replicate revision storage), so you can
-see, how method calls should be made with either of these storages.
+see how method calls should be made with either of these storages.
 
 .. code-block:: javascript
     :linenos:
@@ -71,20 +72,20 @@ see, how method calls should be made with either of these storages.
     // create and store new document
     jio_instance.post({"title": "some title"}).
       then(function (response) {
-        // console.log(response):
+        // console.log(response);
       });
 
     // create or update an existing document
     jio_instance.put({"_id": "my_document", "title": "New Title"}).
       then(function (response) {
-        // console.log(response):
+        // console.log(response);
       });
 
-    // add an attachement to a document
+    // add an attachment to a document
     jio_instance.putAttachment({"_id": "my_document", "_attachment": "its_attachment",
                                 "_data": "abc", "_mimetype": "text/plain"}).
       then(function (response) {
-        // console.log(response):
+        // console.log(response);
       });
 
     // read a document
@@ -93,7 +94,7 @@ see, how method calls should be made with either of these storages.
         // console.log(response);
       });
 
-    // read an attachement
+    // read an attachment
     jio_instance.getAttachment({"_id": "my_document", "_attachment": "its_attachment"}).
       then(function (response) {
         // console.log(response);
@@ -105,7 +106,7 @@ see, how method calls should be made with either of these storages.
         // console.log(response):
       });
 
-    // delete an attachement
+    // delete an attachment
     jio_instance.removeAttachment({"_id": "my_document", "_attachment": "its_attachment"}).
       then(function (response) {
         // console.log(response):
@@ -120,7 +121,7 @@ see, how method calls should be made with either of these storages.
 Promises
 --------
 
-Each JIO methods return a Promise object, which allows us to get responses into
+Each JIO methods returns a Promise object, which allows us to get responses into
 callback parameters and to chain callbacks with other returned values.
 
 JIO uses a custom version of `RSVP.js <https://github.com/tildeio/rsvp.js>`_, adding canceler and progression features.
@@ -132,13 +133,10 @@ You can read more about promises:
  * `CommonJS Promises <http://wiki.commonjs.org/wiki/Promises>`_
 
 
-
-
-
 Method Options and Callback Responses
 -------------------------------------
 
-To retrieve JIO responses, you have to give callbacks like this:
+To retrieve JIO responses, you have to provide callbacks like this:
 
 .. code-block:: javascript
 
@@ -336,7 +334,4 @@ localStorage contents:
       "jio/local/usr/app/myVideo/thumbnail": "/9j/4AAQSkZ...",
       "jio/local/usr/app/myVideo/video": "..."
     }
-
-
-
 

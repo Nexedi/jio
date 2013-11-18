@@ -9,19 +9,19 @@ A storage to enable interoperability between all kind of storages.
 A global ID (GID) is a document id which represents a unique document. This ID
 will be used to find this unique document on all kind of backends.
 
-This storage used sub storage allDocs and complex queries to find unique documents, and convert their ids to gids.
+This storage uses sub storage allDocs and complex queries to find unique documents, and converts their ids to gids.
 
-Cases where it can be used
---------------------------
+Where it can be used
+--------------------
 
-When you want to duplicate/synchronize/split/edit data in different kind of storages (ERP5 + XWiki + Dav + ...).
+When you want to duplicate / synchronize / split / edit data in different kind of storages (ERP5 + XWiki + Dav + ...).
 
 Storage Description
 -------------------
 
 * ``type`` - ``"gid"``
 * ``sub_storage`` - the sub storage description.
-* ``constraints`` - the constraints to use to generate a gid by define metadata types for some kind of document.
+* ``constraints`` - the constraints to use to generate a gid by defining metadata types for some kind of document.
 
 Example:
 
@@ -153,7 +153,5 @@ Offline Application Usage::
       `-- Local Storage
 
 **CAUTION: All gid storage must have the same description!**
-
-
 
 

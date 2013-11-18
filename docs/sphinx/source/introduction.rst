@@ -17,13 +17,15 @@ retrieve documents and specific information across storage trees.
 How does it work?
 -----------------
 
+.. XXX three parts?
+
 JIO is separated into three parts - jIO core and storage library(ies). The core
-is using storage libraries (connectors) to interact with the accociated remote
+is using storage libraries (connectors) to interact with the associated remote
 storage servers. Some queries can be used on top of the jIO allDocs method to
 query documents based on defined criteria.
 
 JIO uses a job management system, so every method called adds a job into a
-queue. The queue is copied in the browsers local storage (by default), so it
+queue. The queue is copied in the browser's local storage (by default), so it
 can be restored in case of a browser crash. Jobs are being invoked
 asynchronously with ongoing jobs not being able to re-trigger to prevent
 conflicts.
@@ -86,6 +88,8 @@ This walkthrough is designed to get you started using a basic jIO instance.
 
         // create your jio instance
         var my_jio = jIO.createJIO(storage_description);
+
+.. XXX 6 methods or 10?
 
 #.  The jIO API provides six main methods to manage documents across the storage(s) specified in your jIO storage tree.
 
