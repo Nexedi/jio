@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>For developers &mdash; JIO 2.0.0 documentation</title>
+    <title>For developers &mdash; jIO 2.0.0 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="JIO 2.0.0 documentation" href="index.html" />
+    <link rel="top" title="jIO 2.0.0 documentation" href="index.html" />
     <link rel="next" title="JavaScript Naming Conventions" href="naming_conventions.html" />
     <link rel="prev" title="Metadata" href="metadata.html" /> 
   </head>
@@ -42,7 +42,7 @@
         <li class="right" >
           <a href="metadata.html" title="Metadata"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">jIO 2.0.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -115,23 +115,23 @@ plus the storages and dependencies you need and you will be good to go.</p>
 </pre></div>
 </div>
 <p>(To help you design your methods, some tools are provided by jIO.util.)</p>
-<p>The first parameter command provides some methods to act on the JIO job:</p>
+<p>The first parameter command provides some methods to act on the jIO job:</p>
 <ul>
-<li><p class="first"><tt class="docutils literal"><span class="pre">success</span></tt>, to tell JIO that the job is successfully terminated</p>
+<li><p class="first"><tt class="docutils literal"><span class="pre">success</span></tt>, to tell jIO that the job is successfully terminated</p>
 <p><tt class="docutils literal"><span class="pre">command.success(status[Text],</span> <span class="pre">[{custom</span> <span class="pre">key</span> <span class="pre">to</span> <span class="pre">add</span> <span class="pre">to</span> <span class="pre">the</span> <span class="pre">response}]);</span></tt></p>
 </li>
 <li><p class="first"><tt class="docutils literal"><span class="pre">resolve</span></tt>, is equal to success</p>
 </li>
-<li><p class="first"><tt class="docutils literal"><span class="pre">error</span></tt>, to tell JIO that the job cannot be done</p>
+<li><p class="first"><tt class="docutils literal"><span class="pre">error</span></tt>, to tell jIO that the job cannot be done</p>
 <p><tt class="docutils literal"><span class="pre">command.error(status[Text],</span> <span class="pre">[reason],</span> <span class="pre">[message],</span> <span class="pre">[{custom</span> <span class="pre">key</span> <span class="pre">to</span> <span class="pre">add</span> <span class="pre">to</span> <span class="pre">the</span> <span class="pre">response}])</span></tt></p>
 </li>
-<li><p class="first"><tt class="docutils literal"><span class="pre">retry</span></tt>, to tell JIO that the job cannot be done now, but can be retried later. (same API than error)</p>
+<li><p class="first"><tt class="docutils literal"><span class="pre">retry</span></tt>, to tell jIO that the job cannot be done now, but can be retried later. (same API than error)</p>
 </li>
-<li><p class="first"><tt class="docutils literal"><span class="pre">reject</span></tt>, to tell JIO that the job cannot be done, let JIO to decide whether to retry or not. (same API than error)</p>
+<li><p class="first"><tt class="docutils literal"><span class="pre">reject</span></tt>, to tell jIO that the job cannot be done, let jIO to decide whether to retry or not. (same API than error)</p>
 </li>
 </ul>
-<p>The second parameter <tt class="docutils literal"><span class="pre">metadata</span></tt> or <tt class="docutils literal"><span class="pre">param</span></tt> is the first parameter provided by the JIO user.</p>
-<p>The third parameter <tt class="docutils literal"><span class="pre">option</span></tt> is the option parameter provided by the JIO user.</p>
+<p>The second parameter <tt class="docutils literal"><span class="pre">metadata</span></tt> or <tt class="docutils literal"><span class="pre">param</span></tt> is the first parameter provided by the jIO user.</p>
+<p>The third parameter <tt class="docutils literal"><span class="pre">option</span></tt> is the option parameter provided by the jIO user.</p>
 <p>Methods should return the following objects:</p>
 <ul>
 <li><p class="first">post &#8211;&gt; success(&#8220;created&#8221;, {&#8220;id&#8221;: new_generated_id})</p>
@@ -378,7 +378,7 @@ can also add your own rules, as we&#8217;re going to see now.</p>
         <li class="right" >
           <a href="metadata.html" title="Metadata"
              >previous</a> |</li>
-        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">jIO 2.0.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

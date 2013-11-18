@@ -1,8 +1,6 @@
 
-
 .. role:: js(code)
    :language: javascript
-
 
 .. _list-of-available-storages:
 
@@ -15,10 +13,10 @@ store passwords.
 
 The best way to create a storage description is to use the (often) provided
 tool given by the storage library. The returned description is secured to avoid
-clear readable password. (encrypted password for instance)
+cleartext, readable passwords (as opposed to encrypted passwords for instance).
 
 When building storage trees, there is no limit on the number of storages you
-can use. The only thing you have to be aware of is compatability of simple and
+can use. The only thing you have to be aware of is compatibility of simple and
 revision based storages.
 
 
@@ -28,12 +26,11 @@ Connectors
 LocalStorage
 ^^^^^^^^^^^^
 
-
 Three methods are provided:
 
- * :js:`createDescription(username, [application_name], [mode="localStorage"])`
- * :js:`createLocalDescription(username, [application_name])`
- * :js:`createMemoryDescription(username, [application_name])`
+* :js:`createDescription(username, [application_name], [mode="localStorage"])`
+* :js:`createLocalDescription(username, [application_name])`
+* :js:`createMemoryDescription(username, [application_name])`
 
 All parameters are strings.
 
@@ -51,8 +48,10 @@ Examples:
 DavStorage
 ^^^^^^^^^^
 
-The tool dav_storage.createDescription generates a dav storage description for
-*no*, *basic* or *digest* authentication (*digest* is not implemented yet).
+The method ``dav_storage.createDescription()`` generates a DAV storage description for
+*none*, *basic* or *digest* authentication.
+
+NB: digest **is not implemented yet**.
 
 .. code-block:: javascript
 
@@ -60,16 +59,19 @@ The tool dav_storage.createDescription generates a dav storage description for
 
 All parameters are strings.
 
-.. XXX simplify here
+=============   ========================
+parameter       required?
+=============   ========================
+``url``         yes
+``auth_type``   yes
+``realm``       if auth_type == 'digest'
+``username``    if auth_type != 'none'
+``password``    if auth-type != 'none'
+=============   ========================
 
-Only ``url`` and ``auth_type`` are required. If ``auth_type`` is equal to "none",
-then ``realm``, ``username`` and ``password`` are useless. ``username`` and ``password`` become
-required if ``auth_type`` is equal to "basic". And ``realm`` also becomes required if
-``auth_type`` is equal to "digest".
+If ``auth_type`` is "none", then ``realm``, ``username`` and ``password`` are never used.
 
-digest **is not implemented yet**
-
-**Be careful**: The generated description never contains readable password, but
+**Be careful**: The generated description never contains a readable password, but
 for basic authentication, the password will just be base64 encoded.
 
 S3Storage
@@ -89,7 +91,7 @@ IndexStorage
 ^^^^^^^^^^^^
 
 This handler indexes documents metadata into a database (which is a simple
-document) to increase the speed of allDocs requests. However, it is not able to
+document) to increase the speed of ``allDocs()`` requests. However, it is not able to
 manage the ``include_docs`` option.
 
 The sub storages have to manage ``query`` and ``include_docs`` options.
@@ -145,7 +147,7 @@ A revision based handler is a storage which is able to do some document
 versioning using simple storages listed above.
 
 On jIO command parameter, ``_id`` is still used to identify a document, but
-another id ``_rev`` must be defined to use a specific revision of this document.
+another id ``_rev`` must be defined to use a specific revision of that document.
 
 On command responses, you will find another field ``rev`` which will represent the
 new revision produced by your action. All the document history is kept unless

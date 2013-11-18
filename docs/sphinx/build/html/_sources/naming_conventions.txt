@@ -181,7 +181,7 @@ Good Example
 
 .. code-block:: javascript
 
-  function func () { 
+  function func() { 
     return { 
       "name": "Batman" 
     };
@@ -502,7 +502,7 @@ Additional Readings
 
 Resources, additional reading materials and links:
 
-* `Javascript Patterns <http://shop.oreilly.com/product/9780596806767.do>`_, main ressource used.
+* `JavaScript Patterns <http://shop.oreilly.com/product/9780596806767.do>`_, main ressource used.
 * `JSLint <http://www.jslint.com/>`_, code quality.
 * `YUIDoc <http://yuilibrary.com/projects/yuidoc>`_, generate documentation from code.
 

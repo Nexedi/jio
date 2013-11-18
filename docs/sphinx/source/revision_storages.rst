@@ -37,11 +37,11 @@ Simple Conflict Example
 
 You are keeping a namecard file on your PC updating from your smartphone. Your
 smartphone ran out of battery and is offline when you update your namecard on
-your PC with your new email adress. Someone else change this email from your PC
+your PC with your new email adress. Someone else changes this email from your PC
 and once your smartphone is recharged, you go back online and the previous
 update is executed.
 
-#. Setting up the storage tree
+#. Set up the storage tree
 
   .. code-block:: javascript
 
@@ -64,7 +64,7 @@ update is executed.
     });
 
 
-#. Create your namecard on your smartphone
+#. Create the namecard on your smartphone
 
    .. code-block:: javascript
 
@@ -91,10 +91,10 @@ update is executed.
        // response.rev -> "2-068E73F5B44FEC987B51354DFC772891"
      });
 
-   Your smartphone is offline, so you will now have one version (1-578...) on
+   Your smartphone is offline, so now you will have one version (1-578...) on
    your smartphone and another version on webDav (2-068...) on your PC.
 
-#. You modify your namecard while being offline
+#. You modify the namecard while being offline
 
    .. code-block:: javascript
 
@@ -114,7 +114,7 @@ update is executed.
      });
 
 
-#. Later, your smartphone is online and you retrieve your namecard.
+#. Later, your smartphone is online and you retrieve the other version of the namecard.
 
    .. code-block:: javascript
 
@@ -157,7 +157,7 @@ update is executed.
 
    When deleting the conflicting version of your namecard, jIO removes this
    version from all storages and sets the document tree leaf of this version to
-   deleted. All storages now contain just a single version of your namecard
+   deleted. All storages now contain just a single version of the namecard
    (2-3753...). Note that, on the document tree, removing a revison will
    create a new revision with status set to *deleted*.
 

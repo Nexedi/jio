@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>How to manage documents? &mdash; JIO 2.0.0 documentation</title>
+    <title>How to manage documents? &mdash; jIO 2.0.0 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="JIO 2.0.0 documentation" href="index.html" />
+    <link rel="top" title="jIO 2.0.0 documentation" href="index.html" />
     <link rel="next" title="Revision Storages: Conflicts and Resolution" href="revision_storages.html" />
     <link rel="prev" title="Downloads" href="download.html" /> 
   </head>
@@ -42,7 +42,7 @@
         <li class="right" >
           <a href="download.html" title="Downloads"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">jIO 2.0.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -53,10 +53,10 @@
             
   <div class="section" id="how-to-manage-documents">
 <h1>How to manage documents?<a class="headerlink" href="#how-to-manage-documents" title="Permalink to this headline">¶</a></h1>
-<p>JIO is mapped after the CouchDB API and extends them to provide unified, scalable
-and high performance access via Javascript to a wide variety of different
+<p>jIO is mapped after the CouchDB APIs and extends them to provide unified, scalable
+and high performance access via JavaScript to a wide variety of different
 storage backends.</p>
-<p>If you are unfamiliar with <a class="reference external" href="http://couchdb.apache.org/">Apache CouchDB</a>:
+<p>If you are not familiar with <a class="reference external" href="http://couchdb.apache.org/">Apache CouchDB</a>:
 it is a scalable, fault-tolerant, and schema-free document-oriented database.
 It is used in large and small organizations for a variety of applications where
 traditional SQL databases are not the best solution for the problem at hand.
@@ -68,7 +68,7 @@ and has its own conflict management system.</p>
 <p>A document is an association of metadata and attachment(s). The metadata is the
 set of properties of the document and the attachments are the binaries of the content
 of the document.</p>
-<p>In jIO, metadata is just a dictionnary with keys and values (JSON object), and
+<p>In jIO, metadata is just a dictionary with keys and values (JSON object), and
 attachments are just simple strings.</p>
 <div class="highlight-javascript"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
 2
@@ -117,7 +117,7 @@ attachments are just simple strings.</p>
 </div>
 <div class="section" id="basic-methods">
 <h2>Basic Methods<a class="headerlink" href="#basic-methods" title="Permalink to this headline">¶</a></h2>
-<p>Below you can find sample calls of the main jIO methods. All examples are using
+<p>Below you can see examples of the main jIO methods. All examples are using
 revisions (as in revision storage or replicate revision storage), so you can
 see how method calls should be made with either of these storages.</p>
 <div class="highlight-javascript"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
@@ -206,54 +206,52 @@ see how method calls should be made with either of these storages.</p>
 <span class="c1">// delete a document and its attachment(s)</span>
 <span class="nx">jio_instance</span><span class="p">.</span><span class="nx">remove</span><span class="p">({</span><span class="s2">&quot;_id&quot;</span><span class="o">:</span> <span class="s2">&quot;my_document&quot;</span><span class="p">}).</span>
   <span class="nx">then</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// console.log(response):</span>
+    <span class="c1">// console.log(response);</span>
   <span class="p">});</span>
 
 <span class="c1">// delete an attachment</span>
 <span class="nx">jio_instance</span><span class="p">.</span><span class="nx">removeAttachment</span><span class="p">({</span><span class="s2">&quot;_id&quot;</span><span class="o">:</span> <span class="s2">&quot;my_document&quot;</span><span class="p">,</span> <span class="s2">&quot;_attachment&quot;</span><span class="o">:</span> <span class="s2">&quot;its_attachment&quot;</span><span class="p">}).</span>
   <span class="nx">then</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// console.log(response):</span>
+    <span class="c1">// console.log(response);</span>
   <span class="p">});</span>
 
 <span class="c1">// get all documents</span>
 <span class="nx">jio_instance</span><span class="p">.</span><span class="nx">allDocs</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
-  <span class="c1">// console.log(response):</span>
+  <span class="c1">// console.log(response);</span>
 <span class="p">});</span>
 </pre></div>
 </td></tr></table></div>
 </div>
 <div class="section" id="promises">
 <h2>Promises<a class="headerlink" href="#promises" title="Permalink to this headline">¶</a></h2>
-<p>Each JIO methods returns a Promise object, which allows us to get responses into
+<p>Each jIO method returns a Promise object, which allows us to get responses into
 callback parameters and to chain callbacks with other returned values.</p>
-<p>JIO uses a custom version of <a class="reference external" href="https://github.com/tildeio/rsvp.js">RSVP.js</a>, adding canceler and progression features.</p>
+<p>jIO uses a custom version of <a class="reference external" href="https://github.com/tildeio/rsvp.js">RSVP.js</a>, adding canceler and progression features.</p>
 <p>You can read more about promises:</p>
-<blockquote>
-<div><ul class="simple">
-<li><a class="reference external" href="https://github.com/tildeio/rsvp.js#rsvpjs--">github RSVP.js</a></li>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/tildeio/rsvp.js#rsvpjs--">RSVP.js</a> on GitHub</li>
 <li><a class="reference external" href="http://promisesaplus.com/">Promises/A+</a></li>
 <li><a class="reference external" href="http://wiki.commonjs.org/wiki/Promises">CommonJS Promises</a></li>
 </ul>
-</div></blockquote>
 </div>
 <div class="section" id="method-options-and-callback-responses">
 <h2>Method Options and Callback Responses<a class="headerlink" href="#method-options-and-callback-responses" title="Permalink to this headline">¶</a></h2>
-<p>To retrieve JIO responses, you have to provide callbacks like this:</p>
+<p>To retrieve jIO responses, you have to provide callbacks like this:</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="nx">jio_instance</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="nx">metadata</span><span class="p">,</span> <span class="p">[</span><span class="nx">options</span><span class="p">]).</span>
     <span class="nx">then</span><span class="p">([</span><span class="nx">responseCallback</span><span class="p">],</span> <span class="p">[</span><span class="nx">errorCallback</span><span class="p">],</span> <span class="p">[</span><span class="nx">progressionCallback</span><span class="p">]);</span>
 </pre></div>
 </div>
 <ul class="simple">
-<li>On command success, responseCallback will be called with the JIO response as first parameter.</li>
-<li>On command error, errorCallback will be called with the JIO error as first parameter.</li>
-<li>On command notification, progressionCallback will be called with the storage notification.</li>
+<li>On command success, <tt class="docutils literal"><span class="pre">responseCallback</span></tt> will be called with the jIO response as first parameter.</li>
+<li>On command error, <tt class="docutils literal"><span class="pre">errorCallback</span></tt> will be called with the jIO error as first parameter.</li>
+<li>On command notification, <tt class="docutils literal"><span class="pre">progressionCallback</span></tt> will be called with the storage notification.</li>
 </ul>
-<p>Here is a list of responses returned by JIO according to methods and options:</p>
+<p>Here is a list of responses returned by jIO according to methods and options:</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="19%" />
-<col width="32%" />
-<col width="49%" />
+<col width="17%" />
+<col width="40%" />
+<col width="44%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Option</th>
@@ -263,7 +261,7 @@ callback parameters and to chain callbacks with other returned values.</p>
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td>No options</td>
-<td>post, put, remove</td>
+<td><tt class="docutils literal"><span class="pre">post()</span></tt>, <tt class="docutils literal"><span class="pre">put()</span></tt>, <tt class="docutils literal"><span class="pre">remove()</span></tt></td>
 <td><div class="first last highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
   <span class="s2">&quot;result&quot;</span><span class="o">:</span> <span class="s2">&quot;success&quot;</span><span class="p">,</span>
   <span class="s2">&quot;method&quot;</span><span class="o">:</span> <span class="s2">&quot;post&quot;</span><span class="p">,</span>
@@ -277,7 +275,7 @@ callback parameters and to chain callbacks with other returned values.</p>
 </td>
 </tr>
 <tr class="row-odd"><td>No options</td>
-<td>putAttachment, removeAttachment</td>
+<td><tt class="docutils literal"><span class="pre">putAttachment()</span></tt>, <tt class="docutils literal"><span class="pre">removeAttachment()</span></tt></td>
 <td><div class="first last highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
   <span class="s2">&quot;result&quot;</span><span class="o">:</span> <span class="s2">&quot;success&quot;</span><span class="p">,</span>
   <span class="s2">&quot;method&quot;</span><span class="o">:</span> <span class="s2">&quot;putAttachment&quot;</span><span class="p">,</span>
@@ -292,7 +290,7 @@ callback parameters and to chain callbacks with other returned values.</p>
 </td>
 </tr>
 <tr class="row-even"><td>No options</td>
-<td>get</td>
+<td><tt class="docutils literal"><span class="pre">get()</span></tt></td>
 <td><div class="first last highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
   <span class="s2">&quot;result&quot;</span><span class="o">:</span> <span class="s2">&quot;success&quot;</span><span class="p">,</span>
   <span class="s2">&quot;method&quot;</span><span class="o">:</span> <span class="s2">&quot;get&quot;</span><span class="p">,</span>
@@ -308,7 +306,7 @@ callback parameters and to chain callbacks with other returned values.</p>
 </td>
 </tr>
 <tr class="row-odd"><td>No options</td>
-<td>getAttachment</td>
+<td><tt class="docutils literal"><span class="pre">getAttachment()</span></tt></td>
 <td><div class="first last highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
   <span class="s2">&quot;result&quot;</span><span class="o">:</span> <span class="s2">&quot;success&quot;</span><span class="p">,</span>
   <span class="s2">&quot;method&quot;</span><span class="o">:</span> <span class="s2">&quot;getAttachment&quot;</span><span class="p">,</span>
@@ -323,7 +321,7 @@ callback parameters and to chain callbacks with other returned values.</p>
 </td>
 </tr>
 <tr class="row-even"><td>No option</td>
-<td>allDocs</td>
+<td><tt class="docutils literal"><span class="pre">allDocs()</span></tt></td>
 <td><div class="first last highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
   <span class="s2">&quot;result&quot;</span><span class="o">:</span> <span class="s2">&quot;success&quot;</span><span class="p">,</span>
   <span class="s2">&quot;method&quot;</span><span class="o">:</span> <span class="s2">&quot;allDocs&quot;</span><span class="p">,</span>
@@ -344,7 +342,7 @@ callback parameters and to chain callbacks with other returned values.</p>
 </td>
 </tr>
 <tr class="row-odd"><td>include_docs: true</td>
-<td>allDocs</td>
+<td><tt class="docutils literal"><span class="pre">allDocs()</span></tt></td>
 <td><div class="first last highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
   <span class="s2">&quot;result&quot;</span><span class="o">:</span> <span class="s2">&quot;success&quot;</span><span class="p">,</span>
   <span class="s2">&quot;method&quot;</span><span class="o">:</span> <span class="s2">&quot;allDocs&quot;</span><span class="p">,</span>
@@ -369,7 +367,7 @@ callback parameters and to chain callbacks with other returned values.</p>
 </tr>
 </tbody>
 </table>
-<p>In case of error, the errorCallback first parameter will look like:</p>
+<p>In case of error, the <tt class="docutils literal"><span class="pre">errorCallback</span></tt> first parameter will look like:</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
   <span class="s2">&quot;result&quot;</span><span class="o">:</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span>
   <span class="s2">&quot;method&quot;</span><span class="o">:</span> <span class="s2">&quot;get&quot;</span><span class="p">,</span>
@@ -519,7 +517,7 @@ callback parameters and to chain callbacks with other returned values.</p>
         <li class="right" >
           <a href="download.html" title="Downloads"
              >previous</a> |</li>
-        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">jIO 2.0.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

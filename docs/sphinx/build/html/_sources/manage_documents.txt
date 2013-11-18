@@ -1,11 +1,11 @@
 How to manage documents?
 ========================
 
-JIO is mapped after the CouchDB API and extends them to provide unified, scalable
-and high performance access via Javascript to a wide variety of different
+jIO is mapped after the CouchDB APIs and extends them to provide unified, scalable
+and high performance access via JavaScript to a wide variety of different
 storage backends.
 
-If you are unfamiliar with `Apache CouchDB <http://couchdb.apache.org/>`_:
+If you are not familiar with `Apache CouchDB <http://couchdb.apache.org/>`_:
 it is a scalable, fault-tolerant, and schema-free document-oriented database.
 It is used in large and small organizations for a variety of applications where
 traditional SQL databases are not the best solution for the problem at hand.
@@ -20,7 +20,7 @@ A document is an association of metadata and attachment(s). The metadata is the
 set of properties of the document and the attachments are the binaries of the content
 of the document.
 
-In jIO, metadata is just a dictionnary with keys and values (JSON object), and
+In jIO, metadata is just a dictionary with keys and values (JSON object), and
 attachments are just simple strings.
 
 .. code-block:: javascript
@@ -59,7 +59,7 @@ You can also retrieve document attachment metadata in this object.
 Basic Methods
 -------------
 
-Below you can find sample calls of the main jIO methods. All examples are using
+Below you can see examples of the main jIO methods. All examples are using
 revisions (as in revision storage or replicate revision storage), so you can
 see how method calls should be made with either of these storages.
 
@@ -103,40 +103,40 @@ see how method calls should be made with either of these storages.
     // delete a document and its attachment(s)
     jio_instance.remove({"_id": "my_document"}).
       then(function (response) {
-        // console.log(response):
+        // console.log(response);
       });
 
     // delete an attachment
     jio_instance.removeAttachment({"_id": "my_document", "_attachment": "its_attachment"}).
       then(function (response) {
-        // console.log(response):
+        // console.log(response);
       });
 
     // get all documents
     jio_instance.allDocs().then(function (response) {
-      // console.log(response):
+      // console.log(response);
     });
 
 
 Promises
 --------
 
-Each JIO methods returns a Promise object, which allows us to get responses into
+Each jIO method returns a Promise object, which allows us to get responses into
 callback parameters and to chain callbacks with other returned values.
 
-JIO uses a custom version of `RSVP.js <https://github.com/tildeio/rsvp.js>`_, adding canceler and progression features.
+jIO uses a custom version of `RSVP.js <https://github.com/tildeio/rsvp.js>`_, adding canceler and progression features.
 
 You can read more about promises:
 
- * `github RSVP.js <https://github.com/tildeio/rsvp.js#rsvpjs-->`_
- * `Promises/A+ <http://promisesaplus.com/>`_
- * `CommonJS Promises <http://wiki.commonjs.org/wiki/Promises>`_
+* `RSVP.js <https://github.com/tildeio/rsvp.js#rsvpjs-->`_ on GitHub
+* `Promises/A+ <http://promisesaplus.com/>`_
+* `CommonJS Promises <http://wiki.commonjs.org/wiki/Promises>`_
 
 
 Method Options and Callback Responses
 -------------------------------------
 
-To retrieve JIO responses, you have to provide callbacks like this:
+To retrieve jIO responses, you have to provide callbacks like this:
 
 .. code-block:: javascript
 
@@ -144,103 +144,103 @@ To retrieve JIO responses, you have to provide callbacks like this:
         then([responseCallback], [errorCallback], [progressionCallback]);
 
 
-* On command success, responseCallback will be called with the JIO response as first parameter.
-* On command error, errorCallback will be called with the JIO error as first parameter.
-* On command notification, progressionCallback will be called with the storage notification.
+* On command success, ``responseCallback`` will be called with the jIO response as first parameter.
+* On command error, ``errorCallback`` will be called with the jIO error as first parameter.
+* On command notification, ``progressionCallback`` will be called with the storage notification.
 
-Here is a list of responses returned by JIO according to methods and options:
-
-
-==================   ===============================   ======================================
- Option              Available for                     Response (Callback first parameter)
-==================   ===============================   ======================================
-No options           post, put, remove                 .. code-block:: javascript
-
-                                                        {
-                                                          "result": "success",
-                                                          "method": "post",
-                                                          // or put or remove
-                                                          "id": "my_doc_id",
-                                                          "status": 204,
-                                                          "statusText": "No Content"
-                                                        }
-No options           putAttachment, removeAttachment   .. code-block:: javascript
-
-                                                        {
-                                                          "result": "success",
-                                                          "method": "putAttachment",
-                                                          // or removeAttachment
-                                                          "id": "my_doc_id",
-                                                          "attachment": "my_attachment_id",
-                                                          "status": 204,
-                                                          "statusText": "No Content"
-                                                        }
-No options           get                               .. code-block:: javascript
-
-                                                        {
-                                                          "result": "success",
-                                                          "method": "get",
-                                                          "id": "my_doc_id",
-                                                          "status": 200,
-                                                          "statusText": "Ok",
-                                                          "data": {
-                                                            // Here, the document metadata
-                                                          }
-                                                        }
-No options           getAttachment                     .. code-block:: javascript
-
-                                                        {
-                                                          "result": "success",
-                                                          "method": "getAttachment",
-                                                          "id": "my_doc_id",
-                                                          "attachment": "my_attachment_id",
-                                                          "status": 200,
-                                                          "statusText": "Ok",
-                                                          "data": Blob // Here, the attachment content
-                                                        }
-No option            allDocs                           .. code-block:: javascript
-
-                                                        {
-                                                          "result": "success",
-                                                          "method": "allDocs",
-                                                          "id": "my_doc_id",
-                                                          "status": 200,
-                                                          "statusText": "Ok",
-                                                          "data":  {
-                                                            "total_rows": 1,
-                                                            "rows": [{
-                                                              "id": "mydoc",
-                                                              "key": "mydoc", // optional
-                                                              "value": {},
-                                                            }]
-                                                          }
-                                                        }
-include_docs: true   allDocs                           .. code-block:: javascript
-
-                                                        {
-                                                          "result": "success",
-                                                          "method": "allDocs",
-                                                          "id": "my_doc_id",
-                                                          "status": 200,
-                                                          "statusText": "Ok",
-                                                          "data":  {
-                                                            "total_rows": 1,
-                                                            "rows": [{
-                                                              "id": "mydoc",
-                                                              "key": "mydoc", // optional
-                                                              "value": {},
-                                                              "doc": {
-                                                                // Here, "mydoc" metadata
-                                                              }
-                                                            }]
-                                                          }
-                                                        }
-==================   ===============================   ======================================
+Here is a list of responses returned by jIO according to methods and options:
 
 
+==================   ===========================================   ===============================================
+ Option              Available for                                 Response (Callback first parameter)
+==================   ===========================================   ===============================================
+No options           ``post()``, ``put()``, ``remove()``           .. code-block:: javascript
+ 
+                                                                    {
+                                                                      "result": "success",
+                                                                      "method": "post",
+                                                                      // or put or remove
+                                                                      "id": "my_doc_id",
+                                                                      "status": 204,
+                                                                      "statusText": "No Content"
+                                                                    }
+No options           ``putAttachment()``, ``removeAttachment()``   .. code-block:: javascript
+
+                                                                    {
+                                                                      "result": "success",
+                                                                      "method": "putAttachment",
+                                                                      // or removeAttachment
+                                                                      "id": "my_doc_id",
+                                                                      "attachment": "my_attachment_id",
+                                                                      "status": 204,
+                                                                      "statusText": "No Content"
+                                                                    }
+No options           ``get()``                                     .. code-block:: javascript
+
+                                                                    {
+                                                                      "result": "success",
+                                                                      "method": "get",
+                                                                      "id": "my_doc_id",
+                                                                      "status": 200,
+                                                                      "statusText": "Ok",
+                                                                      "data": {
+                                                                        // Here, the document metadata
+                                                                      }
+                                                                    }
+No options           ``getAttachment()``                           .. code-block:: javascript
+
+                                                                    {
+                                                                      "result": "success",
+                                                                      "method": "getAttachment",
+                                                                      "id": "my_doc_id",
+                                                                      "attachment": "my_attachment_id",
+                                                                      "status": 200,
+                                                                      "statusText": "Ok",
+                                                                      "data": Blob // Here, the attachment content
+                                                                    }
+No option            ``allDocs()``                                 .. code-block:: javascript
+
+                                                                    {
+                                                                      "result": "success",
+                                                                      "method": "allDocs",
+                                                                      "id": "my_doc_id",
+                                                                      "status": 200,
+                                                                      "statusText": "Ok",
+                                                                      "data":  {
+                                                                        "total_rows": 1,
+                                                                        "rows": [{
+                                                                          "id": "mydoc",
+                                                                          "key": "mydoc", // optional
+                                                                          "value": {},
+                                                                        }]
+                                                                      }
+                                                                    }
+include_docs: true   ``allDocs()``                                 .. code-block:: javascript
+
+                                                                    {
+                                                                      "result": "success",
+                                                                      "method": "allDocs",
+                                                                      "id": "my_doc_id",
+                                                                      "status": 200,
+                                                                      "statusText": "Ok",
+                                                                      "data":  {
+                                                                        "total_rows": 1,
+                                                                        "rows": [{
+                                                                          "id": "mydoc",
+                                                                          "key": "mydoc", // optional
+                                                                          "value": {},
+                                                                          "doc": {
+                                                                            // Here, "mydoc" metadata
+                                                                          }
+                                                                        }]
+                                                                      }
+                                                                    }
+==================   ===========================================   ===============================================
 
 
-In case of error, the errorCallback first parameter will look like:
+
+
+In case of error, the ``errorCallback`` first parameter will look like:
 
 .. code-block:: javascript
 

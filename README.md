@@ -5,8 +5,8 @@
 
 ### Getting Started
 
-To set up jIO include jio.js, dependencies and the connectors for the storages
-you want to use in your page header (note that more dependencies may be required
+To setup you should jIO include jio.js, dependencies and the connectors for the storages
+you want to use in the HTML page header (note that more dependencies may be required
 depending on type of storages being used):
 
     <!-- jio + dependency -->
@@ -31,7 +31,7 @@ Then create your jIO instance like this:
 
 ### Documents and Methods
 
-Documents are JSON strings that contain *meta-data* (properties, like a filename)
+Documents are JSON strings that contain *metadata* (properties, like a filename)
 and *attachments* (optional content, for example *image.jpg*).
 
 jIO exposes the following methods to *create*, *read*, *update* and *delete* documents
@@ -41,7 +41,7 @@ each method, please refer to the documentation):
     // create and store new document
     jio_instance.post({"title": "some title"}).
       then(function (response) {
-        // console.log(response):
+        // console.log(response);
         // {
         //   "result": "success",
         //   "id": "404aef5e-22cc-4a64-a292-37776c6464a3" // Generated id
@@ -52,7 +52,7 @@ each method, please refer to the documentation):
     // create or update an existing document
     jio_instance.put({"_id": "my_document", "title": "New Title"}).
       then(function (response) {
-        // console.log(response):
+        // console.log(response);
         // {
         //   "result": "success",
         //   "id": "my_document",
@@ -64,7 +64,7 @@ each method, please refer to the documentation):
     jio_instance.putAttachment({"_id": "my_document", "_attachment": "its_attachment",
                                 "_data": "abc", "_mimetype": "text/plain"}).
       then(function (response) {
-        // console.log(response):
+        // console.log(response);
         // {
         //   "result": "success",
         //   "id": "my_document",
@@ -106,7 +106,7 @@ each method, please refer to the documentation):
     // delete a document and its attachment(s)
     jio_instance.remove({"_id": "my_document"}).
       then(function (response) {
-        // console.log(response):
+        // console.log(response);
         // {
         //   "result": "success",
         //   "id": "my_document"
@@ -116,7 +116,7 @@ each method, please refer to the documentation):
     // delete an attachement
     jio_instance.removeAttachment({"_id": "my_document", "_attachment": "its_attachment"}).
       then(function (response) {
-        // console.log(response):
+        // console.log(response);
         // {
         //   "result": "success",
         //   "id": "my_document",
@@ -126,7 +126,7 @@ each method, please refer to the documentation):
 
     // get all documents
     jio_instance.allDocs().then(function (response) {
-      // console.log(response):
+      // console.log(response);
       // {
       //   "data": {
       //     "total_rows": 1,
@@ -301,7 +301,7 @@ create your own connector, please also refer to the [documentation](https://www.
 
 jIO uses complex-queries manager, which can be run on top of the allDocs()
 method to query documents in the storage tree. A sample query would look like
-this (note, that allDocs and complex queries cannot be run on every storage and
+this (note that not all storages support allDocs and complex queries, and
 that pre-querying of documents on distant storages should best be done
 server-side):
 
@@ -315,7 +315,7 @@ server-side):
       // fields to return in response
       "select_list": [<string A>, <string B>]
     }).then(function (response) {
-      // console.log(response):
+      // console.log(response);
       // {
       //   "total_rows": 1,
       //   "rows": [{
@@ -328,22 +328,22 @@ server-side):
       // }
     });
 
-To find out more about complex queries, please refer to the documentation
+To find out more about complex queries, please refer to the documentation.
 
 ### Task Management
 
 jIO is running a task queue manager in the background which processes incoming
-tasks according to set of defined rules. To find out more and including how to
+tasks according to a set of defined rules. To find out more including how to
 define your own execution rules, please refer to the documentation.
 
 ### Conflict Management
 
-As jIO allows to manage and share documents across multiple storage locactions
-it is likely for conflicts to occur (= multiple versions of a single document
+As jIO allows to manage and share documents across multiple storage locactions,
+conflicts may happen (i.e. multiple versions of a single document
 existing in the storage tree). jIO manages conflicts by ensuring that every
 version of a document is available on every storage and that conflicts are
 accessible (and solvable) using the *conflicts: true* option when using the
-respective jIO methods. For more info on conflicts and available options, please
+related jIO methods. For more info on conflicts and available options, please
 refer to the documentation.
 
 ### Crash-Proof

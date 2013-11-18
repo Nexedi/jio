@@ -1,13 +1,13 @@
 
 .. _gid-storage:
 
-JIO GIDStorage
+jIO GIDStorage
 ==============
 
 A storage to enable interoperability between all kind of storages.
 
 A global ID (GID) is a document id which represents a unique document. This ID
-will be used to find this unique document on all kind of backends.
+is then used to find this unique document on all types of backends.
 
 This storage uses sub storage allDocs and complex queries to find unique documents, and converts their ids to gids.
 
@@ -43,7 +43,7 @@ Example:
   }
 
 
-This description tells the *GIDStorage* to use 2 metadata (``type``, ``title``) to define a
+This description tells the *GIDStorage* to use 2 metadata attributes (``type``, ``title``) to define a
 document as unique in the default case. If the document is of type ``Text``, then
 the handler will use 3 metadata (``type``, ``title``, ``language``).
 If these constraints are not respected, then the storage returns an error telling us to
@@ -72,6 +72,7 @@ constraints:
 
 
 Available metadata types are:
+
 * ``"json"`` - The json value of the metadata.
 * ``"string"`` - The value as string if it is not a list.
 * ``"list"`` - The value as list.
@@ -86,9 +87,9 @@ Available metadata types are:
 Document Requirements
 ---------------------
 
-A metadata value must be a string. This string can be placed in an object which
-key is 'content'. The object can contains custom keys with string values. A
-metadata can contain several values. Example:
+A metadata value must be a string. This string can be placed in an attribute within
+a ``"content"`` key. The object can contains custom keys with string values. A
+metadata object can contain several values. Example:
 
 .. code-block:: javascript
 
@@ -109,7 +110,7 @@ metadata can contain several values. Example:
   }
 
 
-Metadata which name begin with an underscore can contain anything.
+Metadata attributes which names begin with an underscore can contain anything.
 
 .. code-block:: javascript
 
@@ -121,7 +122,8 @@ Storage Requirements
 --------------------
 
 * This storage is not compatible with *RevisionStorage* and *ReplicateRevisionStorage*.
-* Sub storage have to support complex queries options and ``include_docs`` option.
+* Sub storages have to support options for ``complex queries`` and ``include_docs``.
+
 
 Dependencies
 ------------
@@ -131,7 +133,7 @@ No dependency.
 Suggested storage tree
 ----------------------
 
-Replication Between Storage::
+Replication between storages::
 
   Replicate Storage
   +-- GID Storage
@@ -143,7 +145,7 @@ Replication Between Storage::
 
 **CAUTION: All gid storage must have the same description!**
 
-Offline Application Usage::
+Offline application usage::
 
   Replicate Storage
   +-- Index Storage with DB in Local Storage

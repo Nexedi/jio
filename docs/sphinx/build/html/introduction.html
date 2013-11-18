@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Introduction &mdash; JIO 2.0.0 documentation</title>
+    <title>Introduction &mdash; jIO 2.0.0 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -25,9 +25,9 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="JIO 2.0.0 documentation" href="index.html" />
+    <link rel="top" title="jIO 2.0.0 documentation" href="index.html" />
     <link rel="next" title="Downloads" href="download.html" />
-    <link rel="prev" title="Welcome to JIO’s documentation!" href="index.html" /> 
+    <link rel="prev" title="Welcome to jIO’s documentation!" href="index.html" /> 
   </head>
   <body>
     <div class="related">
@@ -40,9 +40,9 @@
           <a href="download.html" title="Downloads"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="index.html" title="Welcome to JIO’s documentation!"
+          <a href="index.html" title="Welcome to jIO’s documentation!"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">jIO 2.0.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -55,7 +55,7 @@
 <h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="what-is-jio">
 <h2>What is jIO?<a class="headerlink" href="#what-is-jio" title="Permalink to this headline">¶</a></h2>
-<p>JIO is a JavaScript library that allows to manage JSON documents on local or
+<p>jIO is a JavaScript library that allows to manage JSON documents on local or
 remote storages in asynchronous fashion. jIO is an abstracted API mapped after
 CouchDB, that offers connectors to multiple storages, special handlers to
 enhance functionality (replication, revisions, indexing) and a query module to
@@ -63,14 +63,14 @@ retrieve documents and specific information across storage trees.</p>
 </div>
 <div class="section" id="how-does-it-work">
 <h2>How does it work?<a class="headerlink" href="#how-does-it-work" title="Permalink to this headline">¶</a></h2>
-<p>JIO is separated into three parts - jIO core and storage library(ies). The core
+<p>jIO is composed of two parts - jIO core and storage library(ies). The core
 is using storage libraries (connectors) to interact with the associated remote
-storage servers. Some queries can be used on top of the jIO allDocs method to
+storage servers. Some queries can be used on top of the jIO <tt class="docutils literal"><span class="pre">allDocs()</span></tt> method to
 query documents based on defined criteria.</p>
-<p>JIO uses a job management system, so every method called adds a job into a
+<p>jIO uses a job management system, so every method call adds a job into a
 queue. The queue is copied in the browser&#8217;s local storage (by default), so it
-can be restored in case of a browser crash. Jobs are being invoked
-asynchronously with ongoing jobs not being able to re-trigger to prevent
+can be restored in case of browser crash. Jobs are invoked
+asynchronously and ongoing jobs are not able to re-trigger to prevent
 conflicts.</p>
 </div>
 <div class="section" id="getting-started">
@@ -78,7 +78,7 @@ conflicts.</p>
 <p>This walkthrough is designed to get you started using a basic jIO instance.</p>
 <ol class="arabic">
 <li><p class="first">Download jIO core, the storages you want to use as well as the
-complex-queries scripts as well as the dependencies required for the storages
+complex-queries scripts and the dependencies required for the storages
 you intend to use.  <a class="reference internal" href="download.html#download-fork"><em>[Download &amp; Fork]</em></a></p>
 </li>
 <li><p class="first">Add the scripts to your HTML page in the following order:</p>
@@ -94,7 +94,7 @@ you intend to use.  <a class="reference internal" href="download.html#download-f
 
 &lt;script ...&gt;</pre>
 </div>
-<p>With require js, the main.js will be like this:</p>
+<p>With <a class="reference external" href="http://requirejs.org/">RequireJS</a>, the main.js will look like:</p>
 <div class="highlight-javascript"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
  2
  3
@@ -125,7 +125,7 @@ you intend to use.  <a class="reference internal" href="download.html#download-f
 </pre></div>
 </td></tr></table></div>
 </li>
-<li><p class="first">jIO connects to a number of storages and allows to add handlers (or
+<li><p class="first">jIO connects to a number of storages and allows adding handlers (or
 functions) to specifc storages.
 You can use both handlers and available storages to build a storage
 tree across which all documents will be maintained and managed by jIO.</p>
@@ -135,59 +135,57 @@ tree across which all documents will be maintained and managed by jIO.</p>
 </pre></div>
 </div>
 </li>
-</ol>
-<ol class="arabic">
-<li><p class="first">The jIO API provides six main methods to manage documents across the storage(s) specified in your jIO storage tree.</p>
+<li><p class="first">The jIO API provides ten main methods to manage documents across the storage(s) specified in your jIO storage tree.</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="16%" />
-<col width="48%" />
-<col width="36%" />
+<col width="19%" />
+<col width="46%" />
+<col width="35%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Method</th>
-<th class="head">Sample Call</th>
+<th class="head">Example call</th>
 <th class="head">Description</th>
 </tr>
 </thead>
 <tbody valign="top">
-<tr class="row-even"><td><cite>post</cite></td>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">post()</span></tt></td>
 <td><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">my_jio</span></span><span class="punctuation"><span class="pre">.</span></span><span class="name other"><span class="pre">post</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin"><span class="pre">document</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">options</span></span><span class="punctuation"><span class="pre">]);</span></span></tt></td>
 <td>Creates a new document</td>
 </tr>
-<tr class="row-odd"><td><cite>put</cite></td>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">put()</span></tt></td>
 <td><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">my_jio</span></span><span class="punctuation"><span class="pre">.</span></span><span class="name other"><span class="pre">put</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin"><span class="pre">document</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">options</span></span><span class="punctuation"><span class="pre">]);</span></span></tt></td>
 <td>Creates/Updates a document</td>
 </tr>
-<tr class="row-even"><td><cite>putAttachment</cite></td>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">putAttachment()</span></tt></td>
 <td><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">my_jio</span></span><span class="punctuation"><span class="pre">.</span></span><span class="name other"><span class="pre">putAttachement</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name other"><span class="pre">attachment</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">options</span></span><span class="punctuation"><span class="pre">]);</span></span></tt></td>
 <td>Updates/Adds an attachment to a document</td>
 </tr>
-<tr class="row-odd"><td><cite>get</cite></td>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">get()</span></tt></td>
 <td><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">my_jio</span></span><span class="punctuation"><span class="pre">.</span></span><span class="name other"><span class="pre">get</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin"><span class="pre">document</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">options</span></span><span class="punctuation"><span class="pre">]);</span></span></tt></td>
 <td>Reads a document</td>
 </tr>
-<tr class="row-even"><td><cite>getAttachment</cite></td>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">getAttachment()</span></tt></td>
 <td><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">my_jio</span></span><span class="punctuation"><span class="pre">.</span></span><span class="name other"><span class="pre">getAttachment</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name other"><span class="pre">attachment</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">options</span></span><span class="punctuation"><span class="pre">]);</span></span></tt></td>
 <td>Reads a document attachment</td>
 </tr>
-<tr class="row-odd"><td><cite>remove</cite></td>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">remove()</span></tt></td>
 <td><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">my_jio</span></span><span class="punctuation"><span class="pre">.</span></span><span class="name other"><span class="pre">remove</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin"><span class="pre">document</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">options</span></span><span class="punctuation"><span class="pre">]);</span></span></tt></td>
 <td>Deletes a document and its attachments</td>
 </tr>
-<tr class="row-even"><td><cite>removeAttachment</cite></td>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">removeAttachment()</span></tt></td>
 <td><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">my_jio</span></span><span class="punctuation"><span class="pre">.</span></span><span class="name other"><span class="pre">removeAttachment</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name other"><span class="pre">attachment</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">options</span></span><span class="punctuation"><span class="pre">]);</span></span></tt></td>
 <td>Deletes a document attachment</td>
 </tr>
-<tr class="row-odd"><td><cite>allDocs</cite></td>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">allDocs()</span></tt></td>
 <td><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">my_jio</span></span><span class="punctuation"><span class="pre">.</span></span><span class="name other"><span class="pre">allDocs</span></span><span class="punctuation"><span class="pre">(</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">options</span></span><span class="punctuation"><span class="pre">]);</span></span></tt></td>
 <td>Retrieves a list of existing documents</td>
 </tr>
-<tr class="row-even"><td><cite>check</cite></td>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">check()</span></tt></td>
 <td><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">my_jio</span></span><span class="punctuation"><span class="pre">.</span></span><span class="name other"><span class="pre">check</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin"><span class="pre">document</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">options</span></span><span class="punctuation"><span class="pre">]);</span></span></tt></td>
 <td>Check the document state</td>
 </tr>
-<tr class="row-odd"><td><cite>repair</cite></td>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">repair()</span></tt></td>
 <td><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">my_jio</span></span><span class="punctuation"><span class="pre">.</span></span><span class="name other"><span class="pre">repair</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin"><span class="pre">document</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">options</span></span><span class="punctuation"><span class="pre">]);</span></span></tt></td>
 <td>Repair the document</td>
 </tr>
@@ -219,7 +217,7 @@ tree across which all documents will be maintained and managed by jIO.</p>
 
   <h4>Previous topic</h4>
   <p class="topless"><a href="index.html"
-                        title="previous chapter">Welcome to JIO&#8217;s documentation!</a></p>
+                        title="previous chapter">Welcome to jIO&#8217;s documentation!</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="download.html"
                         title="next chapter">Downloads</a></p>
@@ -255,9 +253,9 @@ tree across which all documents will be maintained and managed by jIO.</p>
           <a href="download.html" title="Downloads"
              >next</a> |</li>
         <li class="right" >
-          <a href="index.html" title="Welcome to JIO’s documentation!"
+          <a href="index.html" title="Welcome to jIO’s documentation!"
              >previous</a> |</li>
-        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">jIO 2.0.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

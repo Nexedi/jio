@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>JIO Complex Queries &mdash; JIO 2.0.0 documentation</title>
+    <title>jIO Complex Queries &mdash; jIO 2.0.0 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -25,9 +25,9 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="JIO 2.0.0 documentation" href="index.html" />
+    <link rel="top" title="jIO 2.0.0 documentation" href="index.html" />
     <link rel="next" title="Metadata" href="metadata.html" />
-    <link rel="prev" title="JIO GIDStorage" href="gid_storage.html" /> 
+    <link rel="prev" title="jIO GIDStorage" href="gid_storage.html" /> 
   </head>
   <body>
     <div class="related">
@@ -40,9 +40,9 @@
           <a href="metadata.html" title="Metadata"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="gid_storage.html" title="JIO GIDStorage"
+          <a href="gid_storage.html" title="jIO GIDStorage"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">jIO 2.0.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -52,25 +52,25 @@
           <div class="body">
             
   <div class="section" id="jio-complex-queries">
-<h1>JIO Complex Queries<a class="headerlink" href="#jio-complex-queries" title="Permalink to this headline">¶</a></h1>
+<h1>jIO Complex Queries<a class="headerlink" href="#jio-complex-queries" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="what-are-complex-queries">
 <h2>What are Complex Queries?<a class="headerlink" href="#what-are-complex-queries" title="Permalink to this headline">¶</a></h2>
-<p>In jIO, a complex query can tell a storage server to select, filter, sort, or
+<p>In jIO, a complex query can ask a storage server to select, filter, sort, or
 limit a document list before sending it back. If the server is not able to do
 so, the complex query tool can act on the retreived list by itself. Only the
-allDocs method can use complex queries.</p>
+<tt class="docutils literal"><span class="pre">allDocs()</span></tt> method can use complex queries.</p>
 <p>A query can either be a string (using a specific language useful for writing
 queries), or it can be a tree of objects (useful to browse queries). To handle
 complex queries, jIO uses a parsed grammar file which is compiled using <a class="reference external" href="http://jscc.phorward-software.com/">JSCC</a>.</p>
 </div>
 <div class="section" id="why-use-complex-queries">
 <h2>Why use Complex Queries?<a class="headerlink" href="#why-use-complex-queries" title="Permalink to this headline">¶</a></h2>
-<p>Complex queries can be used similar to database queries. So they are useful to:</p>
+<p>Complex queries can be used like database queries, for tasks such as:</p>
 <ul class="simple">
 <li>search a specific document</li>
 <li>sort a list of documents in a certain order</li>
 <li>avoid retrieving a list of ten thousand documents</li>
-<li>limit the list to show only xy documents by page</li>
+<li>limit the list to show only N documents per page</li>
 </ul>
 <p>For some storages (like localStorage), complex queries can be a powerful tool
 to query accessible documents. When querying documents on a distant storage,
@@ -82,7 +82,8 @@ itself.</p>
 </div>
 <div class="section" id="how-to-use-complex-queries-with-jio">
 <h2>How to use Complex Queries with jIO?<a class="headerlink" href="#how-to-use-complex-queries-with-jio" title="Permalink to this headline">¶</a></h2>
-<p>Complex queries can be triggered by including the option named query in the allDocs method call. An example would be:</p>
+<p>Complex queries can be triggered by including the option named query in the <tt class="docutils literal"><span class="pre">allDocs()</span></tt> method call.</p>
+<p>Example:</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">options</span> <span class="o">=</span> <span class="p">{};</span>
 
 <span class="c1">// search text query</span>
@@ -119,9 +120,9 @@ itself.</p>
 </div>
 <div class="section" id="how-to-use-complex-queries-outside-jio">
 <h2>How to use Complex Queries outside jIO?<a class="headerlink" href="#how-to-use-complex-queries-outside-jio" title="Permalink to this headline">¶</a></h2>
-<p>Complex Queries provides an API - which namespace is complex_queries. Please
-also refer to the <a class="reference external" href="http://git.erp5.org/gitweb/jio.git/blob/HEAD:/examples/complex_example.html?js=1">Complex Queries sample page</a>
-on how to use these methods in- and outside jIO. The module provides:</p>
+<p>Complex Queries provides an API - which namespace is complex_queries.
+Refer to the <a class="reference external" href="http://git.erp5.org/gitweb/jio.git/blob/HEAD:/examples/complex_example.html?js=1">Complex Queries sample page</a>
+for how to use these methods, in and outside jIO. The module provides:</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
   <span class="nx">parseStringToObject</span><span class="o">:</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">parseStringToObject</span><span class="p">],</span>
   <span class="nx">stringEscapeRegexpCharacters</span><span class="o">:</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">stringEscapeRegexpCharacters</span><span class="p">],</span>
@@ -197,7 +198,7 @@ want to use a wildcard, just set the wildcard character to an empty string.</p>
 components because criteria like filters will be changed frequently by the
 component (change <tt class="docutils literal"><span class="pre">limit:</span> <span class="pre">[0,</span> <span class="pre">10]</span></tt> to <tt class="docutils literal"><span class="pre">limit:</span> <span class="pre">[10,</span> <span class="pre">10]</span></tt> or <tt class="docutils literal"><span class="pre">sort_on:</span> <span class="pre">[['title',</span>
 <span class="pre">'ascending']]</span></tt> to <tt class="docutils literal"><span class="pre">sort_on:</span> <span class="pre">[['creator',</span> <span class="pre">'ascending']]</span></tt>) and each component must
-have their own default properties to keep their own behavior.</p>
+have its own default properties to keep their own behavior.</p>
 </div>
 <div class="section" id="convert-complex-queries-into-another-type">
 <h3>Convert Complex Queries into another type<a class="headerlink" href="#convert-complex-queries-into-another-type" title="Permalink to this headline">¶</a></h3>
@@ -367,7 +368,7 @@ ignore: " "</pre>
             </a></p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">JIO Complex Queries</a><ul>
+<li><a class="reference internal" href="#">jIO Complex Queries</a><ul>
 <li><a class="reference internal" href="#what-are-complex-queries">What are Complex Queries?</a></li>
 <li><a class="reference internal" href="#why-use-complex-queries">Why use Complex Queries?</a></li>
 <li><a class="reference internal" href="#how-to-use-complex-queries-with-jio">How to use Complex Queries with jIO?</a></li>
@@ -385,7 +386,7 @@ ignore: " "</pre>
 
   <h4>Previous topic</h4>
   <p class="topless"><a href="gid_storage.html"
-                        title="previous chapter">JIO GIDStorage</a></p>
+                        title="previous chapter">jIO GIDStorage</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="metadata.html"
                         title="next chapter">Metadata</a></p>
@@ -421,9 +422,9 @@ ignore: " "</pre>
           <a href="metadata.html" title="Metadata"
              >next</a> |</li>
         <li class="right" >
-          <a href="gid_storage.html" title="JIO GIDStorage"
+          <a href="gid_storage.html" title="jIO GIDStorage"
              >previous</a> |</li>
-        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">jIO 2.0.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

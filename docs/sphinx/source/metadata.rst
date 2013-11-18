@@ -14,9 +14,8 @@ The word "metadata" means "data about data". Metadata articulates a context for
 objects of interest -- "resources" such as MP3 files, library books, or
 satellite images -- in the form of "resource descriptions". As a tradition,
 resource description dates back to the earliest archives and library catalogs.
-The modern "metadata" field that gave rise to Dublin Core and other recent
-standards emerged with the Web revolution of the mid-1990s.
-http://dublincore.org/metadata-basics/
+During the Web revolution of the mid-1990s, `Dublic Core <http://dublincore.org/metadata-basics/>`_
+has emerged as one of the prominent metadata standards.
 
 Why use metadata?
 -----------------
@@ -61,10 +60,10 @@ List of metadata to use
 Identification
 ^^^^^^^^^^^^^^
 
-* **"_id"**, a specific jIO metadata which helps the storage to find a document
+* **_id**, a specific jIO metadata which helps the storage to find a document
   (can be a real path name, a dc:identifier, a uuid, ...). **String Only**
 
-* **"identifer"**, :js:`{"identifier": "http://domain/jio_home_page"}, {"identifier": "urn:ISBN:978-1-2345-6789-X"},
+* **identifer**, :js:`{"identifier": "http://domain/jio_home_page"}, {"identifier": "urn:ISBN:978-1-2345-6789-X"},
   {"identifier": [{"scheme": "DCTERMS.URI", "content": "http://domain/jio_home_page"}]}`
 
   an unambiguous reference to the resource within a given context. Recommended
@@ -74,14 +73,14 @@ Identification
   Resource Locator (URL), the Digital Object Identifier (DOI) and the
   International Standard Book Number (ISBN).
 
-* **"format"**, :js:`{"format": ["text/html", "52 kB"]}, {"format": ["image/jpeg", "100 x 100 pixels", "13.2 KiB"]}`
+* **format**, :js:`{"format": ["text/html", "52 kB"]}, {"format": ["image/jpeg", "100 x 100 pixels", "13.2 KiB"]}`
 
   the physical or digital manifestation of the resource. Typically, Format may
   include the media-type or dimensions of the resource. Examples of dimensions
   include size and duration. Format may be used to determine the software,
   hardware or other equipment needed to display or operate the resource.
 
-* **"date"**, :js:`{"date": "2011-12-13T14:15:16Z"}, {"date": {"scheme": "DCTERMS.W3CDTF", "content": "2011-12-13"}}`
+* **date**, :js:`{"date": "2011-12-13T14:15:16Z"}, {"date": {"scheme": "DCTERMS.W3CDTF", "content": "2011-12-13"}}`
 
   a date associated with an event in the life cycle of the resource. Typically,
   Date will be associated with the creation or availability of the resource.
@@ -89,7 +88,7 @@ Identification
   of ISO 8601 `Date and Time Formats, W3C Note <http://www.w3.org/TR/NOTE-datetime>`_
   and follows the YYYY-MM-DD format.
 
-* **"type"**, :js:`{"type": "Text"}, {"type": "Image"}, {"type": "Dataset"}`
+* **type**, :js:`{"type": "Text"}, {"type": "Image"}, {"type": "Dataset"}`
 
   the nature or genre of the content of the resource. Type includes terms describing
   general categories, functions, genres, or aggregation levels for content.
@@ -100,26 +99,26 @@ Identification
 Intellectual property
 ^^^^^^^^^^^^^^^^^^^^^
 
-* **"creator"**, :js:`{"creator": "Tristan Cavelier"}, {"creator": ["Tristan Cavelier", "Sven Franck"]}`
+* **creator**, :js:`{"creator": "Tristan Cavelier"}, {"creator": ["Tristan Cavelier", "Sven Franck"]}`
 
   an entity primarily responsible for creating the content of the resource.
   Examples of a Creator include a person, an organization, or a service.
   Typically the name of the Creator should be used to indicate the entity.
 
-* **"publisher"**, :js:`{"publisher": "Nexedi"}`
+* **publisher**, :js:`{"publisher": "Nexedi"}`
 
   the entity responsible for making the resource available. Examples of a
   Publisher include a person, an organization, or a service. Typically, the name
   of a Publisher should be used to indicate the entity.
 
-* **"contributor"**, :js:`{"contributor": ["Full Name", "Full Name", ...]}`
+* **contributor**, :js:`{"contributor": ["Full Name", "Full Name", ...]}`
 
   an entity responsible for making contributions to the content of the
   resource. Examples of a Contributor include a person, an organization or a
   service. Typically, the name of a Contributor should be used to indicate the
   entity.
 
-* **"rights"**, :js:`{"rights": "Access limited to members"}, {"rights": "https://www.j-io.org/documentation/jio-documentation/#copyright-and-license"}`
+* **rights**, :js:`{"rights": "Access limited to members"}, {"rights": "https://www.j-io.org/documentation/jio-documentation/#copyright-and-license"}`
 
   information about rights held in and over the resource. Typically a Rights
   element will contain a rights management statement for the resource, or
@@ -132,24 +131,24 @@ Intellectual property
 Content
 ^^^^^^^
 
-* **"title"**, :js:`{"title": "jIO Home Page"}`
+* **title**, :js:`{"title": "jIO Home Page"}`
 
   the name given to the resource. Typically, a Title will be a name by which the resource is formally known.
 
-* **"subject"**, :js:`{"subject": "jIO"}, {"subject": ["jIO", "basics"]}`
+* **subject**, :js:`{"subject": "jIO"}, {"subject": ["jIO", "basics"]}`
 
   the topic of the content of the resource. Typically, a Subject will be
   expressed as keywords or key phrases or classification codes that describe the
   topic of the resource. Recommended best practice is to select a value from a
   controlled vocabulary or formal classification scheme.
 
-* **"description"**, :js:`{"description": "Simple guide to show the basics of jIO"}, {"description": {"lang": "fr", "content": "Ma description"}}`
+* **description**, :js:`{"description": "Simple guide to show the basics of jIO"}, {"description": {"lang": "fr", "content": "Ma description"}}`
 
   an account of the content of the resource. Description may include but is not
   limited to: an abstract, table of contents, reference to a graphical
   representation of content or a free-text account of the content.
 
-* **"language"**, :js:`{"language": "en"}`
+* **language**, :js:`{"language": "en"}`
 
   the language of the intellectual content of the resource. Recommended best
   practice for the values of the Language element is defined by `RFC 3066 <http://www.ietf.org/rfc/rfc3066.txt>`_
@@ -158,20 +157,20 @@ Content
   or "eng" for English, "akk" for Akkadian, and "en-GB" for English used in the
   United Kingdom.
 
-* **"source"**, :js:`{"source": ["Image taken from a drawing by Mr. Artist", "<phone number>"]}`,
+* **source**, :js:`{"source": ["Image taken from a drawing by Mr. Artist", "<phone number>"]}`,
 
   a Reference to a resource from which the present resource is derived. The
   present resource may be derived from the Source resource in whole or part.
   Recommended best practice is to reference the resource by means of a string or
   number conforming to a formal identification system.
 
-* **"relation"**, :js:`{"relation": "Resilience project"}`
+* **relation**, :js:`{"relation": "Resilience project"}`
 
   a reference to a related resource. Recommended best practice is to reference
   the resource by means of a string or number conforming to a formal
   identification system.
 
-* **"coverage"**, :js:`{"coverage": "France"}`
+* **coverage**, :js:`{"coverage": "France"}`
 
   the extent or scope of the content of the resource. Coverage will typically
   include spatial location (a place name or geographic co-ordinates), temporal
@@ -182,13 +181,13 @@ Content
   places or time periods should be used in preference to numeric identifiers such
   as sets of co-ordinates or date ranges.
 
-* **"category"**, :js:`{"category": ["parent/26323", "resilience/javascript", "javascript/library/io"]}`
+* **category**, :js:`{"category": ["parent/26323", "resilience/javascript", "javascript/library/io"]}`
 
   the category the resource is associated with. The categories may look like
   navigational facets, they correspond to the properties of the resource which
-  can be generated with metadata or some other informations (see `faceted search <https://en.wikipedia.org/wiki/Faceted_search>`_).
+  can be generated with metadata or some other information (see `faceted search <https://en.wikipedia.org/wiki/Faceted_search>`_).
 
-* **"product"**, :js:`{"product": "..."}`
+* **product**, :js:`{"product": "..."}`
 
   for e-commerce use.
 

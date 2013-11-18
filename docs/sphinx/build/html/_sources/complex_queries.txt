@@ -1,13 +1,13 @@
-JIO Complex Queries
+jIO Complex Queries
 ===================
 
 What are Complex Queries?
 -------------------------
 
-In jIO, a complex query can tell a storage server to select, filter, sort, or
+In jIO, a complex query can ask a storage server to select, filter, sort, or
 limit a document list before sending it back. If the server is not able to do
 so, the complex query tool can act on the retreived list by itself. Only the
-allDocs method can use complex queries.
+``allDocs()`` method can use complex queries.
 
 A query can either be a string (using a specific language useful for writing
 queries), or it can be a tree of objects (useful to browse queries). To handle
@@ -16,12 +16,12 @@ complex queries, jIO uses a parsed grammar file which is compiled using `JSCC <h
 Why use Complex Queries?
 ------------------------
 
-Complex queries can be used similar to database queries. So they are useful to:
+Complex queries can be used like database queries, for tasks such as:
 
 * search a specific document
 * sort a list of documents in a certain order
 * avoid retrieving a list of ten thousand documents
-* limit the list to show only xy documents by page
+* limit the list to show only N documents per page
 
 For some storages (like localStorage), complex queries can be a powerful tool
 to query accessible documents. When querying documents on a distant storage,
@@ -34,7 +34,9 @@ itself.
 How to use Complex Queries with jIO?
 ------------------------------------
 
-Complex queries can be triggered by including the option named query in the allDocs method call. An example would be:
+Complex queries can be triggered by including the option named query in the ``allDocs()`` method call.
+
+Example:
 
 .. code-block:: javascript
 
@@ -74,11 +76,11 @@ Complex queries can be triggered by including the option named query in the allD
 How to use Complex Queries outside jIO?
 ---------------------------------------
 
-.. XXX 404 on complex_example.html
+.. XXX 404 page missing on complex_example.html
 
-Complex Queries provides an API - which namespace is complex_queries. Please
-also refer to the `Complex Queries sample page <http://git.erp5.org/gitweb/jio.git/blob/HEAD:/examples/complex_example.html?js=1>`_
-on how to use these methods in- and outside jIO. The module provides:
+Complex Queries provides an API - which namespace is complex_queries.
+Refer to the `Complex Queries sample page <http://git.erp5.org/gitweb/jio.git/blob/HEAD:/examples/complex_example.html?js=1>`_
+for how to use these methods, in and outside jIO. The module provides:
 
 .. code-block:: javascript
 
@@ -168,7 +170,7 @@ Default search types should be defined in the application's user interface
 components because criteria like filters will be changed frequently by the
 component (change ``limit: [0, 10]`` to ``limit: [10, 10]`` or ``sort_on: [['title',
 'ascending']]`` to ``sort_on: [['creator', 'ascending']]``) and each component must
-have their own default properties to keep their own behavior.
+have its own default properties to keep their own behavior.
 
 Convert Complex Queries into another type
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

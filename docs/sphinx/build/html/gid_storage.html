@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>JIO GIDStorage &mdash; JIO 2.0.0 documentation</title>
+    <title>jIO GIDStorage &mdash; jIO 2.0.0 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -25,8 +25,8 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="JIO 2.0.0 documentation" href="index.html" />
-    <link rel="next" title="JIO Complex Queries" href="complex_queries.html" />
+    <link rel="top" title="jIO 2.0.0 documentation" href="index.html" />
+    <link rel="next" title="jIO Complex Queries" href="complex_queries.html" />
     <link rel="prev" title="List of Available Storages" href="available_storages.html" /> 
   </head>
   <body>
@@ -37,12 +37,12 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="complex_queries.html" title="JIO Complex Queries"
+          <a href="complex_queries.html" title="jIO Complex Queries"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="available_storages.html" title="List of Available Storages"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">jIO 2.0.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -52,10 +52,10 @@
           <div class="body">
             
   <div class="section" id="jio-gidstorage">
-<span id="gid-storage"></span><h1>JIO GIDStorage<a class="headerlink" href="#jio-gidstorage" title="Permalink to this headline">¶</a></h1>
+<span id="gid-storage"></span><h1>jIO GIDStorage<a class="headerlink" href="#jio-gidstorage" title="Permalink to this headline">¶</a></h1>
 <p>A storage to enable interoperability between all kind of storages.</p>
 <p>A global ID (GID) is a document id which represents a unique document. This ID
-will be used to find this unique document on all kind of backends.</p>
+is then used to find this unique document on all types of backends.</p>
 <p>This storage uses sub storage allDocs and complex queries to find unique documents, and converts their ids to gids.</p>
 <div class="section" id="where-it-can-be-used">
 <h2>Where it can be used<a class="headerlink" href="#where-it-can-be-used" title="Permalink to this headline">¶</a></h2>
@@ -85,7 +85,7 @@ will be used to find this unique document on all kind of backends.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>This description tells the <em>GIDStorage</em> to use 2 metadata (<tt class="docutils literal"><span class="pre">type</span></tt>, <tt class="docutils literal"><span class="pre">title</span></tt>) to define a
+<p>This description tells the <em>GIDStorage</em> to use 2 metadata attributes (<tt class="docutils literal"><span class="pre">type</span></tt>, <tt class="docutils literal"><span class="pre">title</span></tt>) to define a
 document as unique in the default case. If the document is of type <tt class="docutils literal"><span class="pre">Text</span></tt>, then
 the handler will use 3 metadata (<tt class="docutils literal"><span class="pre">type</span></tt>, <tt class="docutils literal"><span class="pre">title</span></tt>, <tt class="docutils literal"><span class="pre">language</span></tt>).
 If these constraints are not respected, then the storage returns an error telling us to
@@ -110,21 +110,23 @@ constraints:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>Available metadata types are:
-* <tt class="docutils literal"><span class="pre">&quot;json&quot;</span></tt> - The json value of the metadata.
-* <tt class="docutils literal"><span class="pre">&quot;string&quot;</span></tt> - The value as string if it is not a list.
-* <tt class="docutils literal"><span class="pre">&quot;list&quot;</span></tt> - The value as list.
-* <tt class="docutils literal"><span class="pre">&quot;date&quot;</span></tt> - The value if it can be converted to a date (as string).
-* <tt class="docutils literal"><span class="pre">&quot;DCMIType&quot;</span></tt> - A value matching one of the DCMIType Vocabulary (as string).
-* <tt class="docutils literal"><span class="pre">&quot;contentType&quot;</span></tt> - A value which is a content type (as string).
-* <tt class="docutils literal"><span class="pre">[&quot;DCMIType&quot;,</span> <span class="pre">&quot;list&quot;]</span></tt> - The value which contains a DCMIType (as list).
-* <tt class="docutils literal"><span class="pre">[...]</span></tt> - make your own combination.</p>
+<p>Available metadata types are:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">&quot;json&quot;</span></tt> - The json value of the metadata.</li>
+<li><tt class="docutils literal"><span class="pre">&quot;string&quot;</span></tt> - The value as string if it is not a list.</li>
+<li><tt class="docutils literal"><span class="pre">&quot;list&quot;</span></tt> - The value as list.</li>
+<li><tt class="docutils literal"><span class="pre">&quot;date&quot;</span></tt> - The value if it can be converted to a date (as string).</li>
+<li><tt class="docutils literal"><span class="pre">&quot;DCMIType&quot;</span></tt> - A value matching one of the DCMIType Vocabulary (as string).</li>
+<li><tt class="docutils literal"><span class="pre">&quot;contentType&quot;</span></tt> - A value which is a content type (as string).</li>
+<li><tt class="docutils literal"><span class="pre">[&quot;DCMIType&quot;,</span> <span class="pre">&quot;list&quot;]</span></tt> - The value which contains a DCMIType (as list).</li>
+<li><tt class="docutils literal"><span class="pre">[...]</span></tt> - make your own combination.</li>
+</ul>
 </div>
 <div class="section" id="document-requirements">
 <h2>Document Requirements<a class="headerlink" href="#document-requirements" title="Permalink to this headline">¶</a></h2>
-<p>A metadata value must be a string. This string can be placed in an object which
-key is &#8216;content&#8217;. The object can contains custom keys with string values. A
-metadata can contain several values. Example:</p>
+<p>A metadata value must be a string. This string can be placed in an attribute within
+a <tt class="docutils literal"><span class="pre">&quot;content&quot;</span></tt> key. The object can contains custom keys with string values. A
+metadata object can contain several values. Example:</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
   <span class="s2">&quot;key&quot;</span><span class="o">:</span> <span class="s2">&quot;value&quot;</span><span class="p">,</span>
   <span class="c1">// or</span>
@@ -142,7 +144,7 @@ metadata can contain several values. Example:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>Metadata which name begin with an underscore can contain anything.</p>
+<p>Metadata attributes which names begin with an underscore can contain anything.</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
   <span class="s2">&quot;_key&quot;</span><span class="o">:</span> <span class="p">{</span><span class="s2">&quot;whatever&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="p">[]],</span> <span class="s2">&quot;a&quot;</span><span class="o">:</span> <span class="kc">null</span><span class="p">}</span>
 <span class="p">}</span>
@@ -153,7 +155,7 @@ metadata can contain several values. Example:</p>
 <h2>Storage Requirements<a class="headerlink" href="#storage-requirements" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li>This storage is not compatible with <em>RevisionStorage</em> and <em>ReplicateRevisionStorage</em>.</li>
-<li>Sub storage have to support complex queries options and <tt class="docutils literal"><span class="pre">include_docs</span></tt> option.</li>
+<li>Sub storages have to support options for <tt class="docutils literal"><span class="pre">complex</span> <span class="pre">queries</span></tt> and <tt class="docutils literal"><span class="pre">include_docs</span></tt>.</li>
 </ul>
 </div>
 <div class="section" id="dependencies">
@@ -162,7 +164,7 @@ metadata can contain several values. Example:</p>
 </div>
 <div class="section" id="suggested-storage-tree">
 <h2>Suggested storage tree<a class="headerlink" href="#suggested-storage-tree" title="Permalink to this headline">¶</a></h2>
-<p>Replication Between Storage:</p>
+<p>Replication between storages:</p>
 <div class="highlight-python"><pre>Replicate Storage
 +-- GID Storage
 |   `-- Local Storage
@@ -172,7 +174,7 @@ metadata can contain several values. Example:</p>
    `-- Remote Storage 2</pre>
 </div>
 <p><strong>CAUTION: All gid storage must have the same description!</strong></p>
-<p>Offline Application Usage:</p>
+<p>Offline application usage:</p>
 <div class="highlight-python"><pre>Replicate Storage
 +-- Index Storage with DB in Local Storage
 |   `-- GID Storage
@@ -195,7 +197,7 @@ metadata can contain several values. Example:</p>
             </a></p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">JIO GIDStorage</a><ul>
+<li><a class="reference internal" href="#">jIO GIDStorage</a><ul>
 <li><a class="reference internal" href="#where-it-can-be-used">Where it can be used</a></li>
 <li><a class="reference internal" href="#storage-description">Storage Description</a></li>
 <li><a class="reference internal" href="#document-requirements">Document Requirements</a></li>
@@ -211,7 +213,7 @@ metadata can contain several values. Example:</p>
                         title="previous chapter">List of Available Storages</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="complex_queries.html"
-                        title="next chapter">JIO Complex Queries</a></p>
+                        title="next chapter">jIO Complex Queries</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/gid_storage.txt"
@@ -241,12 +243,12 @@ metadata can contain several values. Example:</p>
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="complex_queries.html" title="JIO Complex Queries"
+          <a href="complex_queries.html" title="jIO Complex Queries"
              >next</a> |</li>
         <li class="right" >
           <a href="available_storages.html" title="List of Available Storages"
              >previous</a> |</li>
-        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">jIO 2.0.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
