@@ -1,0 +1,389 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>For developers &mdash; JIO 2.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="JIO 2.0.0 documentation" href="index.html" />
+    <link rel="next" title="JavaScript Naming Conventions" href="naming_conventions.html" />
+    <link rel="prev" title="Metadata" href="metadata.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="naming_conventions.html" title="JavaScript Naming Conventions"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="metadata.html" title="Metadata"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="for-developers">
+<h1>For developers<a class="headerlink" href="#for-developers" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="quick-start">
+<h2>Quick start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h2>
+<p>To get started with jIO, clone one of the repositories linked in <a class="reference internal" href="download.html#download-fork"><em>Download &amp; Fork</em></a>.</p>
+<p>To build the library you have to:</p>
+<ul>
+<li><p class="first">Install <a class="reference external" href="http://nodejs.org/">NodeJS</a> (including NPM)</p>
+</li>
+<li><p class="first">Install Grunt command line with npm.</p>
+<p><tt class="docutils literal"><span class="pre">#</span> <span class="pre">npm</span> <span class="pre">-g</span> <span class="pre">install</span> <span class="pre">grunt-cli</span></tt></p>
+</li>
+<li><p class="first">Install dev dependencies.</p>
+<p><tt class="docutils literal"><span class="pre">$</span> <span class="pre">npm</span> <span class="pre">install</span></tt></p>
+</li>
+<li><p class="first">Compile JS/CC parser.</p>
+<p><tt class="docutils literal"><span class="pre">$</span> <span class="pre">make</span></tt> (until we find how to compile it with grunt)</p>
+</li>
+<li><p class="first">Run build.</p>
+<p><tt class="docutils literal"><span class="pre">$</span> <span class="pre">grunt</span></tt></p>
+</li>
+</ul>
+<p>The repository also includes the built ready-to-use files, so in case you do
+not want to build jIO yourself, just use <em>jio.js</em> as well as <em>complex_queries.js</em>
+plus the storages and dependencies you need and you will be good to go.</p>
+</div>
+<div class="section" id="naming-conventions">
+<h2>Naming Conventions<a class="headerlink" href="#naming-conventions" title="Permalink to this headline">¶</a></h2>
+<p>All the code follows these <a class="reference internal" href="naming_conventions.html#naming-conventions"><em>JavaScript Naming Conventions</em></a>.</p>
+</div>
+<div class="section" id="how-to-design-your-own-jio-storage-library">
+<h2>How to design your own jIO Storage Library<a class="headerlink" href="#how-to-design-your-own-jio-storage-library" title="Permalink to this headline">¶</a></h2>
+<p>Create a constructor:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span> <span class="nx">MyStorage</span><span class="p">(</span><span class="nx">storage_description</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">this</span><span class="p">.</span><span class="nx">_value</span> <span class="o">=</span> <span class="nx">storage_description</span><span class="p">.</span><span class="nx">value</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="k">this</span><span class="p">.</span><span class="nx">_value</span> <span class="o">!==</span> <span class="s1">&#39;string&#39;</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">throw</span> <span class="k">new</span> <span class="nx">TypeError</span><span class="p">(</span><span class="s2">&quot;&#39;value&#39; description property is not a string&quot;</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Create 10 methods: <tt class="docutils literal"><span class="pre">post</span></tt>, <tt class="docutils literal"><span class="pre">put</span></tt>, <tt class="docutils literal"><span class="pre">putAttachment</span></tt>, <tt class="docutils literal"><span class="pre">get</span></tt>, <tt class="docutils literal"><span class="pre">getAttachment</span></tt>,
+<tt class="docutils literal"><span class="pre">remove</span></tt>, <tt class="docutils literal"><span class="pre">removeAttachment</span></tt>, <tt class="docutils literal"><span class="pre">allDocs</span></tt>, <tt class="docutils literal"><span class="pre">check</span></tt> and <tt class="docutils literal"><span class="pre">repair</span></tt>.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">MyStorage</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">post</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">command</span><span class="p">,</span> <span class="nx">metadata</span><span class="p">,</span> <span class="nx">option</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">document_id</span> <span class="o">=</span> <span class="nx">metadata</span><span class="p">.</span><span class="nx">_id</span><span class="p">;</span>
+  <span class="c1">// [...]</span>
+<span class="p">};</span>
+
+<span class="nx">MyStorage</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">get</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">command</span><span class="p">,</span> <span class="nx">param</span><span class="p">,</span> <span class="nx">option</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">document_id</span> <span class="o">=</span> <span class="nx">param</span><span class="p">.</span><span class="nx">_id</span><span class="p">;</span>
+  <span class="c1">// [...]</span>
+<span class="p">};</span>
+
+<span class="nx">MyStorage</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">putAttachment</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">command</span><span class="p">,</span> <span class="nx">param</span><span class="p">,</span> <span class="nx">option</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">document_id</span> <span class="o">=</span> <span class="nx">param</span><span class="p">.</span><span class="nx">_id</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">attachment_id</span> <span class="o">=</span> <span class="nx">param</span><span class="p">.</span><span class="nx">_attachment</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">attachment_data</span> <span class="o">=</span> <span class="nx">param</span><span class="p">.</span><span class="nx">_blob</span><span class="p">;</span>
+  <span class="c1">// [...]</span>
+<span class="p">};</span>
+
+<span class="c1">// [...]</span>
+</pre></div>
+</div>
+<p>(To help you design your methods, some tools are provided by jIO.util.)</p>
+<p>The first parameter command provides some methods to act on the JIO job:</p>
+<ul>
+<li><p class="first"><tt class="docutils literal"><span class="pre">success</span></tt>, to tell JIO that the job is successfully terminated</p>
+<p><tt class="docutils literal"><span class="pre">command.success(status[Text],</span> <span class="pre">[{custom</span> <span class="pre">key</span> <span class="pre">to</span> <span class="pre">add</span> <span class="pre">to</span> <span class="pre">the</span> <span class="pre">response}]);</span></tt></p>
+</li>
+<li><p class="first"><tt class="docutils literal"><span class="pre">resolve</span></tt>, is equal to success</p>
+</li>
+<li><p class="first"><tt class="docutils literal"><span class="pre">error</span></tt>, to tell JIO that the job cannot be done</p>
+<p><tt class="docutils literal"><span class="pre">command.error(status[Text],</span> <span class="pre">[reason],</span> <span class="pre">[message],</span> <span class="pre">[{custom</span> <span class="pre">key</span> <span class="pre">to</span> <span class="pre">add</span> <span class="pre">to</span> <span class="pre">the</span> <span class="pre">response}])</span></tt></p>
+</li>
+<li><p class="first"><tt class="docutils literal"><span class="pre">retry</span></tt>, to tell JIO that the job cannot be done now, but can be retried later. (same API than error)</p>
+</li>
+<li><p class="first"><tt class="docutils literal"><span class="pre">reject</span></tt>, to tell JIO that the job cannot be done, let JIO to decide whether to retry or not. (same API than error)</p>
+</li>
+</ul>
+<p>The second parameter <tt class="docutils literal"><span class="pre">metadata</span></tt> or <tt class="docutils literal"><span class="pre">param</span></tt> is the first parameter provided by the JIO user.</p>
+<p>The third parameter <tt class="docutils literal"><span class="pre">option</span></tt> is the option parameter provided by the JIO user.</p>
+<p>Methods should return the following objects:</p>
+<ul>
+<li><p class="first">post &#8211;&gt; success(&#8220;created&#8221;, {&#8220;id&#8221;: new_generated_id})</p>
+</li>
+<li><p class="first">put, remove, putAttachment or removeAttachment &#8211;&gt; success(204)</p>
+</li>
+<li><p class="first">get &#8211;&gt; success(&#8220;ok&#8221;, {&#8220;data&#8221;: document_metadata})</p>
+</li>
+<li><p class="first">getAttachment &#8211;&gt;</p>
+<p>success(&#8220;ok&#8221;, {&#8220;data&#8221;: binary_string, &#8220;content_type&#8221;: content_type})
+// or
+success(&#8220;ok&#8221;, {&#8220;data&#8221;: new Blob([data], {&#8220;type&#8221;: content_type})})</p>
+</li>
+<li><p class="first">allDocs &#8211;&gt; success(&#8220;ok&#8221;, {&#8220;data&#8221;: row_object})</p>
+</li>
+<li><p class="first">check &#8211;&gt;</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// if metadata provides &quot;_id&quot; -&gt; check document state</span>
+<span class="c1">// if metadata doesn&#39;t promides &quot;_id&quot; -&gt; check storage state</span>
+<span class="nx">success</span><span class="p">(</span><span class="s2">&quot;no_content&quot;</span><span class="p">)</span>
+<span class="c1">// or</span>
+<span class="nx">error</span><span class="p">(</span><span class="s2">&quot;conflict&quot;</span><span class="p">,</span> <span class="s2">&quot;corrupted&quot;</span><span class="p">,</span> <span class="s2">&quot;incoherent document or storage&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">repair &#8211;&gt;</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// if metadata provides &quot;_id&quot; -&gt; repair document state</span>
+<span class="c1">// if metadata doesn&#39;t promides &quot;_id&quot; -&gt; repair storage state</span>
+<span class="nx">success</span><span class="p">(</span><span class="s2">&quot;no_content&quot;</span><span class="p">)</span>
+<span class="c1">// or</span>
+<span class="nx">error</span><span class="p">(</span><span class="s2">&quot;conflict&quot;</span><span class="p">,</span> <span class="s2">&quot;corrupted&quot;</span><span class="p">,</span> <span class="s2">&quot;impossible to repair document or storage&quot;</span><span class="p">)</span>
+<span class="c1">// DON&#39;T DESIGN STORAGES IF THEIR IS NO WAY TO REPAIR INCOHERENT STATES</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p>After creating all methods, your storage must be added to jIO. This is done
+with the <tt class="docutils literal"><span class="pre">jIO.addStorage()</span></tt> method, which requires two parameters: the storage
+type (string) and a constructor (function). It is called like this:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// add custom storage to jIO</span>
+<span class="nx">jIO</span><span class="p">.</span><span class="nx">addStorage</span><span class="p">(</span><span class="s1">&#39;mystoragetype&#39;</span><span class="p">,</span> <span class="nx">MyStorage</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Please refer to <em>localstorage.js</em> implementation for a good example on how to
+setup a storage and what methods are required.</p>
+<p>Also keep in mind that jIO is a job-based library: whenever you trigger a method,
+a job is created, which will later return a response, after being processed.</p>
+</div>
+<div class="section" id="job-rules">
+<h2>Job rules<a class="headerlink" href="#job-rules" title="Permalink to this headline">¶</a></h2>
+<p>The jIO job manager follows several rules set at the creation of a new jIO
+instance. When you try to call a method, jIO will create a job and will make
+sure the job is really necessary and will be executed. Thanks to these job
+rules, jIO knows what to do with the new job before adding it to the queue. You
+can also add your own rules, as we&#8217;re going to see now.</p>
+<p>These are the jIO <strong>default rules</strong>:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">jio_instance</span> <span class="o">=</span> <span class="nx">jIO</span><span class="p">.</span><span class="nx">createJIO</span><span class="p">(</span><span class="nx">storage_description</span><span class="p">,</span> <span class="p">{</span>
+  <span class="s2">&quot;job_rules&quot;</span><span class="o">:</span> <span class="p">[{</span>
+    <span class="s2">&quot;code_name&quot;</span><span class="o">:</span> <span class="s2">&quot;readers update&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;conditions&quot;</span><span class="o">:</span> <span class="p">[</span>
+      <span class="s2">&quot;sameStorageDescription&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;areReaders&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;sameMethod&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;sameParameters&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;sameOptions&quot;</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;action&quot;</span><span class="o">:</span> <span class="s2">&quot;update&quot;</span>
+  <span class="p">},</span> <span class="p">{</span>
+    <span class="s2">&quot;code_name&quot;</span><span class="o">:</span> <span class="s2">&quot;metadata writers update&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;conditions&quot;</span><span class="o">:</span> <span class="p">[</span>
+      <span class="s2">&quot;sameStorageDescription&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;areWriters&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;useMetadataOnly&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;sameMethod&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;haveDocumentIds&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;sameParameters&quot;</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;action&quot;</span><span class="o">:</span> <span class="s2">&quot;update&quot;</span>
+  <span class="p">},</span> <span class="p">{</span>
+    <span class="s2">&quot;code_name&quot;</span><span class="o">:</span> <span class="s2">&quot;writers wait&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;conditions&quot;</span><span class="o">:</span> <span class="p">[</span>
+      <span class="s2">&quot;sameStorageDescription&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;areWriters&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;haveDocumentIds&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;sameDocumentId&quot;</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;action&quot;</span><span class="o">:</span> <span class="s2">&quot;wait&quot;</span>
+  <span class="p">}]</span>
+<span class="p">});</span>
+</pre></div>
+</div>
+<p>The following actions can be used:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">ok</span></tt> - accept the job</li>
+<li><tt class="docutils literal"><span class="pre">wait</span></tt> - wait until the end of the selected job</li>
+<li><tt class="docutils literal"><span class="pre">update</span></tt> - bind the selected job to this one</li>
+<li><tt class="docutils literal"><span class="pre">deny</span></tt> - reject the job</li>
+</ul>
+<p>The following condition function can be used:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">sameStorageDescription</span></tt> - check if the storage descriptions are different.</li>
+<li><tt class="docutils literal"><span class="pre">areWriters</span></tt> - check if the commands are <tt class="docutils literal"><span class="pre">post</span></tt>, <tt class="docutils literal"><span class="pre">put</span></tt>, <tt class="docutils literal"><span class="pre">putAttachment</span></tt>, <tt class="docutils literal"><span class="pre">remove</span></tt>, <tt class="docutils literal"><span class="pre">removeAttachment</span></tt>, or <tt class="docutils literal"><span class="pre">repair</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">areReaders</span></tt> - check if the commands are <tt class="docutils literal"><span class="pre">get</span></tt>, <tt class="docutils literal"><span class="pre">getAttachment</span></tt>, <tt class="docutils literal"><span class="pre">allDocs</span></tt> or <tt class="docutils literal"><span class="pre">check</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">useMetadataOnly</span></tt> - check if the commands are <tt class="docutils literal"><span class="pre">post</span></tt>, <tt class="docutils literal"><span class="pre">put</span></tt>, <tt class="docutils literal"><span class="pre">get</span></tt>, <tt class="docutils literal"><span class="pre">remove</span></tt> or <tt class="docutils literal"><span class="pre">allDocs</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">sameMethod</span></tt> - check if the commands are equal.</li>
+<li><tt class="docutils literal"><span class="pre">sameDocumentId</span></tt> - check if the document ids are equal.</li>
+<li><tt class="docutils literal"><span class="pre">sameParameters</span></tt> - check if the metadata or param are equal (deep comparison).</li>
+<li><tt class="docutils literal"><span class="pre">sameOptions</span></tt> - check if the command options are equal.</li>
+<li><tt class="docutils literal"><span class="pre">haveDocumentIds</span></tt> - test if the two commands contain document ids.</li>
+</ul>
+</div>
+<div class="section" id="create-job-condition">
+<h2>Create Job Condition<a class="headerlink" href="#create-job-condition" title="Permalink to this headline">¶</a></h2>
+<p>You can create two types of function: job condition, and job comparison.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// Job Condition</span>
+<span class="c1">// Check if the job is a get command</span>
+<span class="nx">jIO</span><span class="p">.</span><span class="nx">addJobRuleCondition</span><span class="p">(</span><span class="s2">&quot;isGetMethod&quot;</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">job</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">job</span><span class="p">.</span><span class="nx">method</span> <span class="o">===</span> <span class="s1">&#39;get&#39;</span><span class="p">;</span>
+<span class="p">});</span>
+
+<span class="c1">// Job Comparison</span>
+<span class="c1">// Check if the jobs have the same &#39;title&#39; property only if they are strings</span>
+<span class="nx">jIO</span><span class="p">.</span><span class="nx">addJobRuleCondition</span><span class="p">(</span><span class="s2">&quot;sameTitleIfString&quot;</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">job</span><span class="p">,</span> <span class="nx">selected_job</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">job</span><span class="p">.</span><span class="nx">kwargs</span><span class="p">.</span><span class="nx">title</span> <span class="o">===</span> <span class="s1">&#39;string&#39;</span> <span class="o">&amp;&amp;</span>
+      <span class="k">typeof</span> <span class="nx">selected_job</span><span class="p">.</span><span class="nx">kwargs</span><span class="p">.</span><span class="nx">title</span> <span class="o">===</span> <span class="s1">&#39;string&#39;</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">job</span><span class="p">.</span><span class="nx">kwargs</span><span class="p">.</span><span class="nx">title</span> <span class="o">===</span> <span class="nx">selected_job</span><span class="p">.</span><span class="nx">kwargs</span><span class="p">.</span><span class="nx">title</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+<span class="p">});</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="add-job-rules">
+<h2>Add job rules<a class="headerlink" href="#add-job-rules" title="Permalink to this headline">¶</a></h2>
+<p>You just have to define job rules in the jIO options:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// Do not accept to post or put a document which title is equal to another</span>
+<span class="c1">// already running post or put document title</span>
+<span class="kd">var</span> <span class="nx">jio_instance</span> <span class="o">=</span> <span class="nx">jIO</span><span class="p">.</span><span class="nx">createJIO</span><span class="p">(</span><span class="nx">storage_description</span><span class="p">,</span> <span class="p">{</span>
+  <span class="s2">&quot;job_rules&quot;</span><span class="o">:</span> <span class="p">[{</span>
+    <span class="s2">&quot;code_name&quot;</span><span class="o">:</span> <span class="s2">&quot;avoid similar title&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;conditions&quot;</span><span class="o">:</span> <span class="p">[</span>
+      <span class="s2">&quot;sameStorageDescription&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;areWriters&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;sameTitleIfString&quot;</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;action&quot;</span><span class="o">:</span> <span class="s2">&quot;deny&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;before&quot;</span><span class="o">:</span> <span class="s2">&quot;writers update&quot;</span> <span class="c1">// optional</span>
+    <span class="c1">// &quot;after&quot;: also exists</span>
+  <span class="p">}]</span>
+<span class="p">});</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="clear-replace-default-job-rules">
+<h2>Clear/Replace default job rules<a class="headerlink" href="#clear-replace-default-job-rules" title="Permalink to this headline">¶</a></h2>
+<p>If a job&#8217;s <tt class="docutils literal"><span class="pre">code_name</span></tt> is equal to <tt class="docutils literal"><span class="pre">readers</span> <span class="pre">update</span></tt>, then adding this rule will replace it:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">jio_instance</span> <span class="o">=</span> <span class="nx">jIO</span><span class="p">.</span><span class="nx">createJIO</span><span class="p">(</span><span class="nx">storage_description</span><span class="p">,</span> <span class="p">{</span>
+  <span class="s2">&quot;job_rules&quot;</span><span class="o">:</span> <span class="p">[{</span>
+    <span class="s2">&quot;code_name&quot;</span><span class="o">:</span> <span class="s2">&quot;readers update&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;conditions&quot;</span><span class="o">:</span> <span class="p">[</span>
+      <span class="s2">&quot;sameStorageDescription&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;areReaders&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;sameMethod&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;haveDocumentIds&quot;</span>
+      <span class="s2">&quot;sameParameters&quot;</span>
+      <span class="c1">// sameOptions is removed</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;action&quot;</span><span class="o">:</span> <span class="s2">&quot;update&quot;</span>
+  <span class="p">}]</span>
+<span class="p">});</span>
+</pre></div>
+</div>
+<p>Or you can just clear all rules before adding new ones:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">jio_instance</span> <span class="o">=</span> <span class="nx">jIO</span><span class="p">.</span><span class="nx">createJIO</span><span class="p">(</span><span class="nx">storage_description</span><span class="p">,</span> <span class="p">{</span>
+  <span class="s2">&quot;clear_job_rules&quot;</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
+  <span class="s2">&quot;job_rules&quot;</span><span class="o">:</span> <span class="p">[{</span>
+    <span class="c1">// ...</span>
+  <span class="p">}]</span>
+<span class="p">});</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/jio.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">For developers</a><ul>
+<li><a class="reference internal" href="#quick-start">Quick start</a></li>
+<li><a class="reference internal" href="#naming-conventions">Naming Conventions</a></li>
+<li><a class="reference internal" href="#how-to-design-your-own-jio-storage-library">How to design your own jIO Storage Library</a></li>
+<li><a class="reference internal" href="#job-rules">Job rules</a></li>
+<li><a class="reference internal" href="#create-job-condition">Create Job Condition</a></li>
+<li><a class="reference internal" href="#add-job-rules">Add job rules</a></li>
+<li><a class="reference internal" href="#clear-replace-default-job-rules">Clear/Replace default job rules</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="metadata.html"
+                        title="previous chapter">Metadata</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="naming_conventions.html"
+                        title="next chapter">JavaScript Naming Conventions</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/developers.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="naming_conventions.html" title="JavaScript Naming Conventions"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="metadata.html" title="Metadata"
+             >previous</a> |</li>
+        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Nexedi.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

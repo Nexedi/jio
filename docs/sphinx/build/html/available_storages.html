@@ -1,0 +1,264 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>List of Available Storages &mdash; JIO 2.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="JIO 2.0.0 documentation" href="index.html" />
+    <link rel="next" title="JIO GIDStorage" href="gid_storage.html" />
+    <link rel="prev" title="Revision Storages: Conflicts and Resolution" href="revision_storages.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="gid_storage.html" title="JIO GIDStorage"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="revision_storages.html" title="Revision Storages: Conflicts and Resolution"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="list-of-available-storages">
+<span id="id1"></span><h1>List of Available Storages<a class="headerlink" href="#list-of-available-storages" title="Permalink to this headline">¶</a></h1>
+<p>JIO saves his job queue in a workspace which is localStorage by default.
+Provided storage descriptions are also stored, and it can be dangerous to
+store passwords.</p>
+<p>The best way to create a storage description is to use the (often) provided
+tool given by the storage library. The returned description is secured to avoid
+clear readable password. (encrypted password for instance)</p>
+<p>When building storage trees, there is no limit on the number of storages you
+can use. The only thing you have to be aware of is compatability of simple and
+revision based storages.</p>
+<div class="section" id="connectors">
+<h2>Connectors<a class="headerlink" href="#connectors" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="localstorage">
+<h3>LocalStorage<a class="headerlink" href="#localstorage" title="Permalink to this headline">¶</a></h3>
+<p>Three methods are provided:</p>
+<blockquote>
+<div><ul class="simple">
+<li><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">createDescription</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name other"><span class="pre">username</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">application_name</span></span><span class="punctuation"><span class="pre">],</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">mode</span></span><span class="operator"><span class="pre">=</span></span><span class="literal string double"><span class="pre">&quot;localStorage&quot;</span></span><span class="punctuation"><span class="pre">])</span></span></tt></li>
+<li><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">createLocalDescription</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name other"><span class="pre">username</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">application_name</span></span><span class="punctuation"><span class="pre">])</span></span></tt></li>
+<li><tt class="code js javascript docutils literal"><span class="name other"><span class="pre">createMemoryDescription</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name other"><span class="pre">username</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="name other"><span class="pre">application_name</span></span><span class="punctuation"><span class="pre">])</span></span></tt></li>
+</ul>
+</div></blockquote>
+<p>All parameters are strings.</p>
+<p>Examples:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// to work on browser localStorage</span>
+<span class="kd">var</span> <span class="nx">jio</span> <span class="o">=</span> <span class="nx">jIO</span><span class="p">.</span><span class="nx">createJIO</span><span class="p">(</span><span class="nx">local_storage</span><span class="p">.</span><span class="nx">createDescription</span><span class="p">(</span><span class="s2">&quot;me&quot;</span><span class="p">));</span>
+
+<span class="c1">// to work on browser memory</span>
+<span class="kd">var</span> <span class="nx">jio</span> <span class="o">=</span> <span class="nx">jIO</span><span class="p">.</span><span class="nx">createJIO</span><span class="p">(</span><span class="nx">local_storage</span><span class="p">.</span><span class="nx">createMemoryDescription</span><span class="p">(</span><span class="s2">&quot;me&quot;</span><span class="p">));</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="davstorage">
+<h3>DavStorage<a class="headerlink" href="#davstorage" title="Permalink to this headline">¶</a></h3>
+<p>The tool dav_storage.createDescription generates a dav storage description for
+<em>no</em>, <em>basic</em> or <em>digest</em> authentication (<em>digest</em> is not implemented yet).</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">dav_storage</span><span class="p">.</span><span class="nx">createDescription</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="nx">auth_type</span><span class="p">,</span> <span class="p">[</span><span class="nx">realm</span><span class="p">],</span> <span class="p">[</span><span class="nx">username</span><span class="p">],</span> <span class="p">[</span><span class="nx">password</span><span class="p">]);</span>
+</pre></div>
+</div>
+<p>All parameters are strings.</p>
+<p>Only <tt class="docutils literal"><span class="pre">url</span></tt> and <tt class="docutils literal"><span class="pre">auth_type</span></tt> are required. If <tt class="docutils literal"><span class="pre">auth_type</span></tt> is equal to &#8220;none&#8221;,
+then <tt class="docutils literal"><span class="pre">realm</span></tt>, <tt class="docutils literal"><span class="pre">username</span></tt> and <tt class="docutils literal"><span class="pre">password</span></tt> are useless. <tt class="docutils literal"><span class="pre">username</span></tt> and <tt class="docutils literal"><span class="pre">password</span></tt> become
+required if <tt class="docutils literal"><span class="pre">auth_type</span></tt> is equal to &#8220;basic&#8221;. And <tt class="docutils literal"><span class="pre">realm</span></tt> also becomes required if
+<tt class="docutils literal"><span class="pre">auth_type</span></tt> is equal to &#8220;digest&#8221;.</p>
+<p>digest <strong>is not implemented yet</strong></p>
+<p><strong>Be careful</strong>: The generated description never contains readable password, but
+for basic authentication, the password will just be base64 encoded.</p>
+</div>
+<div class="section" id="s3storage">
+<h3>S3Storage<a class="headerlink" href="#s3storage" title="Permalink to this headline">¶</a></h3>
+<p>Updating to v2.0</p>
+</div>
+<div class="section" id="xwikistorage">
+<h3>XWikiStorage<a class="headerlink" href="#xwikistorage" title="Permalink to this headline">¶</a></h3>
+<p>Updating to v2.0</p>
+</div>
+</div>
+<div class="section" id="handlers">
+<h2>Handlers<a class="headerlink" href="#handlers" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="indexstorage">
+<h3>IndexStorage<a class="headerlink" href="#indexstorage" title="Permalink to this headline">¶</a></h3>
+<p>This handler indexes documents metadata into a database (which is a simple
+document) to increase the speed of allDocs requests. However, it is not able to
+manage the <tt class="docutils literal"><span class="pre">include_docs</span></tt> option.</p>
+<p>The sub storages have to manage <tt class="docutils literal"><span class="pre">query</span></tt> and <tt class="docutils literal"><span class="pre">include_docs</span></tt> options.</p>
+<p>Here is the description:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+  <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;index&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;indices&quot;</span><span class="o">:</span> <span class="p">[{</span>
+    <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;index_title_subject.json&quot;</span><span class="p">,</span> <span class="c1">// doc id where to store indices</span>
+    <span class="s2">&quot;index&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="s2">&quot;subject&quot;</span><span class="p">],</span> <span class="c1">// metadata to index</span>
+    <span class="s2">&quot;attachment&quot;</span><span class="o">:</span> <span class="s2">&quot;db.json&quot;</span><span class="p">,</span> <span class="c1">// default &quot;body&quot;</span>
+    <span class="s2">&quot;metadata&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="c1">// additional metadata to add to database, default undefined</span>
+      <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;Dataset&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;format&quot;</span><span class="o">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;title&quot;</span><span class="o">:</span> <span class="s2">&quot;My index database&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;creator&quot;</span><span class="o">:</span> <span class="s2">&quot;Me&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;sub_storage&quot;</span><span class="o">:</span> <span class="o">&lt;</span><span class="nx">sub</span> <span class="nx">storage</span> <span class="nx">where</span> <span class="nx">to</span> <span class="nx">store</span> <span class="nx">index</span><span class="o">&gt;</span>
+                   <span class="c1">// default equal to parent sub_storage field</span>
+  <span class="p">},</span> <span class="p">{</span>
+    <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;index_year.json&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;index&quot;</span><span class="o">:</span> <span class="s2">&quot;year&quot;</span>
+    <span class="p">...</span>
+  <span class="p">}],</span>
+  <span class="s2">&quot;sub_storage&quot;</span><span class="o">:</span> <span class="o">&lt;</span><span class="nx">sub</span> <span class="nx">storage</span> <span class="nx">description</span><span class="o">&gt;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="gidstorage">
+<h3>GIDStorage<a class="headerlink" href="#gidstorage" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference internal" href="gid_storage.html#gid-storage"><em>Full description here</em></a>.</p>
+<p>Updating to v2.0</p>
+</div>
+<div class="section" id="splitstorage">
+<h3>SplitStorage<a class="headerlink" href="#splitstorage" title="Permalink to this headline">¶</a></h3>
+<p>Updating to v2.0</p>
+</div>
+<div class="section" id="replicate-storage">
+<h3>Replicate Storage<a class="headerlink" href="#replicate-storage" title="Permalink to this headline">¶</a></h3>
+<p>Comming soon</p>
+</div>
+</div>
+<div class="section" id="revision-based-handlers">
+<h2>Revision Based Handlers<a class="headerlink" href="#revision-based-handlers" title="Permalink to this headline">¶</a></h2>
+<p>A revision based handler is a storage which is able to do some document
+versioning using simple storages listed above.</p>
+<p>On JIO command parameter, <tt class="docutils literal"><span class="pre">_id</span></tt> is still used to identify a document, but
+another id <tt class="docutils literal"><span class="pre">_rev</span></tt> must be defined to use a specific revision of this document.</p>
+<p>On command responses, you will find another field <tt class="docutils literal"><span class="pre">rev</span></tt> which will represent the
+new revision produced by your action. All the document history is kept unless
+you decide to delete older revisions.</p>
+<p>Other fields <tt class="docutils literal"><span class="pre">conflicts</span></tt>, <tt class="docutils literal"><span class="pre">revisions</span></tt> and <tt class="docutils literal"><span class="pre">revs_info</span></tt> can be returned if the
+options <strong>conflicts: true</strong>, <strong>revs: true</strong> or <strong>revs_info: true</strong> are set.</p>
+<div class="section" id="revision-storage">
+<h3>Revision Storage<a class="headerlink" href="#revision-storage" title="Permalink to this headline">¶</a></h3>
+<p>Updating to v2.0</p>
+</div>
+<div class="section" id="replicate-revision-storage">
+<h3>Replicate Revision Storage<a class="headerlink" href="#replicate-revision-storage" title="Permalink to this headline">¶</a></h3>
+<p>Updating to v2.0</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/jio.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">List of Available Storages</a><ul>
+<li><a class="reference internal" href="#connectors">Connectors</a><ul>
+<li><a class="reference internal" href="#localstorage">LocalStorage</a></li>
+<li><a class="reference internal" href="#davstorage">DavStorage</a></li>
+<li><a class="reference internal" href="#s3storage">S3Storage</a></li>
+<li><a class="reference internal" href="#xwikistorage">XWikiStorage</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#handlers">Handlers</a><ul>
+<li><a class="reference internal" href="#indexstorage">IndexStorage</a></li>
+<li><a class="reference internal" href="#gidstorage">GIDStorage</a></li>
+<li><a class="reference internal" href="#splitstorage">SplitStorage</a></li>
+<li><a class="reference internal" href="#replicate-storage">Replicate Storage</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#revision-based-handlers">Revision Based Handlers</a><ul>
+<li><a class="reference internal" href="#revision-storage">Revision Storage</a></li>
+<li><a class="reference internal" href="#replicate-revision-storage">Replicate Revision Storage</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="revision_storages.html"
+                        title="previous chapter">Revision Storages: Conflicts and Resolution</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="gid_storage.html"
+                        title="next chapter">JIO GIDStorage</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/available_storages.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="gid_storage.html" title="JIO GIDStorage"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="revision_storages.html" title="Revision Storages: Conflicts and Resolution"
+             >previous</a> |</li>
+        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Nexedi.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

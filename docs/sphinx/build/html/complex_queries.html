@@ -1,0 +1,434 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>JIO Complex Queries &mdash; JIO 2.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="JIO 2.0.0 documentation" href="index.html" />
+    <link rel="next" title="Metadata" href="metadata.html" />
+    <link rel="prev" title="JIO GIDStorage" href="gid_storage.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="metadata.html" title="Metadata"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="gid_storage.html" title="JIO GIDStorage"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="jio-complex-queries">
+<h1>JIO Complex Queries<a class="headerlink" href="#jio-complex-queries" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="what-are-complex-queries">
+<h2>What are Complex Queries?<a class="headerlink" href="#what-are-complex-queries" title="Permalink to this headline">¶</a></h2>
+<p>In jIO, a complex query can tell a storage server to select, filter, sort, or
+limit a document list before sending it back. If the server is not able to do
+so, the complex query tool can act on the retreived list by itself. Only the
+allDocs method can use complex queries.</p>
+<p>A query can either be a string (using a specific language useful for writing
+queries), or it can be a tree of objects (useful to browse queries). To handle
+complex queries, jIO uses a parsed grammar file which is compiled using <a class="reference external" href="http://jscc.phorward-software.com/">JSCC</a>.</p>
+</div>
+<div class="section" id="why-use-complex-queries">
+<h2>Why use Complex Queries?<a class="headerlink" href="#why-use-complex-queries" title="Permalink to this headline">¶</a></h2>
+<p>Complex queries can be used similar to database queries. So they are useful to:</p>
+<ul class="simple">
+<li>search a specific document</li>
+<li>sort a list of documents in a certain order</li>
+<li>avoid retrieving a list of ten thousand documents</li>
+<li>limit the list to show only xy documents by page</li>
+</ul>
+<p>For some storages (like localStorage), complex queries can be a powerful tool
+to query accessible documents. When querying documents on a distant storage,
+some server-side logic should be run to avoid having to request large amount of
+documents to run a query on the client. If distant storages are static, an
+alternative would be to use an indexStorage with appropriate indices as complex
+queries will always try to run the query on the index before querying documents
+itself.</p>
+</div>
+<div class="section" id="how-to-use-complex-queries-with-jio">
+<h2>How to use Complex Queries with jIO?<a class="headerlink" href="#how-to-use-complex-queries-with-jio" title="Permalink to this headline">¶</a></h2>
+<p>Complex queries can be triggered by including the option named query in the allDocs method call. An example would be:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">options</span> <span class="o">=</span> <span class="p">{};</span>
+
+<span class="c1">// search text query</span>
+<span class="nx">options</span><span class="p">[</span><span class="s1">&#39;query&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;(creator:&quot;John Doe&quot;) AND (format:&quot;pdf&quot;)&#39;</span><span class="p">;</span>
+
+<span class="c1">// OR query tree</span>
+<span class="nx">options</span><span class="p">[</span><span class="s1">&#39;query&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="nx">type</span><span class="o">:</span><span class="s1">&#39;complex&#39;</span><span class="p">,</span>
+  <span class="nx">operator</span><span class="o">:</span><span class="s1">&#39;AND&#39;</span><span class="p">,</span>
+  <span class="nx">query_list</span><span class="o">:</span> <span class="p">[{</span>
+    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;simple&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;key&quot;</span><span class="o">:</span> <span class="s2">&quot;creator&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;value&quot;</span><span class="o">:</span> <span class="s2">&quot;John Doe&quot;</span>
+  <span class="p">},</span> <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;simple&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;key&quot;</span><span class="o">:</span> <span class="s2">&quot;format&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;value&quot;</span><span class="o">:</span> <span class="s2">&quot;pdf&quot;</span>
+  <span class="p">}]</span>
+<span class="p">};</span>
+
+<span class="c1">// FULL example using filtering criteria</span>
+<span class="nx">options</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="nx">query</span><span class="o">:</span> <span class="s1">&#39;(creator:&quot;% Doe&quot;) AND (format:&quot;pdf&quot;)&#39;</span><span class="p">,</span>
+  <span class="nx">limit</span><span class="o">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span>
+  <span class="nx">sort_on</span><span class="o">:</span> <span class="p">[[</span><span class="s1">&#39;last_modified&#39;</span><span class="p">,</span> <span class="s1">&#39;descending&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;creation_date&#39;</span><span class="p">,</span> <span class="s1">&#39;descending&#39;</span><span class="p">]],</span>
+  <span class="nx">select_list</span><span class="o">:</span> <span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">],</span>
+  <span class="nx">wildcard_character</span><span class="o">:</span> <span class="s1">&#39;%&#39;</span>
+<span class="p">};</span>
+
+<span class="c1">// execution</span>
+<span class="nx">jio_instance</span><span class="p">.</span><span class="nx">allDocs</span><span class="p">(</span><span class="nx">options</span><span class="p">,</span> <span class="nx">callback</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="how-to-use-complex-queries-outside-jio">
+<h2>How to use Complex Queries outside jIO?<a class="headerlink" href="#how-to-use-complex-queries-outside-jio" title="Permalink to this headline">¶</a></h2>
+<p>Complex Queries provides an API - which namespace is complex_queries. Please
+also refer to the <a class="reference external" href="http://git.erp5.org/gitweb/jio.git/blob/HEAD:/examples/complex_example.html?js=1">Complex Queries sample page</a>
+on how to use these methods in- and outside jIO. The module provides:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+  <span class="nx">parseStringToObject</span><span class="o">:</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">parseStringToObject</span><span class="p">],</span>
+  <span class="nx">stringEscapeRegexpCharacters</span><span class="o">:</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">stringEscapeRegexpCharacters</span><span class="p">],</span>
+  <span class="nx">select</span><span class="o">:</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">select</span><span class="p">],</span>
+  <span class="nx">sortOn</span><span class="o">:</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">sortOn</span><span class="p">],</span>
+  <span class="nx">limit</span><span class="o">:</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">limit</span><span class="p">],</span>
+  <span class="nx">convertStringToRegExp</span><span class="o">:</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">convertStringToRegExp</span><span class="p">],</span>
+  <span class="nx">QueryFactory</span><span class="o">:</span> <span class="p">{</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">QueryFactory</span><span class="p">]</span> <span class="nx">create</span><span class="o">:</span> <span class="p">[</span><span class="nb">Function</span><span class="p">]</span> <span class="p">},</span>
+  <span class="nx">Query</span><span class="o">:</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">Query</span><span class="p">],</span>
+  <span class="nx">SimpleQuery</span><span class="o">:</span> <span class="p">{</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">SimpleQuery</span><span class="p">]</span> <span class="nx">super_</span><span class="o">:</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">Query</span><span class="p">]</span> <span class="p">},</span>
+  <span class="nx">ComplexQuery</span><span class="o">:</span> <span class="p">{</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">ComplexQuery</span><span class="p">]</span> <span class="nx">super_</span><span class="o">:</span> <span class="p">[</span><span class="nb">Function</span><span class="o">:</span> <span class="nx">Query</span><span class="p">]</span> <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>(Reference API coming soon.)</p>
+<p>Basic example:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// object list (generated from documents in storage or index)</span>
+<span class="kd">var</span> <span class="nx">object_list</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="o">:</span> <span class="s2">&quot;Document number 1&quot;</span><span class="p">,</span> <span class="s2">&quot;creator&quot;</span><span class="o">:</span> <span class="s2">&quot;John Doe&quot;</span><span class="p">},</span>
+  <span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="o">:</span> <span class="s2">&quot;Document number 2&quot;</span><span class="p">,</span> <span class="s2">&quot;creator&quot;</span><span class="o">:</span> <span class="s2">&quot;James Bond&quot;</span><span class="p">}</span>
+<span class="p">];</span>
+
+<span class="c1">// the query to run</span>
+<span class="kd">var</span> <span class="nx">query</span> <span class="o">=</span> <span class="s1">&#39;title: &quot;Document number 1&quot;&#39;</span><span class="p">;</span>
+
+<span class="c1">// running the query</span>
+<span class="kd">var</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">complex_queries</span><span class="p">.</span><span class="nx">QueryFactory</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span><span class="nx">query</span><span class="p">).</span><span class="nx">exec</span><span class="p">(</span><span class="nx">object_list</span><span class="p">);</span>
+<span class="c1">// console.log(result);</span>
+<span class="c1">// [ { &quot;title&quot;: &quot;Document number 1&quot;, &quot;creator&quot;: &quot;John Doe&quot;} ]</span>
+</pre></div>
+</div>
+<p>Other example:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">complex_queries</span><span class="p">.</span><span class="nx">QueryFactory</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span><span class="nx">query</span><span class="p">).</span><span class="nx">exec</span><span class="p">(</span>
+  <span class="nx">object_list</span><span class="p">,</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;select&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">],</span>
+    <span class="s2">&quot;limit&quot;</span><span class="o">:</span> <span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">],</span> <span class="c1">// from 20th to 40th document</span>
+    <span class="s2">&quot;sort_on&quot;</span><span class="o">:</span> <span class="p">[[</span><span class="s1">&#39;title&#39;</span><span class="p">,</span> <span class="s1">&#39;ascending&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;year&#39;</span><span class="p">,</span> <span class="s1">&#39;descending&#39;</span><span class="p">]],</span>
+    <span class="s2">&quot;other_keys_and_values&quot;</span><span class="o">:</span> <span class="s2">&quot;are_ignored&quot;</span>
+  <span class="p">}</span>
+<span class="p">);</span>
+<span class="c1">// this case is equal to:</span>
+<span class="kd">var</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">complex_queries</span><span class="p">.</span><span class="nx">QueryFactory</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span><span class="nx">query</span><span class="p">).</span><span class="nx">exec</span><span class="p">(</span><span class="nx">object_list</span><span class="p">);</span>
+<span class="nx">complex_queries</span><span class="p">.</span><span class="nx">sortOn</span><span class="p">([[</span><span class="s1">&#39;title&#39;</span><span class="p">,</span> <span class="s1">&#39;ascending&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;year&#39;</span><span class="p">,</span> <span class="s1">&#39;descending&#39;</span><span class="p">]],</span> <span class="nx">result</span><span class="p">);</span>
+<span class="nx">complex_queries</span><span class="p">.</span><span class="nx">limit</span><span class="p">([</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">],</span> <span class="nx">result</span><span class="p">);</span>
+<span class="nx">complex_queries</span><span class="p">.</span><span class="nx">select</span><span class="p">([</span><span class="s1">&#39;title&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">],</span> <span class="nx">result</span><span class="p">);</span>
+</pre></div>
+</div>
+<div class="section" id="complex-queries-in-storage-connectors">
+<h3>Complex Queries in storage connectors<a class="headerlink" href="#complex-queries-in-storage-connectors" title="Permalink to this headline">¶</a></h3>
+<p>The query exec method must only be used if the server is not able to pre-select
+documents. As mentioned before, you could use an indexStorage to maintain
+indices with key information on all documents in a storage. This index file
+will then be used to run queries, if all of the fields required in the query answer
+are available in the index.</p>
+</div>
+<div class="section" id="matching-properties">
+<h3>Matching properties<a class="headerlink" href="#matching-properties" title="Permalink to this headline">¶</a></h3>
+<p>Complex Queries select items which exactly match the value given in the
+query. You can use wildcards (&#8216;%&#8217; is the default wildcard character), and you
+can change the wildcard character in the query options object. If you don&#8217;t
+want to use a wildcard, just set the wildcard character to an empty string.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">query</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s2">&quot;query&quot;</span><span class="o">:</span> <span class="s1">&#39;creator:&quot;* Doe&quot;&#39;</span><span class="p">,</span>
+  <span class="s2">&quot;wildcard_character&quot;</span><span class="o">:</span> <span class="s2">&quot;*&quot;</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="should-default-search-types-be-defined-in-jio-or-in-user-interface-components">
+<h3>Should default search types be defined in jIO or in user interface components?<a class="headerlink" href="#should-default-search-types-be-defined-in-jio-or-in-user-interface-components" title="Permalink to this headline">¶</a></h3>
+<p>Default search types should be defined in the application&#8217;s user interface
+components because criteria like filters will be changed frequently by the
+component (change <tt class="docutils literal"><span class="pre">limit:</span> <span class="pre">[0,</span> <span class="pre">10]</span></tt> to <tt class="docutils literal"><span class="pre">limit:</span> <span class="pre">[10,</span> <span class="pre">10]</span></tt> or <tt class="docutils literal"><span class="pre">sort_on:</span> <span class="pre">[['title',</span>
+<span class="pre">'ascending']]</span></tt> to <tt class="docutils literal"><span class="pre">sort_on:</span> <span class="pre">[['creator',</span> <span class="pre">'ascending']]</span></tt>) and each component must
+have their own default properties to keep their own behavior.</p>
+</div>
+<div class="section" id="convert-complex-queries-into-another-type">
+<h3>Convert Complex Queries into another type<a class="headerlink" href="#convert-complex-queries-into-another-type" title="Permalink to this headline">¶</a></h3>
+<p>Example, convert Query object into a human readable string:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">query</span> <span class="o">=</span> <span class="nx">complex_queries</span><span class="p">.</span><span class="nx">QueryFactory</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span><span class="s1">&#39;year: &lt; 2000 OR title: &quot;*a&quot;&#39;</span><span class="p">),</span>
+  <span class="nx">option</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;wildcard_character&quot;</span><span class="o">:</span> <span class="s2">&quot;*&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;limit&quot;</span><span class="o">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">]</span>
+  <span class="p">},</span>
+  <span class="nx">human_read</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;&lt;&quot;</span><span class="o">:</span> <span class="s2">&quot;is lower than &quot;</span><span class="p">,</span>
+    <span class="s2">&quot;&lt;=&quot;</span><span class="o">:</span> <span class="s2">&quot;is lower or equal than &quot;</span><span class="p">,</span>
+    <span class="s2">&quot;&gt;&quot;</span><span class="o">:</span> <span class="s2">&quot;is greater than &quot;</span><span class="p">,</span>
+    <span class="s2">&quot;&gt;=&quot;</span><span class="o">:</span> <span class="s2">&quot;is greater or equal than &quot;</span><span class="p">,</span>
+    <span class="s2">&quot;=&quot;</span><span class="o">:</span> <span class="s2">&quot;matches &quot;</span><span class="p">,</span>
+    <span class="s2">&quot;!=&quot;</span><span class="o">:</span> <span class="s2">&quot;doesn&#39;t match &quot;</span>
+  <span class="p">};</span>
+
+<span class="nx">query</span><span class="p">.</span><span class="nx">onParseStart</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">object</span><span class="p">,</span> <span class="nx">option</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">object</span><span class="p">.</span><span class="nx">start</span> <span class="o">=</span> <span class="s2">&quot;The wildcard character is &#39;&quot;</span> <span class="o">+</span>
+    <span class="p">(</span><span class="nx">option</span><span class="p">.</span><span class="nx">wildcard_character</span> <span class="o">||</span> <span class="s2">&quot;%&quot;</span><span class="p">)</span> <span class="o">+</span>
+    <span class="s2">&quot;&#39; and we need only the &quot;</span> <span class="o">+</span> <span class="nx">option</span><span class="p">.</span><span class="nx">limit</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot; elements from the numero &quot;</span> <span class="o">+</span>
+    <span class="nx">option</span><span class="p">.</span><span class="nx">limit</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;. &quot;</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="nx">query</span><span class="p">.</span><span class="nx">onParseSimpleQuery</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">object</span><span class="p">,</span> <span class="nx">option</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">object</span><span class="p">.</span><span class="nx">parsed</span> <span class="o">=</span> <span class="nx">object</span><span class="p">.</span><span class="nx">parsed</span><span class="p">.</span><span class="nx">key</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="nx">human_read</span><span class="p">[</span><span class="nx">object</span><span class="p">.</span><span class="nx">parsed</span><span class="p">.</span><span class="nx">operator</span><span class="p">]</span> <span class="o">+</span>
+    <span class="nx">object</span><span class="p">.</span><span class="nx">parsed</span><span class="p">.</span><span class="nx">value</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="nx">query</span><span class="p">.</span><span class="nx">onParseComplexQuery</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">object</span><span class="p">,</span> <span class="nx">option</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">object</span><span class="p">.</span><span class="nx">parsed</span> <span class="o">=</span> <span class="s2">&quot;I want all document where &quot;</span> <span class="o">+</span>
+    <span class="nx">object</span><span class="p">.</span><span class="nx">parsed</span><span class="p">.</span><span class="nx">query_list</span><span class="p">.</span><span class="nx">join</span><span class="p">(</span><span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="nx">object</span><span class="p">.</span><span class="nx">parsed</span><span class="p">.</span><span class="nx">operator</span><span class="p">.</span><span class="nx">toLowerCase</span><span class="p">()</span> <span class="o">+</span>
+    <span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;. &quot;</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="nx">query</span><span class="p">.</span><span class="nx">onParseEnd</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">object</span><span class="p">,</span> <span class="nx">option</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">object</span><span class="p">.</span><span class="nx">parsed</span> <span class="o">=</span> <span class="nx">object</span><span class="p">.</span><span class="nx">start</span> <span class="o">+</span> <span class="nx">object</span><span class="p">.</span><span class="nx">parsed</span> <span class="o">+</span> <span class="s2">&quot;Thank you!&quot;</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">query</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">option</span><span class="p">));</span>
+<span class="c1">// logged: &quot;The wildcard character is &#39;*&#39; and we need only the 10 elements</span>
+<span class="c1">// from the numero 0. I want all document where year is lower than 2000 or title</span>
+<span class="c1">// matches *a. Thank you!&quot;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="json-schemas-and-grammar">
+<h2>JSON Schemas and Grammar<a class="headerlink" href="#json-schemas-and-grammar" title="Permalink to this headline">¶</a></h2>
+<p>Below you can find schemas for constructing queries.</p>
+<ul>
+<li><p class="first">Complex Queries JSON Schema:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+  <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;ComplexQuery&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;properties&quot;</span><span class="o">:</span> <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;string&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;format&quot;</span><span class="o">:</span> <span class="s2">&quot;complex&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;default&quot;</span><span class="o">:</span> <span class="s2">&quot;complex&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;description&quot;</span><span class="o">:</span> <span class="s2">&quot;The type is used to recognize the query type.&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;operator&quot;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;string&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;format&quot;</span><span class="o">:</span> <span class="s2">&quot;(AND|OR|NOT)&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;required&quot;</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="s2">&quot;description&quot;</span><span class="o">:</span> <span class="s2">&quot;Can be &#39;AND&#39;, &#39;OR&#39; or &#39;NOT&#39;.&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;query_list&quot;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;array&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;items&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;object&quot;</span>
+      <span class="p">},</span>
+      <span class="s2">&quot;required&quot;</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="s2">&quot;default&quot;</span><span class="o">:</span> <span class="p">[],</span>
+      <span class="s2">&quot;description&quot;</span><span class="o">:</span> <span class="s2">&quot;query_list is a list of queries which can be in serialized format of in object format.&quot;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Simple Queries JSON Schema:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+  <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;SimpleQuery&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;properties&quot;</span><span class="o">:</span> <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;string&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;format&quot;</span><span class="o">:</span> <span class="s2">&quot;simple&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;default&quot;</span><span class="o">:</span> <span class="s2">&quot;simple&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;description&quot;</span><span class="o">:</span> <span class="s2">&quot;The type is used to recognize the query type.&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;operator&quot;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;string&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;default&quot;</span><span class="o">:</span> <span class="s2">&quot;=&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;format&quot;</span><span class="o">:</span> <span class="s2">&quot;(&gt;=?|&lt;=?|!?=)&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;description&quot;</span><span class="o">:</span> <span class="s2">&quot;The operator used to compare.&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;string&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;default&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;description&quot;</span><span class="o">:</span> <span class="s2">&quot;The column id.&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;value&quot;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;string&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;default&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;description&quot;</span><span class="o">:</span> <span class="s2">&quot;The value we want to search.&quot;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Complex Queries Grammar:</p>
+<div class="highlight-python"><pre>search_text
+    : and_expression
+    | and_expression search_text
+    | and_expression OR search_text
+
+and_expression
+    : boolean_expression
+    | boolean_expression AND and_expression
+
+boolean_expression
+    : NOT expression
+    | expression
+
+expression
+    : ( search_text )
+    | COLUMN expression
+    | value
+
+value
+    : OPERATOR string
+    | string
+
+string
+    : WORD
+    | STRING
+
+terminal:
+    OR               -&gt; /OR[ ]/
+    AND              -&gt; /AND[ ]/
+    NOT              -&gt; /NOT[ ]/
+    COLUMN           -&gt; /[^&gt;&lt;= :\(\)"][^ :\(\)"]*:/
+    STRING           -&gt; /"(\\.|[^\\"])*"/
+    WORD             -&gt; /[^&gt;&lt;= :\(\)"][^ :\(\)"]*/
+    OPERATOR         -&gt; /(&gt;=?|&lt;=?|!?=)/
+    LEFT_PARENTHESE  -&gt; /\(/
+    RIGHT_PARENTHESE -&gt; /\)/
+
+ignore: " "</pre>
+</div>
+</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/jio.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">JIO Complex Queries</a><ul>
+<li><a class="reference internal" href="#what-are-complex-queries">What are Complex Queries?</a></li>
+<li><a class="reference internal" href="#why-use-complex-queries">Why use Complex Queries?</a></li>
+<li><a class="reference internal" href="#how-to-use-complex-queries-with-jio">How to use Complex Queries with jIO?</a></li>
+<li><a class="reference internal" href="#how-to-use-complex-queries-outside-jio">How to use Complex Queries outside jIO?</a><ul>
+<li><a class="reference internal" href="#complex-queries-in-storage-connectors">Complex Queries in storage connectors</a></li>
+<li><a class="reference internal" href="#matching-properties">Matching properties</a></li>
+<li><a class="reference internal" href="#should-default-search-types-be-defined-in-jio-or-in-user-interface-components">Should default search types be defined in jIO or in user interface components?</a></li>
+<li><a class="reference internal" href="#convert-complex-queries-into-another-type">Convert Complex Queries into another type</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#json-schemas-and-grammar">JSON Schemas and Grammar</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="gid_storage.html"
+                        title="previous chapter">JIO GIDStorage</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="metadata.html"
+                        title="next chapter">Metadata</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/complex_queries.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="metadata.html" title="Metadata"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="gid_storage.html" title="JIO GIDStorage"
+             >previous</a> |</li>
+        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Nexedi.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

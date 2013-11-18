@@ -1,0 +1,555 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Metadata &mdash; JIO 2.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="JIO 2.0.0 documentation" href="index.html" />
+    <link rel="next" title="For developers" href="developers.html" />
+    <link rel="prev" title="JIO Complex Queries" href="complex_queries.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="developers.html" title="For developers"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="complex_queries.html" title="JIO Complex Queries"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="metadata">
+<h1>Metadata<a class="headerlink" href="#metadata" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="what-is-metadata">
+<h2>What is metadata?<a class="headerlink" href="#what-is-metadata" title="Permalink to this headline">¶</a></h2>
+<p>The word &#8220;metadata&#8221; means &#8220;data about data&#8221;. Metadata articulates a context for
+objects of interest &#8211; &#8220;resources&#8221; such as MP3 files, library books, or
+satellite images &#8211; in the form of &#8220;resource descriptions&#8221;. As a tradition,
+resource description dates back to the earliest archives and library catalogs.
+The modern &#8220;metadata&#8221; field that gave rise to Dublin Core and other recent
+standards emerged with the Web revolution of the mid-1990s.
+<a class="reference external" href="http://dublincore.org/metadata-basics/">http://dublincore.org/metadata-basics/</a></p>
+</div>
+<div class="section" id="why-use-metadata">
+<h2>Why use metadata?<a class="headerlink" href="#why-use-metadata" title="Permalink to this headline">¶</a></h2>
+<p>Uploading a document to several servers can be very tricky, because the
+document has to be saved in a place where it can be easily found with basic
+searches in all storages (For instance: ERP5, XWiki and Mioga2 have their own
+way to save documents and to get them). So we must use metadata for
+<em>interoperability reasons</em>. Interoperability is the ability of diverse systems
+and organizations to work together.</p>
+</div>
+<div class="section" id="how-to-format-metadata-with-jio">
+<h2>How to format metadata with JIO<a class="headerlink" href="#how-to-format-metadata-with-jio" title="Permalink to this headline">¶</a></h2>
+<p>See below XML and its JSON equivalent:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="53%" />
+<col width="47%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">XML</th>
+<th class="head">JSON</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><div class="first last highlight-xml"><div class="highlight"><pre><span class="nt">&lt;dc:title&gt;</span>My Title<span class="nt">&lt;/dc:title&gt;</span>
+</pre></div>
+</div>
+</td>
+<td><div class="first last highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="o">:</span><span class="s2">&quot;My Title&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><div class="first last highlight-xml"><div class="highlight"><pre><span class="nt">&lt;dc:contributor&gt;</span>Me<span class="nt">&lt;/dc:contributor&gt;</span>
+<span class="nt">&lt;dc:contributor&gt;</span>And You<span class="nt">&lt;/dc:contributor&gt;</span>
+</pre></div>
+</div>
+</td>
+<td><div class="first last highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;contributor&quot;</span><span class="o">:</span><span class="p">[</span><span class="s2">&quot;Me&quot;</span><span class="p">,</span> <span class="s2">&quot;And You&quot;</span><span class="p">]}</span>
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><div class="first last highlight-xml"><div class="highlight"><pre><span class="nt">&lt;dc:identifier</span> <span class="na">scheme=</span><span class="s">&quot;DCTERMS.URI&quot;</span><span class="nt">&gt;</span>
+  http://my/resource
+<span class="nt">&lt;/dc:identifier&gt;</span>
+<span class="nt">&lt;dc:identifier&gt;</span>
+  Xaoe41PAPNIWz
+<span class="nt">&lt;/dc:identifier&gt;</span>
+</pre></div>
+</div>
+</td>
+<td><div class="first last highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;identifier&quot;</span><span class="o">:</span> <span class="p">[</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;scheme&quot;</span><span class="o">:</span> <span class="s2">&quot;DCTERMS.URI&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;content&quot;</span><span class="o">:</span> <span class="s2">&quot;http://my/resource&quot;</span>
+   <span class="p">},</span>
+  <span class="s2">&quot;Xaoe41PAPNIWz&quot;</span><span class="p">]}</span>
+</pre></div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="list-of-metadata-to-use">
+<h2>List of metadata to use<a class="headerlink" href="#list-of-metadata-to-use" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="identification">
+<h3>Identification<a class="headerlink" href="#identification" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p class="first"><strong>&#8220;_id&#8221;</strong>, a specific JIO metadata which helps the storage to find a document
+(can be a real path name, a dc:identifier, a uuid, ...). <strong>String Only</strong></p>
+</li>
+<li><p class="first"><strong>&#8220;identifer&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;identifier&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;http://domain/jio_home_page&quot;</span></span><span class="punctuation"><span class="pre">},</span></span> <span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;identifier&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;urn:ISBN:978-1-2345-6789-X&quot;</span></span><span class="punctuation"><span class="pre">},</span></span>
+<span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;identifier&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;scheme&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;DCTERMS.URI&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal string double"><span class="pre">&quot;content&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;http://domain/jio_home_page&quot;</span></span><span class="punctuation"><span class="pre">}]}</span></span></tt></p>
+<p>an unambiguous reference to the resource within a given context. Recommended
+best practice is to identify the resource by means of a string or number
+conforming to a formal identification system. Examples of formal identification
+systems include the Uniform Resource Identifier (URI) (including the Uniform
+Resource Locator (URL), the Digital Object Identifier (DOI) and the
+International Standard Book Number (ISBN).</p>
+</li>
+<li><p class="first"><strong>&#8220;format&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;format&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="literal string double"><span class="pre">&quot;text/html&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal string double"><span class="pre">&quot;52</span> <span class="pre">kB&quot;</span></span><span class="punctuation"><span class="pre">]},</span></span> <span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;format&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="literal string double"><span class="pre">&quot;image/jpeg&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal string double"><span class="pre">&quot;100</span> <span class="pre">x</span> <span class="pre">100</span> <span class="pre">pixels&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal string double"><span class="pre">&quot;13.2</span> <span class="pre">KiB&quot;</span></span><span class="punctuation"><span class="pre">]}</span></span></tt></p>
+<p>the physical or digital manifestation of the resource. Typically, Format may
+include the media-type or dimensions of the resource. Examples of dimensions
+include size and duration. Format may be used to determine the software,
+hardware or other equipment needed to display or operate the resource.</p>
+</li>
+<li><p class="first"><strong>&#8220;date&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;date&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;2011-12-13T14:15:16Z&quot;</span></span><span class="punctuation"><span class="pre">},</span></span> <span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;date&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;scheme&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;DCTERMS.W3CDTF&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal string double"><span class="pre">&quot;content&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;2011-12-13&quot;</span></span><span class="punctuation"><span class="pre">}}</span></span></tt></p>
+<p>a date associated with an event in the life cycle of the resource. Typically,
+Date will be associated with the creation or availability of the resource.
+Recommended best practice for encoding the date value is defined in a profile
+of ISO 8601 <a class="reference external" href="http://www.w3.org/TR/NOTE-datetime">Date and Time Formats, W3C Note</a>
+and follows the YYYY-MM-DD format.</p>
+</li>
+<li><p class="first"><strong>&#8220;type&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;type&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;Text&quot;</span></span><span class="punctuation"><span class="pre">},</span></span> <span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;type&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;Image&quot;</span></span><span class="punctuation"><span class="pre">},</span></span> <span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;type&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;Dataset&quot;</span></span><span class="punctuation"><span class="pre">}</span></span></tt></p>
+<p>the nature or genre of the content of the resource. Type includes terms describing
+general categories, functions, genres, or aggregation levels for content.
+Recommended best practice is to select a value from a controlled vocabulary.
+<strong>The type is not a MIME Type!</strong></p>
+</li>
+</ul>
+</div>
+<div class="section" id="intellectual-property">
+<h3>Intellectual property<a class="headerlink" href="#intellectual-property" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p class="first"><strong>&#8220;creator&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;creator&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;Tristan</span> <span class="pre">Cavelier&quot;</span></span><span class="punctuation"><span class="pre">},</span></span> <span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;creator&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="literal string double"><span class="pre">&quot;Tristan</span> <span class="pre">Cavelier&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal string double"><span class="pre">&quot;Sven</span> <span class="pre">Franck&quot;</span></span><span class="punctuation"><span class="pre">]}</span></span></tt></p>
+<p>an entity primarily responsible for creating the content of the resource.
+Examples of a Creator include a person, an organization, or a service.
+Typically the name of the Creator should be used to indicate the entity.</p>
+</li>
+<li><p class="first"><strong>&#8220;publisher&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;publisher&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;Nexedi&quot;</span></span><span class="punctuation"><span class="pre">}</span></span></tt></p>
+<p>the entity responsible for making the resource available. Examples of a
+Publisher include a person, an organization, or a service. Typically, the name
+of a Publisher should be used to indicate the entity.</p>
+</li>
+<li><p class="first"><strong>&#8220;contributor&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;contributor&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="literal string double"><span class="pre">&quot;Full</span> <span class="pre">Name&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal string double"><span class="pre">&quot;Full</span> <span class="pre">Name&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">...]}</span></span></tt></p>
+<p>an entity responsible for making contributions to the content of the
+resource. Examples of a Contributor include a person, an organization or a
+service. Typically, the name of a Contributor should be used to indicate the
+entity.</p>
+</li>
+<li><p class="first"><strong>&#8220;rights&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;rights&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;Access</span> <span class="pre">limited</span> <span class="pre">to</span> <span class="pre">members&quot;</span></span><span class="punctuation"><span class="pre">},</span></span> <span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;rights&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;https://www.j-io.org/documentation/jio-documentation/#copyright-and-license&quot;</span></span><span class="punctuation"><span class="pre">}</span></span></tt></p>
+<p>information about rights held in and over the resource. Typically a Rights
+element will contain a rights management statement for the resource, or
+reference a service providing such information. Rights information often
+encompasses Intellectual Property Rights (IPR), Copyright, and various Property
+Rights. If the rights element is absent, no assumptions can be made about the
+status of these and other rights with respect to the resource.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="content">
+<h3>Content<a class="headerlink" href="#content" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p class="first"><strong>&#8220;title&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;title&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;JIO</span> <span class="pre">Home</span> <span class="pre">Page&quot;</span></span><span class="punctuation"><span class="pre">}</span></span></tt></p>
+<p>the name given to the resource. Typically, a Title will be a name by which the resource is formally known.</p>
+</li>
+<li><p class="first"><strong>&#8220;subject&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;subject&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;JIO&quot;</span></span><span class="punctuation"><span class="pre">},</span></span> <span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;subject&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="literal string double"><span class="pre">&quot;JIO&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal string double"><span class="pre">&quot;basics&quot;</span></span><span class="punctuation"><span class="pre">]}</span></span></tt></p>
+<p>the topic of the content of the resource. Typically, a Subject will be
+expressed as keywords or key phrases or classification codes that describe the
+topic of the resource. Recommended best practice is to select a value from a
+controlled vocabulary or formal classification scheme.</p>
+</li>
+<li><p class="first"><strong>&#8220;description&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;description&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;Simple</span> <span class="pre">guide</span> <span class="pre">to</span> <span class="pre">show</span> <span class="pre">the</span> <span class="pre">basics</span> <span class="pre">of</span> <span class="pre">JIO&quot;</span></span><span class="punctuation"><span class="pre">},</span></span> <span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;description&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;lang&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;fr&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal string double"><span class="pre">&quot;content&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;Ma</span> <span class="pre">description&quot;</span></span><span class="punctuation"><span class="pre">}}</span></span></tt></p>
+<p>an account of the content of the resource. Description may include but is not
+limited to: an abstract, table of contents, reference to a graphical
+representation of content or a free-text account of the content.</p>
+</li>
+<li><p class="first"><strong>&#8220;language&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;language&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;en&quot;</span></span><span class="punctuation"><span class="pre">}</span></span></tt></p>
+<p>the language of the intellectual content of the resource. Recommended best
+practice for the values of the Language element is defined by <a class="reference external" href="http://www.ietf.org/rfc/rfc3066.txt">RFC 3066</a>
+which, in conjunction with <a class="reference external" href="http://www.oasis-open.org/cover/iso639a.html">ISO 639</a>, defines two- and
+three-letter primary language tags with optional subtags. Examples include &#8220;en&#8221;
+or &#8220;eng&#8221; for English, &#8220;akk&#8221; for Akkadian, and &#8220;en-GB&#8221; for English used in the
+United Kingdom.</p>
+</li>
+<li><p class="first"><strong>&#8220;source&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;source&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="literal string double"><span class="pre">&quot;Image</span> <span class="pre">taken</span> <span class="pre">from</span> <span class="pre">a</span> <span class="pre">drawing</span> <span class="pre">by</span> <span class="pre">Mr.</span> <span class="pre">Artist&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal string double"><span class="pre">&quot;&lt;phone</span> <span class="pre">number&gt;&quot;</span></span><span class="punctuation"><span class="pre">]}</span></span></tt>,</p>
+<p>a Reference to a resource from which the present resource is derived. The
+present resource may be derived from the Source resource in whole or part.
+Recommended best practice is to reference the resource by means of a string or
+number conforming to a formal identification system.</p>
+</li>
+<li><p class="first"><strong>&#8220;relation&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;relation&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;Resilience</span> <span class="pre">project&quot;</span></span><span class="punctuation"><span class="pre">}</span></span></tt></p>
+<p>a reference to a related resource. Recommended best practice is to reference
+the resource by means of a string or number conforming to a formal
+identification system.</p>
+</li>
+<li><p class="first"><strong>&#8220;coverage&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;coverage&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;France&quot;</span></span><span class="punctuation"><span class="pre">}</span></span></tt></p>
+<p>the extent or scope of the content of the resource. Coverage will typically
+include spatial location (a place name or geographic co-ordinates), temporal
+period (a period label, date, or date range) or jurisdiction (such as a named
+administrative entity). Recommended best practice is to select a value from a
+controlled vocabulary (for example, the <a class="reference external" href="http://www.getty.edu/research/tools/vocabulary/tgn/">Getty Thesaurus of Geographic Names</a>. Where appropriate, named
+places or time periods should be used in preference to numeric identifiers such
+as sets of co-ordinates or date ranges.</p>
+</li>
+<li><p class="first"><strong>&#8220;category&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;category&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="literal string double"><span class="pre">&quot;parent/26323&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal string double"><span class="pre">&quot;resilience/javascript&quot;</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal string double"><span class="pre">&quot;javascript/library/io&quot;</span></span><span class="punctuation"><span class="pre">]}</span></span></tt></p>
+<p>the category the resource is associated with. The categories may look like
+navigational facets, they correspond to the properties of the resource which
+can be generated with metadata or some other informations (see <a class="reference external" href="https://en.wikipedia.org/wiki/Faceted_search">faceted search</a>).</p>
+</li>
+<li><p class="first"><strong>&#8220;product&#8221;</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="literal string double"><span class="pre">&quot;product&quot;</span></span><span class="operator"><span class="pre">:</span></span> <span class="literal string double"><span class="pre">&quot;...&quot;</span></span><span class="punctuation"><span class="pre">}</span></span></tt></p>
+<p>for e-commerce use.</p>
+</li>
+<li><p class="first"><strong>custom</strong>, <tt class="code js javascript docutils literal"><span class="punctuation"><span class="pre">{</span></span><span class="name other"><span class="pre">custom1</span></span><span class="operator"><span class="pre">:</span></span> <span class="name other"><span class="pre">value1</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name other"><span class="pre">custom2</span></span><span class="operator"><span class="pre">:</span></span> <span class="name other"><span class="pre">value2</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="punctuation"><span class="pre">...}</span></span></tt></p>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="posting-a-webpage-for-jio">
+<h3>Posting a webpage for JIO<a class="headerlink" href="#posting-a-webpage-for-jio" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">jio</span><span class="p">.</span><span class="nx">put</span><span class="p">({</span>
+  <span class="s2">&quot;_id&quot;</span>         <span class="o">:</span> <span class="s2">&quot;...&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;identifier&quot;</span>  <span class="o">:</span> <span class="s2">&quot;http://domain/jio_home_page&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;format&quot;</span>      <span class="o">:</span> <span class="p">[</span><span class="s2">&quot;text/html&quot;</span><span class="p">,</span> <span class="s2">&quot;52 kB&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;date&quot;</span>        <span class="o">:</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">(),</span>
+  <span class="s2">&quot;type&quot;</span>        <span class="o">:</span> <span class="s2">&quot;Text&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;creator&quot;</span>     <span class="o">:</span> <span class="p">[</span><span class="s2">&quot;Nexedi&quot;</span><span class="p">,</span> <span class="s2">&quot;Tristan Cavelier&quot;</span><span class="p">,</span> <span class="s2">&quot;Sven Franck&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;title&quot;</span>       <span class="o">:</span> <span class="s2">&quot;JIO Home Page&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;subject&quot;</span>     <span class="o">:</span> <span class="p">[</span><span class="s2">&quot;JIO&quot;</span><span class="p">,</span> <span class="s2">&quot;basics&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;description&quot;</span> <span class="o">:</span> <span class="s2">&quot;Simple guide to show the basics of JIO&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;category&quot;</span>    <span class="o">:</span> <span class="p">[</span><span class="s2">&quot;resilience/jio&quot;</span><span class="p">,</span> <span class="s2">&quot;webpage&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;language&quot;</span>    <span class="o">:</span> <span class="s2">&quot;en&quot;</span>
+<span class="p">},</span> <span class="nx">callbacks</span><span class="p">);</span> <span class="c1">// send content as attachment</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="posting-jio-library">
+<h3>Posting JIO library<a class="headerlink" href="#posting-jio-library" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">jio</span><span class="p">.</span><span class="nx">put</span><span class="p">({</span>
+  <span class="s2">&quot;_id&quot;</span>         <span class="o">:</span> <span class="s2">&quot;...&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;identifier&quot;</span>  <span class="o">:</span> <span class="s2">&quot;jio.js&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;date&quot;</span>        <span class="o">:</span> <span class="s2">&quot;2013-02-15&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;format&quot;</span>      <span class="o">:</span> <span class="s2">&quot;application/javascript&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;type&quot;</span>        <span class="o">:</span> <span class="s2">&quot;Software&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;creator&quot;</span>     <span class="o">:</span> <span class="p">[</span><span class="s2">&quot;Tristan Cavelier&quot;</span><span class="p">,</span> <span class="s2">&quot;Sven Franck&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;publisher&quot;</span>   <span class="o">:</span> <span class="s2">&quot;Nexedi&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;rights&quot;</span>      <span class="o">:</span>
+    <span class="s2">&quot;https://www.j-io.org/documentation/jio-documentation/#copyright-and-license&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;title&quot;</span>       <span class="o">:</span> <span class="s2">&quot;Javascript Input/Output&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;subject&quot;</span>     <span class="o">:</span> <span class="s2">&quot;JIO&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;category&quot;</span>    <span class="o">:</span> <span class="p">[</span><span class="s2">&quot;resilience/javascript&quot;</span><span class="p">,</span> <span class="s2">&quot;javascript/library/io&quot;</span><span class="p">]</span>
+  <span class="s2">&quot;description&quot;</span> <span class="o">:</span> <span class="s2">&quot;jIO is a client-side JavaScript library to manage &quot;</span> <span class="o">+</span>
+                  <span class="s2">&quot;documents across multiple storages.&quot;</span>
+<span class="p">},</span> <span class="nx">callbacks</span><span class="p">);</span> <span class="c1">// send content as attachment</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="posting-a-webpage-for-interoperability-levels">
+<h3>Posting a webpage for interoperability levels<a class="headerlink" href="#posting-a-webpage-for-interoperability-levels" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">jio</span><span class="p">.</span><span class="nx">put</span><span class="p">({</span>
+  <span class="s2">&quot;_id&quot;</span>         <span class="o">:</span> <span class="s2">&quot;...&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;identifier&quot;</span>  <span class="o">:</span> <span class="s2">&quot;http://dublincore.org/documents/interoperability-levels/&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;date&quot;</span>        <span class="o">:</span> <span class="s2">&quot;2009-05-01&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;format&quot;</span>      <span class="o">:</span> <span class="s2">&quot;text/html&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;type&quot;</span>        <span class="o">:</span> <span class="s2">&quot;Text&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;creator&quot;</span>     <span class="o">:</span> <span class="p">[</span><span class="s2">&quot;Mikael Nilsson&quot;</span><span class="p">,</span> <span class="s2">&quot;Thomas Baker&quot;</span><span class="p">,</span> <span class="s2">&quot;Pete Johnston&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;publisher&quot;</span>   <span class="o">:</span> <span class="s2">&quot;Dublin Core Metadata Initiative&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;title&quot;</span>       <span class="o">:</span> <span class="s2">&quot;Interoperability Levels for Dublin Core Metadata&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;description&quot;</span> <span class="o">:</span> <span class="s2">&quot;This document discusses the design choices involved &quot;</span> <span class="o">+</span>
+                  <span class="s2">&quot;in designing applications for different types of &quot;</span> <span class="o">+</span>
+                  <span class="s2">&quot;interoperability. [...]&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;language&quot;</span>    <span class="o">:</span> <span class="s2">&quot;en&quot;</span>
+<span class="p">},</span> <span class="nx">callbacks</span><span class="p">);</span> <span class="c1">// send content as attachment</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="posting-an-image">
+<h3>Posting an image<a class="headerlink" href="#posting-an-image" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">jio</span><span class="p">.</span><span class="nx">put</span><span class="p">({</span>
+  <span class="s2">&quot;_id&quot;</span>         <span class="o">:</span> <span class="s2">&quot;...&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;identifier&quot;</span>  <span class="o">:</span> <span class="s2">&quot;new_york_city_at_night&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;format&quot;</span>      <span class="o">:</span> <span class="p">[</span><span class="s2">&quot;image/jpeg&quot;</span><span class="p">,</span> <span class="s2">&quot;7.2 MB&quot;</span><span class="p">,</span> <span class="s2">&quot;8192 x 4096 pixels&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;date&quot;</span>        <span class="o">:</span> <span class="s2">&quot;1999&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;type&quot;</span>        <span class="o">:</span> <span class="s2">&quot;Image&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;creator&quot;</span>     <span class="o">:</span> <span class="s2">&quot;Mr. Someone&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;title&quot;</span>       <span class="o">:</span> <span class="s2">&quot;New York City at Night&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;subject&quot;</span>     <span class="o">:</span> <span class="p">[</span><span class="s2">&quot;New York&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;description&quot;</span> <span class="o">:</span> <span class="s2">&quot;A photo of New York City taken just after midnight&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;coverage&quot;</span>    <span class="o">:</span> <span class="p">[</span><span class="s2">&quot;New York&quot;</span><span class="p">,</span> <span class="s2">&quot;1996-1997&quot;</span><span class="p">]</span>
+<span class="p">},</span> <span class="nx">callbacks</span><span class="p">);</span> <span class="c1">// send content as attachment</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="posting-a-book">
+<h3>Posting a book<a class="headerlink" href="#posting-a-book" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">jio</span><span class="p">.</span><span class="nx">put</span><span class="p">({</span>
+  <span class="s2">&quot;_id&quot;</span>         <span class="o">:</span> <span class="s2">&quot;...&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;identifier&quot;</span>  <span class="o">:</span> <span class="p">{</span><span class="s2">&quot;scheme&quot;</span><span class="o">:</span> <span class="s2">&quot;DCTERMS.URI&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="o">:</span> <span class="s2">&quot;urn:ISBN:0385424728&quot;</span><span class="p">},</span>
+  <span class="s2">&quot;format&quot;</span>      <span class="o">:</span> <span class="s2">&quot;application/pdf&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;date&quot;</span>        <span class="o">:</span> <span class="p">{</span><span class="s2">&quot;scheme&quot;</span><span class="o">:</span> <span class="s2">&quot;DCTERMS.W3CDTF&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="o">:</span> <span class="nx">getW3CDate</span><span class="p">()},</span> <span class="c1">// see tools below</span>
+  <span class="s2">&quot;creator&quot;</span>     <span class="o">:</span> <span class="s2">&quot;Original Author(s)&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;publisher&quot;</span>   <span class="o">:</span> <span class="s2">&quot;Me&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;title&quot;</span>       <span class="o">:</span> <span class="p">{</span><span class="s2">&quot;lang&quot;</span><span class="o">:</span> <span class="s2">&quot;en&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="o">:</span> <span class="s2">&quot;...&quot;</span><span class="p">},</span>
+  <span class="s2">&quot;description&quot;</span> <span class="o">:</span> <span class="p">{</span><span class="s2">&quot;lang&quot;</span><span class="o">:</span> <span class="s2">&quot;en&quot;</span><span class="p">,</span> <span class="s2">&quot;Summary: ...&quot;</span><span class="p">},</span>
+  <span class="s2">&quot;language&quot;</span>    <span class="o">:</span> <span class="p">{</span><span class="s2">&quot;scheme&quot;</span><span class="o">:</span> <span class="s2">&quot;DCTERMS.RFC4646&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="o">:</span> <span class="s2">&quot;en-GB&quot;</span><span class="p">}</span>
+<span class="p">},</span> <span class="nx">callbakcs</span><span class="p">);</span> <span class="c1">// send content as attachment</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="posting-a-video">
+<h3>Posting a video<a class="headerlink" href="#posting-a-video" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">jio</span><span class="p">.</span><span class="nx">put</span><span class="p">({</span>
+  <span class="s2">&quot;_id&quot;</span>         <span class="o">:</span> <span class="s2">&quot;...&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;identifier&quot;</span>  <span class="o">:</span> <span class="s2">&quot;my_video&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;format&quot;</span>      <span class="o">:</span> <span class="p">[</span><span class="s2">&quot;video/ogg&quot;</span><span class="p">,</span> <span class="s2">&quot;130 MB&quot;</span><span class="p">,</span> <span class="s2">&quot;1080p&quot;</span><span class="p">,</span> <span class="s2">&quot;20 seconds&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;date&quot;</span>        <span class="o">:</span> <span class="nx">getW3CDate</span><span class="p">(),</span> <span class="c1">// see tools below</span>
+  <span class="s2">&quot;type&quot;</span>        <span class="o">:</span> <span class="s2">&quot;Video&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;creator&quot;</span>     <span class="o">:</span> <span class="s2">&quot;Me&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;title&quot;</span>       <span class="o">:</span> <span class="s2">&quot;My life&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;description&quot;</span> <span class="o">:</span> <span class="s2">&quot;A video about my life&quot;</span>
+<span class="p">},</span> <span class="nx">callbacks</span><span class="p">);</span> <span class="c1">// send content as attachment</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="posting-a-job-announcement">
+<h3>Posting a job announcement<a class="headerlink" href="#posting-a-job-announcement" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">jio</span><span class="p">.</span><span class="nx">post</span><span class="p">({</span>
+  <span class="s2">&quot;format&quot;</span>      <span class="o">:</span> <span class="s2">&quot;text/html&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;date&quot;</span>        <span class="o">:</span> <span class="s2">&quot;2013-02-14T14:44Z&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;type&quot;</span>        <span class="o">:</span> <span class="s2">&quot;Text&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;creator&quot;</span>     <span class="o">:</span> <span class="s2">&quot;James Douglas&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;publisher&quot;</span>   <span class="o">:</span> <span class="s2">&quot;Morgan Healey Ltd&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;title&quot;</span>       <span class="o">:</span> <span class="s2">&quot;E-Commerce Product Manager&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;subject&quot;</span>     <span class="o">:</span> <span class="s2">&quot;Job Announcement&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;description&quot;</span> <span class="o">:</span> <span class="s2">&quot;...&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;language&quot;</span>    <span class="o">:</span> <span class="s2">&quot;en-GB&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;source&quot;</span>      <span class="o">:</span> <span class="s2">&quot;James@morganhealey.com&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;relation&quot;</span>    <span class="o">:</span> <span class="p">[</span><span class="s2">&quot;Totaljobs&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;coverage&quot;</span>    <span class="o">:</span> <span class="s2">&quot;London, South East&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;job_type&quot;</span>    <span class="o">:</span> <span class="s2">&quot;Permanent&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;salary&quot;</span>      <span class="o">:</span> <span class="s2">&quot;£45,000 per annum&quot;</span>
+<span class="p">},</span> <span class="nx">callbacks</span><span class="p">);</span> <span class="c1">// send content as attachment</span>
+<span class="c1">// result: http://www.totaljobs.com/JobSeeking/E-Commerce-Product-Manager_job55787655</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="getting-a-list-of-document-created-by-someone">
+<h3>Getting a list of document created by someone<a class="headerlink" href="#getting-a-list-of-document-created-by-someone" title="Permalink to this headline">¶</a></h3>
+<p>With complex query:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">jio</span><span class="p">.</span><span class="nx">allDocs</span><span class="p">({</span><span class="s2">&quot;query&quot;</span><span class="o">:</span> <span class="s2">&quot;creator: \&quot;someone\&quot;&quot;</span><span class="p">},</span> <span class="nx">callbacks</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="getting-all-documents-about-jio-in-the-resilience-project">
+<h3>Getting all documents about JIO in the resilience project<a class="headerlink" href="#getting-all-documents-about-jio-in-the-resilience-project" title="Permalink to this headline">¶</a></h3>
+<p>With complex query:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">jio</span><span class="p">.</span><span class="nx">allDocs</span><span class="p">({</span><span class="s2">&quot;query&quot;</span><span class="o">:</span> <span class="s2">&quot;subject: \&quot;JIO\&quot; AND category: \&quot;resilience\&quot;&quot;</span><span class="p">},</span> <span class="nx">callbacks</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="tools">
+<h2>Tools<a class="headerlink" href="#tools" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="w3c-date-function">
+<h3>W3C Date function<a class="headerlink" href="#w3c-date-function" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="cm">/**</span>
+<span class="cm"> * Tool to get the date in W3C date format</span>
+<span class="cm"> * - &quot;2011-12-13T14:15:16+01:00&quot; with use_utc = false (by default)</span>
+<span class="cm"> * - &quot;2011-12-13T13:15:16Z&quot; with use_utc = true</span>
+<span class="cm"> *</span>
+<span class="cm"> * @param  {Boolean} use_utc Use UTC format</span>
+<span class="cm"> * @return {String} The date in W3C date format</span>
+<span class="cm"> */</span>
+<span class="kd">function</span> <span class="nx">getW3CDate</span><span class="p">(</span><span class="nx">use_utc</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">d</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">(),</span> <span class="nx">offset</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">use_utc</span> <span class="o">===</span> <span class="kc">true</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">d</span><span class="p">.</span><span class="nx">toISOString</span><span class="p">();</span>
+  <span class="p">}</span>
+  <span class="nx">offset</span> <span class="o">=</span> <span class="o">-</span> <span class="nx">d</span><span class="p">.</span><span class="nx">getTimezoneOffset</span><span class="p">();</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="nx">d</span><span class="p">.</span><span class="nx">getFullYear</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span>
+      <span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">getMonth</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span>
+      <span class="nx">d</span><span class="p">.</span><span class="nx">getDate</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;T&quot;</span> <span class="o">+</span>
+      <span class="nx">d</span><span class="p">.</span><span class="nx">getHours</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;:&quot;</span> <span class="o">+</span>
+      <span class="nx">d</span><span class="p">.</span><span class="nx">getMinutes</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;:&quot;</span> <span class="o">+</span>
+      <span class="nx">d</span><span class="p">.</span><span class="nx">getSeconds</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span>
+      <span class="nx">d</span><span class="p">.</span><span class="nx">getMilliseconds</span><span class="p">()</span> <span class="o">+</span>
+      <span class="p">(</span><span class="nx">offset</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="o">?</span> <span class="s2">&quot;-&quot;</span> <span class="o">:</span> <span class="s2">&quot;+&quot;</span><span class="p">)</span> <span class="o">+</span>
+      <span class="p">(</span><span class="nx">offset</span> <span class="o">/</span> <span class="mi">60</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;:&quot;</span> <span class="o">+</span>
+      <span class="p">(</span><span class="nx">offset</span> <span class="o">%</span> <span class="mi">60</span><span class="p">)</span>
+  <span class="p">).</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/[0-9]+/g</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">found</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">found</span><span class="p">.</span><span class="nx">length</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="s1">&#39;0&#39;</span> <span class="o">+</span> <span class="nx">found</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nx">found</span><span class="p">;</span>
+  <span class="p">});</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="sources">
+<h2>Sources<a class="headerlink" href="#sources" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="https://en.wikipedia.org/wiki/Interoperability">Interoperability definition</a></li>
+<li><a class="reference external" href="https://en.wikipedia.org/wiki/Faceted_search">Faceted search</a></li>
+<li><a class="reference external" href="http://dublincore.org/">DublinCore</a><ul>
+<li><a class="reference external" href="http://dublincore.org/documents/interoperability-levels/">Interoperability levels</a></li>
+<li><a class="reference external" href="http://dublincore.org/documents/usageguide/elements.shtml">Metadata elements</a></li>
+<li><a class="reference external" href="http://www.chu-rouen.fr/documed/eahilsantander.html">http://www.chu-rouen.fr/documed/eahilsantander.html</a></li>
+<li><a class="reference external" href="http://openweb.eu.org/articles/dublin_core">http://openweb.eu.org/articles/dublin_core</a> (French)</li>
+</ul>
+</li>
+<li><a class="reference external" href="https://couchdb.apache.org/">CouchDB</a></li>
+<li><a class="reference external" href="http://www.w3.org/RDF/">Resource Description Framework (RDF)</a></li>
+<li><a class="reference external" href="https://en.wikipedia.org/wiki/Five_Ws">Five Ws</a></li>
+<li><a class="reference external" href="https://en.wikipedia.org/wiki/Metadata">Metadata</a></li>
+<li>MIME Types<ul>
+<li><a class="reference external" href="https://en.wikipedia.org/wiki/Internet_media_type">https://en.wikipedia.org/wiki/Internet_media_type</a></li>
+<li><a class="reference external" href="https://www.iana.org/assignments/media-types">https://www.iana.org/assignments/media-types</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/jio.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Metadata</a><ul>
+<li><a class="reference internal" href="#what-is-metadata">What is metadata?</a></li>
+<li><a class="reference internal" href="#why-use-metadata">Why use metadata?</a></li>
+<li><a class="reference internal" href="#how-to-format-metadata-with-jio">How to format metadata with JIO</a></li>
+<li><a class="reference internal" href="#list-of-metadata-to-use">List of metadata to use</a><ul>
+<li><a class="reference internal" href="#identification">Identification</a></li>
+<li><a class="reference internal" href="#intellectual-property">Intellectual property</a></li>
+<li><a class="reference internal" href="#content">Content</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#examples">Examples</a><ul>
+<li><a class="reference internal" href="#posting-a-webpage-for-jio">Posting a webpage for JIO</a></li>
+<li><a class="reference internal" href="#posting-jio-library">Posting JIO library</a></li>
+<li><a class="reference internal" href="#posting-a-webpage-for-interoperability-levels">Posting a webpage for interoperability levels</a></li>
+<li><a class="reference internal" href="#posting-an-image">Posting an image</a></li>
+<li><a class="reference internal" href="#posting-a-book">Posting a book</a></li>
+<li><a class="reference internal" href="#posting-a-video">Posting a video</a></li>
+<li><a class="reference internal" href="#posting-a-job-announcement">Posting a job announcement</a></li>
+<li><a class="reference internal" href="#getting-a-list-of-document-created-by-someone">Getting a list of document created by someone</a></li>
+<li><a class="reference internal" href="#getting-all-documents-about-jio-in-the-resilience-project">Getting all documents about JIO in the resilience project</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tools">Tools</a><ul>
+<li><a class="reference internal" href="#w3c-date-function">W3C Date function</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#sources">Sources</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="complex_queries.html"
+                        title="previous chapter">JIO Complex Queries</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="developers.html"
+                        title="next chapter">For developers</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/metadata.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="developers.html" title="For developers"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="complex_queries.html" title="JIO Complex Queries"
+             >previous</a> |</li>
+        <li><a href="index.html">JIO 2.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Nexedi.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
