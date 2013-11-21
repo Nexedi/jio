@@ -1,5 +1,7 @@
 {%- extends "basic/layout.html" %}
 {%- block extrahead %}
+  <link rel="stylesheet" type="text/css" href="_static/jiodocs.css">
+  <script type="text/javascript" src="_static/jiodocs.js"></script>
   {{ super() }}
   {% if theme_touch_icon %}
     <link rel="apple-touch-icon" href="{{ pathto('_static/' ~ theme_touch_icon, 1) }}" />

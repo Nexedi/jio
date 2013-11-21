@@ -27,7 +27,7 @@ import sys, os
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.todo', 'sphinx.ext.ifconfig']
+extensions = ['sphinx.ext.todo', 'sphinx.ext.ifconfig', 'sphinxcontrib.jsdemo']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -134,7 +134,7 @@ html_static_path = ['_static']
 
 # Custom sidebar templates, maps document names to template names.
 html_sidebars = {
-    'index':    ['side-top.html', 'side-support.html', 'side-informed.html', 'searchbox.html'],
+    'index':    ['side-top.html', 'side-gettingstarted.html', 'side-downloads.html', 'side-support.html', 'side-informed.html', 'searchbox.html'],
     '**':       ['side-top.html', 'localtoc.html', 'relations.html', 'searchbox.html']
 }
 

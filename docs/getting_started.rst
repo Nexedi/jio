@@ -85,6 +85,14 @@ This walkthrough is designed to get you started using a basic jIO instance.
 Download & Fork
 ---------------
 
+You can use one of the ZIP packages, which include all the dependencies and storages:
+
+`Full download (172k) <_static/jio-2.0.0.zip>`_
+`Minified download (87k) <_static/jio-2.0.0-min.zip>`_
+
+or you can create your own set of files using the following links:
+
+
 Core
 ^^^^
 
@@ -127,13 +135,6 @@ Revision based storage handlers
 
 * `revisionstorage.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/jio.storage/revisionstorage.js>`_ (depends on sha256) (WIP)
 * `replicaterevisionstorage.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/jio.storage/replicatestorage.js>`_ (WIP)
-
-Minified version
-^^^^^^^^^^^^^^^^
-
-.. XXX this sounds harsh. Can we provide it or at least be more explicit?
-
-To get the minified version of the jIO library, you have to build it yourself. See documentation.
 
 Unit tests
 ^^^^^^^^^^
