@@ -5,6 +5,12 @@
   margin-bottom: 0.4em;
 }
 
+pre {
+  padding-left: 15px;
+  padding-righ: 15px;
+}
+
+
 
 a.button {
     -moz-border-radius:6px;

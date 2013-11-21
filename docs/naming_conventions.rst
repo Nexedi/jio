@@ -44,12 +44,12 @@ Bad Example
   }
 
 
-Use JSLint
-^^^^^^^^^^
+Using JSLint
+^^^^^^^^^^^^
 
 `JSLint <http://www.jslint.com/>`_ is a quality tool that inspects code and warns
 about potential problems. It is available online and can also be integrated
-into several development environments, so errors will be highlighted when
+into several development environments, so errors can be highlighted when
 writing code.
 
 Before validating your code in JSLint, you should use a code
@@ -59,9 +59,14 @@ are a number of beautifiers available online. The following ones seem to work be
 * `JSbeautifier.org <http://jsbeautifier.org/>`_
 * `JS-Beautify <http://alexis.m2osw.com/js-beautify/>`_
 
-In this project, JavaScript sources have to begin with the header: :js:`/*jslint indent: 2,
-maxlen: 80, nomen: true */`, which means it uses two spaces indentation, 80
-maximum characters per line and the use of '_' as first character in a variable name is allowed.
+In this project, JavaScript sources have to begin with the header:
+
+.. code-block:: javascript
+
+    /*jslint indent: 2, maxlen: 80, nomen: true */
+    
+which means it uses two spaces indentation, 80
+maximum characters per line and allows variable names starting with '_'.
 Other JSLint options can be added in sub functions if necessary.
 
 Some allowed options are:
@@ -77,7 +82,7 @@ Some allowed options are:
 Coding Conventions
 ------------------
 
-Coding conventions include generic patterns that ensure that written code follows certain formatting conventions.
+Coding conventions include generic patterns that ensure the written code follows certain formatting conventions.
 
 
 Uses two-space indentation
@@ -502,8 +507,8 @@ Additional Readings
 
 Resources, additional reading materials and links:
 
-* `JavaScript Patterns <http://shop.oreilly.com/product/9780596806767.do>`_, main ressource used.
-* `JSLint <http://www.jslint.com/>`_, code quality.
+* `JavaScript Patterns <http://shop.oreilly.com/product/9780596806767.do>`_, main resource used.
+* `JSLint <http://www.jslint.com/>`_, code quality tool.
 * `YUIDoc <http://yuilibrary.com/projects/yuidoc>`_, generate documentation from code.
 
 

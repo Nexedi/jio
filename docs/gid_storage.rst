@@ -98,7 +98,10 @@ metadata object can contain several values. Example:
     // or
     "key": ["value1", "value2"],
     // or
-    "key": {"attribute name": "attribute value", "content": "value"},
+    "key": {
+      "attribute name": "attribute value",
+      "content": "value"
+    },
     // or
     "key": [
       {"scheme": "DCTERMS.URI", "content": "http://foo.com/bar"},

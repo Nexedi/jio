@@ -6,7 +6,7 @@ What are Complex Queries?
 
 In jIO, a complex query can ask a storage server to select, filter, sort, or
 limit a document list before sending it back. If the server is not able to do
-so, the complex query tool can act on the retreived list by itself. Only the
+so, the complex query tool can do the filtering by itself on the client. Only the
 ``allDocs()`` method can use complex queries.
 
 A query can either be a string (using a specific language useful for writing
@@ -25,16 +25,15 @@ Complex queries can be used like database queries, for tasks such as:
 
 For some storages (like localStorage), complex queries can be a powerful tool
 to query accessible documents. When querying documents on a distant storage,
-some server-side logic should be run to avoid having to request large amount of
-documents to run a query on the client. If distant storages are static, an
-alternative would be to use an indexStorage with appropriate indices as complex
-queries will always try to run the query on the index before querying documents
-itself.
+some server-side logic should be run to avoid returning too many documents
+to the client. If distant storages are static, an alternative would be to use
+an indexStorage with appropriate indices as complex queries will always try
+to run the query on the index before querying documents itself.
 
 How to use Complex Queries with jIO?
 ------------------------------------
 
-Complex queries can be triggered by including the option named query in the ``allDocs()`` method call.
+Complex queries can be triggered by including the option named **query** in the ``allDocs()`` method call.
 
 Example:
 
@@ -64,7 +63,10 @@ Example:
     options = {
       query: '(creator:"% Doe") AND (format:"pdf")',
       limit: [0, 100],
-      sort_on: [['last_modified', 'descending'], ['creation_date', 'descending']],
+      sort_on: [
+        ['last_modified', 'descending'],
+        ['creation_date', 'descending']
+      ],
       select_list: ['title'],
       wildcard_character: '%'
     };
@@ -86,15 +88,20 @@ for how to use these methods, in and outside jIO. The module provides:
 
     {
       parseStringToObject: [Function: parseStringToObject],
-      stringEscapeRegexpCharacters: [Function: stringEscapeRegexpCharacters],
+      stringEscapeRegexpCharacters:
+                    [Function: stringEscapeRegexpCharacters],
       select: [Function: select],
       sortOn: [Function: sortOn],
       limit: [Function: limit],
       convertStringToRegExp: [Function: convertStringToRegExp],
       QueryFactory: { [Function: QueryFactory] create: [Function] },
       Query: [Function: Query],
-      SimpleQuery: { [Function: SimpleQuery] super_: [Function: Query] },
-      ComplexQuery: { [Function: ComplexQuery] super_: [Function: Query] }
+      SimpleQuery: {
+          [Function: SimpleQuery] super_: [Function: Query]
+      },
+      ComplexQuery: {
+          [Function: ComplexQuery] super_: [Function: Query]
+      }
     }
 
 (Reference API coming soon.)
@@ -113,7 +120,8 @@ Basic example:
     var query = 'title: "Document number 1"';
 
     // running the query
-    var result = complex_queries.QueryFactory.create(query).exec(object_list);
+    var result = complex_queries.QueryFactory.
+                                create(query).exec(object_list);
     // console.log(result);
     // [ { "title": "Document number 1", "creator": "John Doe"} ]
 
@@ -132,8 +140,12 @@ Other example:
       }
     );
     // this case is equal to:
-    var result = complex_queries.QueryFactory.create(query).exec(object_list);
-    complex_queries.sortOn([['title', 'ascending'], ['year', 'descending']], result);
+    var result = complex_queries.QueryFactory.
+                                create(query).exec(object_list);
+    complex_queries.sortOn([
+                            ['title', 'ascending'],
+                            ['year', 'descending']
+                           ], result);
     complex_queries.limit([20, 20], result);
     complex_queries.select(['title', 'year'], result);
 
@@ -179,7 +191,8 @@ Example, convert Query object into a human readable string:
 
 .. code-block:: javascript
 
-    var query = complex_queries.QueryFactory.create('year: < 2000 OR title: "*a"'),
+    var query = complex_queries.QueryFactory.
+                               create('year: < 2000 OR title: "*a"'),
       option = {
         "wildcard_character": "*",
         "limit": [0, 10]
@@ -196,19 +209,24 @@ Example, convert Query object into a human readable string:
     query.onParseStart = function (object, option) {
       object.start = "The wildcard character is '" +
         (option.wildcard_character || "%") +
-        "' and we need only the " + option.limit[1] + " elements from the numero " +
+        "' and we need only the " +
+        option.limit[1] +
+        " elements from the number " +
         option.limit[0] + ". ";
     };
 
     query.onParseSimpleQuery = function (object, option) {
-      object.parsed = object.parsed.key + " " + human_read[object.parsed.operator] +
+      object.parsed = object.parsed.key +
+        " " + human_read[object.parsed.operator] +
         object.parsed.value;
     };
 
     query.onParseComplexQuery = function (object, option) {
       object.parsed = "I want all document where " +
-        object.parsed.query_list.join(" " + object.parsed.operator.toLowerCase() +
-        " ") + ". ";
+        object.parsed.query_list.join(" " +
+                              object.parsed.operator.toLowerCase() +
+                              " ") +
+        ". ";
     };
 
     query.onParseEnd = function (object, option) {
@@ -216,8 +234,9 @@ Example, convert Query object into a human readable string:
     };
 
     console.log(query.parse(option));
-    // logged: "The wildcard character is '*' and we need only the 10 elements
-    // from the numero 0. I want all document where year is lower than 2000 or title
+    // logged: "The wildcard character is '*' and we need
+    // only the 10 elements from the number 0. I want all
+    // document where year is lower than 2000 or title
     // matches *a. Thank you!"
 
 
@@ -237,7 +256,7 @@ Below you can find schemas for constructing queries.
           "type": "string",
           "format": "complex",
           "default": "complex",
-          "description": "The type is used to recognize the query type."
+          "description": "Type is used to recognize the query type"
         },
         "operator": {
           "type": "string",
@@ -252,7 +271,9 @@ Below you can find schemas for constructing queries.
           },
           "required": true,
           "default": [],
-          "description": "query_list is a list of queries which can be in serialized format of in object format."
+          "description": "query_list is a list of queries which " +
+                         "can be in serialized format " +
+                         "or in object format."
         }
       }
     }
@@ -269,7 +290,7 @@ Below you can find schemas for constructing queries.
           "type": "string",
           "format": "simple",
           "default": "simple",
-          "description": "The type is used to recognize the query type."
+          "description": "Type is used to recognize the query type."
         },
         "operator": {
           "type": "string",

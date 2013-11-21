@@ -5,7 +5,7 @@ Revision Storages: Conflicts and Resolution
 Why Conflicts can Occur
 -----------------------
 
-Using jIO you can store documents in multiple storage locations. With
+Using jIO you can store documents in multiple locations. With an
 increasing number of users working on a document and some storages not being
 available or responding too slow, conflicts are more likely to occur. jIO
 defines a conflict as multiple versions of a document existing in a storage
@@ -26,7 +26,7 @@ will select the **latest**, **left-most** version on the document tree, along wi
 conflicting versions (when option **conflicts: true** is set in order for
 developers to setup a routine to solve conflicts.
 
-Technically a conflict is solved by deleting alternative versions of a document
+Technically, a conflict is solved by deleting alternative versions of a document
 ("cutting leaves off from the document tree"). When a user decides to keep a
 version of a document and manually deletes all conflicting versions, the
 storage tree is updated accordingly and the document is available in a single
@@ -35,13 +35,15 @@ version on all storages.
 Simple Conflict Example
 -----------------------
 
+.. TODO this is a little confusing
+
 You are keeping a namecard file on your PC updating from your smartphone. Your
 smartphone ran out of battery and is offline when you update your namecard on
 your PC with your new email adress. Someone else changes this email from your PC
 and once your smartphone is recharged, you go back online and the previous
 update is executed.
 
-#. Set up the storage tree
+#. Set up the storage tree:
 
   .. code-block:: javascript
 
@@ -64,7 +66,7 @@ update is executed.
     });
 
 
-#. Create the namecard on your smartphone
+#. Create the namecard on your smartphone:
 
    .. code-block:: javascript
 
@@ -76,9 +78,9 @@ update is executed.
        // response.rev -> "1-5782E71F1E4BF698FA3793D9D5A96393"
      });
 
-   This will create the document on your webDav and local storage
+   This will create the document on your WebDAV and local storage
 
-#. Someone else updates your shared namecard on Webdav
+#. Someone else updates your shared namecard on WebDAV:
 
    .. code-block:: javascript
 
@@ -92,9 +94,9 @@ update is executed.
      });
 
    Your smartphone is offline, so now you will have one version (1-578...) on
-   your smartphone and another version on webDav (2-068...) on your PC.
+   your smartphone and another version on WebDAV (2-068...) on your PC.
 
-#. You modify the namecard while being offline
+#. You modify the namecard while being offline:
 
    .. code-block:: javascript
 
@@ -114,7 +116,7 @@ update is executed.
      });
 
 
-#. Later, your smartphone is online and you retrieve the other version of the namecard.
+#. Later, your smartphone is online and you retrieve the other version of the namecard:
 
    .. code-block:: javascript
 
@@ -128,7 +130,7 @@ update is executed.
    left-most version on the document tree (2-375... and labels all other
    versions as conflicting 2-068...).
 
-#. Retrieve conflicts by setting option
+#. Retrieve conflicts by setting option:
 
    .. code-block:: javascript
 
@@ -143,7 +145,7 @@ update is executed.
    The conflicting version (*2-068E...*) is displayed, because **{conflicts: true}** was
    specified in the GET call. Deleting either version will solve the conflict.
 
-#. Delete conflicting version
+#. Delete conflicting version:
 
    .. code-block:: javascript
 

@@ -5,17 +5,14 @@
 Getting started
 ===============
 
-This walkthrough is designed to get you started using a basic jIO instance.
-
-#.  Download jIO core, the storages you want to use as well as the
-    complex-queries scripts and the dependencies required for the storages
-    you intend to use.  :ref:`[Download & Fork] <download-fork>`
+#.  :ref:`Download <download-fork>` the core jIO, the storages you need and the
+    dependencies required for them.
 
 #.  Add the scripts to your HTML page in the following order:
 
     .. code-block:: html
 
-      <!-- jio core + dependency -->
+      <!-- jio core + dependencies -->
       <script src="sha256.amd.js"></script>
       <script src="rsvp-custom.js"></script>
       <script src="jio.js"></script>
@@ -63,20 +60,30 @@ This walkthrough is designed to get you started using a basic jIO instance.
 
 #.  The jIO API provides ten main methods to manage documents across the storage(s) specified in your jIO storage tree.
 
-    ======================  =====================================================  ========================================
-    Method                  Example call                                           Description
-    ======================  =====================================================  ========================================
-    ``post()``              :js:`my_jio.post(document, [options]);`                Creates a new document
-    ``put()``               :js:`my_jio.put(document, [options]);`                 Creates/Updates a document
-    ``putAttachment()``     :js:`my_jio.putAttachement(attachment, [options]);`    Updates/Adds an attachment to a document
-    ``get()``               :js:`my_jio.get(document, [options]);`                 Reads a document
-    ``getAttachment()``     :js:`my_jio.getAttachment(attachment, [options]);`     Reads a document attachment
-    ``remove()``            :js:`my_jio.remove(document, [options]);`              Deletes a document and its attachments
-    ``removeAttachment()``  :js:`my_jio.removeAttachment(attachment, [options]);`  Deletes a document attachment
-    ``allDocs()``           :js:`my_jio.allDocs([options]);`                       Retrieves a list of existing documents
-    ``check()``             :js:`my_jio.check(document, [options]);`               Check the document state
-    ``repair()``            :js:`my_jio.repair(document, [options]);`              Repair the document
-    ======================  =====================================================  ========================================
+    ======================  ========================================================
+    Method                  Example
+    ======================  ========================================================
+    ``post()``              |  :js:`my_jio.post(document, [options]);`
+                            |  Creates a new document
+    ``put()``               |  :js:`my_jio.put(document, [options]);`
+                            |  Creates/Updates a document
+    ``putAttachment()``     |  :js:`my_jio.putAttachement(attachment, [options]);`
+                            |  Updates/Adds an attachment to a document
+    ``get()``               |  :js:`my_jio.get(document, [options]);`
+                            |  Reads a document
+    ``getAttachment()``     |  :js:`my_jio.getAttachment(attachment, [options]);`
+                            |  Reads a document attachment
+    ``remove()``            |  :js:`my_jio.remove(document, [options]);`
+                            |  Deletes a document and its attachments
+    ``removeAttachment()``  |  :js:`my_jio.removeAttachment(attachment, [options]);`
+                            |  Deletes a document's attachment
+    ``allDocs()``           |  :js:`my_jio.allDocs([options]);`
+                            |  Retrieves a list of existing documents
+    ``check()``             |  :js:`my_jio.check(document, [options]);`
+                            |  Check the document state
+    ``repair()``            |  :js:`my_jio.repair(document, [options]);`
+                            |  Repair the document
+    ======================  ========================================================
 
 
 

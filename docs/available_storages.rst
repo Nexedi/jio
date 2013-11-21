@@ -55,7 +55,8 @@ NB: digest **is not implemented yet**.
 
 .. code-block:: javascript
 
-   dav_storage.createDescription(url, auth_type, [realm], [username], [password]);
+   dav_storage.createDescription(url, auth_type,
+                                 [realm], [username], [password]);
 
 All parameters are strings.
 
@@ -103,17 +104,20 @@ Here is the description:
    {
      "type": "index",
      "indices": [{
-       "id": "index_title_subject.json", // doc id where to store indices
-       "index": ["title", "subject"], // metadata to index
+       // doc id where to store indices
+       "id": "index_title_subject.json",
+       // metadata to index
+       "index": ["title", "subject"],
        "attachment": "db.json", // default "body"
-       "metadata": { // additional metadata to add to database, default undefined
+       // additional metadata to add to database, default undefined
+       "metadata": {
          "type": "Dataset",
          "format": "application/json",
          "title": "My index database",
          "creator": "Me"
        },
+       // default equal to parent sub_storage field
        "sub_storage": <sub storage where to store index>
-                      // default equal to parent sub_storage field
      }, {
        "id": "index_year.json",
        "index": "year"

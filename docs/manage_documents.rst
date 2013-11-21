@@ -2,8 +2,7 @@ How to manage documents?
 ========================
 
 jIO is mapped after the CouchDB APIs and extends them to provide unified, scalable
-and high performance access via JavaScript to a wide variety of different
-storage backends.
+and high performance access via JavaScript to a wide variety of storage backends.
 
 If you are not familiar with `Apache CouchDB <http://couchdb.apache.org/>`_:
 it is a scalable, fault-tolerant, and schema-free document-oriented database.
@@ -17,11 +16,11 @@ What is a document?
 -------------------
 
 A document is an association of metadata and attachment(s). The metadata is the
-set of properties of the document and the attachments are the binaries of the content
-of the document.
+set of properties of the document and the attachments are binary (or text) objects
+that represent the content of the document.
 
-In jIO, metadata is just a dictionary with keys and values (JSON object), and
-attachments are just simple strings.
+In jIO, the metadata is a dictionary with keys and values (a JSON object), and
+attachments are simple strings.
 
 .. code-block:: javascript
 
@@ -58,7 +57,7 @@ Basic Methods
 -------------
 
 Below you can see examples of the main jIO methods. All examples are using
-revisions (as in revision storage or replicate revision storage), so you can
+revisions (as in revision storage or replicated revision storage), so you can
 see how method calls should be made with either of these storages.
 
 .. code-block:: javascript
@@ -79,8 +78,10 @@ see how method calls should be made with either of these storages.
       });
 
     // add an attachment to a document
-    jio_instance.putAttachment({"_id": "my_document", "_attachment": "its_attachment",
-                                "_data": "abc", "_mimetype": "text/plain"}).
+    jio_instance.putAttachment({"_id": "my_document",
+                                "_attachment": "its_attachment",
+                                "_data": "abc",
+                                "_mimetype": "text/plain"}).
       then(function (response) {
         // console.log(response);
       });
@@ -92,7 +93,8 @@ see how method calls should be made with either of these storages.
       });
 
     // read an attachment
-    jio_instance.getAttachment({"_id": "my_document", "_attachment": "its_attachment"}).
+    jio_instance.getAttachment({"_id": "my_document",
+                                "_attachment": "its_attachment"}).
       then(function (response) {
         // console.log(response);
       });
@@ -104,7 +106,8 @@ see how method calls should be made with either of these storages.
       });
 
     // delete an attachment
-    jio_instance.removeAttachment({"_id": "my_document", "_attachment": "its_attachment"}).
+    jio_instance.removeAttachment({"_id": "my_document",
+                                   "_attachment": "its_attachment"}).
       then(function (response) {
         // console.log(response);
       });
@@ -137,8 +140,10 @@ To retrieve jIO responses, you have to provide callbacks like this:
 
 .. code-block:: javascript
 
-    jio_instance.post(metadata, [options]).
-        then([responseCallback], [errorCallback], [progressionCallback]);
+  jio_instance.post(metadata, [options]).
+      then([responseCallback],
+           [errorCallback],
+           [progressionCallback]);
 
 
 * On command success, ``responseCallback`` will be called with the jIO response as first parameter.
@@ -253,10 +258,10 @@ In case of error, the ``errorCallback`` first parameter will look like:
 
 
 
-Example: How to store a video on localStorage
----------------------------------------------
+How to store a video on localStorage
+------------------------------------
 
-The following shows how to create a new jIO in localStorage and then post a document with two attachments.
+The following example shows how to create a new jIO in localStorage and then post a document with two attachments.
 
 .. code-block:: javascript
 
