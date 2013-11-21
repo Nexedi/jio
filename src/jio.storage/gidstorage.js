@@ -330,7 +330,7 @@
           if (method === 'post') {
             return command.error(
               "conflict",
-              "Document already exist",
+              "Document already exists",
               "Cannot " + method + " document"
             );
           }
@@ -388,7 +388,7 @@
         if (response.total_rows === 0) {
           return command.error(
             "not_found",
-            "Document already exist",
+            "Document already exists",
             "Cannot " + method + " attachment"
           );
         }
@@ -397,9 +397,7 @@
         command.storage(priv.sub_storage)[method + "Attachment"](
           doc
         ).then(function (response) {
-          if (method !== 'get') {
-            response.id = gid_object;
-          }
+          response.id = gid_object;
           command.success(response);
         }, function (err) {
           err.message = "Cannot " + method + " attachment";
