@@ -20,26 +20,14 @@
 }(['jio', 'sha256'], function (jIO, sha256) {
   "use strict";
 
-  jIO.addStorageType("revision", function (spec, my) {
+  jIO.addStorage("revision", function (spec) {
 
-    var that = {}, priv = {};
+    var that = this, priv = {};
     spec = spec || {};
-    that = my.basicStorage(spec, my);
     // ATTRIBUTES //
     priv.doc_tree_suffix = ".revision_tree.json";
     priv.sub_storage = spec.sub_storage;
     // METHODS //
-    /**
-     * Description to store in order to be restored later
-     * @method specToStore
-     * @return {object} Descriptions to store
-     */
-    that.specToStore = function () {
-      return {
-        "sub_storage": priv.sub_storage
-      };
-    };
-
     /**
      * Clones an object in deep (without functions)
      * @method clone
@@ -93,11 +81,9 @@
     priv.checkDocumentRevisionFormat = function (doc) {
       var send_error = function (message) {
         return {
-          "status": 31,
-          "statusText": "Wrong Revision Format",
-          "error": "wrong_revision_format",
+          "status": 409,
           "message": message,
-          "reason": "Revision is wrong"
+          "reason": "Wrong revision"
         };
       };
       if (typeof doc._rev === "string") {
@@ -232,7 +218,7 @@
      * @return {array} 0:The next revision number and 1:the hash code
      */
     priv.generateNextRevision = function (doc, deleted_flag) {
-      var string, revision_history, revs_info, pseudo_revision;
+      var string, revision_history, revs_info;
       doc = priv.clone(doc) || {};
       revision_history = doc._revs;
       revs_info = doc._revs_info;
@@ -281,7 +267,7 @@
     };
 
     priv.updateDocumentTree = function (doc, doc_tree) {
-      var revs_info, updateDocumentTreeRec, next_rev;
+      var revs_info, updateDocumentTreeRec;
       doc = priv.clone(doc);
       revs_info = doc._revs_info;
       updateDocumentTreeRec = function (doc_tree, revs_info) {
@@ -306,19 +292,20 @@
       updateDocumentTreeRec(doc_tree, priv.clone(revs_info));
     };
 
-    priv.send = function (method, doc, option, callback) {
-      that.addJob(
-        method,
-        priv.sub_storage,
-        doc,
-        option,
-        function (success) {
-          callback(undefined, success);
-        },
-        function (err) {
-          callback(err, undefined);
-        }
-      );
+    priv.send = function (command, method, doc, option, callback) {
+      function onSuccess(success) {
+        callback(undefined, success);
+      }
+      function onError(err) {
+        callback(err, undefined);
+      }
+      if (method === 'allDocs') {
+        command.storage(priv.sub_storage).allDocs(option).
+          then(onSuccess, onError);
+      } else {
+        command.storage(priv.sub_storage)[method](doc, option).
+          then(onSuccess, onError);
+      }
     };
 
     priv.getWinnerRevsInfo = function (doc_tree) {
@@ -369,35 +356,35 @@
       return conflicts.length === 0 ? undefined : conflicts;
     };
 
-    priv.get = function (doc, option, callback) {
-      priv.send("get", doc, option, callback);
+    priv.get = function (command, doc, option, callback) {
+      priv.send(command, "get", doc, option, callback);
     };
-    priv.put = function (doc, option, callback) {
-      priv.send("put", doc, option, callback);
+    priv.put = function (command, doc, option, callback) {
+      priv.send(command, "put", doc, option, callback);
     };
-    priv.remove = function (doc, option, callback) {
-      priv.send("remove", doc, option, callback);
+    priv.remove = function (command, doc, option, callback) {
+      priv.send(command, "remove", doc, option, callback);
     };
-    priv.getAttachment = function (attachment, option, callback) {
-      priv.send("getAttachment", attachment, option, callback);
+    priv.getAttachment = function (command, attachment, option, callback) {
+      priv.send(command, "getAttachment", attachment, option, callback);
     };
-    priv.putAttachment = function (attachment, option, callback) {
-      priv.send("putAttachment", attachment, option, callback);
+    priv.putAttachment = function (command, attachment, option, callback) {
+      priv.send(command, "putAttachment", attachment, option, callback);
     };
-    priv.removeAttachment = function (attachment, option, callback) {
-      priv.send("removeAttachment", attachment, option, callback);
+    priv.removeAttachment = function (command, attachment, option, callback) {
+      priv.send(command, "removeAttachment", attachment, option, callback);
     };
 
-    priv.getDocument = function (doc, option, callback) {
+    priv.getDocument = function (command, doc, option, callback) {
       doc = priv.clone(doc);
       doc._id = doc._id + "." + doc._rev;
       delete doc._attachment;
       delete doc._rev;
       delete doc._revs;
       delete doc._revs_info;
-      priv.get(doc, option, callback);
+      priv.get(command, doc, option, callback);
     };
-    priv.putDocument = function (doc, option, callback) {
+    priv.putDocument = function (command, doc, option, callback) {
       doc = priv.clone(doc);
       doc._id = doc._id + "." + doc._rev;
       delete doc._attachment;
@@ -406,19 +393,19 @@
       delete doc._rev;
       delete doc._revs;
       delete doc._revs_info;
-      priv.put(doc, option, callback);
+      priv.put(command, doc, option, callback);
     };
 
-    priv.getRevisionTree = function (doc, option, callback) {
+    priv.getRevisionTree = function (command, doc, option, callback) {
       doc = priv.clone(doc);
       doc._id = doc._id + priv.doc_tree_suffix;
-      priv.get(doc, option, callback);
+      priv.get(command, doc, option, callback);
     };
 
-    priv.getAttachmentList = function (doc, option, callback) {
+    priv.getAttachmentList = function (command, doc, option, callback) {
       var attachment_id, dealResults, state = "ok", result_list = [], count = 0;
       dealResults = function (attachment_id, attachment_meta) {
-        return function (err, attachment) {
+        return function (err, response) {
           if (state !== "ok") {
             return;
           }
@@ -433,12 +420,12 @@
           }
           result_list.push({
             "_attachment": attachment_id,
-            "_data": attachment,
+            "_data": response.data,
             "_mimetype": attachment_meta.content_type
           });
           if (count === 0) {
             state = "finished";
-            callback(undefined, result_list);
+            callback(undefined, {"data": result_list});
           }
         };
       };
@@ -446,6 +433,7 @@
         if (doc._attachments.hasOwnProperty(attachment_id)) {
           count += 1;
           priv.getAttachment(
+            command,
             {"_id": doc._id, "_attachment": attachment_id},
             option,
             dealResults(attachment_id, doc._attachments[attachment_id])
@@ -457,11 +445,12 @@
       }
     };
 
-    priv.putAttachmentList = function (doc, option, attachment_list, callback) {
+    priv.putAttachmentList = function (command, doc, option,
+                                       attachment_list, callback) {
       var i, dealResults, state = "ok", count = 0, attachment;
       attachment_list = attachment_list || [];
-      dealResults = function (index) {
-        return function (err, response) {
+      dealResults = function () {
+        return function (err) {
           if (state !== "ok") {
             return;
           }
@@ -472,7 +461,7 @@
           }
           if (count === 0) {
             state = "finished";
-            callback(undefined, {"id": doc._id, "ok": true});
+            callback(undefined, {});
           }
         };
       };
@@ -481,18 +470,18 @@
         if (attachment !== undefined) {
           count += 1;
           attachment._id = doc._id + "." + doc._rev;
-          priv.putAttachment(attachment, option, dealResults(i));
+          priv.putAttachment(command, attachment, option, dealResults(i));
         }
       }
       if (count === 0) {
-        return callback(undefined, {"id": doc._id, "ok": true});
+        return callback(undefined, {});
       }
     };
 
-    priv.putDocumentTree = function (doc, option, doc_tree, callback) {
+    priv.putDocumentTree = function (command, doc, option, doc_tree, callback) {
       doc_tree = priv.clone(doc_tree);
       doc_tree._id = doc._id + priv.doc_tree_suffix;
-      priv.put(doc_tree, option, callback);
+      priv.put(command, doc_tree, option, callback);
     };
 
     priv.notFoundError = function (message, reason) {
@@ -515,7 +504,7 @@
       };
     };
 
-    priv.revisionGenericRequest = function (doc, option,
+    priv.revisionGenericRequest = function (command, doc, option,
                                             specific_parameter, onEnd) {
       var prev_doc, doc_tree, attachment_list, callback = {};
       if (specific_parameter.doc_id) {
@@ -526,7 +515,7 @@
       }
       callback.begin = function () {
         var check_error;
-        doc._id = doc._id || priv.generateUuid();
+        doc._id = doc._id || priv.generateUuid(); // XXX should not generate id
         if (specific_parameter.revision_needed && !doc._rev) {
           return onEnd(priv.conflictError(
             "Document update conflict",
@@ -538,7 +527,7 @@
         if (check_error !== undefined) {
           return onEnd(check_error, undefined);
         }
-        priv.getRevisionTree(doc, option, callback.getRevisionTree);
+        priv.getRevisionTree(command, doc, option, callback.getRevisionTree);
       };
       callback.getRevisionTree = function (err, response) {
         var winner_info, previous_revision, generate_new_revision;
@@ -550,7 +539,7 @@
             return onEnd(err, undefined);
           }
         }
-        doc_tree = response || priv.newDocTree();
+        doc_tree = response.data || priv.newDocTree();
         if (specific_parameter.get || specific_parameter.getAttachment) {
           if (!doc._rev) {
             winner_info = priv.getWinnerRevsInfo(doc_tree);
@@ -569,7 +558,7 @@
             doc._rev = winner_info[0].rev;
           }
           priv.fillDocumentRevisionProperties(doc, doc_tree);
-          return priv.getDocument(doc, option, callback.getDocument);
+          return priv.getDocument(command, doc, option, callback.getDocument);
         }
         priv.fillDocumentRevisionProperties(doc, doc_tree);
         if (generate_new_revision) {
@@ -602,7 +591,8 @@
                                     "deleted" : "available");
         priv.updateDocumentTree(doc, doc_tree);
         if (prev_doc) {
-          return priv.getDocument(prev_doc, option, callback.getDocument);
+          return priv.getDocument(command, prev_doc,
+                                  option, callback.getDocument);
         }
         if (specific_parameter.remove || specific_parameter.removeAttachment) {
           return onEnd(priv.notFoundError(
@@ -662,9 +652,11 @@
           }
         }
         if (specific_parameter.remove) {
-          priv.putDocumentTree(doc, option, doc_tree, callback.putDocumentTree);
+          priv.putDocumentTree(command, doc, option,
+                               doc_tree, callback.putDocumentTree);
         } else {
-          priv.getAttachmentList(res_doc, option, callback.getAttachmentList);
+          priv.getAttachmentList(command, res_doc, option,
+                                 callback.getAttachmentList);
         }
       };
       callback.getAttachmentList = function (err, res_list) {
@@ -706,9 +698,9 @@
             ), undefined);
           }
         }
-        priv.putDocument(doc, option, callback.putDocument);
+        priv.putDocument(command, doc, option, callback.putDocument);
       };
-      callback.putDocument = function (err, response) {
+      callback.putDocument = function (err) {
         var i, attachment_found = false;
         if (err) {
           err.message = "Cannot post the document";
@@ -731,20 +723,22 @@
           }
         }
         priv.putAttachmentList(
+          command,
           doc,
           option,
           attachment_list,
           callback.putAttachmentList
         );
       };
-      callback.putAttachmentList = function (err, response) {
+      callback.putAttachmentList = function (err) {
         if (err) {
           err.message = "Cannot copy attacments to the document";
           return onEnd(err, undefined);
         }
-        priv.putDocumentTree(doc, option, doc_tree, callback.putDocumentTree);
+        priv.putDocumentTree(command, doc, option,
+                             doc_tree, callback.putDocumentTree);
       };
-      callback.putDocumentTree = function (err, response) {
+      callback.putDocumentTree = function (err) {
         var response_object;
         if (err) {
           err.message = "Cannot update the document history";
@@ -762,7 +756,7 @@
         }
         onEnd(undefined, response_object);
         // if (option.keep_revision_history !== true) {
-        //   // priv.remove(prev_doc, option, function () {
+        //   // priv.remove(command, prev_doc, option, function () {
         //   //   - change "available" status to "deleted"
         //   //   - remove attachments
         //   //   - done, no callback
@@ -780,16 +774,17 @@
      * @method post
      * @param  {object} command The JIO command
      */
-    that.post = function (command) {
+    that.post = function (command, metadata, option) {
       priv.revisionGenericRequest(
-        command.cloneDoc(),
-        command.cloneOption(),
+        command,
+        metadata,
+        option,
         {},
         function (err, response) {
           if (err) {
-            return that.error(err);
+            return command.error(err);
           }
-          that.success(response);
+          command.success({"id": response.id});
         }
       );
     };
@@ -802,124 +797,125 @@
      * @method put
      * @param  {object} command The JIO command
      */
-    that.put = function (command) {
+    that.put = function (command, metadata, option) {
       priv.revisionGenericRequest(
-        command.cloneDoc(),
-        command.cloneOption(),
+        command,
+        metadata,
+        option,
         {},
-        function (err, response) {
+        function (err) {
           if (err) {
-            return that.error(err);
+            return command.error(err);
           }
-          that.success(response);
+          command.success();
         }
       );
     };
 
 
-    that.putAttachment = function (command) {
+    that.putAttachment = function (command, param, option) {
       priv.revisionGenericRequest(
-        command.cloneDoc(),
-        command.cloneOption(),
+        command,
+        param,
+        option,
         {
-          "doc_id": command.getDocId(),
-          "attachment_id": command.getAttachmentId(),
+          "doc_id": param._id,
+          "attachment_id": param._attachment,
           "add_to_attachment_list": {
-            "_attachment": command.getAttachmentId(),
-            "_mimetype": command.getAttachmentMimeType(),
-            "_data": command.getAttachmentData()
+            "_attachment": param._attachment,
+            "_mimetype": param._blob.type,
+            "_data": param._blob
           },
           "putAttachment": true
         },
-        function (err, response) {
+        function (err) {
           if (err) {
-            return that.error(err);
+            return command.error(err);
           }
-          that.success(response);
+          command.success();
         }
       );
     };
 
-    that.remove = function (command) {
-      if (command.getAttachmentId()) {
-        return that.removeAttachment(command);
-      }
+    that.remove = function (command, param, option) {
       priv.revisionGenericRequest(
-        command.cloneDoc(),
-        command.cloneOption(),
+        command,
+        param,
+        option,
         {
           "revision_needed": true,
           "remove": true
         },
-        function (err, response) {
+        function (err) {
           if (err) {
-            return that.error(err);
+            return command.error(err);
           }
-          that.success(response);
+          command.success();
         }
       );
     };
 
-    that.removeAttachment = function (command) {
+    that.removeAttachment = function (command, param, option) {
       priv.revisionGenericRequest(
-        command.cloneDoc(),
-        command.cloneOption(),
+        command,
+        param,
+        option,
         {
-          "doc_id": command.getDocId(),
-          "attachment_id": command.getAttachmentId(),
+          "doc_id": param._id,
+          "attachment_id": param._attachment,
           "revision_needed": true,
           "removeAttachment": true,
           "remove_from_attachment_list": {
-            "_attachment": command.getAttachmentId()
+            "_attachment": param._attachment
           }
         },
-        function (err, response) {
+        function (err) {
           if (err) {
-            return that.error(err);
+            return command.error(err);
           }
-          that.success(response);
+          command.success();
         }
       );
     };
 
-    that.get = function (command) {
-      if (command.getAttachmentId()) {
-        return that.getAttachment(command);
-      }
+    that.get = function (command, param, option) {
       priv.revisionGenericRequest(
-        command.cloneDoc(),
-        command.cloneOption(),
+        command,
+        param,
+        option,
         {
           "get": true
         },
         function (err, response) {
           if (err) {
-            return that.error(err);
+            return command.error(err);
           }
-          that.success(response);
+          command.success({"data": response.data});
         }
       );
     };
 
-    that.getAttachment = function (command) {
+    that.getAttachment = function (command, param, option) {
       priv.revisionGenericRequest(
-        command.cloneDoc(),
-        command.cloneOption(),
+        command,
+        param,
+        option,
         {
-          "doc_id": command.getDocId(),
-          "attachment_id": command.getAttachmentId(),
+          "doc_id": param._id,
+          "attachment_id": param._attachment,
           "getAttachment": true
         },
         function (err, response) {
           if (err) {
-            return that.error(err);
+            return command.error(err);
           }
-          that.success(response);
+          command.success({"data": response.data});
         }
       );
     };
 
-    that.allDocs = function (command) {
+    that.allDocs = function (command, param, option) {
+      /*jslint unparam: true */
       var rows, result = {"total_rows": 0, "rows": []}, functions = {};
       functions.finished = 0;
       functions.falseResponseGenerator = function (response, callback) {
@@ -929,7 +925,7 @@
         return function (err, doc_tree) {
           var document_revision, row, revs_info;
           if (err) {
-            return that.error(err);
+            return command.error(err);
           }
           revs_info = priv.getWinnerRevsInfo(doc_tree);
           document_revision =
@@ -942,7 +938,7 @@
                 "rev": revs_info[0].rev
               }
             };
-            if (document_revision.doc && command.getOption("include_docs")) {
+            if (document_revision.doc && option.include_docs) {
               document_revision.doc._id = doc_id;
               document_revision.doc._rev = revs_info[0].rev;
               row.doc = document_revision.doc;
@@ -956,15 +952,15 @@
       functions.success = function () {
         functions.finished -= 1;
         if (functions.finished === 0) {
-          that.success(result);
+          command.success(result);
         }
       };
-      priv.send("allDocs", null, command.cloneOption(
-      ), function (err, response) {
-        var i, j, row, selector, selected;
+      priv.send(command, "allDocs", null, option, function (err, response) {
+        var i, row, selector, selected;
         if (err) {
-          return that.error(err);
+          return command.error(err);
         }
+        response = response.data;
         selector = /\.revision_tree\.json$/;
         rows = {
           "revision_trees": {
@@ -1016,8 +1012,9 @@
               );
             } else {
               priv.getRevisionTree(
+                command,
                 {"_id": rows.revision_trees[i].id},
-                command.cloneOption(),
+                option,
                 functions.fillResultGenerator(rows.revision_trees[i].id)
               );
             }
@@ -1026,9 +1023,6 @@
         functions.success();
       });
     };
-
-    // END //
-    return that;
   }); // end RevisionStorage
 
 }));
