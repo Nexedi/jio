@@ -142,7 +142,7 @@ Updating to v2.0
 Replicate Storage
 ^^^^^^^^^^^^^^^^^
 
-Comming soon
+Coming soon
 
 Revision Based Handlers
 -----------------------

@@ -2,17 +2,17 @@
 .. role:: js(code)
    :language: javascript
 
-.. _naming-conventions:
+.. _style-guide:
 
-JavaScript Naming Conventions
-=============================
+JavaScript Style Guide
+======================
 
-This document defines JavaScript naming conventions, which are split into essential, coding and naming conventions.
+This document defines JavaScript style conventions, which are split into essential, coding and naming conventions.
 
 Essential Conventions
 ---------------------
 
-Essential conventions include generic patterns that should be adhered to in order to write *readable*, *consistent* and *maintainable* code.
+Essential conventions include generic patterns that you should adhere to in order to write *readable*, *consistent* and *maintainable* code.
 
 Minimizing Globals
 ^^^^^^^^^^^^^^^^^^
@@ -48,8 +48,8 @@ Using JSLint
 ^^^^^^^^^^^^
 
 `JSLint <http://www.jslint.com/>`_ is a quality tool that inspects code and warns
-about potential problems. It is available online and can also be integrated
-into several development environments, so errors can be highlighted when
+about potential problems. It can be used online and can also be integrated
+into several development environments, so errors can be highlighted while
 writing code.
 
 Before validating your code in JSLint, you should use a code
@@ -82,11 +82,11 @@ Some allowed options are:
 Coding Conventions
 ------------------
 
-Coding conventions include generic patterns that ensure the written code follows certain formatting conventions.
+Coding conventions include generic patterns that ensure the written code is consistently formatted.
 
 
-Uses two-space indentation
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Using two-space indentation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Tabs and 2-space indentation are being used equally. Since a lot of errors on
 JSLint often result from mixed use of space and tab, using 2 spaces throughout
@@ -228,7 +228,6 @@ Bad Example
 
 .. code-block:: javascript
 
-  // [...]
   return {
     "namedFunction": function namedFunction() {
       return;
@@ -239,7 +238,6 @@ Good Example
 
 .. code-block:: javascript
 
-  // [...]
   function namedFunction() {
     return;
   }
@@ -318,8 +316,6 @@ Variable names with multiple words should always use an underscore between them.
 
 
 Confusing variable names should end with the variable type.
-
-Example
 
 .. code-block:: javascript
 

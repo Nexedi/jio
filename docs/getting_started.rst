@@ -33,8 +33,7 @@ Getting started
             "paths": {
                 // jio core + dependency
 
-                // the AMD compatible version of sha256.js,
-                // see Download and Fork
+                // the AMD compatible version of sha256.js, see Download and Fork
                 "sha256": "sha256.amd",
                 "rsvp": "rsvp-custom",
                 "jio": "jio",
@@ -97,16 +96,16 @@ You can use one of the ZIP packages, which include all the dependencies and stor
 `Full download (172k) <_static/jio-2.0.0.zip>`_
 `Minified download (87k) <_static/jio-2.0.0-min.zip>`_
 
-or you can create your own set of files using the following links:
+or you can create your own set of files, which are are provided in the above packages and the source repository:
 
 
 Core
 ^^^^
 
-* `sha256.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha256.amd.js>`_
-* `rsvp-custom.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/lib/rsvp/rsvp-custom.js>`_, AMD only version: `rsvp-custom.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/lib/rsvp/rsvp-custom.amd.js>`_
-* `jio.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/jio.js>`_
-* `complex_queries.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/complex_queries.js>`_
+* sha256.amd.js
+* rsvp-custom.js, AMD only version: rsvp-custom.amd.js
+* jio.js
+* complex_queries.js
 
 Storage dependencies
 ^^^^^^^^^^^^^^^^^^^^
@@ -121,27 +120,28 @@ Storage dependencies
 Storage connectors
 ^^^^^^^^^^^^^^^^^^
 
-* `localstorage.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/jio.storage/localstorage.js>`_
-* `davstorage.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/jio.storage/davstorage.js>`_
-* `s3storage.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/jio.storage/s3storage.js>`_ (depends on sha1, jQuery) (WIP)
-* `xwikistorage.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/jio.storage/xwikistorage.js>`_ (depends on jQuery) (WIP)
-* `erp5storage.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/jio.storage/erp5storage.js>`_ (depends on jQuery) (WIP)
+* localstorage.js
+* davstorage.js
+* s3storage.js (depends on sha1, jQuery) (WIP)
+* xwikistorage.js (depends on jQuery) (WIP)
+* erp5storage.js (depends on jQuery) (WIP)
 * restsqlstorage.js (depends on jQuery) (WIP)
 * mioga2storage.js (depends on jQuery) (WIP)
 
 Storage handlers
 ^^^^^^^^^^^^^^^^
 
-* `indexstorage.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/jio.storage/indexstorage.js>`_ (WIP)
-* `gidstorage.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/jio.storage/gidstorage.js>`_ (WIP)
-* `splitstorage.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/jio.storage/splitstorage.js>`_ (WIP)
+* indexstorage.js (WIP)
+* gidstorage.js (WIP)
+* splitstorage.js (WIP)
 * replicatestorage.js (WIP)
 
 Revision based storage handlers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* `revisionstorage.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/jio.storage/revisionstorage.js>`_ (depends on sha256) (WIP)
-* `replicaterevisionstorage.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/jio.storage/replicatestorage.js>`_ (WIP)
+* revisionstorage.js (depends on sha256) (WIP)
+* replicaterevisionstorage.js (WIP)
+
 
 Unit tests
 ^^^^^^^^^^

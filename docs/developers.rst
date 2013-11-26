@@ -4,20 +4,27 @@ For developers
 Quick start
 -----------
 
-To get started with jIO, clone one of the repositories linked in :ref:`Download & Fork <download-fork>`.
+The source repository includes ready-to-use files, so in case you do
+not want to build jIO yourself, just use *jio.js* as well as *complex_queries.js*
+plus the storages and dependencies you need and you will be good to go.
 
-To build the library you have to:
+If you want to modify or build jIO yourself, you need to
 
-* Install `NodeJS <http://nodejs.org/>`_ (including NPM)
-* Install Grunt command line with npm.
+* Clone from a repository
+
+  ``$ git clone https://github.com/nexedi/jio.git``
+
+* Install `NodeJS <http://nodejs.org/>`_ (including ``npm``)
+
+* Install the Grunt command line with ``npm``.
 
   ``# npm -g install grunt-cli``
 
-* Install dev dependencies.
+* Install the dependencies.
   
   ``$ npm install``
 
-* Compile JS/CC parser.
+* Compile the JS/CC parser.
   
   ``$ make`` (until we find out how to compile it with grunt)
 
@@ -25,14 +32,11 @@ To build the library you have to:
   
   ``$ grunt``
 
-The repository also includes the built ready-to-use files, so in case you do
-not want to build jIO yourself, just use *jio.js* as well as *complex_queries.js*
-plus the storages and dependencies you need and you will be good to go.
 
 Naming Conventions
 ------------------
 
-All the code follows these :ref:`JavaScript Naming Conventions <naming-conventions>`.
+All the code follows this :ref:`JavaScript Style Guide <style-guide>`.
 
 How to design your own jIO Storage Library
 ------------------------------------------
@@ -102,15 +106,17 @@ Methods should return the following objects:
 
 * **post()** --> ``success("created", {"id": new_generated_id})``
 
-* **put()**, ``remove``, ``putAttachment`` or ``removeAttachment`` --> ``success(204)``
+* **put()**, **remove()**, **putAttachment()** or **removeAttachment()** --> ``success(204)``
 
 * **get()** --> ``success("ok", {"data": document_metadata})``
 
 * **getAttachment()** -->
 
-  ``success("ok", {"data": binary_string, "content_type": content_type})``
-  // or
-  ``success("ok", {"data": new Blob([data], {"type": content_type})})``
+  .. code-block:: javascript
+
+    success("ok", {"data": binary_string, "content_type": content_type})
+    // or
+    success("ok", {"data": new Blob([data], {"type": content_type})})
 
 * **allDocs()** --> ``success("ok", {"data": row_object})``
 
@@ -132,8 +138,7 @@ Methods should return the following objects:
     // if metadata doesn't promides "_id" -> repair storage state
     success("no_content")
     // or
-    error("conflict", "corrupted",
-          "impossible to repair document or storage")
+    error("conflict", "corrupted", "impossible to repair document or storage")
     // DON'T DESIGN STORAGES IF THERE IS NO WAY
     // TO REPAIR INCOHERENT STATES
 

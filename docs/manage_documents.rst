@@ -141,14 +141,12 @@ To retrieve jIO responses, you have to provide callbacks like this:
 .. code-block:: javascript
 
   jio_instance.post(metadata, [options]).
-      then([responseCallback],
-           [errorCallback],
-           [progressionCallback]);
+      then([responseCallback], [errorCallback], [progressionCallback]);
 
 
-* On command success, ``responseCallback`` will be called with the jIO response as first parameter.
-* On command error, ``errorCallback`` will be called with the jIO error as first parameter.
-* On command notification, ``progressionCallback`` will be called with the storage notification.
+* On command success, ``responseCallback`` is called with the jIO response as first parameter.
+* On command error, ``errorCallback`` is called with the jIO error as first parameter.
+* On command notification, ``progressionCallback`` is called with the storage notification.
 
 Here is a list of responses returned by jIO according to methods and options:
 
@@ -253,7 +251,7 @@ In case of error, the ``errorCallback`` first parameter will look like:
       "statusText": "Not Found",
       "error": "not_found",
       "reason": "document missing",
-      "message": "Unable to get the requseted document"
+      "message": "Unable to get the requested document"
     }
 
 
@@ -261,7 +259,7 @@ In case of error, the ``errorCallback`` first parameter will look like:
 How to store a video on localStorage
 ------------------------------------
 
-The following example shows how to create a new jIO in localStorage and then post a document with two attachments.
+The following example creates a new jIO in localStorage and then posts a document with two attachments.
 
 .. code-block:: javascript
 
@@ -271,6 +269,7 @@ The following example shows how to create a new jIO in localStorage and then pos
       "username": "usr",
       "application_name":"app"
     });
+
     // post the document "metadata"
     jio_instance.post({
       "title"       : "My Video",
@@ -283,6 +282,7 @@ The following example shows how to create a new jIO in localStorage and then pos
         return alert('Error posting the document meta');
       }
       id = response.id;
+
       // post a thumbnail attachment
       jio_instance.putAttachment({
         "_id": id,
@@ -293,6 +293,7 @@ The following example shows how to create a new jIO in localStorage and then pos
         if (err) {
           return alert('Error attaching thumbnail');
         }
+
         // post video attachment
         jio_instance.putAttachment({
           "_id": id,
@@ -309,7 +310,7 @@ The following example shows how to create a new jIO in localStorage and then pos
     });
 
 
-localStorage contents:
+localStorage now contains:
 
 .. code-block:: javascript
 

@@ -88,8 +88,7 @@ for how to use these methods, in and outside jIO. The module provides:
 
     {
       parseStringToObject: [Function: parseStringToObject],
-      stringEscapeRegexpCharacters:
-                    [Function: stringEscapeRegexpCharacters],
+      stringEscapeRegexpCharacters: [Function: stringEscapeRegexpCharacters],
       select: [Function: select],
       sortOn: [Function: sortOn],
       limit: [Function: limit],
@@ -120,8 +119,7 @@ Basic example:
     var query = 'title: "Document number 1"';
 
     // running the query
-    var result = complex_queries.QueryFactory.
-                                create(query).exec(object_list);
+    var result = complex_queries.QueryFactory.create(query).exec(object_list);
     // console.log(result);
     // [ { "title": "Document number 1", "creator": "John Doe"} ]
 

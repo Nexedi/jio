@@ -48,6 +48,6 @@ jIO documentation
     complex_queries
     metadata
     developers
-    naming_conventions
+    style_guide
     authors
 

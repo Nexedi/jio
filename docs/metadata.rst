@@ -334,8 +334,7 @@ Posting an image
     "creator"    : "Mr. Someone",
     "title"      : "New York City at Night",
     "subject"    : ["New York"],
-    "description": "A photo of New York City " +
-                     "taken just after midnight",
+    "description": "A photo of New York City taken just after midnight",
     "coverage"   : ["New York", "1996-1997"]
   }, callbacks); // send content as attachment
 
