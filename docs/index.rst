@@ -15,9 +15,9 @@ retrieve documents and specific information across storage trees.
 How does it work?
 -----------------
 
-jIO is composed of two parts - jIO core and storage library(ies). The core
-is using storage libraries (connectors) to interact with the associated remote
-storage servers. Some queries can be used on top of the jIO ``allDocs()`` method to
+jIO is composed of two parts - jIO core and storage libraries. The core
+makes use of storage libraries (connectors) to interact with the associated remote
+storage servers. Some queries can be used on top of the ``.allDocs()`` method to
 query documents based on defined criteria.
 
 jIO uses a job management system, so each method call adds a job into a

@@ -30,23 +30,21 @@ Getting started
     .. code-block:: javascript
 
         require.config({
-            "paths": {
+            paths: {
                 // jio core + dependency
-
-                // the AMD compatible version of sha256.js, see Download and Fork
-                "sha256": "sha256.amd",
-                "rsvp": "rsvp-custom",
-                "jio": "jio",
+                sha256: 'sha256.amd',   // AMD-compatible version of sha256.js
+                rsvp: 'rsvp-custom',
+                jio: 'jio',
                 // storages + dependencies
-                "complex_queries": "complex_queries",
-                "localstorage": "localstorage",
-                "davstorage": "davstorage"
+                complex_queries: 'complex_queries',
+                localstorage: 'localstorage',
+                davstorage: 'davstorage'
             }
         });
 
 
 #.  jIO connects to a number of storages and allows adding handlers (or
-    functions) to specifc storages.
+    functions) to specific storages.
     You can use both handlers and available storages to build a storage
     tree across which all documents will be maintained and managed by jIO.
     
@@ -59,30 +57,30 @@ Getting started
 
 #.  The jIO API provides ten main methods to manage documents across the storage(s) specified in your jIO storage tree.
 
-    ======================  ========================================================
-    Method                  Example
-    ======================  ========================================================
-    ``post()``              |  :js:`my_jio.post(document, [options]);`
-                            |  Creates a new document
-    ``put()``               |  :js:`my_jio.put(document, [options]);`
-                            |  Creates/Updates a document
-    ``putAttachment()``     |  :js:`my_jio.putAttachement(attachment, [options]);`
-                            |  Updates/Adds an attachment to a document
-    ``get()``               |  :js:`my_jio.get(document, [options]);`
-                            |  Reads a document
-    ``getAttachment()``     |  :js:`my_jio.getAttachment(attachment, [options]);`
-                            |  Reads a document attachment
-    ``remove()``            |  :js:`my_jio.remove(document, [options]);`
-                            |  Deletes a document and its attachments
-    ``removeAttachment()``  |  :js:`my_jio.removeAttachment(attachment, [options]);`
-                            |  Deletes a document's attachment
-    ``allDocs()``           |  :js:`my_jio.allDocs([options]);`
-                            |  Retrieves a list of existing documents
-    ``check()``             |  :js:`my_jio.check(document, [options]);`
-                            |  Check the document state
-    ``repair()``            |  :js:`my_jio.repair(document, [options]);`
-                            |  Repair the document
-    ======================  ========================================================
+    =======================  ========================================================
+    Method                   Example
+    =======================  ========================================================
+    ``.post()``              |  :js:`my_jio.post(document, [options]);`
+                             |  Creates a new document
+    ``.put()``               |  :js:`my_jio.put(document, [options]);`
+                             |  Creates/Updates a document
+    ``.putAttachment()``     |  :js:`my_jio.putAttachement(attachment, [options]);`
+                             |  Updates/Adds an attachment to a document
+    ``.get()``               |  :js:`my_jio.get(document, [options]);`
+                             |  Reads a document
+    ``.getAttachment()``     |  :js:`my_jio.getAttachment(attachment, [options]);`
+                             |  Reads a document attachment
+    ``.remove()``            |  :js:`my_jio.remove(document, [options]);`
+                             |  Deletes a document and its attachments
+    ``.removeAttachment()``  |  :js:`my_jio.removeAttachment(attachment, [options]);`
+                             |  Deletes a document's attachment
+    ``.allDocs()``           |  :js:`my_jio.allDocs([options]);`
+                             |  Retrieves a list of existing documents
+    ``.check()``             |  :js:`my_jio.check(document, [options]);`
+                             |  Checks the document state
+    ``.repair()``            |  :js:`my_jio.repair(document, [options]);`
+                             |  Repairs the document
+    =======================  ========================================================
 
 
 
@@ -114,8 +112,8 @@ Storage dependencies
 
 * `jquery.js <http://code.jquery.com/jquery.js>`_
 * `Stanford Javascript Crypto Library <http://bitwiseshiftleft.github.io/sjcl/>`_, [`sjcl.zip <https://crypto.stanford.edu/sjcl/sjcl.zip>`_]
-* `sha1 <http://pajhome.org.uk/crypt/md5/sha1.html>`_, [`sha1.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/lib/jsSha1/sha1.js>`_], AMD compatible version: `sha1.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha1.amd.js>`_
-* `sha2, sha256 <http://anmar.eu.org/projects/jssha2/>`_, `jssha2.zip <http://anmar.eu.org/projects/jssha2/files/jssha2-0.3.zip>`_, AMD compatible versions: `sha2.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha2.amd.js>`_, `sha256.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha256.amd.js>`_
+* `sha1 <http://pajhome.org.uk/crypt/md5/sha1.html>`_, [`sha1.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/lib/jsSha1/sha1.js>`_], AMD-compatible version: `sha1.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha1.amd.js>`_
+* `sha2, sha256 <http://anmar.eu.org/projects/jssha2/>`_, `jssha2.zip <http://anmar.eu.org/projects/jssha2/files/jssha2-0.3.zip>`_, AMD-compatible versions: `sha2.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha2.amd.js>`_, `sha256.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha256.amd.js>`_
 
 Storage connectors
 ^^^^^^^^^^^^^^^^^^

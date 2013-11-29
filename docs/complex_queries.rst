@@ -42,20 +42,20 @@ Example:
     var options = {};
 
     // search text query
-    options['query'] = '(creator:"John Doe") AND (format:"pdf")';
+    options.query = '(creator:"John Doe") AND (format:"pdf")';
 
     // OR query tree
-    options['query'] = {
-      type:'complex',
-      operator:'AND',
+    options.query = {
+      type: 'complex',
+      operator: 'AND',
       query_list: [{
-        "type": "simple",
-        "key": "creator",
-        "value": "John Doe"
+        type: 'simple',
+        key: 'creator',
+        value: 'John Doe'
       }, {
-        "type": "simple",
-        "key": "format",
-        "value": "pdf"
+        type: 'simple',
+        key: 'format',
+        value: 'pdf'
       }]
     };
 
@@ -168,8 +168,8 @@ want to use a wildcard, just set the wildcard character to an empty string.
 .. code-block:: javascript
 
     var query = {
-      "query": 'creator:"* Doe"',
-      "wildcard_character": "*"
+      query: 'creator:"* Doe"',
+      wildcard_character: '*'
     };
 
 
@@ -192,8 +192,8 @@ Example, convert Query object into a human readable string:
     var query = complex_queries.QueryFactory.
                                create('year: < 2000 OR title: "*a"'),
       option = {
-        "wildcard_character": "*",
-        "limit": [0, 10]
+        wildcard_character: '*',
+        limit: [0, 10]
       },
       human_read = {
         "<": "is lower than ",

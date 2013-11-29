@@ -28,9 +28,9 @@ LocalStorage
 
 Three methods are provided:
 
-* :js:`createDescription(username, [application_name], [mode="localStorage"])`
-* :js:`createLocalDescription(username, [application_name])`
-* :js:`createMemoryDescription(username, [application_name])`
+* :js:`.createDescription(username, [application_name], [mode='localStorage'])`
+* :js:`.createLocalDescription(username, [application_name])`
+* :js:`.createMemoryDescription(username, [application_name])`
 
 All parameters are strings.
 
@@ -39,10 +39,10 @@ Examples:
 .. code-block:: javascript
 
     // to work on browser localStorage
-    var jio = jIO.createJIO(local_storage.createDescription("me"));
+    var jio = jIO.createJIO(local_storage.createDescription('me'));
 
     // to work on browser memory
-    var jio = jIO.createJIO(local_storage.createMemoryDescription("me"));
+    var jio = jIO.createJIO(local_storage.createMemoryDescription('me'));
 
 
 DavStorage
@@ -70,7 +70,7 @@ parameter       required?
 ``password``    if auth-type != 'none'
 =============   ========================
 
-If ``auth_type`` is "none", then ``realm``, ``username`` and ``password`` are never used.
+If ``auth_type`` is the string ``"none"``, then ``realm``, ``username`` and ``password`` are never used.
 
 **Be careful**: The generated description never contains a readable password, but
 for basic authentication, the password will just be base64 encoded.
@@ -92,7 +92,7 @@ IndexStorage
 ^^^^^^^^^^^^
 
 This handler indexes documents metadata into a database (which is a simple
-document) to increase the speed of ``allDocs()`` requests. However, it is not able to
+document) to increase the speed of ``.allDocs()`` requests. However, it is not able to
 manage the ``include_docs`` option.
 
 The sub storages have to manage ``query`` and ``include_docs`` options.
@@ -102,28 +102,28 @@ Here is the description:
 .. code-block:: javascript
 
    {
-     "type": "index",
-     "indices": [{
+     type: 'index',
+     indices: [{
        // doc id where to store indices
-       "id": "index_title_subject.json",
+       id: 'index_title_subject.json',
        // metadata to index
-       "index": ["title", "subject"],
-       "attachment": "db.json", // default "body"
+       index: ['title', 'subject'],
+       attachment: 'db.json', // default 'body'
        // additional metadata to add to database, default undefined
-       "metadata": {
-         "type": "Dataset",
-         "format": "application/json",
-         "title": "My index database",
-         "creator": "Me"
+       metadata: {
+         type: 'Dataset',
+         format: 'application/json',
+         title: 'My index database',
+         creator: 'Me'
        },
        // default equal to parent sub_storage field
-       "sub_storage": <sub storage where to store index>
+       sub_storage: <sub storage where to store index>
      }, {
-       "id": "index_year.json",
-       "index": "year"
+       id: 'index_year.json',
+       index: 'year'
        ...
      }],
-     "sub_storage": <sub storage description>
+     sub_storage: <sub storage description>
    }
 
 

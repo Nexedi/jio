@@ -47,19 +47,19 @@ update is executed.
 
   .. code-block:: javascript
 
-    var jio_instance = jIO.newJio({
+    var jio_instance = jIO.createJIO({
       // replicate revision storage
-      "type":"replicaterevision",
-      "storagelist":[{
-        "type": "revision",
-        "sub_storage": {
-          "type": "dav",
+      type: 'replicaterevision',
+      storagelist:[{
+        type: 'revision',
+        sub_storage: {
+          type: 'dav',
           ...
         }
       }, {
-        "type": "revision",
-        "sub_storage": {
-          "type": "local",
+        type: 'revision',
+        sub_storage: {
+          type: 'local',
           ...
         }
       }]
@@ -71,11 +71,11 @@ update is executed.
    .. code-block:: javascript
 
      jio_instance.post({
-       "_id": "myNameCard",
-       "email": "me@web.com"
+       _id: 'myNameCard',
+       email: 'me@web.com'
       }).then(function (response) {
-       // response.id -> "myNameCard"
-       // response.rev -> "1-5782E71F1E4BF698FA3793D9D5A96393"
+       // response.id -> 'myNameCard'
+       // response.rev -> '1-5782E71F1E4BF698FA3793D9D5A96393'
      });
 
    This will create the document on your WebDAV and local storage
@@ -85,12 +85,12 @@ update is executed.
    .. code-block:: javascript
 
      jio_instance.put({
-       "email": "my_new_me@web.com",
-       "_id": "myNameCard"
-       "_rev": "1-5782E71F1E4BF698FA3793D9D5A96393"
+       email: 'my_new_me@web.com',
+       _id: 'myNameCard'
+       _rev: '1-5782E71F1E4BF698FA3793D9D5A96393'
      }).then(function (response) {
-       // response.id -> "myNameCard"
-       // response.rev -> "2-068E73F5B44FEC987B51354DFC772891"
+       // response.id -> 'myNameCard'
+       // response.rev -> '2-068E73F5B44FEC987B51354DFC772891'
      });
 
    Your smartphone is offline, so now you will have one version (1-578...) on
@@ -100,19 +100,19 @@ update is executed.
 
    .. code-block:: javascript
 
-     jio_instance.get({"_id": "myNameCard"}).then(function (response) {
-       // response.id -> "myNameCard"
-       // response.rev -> "1-5782E71F1E4BF698FA3793D9D5A96393"
-       // response.data.email -> "me@web.com"
+     jio_instance.get({_id: 'myNameCard'}).then(function (response) {
+       // response.id -> 'myNameCard'
+       // response.rev -> '1-5782E71F1E4BF698FA3793D9D5A96393'
+       // response.data.email -> 'me@web.com'
 
        return jio_instance.put({
-         "_id": "myNameCard",
-         "email": "me_again@web.com"
+         _id: 'myNameCard',
+         email: 'me_again@web.com'
        });
 
      }).then(function (response) {
-       // response.id -> "myNameCard"
-       // response.rev -> "2-3753476B70A49EA4D8C9039E7B04254C"
+       // response.id -> 'myNameCard'
+       // response.rev -> '2-3753476B70A49EA4D8C9039E7B04254C'
      });
 
 
@@ -120,10 +120,10 @@ update is executed.
 
    .. code-block:: javascript
 
-     jio_instance.get({"_id": "myNameCard"}).then(function (response) {
-       // response.id -> "myNameCard"
-       // response.rev -> "2-3753476B70A49EA4D8C9039E7B04254C"
-       // response.data.email -> "me_again@web.com"
+     jio_instance.get({_id: 'myNameCard'}).then(function (response) {
+       // response.id -> 'myNameCard'
+       // response.rev -> '2-3753476B70A49EA4D8C9039E7B04254C'
+       // response.data.email -> 'me_again@web.com'
      });
 
    When multiple versions of a document are available, jIO returns the latest,
@@ -134,32 +134,32 @@ update is executed.
 
    .. code-block:: javascript
 
-     jio_instance.get({"_id": "myNameCard"}, {
-       "conflicts": true
+     jio_instance.get({_id: 'myNameCard'}, {
+       conflicts: true
      }).then(function (response) {
-       // response.id -> "myNameCard"
-       // response.rev -> "2-3753476B70A49EA4D8C9039E7B04254C",
-       // response.conflicts -> ["2-068E73F5B44FEC987B51354DFC772891"]
+       // response.id -> 'myNameCard'
+       // response.rev -> '2-3753476B70A49EA4D8C9039E7B04254C',
+       // response.conflicts -> ['2-068E73F5B44FEC987B51354DFC772891']
      });
 
    The conflicting version (*2-068E...*) is displayed, because **{conflicts: true}** was
    specified in the GET call. Deleting either version will solve the conflict.
 
-#. Delete conflicting version:
+#. Delete the conflicting version:
 
    .. code-block:: javascript
 
      jio_instance.remove({
-       "_id": "myNameCard",
-       "_rev": "2-068E73F5B44FEC987B51354DFC772891"
+       _id: 'myNameCard',
+       _rev: '2-068E73F5B44FEC987B51354DFC772891'
      }).then(function (response) {
-       // response.id -> "myNameCard"
-       // response.rev -> "3-28910A4937537B5168E772896B70EC98"
+       // response.id -> 'myNameCard'
+       // response.rev -> '3-28910A4937537B5168E772896B70EC98'
      });
 
-   When deleting the conflicting version of your namecard, jIO removes this
-   version from all storages and sets the document tree leaf of this version to
-   deleted. All storages now contain just a single version of the namecard
+   When deleting the conflicting version of your namecard, jIO removed it
+   from all storages and set the document tree leaf of that version to
+   *deleted*. All storages now contain just a single version of the namecard
    (2-3753...). Note that, on the document tree, removing a revison will
    create a new revision with status set to *deleted*.
 
