@@ -505,6 +505,7 @@ Resources, additional reading materials and links:
 
 * `JavaScript Patterns <http://shop.oreilly.com/product/9780596806767.do>`_, main resource used.
 * `JSLint <http://www.jslint.com/>`_, code quality tool.
+* `JSLint Error Explanations <http://jslinterrors.com/>`_, a useful reference.
 * `YUIDoc <http://yuilibrary.com/projects/yuidoc>`_, generate documentation from code.
 
 
