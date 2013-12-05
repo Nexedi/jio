@@ -293,6 +293,7 @@
     };
 
     priv.send = function (command, method, doc, option, callback) {
+      var storage = command.storage(priv.sub_storage);
       function onSuccess(success) {
         callback(undefined, success);
       }
@@ -300,11 +301,9 @@
         callback(err, undefined);
       }
       if (method === 'allDocs') {
-        command.storage(priv.sub_storage).allDocs(option).
-          then(onSuccess, onError);
+        storage.allDocs(option).then(onSuccess, onError);
       } else {
-        command.storage(priv.sub_storage)[method](doc, option).
-          then(onSuccess, onError);
+        storage[method](doc, option).then(onSuccess, onError);
       }
     };
 
@@ -399,7 +398,15 @@
     priv.getRevisionTree = function (command, doc, option, callback) {
       doc = priv.clone(doc);
       doc._id = doc._id + priv.doc_tree_suffix;
-      priv.get(command, doc, option, callback);
+      priv.get(command, doc, option, function (err, response) {
+        if (err) {
+          return callback(err, response);
+        }
+        if (response.data && response.data.children) {
+          response.data.children = JSON.parse(response.data.children);
+        }
+        return callback(err, response);
+      });
     };
 
     priv.getAttachmentList = function (command, doc, option, callback) {
@@ -441,7 +448,7 @@
         }
       }
       if (count === 0) {
-        callback(undefined, []);
+        callback(undefined, {"data": []});
       }
     };
 
@@ -481,14 +488,15 @@
     priv.putDocumentTree = function (command, doc, option, doc_tree, callback) {
       doc_tree = priv.clone(doc_tree);
       doc_tree._id = doc._id + priv.doc_tree_suffix;
+      if (doc_tree.children) {
+        doc_tree.children = JSON.stringify(doc_tree.children);
+      }
       priv.put(command, doc_tree, option, callback);
     };
 
     priv.notFoundError = function (message, reason) {
       return {
-        "status": 404,
-        "statusText": "Not Found",
-        "error": "not_found",
+        "status": "not_found",
         "message": message,
         "reason": reason
       };
@@ -496,9 +504,7 @@
 
     priv.conflictError = function (message, reason) {
       return {
-        "status": 409,
-        "statusText": "Conflict",
-        "error": "conflict",
+        "status": "conflict",
         "message": message,
         "reason": reason
       };
@@ -539,7 +545,7 @@
             return onEnd(err, undefined);
           }
         }
-        doc_tree = response.data || priv.newDocTree();
+        doc_tree = (response && response.data) || priv.newDocTree();
         if (specific_parameter.get || specific_parameter.getAttachment) {
           if (!doc._rev) {
             winner_info = priv.getWinnerRevsInfo(doc_tree);
@@ -600,7 +606,7 @@
             "missing"
           ), undefined);
         }
-        priv.putDocument(doc, option, callback.putDocument);
+        priv.putDocument(command, doc, option, callback.putDocument);
       };
       callback.getDocument = function (err, res_doc) {
         var k, conflicts;
@@ -619,12 +625,13 @@
                 "missing"
               ), undefined);
             }
-            res_doc = {};
+            res_doc = {"data":{}};
           } else {
             err.message = "Cannot get document";
             return onEnd(err, undefined);
           }
         }
+        res_doc = res_doc.data;
         if (specific_parameter.get) {
           res_doc._id = doc._id;
           res_doc._rev = doc._rev;
@@ -665,6 +672,7 @@
           err.message = "Cannot get attachment";
           return onEnd(err, undefined);
         }
+        res_list = res_list.data;
         attachment_list = res_list || [];
         if (specific_parameter.getAttachment) {
           // getting specific attachment
@@ -745,7 +753,6 @@
           return onEnd(err, undefined);
         }
         response_object = {
-          "ok": true,
           "id": doc._id,
           "rev": doc._rev
         };
@@ -784,7 +791,7 @@
           if (err) {
             return command.error(err);
           }
-          command.success({"id": response.id});
+          command.success({"id": response.id, "rev": response.rev});
         }
       );
     };
