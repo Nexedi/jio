@@ -20,6 +20,11 @@
 }(['jio', 'sha256'], function (jIO, sha256) {
   "use strict";
 
+  var tool = {
+    "readBlobAsBinaryString": jIO.util.readBlobAsBinaryString,
+    "uniqueJSONStringify": jIO.util.uniqueJSONStringify
+  };
+
   jIO.addStorage("revision", function (spec) {
 
     var that = this, priv = {};
@@ -225,7 +230,8 @@
       delete doc._rev;
       delete doc._revs;
       delete doc._revs_info;
-      string = JSON.stringify(doc) + JSON.stringify(revision_history) +
+      string = tool.uniqueJSONStringify(doc) +
+        tool.uniqueJSONStringify(revision_history) +
         JSON.stringify(deleted_flag ? true : false);
       revision_history.start += 1;
       revision_history.ids.unshift(priv.hashCode(string));
@@ -389,6 +395,7 @@
       delete doc._attachment;
       delete doc._data;
       delete doc._mimetype;
+      delete doc._content_type;
       delete doc._rev;
       delete doc._revs;
       delete doc._revs_info;
@@ -428,7 +435,7 @@
           result_list.push({
             "_attachment": attachment_id,
             "_data": response.data,
-            "_mimetype": attachment_meta.content_type
+            "_content_type": attachment_meta.content_type
           });
           if (count === 0) {
             state = "finished";
@@ -625,7 +632,7 @@
                 "missing"
               ), undefined);
             }
-            res_doc = {"data":{}};
+            res_doc = {"data": {}};
           } else {
             err.message = "Cannot get document";
             return onEnd(err, undefined);
@@ -821,27 +828,34 @@
 
 
     that.putAttachment = function (command, param, option) {
-      priv.revisionGenericRequest(
-        command,
-        param,
-        option,
-        {
-          "doc_id": param._id,
-          "attachment_id": param._attachment,
-          "add_to_attachment_list": {
-            "_attachment": param._attachment,
-            "_mimetype": param._blob.type,
-            "_data": param._blob
+      tool.readBlobAsBinaryString(param._blob).then(function (event) {
+        param._content_type = param._blob.type;
+        param._data = event.target.result;
+        delete param._blob;
+        priv.revisionGenericRequest(
+          command,
+          param,
+          option,
+          {
+            "doc_id": param._id,
+            "attachment_id": param._attachment,
+            "add_to_attachment_list": {
+              "_attachment": param._attachment,
+              "_content_type": param._content_type,
+              "_data": param._data
+            },
+            "putAttachment": true
           },
-          "putAttachment": true
-        },
-        function (err) {
-          if (err) {
-            return command.error(err);
+          function (err, response) {
+            if (err) {
+              return command.error(err);
+            }
+            command.success({"rev": response.rev});
           }
-          command.success();
-        }
-      );
+        );
+      }, function () {
+        command.error("conflict", "broken blob", "Cannot read data to put");
+      });
     };
 
     that.remove = function (command, param, option) {

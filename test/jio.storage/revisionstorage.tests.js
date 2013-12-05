@@ -22,13 +22,20 @@
   //////////////////////////////////////////////////////////////////////////////
   // Tools
 
+  var tool = {
+    "deepClone": jIO.util.deepClone,
+    "uniqueJSONStringify": jIO.util.uniqueJSONStringify,
+    "readBlobAsBinaryString": jIO.util.readBlobAsBinaryString
+  };
+
   function generateRevisionHash(doc, revisions, deleted_flag) {
     var string;
-    doc = jIO.util.deepClone(doc);
+    doc = tool.deepClone(doc);
     delete doc._rev;
     delete doc._revs;
     delete doc._revs_info;
-    string = JSON.stringify(doc) + JSON.stringify(revisions) +
+    string = tool.uniqueJSONStringify(doc) +
+      tool.uniqueJSONStringify(revisions) +
       JSON.stringify(deleted_flag ? true : false);
     return sha256.hex_sha256(string);
   }
@@ -71,7 +78,6 @@
       "type": "local",
       "username": "revision post",
       "mode": "memory"
-      //"mode": "localStorage"
     };
 
     jio = jIO.createJIO({
@@ -144,8 +150,7 @@
         "id": "post1",
         "method": "post",
         "result": "success",
-        "rev": "1-eedaf5235af91978a06d0b0e68b1c16adbc539" +
-          "5bb9bd4a0cfd632fe03f9d8ef3",
+        "rev": shared.rev,
         "status": 201,
         "statusText": "Created"
       }, "Post");
@@ -266,7 +271,7 @@
         "_id": "post1." + shared.rev,
         "_attachment": "attachment_test",
         "_data": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "_mimetype": "oh/yeah"
+        "_content_type": "oh/yeah"
       });
 
     }).then(function () {
@@ -299,7 +304,7 @@
 
     }).then(function (answer) {
 
-      return jIO.util.readBlobAsBinaryString(answer.data);
+      return tool.readBlobAsBinaryString(answer.data);
 
     }).then(function (event) {
 
@@ -310,9 +315,9 @@
       shared.doc_tree._id = "post1.revision_tree.json";
       shared.doc_tree.children = JSON.parse(shared.doc_tree.children);
       shared.doc_tree.children[0].children[0].children.unshift({
-         "rev": shared.rev,
-         "status": "available",
-         "children": []
+        "rev": shared.rev,
+        "status": "available",
+        "children": []
       });
       shared.doc_tree.children = JSON.stringify(shared.doc_tree.children);
 
@@ -402,7 +407,6 @@
       "type": "local",
       "username": "revision put",
       "mode": "memory"
-      //"mode": "localStorage"
     };
 
     jio = jIO.createJIO({
@@ -536,7 +540,7 @@
         "rev": shared.rev,
         "status": 204,
         "statusText": "No Content"
-       }, "Put + wrong revision");
+      }, "Put + wrong revision");
 
       // check document
       shared.doc._id = "put1." + shared.rev;
@@ -634,12 +638,12 @@
         "_id": "put1.3-rh3",
         "_attachment": "att1",
         "_data": "a",
-        "_mimetype": "text/plain"
+        "_content_type": "text/plain"
       }), jio_local.putAttachment({
         "_id": "put1.3-rh3",
         "_attachment": "att2",
         "_data": "bc",
-        "_mimetype": "dont/care"
+        "_content_type": "dont/care"
       })]);
 
     }).then(function () {
@@ -687,8 +691,8 @@
       deepEqual(answers[1].data.type, "dont/care", "Check attachment 2 type");
 
       return RSVP.all([
-        jIO.util.readBlobAsBinaryString(answers[0].data),
-        jIO.util.readBlobAsBinaryString(answers[1].data)
+        tool.readBlobAsBinaryString(answers[0].data),
+        tool.readBlobAsBinaryString(answers[1].data)
       ]);
 
     }).then(function (answers) {
@@ -714,174 +718,236 @@
 
   });
 
-  // test("Put Attachment", function () {
+  test("Put Attachment", function () {
 
-  //   var o = generateTools();
+    var shared = {}, jio, jio_local;
 
-  //   o.jio = jIO.newJio({
-  //     "type": "revision",
-  //     "sub_storage": {
-  //       "type": "local",
-  //       "username": "urevputattmt",
-  //       "application_name": "arevputattmt"
-  //     }
-  //   });
+    shared.workspace = {};
+    shared.local_storage_description = {
+      "type": "local",
+      "username": "revision putAttachment",
+      "mode": "memory"
+    };
 
-  //   // putAttachment without doc id
-  //   // error 20 -> document id required
-  //   o.spy(o, "status", 20, "PutAttachment without doc id" +
-  //         " -> 20 document id required");
-  //   o.jio.putAttachment({}, o.f);
-  //   o.tick(o);
+    jio = jIO.createJIO({
+      "type": "revision",
+      "sub_storage": shared.local_storage_description
+    }, {"workspace": shared.workspace});
 
-  //   // putAttachment without attachment id
-  //   // erorr 22 -> attachment id required
-  //   o.spy(o, "status", 22, "PutAttachment without attachment id" +
-  //         " -> 22 attachment id required");
-  //   o.jio.putAttachment({"_id": "putattmt1"}, o.f);
-  //   o.tick(o);
+    jio_local = jIO.createJIO(shared.local_storage_description, {
+      "workspace": shared.workspace
+    });
 
-  //   // putAttachment without document
-  //   o.revisions = {"start": 0, "ids": []};
-  // o.rev_hash = generateRevisionHash({"_id": "doc1", "_attachment": "attmt1"},
-  //                                     o.revisions);
-  //   o.rev = "1-" + o.rev_hash;
-  //   o.spy(o, "value",
-  //         {"ok": true, "id": "doc1", "attachment": "attmt1", "rev": o.rev},
-  //         "PutAttachment without document, without data");
-  //   o.jio.putAttachment({"_id": "doc1", "_attachment": "attmt1"}, o.f);
-  //   o.tick(o);
+    stop();
 
-  //   // check document
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(
-  //       "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
-  //     ),
-  //     {
-  //       "_id": "doc1." + o.rev,
-  //       "_attachments": {
-  //         "attmt1": {
-  //           "length": 0,
-  //           // md5("")
-  //           "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
-  //         }
-  //       }
-  //     },
-  //     "Check document"
-  //   );
+    // putAttachment without document
+    shared.revisions = {"start": 0, "ids": []};
+    shared.rev_hash = generateRevisionHash({
+      "_id": "doc1",
+      "_attachment": "attmt1",
+      "_data": "",
+      "_content_type": ""
+    }, shared.revisions);
+    shared.rev = "1-" + shared.rev_hash;
+    jio.putAttachment({
+      "_id": "doc1",
+      "_attachment": "attmt1",
+      "_data": ""
+    }).then(function (answer) {
 
-  //   // check attachment
-  //   deepEqual(util.jsonlocalstorage.getItem(
-  //     "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
-  //       + "/attmt1"
-  //   ), "", "Check attachment");
-  //   // adding a metadata to the document
-  //   o.doc = util.jsonlocalstorage.getItem(
-  //     "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
-  //   );
-  //   o.doc.title = "My Title";
-  //   util.jsonlocalstorage.setItem(
-  //     "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev,
-  //     o.doc
-  //   );
+      deepEqual(answer, {
+        "attachment": "attmt1",
+        "id": "doc1",
+        "method": "putAttachment",
+        "result": "success",
+        "rev": shared.rev,
+        "status": 204,
+        "statusText": "No Content" // XXX should be 201 Created
+      }, "PutAttachment without document");
 
-  //   // update attachment
-  //   o.prev_rev = o.rev;
-  //   o.revisions = {"start": 1, "ids": [o.rev_hash]};
-  //   o.rev_hash = generateRevisionHash({
-  //     "_id": "doc1",
-  //     "_data": "abc",
-  //     "_attachment": "attmt1",
-  //   }, o.revisions);
-  //   o.rev = "2-" + o.rev_hash;
-  //   o.spy(o, "value",
-  //         {"ok": true, "id": "doc1", "attachment": "attmt1", "rev": o.rev},
-  //         "Update Attachment, with data");
-  //   o.jio.putAttachment({
-  //     "_id": "doc1",
-  //     "_data": "abc",
-  //     "_attachment": "attmt1",
-  //     "_rev": o.prev_rev
-  //   }, o.f);
-  //   o.tick(o);
+      return jio_local.get({"_id": "doc1." + shared.rev});
 
-  //   // check document
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(
-  //       "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
-  //     ),
-  //     {
-  //       "_id": "doc1." + o.rev,
-  //       "title": "My Title",
-  //       "_attachments": {
-  //         "attmt1": {
-  //           "length": 3,
-  //           // md5("abc")
-  //           "digest": "md5-900150983cd24fb0d6963f7d28e17f72"
-  //         }
-  //       }
-  //     },
-  //     "Check document"
-  //   );
+    }).then(function (answer) {
 
-  //   // check attachment
-  //   deepEqual(util.jsonlocalstorage.getItem(
-  //     "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev +
-  //       "/attmt1"
-  //   ), "abc", "Check attachment");
+      // check document
+      deepEqual(
+        answer.data,
+        {
+          "_id": "doc1." + shared.rev,
+          "_attachments": {
+            "attmt1": {
+              "content_type": "",
+              "length": 0,
+              "digest": "sha256-e3b0c44298fc1c149afbf4c8996fb9242" +
+                "7ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        "Check document"
+      );
 
-  //   // putAttachment new attachment
-  //   o.prev_rev = o.rev;
-  //   o.revisions = {"start": 2, "ids": [o.rev_hash, o.revisions.ids[0]]};
-  //   o.rev_hash = generateRevisionHash({
-  //     "_id": "doc1",
-  //     "_data": "def",
-  //     "_attachment": "attmt2",
-  //   }, o.revisions);
-  //   o.rev = "3-" + o.rev_hash;
-  //   o.spy(o, "value",
-  //         {"ok": true, "id": "doc1", "attachment": "attmt2", "rev": o.rev},
-  //         "PutAttachment without document, without data");
-  //   o.jio.putAttachment({
-  //     "_id": "doc1",
-  //     "_data": "def",
-  //     "_attachment": "attmt2",
-  //     "_rev": o.prev_rev
-  //   }, o.f);
-  //   o.tick(o);
+      // check attachment
+      return jio_local.getAttachment({
+        "_id": "doc1." + shared.rev,
+        "_attachment": "attmt1"
+      });
 
-  //   // check document
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(
-  //       "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev
-  //     ),
-  //     {
-  //       "_id": "doc1." + o.rev,
-  //       "title": "My Title",
-  //       "_attachments": {
-  //         "attmt1": {
-  //           "length": 3,
-  //           "digest": "md5-900150983cd24fb0d6963f7d28e17f72"
-  //         },
-  //         "attmt2": {
-  //           "length": 3,
-  //           // md5("def")
-  //           "digest": "md5-4ed9407630eb1000c0f6b63842defa7d"
-  //         }
-  //       }
-  //     },
-  //     "Check document"
-  //   );
+    }).then(function (answer) {
 
-  //   // check attachment
-  //   deepEqual(util.jsonlocalstorage.getItem(
-  //     "jio/localstorage/urevputattmt/arevputattmt/doc1." + o.rev +
-  //       "/attmt2"
-  //   ), "def", "Check attachment");
+      return tool.readBlobAsBinaryString(answer.data);
 
-  //   util.closeAndcleanUpJio(o.jio);
+    }).then(function (event) {
 
-  // });
+      deepEqual(event.target.result, "", "Check attachment");
+
+      // adding a metadata to the document
+      return jio_local.get({"_id": "doc1." + shared.rev});
+
+    }).then(function (answer) {
+
+      answer.data._id = "doc1." + shared.rev;
+      answer.data.title = "My Title";
+      return jio_local.put(answer.data);
+
+    }).then(function () {
+
+      // update attachment
+      shared.prev_rev = shared.rev;
+      shared.revisions = {"start": 1, "ids": [shared.rev_hash]};
+      shared.rev_hash = generateRevisionHash({
+        "_id": "doc1",
+        "_data": "abc",
+        "_content_type": "",
+        "_attachment": "attmt1"
+      }, shared.revisions);
+      shared.rev = "2-" + shared.rev_hash;
+      return jio.putAttachment({
+        "_id": "doc1",
+        "_data": "abc",
+        "_attachment": "attmt1",
+        "_rev": shared.prev_rev
+      });
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "attachment": "attmt1",
+        "id": "doc1",
+        "method": "putAttachment",
+        "result": "success",
+        "rev": shared.rev,
+        "status": 204,
+        "statusText": "No Content"
+      }, "Update attachment");
+
+      // check document
+      return jio_local.get({"_id": "doc1." + shared.rev});
+
+    }).then(function (answer) {
+
+      deepEqual(
+        answer.data,
+        {
+          "_id": "doc1." + shared.rev,
+          "title": "My Title",
+          "_attachments": {
+            "attmt1": {
+              "content_type": "",
+              "length": 3,
+              "digest": "sha256-ba7816bf8f01cfea414140de5dae2223b00361a3" +
+                "96177a9cb410ff61f20015ad"
+            }
+          }
+        },
+        "Check document"
+      );
+
+      // check attachment
+      return jio_local.getAttachment({
+        "_id": "doc1." + shared.rev,
+        "_attachment": "attmt1"
+      });
+
+    }).then(function (answer) {
+
+      return tool.readBlobAsBinaryString(answer.data);
+
+    }).then(function (event) {
+
+      deepEqual(event.target.result, "abc", "Check attachment");
+
+      // putAttachment new attachment
+      shared.prev_rev = shared.rev;
+      shared.revisions = {
+        "start": 2,
+        "ids": [shared.rev_hash, shared.revisions.ids[0]]
+      };
+      shared.rev_hash = generateRevisionHash({
+        "_id": "doc1",
+        "_data": "def",
+        "_attachment": "attmt2",
+        "_content_type": ""
+      }, shared.revisions);
+      shared.rev = "3-" + shared.rev_hash;
+      return jio.putAttachment({
+        "_id": "doc1",
+        "_data": "def",
+        "_attachment": "attmt2",
+        "_rev": shared.prev_rev
+      });
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "attachment": "attmt2",
+        "id": "doc1",
+        "method": "putAttachment",
+        "result": "success",
+        "rev": shared.rev,
+        "status": 204,
+        "statusText": "No Content" // XXX should be 201 Created
+      }, "PutAttachment without document");
+
+      return jio_local.get({"_id": "doc1." + shared.rev});
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data, {
+        "_id": "doc1." + shared.rev,
+        "title": "My Title",
+        "_attachments": {
+          "attmt1": {
+            "content_type": "",
+            "length": 3,
+            "digest": "sha256-ba7816bf8f01cfea414140de5dae2223b00361a3" +
+                "96177a9cb410ff61f20015ad"
+          },
+          "attmt2": {
+            "content_type": "",
+            "length": 3,
+            "digest": "sha256-cb8379ac2098aa165029e3938a51da0bcecfc008" +
+              "fd6795f401178647f96c5b34"
+          }
+        }
+      }, "Check document");
+
+      // check attachment
+      return jio_local.getAttachment({
+        "_id": "doc1." + shared.rev,
+        "_attachment": "attmt2"
+      });
+
+    }).then(function (answer) {
+
+      return tool.readBlobAsBinaryString(answer.data);
+
+    }).then(function (event) {
+
+      deepEqual(event.target.result, "def", "Check attachment");
+
+    }).fail(unexpectedError).always(start);
+
+  });
 
   // test("Get", function () {
 
