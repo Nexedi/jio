@@ -810,11 +810,11 @@
         metadata,
         option,
         {},
-        function (err) {
+        function (err, response) {
           if (err) {
             return command.error(err);
           }
-          command.success();
+          command.success({"rev": response.rev});
         }
       );
     };

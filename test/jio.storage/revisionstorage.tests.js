@@ -393,251 +393,326 @@
 
   });
 
-  // test("Put", function () {
+  test("Put", function () {
 
-  //   var o = generateTools();
+    var shared = {}, jio, jio_local;
 
-  //   o.jio = jIO.newJio({
-  //     "type": "revision",
-  //     "sub_storage": {
-  //       "type": "local",
-  //       "username": "urevput",
-  //       "application_name": "arevput"
-  //     }
-  //   });
-  //   o.localpath = "jio/localstorage/urevput/arevput";
+    shared.workspace = {};
+    shared.local_storage_description = {
+      "type": "local",
+      "username": "revision put",
+      "mode": "memory"
+      //"mode": "localStorage"
+    };
 
-  //   // put without id
-  //   // error 20 -> document id required
-  //   o.spy(o, "status", 20, "Put without id");
-  //   o.jio.put({}, o.f);
-  //   o.tick(o);
+    jio = jIO.createJIO({
+      "type": "revision",
+      "sub_storage": shared.local_storage_description
+    }, {"workspace": shared.workspace});
 
-  //   // put non empty document
-  //   o.doc = {"_id": "put1", "title": "myPut1"};
-  //   o.revisions = {"start": 0, "ids": []};
-  //   o.rev = "1-" + generateRevisionHash(o.doc, o.revisions);
-  //   o.spy(o, "value", {"ok": true, "id": "put1", "rev": o.rev},
-  //          "Creates a document");
-  //   o.jio.put(o.doc, o.f);
-  //   o.tick(o);
+    jio_local = jIO.createJIO(shared.local_storage_description, {
+      "workspace": shared.workspace
+    });
 
-  //   // check document
-  //   o.doc._id = "put1." + o.rev;
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(o.localpath + "/put1." + o.rev),
-  //     o.doc,
-  //     "Check document"
-  //   );
+    stop();
 
-  //   // check document tree
-  //   o.doc_tree = {
-  //     "_id": "put1.revision_tree.json",
-  //     "children": [{
-  //       "rev": o.rev,
-  //       "status": "available",
-  //       "children": []
-  //     }]
-  //   };
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(
-  //       o.localpath + "/put1.revision_tree.json"
-  //     ),
-  //     o.doc_tree,
-  //     "Check document tree"
-  //   );
+    // put non empty document
+    shared.doc = {"_id": "put1", "title": "myPut1"};
+    shared.revisions = {"start": 0, "ids": []};
+    shared.rev = "1-" + generateRevisionHash(shared.doc, shared.revisions);
+    jio.put(shared.doc).then(function (answer) {
 
-  //   // put without rev and document already exists
-  //   o.doc = {"_id": "put1", "title": "myPut2"};
-  //   o.rev = "1-" + generateRevisionHash(o.doc, o.revisions);
-  //   o.spy(o, "value", {"ok": true, "id": "put1", "rev": o.rev},
-  //          "Put same document without revision");
-  //   o.jio.put(o.doc, o.f);
-  //   o.tick(o);
+      deepEqual(answer, {
+        "id": "put1",
+        "method": "put",
+        "result": "success",
+        "rev": shared.rev,
+        "status": 204,
+        "statusText": "No Content" // XXX should 201 Created
+      }, "Create a document");
 
-  //   o.doc_tree.children.unshift({
-  //     "rev": o.rev,
-  //     "status": "available",
-  //     "children": []
-  //   });
+      // check document
+      shared.doc._id = "put1." + shared.rev;
+      return jio_local.get({"_id": shared.doc._id});
 
-  //   // put + revision
-  //   o.doc = {"_id": "put1", "_rev": o.rev, "title": "myPut2"};
-  //   o.revisions = {"start": 1, "ids": [o.rev.split('-')[1]]};
-  //   o.rev = "2-" + generateRevisionHash(o.doc, o.revisions);
-  //   o.spy(o, "value", {"id": "put1", "ok": true, "rev": o.rev},
-  //          "Put + revision");
-  //   o.jio.put(o.doc, o.f);
-  //   o.tick(o);
+    }).then(function (answer) {
 
-  //   // check document
-  //   o.doc._id = "put1." + o.rev;
-  //   delete o.doc._rev;
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(o.localpath + "/put1." + o.rev),
-  //     o.doc,
-  //     "Check document"
-  //   );
+      deepEqual(answer.data, shared.doc, "Check document");
 
-  //   // check document tree
-  //   o.doc_tree.children[0].children.unshift({
-  //     "rev": o.rev,
-  //     "status": "available",
-  //     "children": []
-  //   });
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(
-  //       o.localpath + "/put1.revision_tree.json"
-  //     ),
-  //     o.doc_tree,
-  //     "Check document tree"
-  //   );
+      // check document tree
+      shared.doc_tree = {
+        "_id": "put1.revision_tree.json",
+        "children": [{
+          "rev": shared.rev,
+          "status": "available",
+          "children": []
+        }]
+      };
+      shared.doc_tree.children = JSON.stringify(shared.doc_tree.children);
 
-  //   // put + wrong revision
-  //   o.doc = {"_id": "put1", "_rev": "3-wr3", "title": "myPut3"};
-  //   o.revisions = {"start": 3, "ids": ["wr3"]};
-  //   o.rev = "4-" + generateRevisionHash(o.doc, o.revisions);
-  //   o.spy(o, "value", {"id": "put1", "ok": true, "rev": o.rev},
-  //          "Put + wrong revision");
-  //   o.jio.put(o.doc, o.f);
-  //   o.tick(o);
+      return jio_local.get({"_id": shared.doc_tree._id});
 
-  //   // check document
-  //   o.doc._id = "put1." + o.rev;
-  //   delete o.doc._rev;
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(o.localpath + "/put1." + o.rev),
-  //     o.doc,
-  //     "Check document"
-  //   );
+    }).then(function (answer) {
 
-  //   // check document tree
-  //   o.doc_tree.children.unshift({
-  //     "rev": "3-wr3",
-  //     "status": "missing",
-  //     "children": [{
-  //       "rev": o.rev,
-  //       "status": "available",
-  //       "children": []
-  //     }]
-  //   });
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(
-  //       o.localpath + "/put1.revision_tree.json"
-  //     ),
-  //     o.doc_tree,
-  //     "Check document tree"
-  //   );
+      deepEqual(answer.data, shared.doc_tree, "Check document tree");
 
-  //   // put + revision history
-  //   o.doc = {
-  //     "_id": "put1",
-  //     //"_revs": ["3-rh3", "2-rh2", "1-rh1"], // same as below
-  //     "_revs": {"start": 3, "ids": ["rh3", "rh2", "rh1"]},
-  //     "title": "myPut3"
-  //   };
-  //   o.spy(o, "value", {"id": "put1", "ok": true, "rev": "3-rh3"},
-  //          "Put + revision history");
-  //   o.jio.put(o.doc, o.f);
-  //   o.tick(o);
+      // put without rev and document already exists
+      shared.doc = {"_id": "put1", "title": "myPut2"};
+      shared.rev = "1-" + generateRevisionHash(shared.doc, shared.revisions);
+      return jio.put(shared.doc);
 
-  //   // check document
-  //   o.doc._id = "put1.3-rh3";
-  //   delete o.doc._revs;
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(o.localpath + "/put1.3-rh3"),
-  //     o.doc,
-  //     "Check document"
-  //   );
+    }).then(function (answer) {
 
-  //   // check document tree
-  //   o.doc_tree.children.unshift({
-  //     "rev": "1-rh1",
-  //     "status": "missing",
-  //     "children": [{
-  //       "rev": "2-rh2",
-  //       "status": "missing",
-  //       "children": [{
-  //         "rev": "3-rh3",
-  //         "status": "available",
-  //         "children": []
-  //       }]
-  //     }]
-  //   });
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(
-  //       o.localpath + "/put1.revision_tree.json"
-  //     ),
-  //     o.doc_tree,
-  //     "Check document tree"
-  //   );
+      deepEqual(answer, {
+        "id": "put1",
+        "method": "put",
+        "result": "success",
+        "rev": shared.rev,
+        "status": 204,
+        "statusText": "No Content" // XXX should be 201 Created
+      }, "Put same document without revision");
 
-  //   // add attachment
-  //   o.doc._attachments = {
-  //     "att1": {
-  //       "length": 1,
-  //       "content_type": "text/plain",
-  //       "digest": "md5-0cc175b9c0f1b6a831c399e269772661"
-  //     },
-  //     "att2": {
-  //       "length": 2,
-  //       "content_type": "dont/care",
-  //       "digest": "md5-5360af35bde9ebd8f01f492dc059593c"
-  //     }
-  //   };
-  //   util.jsonlocalstorage.setItem(o.localpath + "/put1.3-rh3", o.doc);
-  //   util.jsonlocalstorage.setItem(o.localpath + "/put1.3-rh3/att1", "a");
-  //   util.jsonlocalstorage.setItem(o.localpath + "/put1.3-rh3/att2", "bc");
 
-  //   // put + revision with attachment
-  //   o.attachments = o.doc._attachments;
-  //   o.doc = {"_id": "put1", "_rev": "3-rh3", "title": "myPut4"};
-  //   o.revisions = {"start": 3, "ids": ["rh3", "rh2", "rh1"]};
-  //   o.rev = "4-" + generateRevisionHash(o.doc, o.revisions);
-  //   o.spy(o, "value", {"id": "put1", "ok": true, "rev": o.rev},
-  //          "Put + revision (document contains attachments)");
-  //   o.jio.put(o.doc, o.f);
-  //   o.tick(o);
+      shared.doc_tree.children = JSON.parse(shared.doc_tree.children);
+      shared.doc_tree.children.unshift({
+        "rev": shared.rev,
+        "status": "available",
+        "children": []
+      });
+      shared.doc_tree.children = JSON.stringify(shared.doc_tree.children);
 
-  //   // check document
-  //   o.doc._id = "put1." + o.rev;
-  //   o.doc._attachments = o.attachments;
-  //   delete o.doc._rev;
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(o.localpath + "/put1." + o.rev),
-  //     o.doc,
-  //     "Check document"
-  //   );
+      // put + revision
+      shared.doc = {"_id": "put1", "_rev": shared.rev, "title": "myPut2"};
+      shared.revisions = {"start": 1, "ids": [shared.rev.split('-')[1]]};
+      shared.rev = "2-" + generateRevisionHash(shared.doc, shared.revisions);
+      return jio.put(shared.doc);
 
-  //   // check attachments
-  //   deepEqual(
-  //    util.jsonlocalstorage.getItem(o.localpath + "/put1." + o.rev + "/att1"),
-  //     "a",
-  //     "Check Attachment"
-  //   );
-  //   deepEqual(
-  //    util.jsonlocalstorage.getItem(o.localpath + "/put1." + o.rev + "/att2"),
-  //     "bc",
-  //     "Check Attachment"
-  //   );
+    }).then(function (answer) {
 
-  //   // check document tree
-  //   o.doc_tree.children[0].children[0].children[0].children.unshift({
-  //     "rev": o.rev,
-  //     "status": "available",
-  //     "children": []
-  //   });
-  //   deepEqual(
-  //     util.jsonlocalstorage.getItem(
-  //       o.localpath + "/put1.revision_tree.json"
-  //     ),
-  //     o.doc_tree,
-  //     "Check document tree"
-  //   );
+      deepEqual(answer, {
+        "id": "put1",
+        "method": "put",
+        "result": "success",
+        "rev": shared.rev,
+        "status": 204,
+        "statusText": "No Content"
+      }, "Put + revision");
 
-  //   util.closeAndcleanUpJio(o.jio);
+      // check document
+      shared.doc._id = "put1." + shared.rev;
+      delete shared.doc._rev;
+      return jio_local.get({"_id": shared.doc._id});
 
-  // });
+    }).then(function (answer) {
+
+      deepEqual(answer.data, shared.doc, "Check document");
+
+      // check document tree
+      shared.doc_tree.children = JSON.parse(shared.doc_tree.children);
+      shared.doc_tree.children[0].children.unshift({
+        "rev": shared.rev,
+        "status": "available",
+        "children": []
+      });
+      shared.doc_tree.children = JSON.stringify(shared.doc_tree.children);
+      return jio_local.get({"_id": shared.doc_tree._id});
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data, shared.doc_tree, "Check document tree");
+
+      // put + wrong revision
+      shared.doc = {"_id": "put1", "_rev": "3-wr3", "title": "myPut3"};
+      shared.revisions = {"start": 3, "ids": ["wr3"]};
+      shared.rev = "4-" + generateRevisionHash(shared.doc, shared.revisions);
+      return jio.put(shared.doc);
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "id": "put1",
+        "method": "put",
+        "result": "success",
+        "rev": shared.rev,
+        "status": 204,
+        "statusText": "No Content"
+       }, "Put + wrong revision");
+
+      // check document
+      shared.doc._id = "put1." + shared.rev;
+      delete shared.doc._rev;
+      return jio_local.get({"_id": shared.doc._id});
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data, shared.doc, "Check document");
+
+      // check document tree
+      shared.doc_tree.children = JSON.parse(shared.doc_tree.children);
+      shared.doc_tree.children.unshift({
+        "rev": "3-wr3",
+        "status": "missing",
+        "children": [{
+          "rev": shared.rev,
+          "status": "available",
+          "children": []
+        }]
+      });
+      shared.doc_tree.children = JSON.stringify(shared.doc_tree.children);
+      return jio_local.get({"_id": shared.doc_tree._id});
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data, shared.doc_tree, "Check document tree");
+
+      // put + revision history
+      shared.doc = {
+        "_id": "put1",
+        //"_revs": ["3-rh3", "2-rh2", "1-rh1"], // same as below
+        "_revs": {"start": 3, "ids": ["rh3", "rh2", "rh1"]},
+        "title": "myPut3"
+      };
+      return jio.put(shared.doc);
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "id": "put1",
+        "method": "put",
+        "result": "success",
+        "rev": "3-rh3",
+        "status": 204,
+        "statusText": "No Content"
+      }, "Put + revision history");
+
+      // check document
+      shared.doc._id = "put1.3-rh3";
+      delete shared.doc._revs;
+      return jio_local.get({"_id": shared.doc._id});
+
+    }).then(function (answer) {
+      deepEqual(answer.data, shared.doc, "Check document");
+
+      // check document tree
+      shared.doc_tree.children = JSON.parse(shared.doc_tree.children);
+      shared.doc_tree.children.unshift({
+        "rev": "1-rh1",
+        "status": "missing",
+        "children": [{
+          "rev": "2-rh2",
+          "status": "missing",
+          "children": [{
+            "rev": "3-rh3",
+            "status": "available",
+            "children": []
+          }]
+        }]
+      });
+      shared.doc_tree.children = JSON.stringify(shared.doc_tree.children);
+      return jio_local.get({"_id": shared.doc_tree._id});
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data, shared.doc_tree, "Check document tree");
+
+      // add attachment
+      shared.doc._attachments = {
+        "att1": {
+          "length": 1,
+          "content_type": "text/plain",
+          "digest": "sha256-ca978112ca1bbdcafac231b39a23dc4da" +
+            "786eff8147c4e72b9807785afee48bb"
+        },
+        "att2": {
+          "length": 2,
+          "content_type": "dont/care",
+          "digest": "sha256-1e0bbd6c686ba050b8eb03ffeedc64fdc" +
+            "9d80947fce821abbe5d6dc8d252c5ac"
+        }
+      };
+      return RSVP.all([jio_local.putAttachment({
+        "_id": "put1.3-rh3",
+        "_attachment": "att1",
+        "_data": "a",
+        "_mimetype": "text/plain"
+      }), jio_local.putAttachment({
+        "_id": "put1.3-rh3",
+        "_attachment": "att2",
+        "_data": "bc",
+        "_mimetype": "dont/care"
+      })]);
+
+    }).then(function () {
+
+      // put + revision with attachment
+      shared.attachments = shared.doc._attachments;
+      shared.doc = {"_id": "put1", "_rev": "3-rh3", "title": "myPut4"};
+      shared.revisions = {"start": 3, "ids": ["rh3", "rh2", "rh1"]};
+      shared.rev = "4-" + generateRevisionHash(shared.doc, shared.revisions);
+      return jio.put(shared.doc);
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "id": "put1",
+        "method": "put",
+        "result": "success",
+        "rev": shared.rev,
+        "status": 204,
+        "statusText": "No Content"
+      }, "Put + revision (document contains attachments)");
+
+      // check document
+      shared.doc._id = "put1." + shared.rev;
+      shared.doc._attachments = shared.attachments;
+      delete shared.doc._rev;
+      return jio_local.get({"_id": shared.doc._id});
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data, shared.doc, "Check document");
+
+      // check attachments
+      return RSVP.all([jio_local.getAttachment({
+        "_id": "put1." + shared.rev,
+        "_attachment": "att1"
+      }), jio_local.getAttachment({
+        "_id": "put1." + shared.rev,
+        "_attachment": "att2"
+      })]);
+
+    }).then(function (answers) {
+
+      deepEqual(answers[0].data.type, "text/plain", "Check attachment 1 type");
+      deepEqual(answers[1].data.type, "dont/care", "Check attachment 2 type");
+
+      return RSVP.all([
+        jIO.util.readBlobAsBinaryString(answers[0].data),
+        jIO.util.readBlobAsBinaryString(answers[1].data)
+      ]);
+
+    }).then(function (answers) {
+
+      deepEqual(answers[0].target.result, "a", "Check attachment 1 content");
+      deepEqual(answers[1].target.result, "bc", "Check attachment 2 content");
+
+      // check document tree
+      shared.doc_tree.children = JSON.parse(shared.doc_tree.children);
+      shared.doc_tree.children[0].children[0].children[0].children.unshift({
+        "rev": shared.rev,
+        "status": "available",
+        "children": []
+      });
+      shared.doc_tree.children = JSON.stringify(shared.doc_tree.children);
+      return jio_local.get({"_id": shared.doc_tree._id});
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data, shared.doc_tree, "Check document tree");
+
+    }).fail(unexpectedError).always(start);
+
+  });
 
   // test("Put Attachment", function () {
 
