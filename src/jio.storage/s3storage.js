@@ -17,7 +17,7 @@
   var b64_hmac_sha1 = sha1.b64_hmac_sha1;
 
   jIO.addStorageType("s3", function (spec, my) {
-    var evt, that, priv = {};
+    var that, priv = {};
     spec = spec || {};
     that = my.basicStorage(spec, my);
 
@@ -258,10 +258,10 @@
 
 
 
-    that.encodePolicy = function (form) {
+    that.encodePolicy = function () {
       //generates the policy
       //enables the choice for the http response code
-      var http_code, s3_policy, Signature = '';
+      var s3_policy;
       s3_policy = {
         "expiration": "2020-01-01T00:00:00Z",
         "conditions": [
@@ -269,7 +269,7 @@
           ["starts-with", "$key", ""],
           {"acl": priv.acl },
           {"success_action_redirect": ""},
-          {"success_action_status": http_code },
+          {"success_action_status": undefined }, // http_code
           ["starts-with", "$Content-Type", ""],
           ["content-length-range", 0, 524288000]
         ]
@@ -280,7 +280,7 @@
       priv.b64_policy = btoa(JSON.stringify(s3_policy));
       //generates the signature value using the policy and the secret access key
       //use of sha1.js to generate the signature
-      Signature = that.signature(priv.b64_policy);
+      //Signature = that.signature(priv.b64_policy);
 
     };
 
@@ -407,6 +407,7 @@
     }
 
     priv.updateMeta = function (doc, docid, attachid, action, data) {
+      /*jslint unparam: true */
       doc._attachments = doc._attachments || {};
       switch (action) {
       case "add":
@@ -453,7 +454,7 @@
       return error;
     };
 
-    that.encodeAuthorization = function (key, mime) {
+    that.encodeAuthorization = function (key) {
       //GET oriented method
       var requestUTC, httpVerb, StringToSign, Signature;
       requestUTC = new Date().toUTCString();
@@ -670,7 +671,6 @@
         docId,
         attachId,
         mime,
-        attachment_id,
         attachment_data,
         attachment_md5,
         attachment_mimetype,
@@ -682,7 +682,7 @@
       mime = 'text/plain; charset=UTF-8';
       //récupération des variables de l'attachement
 
-      attachment_id = command.getAttachmentId();
+      //attachment_id = command.getAttachmentId();
       attachment_data = command.getAttachmentData();
       attachment_md5 = command.md5SumAttachmentData();
       attachment_mimetype = command.getAttachmentMimeType();
@@ -697,7 +697,7 @@
           attachment_data,
           false,
           true,
-          function (reponse) {
+          function () {
             that.success({
               // response
               "ok": true,
@@ -722,7 +722,7 @@
         doc = priv.updateMeta(data, docId, attachId, "add", attachment_obj);
 
         that.XHRwrapper(command, docId, '', 'PUT', mime, doc, false, false,
-          function (reponse) {
+          function () {
             putAttachment();
           }
           );
@@ -760,7 +760,7 @@
 
       function deleteDocument() {
         that.XHRwrapper(command, docId, '', 'DELETE', mime, '', true, false,
-          function (reponse) {
+          function () {
             that.success({
               // response
               "ok": true,
@@ -771,7 +771,8 @@
           );
       }
 
-      function myCallback(response) {
+      function myCallback() {
+        return;
       }
 
       that.XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
@@ -801,12 +802,7 @@
       var mon_document,
         docId,
         attachId,
-        mime,
-        attachment_id,
-        attachment_data,
-        attachment_md5,
-        attachment_mimetype,
-        attachment_length;
+        mime;
 
       mon_document = null;
       docId = command.getDocId();
@@ -814,17 +810,17 @@
       mime = 'text/plain; charset=UTF-8';
       //récupération des variables de l'attachement
 
-      attachment_id = command.getAttachmentId();
-      attachment_data = command.getAttachmentData();
-      attachment_md5 = command.md5SumAttachmentData();
-      attachment_mimetype = command.getAttachmentMimeType();
-      attachment_length = command.getAttachmentLength();
+      // attachment_id = command.getAttachmentId();
+      // attachment_data = command.getAttachmentData();
+      // attachment_md5 = command.md5SumAttachmentData();
+      // attachment_mimetype = command.getAttachmentMimeType();
+      // attachment_length = command.getAttachmentLength();
 
       function removeAttachment() {
         that.XHRwrapper(command, docId, attachId, 'DELETE', mime, '', true,
-          true, function (reponse) {
-          }
-          );
+          true, function () {
+            return;
+          });
       }
 
       function putDocument() {
@@ -832,10 +828,9 @@
         data = JSON.parse(mon_document);
         doc = priv.updateMeta(data, docId, attachId, "remove", '');
         that.XHRwrapper(command, docId, '', 'PUT', mime, doc,
-          false, false, function (reponse) {
+          false, false, function () {
             removeAttachment();
-          }
-          );
+          });
       }
 
       function getDocument() {
@@ -873,16 +868,14 @@
           keyId,
           Signature,
           callURL,
-          requestUTC,
-          parse,
-          checkCounter;
+          requestUTC;
 
         keys = $(mon_document).find('Key');
 
         resultTable = [];
         counter = 0;
 
-        keys.each(function (index) {
+        keys.each(function () {
           var that, filename, docId;
           that = $(this);
           filename = that.context.textContent;
@@ -908,6 +901,7 @@
         countB = 0;
 
         dealCallback = function (i, countB, allDoc) {
+          /*jslint unparam: true */
           return function (doc, statustext, response) {
             allDoc.rows[i].doc = response.responseText;
             if (count === 0) {
@@ -941,14 +935,12 @@
             Signature = that.encodeAuthorization(keyId);
             callURL = 'http://' + priv.server + '.s3.amazonaws.com/' + keyId;
             requestUTC = new Date().toUTCString();
-            parse = true;
 
             allDocResponse.rows[i] = {
               "id": priv.fileNameToIds(keyId).join(),
               "key": keyId,
               "value": {}
             };
-            checkCounter = i;
 
             $.ajax({
               contentType : '',

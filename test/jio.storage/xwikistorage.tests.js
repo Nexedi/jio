@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, jIO, jio_tests, test, ok, sinon */
+/*global define, jIO, jio_tests, test, ok, sinon, module */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -18,6 +18,7 @@
       tick: util.otick
     };
     function addFakeServerResponse(type, method, path, status, response) {
+      /*jslint unparam: true */
       o.server.respondWith(method, new RegExp(path), [
         status,
         {"Content-Type": 'application/xml'},
@@ -30,7 +31,7 @@
 
   module('XWikiStorage');
 
-  function setUp(that, liveTest) {
+  function setUp(that) {
     var o = generateTools(that);
     o.server = sinon.fakeServer.create();
     o.jio = jIO.newJio({type: 'xwiki', formTokenPath: 'form_token'});

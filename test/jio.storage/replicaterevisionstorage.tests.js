@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global define, jIO, jio_tests, hex_sha256, test, ok, deepEqual, sinon,
-  expect */
+  expect, module */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -75,6 +75,7 @@
   module("Replicate Revision Storage");
 
   var testReplicateRevisionStorage = function (sinon, jio_description) {
+    /*jslint unparam: true */
 
     var o = generateTools(), leavesAction, generateLocalPath;
 
@@ -778,6 +779,7 @@
     description,
     index
   ) {
+    /*jslint unparam: true */
     var o = generateTools();
 
     o.jio = jIO.newJio(description);
@@ -792,7 +794,7 @@
       "children": [{
         "rev": "1-111",
         "status": "available",
-        "children": [],
+        "children": []
       }]
     };
     o.doc1_1 = {"_id": "doc1.1-111", "title": "A"};

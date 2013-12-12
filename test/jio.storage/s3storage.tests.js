@@ -1,5 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, jIO, jio_tests, window, test, ok, deepEqual, sinon, expect */
+/*global define, jIO, jio_tests, window, test, ok, deepEqual, sinon, expect,
+  module */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {

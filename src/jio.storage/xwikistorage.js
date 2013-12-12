@@ -9,7 +9,8 @@
     XMLHttpRequest: true,
     Blob: true,
     FormData: true,
-    window: true
+    window: true,
+    setTimeout: true
 */
 /**
  * JIO XWiki Storage. Type = 'xwiki'.
@@ -86,7 +87,7 @@
                 priv.xwikiurl + "]",
             "reason": cause
           });
-        },
+        }
       });
     };
 
@@ -125,7 +126,7 @@
     };
 
     priv.isBlob = function (potentialBlob) {
-      return typeof (potentialBlob) !== 'undefined' &&
+      return potentialBlob !== undefined &&
         potentialBlob.toString() === "[object Blob]";
     };
 
@@ -225,7 +226,7 @@
           xhr.responseType = 'text';
         }
 
-        xhr.onload = function (e) {
+        xhr.onload = function () {
           if (xhr.status === 200) {
             var contentType = xhr.getResponseHeader("Content-Type");
             if (contentType.indexOf(';') > -1) {
@@ -327,7 +328,7 @@
           xhr = new XMLHttpRequest();
           xhr.open('POST', priv.xwikiurl + "/bin/upload/" +
                            parts.space + '/' + parts.page, true);
-          xhr.onload = function (e) {
+          xhr.onload = function () {
             if (xhr.status === 302 || xhr.status === 200) {
               andThen(null);
             } else {
@@ -490,7 +491,7 @@
       return {
         "username": priv.username,
         "language": priv.language,
-        "xwikiurl": priv.xwikiurl,
+        "xwikiurl": priv.xwikiurl
       };
     };
 
@@ -666,16 +667,16 @@
      * @param  {object} command The JIO command
      */
     that.remove = that.removeAttachment = function (command) {
-      var notFoundError, objId, complete;
-      notFoundError = function (word) {
-        that.error({
-          "status": 404,
-          "statusText": "Not Found",
-          "error": "not_found",
-          "message": word + " not found",
-          "reason": "missing"
-        });
-      };
+      var objId, complete;
+      // notFoundError = function (word) {
+      //   that.error({
+      //     "status": 404,
+      //     "statusText": "Not Found",
+      //     "error": "not_found",
+      //     "message": word + " not found",
+      //     "reason": "missing"
+      //   });
+      // };
 
       objId = command.getDocId();
       complete = function (err) {
@@ -718,7 +719,7 @@
     return that;
   };
 
-  if (typeof (define) === 'function' && define.amd) {
+  if (typeof define === 'function' && define.amd) {
     define(['jquery', 'jio'], function (jquery, jIO) {
       $ = jquery;
       jIO.addStorageType('xwiki', store);

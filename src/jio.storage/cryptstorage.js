@@ -1,6 +1,7 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global jIO: true, sjcl: true, $: true, setTimeout: true */
 jIO.addStorageType('crypt', function (spec, my) {
+  /*jslint todo: true*/
   spec = spec || {};
   var that = my.basicStorage(spec, my),
     priv = {},
@@ -80,7 +81,9 @@ jIO.addStorageType('crypt', function (spec, my) {
       obj._wait = obj._wait || {};
       if (obj._wait[function_name]) {
         obj._wait[function_name] -= 1;
-        return function () {};
+        return function () {
+          return;
+        };
       }
       // ok if undef or 0
       arglist = arglist || [];
@@ -97,7 +100,9 @@ jIO.addStorageType('crypt', function (spec, my) {
       obj._wait[function_name] = times;
     };
     async.end = function () {
-      async.call = function () {};
+      async.call = function () {
+        return;
+      };
     };
     return async;
   };
