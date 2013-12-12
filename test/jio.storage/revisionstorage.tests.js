@@ -949,200 +949,294 @@
 
   });
 
-  // test("Get", function () {
+  test("Get & GetAttachment", function () {
 
-  //   var o = generateTools();
+    var shared = {}, jio, jio_local;
 
-  //   o.jio = jIO.newJio({
-  //     "type": "revision",
-  //     "sub_storage": {
-  //       "type": "local",
-  //       "username": "urevget",
-  //       "application_name": "arevget"
-  //     }
-  //   });
-  //   o.localpath = "jio/localstorage/urevget/arevget";
+    shared.workspace = {};
+    shared.local_storage_description = {
+      "type": "local",
+      "username": "revision get",
+      "mode": "memory"
+    };
 
-  //   // get inexistent document
-  //   o.spy(o, "status", 404, "Get inexistent document (winner)" +
-  //         " -> 404 Not Found");
-  //   o.jio.get({"_id": "get1"}, o.f);
-  //   o.tick(o);
+    jio = jIO.createJIO({
+      "type": "revision",
+      "sub_storage": shared.local_storage_description
+    }, {"workspace": shared.workspace});
 
-  //   // get inexistent attachment
-  //   o.spy(o, "status", 404, "Get inexistent attachment (winner)" +
-  //         " -> 404 Not Found");
-  //   o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
-  //   o.tick(o);
+    jio_local = jIO.createJIO(shared.local_storage_description, {
+      "workspace": shared.workspace
+    });
 
-  //   // adding a document
-  //   o.doctree = {"children": [{
-  //     "rev": "1-rev1",
-  //     "status": "available",
-  //     "children": []
-  //   }]};
-  //   o.doc_myget1 = {"_id": "get1.1-rev1", "title": "myGet1"};
-  //   util.jsonlocalstorage.setItem(
-  //     o.localpath + "/get1.revision_tree.json",
-  //     o.doctree
-  //   );
-  //  util.jsonlocalstorage.setItem(o.localpath + "/get1.1-rev1", o.doc_myget1);
+    stop();
 
-  //   // get document
-  //   o.doc_myget1_cloned = deepClone(o.doc_myget1);
-  //   o.doc_myget1_cloned._id = "get1";
-  //   o.doc_myget1_cloned._rev = "1-rev1";
-  //   o.doc_myget1_cloned._revisions = {"start": 1, "ids": ["rev1"]};
-  //   o.doc_myget1_cloned._revs_info = [{
-  //     "rev": "1-rev1",
-  //     "status": "available"
-  //   }];
-  //   o.spy(o, "value", o.doc_myget1_cloned, "Get document (winner)");
-  //   o.jio.get({"_id": "get1"}, {
-  //     "revs_info": true,
-  //     "revs": true,
-  //     "conflicts": true
-  //   }, o.f);
-  //   o.tick(o);
+    success(jio.get({"_id": "get1"})).then(function (answer) {
 
-  //   // adding two documents
-  //   o.doctree = {"children": [{
-  //     "rev": "1-rev1",
-  //     "status": "available",
-  //     "children": []
-  //   }, {
-  //     "rev": "1-rev2",
-  //     "status": "available",
-  //     "children": [{
-  //       "rev": "2-rev3",
-  //       "status": "available",
-  //       "children": []
-  //     }]
-  //   }]};
-  //   o.doc_myget2 = {"_id": "get1.1-rev2", "title": "myGet2"};
-  //   o.doc_myget3 = {"_id": "get1.2-rev3", "title": "myGet3"};
-  //   util.jsonlocalstorage.setItem(
-  //     o.localpath + "/get1.revision_tree.json",
-  //     o.doctree
-  //   );
-  //  util.jsonlocalstorage.setItem(o.localpath + "/get1.1-rev2", o.doc_myget2);
-  //  util.jsonlocalstorage.setItem(o.localpath + "/get1.2-rev3", o.doc_myget3);
+      deepEqual(answer, {
+        "error": "not_found",
+        "id": "get1",
+        "message": "Document not found",
+        "method": "get",
+        "reason": "missing",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "Get inexistent document (winner) -> 404 Not Found");
 
-  //   // get document
-  //   o.doc_myget3_cloned = deepClone(o.doc_myget3);
-  //   o.doc_myget3_cloned._id = "get1";
-  //   o.doc_myget3_cloned._rev = "2-rev3";
-  //   o.doc_myget3_cloned._revisions = {"start": 2, "ids": ["rev3", "rev2"]};
-  //   o.doc_myget3_cloned._revs_info = [{
-  //     "rev": "2-rev3",
-  //     "status": "available"
-  //   }, {
-  //     "rev": "1-rev2",
-  //     "status": "available"
-  //   }];
-  //   o.doc_myget3_cloned._conflicts = ["1-rev1"];
-  //   o.spy(o, "value", o.doc_myget3_cloned,
-  //         "Get document (winner, after posting another one)");
-  //   o.jio.get({"_id": "get1"},
-  //             {"revs_info": true, "revs": true, "conflicts": true},
-  //             o.f);
-  //   o.tick(o);
+      return success(jio.getAttachment({"_id": "get1", "_attachment": "get2"}));
 
-  //   // get inexistent specific document
-  //   o.spy(o, "status", 404, "Get document (inexistent specific revision)" +
-  //         " -> 404 Not Found");
-  //   o.jio.get({"_id": "get1", "_rev": "1-rev0"}, {
-  //     "revs_info": true,
-  //     "revs": true,
-  //     "conflicts": true,
-  //   }, o.f);
-  //   o.tick(o);
+    }).then(function (answer) {
 
-  //   // get specific document
-  //   o.doc_myget2_cloned = deepClone(o.doc_myget2);
-  //   o.doc_myget2_cloned._id = "get1";
-  //   o.doc_myget2_cloned._rev = "1-rev2";
-  //   o.doc_myget2_cloned._revisions = {"start": 1, "ids": ["rev2"]};
-  //   o.doc_myget2_cloned._revs_info = [{
-  //     "rev": "1-rev2",
-  //     "status": "available"
-  //   }];
-  //   o.doc_myget2_cloned._conflicts = ["1-rev1"];
-  // o.spy(o, "value", o.doc_myget2_cloned, "Get document (specific revision)");
-  //   o.jio.get({"_id": "get1", "_rev": "1-rev2"}, {
-  //     "revs_info": true,
-  //     "revs": true,
-  //     "conflicts": true,
-  //   }, o.f);
-  //   o.tick(o);
+      deepEqual(answer, {
+        "attachment": "get2",
+        "error": "not_found",
+        "id": "get1",
+        "message": "Document not found",
+        "method": "getAttachment",
+        "reason": "missing",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "Get inexistent attachment (winner) -> 404 Not Found");
 
-  //   // adding an attachment
-  //   o.attmt_myget3 = {
-  //     "get2": {
-  //       "length": 3,
-  //       "digest": "md5-dontcare",
-  //       "content_type": "oh/yeah"
-  //     }
-  //   };
-  //   o.doc_myget3._attachments = o.attmt_myget3;
-  //  util.jsonlocalstorage.setItem(o.localpath + "/get1.2-rev3", o.doc_myget3);
-  //   util.jsonlocalstorage.setItem(o.localpath + "/get1.2-rev3/get2", "abc");
+      // adding a document
+      shared.doctree = {
+        "_id": "get1.revision_tree.json",
+        "children": JSON.stringify([{
+          "rev": "1-rev1",
+          "status": "available",
+          "children": []
+        }])
+      };
+      shared.doc_myget1 = {"_id": "get1.1-rev1", "title": "myGet1"};
 
-  //   // get attachment winner
-  //   o.spy(o, "value", "abc", "Get attachment (winner)");
-  //   o.jio.getAttachment({"_id": "get1", "_attachment": "get2"}, o.f);
-  //   o.tick(o);
 
-  //   // get inexistent attachment specific rev
-  //   o.spy(o, "status", 404, "Get inexistent attachment (specific revision)" +
-  //         " -> 404 Not Found");
-  //   o.jio.getAttachment({
-  //     "_id": "get1",
-  //     "_attachment": "get2",
-  //     "_rev": "1-rev1"
-  //   }, {
-  //     "revs_info": true,
-  //     "revs": true,
-  //     "conflicts": true,
-  //   }, o.f);
-  //   o.tick(o);
+      return jio_local.put(shared.doctree);
+    }).then(function () {
+      return jio_local.put(shared.doc_myget1);
+    }).then(function () {
 
-  //   // get attachment specific rev
-  //   o.spy(o, "value", "abc", "Get attachment (specific revision)");
-  //   o.jio.getAttachment({
-  //     "_id": "get1",
-  //     "_attachment": "get2",
-  //     "_rev": "2-rev3"
-  //   }, {
-  //     "revs_info": true,
-  //     "revs": true,
-  //     "conflicts": true,
-  //   }, o.f);
-  //   o.tick(o);
+      // get document
+      shared.doc_myget1_cloned = tool.deepClone(shared.doc_myget1);
+      shared.doc_myget1_cloned._id = "get1";
+      shared.doc_myget1_cloned._rev = "1-rev1";
+      shared.doc_myget1_cloned._revisions = {"start": 1, "ids": ["rev1"]};
+      shared.doc_myget1_cloned._revs_info = [{
+        "rev": "1-rev1",
+        "status": "available"
+      }];
 
-  //   // get document with attachment (specific revision)
-  //   delete o.doc_myget2_cloned._attachments;
-  //   o.spy(o, "value", o.doc_myget2_cloned,
-  //         "Get document which have an attachment (specific revision)");
-  //   o.jio.get({"_id": "get1", "_rev": "1-rev2"}, {
-  //     "revs_info": true,
-  //     "revs": true,
-  //     "conflicts": true
-  //   }, o.f);
-  //   o.tick(o);
+      return jio.get({"_id": "get1"}, {
+        "revs_info": true,
+        "revs": true,
+        "conflicts": true
+      });
 
-  //   // get document with attachment (winner)
-  //   o.doc_myget3_cloned._attachments = o.attmt_myget3;
-  //   o.spy(o, "value", o.doc_myget3_cloned,
-  //         "Get document which have an attachment (winner)");
-  //   o.jio.get({"_id": "get1"},
-  //             {"revs_info": true, "revs": true, "conflicts": true},
-  //             o.f);
-  //   o.tick(o);
+    }).then(function (answer) {
 
-  //   util.closeAndcleanUpJio(o.jio);
+      deepEqual(answer.data, shared.doc_myget1_cloned, "Get document (winner)");
 
-  // });
+      // adding two documents
+      shared.doctree = {
+        "_id": "get1.revision_tree.json",
+        "children": JSON.stringify([{
+          "rev": "1-rev1",
+          "status": "available",
+          "children": []
+        }, {
+          "rev": "1-rev2",
+          "status": "available",
+          "children": [{
+            "rev": "2-rev3",
+            "status": "available",
+            "children": []
+          }]
+        }])
+      };
+      shared.doc_myget2 = {"_id": "get1.1-rev2", "title": "myGet2"};
+      shared.doc_myget3 = {"_id": "get1.2-rev3", "title": "myGet3"};
+
+      return jio_local.put(shared.doctree);
+    }).then(function () {
+      return jio_local.put(shared.doc_myget2);
+    }).then(function () {
+      return jio_local.put(shared.doc_myget3);
+    }).then(function () {
+
+      // get document
+      shared.doc_myget3_cloned = tool.deepClone(shared.doc_myget3);
+      shared.doc_myget3_cloned._id = "get1";
+      shared.doc_myget3_cloned._rev = "2-rev3";
+      shared.doc_myget3_cloned._revisions =
+        {"start": 2, "ids": ["rev3", "rev2"]};
+      shared.doc_myget3_cloned._revs_info = [{
+        "rev": "2-rev3",
+        "status": "available"
+      }, {
+        "rev": "1-rev2",
+        "status": "available"
+      }];
+      shared.doc_myget3_cloned._conflicts = ["1-rev1"];
+
+      return jio.get({"_id": "get1"}, {
+        "revs_info": true,
+        "revs": true,
+        "conflicts": true
+      });
+    }).then(function (answer) {
+
+      deepEqual(answer.data,
+                shared.doc_myget3_cloned,
+                "Get document (winner, after posting another one)");
+
+      return success(jio.get({"_id": "get1", "_rev": "1-rev0"}, {
+        "revs_info": true,
+        "revs": true,
+        "conflicts": true
+      }));
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "error": "not_found",
+        "id": "get1",
+        "message": "Unable to find the document",
+        "method": "get",
+        "reason": "missing",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "Get document (inexistent specific revision)");
+
+      // get specific document
+      shared.doc_myget2_cloned = tool.deepClone(shared.doc_myget2);
+      shared.doc_myget2_cloned._id = "get1";
+      shared.doc_myget2_cloned._rev = "1-rev2";
+      shared.doc_myget2_cloned._revisions = {"start": 1, "ids": ["rev2"]};
+      shared.doc_myget2_cloned._revs_info = [{
+        "rev": "1-rev2",
+        "status": "available"
+      }];
+      shared.doc_myget2_cloned._conflicts = ["1-rev1"];
+      return jio.get({"_id": "get1", "_rev": "1-rev2"}, {
+        "revs_info": true,
+        "revs": true,
+        "conflicts": true
+      });
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data,
+                shared.doc_myget2_cloned,
+                "Get document (specific revision)");
+
+      // adding an attachment
+      shared.attmt_myget3 = {
+        "get2": {
+          "length": 3,
+          "digest": "sha256-ba7816bf8f01cfea414140de5dae2223b00361a3" +
+            "96177a9cb410ff61f20015ad",
+          "content_type": "oh/yeah"
+        }
+      };
+      shared.doc_myget3._attachments = shared.attmt_myget3;
+
+      return jio_local.putAttachment({
+        "_id": shared.doc_myget3._id,
+        "_attachment": "get2",
+        "_data": "abc",
+        "_content_type": "oh/yeah"
+      });
+
+    }).then(function () {
+
+      return jio.getAttachment({"_id": "get1", "_attachment": "get2"});
+
+    }).then(function (answer) {
+
+      return tool.readBlobAsBinaryString(answer.data);
+
+    }).then(function (event) {
+
+      deepEqual(event.target.result, "abc", "Get attachment (winner)");
+
+      // get inexistent attachment specific rev
+      return success(jio.getAttachment({
+        "_id": "get1",
+        "_attachment": "get2",
+        "_rev": "1-rev1"
+      }, {
+        "revs_info": true,
+        "revs": true,
+        "conflicts": true
+      }));
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "attachment": "get2",
+        "error": "not_found",
+        "id": "get1",
+        "message": "Unable to get an inexistent attachment",
+        "method": "getAttachment",
+        "reason": "missing",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "Get inexistent attachment (specific revision) -> 404 Not Found");
+
+      return jio.getAttachment({
+        "_id": "get1",
+        "_attachment": "get2",
+        "_rev": "2-rev3"
+      }, {
+        "revs_info": true,
+        "revs": true,
+        "conflicts": true
+      });
+
+    }).then(function (answer) {
+
+      return tool.readBlobAsBinaryString(answer.data);
+
+    }).then(function (event) {
+
+      deepEqual(event.target.result,
+                "abc",
+                "Get attachment (specific revision)");
+
+      // get document with attachment (specific revision)
+      delete shared.doc_myget2_cloned._attachments;
+      return jio.get({"_id": "get1", "_rev": "1-rev2"}, {
+        "revs_info": true,
+        "revs": true,
+        "conflicts": true
+      });
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data,
+                shared.doc_myget2_cloned,
+                "Get document which have an attachment (specific revision)");
+
+      // get document with attachment (winner)
+      shared.doc_myget3_cloned._attachments = shared.attmt_myget3;
+      return jio.get({"_id": "get1"}, {
+        "revs_info": true,
+        "revs": true,
+        "conflicts": true
+      });
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data,
+                shared.doc_myget3_cloned,
+                "Get document which have an attachment (winner)");
+
+    }).fail(unexpectedError).always(start);
+
+  });
 
   // test("Remove", function () {
 

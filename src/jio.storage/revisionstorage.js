@@ -503,7 +503,7 @@
 
     priv.notFoundError = function (message, reason) {
       return {
-        "status": "not_found",
+        "status": 404,
         "message": message,
         "reason": reason
       };
@@ -511,7 +511,7 @@
 
     priv.conflictError = function (message, reason) {
       return {
-        "status": "conflict",
+        "status": 409,
         "message": message,
         "reason": reason
       };
@@ -654,7 +654,7 @@
           if (option.revs_info === true) {
             res_doc._revs_info = doc._revs_info;
           }
-          return onEnd(undefined, res_doc);
+          return onEnd(undefined, {"data": res_doc});
         }
         if (specific_parameter.putAttachment ||
             specific_parameter.removeAttachment) {
@@ -687,7 +687,7 @@
             if (attachment_list[i] &&
                 doc._attachment ===
                 attachment_list[i]._attachment) {
-              return onEnd(undefined, attachment_list[i]._data);
+              return onEnd(undefined, {"data": attachment_list[i]._data});
             }
           }
           return onEnd(priv.notFoundError(
