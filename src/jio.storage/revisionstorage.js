@@ -867,11 +867,11 @@
           "revision_needed": true,
           "remove": true
         },
-        function (err) {
+        function (err, response) {
           if (err) {
             return command.error(err);
           }
-          command.success();
+          command.success({"rev": response.rev});
         }
       );
     };
@@ -890,11 +890,11 @@
             "_attachment": param._attachment
           }
         },
-        function (err) {
+        function (err, response) {
           if (err) {
             return command.error(err);
           }
-          command.success();
+          command.success({"rev": response.rev});
         }
       );
     };

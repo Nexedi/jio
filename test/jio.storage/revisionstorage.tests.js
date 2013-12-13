@@ -1238,186 +1238,299 @@
 
   });
 
-  // test("Remove", function () {
+  test("Remove & Remove Attachment", function () {
 
-  //   var o = generateTools();
+    var shared = {}, jio, jio_local;
 
-  //   o.jio = jIO.newJio({
-  //     "type": "revision",
-  //     "sub_storage": {
-  //       "type": "local",
-  //       "username": "urevrem",
-  //       "application_name": "arevrem"
-  //     }
-  //   });
-  //   o.localpath = "jio/localstorage/urevrem/arevrem";
+    shared.workspace = {};
+    shared.local_storage_description = {
+      "type": "local",
+      "username": "revision remove",
+      "mode": "memory"
+    };
 
-  //   // 1. remove document without revision
-  //   o.spy(o, "status", 409, "Remove document without revision " +
-  //         "-> 409 Conflict");
-  //   o.jio.remove({"_id": "remove1"}, o.f);
-  //   o.tick(o);
+    jio = jIO.createJIO({
+      "type": "revision",
+      "sub_storage": shared.local_storage_description
+    }, {"workspace": shared.workspace});
 
-  //   // 2. remove attachment without revision
-  //   o.spy(o, "status", 409, "Remove attachment without revision " +
-  //         "-> 409 Conflict");
-  //  o.jio.removeAttachment({"_id": "remove1", "_attachment": "remove2"}, o.f);
-  //   o.tick(o);
+    jio_local = jIO.createJIO(shared.local_storage_description, {
+      "workspace": shared.workspace
+    });
 
-  //   // adding a document with attachments
-  //   o.doc_myremove1 = {
-  //     "_id": "remove1.1-veryoldrev",
-  //     "title": "myRemove1"
-  //   };
+    stop();
 
-  //   util.jsonlocalstorage.setItem(o.localpath + "/remove1.1-veryoldrev",
-  //                        o.doc_myremove1);
+    // 1. remove document without revision
+    success(jio.remove({"_id": "remove1"})).then(function (answer) {
 
-  //   o.doc_myremove1._id = "remove1.2-oldrev";
-  //   o.attachment_remove2 = {
-  //     "length": 3,
-  //     "digest": "md5-dontcare",
-  //     "content_type": "oh/yeah"
-  //   };
-  //   o.attachment_remove3 = {
-  //     "length": 5,
-  //     "digest": "md5-865f5cc7fbd7854902eae9d8211f178a",
-  //     "content_type": "he/ho"
-  //   };
-  //   o.doc_myremove1._attachments = {
-  //     "remove2": o.attachment_remove2,
-  //     "remove3": o.attachment_remove3
-  //   };
+      deepEqual(answer, {
+        "error": "conflict",
+        "id": "remove1",
+        "message": "Document update conflict",
+        "method": "remove",
+        "reason": "No document revision was provided",
+        "result": "error",
+        "status": 409,
+        "statusText": "Conflict"
+      }, "Remove document without revision -> 409 Conflict");
 
-  //   util.jsonlocalstorage.setItem(o.localpath + "/remove1.2-oldrev",
-  //                        o.doc_myremove1);
-  //   util.jsonlocalstorage.setItem(
-  //     o.localpath + "/remove1.2-oldrev/remove2",
-  //     "abc"
-  //   );
-  //   util.jsonlocalstorage.setItem(
-  //     o.localpath + "/remove1.2-oldrev/remove3",
-  //     "defgh"
-  //   );
+      // 2. remove attachment without revision
+      return success(jio.removeAttachment({
+        "_id": "remove1",
+        "_attachment": "remove2"
+      }));
 
-  //   // add document tree
-  //   o.doctree = {
-  //     "children": [{
-  //       "rev": "1-veryoldrev",
-  //       "status": "available",
-  //       "children": [{
-  //         "rev": "2-oldrev",
-  //         "status": "available",
-  //         "children": []
-  //       }]
-  //     }]
-  //   };
-  //  util.jsonlocalstorage.setItem(o.localpath + "/remove1.revision_tree.json",
-  //                        o.doctree);
+    }).then(function (answer) {
 
-  //   // 3. remove inexistent attachment
-  //   o.spy(o, "status", 404, "Remove inexistent attachment -> 404 Not Found");
-  //   o.jio.removeAttachment({
-  //     "_id": "remove1",
-  //     "_attachment": "remove0",
-  //     "_rev": "2-oldrev"
-  //   }, o.f);
-  //   o.tick(o);
+      deepEqual(answer, {
+        "attachment": "remove2",
+        "error": "conflict",
+        "id": "remove1",
+        "message": "Document update conflict",
+        "method": "removeAttachment",
+        "reason": "No document revision was provided",
+        "result": "error",
+        "status": 409,
+        "statusText": "Conflict"
+      }, "Remove attachment without revision -> 409 Conflict");
 
-  //   // 4. remove existing attachment
-  //   o.rev_hash = generateRevisionHash({
-  //     "_id": "remove1",
-  //     "_attachment": "remove2",
-  //   }, {"start": 2, "ids": ["oldrev", "veryoldrev"]});
-  //   o.spy(o, "value", {
-  //     "ok": true,
-  //     "id": "remove1",
-  //     "attachment": "remove2",
-  //     "rev": "3-" + o.rev_hash
-  //   }, "Remove existing attachment");
-  //   o.jio.removeAttachment({
-  //     "_id": "remove1",
-  //     "_attachment": "remove2",
-  //     "_rev": "2-oldrev"
-  //   }, o.f);
-  //   o.tick(o);
+      // adding a document with attachments
+      shared.doc_myremove1 = {
+        "_id": "remove1.1-veryoldrev",
+        "title": "myRemove1"
+      };
 
-  //   o.doctree = {
-  //     "_id": "remove1.revision_tree.json",
-  //     "children": [{
-  //       "rev": "1-veryoldrev",
-  //       "status": "available",
-  //       "children": [{
-  //         "rev": "2-oldrev",
-  //         "status": "available",
-  //         "children": [{
-  //           "rev": "3-" + o.rev_hash,
-  //           "status": "available",
-  //           "children": []
-  //         }]
-  //       }]
-  //     }]
-  //   };
+      return jio_local.put(shared.doc_myremove1);
 
-  //   // 5. check if document tree has been updated correctly
-  //   deepEqual(util.jsonlocalstorage.getItem(
-  //     o.localpath + "/remove1.revision_tree.json"
-  //   ), o.doctree, "Check document tree");
+    }).then(function () {
 
-  //   // 6. check if the attachment still exists
-  //   deepEqual(util.jsonlocalstorage.getItem(
-  //     o.localpath + "/remove1.2-oldrev/remove2"
-  //   ), "abc", "Check attachment -> still exists");
+      shared.doc_myremove1._id = "remove1.2-oldrev";
+      shared.attachment_remove2 = {
+        "length": 3,
+        "digest": "md5-dontcare",
+        "content_type": "oh/yeah"
+      };
+      shared.attachment_remove3 = {
+        "length": 5,
+        "digest": "sha256-383395a769131d15c1c6fc57c6abdb759ace9809" +
+          "c1ad20d1f491d90f7f02650e",
+        "content_type": "he/ho"
+      };
+      shared.doc_myremove1._attachments = {
+        "remove2": shared.attachment_remove2,
+        "remove3": shared.attachment_remove3
+      };
 
-  //   // 7. check if document is updated
-  //   deepEqual(util.jsonlocalstorage.getItem(
-  //     o.localpath + "/remove1.3-" + o.rev_hash
-  //   ), {
-  //     "_id": "remove1.3-" + o.rev_hash,
-  //     "title": "myRemove1",
-  //     "_attachments": {"remove3": o.attachment_remove3}
-  //   }, "Check document");
+      return jio_local.put(shared.doc_myremove1);
 
-  //   // 8. remove document with wrong revision
-  //   o.spy(o, "status", 409, "Remove document with wrong revision " +
-  //         "-> 409 Conflict");
-  //   o.jio.remove({"_id": "remove1", "_rev": "1-a"}, o.f);
-  //   o.tick(o);
+    }).then(function () {
 
-  //   // 9. remove attachment wrong revision
-  //   o.spy(o, "status", 409, "Remove attachment with wrong revision " +
-  //         "-> 409 Conflict");
-  //   o.jio.removeAttachment({
-  //     "_id": "remove1",
-  //     "_attachment": "remove2",
-  //     "_rev": "1-a"
-  //   }, o.f);
-  //   o.tick(o);
+      return jio_local.putAttachment({
+        "_id": "remove1.2-oldrev",
+        "_attachment": "remove2",
+        "_data": "abc",
+        "_content_type": "oh/yeah"
+      });
 
-  //   // 10. remove document
-  //   o.last_rev = "3-" + o.rev_hash;
-  //   o.rev_hash = generateRevisionHash(
-  //     {"_id": "remove1"},
-  //     {"start": 3, "ids": [o.rev_hash, "oldrev", "veryoldrev"]},
-  //     true
-  //   );
-  //  o.spy(o, "value", {"ok": true, "id": "remove1", "rev": "4-" + o.rev_hash},
-  //         "Remove document");
-  //   o.jio.remove({"_id": "remove1", "_rev": o.last_rev}, o.f);
-  //   o.tick(o);
+    }).then(function () {
 
-  //   // 11. check document tree
-  //   o.doctree.children[0].children[0].children[0].children.unshift({
-  //     "rev": "4-" + o.rev_hash,
-  //     "status": "deleted",
-  //     "children": []
-  //   });
-  //   deepEqual(util.jsonlocalstorage.getItem(
-  //     o.localpath + "/remove1.revision_tree.json"
-  //   ), o.doctree, "Check document tree");
+      return jio_local.putAttachment({
+        "_id": "remove1.2-oldrev",
+        "_attachment": "remove3",
+        "_data": "defgh",
+        "_content_type": "he/ho"
+      });
 
-  //   util.closeAndcleanUpJio(o.jio);
-  // });
+    }).then(function () {
+
+      // add document tree
+      shared.doctree = {
+        "_id": "remove1.revision_tree.json",
+        "children": JSON.stringify([{
+          "rev": "1-veryoldrev",
+          "status": "available",
+          "children": [{
+            "rev": "2-oldrev",
+            "status": "available",
+            "children": []
+          }]
+        }])
+      };
+
+      return jio_local.put(shared.doctree);
+
+    }).then(function () {
+
+      // 3. remove inexistent attachment
+      return success(jio.removeAttachment({
+        "_id": "remove1",
+        "_attachment": "remove0",
+        "_rev": "2-oldrev"
+      }));
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "attachment": "remove0",
+        "error": "not_found",
+        "id": "remove1",
+        "message": "Unable to remove an inexistent attachment",
+        "method": "removeAttachment",
+        "reason": "missing",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "Remove inexistent attachment -> 404 Not Found");
+
+      // 4. remove existing attachment
+      shared.rev_hash = generateRevisionHash({
+        "_id": "remove1",
+        "_attachment": "remove2"
+      }, {"start": 2, "ids": ["oldrev", "veryoldrev"]});
+
+      return jio.removeAttachment({
+        "_id": "remove1",
+        "_attachment": "remove2",
+        "_rev": "2-oldrev"
+      });
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "attachment": "remove2",
+        "id": "remove1",
+        "method": "removeAttachment",
+        "result": "success",
+        "rev": "3-" + shared.rev_hash,
+        "status": 204,
+        "statusText": "No Content"
+      }, "Remove existing attachment");
+
+      shared.doctree = {
+        "_id": "remove1.revision_tree.json",
+        "children": JSON.stringify([{
+          "rev": "1-veryoldrev",
+          "status": "available",
+          "children": [{
+            "rev": "2-oldrev",
+            "status": "available",
+            "children": [{
+              "rev": "3-" + shared.rev_hash,
+              "status": "available",
+              "children": []
+            }]
+          }]
+        }])
+      };
+
+      // 5. check if document tree has been updated correctly
+      return jio_local.get({"_id": shared.doctree._id});
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data, shared.doctree, "Check document tree");
+
+      // 6. check if the attachment still exists
+      return jio_local.getAttachment({
+        "_id": "remove1.2-oldrev",
+        "_attachment": "remove2"
+      });
+
+    }).then(function (answer) {
+
+      return tool.readBlobAsBinaryString(answer.data);
+
+    }).then(function (event) {
+
+      deepEqual(event.target.result, "abc", "Check attachment -> still exists");
+
+      // 7. check if document is updated
+      return jio_local.get({"_id": "remove1.3-" + shared.rev_hash});
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data, {
+        "_id": "remove1.3-" + shared.rev_hash,
+        "title": "myRemove1",
+        "_attachments": {
+          "remove3": shared.attachment_remove3
+        }
+      }, "Check document");
+
+      // 8. remove document with wrong revision
+      return success(jio.remove({"_id": "remove1", "_rev": "1-a"}));
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "error": "conflict",
+        "id": "remove1",
+        "message": "Document update conflict",
+        "method": "remove",
+        "reason": "Document is missing",
+        "result": "error",
+        "status": 409,
+        "statusText": "Conflict"
+      }, "Remove document with wrong revision -> 409 Conflict");
+
+      // 9. remove attachment wrong revision
+      return success(jio.removeAttachment({
+        "_id": "remove1",
+        "_attachment": "remove2",
+        "_rev": "1-a"
+      }));
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "attachment": "remove2",
+        "error": "conflict",
+        "id": "remove1",
+        "message": "Document update conflict",
+        "method": "removeAttachment",
+        "reason": "Document is missing",
+        "result": "error",
+        "status": 409,
+        "statusText": "Conflict"
+      }, "Remove attachment with wrong revision -> 409 Conflict");
+
+      // 10. remove document
+      shared.last_rev = "3-" + shared.rev_hash;
+      shared.rev_hash = generateRevisionHash(
+        {"_id": "remove1"},
+        {"start": 3, "ids": [shared.rev_hash, "oldrev", "veryoldrev"]},
+        true
+      );
+      return jio.remove({"_id": "remove1", "_rev": shared.last_rev});
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "id": "remove1",
+        "method": "remove",
+        "result": "success",
+        "rev": "4-" + shared.rev_hash,
+        "status": 204,
+        "statusText": "No Content"
+      }, "Remove document");
+
+      // 11. check document tree
+      shared.doctree.children = JSON.parse(shared.doctree.children);
+      shared.doctree.children[0].children[0].children[0].children.unshift({
+        "rev": "4-" + shared.rev_hash,
+        "status": "deleted",
+        "children": []
+      });
+      shared.doctree.children = JSON.stringify(shared.doctree.children);
+      return jio_local.get({"_id": shared.doctree._id});
+
+    }).then(function (answer) {
+
+      deepEqual(answer.data, shared.doctree, "Check document tree");
+
+    }).fail(unexpectedError).always(start);
+
+  });
 
   // test("allDocs", function () {
 
