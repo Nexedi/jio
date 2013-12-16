@@ -24,6 +24,7 @@ function SimpleQuery(spec) {
    * @optional
    */
   this.operator = spec.operator || "=";
+  this._spec = spec.operator;
 
   /**
    * Key of the object which refers to the value to compare
@@ -48,7 +49,29 @@ inherits(SimpleQuery, Query);
  * #crossLink "Query/match:method"
  */
 SimpleQuery.prototype.match = function (item, wildcard_character) {
-  return this[this.operator](item[this.key], this.value, wildcard_character);
+  var to_compare = null, matchMethod = null, value = null;
+
+  matchMethod = this[this.operator];
+  if (typeof this.key === 'object') {
+    to_compare = item[this.key.readFrom];
+
+    // defaultMatch overrides the default '=' operator
+    matchMethod = (this.key.defaultMatch || matchMethod);
+
+    // but an explicit operator: key overrides DefaultMatch
+    matchMethod = ((this._spec && this._spec.operator) ?
+            this[this.operator] : matchMethod);
+
+    value = this.value;
+    if (this.key.castTo) {
+      value = this.key.castTo(value);
+      to_compare = this.key.castTo(to_compare);
+    }
+  } else {
+    to_compare = item[this.key];
+    value = this.value;
+  }
+  return matchMethod(to_compare, value, wildcard_character);
 };
 
 /**
@@ -88,7 +111,7 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
   }
   for (i = 0; i < object_value.length; i += 1) {
     value = object_value[i];
-    if (typeof value === 'object') {
+    if (typeof value === 'object' && value.hasOwnProperty('content')) {
       value = value.content;
     }
     if (comparison_value === undefined) {
@@ -129,7 +152,7 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
   }
   for (i = 0; i < object_value.length; i += 1) {
     value = object_value[i];
-    if (typeof value === 'object') {
+    if (typeof value === 'object' && value.hasOwnProperty('content')) {
       value = value.content;
     }
     if (comparison_value === undefined) {
@@ -167,7 +190,7 @@ SimpleQuery.prototype["<"] = function (object_value, comparison_value) {
     object_value = [object_value];
   }
   value = object_value[0];
-  if (typeof value === 'object') {
+  if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
   return value < comparison_value;
@@ -188,7 +211,7 @@ SimpleQuery.prototype["<="] = function (object_value, comparison_value) {
     object_value = [object_value];
   }
   value = object_value[0];
-  if (typeof value === 'object') {
+  if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
   return value <= comparison_value;
@@ -209,7 +232,7 @@ SimpleQuery.prototype[">"] = function (object_value, comparison_value) {
     object_value = [object_value];
   }
   value = object_value[0];
-  if (typeof value === 'object') {
+  if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
   return value > comparison_value;
@@ -230,7 +253,7 @@ SimpleQuery.prototype[">="] = function (object_value, comparison_value) {
     object_value = [object_value];
   }
   value = object_value[0];
-  if (typeof value === 'object') {
+  if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
   return value >= comparison_value;
