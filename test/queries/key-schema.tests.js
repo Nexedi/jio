@@ -15,33 +15,6 @@
 }(['complex_queries', 'qunit'], function (complex_queries) {
   "use strict";
 
-  var dateType = function (obj) {
-    if (Object.prototype.toString.call(obj) === '[object Date]') {
-      // no need to clone
-      return obj;
-    }
-    return new Date(obj);
-  };
-
-  var sameDay = function (a, b) {
-    return (
-      (a.getFullYear() === b.getFullYear()) &&
-        (a.getMonth() === b.getMonth()) &&
-          (a.getDay() === b.getDay())
-    );
-  };
-
-  var sameMonth = function (a, b) {
-    return (
-      (a.getFullYear() === b.getFullYear()) &&
-        (a.getMonth() === b.getMonth())
-    );
-  };
-
-  var sameYear = function (a, b) {
-    return (a.getFullYear() === b.getFullYear());
-  };
-
   var translationEqualityMatcher = function (data) {
     return function (object_value, value) {
       value = data[value];
@@ -49,36 +22,66 @@
     };
   };
 
-  var equalState = translationEqualityMatcher({'ouvert': 'open'});
-
-
 
   /*jslint unparam: true*/
   var key_schema = {
-    case_insensitive_identifier: {
-      readFrom: 'identifier',
-      defaultMatch: function (object_value, value, wildcard_character) {
-        return (object_value.toLowerCase() === value.toLowerCase());
+    types: {
+      dateType: function (obj) {
+        if (Object.prototype.toString.call(obj) === '[object Date]') {
+          // no need to clone
+          return obj;
+        }
+        return new Date(obj);
       }
     },
-    date_day: {
-      readFrom: 'date',
-      castTo: dateType,
-      defaultMatch: sameDay
+
+    comparators: {
+      sameDay: function (a, b) {
+        return (
+          (a.getFullYear() === b.getFullYear()) &&
+            (a.getMonth() === b.getMonth()) &&
+              (a.getDay() === b.getDay())
+        );
+      },
+      sameMonth: function (a, b) {
+        return (
+          (a.getFullYear() === b.getFullYear()) &&
+            (a.getMonth() === b.getMonth())
+        );
+      },
+      sameYear: function (a, b) {
+        return (a.getFullYear() === b.getFullYear());
+      },
+      equalState: translationEqualityMatcher({'ouvert': 'open'})
     },
-    date_month: {
-      readFrom: 'date',
-      castTo: dateType,
-      defaultMatch: sameMonth
-    },
-    date_year: {
-      readFrom: 'date',
-      castTo: dateType,
-      defaultMatch: sameYear
-    },
-    translated_state: {
-      readFrom: 'state',
-      defaultMatch: equalState
+
+    keys: {
+      case_insensitive_identifier: {
+        readFrom: 'identifier',
+        defaultMatch: function (object_value, value, wildcard_character) {
+          // XXX do this with a regexp and wildcard support
+          return (object_value.toLowerCase() === value.toLowerCase());
+        }
+      },
+      date_day: {
+        readFrom: 'date',
+        castTo: 'dateType',
+        defaultMatch: 'sameDay'
+      },
+      date_month: {
+        readFrom: 'date',
+        castTo: 'dateType',
+        defaultMatch: 'sameMonth'
+      },
+      date_year: {
+        readFrom: 'date',
+        castTo: 'dateType',
+        defaultMatch: 'sameYear'
+      },
+      translated_state: {
+        readFrom: 'state',
+        defaultMatch: 'equalState'
+      }
     }
   };
   /*jslint unparam: false*/

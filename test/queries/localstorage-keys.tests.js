@@ -69,18 +69,24 @@
   }
 
 
-  var dateType = function (obj) {
-    if (Object.prototype.toString.call(obj) === '[object Date]') {
-      // no need to clone
-      return obj;
-    }
-    return new Date(obj);
-  }, key_schema = {
-    mydate: {
-      readFrom: 'date',
-      castTo: dateType
+  var key_schema = {
+    types: {
+      dateType: function (obj) {
+        if (Object.prototype.toString.call(obj) === '[object Date]') {
+          // no need to clone
+          return obj;
+        }
+        return new Date(obj);
+      }
+    },
+    keys: {
+      mydate: {
+        readFrom: 'date',
+        castTo: 'dateType'
+      }
     }
   };
+
 
   test("AllDocs", function () {
     expect(3);

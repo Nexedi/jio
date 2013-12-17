@@ -15,6 +15,13 @@
 function SimpleQuery(spec, key_schema) {
   Query.call(this);
 
+  // XXX check for correctness of key_schema:
+  // XXX 'keys' must exist
+  // XXX 'types' is optional
+  // XXX 'comparators' is optional
+  // XXX anything else is invalid
+  // XXX each key can have readFrom, castTo, defaultMatch
+  //     (can be checked in the match function)
   this._key_schema = key_schema || {};
 
   /**
@@ -52,19 +59,33 @@ inherits(SimpleQuery, Query);
  * #crossLink "Query/match:method"
  */
 SimpleQuery.prototype.match = function (item, wildcard_character) {
-  var object_value = null, matchMethod = null, value = null, key = this.key;
+  var object_value = null,
+    defaultMatch = null,
+    castTo = null,
+    matchMethod = null,
+    value = null,
+    key = this.key;
 
   matchMethod = this[this.operator];
 
-  if (this._key_schema[key] !== undefined) {
-    key = this._key_schema[key];
+  if (this._key_schema.keys && this._key_schema.keys[key] !== undefined) {
+    key = this._key_schema.keys[key];
   }
 
   if (typeof key === 'object') {
     object_value = item[key.readFrom];
 
     // defaultMatch overrides the default '=' operator
-    matchMethod = (key.defaultMatch || matchMethod);
+    defaultMatch = key.defaultMatch;
+
+    // defaultMatch can be a string
+    if (typeof defaultMatch === 'string') {
+      // XXX raise error if defaultMatch not in comparators
+      defaultMatch = this._key_schema.comparators[defaultMatch];
+    }
+
+    // defaultMatch overrides the default '=' operator
+    matchMethod = (defaultMatch || matchMethod);
 
     // but an explicit operator: key overrides DefaultMatch
     if (this._spec && this._spec.operator) {
@@ -72,9 +93,16 @@ SimpleQuery.prototype.match = function (item, wildcard_character) {
     }
 
     value = this.value;
-    if (key.castTo) {
-      value = key.castTo(value);
-      object_value = key.castTo(object_value);
+    castTo = key.castTo;
+    if (castTo) {
+      // castTo can be a string
+      if (typeof castTo === 'string') {
+        // XXX raise error if castTo not in types
+        castTo = this._key_schema.types[castTo];
+      }
+
+      value = castTo(value);
+      object_value = castTo(object_value);
     }
   } else {
     object_value = item[key];
