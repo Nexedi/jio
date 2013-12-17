@@ -21,7 +21,7 @@ function QueryFactory() {
  *         of a Query
  * @return {Query} A Query object
  */
-QueryFactory.create = function (object) {
+QueryFactory.create = function (object, key_schema) {
   if (object === "") {
     return new Query();
   }
@@ -30,7 +30,7 @@ QueryFactory.create = function (object) {
   }
   if (typeof (object || {}).type === "string" &&
       query_class_dict[object.type]) {
-    return new query_class_dict[object.type](object);
+    return new query_class_dict[object.type](object, key_schema);
   }
   throw new TypeError("QueryFactory.create(): " +
                       "Argument 1 is not a search text or a parsable object");

@@ -31,8 +31,8 @@
       },
       case_insensitive_identifier: {
         readFrom: 'identifier',
-        defaultMatch: function (to_compare, value, wildcard_character) {
-          return (to_compare.toLowerCase() === value.toLowerCase());
+        defaultMatch: function (object_value, value, wildcard_character) {
+          return (object_value.toLowerCase() === value.toLowerCase());
         }
       }
     };
@@ -294,10 +294,58 @@
   });
 
 
+  var intType = function (value) {
+    if (typeof value === 'string') {
+      return parseInt(value, 10);
+    }
+    return value;
+  };
+
+
+  test('Test overriding operators', function () {
+    var doc_list, docList = function () {
+      return [
+        {'identifier': '10', 'number': '10'},
+        {'identifier': '19', 'number': '19'},
+        {'identifier': '100', 'number': '100'}
+      ];
+    };
+
+    doc_list = docList();
+    complex_queries.QueryFactory.create({
+      type: 'simple',
+      key: {
+        readFrom: 'number',
+        castTo: intType
+      },
+      operator: '>',
+      value: '19'
+    }).exec(doc_list);
+    deepEqual(doc_list, [
+      {'identifier': '100', 'number': '100'}
+    ], 'Key Schema: Numbers are correctly compared (>) after casting');
+
+    doc_list = docList();
+    complex_queries.QueryFactory.create({
+      type: 'simple',
+      key: {
+        readFrom: 'number',
+        castTo: intType
+      },
+      operator: '<',
+      value: '19'
+    }).exec(doc_list);
+    deepEqual(doc_list, [
+      {'identifier': '10', 'number': '10'}
+    ], 'Key Schema: Numbers are correctly compared (<) after casting');
+
+  });
+
+
   var translationEqualityMatcher = function (data) {
-    return function (to_compare, value) {
+    return function (object_value, value) {
       value = data[value];
-      return (to_compare === value);
+      return (object_value === value);
     };
   };
 
@@ -329,25 +377,27 @@
     ], 'It should be possible to look for a translated string with a custom match function');
 
 
-//    doc_list = docList();
-//    complex_queries.QueryFactory.create({
-//      type: 'simple',
-//      key: keys.translated_state,
-//      value: 'ouvert'
-//    }).exec(doc_list);
-//    deepEqual(doc_list, [
-//      {'identifier': '1', 'state': 'open'},
-//    ], 'It should be possible to look for a translated string with operator =');
+    doc_list = docList();
+    complex_queries.QueryFactory.create({
+      type: 'simple',
+      key: keys.translated_state,
+      operator: '=',
+      value: 'ouvert'
+    }).exec(doc_list);
+    deepEqual(doc_list, [
+      {'identifier': '1', 'state': 'open'}
+    ], 'It should be possible to look for a translated string with operator =');
 
 
 //    doc_list = docList();
 //    complex_queries.QueryFactory.create({
 //      type: 'simple',
 //      key: keys.translated_state,
+//      operator: '!=',
 //      value: 'ouvert'
 //    }).exec(doc_list);
 //    deepEqual(doc_list, [
-//      {'identifier': '2', 'state': 'closed'},
+//      {'identifier': '2', 'state': 'closed'}
 //    ], 'It should be possible to look for a translated string with operator !=');
 
 

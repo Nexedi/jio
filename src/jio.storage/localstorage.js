@@ -142,6 +142,7 @@
       this._database = localStorage;
       this._storage = localstorage;
       this._mode = "localStorage";
+      this._key_schema = spec.key_schema;
       break;
     }
   }
@@ -445,7 +446,8 @@
           document_object[meta._id] = meta;
         });
       }
-      complex_queries.QueryFactory.create(options.query || "").
+      complex_queries.QueryFactory.create(options.query || "",
+                                          this._key_schema).
         exec(document_list, options);
       document_list = document_list.map(function (value) {
         var o = {

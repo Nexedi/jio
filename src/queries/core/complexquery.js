@@ -35,7 +35,12 @@ function ComplexQuery(spec) {
    * @optional
    */
   this.query_list = spec.query_list || [];
-  this.query_list = this.query_list.map(QueryFactory.create);
+  /*jslint unparam: true*/
+  this.query_list = this.query_list.map(
+    // decorate the map to avoid sending the index as key_schema argument
+    function (o, i) { return QueryFactory.create(o); }
+  );
+  /*jslint unparam: false*/
 
 }
 inherits(ComplexQuery, Query);

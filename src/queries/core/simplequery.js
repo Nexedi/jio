@@ -12,8 +12,10 @@
  * @param  {String} spec.key The metadata key
  * @param  {String} spec.value The value of the metadata to compare
  */
-function SimpleQuery(spec) {
+function SimpleQuery(spec, key_schema) {
   Query.call(this);
+
+  this._key_schema = key_schema || {};
 
   /**
    * Operator to use to compare object values
@@ -45,33 +47,40 @@ function SimpleQuery(spec) {
 }
 inherits(SimpleQuery, Query);
 
+
 /**
  * #crossLink "Query/match:method"
  */
 SimpleQuery.prototype.match = function (item, wildcard_character) {
-  var to_compare = null, matchMethod = null, value = null;
+  var object_value = null, matchMethod = null, value = null, key = this.key;
 
   matchMethod = this[this.operator];
-  if (typeof this.key === 'object') {
-    to_compare = item[this.key.readFrom];
+
+  if (this._key_schema[key] !== undefined) {
+    key = this._key_schema[key];
+  }
+
+  if (typeof key === 'object') {
+    object_value = item[key.readFrom];
 
     // defaultMatch overrides the default '=' operator
-    matchMethod = (this.key.defaultMatch || matchMethod);
+    matchMethod = (key.defaultMatch || matchMethod);
 
     // but an explicit operator: key overrides DefaultMatch
-    matchMethod = ((this._spec && this._spec.operator) ?
-            this[this.operator] : matchMethod);
+    if (this._spec && this._spec.operator) {
+      matchMethod = this[this.operator];
+    }
 
     value = this.value;
-    if (this.key.castTo) {
-      value = this.key.castTo(value);
-      to_compare = this.key.castTo(to_compare);
+    if (key.castTo) {
+      value = key.castTo(value);
+      object_value = key.castTo(object_value);
     }
   } else {
-    to_compare = item[this.key];
+    object_value = item[key];
     value = this.value;
   }
-  return matchMethod(to_compare, value, wildcard_character);
+  return matchMethod(object_value, value, wildcard_character);
 };
 
 /**
