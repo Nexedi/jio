@@ -302,7 +302,7 @@
   };
 
 
-  test('Test overriding operators', function () {
+  test('Test overriding operators and compound query', function () {
     var doc_list, docList = function () {
       return [
         {'identifier': '10', 'number': '10'},
@@ -323,7 +323,7 @@
     }).exec(doc_list);
     deepEqual(doc_list, [
       {'identifier': '100', 'number': '100'}
-    ], 'Key Schema: Numbers are correctly compared (>) after casting');
+    ], 'Numbers are correctly compared (>) after casting');
 
     doc_list = docList();
     complex_queries.QueryFactory.create({
@@ -337,7 +337,34 @@
     }).exec(doc_list);
     deepEqual(doc_list, [
       {'identifier': '10', 'number': '10'}
-    ], 'Key Schema: Numbers are correctly compared (<) after casting');
+    ], 'Numbers are correctly compared (<) after casting');
+
+    doc_list = docList();
+    complex_queries.QueryFactory.create({
+      type: 'complex',
+      operator: 'OR',
+      query_list: [{
+        type: 'simple',
+        key: {
+          readFrom: 'number',
+          castTo: intType
+        },
+        operator: '<',
+        value: '19'
+      }, {
+        type: 'simple',
+        key: {
+          readFrom: 'number',
+          castTo: intType
+        },
+        operator: '>',
+        value: '19'
+      }]
+    }).exec(doc_list);
+    deepEqual(doc_list, [
+      {'identifier': '10', 'number': '10'},
+      {'identifier': '100', 'number': '100'}
+    ], 'Custom keys should also work within compound queries');
 
   });
 

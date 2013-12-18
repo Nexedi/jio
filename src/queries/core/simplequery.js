@@ -2,6 +2,36 @@
 /*global Query: true, inherits: true, query_class_dict: true, _export: true,
   convertStringToRegExp: true */
 
+var checkKeySchema = function (key_schema) {
+  var prop;
+
+  if (key_schema !== undefined) {
+    if (typeof key_schema !== 'object') {
+      throw new TypeError("SimpleQuery().create(): " +
+                          "key_schema is not of type 'object'");
+    }
+    // keys is mandatory
+    if (key_schema.keys === undefined) {
+      throw new TypeError("SimpleQuery().create(): " +
+                          "key_schema has no 'keys' property");
+    }
+    for (prop in key_schema) {
+      if (key_schema.hasOwnProperty(prop)) {
+        switch (prop) {
+        case 'keys':
+        case 'types':
+        case 'comparators':
+          break;
+        default:
+          throw new TypeError("SimpleQuery().create(): " +
+                             "key_schema has unknown property '" + prop + "'");
+        }
+      }
+    }
+  }
+};
+
+
 /**
  * The SimpleQuery inherits from Query, and compares one metadata value
  *
@@ -15,13 +45,8 @@
 function SimpleQuery(spec, key_schema) {
   Query.call(this);
 
-  // XXX check for correctness of key_schema:
-  // XXX 'keys' must exist
-  // XXX 'types' is optional
-  // XXX 'comparators' is optional
-  // XXX anything else is invalid
-  // XXX each key can have readFrom, castTo, defaultMatch
-  //     (can be checked in the match function)
+  checkKeySchema(key_schema);
+
   this._key_schema = key_schema || {};
 
   /**
@@ -55,6 +80,29 @@ function SimpleQuery(spec, key_schema) {
 inherits(SimpleQuery, Query);
 
 
+var checkKey = function (key) {
+  var prop;
+
+  if (key.readFrom === undefined) {
+    throw new TypeError("Custom key is missing the readFrom property");
+  }
+
+  for (prop in key) {
+    if (key.hasOwnProperty(prop)) {
+      switch (prop) {
+      case 'readFrom':
+      case 'castTo':
+      case 'defaultMatch':
+        break;
+      default:
+        throw new TypeError("Custom key has unknown property '" +
+                            prop + "'");
+      }
+    }
+  }
+};
+
+
 /**
  * #crossLink "Query/match:method"
  */
@@ -73,6 +121,7 @@ SimpleQuery.prototype.match = function (item, wildcard_character) {
   }
 
   if (typeof key === 'object') {
+    checkKey(key);
     object_value = item[key.readFrom];
 
     // defaultMatch overrides the default '=' operator
