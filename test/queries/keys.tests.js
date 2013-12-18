@@ -86,7 +86,7 @@
       return (
         (a.getFullYear() === b.getFullYear()) &&
           (a.getMonth() === b.getMonth()) &&
-            (a.getDay() === b.getDay())
+            (a.getDate() === b.getDate())
       );
     };
 
