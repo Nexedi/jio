@@ -1,7 +1,4 @@
 
-.. role:: js(code)
-   :language: javascript
-
 .. _style-guide:
 
 JavaScript Style Guide

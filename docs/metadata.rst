@@ -1,7 +1,4 @@
 
-.. role:: js(code)
-   :language: javascript
-
 .. _metadata-head:
 
 Metadata
@@ -61,15 +58,15 @@ Identification
 ^^^^^^^^^^^^^^
 
 * **_id**
-  
+
   A specific jIO metadata which helps the storage to find a document
   (can be a real path name, a dc:identifier, a uuid, ...). **String Only**
 
 * **identifer**
-  
-  | :js:`{"identifier": "http://domain/jio_home_page"}`
-  | :js:`{"identifier": "urn:ISBN:978-1-2345-6789-X"}`
-  | :js:`{"identifier": [{"scheme": "DCTERMS.URI", "content": "http://domain/jio_home_page"}]}`
+
+  | ``{"identifier": "http://domain/jio_home_page"}``
+  | ``{"identifier": "urn:ISBN:978-1-2345-6789-X"}``
+  | ``{"identifier": [{"scheme": "DCTERMS.URI", "content": "http://domain/jio_home_page"}]}``
 
   An unambiguous reference to the resource within a given context. Recommended
   best practice is to identify the resource with a string or number
@@ -80,9 +77,9 @@ Identification
   and the `International Standard Book Number <http://en.wikipedia.org/wiki/Isbn>`_ (ISBN).
 
 * **format**
-  
-  | :js:`{"format": ["text/html", "52 kB"]}`
-  | :js:`{"format": ["image/jpeg", "100 x 100 pixels", "13.2 KiB"]}`
+
+  | ``{"format": ["text/html", "52 kB"]}``
+  | ``{"format": ["image/jpeg", "100 x 100 pixels", "13.2 KiB"]}``
 
   The physical or digital manifestation of the resource. Typically, Format may
   include the media-type or dimensions of the resource. Examples of dimensions
@@ -90,9 +87,9 @@ Identification
   hardware or other equipment needed to display or operate the resource.
 
 * **date**
-  
-  | :js:`{"date": "2011-12-13T14:15:16Z"}`
-  | :js:`{"date": {"scheme": "DCTERMS.W3CDTF", "content": "2011-12-13"}}`
+
+  | ``{"date": "2011-12-13T14:15:16Z"}``
+  | ``{"date": {"scheme": "DCTERMS.W3CDTF", "content": "2011-12-13"}}``
 
   A date associated with an event in the life cycle of the resource. Typically,
   Date will be associated with the creation or availability of the resource.
@@ -101,10 +98,10 @@ Identification
   and follows the YYYY-MM-DD format.
 
 * **type**
-  
-  | :js:`{"type": "Text"}`
-  | :js:`{"type": "Image"}`
-  | :js:`{"type": "Dataset"}`
+
+  | ``{"type": "Text"}``
+  | ``{"type": "Image"}``
+  | ``{"type": "Dataset"}``
 
   The nature or genre of the content of the resource. Type includes terms describing
   general categories, functions, genres, or aggregation levels for content.
@@ -116,25 +113,25 @@ Intellectual property
 ^^^^^^^^^^^^^^^^^^^^^
 
 * **creator**
-  
-  | :js:`{"creator": "Tristan Cavelier"}`
-  | :js:`{"creator": ["Tristan Cavelier", "Sven Franck"]}`
+
+  | ``{"creator": "Tristan Cavelier"}``
+  | ``{"creator": ["Tristan Cavelier", "Sven Franck"]}``
 
   An entity primarily responsible for creating the content of the resource.
   Examples of a Creator include a person, an organization, or a service.
   Typically the name of the Creator should be used to indicate the entity.
 
 * **publisher**
-  
-  | :js:`{"publisher": "Nexedi"}`
+
+  | ``{"publisher": "Nexedi"}``
 
   The entity responsible for making the resource available. Examples of a
   Publisher include a person, an organization, or a service. Typically, the name
   of a Publisher should be used to indicate the entity.
 
 * **contributor**
-  
-  | :js:`{"contributor": ["Full Name", "Full Name", ...]}`
+
+  | ``{"contributor": ["Full Name", "Full Name", ...]}``
 
   An entity responsible for making contributions to the content of the
   resource. Examples of a Contributor include a person, an organization or a
@@ -142,9 +139,9 @@ Intellectual property
   entity.
 
 * **rights**
-  
-  | :js:`{"rights": "Access limited to members"}`
-  | :js:`{"rights": "https://www.j-io.org/documentation/jio-documentation/#copyright-and-license"}`
+
+  | ``{"rights": "Access limited to members"}``
+  | ``{"rights": "https://www.j-io.org/documentation/jio-documentation/#copyright-and-license"}``
 
   Information about rights held in and over the resource. Typically a Rights
   element will contain a rights management statement for the resource, or
@@ -158,15 +155,15 @@ Content
 ^^^^^^^
 
 * **title**
-  
-  | :js:`{"title": "jIO Home Page"}`
+
+  | ``{"title": "jIO Home Page"}``
 
   The name given to the resource. Typically, a Title will be a name by which the resource is formally known.
 
 * **subject**
-  
-  | :js:`{"subject": "jIO"}`
-  | :js:`{"subject": ["jIO", "basics"]}`
+
+  | ``{"subject": "jIO"}``
+  | ``{"subject": ["jIO", "basics"]}``
 
   The topic of the content of the resource. Typically, a Subject will be
   expressed as keywords or key phrases or classification codes that describe the
@@ -174,17 +171,17 @@ Content
   controlled vocabulary or formal classification scheme.
 
 * **description**
-  
-  | :js:`{"description": "Simple guide to show the basics of jIO"}`
-  | :js:`{"description": {"lang": "fr", "content": "Ma description"}}`
+
+  | ``{"description": "Simple guide to show the basics of jIO"}``
+  | ``{"description": {"lang": "fr", "content": "Ma description"}}``
 
   An account of the content of the resource. Description may include but is not
   limited to: an abstract, table of contents, reference to a graphical
   representation of content or a free-text account of the content.
 
 * **language**
-  
-  | :js:`{"language": "en"}`
+
+  | ``{"language": "en"}``
 
   The language of the intellectual content of the resource. Recommended best
   practice for the values of the Language element is defined by `RFC 3066 <http://www.ietf.org/rfc/rfc3066.txt>`_
@@ -194,8 +191,8 @@ Content
   United Kingdom.
 
 * **source**
-  
-  | :js:`{"source": ["Image taken from a drawing by Mr. Artist", "<phone number>"]}`
+
+  | ``{"source": ["Image taken from a drawing by Mr. Artist", "<phone number>"]}``
 
   A Reference to a resource from which the present resource is derived. The
   present resource may be derived from the Source resource in whole or part.
@@ -203,16 +200,16 @@ Content
   number conforming to a formal identification system.
 
 * **relation**
-  
-  | :js:`{"relation": "Resilience project"}`
+
+  | ``{"relation": "Resilience project"}``
 
   A reference to a related resource. Recommended best practice is to reference
   the resource by means of a string or number conforming to a formal
   identification system.
 
 * **coverage**
-  
-  | :js:`{"coverage": "France"}`
+
+  | ``{"coverage": "France"}``
 
   The extent or scope of the content of the resource. Coverage will typically
   include spatial location (a place name or geographic co-ordinates), temporal
@@ -224,22 +221,22 @@ Content
   as sets of co-ordinates or date ranges.
 
 * **category**
-  
-  | :js:`{"category": ["parent/26323", "resilience/javascript", "javascript/library/io"]}`
+
+  | ``{"category": ["parent/26323", "resilience/javascript", "javascript/library/io"]}``
 
   The category the resource is associated with. The categories may look like
   navigational facets, they correspond to the properties of the resource which
   can be generated with metadata or some other information (see `faceted search <https://en.wikipedia.org/wiki/Faceted_search>`_).
 
 * **product**
-  
-  | :js:`{"product": "..."}`
+
+  | ``{"product": "..."}``
 
   For e-commerce use.
 
 * **custom**
-  
-  | :js:`{custom1: value1, custom2: value2, ...}`
+
+  | ``{custom1: value1, custom2: value2, ...}``
 
 
 
@@ -353,7 +350,7 @@ Posting a book
                    },
     "format"     : "application/pdf",
     "date"       : {
-                       "scheme": "DCTERMS.W3CDTF", 
+                       "scheme": "DCTERMS.W3CDTF",
                        "content": getW3CDate()
                    }, // see tools below
     "creator"    : "Original Author(s)",

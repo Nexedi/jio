@@ -1,7 +1,4 @@
 
-.. role:: js(code)
-   :language: javascript
-
 .. _list-of-available-storages:
 
 List of Available Storages
@@ -28,9 +25,9 @@ LocalStorage
 
 Three methods are provided:
 
-* :js:`.createDescription(username, [application_name], [mode='localStorage'])`
-* :js:`.createLocalDescription(username, [application_name])`
-* :js:`.createMemoryDescription(username, [application_name])`
+* ``.createDescription(username, [application_name], [mode='localStorage'])``
+* ``.createLocalDescription(username, [application_name])``
+* ``.createMemoryDescription(username, [application_name])``
 
 All parameters are strings.
 

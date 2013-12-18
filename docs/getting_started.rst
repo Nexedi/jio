@@ -1,7 +1,4 @@
 
-.. role:: js(code)
-   :language: javascript
-
 Getting started
 ===============
 
@@ -57,30 +54,30 @@ Getting started
 
 #.  The jIO API provides ten main methods to manage documents across the storage(s) specified in your jIO storage tree.
 
-    =======================  ========================================================
+    =======================  ======================================================
     Method                   Example
-    =======================  ========================================================
-    ``.post()``              |  :js:`my_jio.post(document, [options]);`
+    =======================  ======================================================
+    ``.post()``              |  ``my_jio.post(document, [options]);``
                              |  Creates a new document
-    ``.put()``               |  :js:`my_jio.put(document, [options]);`
+    ``.put()``               |  ``my_jio.put(document, [options]);``
                              |  Creates/Updates a document
-    ``.putAttachment()``     |  :js:`my_jio.putAttachement(attachment, [options]);`
+    ``.putAttachment()``     |  ``my_jio.putAttachement(attachment, [options]);```
                              |  Updates/Adds an attachment to a document
-    ``.get()``               |  :js:`my_jio.get(document, [options]);`
+    ``.get()``               |  ``my_jio.get(document, [options]);``
                              |  Reads a document
-    ``.getAttachment()``     |  :js:`my_jio.getAttachment(attachment, [options]);`
+    ``.getAttachment()``     |  ``my_jio.getAttachment(attachment, [options]);``
                              |  Reads a document attachment
-    ``.remove()``            |  :js:`my_jio.remove(document, [options]);`
+    ``.remove()``            |  ``my_jio.remove(document, [options]);``
                              |  Deletes a document and its attachments
-    ``.removeAttachment()``  |  :js:`my_jio.removeAttachment(attachment, [options]);`
+    ``.removeAttachment()``  |  ``my_jio.removeAttachment(attachment, [options]);``
                              |  Deletes a document's attachment
-    ``.allDocs()``           |  :js:`my_jio.allDocs([options]);`
+    ``.allDocs()``           |  ``my_jio.allDocs([options]);``
                              |  Retrieves a list of existing documents
-    ``.check()``             |  :js:`my_jio.check(document, [options]);`
+    ``.check()``             |  ``my_jio.check(document, [options]);``
                              |  Checks the document state
-    ``.repair()``            |  :js:`my_jio.repair(document, [options]);`
+    ``.repair()``            |  ``my_jio.repair(document, [options]);``
                              |  Repairs the document
-    =======================  ========================================================
+    =======================  ======================================================
 
 
 
@@ -89,10 +86,12 @@ Getting started
 Download & Fork
 ---------------
 
+Please note that the current (2.0.0-wip) version is not stable yet.
+
 You can use one of the ZIP packages, which include all the dependencies and storages:
 
-`Full download (172k) <_static/jio-2.0.0.zip>`_
-`Minified download (87k) <_static/jio-2.0.0-min.zip>`_
+`Full download (172k) <_static/jio-2.0.0-wip.zip>`_
+`Minified download (87k) <_static/jio-2.0.0-wip-min.zip>`_
 
 or you can create your own set of files, which are are provided in the above packages and the source repository:
 

@@ -83,35 +83,6 @@ zip:
 
 
 
-
-#	mkdir "$tmpdir"/storage && \
-#
-#	cp -r jio.storage/localstorage.js "$tmpdir"/storage && \
-#	cp -r jio.storage/davstorage.js   "$tmpdir"/storage && \
-#	cp -r jio.storage/erp5storage.js  "$tmpdir"/storage && \
-#	cp -r jio.storage/indexstorage.js     "$tmpdir"/storage && \
-#	cp -r jio.storage/gidstorage.js       "$tmpdir"/storage && \
-#	cp -r jio.storage/replicatestorage.js "$tmpdir"/storage && \
-#	cp -r jio.storage/splitstorage.js     "$tmpdir"/storage && \
-#
-#	##############################
-#
-#	cd "$tmpdir" && \
-#	res=$?
-#
-#	#cd - >/dev/null && \
-#	rm -rf "$tmpdir"
-#	exit $res
-#
-
-
-
-
-
-
-
-
-
 .phony: clean
 clean:
 	find -name '*~' -delete
