@@ -13,7 +13,7 @@
  * @param  {String} spec.key The metadata key
  * @param  {String} spec.value The value of the metadata to compare
  */
-function ComplexQuery(spec) {
+function ComplexQuery(spec, key_schema) {
   Query.call(this);
 
   /**
@@ -38,7 +38,7 @@ function ComplexQuery(spec) {
   /*jslint unparam: true*/
   this.query_list = this.query_list.map(
     // decorate the map to avoid sending the index as key_schema argument
-    function (o, i) { return QueryFactory.create(o); }
+    function (o, i) { return QueryFactory.create(o, key_schema); }
   );
   /*jslint unparam: false*/
 

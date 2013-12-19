@@ -357,13 +357,13 @@
           readFrom: 'number',
           castTo: intType
         },
-        operator: '>',
+        operator: '=',
         value: '19'
       }]
     }).exec(doc_list);
     deepEqual(doc_list, [
       {'identifier': '10', 'number': '10'},
-      {'identifier': '100', 'number': '100'}
+      {'identifier': '19', 'number': '19'}
     ], 'Custom keys should also work within compound queries');
 
   });

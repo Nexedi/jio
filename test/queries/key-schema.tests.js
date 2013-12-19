@@ -168,6 +168,54 @@
   });
 
 
+  test('Test key schema + complex queries', function () {
+    var doc_list, docList = function () {
+      return [
+        {'identifier': '10', 'number': '10'},
+        {'identifier': '19', 'number': '19'},
+        {'identifier': '100', 'number': '100'}
+      ];
+    }, key_schema = {
+      types: {
+        intType: function (value) {
+          if (typeof value === 'string') {
+            return parseInt(value, 10);
+          }
+          return value;
+        }
+      },
+      keys: {
+        number: {
+          readFrom: 'number',
+          castTo: 'intType'
+        }
+      }
+    };
+
+    doc_list = docList();
+    complex_queries.QueryFactory.create({
+      type: 'complex',
+      operator: 'OR',
+      query_list: [{
+        type: 'simple',
+        key: 'number',
+        operator: '<',
+        value: '19'
+      }, {
+        type: 'simple',
+        key: 'number',
+        operator: '=',
+        value: '19'
+      }]
+    }, key_schema).exec(doc_list);
+    deepEqual(doc_list, [
+      {'identifier': '10', 'number': '10'},
+      {'identifier': '19', 'number': '19'}
+    ], 'Key schema should be propagated from complex to simple queries');
+
+  });
+
+
   test('Key Schema with translation lookup', function () {
     var doc_list, docList = function () {
       return [
