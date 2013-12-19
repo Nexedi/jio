@@ -698,10 +698,6 @@
   IndexStorage.prototype.allDocs = function (command, param, option) { // XXX
     /*jslint unparam: true */
     var index = this.selectIndex(option.select_list || []), delete_id;
-
-    // Include docs option is ignored, if you want to get all the document,
-    // don't use index storage!
-
     option.select_list = (
       Array.isArray(option.select_list) ? option.select_list : []
     );
@@ -710,8 +706,15 @@
       delete_id = true;
     }
     this.getIndexDatabase(command, index).then(function (db) {
-      var i, id;
+      var i, id, now;
       db = db._database;
+      if (option.include_docs) {
+        // XXX find another way to manage include_docs option!!
+        now = Date.now();
+        for (i = 0; i < db.length; i += 1) {
+          db[i]["_" + now] = db[i];
+        }
+      }
       complex_queries.QueryFactory.create(option.query || '').
         exec(db, option);
       for (i = 0; i < db.length; i += 1) {
@@ -723,6 +726,10 @@
           "id": id,
           "value": db[i]
         };
+        if (option.include_docs) {
+          db[i].doc = db[i]["_" + now];
+          delete db[i]["_" + now];
+        }
       }
       command.success(200, {"data": {"total_rows": db.length, "rows": db}});
     }, function (err) {
