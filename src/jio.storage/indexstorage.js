@@ -732,6 +732,7 @@
             "doc": db[i]["_" + now]
           };
           delete db[i].doc["_" + now];
+          delete db[i].value["_" + now];
         } else {
           db[i] = {
             "id": id,
