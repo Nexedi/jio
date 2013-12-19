@@ -697,7 +697,7 @@
    */
   IndexStorage.prototype.allDocs = function (command, param, option) { // XXX
     /*jslint unparam: true */
-    var index = this.selectIndex(option.select_list || []), delete_id;
+    var index = this.selectIndex(option.select_list || []), delete_id, now;
     option.select_list = (
       Array.isArray(option.select_list) ? option.select_list : []
     );
@@ -705,12 +705,15 @@
       option.select_list.push("_id");
       delete_id = true;
     }
+    if (option.include_docs) {
+      now = Date.now();
+      option.select_list.push("_" + now);
+    }
     this.getIndexDatabase(command, index).then(function (db) {
-      var i, id, now;
+      var i, id;
       db = db._database;
       if (option.include_docs) {
         // XXX find another way to manage include_docs option!!
-        now = Date.now();
         for (i = 0; i < db.length; i += 1) {
           db[i]["_" + now] = db[i];
         }
@@ -722,13 +725,18 @@
         if (delete_id) {
           delete db[i]._id;
         }
-        db[i] = {
-          "id": id,
-          "value": db[i]
-        };
         if (option.include_docs) {
-          db[i].doc = db[i]["_" + now];
-          delete db[i]["_" + now];
+          db[i] = {
+            "id": id,
+            "value": db[i],
+            "doc": db[i]["_" + now]
+          };
+          delete db[i].doc["_" + now];
+        } else {
+          db[i] = {
+            "id": id,
+            "value": db[i]
+          };
         }
       }
       command.success(200, {"data": {"total_rows": db.length, "rows": db}});
