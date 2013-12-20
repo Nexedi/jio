@@ -1532,128 +1532,147 @@
 
   });
 
-  // test("allDocs", function () {
+  test("allDocs", function () {
 
-  //   var o = generateTools();
+    var shared = {}, jio;
 
-  //   o.jio = jIO.newJio({
-  //     "type": "revision",
-  //     "sub_storage": {
-  //       "type": "local",
-  //       "username": "urevad1",
-  //       "application_name": "arevad1"
-  //     }
-  //   });
-  //   o.localpath = "jio/localstorage/urevad1/arevad1";
+    shared.workspace = {};
+    shared.local_storage_description = {
+      "type": "local",
+      "username": "revision alldocs",
+      "mode": "memory"
+    };
 
-  //   // adding 3 documents
-  //   o.jio.put({"_id": "yes"}, function (err, response) {
-  //     o.rev1 = (response || {}).rev;
-  //   });
-  //   o.jio.put({"_id": "no"}, function (err, response) {
-  //     o.rev2 = (response || {}).rev;
-  //   });
-  //   o.jio.put({"_id": "maybe"}, function (err, response) {
-  //     o.rev3 = (response || {}).rev;
-  //   });
-  //   o.clock.tick(1000);
+    jio = jIO.createJIO({
+      "type": "revision",
+      "sub_storage": shared.local_storage_description
+    }, {"workspace": shared.workspace});
 
-  //   // adding conflicts
-  //   o.jio.put({"_id": "maybe"});
+    stop();
 
-  //   // adding 2 attachments
-  //   o.jio.putAttachment({
-  //     "_id": "yes",
-  //     "_attachment": "blue",
-  //     "_mimetype": "text/plain",
-  //     "_rev": o.rev1,
-  //     "_data": "sky"
-  //   }, function (err, response) {
-  //     o.rev1 = (response || {}).rev;
-  //   });
-  //   o.jio.putAttachment({
-  //     "_id": "no",
-  //     "_attachment": "Heeeee!",
-  //     "_mimetype": "text/plain",
-  //     "_rev": o.rev2,
-  //     "_data": "Hooooo!"
-  //   }, function (err, response) {
-  //     o.rev2 = (response || {}).rev;
-  //   });
-  //   o.clock.tick(1000);
+    // adding 3 documents
+    jio.put({"_id": "yes"}).then(function (answer) {
 
-  //   o.rows = {
-  //     "total_rows": 3,
-  //     "rows": [{
-  //       "id": "maybe",
-  //       "key": "maybe",
-  //       "value": {
-  //         "rev": o.rev3
-  //       }
-  //     }, {
-  //       "id": "no",
-  //       "key": "no",
-  //       "value": {
-  //         "rev": o.rev2
-  //       }
-  //     }, {
-  //       "id": "yes",
-  //       "key": "yes",
-  //       "value": {
-  //         "rev": o.rev1
-  //       }
-  //     }]
-  //   };
-  //   o.spy(o, "value", o.rows, "allDocs");
-  //   o.jio.allDocs(function (err, response) {
-  //     if (response && response.rows) {
-  //       response.rows.sort(function (a, b) {
-  //         return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
-  //       });
-  //     }
-  //     o.f(err, response);
-  //   });
-  //   o.tick(o);
+      shared.rev1 = answer.rev;
 
-  //   o.rows.rows[0].doc = {
-  //     "_id": "maybe",
-  //     "_rev": o.rev3
-  //   };
-  //   o.rows.rows[1].doc = {
-  //     "_id": "no",
-  //     "_rev": o.rev2,
-  //     "_attachments": {
-  //       "Heeeee!": {
-  //         "content_type": "text/plain",
-  //         "digest": "md5-2686969b0bc0fd9bc186146a1ecb09a7",
-  //         "length": 7
-  //       }
-  //     },
-  //   };
-  //   o.rows.rows[2].doc = {
-  //     "_id": "yes",
-  //     "_rev": o.rev1,
-  //     "_attachments": {
-  //       "blue": {
-  //         "content_type": "text/plain",
-  //         "digest": "md5-900bc885d7553375aec470198a9514f3",
-  //         "length":  3
-  //       }
-  //     },
-  //   };
-  //   o.spy(o, "value", o.rows, "allDocs + include docs");
-  //   o.jio.allDocs({"include_docs": true}, function (err, response) {
-  //     if (response && response.rows) {
-  //       response.rows.sort(function (a, b) {
-  //         return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
-  //       });
-  //     }
-  //     o.f(err, response);
-  //   });
-  //   o.tick(o);
+      return jio.put({"_id": "no"});
 
-  //   util.closeAndcleanUpJio(o.jio);
-  // });
+    }).then(function (answer) {
+
+      shared.rev2 = answer.rev;
+
+      return jio.put({"_id": "maybe"});
+
+    }).then(function (answer) {
+
+      shared.rev3 = answer.rev;
+
+      // adding conflicts
+      return jio.put({"_id": "maybe"});
+
+    }).then(function () {
+
+      // adding 2 attachments
+      return jio.putAttachment({
+        "_id": "yes",
+        "_attachment": "blue",
+        "_mimetype": "text/plain",
+        "_rev": shared.rev1,
+        "_data": "sky"
+      });
+
+    }).then(function (answer) {
+
+      shared.rev1 = answer.rev;
+
+      return jio.putAttachment({
+        "_id": "no",
+        "_attachment": "Heeeee!",
+        "_mimetype": "text/plain",
+        "_rev": shared.rev2,
+        "_data": "Hooooo!"
+      });
+
+    }).then(function (answer) {
+
+      shared.rev2 = answer.rev;
+      shared.rows = {
+        "total_rows": 3,
+        "rows": [{
+          "id": "maybe",
+          "key": "maybe",
+          "value": {
+            "rev": shared.rev3
+          }
+        }, {
+          "id": "no",
+          "key": "no",
+          "value": {
+            "rev": shared.rev2
+          }
+        }, {
+          "id": "yes",
+          "key": "yes",
+          "value": {
+            "rev": shared.rev1
+          }
+        }]
+      };
+
+      return jio.allDocs();
+
+    }).then(function (answer) {
+
+      answer.data.rows.sort(function (a, b) {
+        return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
+      });
+      deepEqual(answer.data, shared.rows, "allDocs");
+
+      shared.rows.rows[0].doc = {
+        "_id": "maybe",
+        "_rev": shared.rev3
+      };
+      shared.rows.rows[1].doc = {
+        "_id": "no",
+        "_rev": shared.rev2,
+        "_attachments": {
+          "Heeeee!": {
+            "content_type": "text/plain",
+            "digest": "sha256-bb333a2679b9537548d359d3f0f8e5cdee541bc8" +
+              "bb38bd5091e889453c15bd5d",
+            "length": 7
+          }
+        }
+      };
+      shared.rows.rows[2].doc = {
+        "_id": "yes",
+        "_rev": shared.rev1,
+        "_attachments": {
+          "blue": {
+            "content_type": "text/plain",
+            "digest": "sha256-05f514fae7ca5710f9e9289a20a5c9b372af781b" +
+              "fc94dd23d9cb8a044122460f",
+            "length":  3
+          }
+        }
+      };
+
+      return jio.allDocs({"include_docs": true});
+
+    }).then(function (answer) {
+
+      answer.data.rows.sort(function (a, b) {
+        return a.id > b.id ? 1 : a.id < b.id ? -1 : 0;
+      });
+      deepEqual(answer.data, shared.rows, "allDocs + include docs");
+
+    }).fail(unexpectedError).always(start);
+
+  });
+
+
+
+
 
   // test("Scenario", function () {
 
