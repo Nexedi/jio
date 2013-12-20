@@ -948,6 +948,10 @@
           if (err) {
             return command.error(err);
           }
+          doc_tree = doc_tree.data;
+          if (typeof doc_tree.children === 'string') {
+            doc_tree.children = JSON.parse(doc_tree.children);
+          }
           revs_info = priv.getWinnerRevsInfo(doc_tree);
           document_revision =
             rows.document_revisions[doc_id + "." + revs_info[0].rev];
@@ -973,7 +977,7 @@
       functions.success = function () {
         functions.finished -= 1;
         if (functions.finished === 0) {
-          command.success(result);
+          command.success({"data": result});
         }
       };
       priv.send(command, "allDocs", null, option, function (err, response) {
@@ -1028,7 +1032,7 @@
             functions.finished += 1;
             if (rows.revision_trees[i].doc) {
               functions.falseResponseGenerator(
-                rows.revision_trees[i].doc,
+                {"data": rows.revision_trees[i].doc},
                 functions.fillResultGenerator(rows.revision_trees[i].id)
               );
             } else {
