@@ -1673,7 +1673,7 @@
 
   test("Scenario", function () {
 
-    var shared = {}, jio, jio2, jio_local;
+    var shared = {}, jio, jio2;
 
     shared.workspace1 = {};
     shared.workspace2 = {};
@@ -1688,10 +1688,6 @@
     };
 
     jio = jIO.createJIO(shared.revision_storage_desciption, {
-      "workspace": shared.workspace1
-    });
-
-    jio_local = jIO.createJIO(shared.local_storage_description, {
       "workspace": shared.workspace1
     });
 
