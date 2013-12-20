@@ -1671,163 +1671,233 @@
   });
 
 
+  test("Scenario", function () {
 
+    var shared = {}, jio, jio2, jio_local;
 
+    shared.workspace1 = {};
+    shared.workspace2 = {};
+    shared.local_storage_description = {
+      "type": "local",
+      "username": "revision scenario",
+      "mode": "memory"
+    };
+    shared.revision_storage_desciption = {
+      "type": "revision",
+      "sub_storage": shared.local_storage_description
+    };
 
-  // test("Scenario", function () {
+    jio = jIO.createJIO(shared.revision_storage_desciption, {
+      "workspace": shared.workspace1
+    });
 
-  //   var o = generateTools();
+    jio_local = jIO.createJIO(shared.local_storage_description, {
+      "workspace": shared.workspace1
+    });
 
-  //   o.jio = jIO.newJio({
-  //     "type": "revision",
-  //     "sub_storage": {
-  //       "type": "local",
-  //       "username": "usam1",
-  //       "application_name": "asam1"
-  //     }
-  //   });
-  //   o.localpath = "jio/localstorage/usam1/asam1";
+    stop();
 
-  //   // new application
-  //   ok(o.jio, "I open my application with revision and localstorage");
+    // new application
+    ok(jio, "I open my application with revision and localstorage");
 
-  //   // put non empty document A-1
-  //   o.doc = {"_id": "sample1", "title": "mySample1"};
-  //   o.revisions = {"start": 0, "ids": []};
-  //   o.hex = generateRevisionHash(o.doc, o.revisions);
-  //   o.rev = "1-" + o.hex;
+    // put non empty document A-1
+    shared.doc = {"_id": "sample1", "title": "mySample1"};
+    shared.revisions = {"start": 0, "ids": []};
+    shared.hex = generateRevisionHash(shared.doc, shared.revisions);
+    shared.rev = "1-" + shared.hex;
 
-  //   o.spy(o, "value", {"ok": true, "id": "sample1", "rev": o.rev},
-  //         "Then, I create a new document (no attachment), my application " +
-  //         "keep the revision in memory");
-  //   o.jio.put(o.doc, o.f);
-  //   o.tick(o);
+    jio.put(shared.doc).then(function (answer) {
 
-  //   // open new tab (JIO)
-  //   o.jio2 = jIO.newJio({
-  //     "type": "revision",
-  //     "sub_storage": {
-  //       "type": "local",
-  //       "username": "usam1",
-  //       "application_name": "asam1"
-  //     }
-  //   });
-  //   o.localpath = "jio/localstorage/usam1/asam1";
+      deepEqual(
+        answer,
+        {
+          "id": "sample1",
+          "method": "put",
+          "result": "success",
+          "rev": shared.rev,
+          "status": 204,
+          "statusText": "No Content"
+        },
+        "Then, I create a new document (no attachment), " +
+          "my application keeps the revision in memory"
+      );
 
-  //   // Create a new JIO in a new tab
-  //   ok(o.jio2, "Now, I am opening a new tab, with the same application" +
-  //      " and the same storage tree");
+      // open new tab (JIO)
+      jio2 = jIO.createJIO(shared.revision_storage_desciption, {
+        "workspace": shared.workspace2
+      });
 
-  //   // Get the document from the first storage
-  //   o.doc._rev = o.rev;
-  //   o.doc._revisions = {"ids": [o.hex], "start": 1};
-  //   o.doc._revs_info = [{"rev": o.rev, "status": "available"}];
-  //   o.spy(o, "value", o.doc, "And, on this new tab, I load the document," +
-  //         "and my application keep the revision in memory");
-  //   o.jio2.get({"_id": "sample1", "_rev": o.rev}, {
-  //     "revs_info": true,
-  //     "revs": true,
-  //     "conflicts": true,
-  //   }, o.f);
-  //   o.tick(o);
+      // Create a new JIO in a new tab
+      ok(jio2, "Now, I am opening a new tab, with the same application" +
+         " and the same storage tree");
 
-  //   // MODIFY the 2nd version
-  //   o.doc_2 = {"_id": "sample1", "_rev": o.rev,
-  //              "title": "mySample2_modified"};
-  //   o.revisions_2 = {"start": 1, "ids": [o.hex]};
-  //   o.hex_2 = generateRevisionHash(o.doc_2, o.revisions_2);
-  //   o.rev_2 = "2-" + o.hex_2;
-  //   o.spy(o, "value", {"id": "sample1", "ok": true, "rev": o.rev_2},
-  //         "So, I can modify and update it");
-  //   o.jio2.put(o.doc_2, o.f);
-  //   o.tick(o);
+      // Get the document from the first storage
+      shared.doc._rev = shared.rev;
+      shared.doc._revisions = {"ids": [shared.hex], "start": 1};
+      shared.doc._revs_info = [{"rev": shared.rev, "status": "available"}];
 
-  //   // MODIFY first version
-  //   o.doc_1 = {
-  //     "_id": "sample1",
-  //     "_rev": o.rev,
-  //     "title": "mySample1_modified"
-  //   };
-  //   o.revisions_1 = {"start": 1, "ids": [o.rev.split('-')[1]]};
-  //   o.hex_1 = generateRevisionHash(o.doc_1, o.revisions_1);
-  //   o.rev_1 = "2-" + o.hex_1;
-  //   o.spy(o, "value", {"id": "sample1", "ok": true, "rev": o.rev_1},
-  //         "Back to the first tab, I update the document.");
-  //   o.jio.put(o.doc_1, o.f);
-  //   o.tick(o);
+      return jio2.get({"_id": "sample1", "_rev": shared.rev}, {
+        "revs_info": true,
+        "revs": true,
+        "conflicts": true
+      });
 
-  //   // Close 1st tab
-  //   o.jio.close();
+    }).then(function (answer) {
 
-  //   // Close 2nd tab
-  //   o.jio2.close();
-  //   ok(o.jio2, "I close tab both tabs");
+      deepEqual(
+        answer.data,
+        shared.doc,
+        "And, on this new tab, I load the document, " +
+          "and my application keeps the revision in memory"
+      );
 
-  //   // Reopen JIO
-  //   o.jio = jIO.newJio({
-  //     "type": "revision",
-  //     "sub_storage": {
-  //       "type": "local",
-  //       "username": "usam1",
-  //       "application_name": "asam1"
-  //     }
-  //   });
-  //   o.localpath = "jio/localstorage/usam1/asam1";
-  //   ok(o.jio, "Later, I open my application again");
+      // MODIFY the 2nd version
+      shared.doc_2 = {"_id": "sample1", "_rev": shared.rev,
+                 "title": "mySample2_modified"};
+      shared.revisions_2 = {"start": 1, "ids": [shared.hex]};
+      shared.hex_2 = generateRevisionHash(shared.doc_2, shared.revisions_2);
+      shared.rev_2 = "2-" + shared.hex_2;
 
-  //   // GET document without revision = winner & conflict!
-  //   o.mydocSample3 = {"_id": "sample1", "title": "mySample1_modified",
-  //                     "_rev": o.rev_1};
-  //   o.mydocSample3._conflicts = [o.rev_2];
-  //   o.mydocSample3._revs_info = [{"rev": o.rev_1, "status": "available"}, {
-  //     "rev": o.rev,
-  //     "status": "available"
-  //   }];
-  //   o.mydocSample3._revisions = {"ids": [o.hex_1, o.hex], "start": 2};
-  //   o.spy(o, "value", o.mydocSample3, "I load the same document as before" +
-  //         ", and a popup shows that there is a conflict");
-  //   o.jio.get({"_id": "sample1"}, {
-  //     "revs_info": true,
-  //     "revs": true,
-  //     "conflicts": true
-  //   }, o.f);
-  //   o.tick(o);
+      return jio2.put(shared.doc_2);
 
-  //   // REMOVE one of the two conflicting versions
-  //   o.revisions = {"start": 2, "ids": [
-  //     o.rev_1.split('-')[1],
-  //     o.rev.split('-')[1]
-  //   ]};
-  //   o.doc_myremove3 = {"_id": "sample1", "_rev": o.rev_1};
-  //  o.rev_3 = "3-" + generateRevisionHash(o.doc_myremove3, o.revisions, true);
+    }).then(function (answer) {
 
-  //   o.spy(o, "value", {"ok": true, "id": "sample1", "rev": o.rev_3},
-  //          "I choose one of the document and close the application.");
-  //   o.jio.remove({"_id": "sample1", "_rev": o.rev_1}, o.f);
-  //   o.tick(o);
+      deepEqual(answer, {
+        "id": "sample1",
+        "method": "put",
+        "result": "success",
+        "rev": shared.rev_2,
+        "status": 204,
+        "statusText": "No Content"
+      }, "So, I can modify and update it");
 
-  //   // check to see if conflict still exists
-  //   o.mydocSample4 = {
-  //     "_id": "sample1",
-  //     "title": "mySample2_modified",
-  //     "_rev": o.rev_2
-  //   };
-  //   o.mydocSample4._revs_info = [{"rev": o.rev_2, "status": "available"}, {
-  //     "rev": o.rev,
-  //     "status": "available"
-  //   }];
-  //   o.mydocSample4._revisions = {"ids": [o.hex_2, o.hex], "start": 2};
+      // MODIFY first version
+      shared.doc_1 = {
+        "_id": "sample1",
+        "_rev": shared.rev,
+        "title": "mySample1_modified"
+      };
+      shared.revisions_1 = {"start": 1, "ids": [shared.rev.split('-')[1]]};
+      shared.hex_1 = generateRevisionHash(shared.doc_1, shared.revisions_1);
+      shared.rev_1 = "2-" + shared.hex_1;
 
-  //   o.spy(o, "value", o.mydocSample4, "Test if conflict still exists");
-  //   o.jio.get({"_id": "sample1"}, {
-  //     "revs_info": true,
-  //     "revs": true,
-  //     "conflicts": true
-  //   }, o.f);
-  //   o.tick(o);
+      return jio.put(shared.doc_1);
 
-  //   // END
-  //   util.closeAndcleanUpJio(o.jio);
-  // });
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "id": "sample1",
+        "method": "put",
+        "result": "success",
+        "rev": shared.rev_1,
+        "status": 204,
+        "statusText": "No Content"
+      }, "Back to the first tab, I update the document.");
+
+      // Close 1st tab
+      jio = undefined;
+      // Close 2nd tab
+      jio2 = undefined;
+      ok(true, "I close tab both tabs");
+
+      // Reopen JIO
+      jio = jIO.createJIO(shared.revision_storage_desciption, {
+        "workspace": shared.workspace1
+      });
+      ok(jio, "Later, I open my application again");
+
+      // GET document without revision = winner & conflict!
+      shared.mydocSample3 = {
+        "_id": "sample1",
+        "title": "mySample1_modified",
+        "_rev": shared.rev_1
+      };
+      shared.mydocSample3._conflicts = [shared.rev_2];
+      shared.mydocSample3._revs_info = [{
+        "rev": shared.rev_1,
+        "status": "available"
+      }, {
+        "rev": shared.rev,
+        "status": "available"
+      }];
+      shared.mydocSample3._revisions = {
+        "ids": [shared.hex_1, shared.hex],
+        "start": 2
+      };
+      return jio.get({"_id": "sample1"}, {
+        "revs_info": true,
+        "revs": true,
+        "conflicts": true
+      });
+
+    }).then(function (answer) {
+
+      deepEqual(
+        answer.data,
+        shared.mydocSample3,
+        "I load the same document as before, " +
+          "and a popup shows that there is a conflict"
+      );
+
+      // REMOVE one of the two conflicting versions
+      shared.revisions = {"start": 2, "ids": [
+        shared.rev_1.split('-')[1],
+        shared.rev.split('-')[1]
+      ]};
+      shared.doc_myremove3 = {"_id": "sample1", "_rev": shared.rev_1};
+      shared.rev_3 = "3-" + generateRevisionHash(
+        shared.doc_myremove3,
+        shared.revisions,
+        true
+      );
+
+      return jio.remove({"_id": "sample1", "_rev": shared.rev_1});
+
+    }).then(function (answer) {
+
+      deepEqual(answer, {
+        "id": "sample1",
+        "method": "remove",
+        "result": "success",
+        "rev": shared.rev_3,
+        "status": 204,
+        "statusText": "No Content"
+      }, "I choose one of the document and close the application.");
+
+      // check to see if conflict still exists
+      shared.mydocSample4 = {
+        "_id": "sample1",
+        "title": "mySample2_modified",
+        "_rev": shared.rev_2
+      };
+      shared.mydocSample4._revs_info = [{
+        "rev": shared.rev_2,
+        "status": "available"
+      }, {
+        "rev": shared.rev,
+        "status": "available"
+      }];
+      shared.mydocSample4._revisions = {
+        "ids": [shared.hex_2, shared.hex],
+        "start": 2
+      };
+
+      return jio.get({"_id": "sample1"}, {
+        "revs_info": true,
+        "revs": true,
+        "conflicts": true
+      });
+
+    }).then(function (answer) {
+
+      deepEqual(
+        answer.data,
+        shared.mydocSample4,
+        "Test if conflict stiil exists"
+      );
+
+    }).fail(unexpectedError).always(start);
+
+  });
 
 }));
