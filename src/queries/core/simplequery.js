@@ -124,7 +124,6 @@ SimpleQuery.prototype.match = function (item, wildcard_character) {
     checkKey(key);
     object_value = item[key.read_from];
 
-    // default_match overrides the default '=' operator
     default_match = key.default_match;
 
     // default_match can be a string
@@ -136,7 +135,7 @@ SimpleQuery.prototype.match = function (item, wildcard_character) {
     // default_match overrides the default '=' operator
     matchMethod = (default_match || matchMethod);
 
-    // but an explicit operator: key overrides default_match
+    // but an explicit operator: parameter overrides default_match
     if (this._spec && this._spec.operator) {
       matchMethod = this[this.operator];
     }

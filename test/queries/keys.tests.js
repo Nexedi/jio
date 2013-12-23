@@ -437,7 +437,6 @@
   // https://github.com/walling/unorm/
   var accentFold = function (s) {
     var map = [
-      [new RegExp('\\s', 'gi'), ''],
       [new RegExp('[àáâãäå]', 'gi'), 'a'],
       [new RegExp('æ', 'gi'), 'ae'],
       [new RegExp('ç', 'gi'), 'c'],
@@ -447,8 +446,7 @@
       [new RegExp('[òóôõö]', 'gi'), 'o'],
       [new RegExp('œ', 'gi'), 'oe'],
       [new RegExp('[ùúûü]', 'gi'), 'u'],
-      [new RegExp('[ýÿ]', 'gi'), 'y'],
-      [new RegExp('\\W', 'gi'), '']
+      [new RegExp('[ýÿ]', 'gi'), 'y']
     ];
 
     map.forEach(function (o) {
@@ -466,24 +464,23 @@
   test('Accent folding', function () {
     equal(accentFold('àéîöùç'), 'aeiouc');
     equal(accentFold('ÀÉÎÖÙÇ'), 'AEIOUC');
+    equal(accentFold('àéî öùç'), 'aei ouc');
   });
 
 
-  test('Query with accent folding (exact matching)', function () {
+  test('Query with accent folding and wildcard', function () {
     /*jslint unparam: true*/
     var doc_list, docList = function () {
       return [
         {'identifier': 'àéîöùç'},
+        {'identifier': 'âèî ôùc'},
         {'identifier': 'ÀÉÎÖÙÇ'},
         {'identifier': 'b'}
       ];
     }, keys = {
       identifier: {
         read_from: 'identifier',
-        default_match: function (object_value, value, wildcard_character) {
-          // XXX todo: regexp & support wildcard_character
-          return accentFold(object_value) === accentFold(value);
-        }
+        cast_to: accentFold
       }
     };
     /*jslint unparam: false*/
@@ -492,11 +489,12 @@
     complex_queries.QueryFactory.create({
       type: 'simple',
       key: keys.identifier,
-      value: 'aeiouc'
+      value: 'aei%'
     }).exec(doc_list);
     deepEqual(doc_list, [
-      {'identifier': 'àéîöùç'}
-    ], 'It should be possible to query for an exact match regardless of accents');
+      {'identifier': 'àéîöùç'},
+      {'identifier': 'âèî ôùc'}
+    ], 'It should be possible to query regardless of accents');
 
   });
 
