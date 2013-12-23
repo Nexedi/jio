@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 120, nomen: true, vars: true */
 /*global define, exports, require, module, complex_queries, window, test, ok,
-  deepEqual, sinon */
+  equal, deepEqual, sinon */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -427,6 +427,76 @@
 //      {'identifier': '2', 'state': 'closed'}
 //    ], 'It should be possible to look for a translated string with operator !=');
 
+
+  });
+
+
+  // This method is provided as an example.
+  // A more robust solution to manage diacritics is recommended for production
+  // environments, with unicode normalization, like (untested):
+  // https://github.com/walling/unorm/
+  var accentFold = function (s) {
+    var map = [
+      [new RegExp('\\s', 'gi'), ''],
+      [new RegExp('[àáâãäå]', 'gi'), 'a'],
+      [new RegExp('æ', 'gi'), 'ae'],
+      [new RegExp('ç', 'gi'), 'c'],
+      [new RegExp('[èéêë]', 'gi'), 'e'],
+      [new RegExp('[ìíîï]', 'gi'), 'i'],
+      [new RegExp('ñ', 'gi'), 'n'],
+      [new RegExp('[òóôõö]', 'gi'), 'o'],
+      [new RegExp('œ', 'gi'), 'oe'],
+      [new RegExp('[ùúûü]', 'gi'), 'u'],
+      [new RegExp('[ýÿ]', 'gi'), 'y'],
+      [new RegExp('\\W', 'gi'), '']
+    ];
+
+    map.forEach(function (o) {
+      var rep = function (match) {
+        if (match.toUpperCase() === match) {
+          return o[1].toUpperCase();
+        }
+        return o[1];
+      };
+      s = s.replace(o[0], rep);
+    });
+    return s;
+  };
+
+  test('Accent folding', function () {
+    equal(accentFold('àéîöùç'), 'aeiouc');
+    equal(accentFold('ÀÉÎÖÙÇ'), 'AEIOUC');
+  });
+
+
+  test('Query with accent folding (exact matching)', function () {
+    /*jslint unparam: true*/
+    var doc_list, docList = function () {
+      return [
+        {'identifier': 'àéîöùç'},
+        {'identifier': 'ÀÉÎÖÙÇ'},
+        {'identifier': 'b'}
+      ];
+    }, keys = {
+      identifier: {
+        readFrom: 'identifier',
+        defaultMatch: function (object_value, value, wildcard_character) {
+          // XXX todo: regexp & support wildcard_character
+          return accentFold(object_value) === accentFold(value);
+        }
+      }
+    };
+    /*jslint unparam: false*/
+
+    doc_list = docList();
+    complex_queries.QueryFactory.create({
+      type: 'simple',
+      key: keys.identifier,
+      value: 'aeiouc'
+    }).exec(doc_list);
+    deepEqual(doc_list, [
+      {'identifier': 'àéîöùç'}
+    ], 'It should be possible to query for an exact match regardless of accents');
 
   });
 
