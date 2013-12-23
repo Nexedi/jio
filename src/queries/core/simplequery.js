@@ -10,17 +10,17 @@ var checkKeySchema = function (key_schema) {
       throw new TypeError("SimpleQuery().create(): " +
                           "key_schema is not of type 'object'");
     }
-    // keys is mandatory
-    if (key_schema.keys === undefined) {
+    // key_set is mandatory
+    if (key_schema.key_set === undefined) {
       throw new TypeError("SimpleQuery().create(): " +
-                          "key_schema has no 'keys' property");
+                          "key_schema has no 'key_set' property");
     }
     for (prop in key_schema) {
       if (key_schema.hasOwnProperty(prop)) {
         switch (prop) {
-        case 'keys':
-        case 'types':
-        case 'comparators':
+        case 'key_set':
+        case 'cast_lookup':
+        case 'match_lookup':
           break;
         default:
           throw new TypeError("SimpleQuery().create(): " +
@@ -83,16 +83,16 @@ inherits(SimpleQuery, Query);
 var checkKey = function (key) {
   var prop;
 
-  if (key.readFrom === undefined) {
-    throw new TypeError("Custom key is missing the readFrom property");
+  if (key.read_from === undefined) {
+    throw new TypeError("Custom key is missing the read_from property");
   }
 
   for (prop in key) {
     if (key.hasOwnProperty(prop)) {
       switch (prop) {
-      case 'readFrom':
-      case 'castTo':
-      case 'defaultMatch':
+      case 'read_from':
+      case 'cast_to':
+      case 'default_match':
         break;
       default:
         throw new TypeError("Custom key has unknown property '" +
@@ -108,50 +108,50 @@ var checkKey = function (key) {
  */
 SimpleQuery.prototype.match = function (item, wildcard_character) {
   var object_value = null,
-    defaultMatch = null,
-    castTo = null,
+    default_match = null,
+    cast_to = null,
     matchMethod = null,
     value = null,
     key = this.key;
 
   matchMethod = this[this.operator];
 
-  if (this._key_schema.keys && this._key_schema.keys[key] !== undefined) {
-    key = this._key_schema.keys[key];
+  if (this._key_schema.key_set && this._key_schema.key_set[key] !== undefined) {
+    key = this._key_schema.key_set[key];
   }
 
   if (typeof key === 'object') {
     checkKey(key);
-    object_value = item[key.readFrom];
+    object_value = item[key.read_from];
 
-    // defaultMatch overrides the default '=' operator
-    defaultMatch = key.defaultMatch;
+    // default_match overrides the default '=' operator
+    default_match = key.default_match;
 
-    // defaultMatch can be a string
-    if (typeof defaultMatch === 'string') {
-      // XXX raise error if defaultMatch not in comparators
-      defaultMatch = this._key_schema.comparators[defaultMatch];
+    // default_match can be a string
+    if (typeof default_match === 'string') {
+      // XXX raise error if default_match not in match_lookup
+      default_match = this._key_schema.match_lookup[default_match];
     }
 
-    // defaultMatch overrides the default '=' operator
-    matchMethod = (defaultMatch || matchMethod);
+    // default_match overrides the default '=' operator
+    matchMethod = (default_match || matchMethod);
 
-    // but an explicit operator: key overrides DefaultMatch
+    // but an explicit operator: key overrides default_match
     if (this._spec && this._spec.operator) {
       matchMethod = this[this.operator];
     }
 
     value = this.value;
-    castTo = key.castTo;
-    if (castTo) {
-      // castTo can be a string
-      if (typeof castTo === 'string') {
-        // XXX raise error if castTo not in types
-        castTo = this._key_schema.types[castTo];
+    cast_to = key.cast_to;
+    if (cast_to) {
+      // cast_to can be a string
+      if (typeof cast_to === 'string') {
+        // XXX raise error if cast_to not in cast_lookup
+        cast_to = this._key_schema.cast_lookup[cast_to];
       }
 
-      value = castTo(value);
-      object_value = castTo(object_value);
+      value = cast_to(value);
+      object_value = cast_to(object_value);
     }
   } else {
     object_value = item[key];

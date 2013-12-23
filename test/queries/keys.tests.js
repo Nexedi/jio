@@ -17,7 +17,7 @@
 
   module('Custom Key Queries');
 
-  test('Simple Key with readFrom', function () {
+  test('Simple Key with read_from', function () {
     /*jslint unparam: true*/
     var doc_list, docList = function () {
       return [
@@ -27,11 +27,11 @@
       ];
     }, keys = {
       title: {
-        readFrom: 'identifier'
+        read_from: 'identifier'
       },
       case_insensitive_identifier: {
-        readFrom: 'identifier',
-        defaultMatch: function (object_value, value, wildcard_character) {
+        read_from: 'identifier',
+        default_match: function (object_value, value, wildcard_character) {
           return (object_value.toLowerCase() === value.toLowerCase());
         }
       }
@@ -103,19 +103,19 @@
 
     var keys = {
       day: {
-        readFrom: 'date',
-        castTo: dateCast,
-        defaultMatch: sameDay
+        read_from: 'date',
+        cast_to: dateCast,
+        default_match: sameDay
       },
       month: {
-        readFrom: 'date',
-        castTo: dateCast,
-        defaultMatch: sameMonth
+        read_from: 'date',
+        cast_to: dateCast,
+        default_match: sameMonth
       },
       year: {
-        readFrom: 'date',
-        castTo: dateCast,
-        defaultMatch: sameYear
+        read_from: 'date',
+        cast_to: dateCast,
+        default_match: sameYear
       }
     };
 
@@ -173,8 +173,8 @@
       ];
     }, keys = {
       mydate: {
-        readFrom: 'date',
-        castTo: dateCast
+        read_from: 'date',
+        cast_to: dateCast
       }
     };
 
@@ -250,7 +250,7 @@
   });
 
 
-  test('Simple Key with both defaultMatch and operator attributes', function () {
+  test('Simple Key with both default_match and operator attributes', function () {
     var doc_list, docList = function () {
       return [
         {'identifier': '1', 'date': '2013-01-01'},
@@ -259,9 +259,9 @@
       ];
     }, keys = {
       mydate: {
-        readFrom: 'date',
-        castTo: dateCast,
-        defaultMatch: function alwaysTrue() { return true; }
+        read_from: 'date',
+        cast_to: dateCast,
+        default_match: function alwaysTrue() { return true; }
       }
     };
 
@@ -315,8 +315,8 @@
     complex_queries.QueryFactory.create({
       type: 'simple',
       key: {
-        readFrom: 'number',
-        castTo: intType
+        read_from: 'number',
+        cast_to: intType
       },
       operator: '>',
       value: '19'
@@ -329,8 +329,8 @@
     complex_queries.QueryFactory.create({
       type: 'simple',
       key: {
-        readFrom: 'number',
-        castTo: intType
+        read_from: 'number',
+        cast_to: intType
       },
       operator: '<',
       value: '19'
@@ -346,16 +346,16 @@
       query_list: [{
         type: 'simple',
         key: {
-          readFrom: 'number',
-          castTo: intType
+          read_from: 'number',
+          cast_to: intType
         },
         operator: '<',
         value: '19'
       }, {
         type: 'simple',
         key: {
-          readFrom: 'number',
-          castTo: intType
+          read_from: 'number',
+          cast_to: intType
         },
         operator: '=',
         value: '19'
@@ -387,8 +387,8 @@
       equalState = translationEqualityMatcher({'ouvert': 'open'}),
       keys = {
         translated_state: {
-          readFrom: 'state',
-          defaultMatch: equalState
+          read_from: 'state',
+          default_match: equalState
         }
       };
 
@@ -479,8 +479,8 @@
       ];
     }, keys = {
       identifier: {
-        readFrom: 'identifier',
-        defaultMatch: function (object_value, value, wildcard_character) {
+        read_from: 'identifier',
+        default_match: function (object_value, value, wildcard_character) {
           // XXX todo: regexp & support wildcard_character
           return accentFold(object_value) === accentFold(value);
         }

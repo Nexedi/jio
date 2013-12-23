@@ -60,16 +60,16 @@
 
     try {
       complex_queries.QueryFactory.create({type: 'simple'}, {});
-      ok(false, 'key_schema.keys is not checked');
+      ok(false, 'key_schema.key_set is not checked');
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
       equal(e.message,
-         "SimpleQuery().create(): key_schema has no 'keys' property",
+         "SimpleQuery().create(): key_schema has no 'key_set' property",
          'wrong exception message');
     }
 
     try {
-      complex_queries.QueryFactory.create({type: 'simple'}, {keys: {}, foobar: {}});
+      complex_queries.QueryFactory.create({type: 'simple'}, {key_set: {}, foobar: {}});
       ok(false, 'unknown key_schema properties are not checked');
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
@@ -92,11 +92,11 @@
         key: {},
         value: 'a'
       }).exec(doc_list);
-      ok(false, 'key.readFrom is not checked');
+      ok(false, 'key.read_from is not checked');
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
       equal(e.message,
-         "Custom key is missing the readFrom property",
+         "Custom key is missing the read_from property",
          'wrong exception message');
     }
 
@@ -104,7 +104,7 @@
       complex_queries.QueryFactory.create({
         type: 'simple',
         key: {
-          readFrom: 'identifier',
+          read_from: 'identifier',
           foobar: ''
         },
         value: 'a'

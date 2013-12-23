@@ -70,7 +70,7 @@
 
 
   var key_schema = {
-    types: {
+    cast_lookup: {
       dateType: function (obj) {
         if (Object.prototype.toString.call(obj) === '[object Date]') {
           // no need to clone
@@ -79,10 +79,10 @@
         return new Date(obj);
       }
     },
-    keys: {
+    key_set: {
       mydate: {
-        readFrom: 'date',
-        castTo: 'dateType'
+        read_from: 'date',
+        cast_to: 'dateType'
       }
     }
   };

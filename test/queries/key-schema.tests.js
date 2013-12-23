@@ -25,7 +25,7 @@
 
   /*jslint unparam: true*/
   var key_schema = {
-    types: {
+    cast_lookup: {
       dateType: function (obj) {
         if (Object.prototype.toString.call(obj) === '[object Date]') {
           // no need to clone
@@ -35,7 +35,7 @@
       }
     },
 
-    comparators: {
+    match_lookup: {
       sameDay: function (a, b) {
         return (
           (a.getFullYear() === b.getFullYear()) &&
@@ -55,32 +55,32 @@
       equalState: translationEqualityMatcher({'ouvert': 'open'})
     },
 
-    keys: {
+    key_set: {
       case_insensitive_identifier: {
-        readFrom: 'identifier',
-        defaultMatch: function (object_value, value, wildcard_character) {
+        read_from: 'identifier',
+        default_match: function (object_value, value, wildcard_character) {
           // XXX do this with a regexp and wildcard support
           return (object_value.toLowerCase() === value.toLowerCase());
         }
       },
       date_day: {
-        readFrom: 'date',
-        castTo: 'dateType',
-        defaultMatch: 'sameDay'
+        read_from: 'date',
+        cast_to: 'dateType',
+        default_match: 'sameDay'
       },
       date_month: {
-        readFrom: 'date',
-        castTo: 'dateType',
-        defaultMatch: 'sameMonth'
+        read_from: 'date',
+        cast_to: 'dateType',
+        default_match: 'sameMonth'
       },
       date_year: {
-        readFrom: 'date',
-        castTo: 'dateType',
-        defaultMatch: 'sameYear'
+        read_from: 'date',
+        cast_to: 'dateType',
+        default_match: 'sameYear'
       },
       translated_state: {
-        readFrom: 'state',
-        defaultMatch: 'equalState'
+        read_from: 'state',
+        default_match: 'equalState'
       }
     }
   };
@@ -176,7 +176,7 @@
         {'identifier': '100', 'number': '100'}
       ];
     }, key_schema = {
-      types: {
+      cast_lookup: {
         intType: function (value) {
           if (typeof value === 'string') {
             return parseInt(value, 10);
@@ -184,10 +184,10 @@
           return value;
         }
       },
-      keys: {
+      key_set: {
         number: {
-          readFrom: 'number',
-          castTo: 'intType'
+          read_from: 'number',
+          cast_to: 'intType'
         }
       }
     };
