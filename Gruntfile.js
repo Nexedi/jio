@@ -27,6 +27,9 @@ module.exports = function (grunt) {
           errorsOnly: true
         }
       },
+      jiodate: {
+        src: ['src/jio.date/jiodate.js']
+      },
       tests: {
         src: ['test/**/*.js'],
         options: {
@@ -81,6 +84,10 @@ module.exports = function (grunt) {
       jio: {
         src: 'jio.js', // '<%= pkg.name %>.js'
         dest: 'jio.min.js'
+      },
+      jiodate: {
+        src: 'src/jio.date/jiodate.js',
+        dest: 'jiodate.min.js'
       },
       queries: {
         src: 'complex_queries.js',

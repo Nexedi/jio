@@ -15,7 +15,7 @@
 }(['complex_queries', 'qunit'], function (complex_queries) {
   "use strict";
 
-  module('Checks upon validity of key and key_schema objects');
+  module('Key and key_schema objects validation');
 
   test('Check the parameters passed to exec() and create()', function () {
     try {

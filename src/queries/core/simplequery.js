@@ -208,6 +208,9 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
     if (value === undefined) {
       return false;
     }
+    if (value.eq !== undefined) {
+      return value.eq(comparison_value);
+    }
     if (
       convertStringToRegExp(
         comparison_value.toString(),
@@ -249,6 +252,9 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
     if (value === undefined) {
       return true;
     }
+    if (value.ne !== undefined) {
+      return value.ne(comparison_value);
+    }
     if (
       convertStringToRegExp(
         comparison_value.toString(),
@@ -278,6 +284,9 @@ SimpleQuery.prototype["<"] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
+  if (value.lt !== undefined) {
+    return value.lt(comparison_value);
+  }
   return value < comparison_value;
 };
 
@@ -298,6 +307,9 @@ SimpleQuery.prototype["<="] = function (object_value, comparison_value) {
   value = object_value[0];
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
+  }
+  if (value.le !== undefined) {
+    return value.le(comparison_value);
   }
   return value <= comparison_value;
 };
@@ -320,6 +332,9 @@ SimpleQuery.prototype[">"] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
+  if (value.gt !== undefined) {
+    return value.gt(comparison_value);
+  }
   return value > comparison_value;
 };
 
@@ -340,6 +355,9 @@ SimpleQuery.prototype[">="] = function (object_value, comparison_value) {
   value = object_value[0];
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
+  }
+  if (value.ge !== undefined) {
+    return value.ge(comparison_value);
   }
   return value >= comparison_value;
 };
