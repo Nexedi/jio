@@ -1,3 +1,4 @@
+
 jIO Complex Queries
 ===================
 
@@ -7,7 +8,7 @@ What are Complex Queries?
 In jIO, a complex query can ask a storage server to select, filter, sort, or
 limit a document list before sending it back. If the server is not able to do
 so, the complex query tool can do the filtering by itself on the client. Only the
-``allDocs()`` method can use complex queries.
+``.allDocs()`` method can use complex queries.
 
 A query can either be a string (using a specific language useful for writing
 queries), or it can be a tree of objects (useful to browse queries). To handle
@@ -33,7 +34,7 @@ to run the query on the index before querying documents itself.
 How to use Complex Queries with jIO?
 ------------------------------------
 
-Complex queries can be triggered by including the option named **query** in the ``allDocs()`` method call.
+Complex queries can be triggered by including the option named **query** in the ``.allDocs()`` method call.
 
 Example:
 

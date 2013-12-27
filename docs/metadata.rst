@@ -11,7 +11,7 @@ The word "metadata" means "data about data". Metadata articulates a context for
 objects of interest -- "resources" such as MP3 files, library books, or
 satellite images -- in the form of "resource descriptions". As a tradition,
 resource description dates back to the earliest archives and library catalogs.
-During the Web revolution of the mid-1990s, `Dublic Core <http://dublincore.org/metadata-basics/>`_
+During the Web revolution of the mid-1990s, `Dublin Core <http://dublincore.org/metadata-basics/>`_
 has emerged as one of the prominent metadata standards.
 
 Why use metadata?

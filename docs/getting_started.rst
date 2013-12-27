@@ -45,14 +45,22 @@ Getting started
     You can use both handlers and available storages to build a storage
     tree across which all documents will be maintained and managed by jIO.
     
-    See :ref:`List of Available Storages <list-of-available-storages>`.
-
     .. code-block:: javascript
 
         // create your jio instance
         var my_jio = jIO.createJIO(storage_description);
 
+    You have to provide a ``storage_description`` object, providing location
+    and credentials.
+
+    Its format depends on the type of storage,
+    see :ref:`List of Available Storages <list-of-available-storages>`.
+
+
 #.  The jIO API provides ten main methods to manage documents across the storage(s) specified in your jIO storage tree.
+
+    For details on the ``document`` and ``attachment`` objects, see :ref:`What is a document? <what-is-a-document>`
+
 
     =======================  ======================================================
     Method                   Example

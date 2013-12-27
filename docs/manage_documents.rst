@@ -12,6 +12,9 @@ CouchDB provides a RESTful HTTP/JSON API accessible by many programming
 libraries and tools (like `curl <http://curl.haxx.se/>`_ or `Pouchdb <http://pouchdb.com/>`_)
 and has its own conflict management system.
 
+
+.. _what-is-a-document:
+
 What is a document?
 -------------------
 
@@ -63,7 +66,7 @@ see how method calls should be made with either of these storages.
 .. code-block:: javascript
 
     // Create a new jIO instance
-    var jio_instance = jIO.createJIO(storage tree description);
+    var jio_instance = jIO.createJIO(storage_description);
 
     // create and store new document
     jio_instance.post({title: 'some title'}).
@@ -256,8 +259,8 @@ In case of error, the ``errorCallback`` first parameter will look like:
 
 
 
-How to store a video on localStorage
-------------------------------------
+How to store binary data
+------------------------
 
 The following example creates a new jIO in localStorage and then posts a document with two attachments.
 
