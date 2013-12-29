@@ -255,6 +255,9 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
     if (value.ne !== undefined) {
       return value.ne(comparison_value);
     }
+    if (value.eq !== undefined) {
+      return !value.eq(comparison_value);
+    }
     if (
       convertStringToRegExp(
         comparison_value.toString(),
@@ -311,6 +314,9 @@ SimpleQuery.prototype["<="] = function (object_value, comparison_value) {
   if (value.le !== undefined) {
     return value.le(comparison_value);
   }
+  if (value.lt !== undefined && value.eq !== undefined) {
+    return value.lt(comparison_value) || value.eq(comparison_value);
+  }
   return value <= comparison_value;
 };
 
@@ -335,6 +341,9 @@ SimpleQuery.prototype[">"] = function (object_value, comparison_value) {
   if (value.gt !== undefined) {
     return value.gt(comparison_value);
   }
+  if (value.lt !== undefined && value.eq !== undefined) {
+    return !(value.lt(comparison_value) || value.eq(comparison_value));
+  }
   return value > comparison_value;
 };
 
@@ -358,6 +367,9 @@ SimpleQuery.prototype[">="] = function (object_value, comparison_value) {
   }
   if (value.ge !== undefined) {
     return value.ge(comparison_value);
+  }
+  if (value.lt !== undefined) {
+    return !value.lt(comparison_value);
   }
   return value >= comparison_value;
 };
