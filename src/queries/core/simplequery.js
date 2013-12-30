@@ -58,7 +58,6 @@ function SimpleQuery(spec, key_schema) {
    * @optional
    */
   this.operator = spec.operator || "=";
-  this._spec = spec.operator;
 
   /**
    * Key of the object which refers to the value to compare
@@ -92,7 +91,7 @@ var checkKey = function (key) {
       switch (prop) {
       case 'read_from':
       case 'cast_to':
-      case 'default_match':
+      case 'equal_match':
         break;
       default:
         throw new TypeError("Custom key has unknown property '" +
@@ -108,7 +107,7 @@ var checkKey = function (key) {
  */
 SimpleQuery.prototype.match = function (item, wildcard_character) {
   var object_value = null,
-    default_match = null,
+    equal_match = null,
     cast_to = null,
     matchMethod = null,
     value = null,
@@ -124,20 +123,17 @@ SimpleQuery.prototype.match = function (item, wildcard_character) {
     checkKey(key);
     object_value = item[key.read_from];
 
-    default_match = key.default_match;
+    equal_match = key.equal_match;
 
-    // default_match can be a string
-    if (typeof default_match === 'string') {
-      // XXX raise error if default_match not in match_lookup
-      default_match = this._key_schema.match_lookup[default_match];
+    // equal_match can be a string
+    if (typeof equal_match === 'string') {
+      // XXX raise error if equal_match not in match_lookup
+      equal_match = this._key_schema.match_lookup[equal_match];
     }
 
-    // default_match overrides the default '=' operator
-    matchMethod = (default_match || matchMethod);
-
-    // but an explicit operator: parameter overrides default_match
-    if (this._spec && this._spec.operator) {
-      matchMethod = this[this.operator];
+    // equal_match overrides the default '=' operator
+    if (equal_match !== undefined) {
+      matchMethod = (this.operator === '=') ? equal_match : matchMethod;
     }
 
     value = this.value;

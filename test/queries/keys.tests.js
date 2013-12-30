@@ -31,7 +31,7 @@
       },
       case_insensitive_identifier: {
         read_from: 'identifier',
-        default_match: function (object_value, value, wildcard_character) {
+        equal_match: function (object_value, value, wildcard_character) {
           return (object_value.toLowerCase() === value.toLowerCase());
         }
       }
@@ -105,17 +105,17 @@
       day: {
         read_from: 'date',
         cast_to: dateCast,
-        default_match: sameDay
+        equal_match: sameDay
       },
       month: {
         read_from: 'date',
         cast_to: dateCast,
-        default_match: sameMonth
+        equal_match: sameMonth
       },
       year: {
         read_from: 'date',
         cast_to: dateCast,
-        default_match: sameYear
+        equal_match: sameYear
       }
     };
 
@@ -250,7 +250,7 @@
   });
 
 
-  test('Simple Key with both default_match and operator attributes', function () {
+  test('Simple Key with both equal_match and operator attributes', function () {
     var doc_list, docList = function () {
       return [
         {'identifier': '1', 'date': '2013-01-01'},
@@ -261,7 +261,7 @@
       mydate: {
         read_from: 'date',
         cast_to: dateCast,
-        default_match: function alwaysTrue() { return true; }
+        equal_match: function alwaysTrue() { return true; }
       }
     };
 
@@ -282,11 +282,23 @@
     complex_queries.QueryFactory.create({
       type: 'simple',
       key: keys.mydate,
-      operator: '>=',
+      operator: '=',
       value: '2013-02-02'
     }).exec(doc_list);
     deepEqual(doc_list, [
       {'identifier': '1', 'date': '2013-01-01'},
+      {'identifier': '2', 'date': '2013-02-02'},
+      {'identifier': '3', 'date': '2013-03-03'}
+    ], "The catch-all filter overrides the default '=' operator");
+
+    doc_list = docList();
+    complex_queries.QueryFactory.create({
+      type: 'simple',
+      key: keys.mydate,
+      operator: '>=',
+      value: '2013-02-02'
+    }).exec(doc_list);
+    deepEqual(doc_list, [
       {'identifier': '2', 'date': '2013-02-02'},
       {'identifier': '3', 'date': '2013-03-03'}
     ], 'An explicit operator should override the catch-all filter');
@@ -388,7 +400,7 @@
       keys = {
         translated_state: {
           read_from: 'state',
-          default_match: equalState
+          equal_match: equalState
         }
       };
 
@@ -416,6 +428,7 @@
     ], 'It should be possible to look for a translated string with operator =');
 
 
+// XXX not implemented yet
 //    doc_list = docList();
 //    complex_queries.QueryFactory.create({
 //      type: 'simple',

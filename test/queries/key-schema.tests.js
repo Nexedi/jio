@@ -58,7 +58,7 @@
     key_set: {
       case_insensitive_identifier: {
         read_from: 'identifier',
-        default_match: function (object_value, value, wildcard_character) {
+        equal_match: function (object_value, value, wildcard_character) {
           // XXX do this with a regexp and wildcard support
           return (object_value.toLowerCase() === value.toLowerCase());
         }
@@ -66,21 +66,21 @@
       date_day: {
         read_from: 'date',
         cast_to: 'dateType',
-        default_match: 'sameDay'
+        equal_match: 'sameDay'
       },
       date_month: {
         read_from: 'date',
         cast_to: 'dateType',
-        default_match: 'sameMonth'
+        equal_match: 'sameMonth'
       },
       date_year: {
         read_from: 'date',
         cast_to: 'dateType',
-        default_match: 'sameYear'
+        equal_match: 'sameYear'
       },
       translated_state: {
         read_from: 'state',
-        default_match: 'equalState'
+        equal_match: 'equalState'
       }
     }
   };
