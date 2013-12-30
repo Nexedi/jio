@@ -17,9 +17,10 @@ Let's start with a simple search:
   }
 
 Each of the ``.someproperty`` attribute in objects' metadata is compared with
-``comparison_value`` through a function defined by the '=' operator.
+``comparison_value`` through a function defined by the '=' operator. Normally,
+it would be a string match that uses the wildcard_character, if present.
 
-Such comparison functions (=, !=, <...) are predefined in jIO, but you can provide your own:
+You can provide your own function to be used as '=' operator:
 
 .. code-block:: javascript
 
@@ -32,14 +33,13 @@ Such comparison functions (=, !=, <...) are predefined in jIO, but you can provi
     type: 'simple',
     key: {
       read_from: 'someproperty',
-      default_match: strictEqual
+      equal_match: strictEqual
     },
     value: comparison_value
   }
 
-Note: ``default_match`` will only be used if no ``operator`` is specified.
-You may decide to interpret the ``wildcard_character`` or just ignore it, as in this case.
-
+Inside ``equal_match``, you can decide to interpret the ``wildcard_character``
+or just ignore it, as in this case.
 
 If you need to convert or preprocess the values before comparison, you can provide
 a conversion function:
@@ -60,8 +60,8 @@ a conversion function:
   }
 
 
-In this case, the operator is still the default '='.
-You can combine ``cast_to`` and ``default_match``:
+In this case, the operator is still the default '=' that works with strings.
+You can combine ``cast_to`` and ``equal_match``:
 
 .. code-block:: javascript
 
@@ -70,7 +70,7 @@ You can combine ``cast_to`` and ``default_match``:
     key: {
       read_from: 'someproperty',
       cast_to: numberType,
-      default_match: strictEqual
+      equal_match: strictEqual
     },
     value: comparison_value
   }
@@ -115,10 +115,78 @@ from any string:
     return s;
   };
 
+  ...
+    cast_to: accentFold
+  ...
+
 
 A more robust solution to manage diacritics is recommended for production
 environments, with unicode normalization, like (untested):
 https://github.com/walling/unorm/
+
+
+Overriding operators and sorting
+--------------------------------
+
+The advantage of providing an ``equal_match`` function is that it can work with basic types;
+you can keep the values as strings or, if you use a ``cast_to`` function, it can return strings,
+numbers, arrays... and that's fine if all you need is the '=' operator.
+
+It's also possible to customize the behavior of the other operators: <, >, !=...
+
+To do that, the object returned by ``cast_to`` must contain a ``.cmp``
+property, that behaves like the ``compareFunction`` described in
+`Array.prototype.sort() <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort>`_:
+
+
+.. code-block:: javascript
+
+  function myType (...) {
+    ...
+    return {
+      ...
+      'cmp': function (b) {
+        if (a < b) {
+          return -1;
+        }
+        if (a > b) {
+          return +1;
+        }
+        return 0;
+      }
+    };
+  }
+
+  ...
+    cast_to: myType
+  ...
+
+
+If the < or > comparison makes no sense for the objects, the function should return ``undefined``.
+
+The ``.cmp()`` property is also used, if present, by the sorting feature of complex queries.
+
+
+
+Partial Date/Time match
+-----------------------
+
+As a real life example, consider a list of documents that have a *start_task* property.
+
+The value of ``start_task`` can be an `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ string
+with date and time information including fractions of a second. Which is, honestly, a bit too
+much for most queries.
+
+By using a ``cast_to`` function with custom operators, it is possible to perform queries like
+"start_task > 2010-06", or "start_task != 2011". Partial time can be used as well, so
+we can ask for projects started after noon of a given day: ``start_task = "2011-04-05" AND start_task > "2011-04-05 12"``
+
+The JIODate type has been implemented on top of the `Moment.js <http://momentjs.com/>`_ library, which
+has a rich API with support for multiple languages and timezones. No special support for timezones
+is present (yet) in JIODate.
+
+To use JIODate, include the ``jiodate.js`` and ``moment.js`` files in your
+application, then set ``cast_to = jiodate.JIODate``.
 
 
 
@@ -135,12 +203,12 @@ you can group all of them in a schema object for reuse:
       date_day: {
         read_from: 'date',
         cast_to: 'dateType',
-        default_match: 'sameDay'
+        equal_match: 'sameDay'
       },
       date_month: {
         read_from: 'date',
         cast_to: 'dateType',
-        default_match: 'sameMonth'
+        equal_match: 'sameMonth'
       }
     },
     cast_lookup: {
@@ -184,12 +252,12 @@ A key_schema object can have three properties:
   then cast_to must be a function.
 
 * ``match_lookup`` - optional, a mapping of name: function that will
-  be used if default_match is a string. If match_lookup is not provided,
-  then default_match must be a function.
+  be used if ``equal_match`` is a string. If match_lookup is not provided,
+  then ``equal_match`` must be a function.
 
 
 Using a schema
-^^^^^^^^^^^^^^
+--------------
 
 A schema can be used:
 
