@@ -124,47 +124,6 @@
   };
 
 
-  JIODate.prototype.eq = function (other) {
-    var p = lesserPrecision(this._precision, other._precision);
-    return this.mom.isSame(other.mom, p);
-  };
-
-
-  JIODate.prototype.ne = function (other) {
-    return (!this.eq(other));
-  };
-
-
-  JIODate.prototype.gt = function (other) {
-    var p = lesserPrecision(this._precision, other._precision);
-    return this.mom.isAfter(other.mom, p);
-  };
-
-
-  JIODate.prototype.lt = function (other) {
-    // XXX using the lesser precision cannot change the result (but check with business calendar)
-    var p = lesserPrecision(this._precision, other._precision);
-    return this.mom.isBefore(other.mom, p);
-  };
-
-
-  JIODate.prototype.ge = function (other) {
-    // XXX using the lesser precision cannot change the result (but check with business calendar)
-    var m1 = this.mom,
-      m2 = other.mom,
-      p = lesserPrecision(this._precision, other._precision);
-    return m1.isAfter(m2, p) || m1.isSame(m2, p);
-  };
-
-
-  JIODate.prototype.le = function (other) {
-    var m1 = this.mom,
-      m2 = other.mom,
-      p = lesserPrecision(this._precision, other._precision);
-    return m1.isBefore(m2, p) || m1.isSame(m2, p);
-  };
-
-
   JIODate.prototype.cmp = function (other) {
     var m1 = this.mom,
       m2 = other.mom,
