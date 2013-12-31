@@ -344,9 +344,9 @@ Below you can find schemas for constructing queries.
         OR               -> /OR[ ]/
         AND              -> /AND[ ]/
         NOT              -> /NOT[ ]/
-        COLUMN           -> /[^><= :\(\)"][^ :\(\)"]*:/
+        COLUMN           -> /[^><!= :\(\)"][^ :\(\)"]*:/
         STRING           -> /"(\\.|[^\\"])*"/
-        WORD             -> /[^><= :\(\)"][^ :\(\)"]*/
+        WORD             -> /[^><!= :\(\)"][^ :\(\)"]*/
         OPERATOR         -> /(>=?|<=?|!?=)/
         LEFT_PARENTHESE  -> /\(/
         RIGHT_PARENTHESE -> /\)/

@@ -31,7 +31,7 @@
           cast_to: jiodate.JIODate
         }
       }
-    };
+    }, query_list = null;
 
     doc_list = docList();
     complex_queries.QueryFactory.create({
@@ -101,6 +101,42 @@
       {'date': '2012-03-04T08:52:13.746Z', 'identifier': 'twenty twelve'}
     ], 'Match with "date >= 2011" (query tree form)');
 
+    query_list = [
+      [
+        'date: < "2011" OR date: "2012-03"',
+        [
+          {'date': '2010-03-04T08:52:13.746Z', 'identifier': 'twenty ten'},
+          {'date': '2012-03-04T08:52:13.746Z', 'identifier': 'twenty twelve'}
+        ]
+      ],
+      [
+        'date: >= "2011-01" AND date: != "2012-03-04T08:52:13.746Z"',
+        [
+          {'date': '2011-03-04T08:52:13.746Z', 'identifier': 'twenty eleven'}
+        ]
+      ]
+    ];
+
+    query_list.forEach(function (o) {
+      var qs = o[0], expected = o[1];
+      doc_list = docList();
+      complex_queries.QueryFactory.create(qs, key_schema).exec(doc_list);
+      deepEqual(doc_list, expected, "Match with '" + qs + "' (parsed query string)");
+    });
+
+    query_list = [
+      'date < "2011"',
+      'date <= "2011"',
+      'date > "2011"',
+      'date >= "2011"'
+    ];
+
+    query_list.forEach(function (qs) {
+      doc_list = docList();
+      complex_queries.QueryFactory.create(qs, key_schema).exec(doc_list);
+      deepEqual(doc_list, [
+      ], "Match with an invalid parsed string " + qs + " should return empty list but not raise errors");
+    });
 
   });
 

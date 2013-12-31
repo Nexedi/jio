@@ -280,6 +280,9 @@ SimpleQuery.prototype["<"] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
+  if (value === undefined || comparison_value === undefined) {
+    return false;
+  }
   if (value.cmp !== undefined) {
     return value.cmp(comparison_value) < 0;
   }
@@ -303,6 +306,9 @@ SimpleQuery.prototype["<="] = function (object_value, comparison_value) {
   value = object_value[0];
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
+  }
+  if (value === undefined || comparison_value === undefined) {
+    return false;
   }
   if (value.cmp !== undefined) {
     return value.cmp(comparison_value) <= 0;
@@ -328,6 +334,9 @@ SimpleQuery.prototype[">"] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
+  if (value === undefined || comparison_value === undefined) {
+    return false;
+  }
   if (value.cmp !== undefined) {
     return value.cmp(comparison_value) > 0;
   }
@@ -351,6 +360,9 @@ SimpleQuery.prototype[">="] = function (object_value, comparison_value) {
   value = object_value[0];
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
+  }
+  if (value === undefined || comparison_value === undefined) {
+    return false;
   }
   if (value.cmp !== undefined) {
     return value.cmp(comparison_value) >= 0;
