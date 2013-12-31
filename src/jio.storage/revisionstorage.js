@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global jIO, hex_sha256, setTimeout, define */
+/*global jIO, hex_sha256, define */
 
 /**
  * JIO Revision Storage.
@@ -1048,6 +1048,17 @@
         functions.success();
       });
     };
+
+    // XXX
+    that.check = function (command) {
+      command.success();
+    };
+
+    // XXX
+    that.repair = function (command) {
+      command.success();
+    };
+
   }); // end RevisionStorage
 
 }));
