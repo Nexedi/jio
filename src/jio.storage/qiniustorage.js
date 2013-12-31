@@ -8,8 +8,8 @@
  * JIO Qiniu Storage. Type = "qiniu".
  * Qiniu "database" storage.
  */
-/*global FormData, btoa, Blob, CryptoJS */
-/*jslint nomen: true, unparam: true, bitwise: true */
+/*global FormData, btoa, Blob, CryptoJS, define, jIO */
+/*jslint indent: 2, maxlen: 80, nomen: true, unparam: true, bitwise: true */
 (function (dependencies, module) {
   "use strict";
   if (typeof define === 'function' && define.amd) {

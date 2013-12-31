@@ -1,6 +1,7 @@
 
 /*global define, module, test_util, RSVP, jIO, test, ok,
-  deepEqual, sinon, expect, stop, start, Blob, equal */
+  deepEqual, sinon, expect, stop, start, Blob, equal, define */
+/*jslint indent: 2 */
 (function (dependencies, module) {
   "use strict";
   if (typeof define === 'function' && define.amd) {
