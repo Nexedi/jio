@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global Query: true, inherits: true, query_class_dict: true, _export: true,
-  convertStringToRegExp: true */
+  convertStringToRegExp, RSVP */
 
 /**
  * The SimpleQuery inherits from Query, and compares one metadata value
@@ -81,7 +81,7 @@ SimpleQuery.prototype.serialized = function () {
  * @return {Boolean} true if match, false otherwise
  */
 SimpleQuery.prototype["="] = function (object_value, comparison_value,
-                      wildcard_character) {
+                                       wildcard_character) {
   var value, i;
   if (!Array.isArray(object_value)) {
     object_value = [object_value];
@@ -93,12 +93,12 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
     }
     if (comparison_value === undefined) {
       if (value === undefined) {
-        return true;
+        return RSVP.resolve(true);
       }
-      return false;
+      return RSVP.resolve(false);
     }
     if (value === undefined) {
-      return false;
+      return RSVP.resolve(false);
     }
     if (
       convertStringToRegExp(
@@ -106,10 +106,10 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
         wildcard_character
       ).test(value.toString())
     ) {
-      return true;
+      return RSVP.resolve(true);
     }
   }
-  return false;
+  return RSVP.resolve(false);
 };
 
 /**
@@ -122,7 +122,7 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
  * @return {Boolean} true if not match, false otherwise
  */
 SimpleQuery.prototype["!="] = function (object_value, comparison_value,
-                       wildcard_character) {
+                                        wildcard_character) {
   var value, i;
   if (!Array.isArray(object_value)) {
     object_value = [object_value];
@@ -134,12 +134,12 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
     }
     if (comparison_value === undefined) {
       if (value === undefined) {
-        return false;
+        return RSVP.resolve(false);
       }
-      return true;
+      return RSVP.resolve(true);
     }
     if (value === undefined) {
-      return true;
+      return RSVP.resolve(true);
     }
     if (
       convertStringToRegExp(
@@ -147,10 +147,10 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
         wildcard_character
       ).test(value.toString())
     ) {
-      return false;
+      return RSVP.resolve(false);
     }
   }
-  return true;
+  return RSVP.resolve(true);
 };
 
 /**
@@ -170,7 +170,7 @@ SimpleQuery.prototype["<"] = function (object_value, comparison_value) {
   if (typeof value === 'object') {
     value = value.content;
   }
-  return value < comparison_value;
+  return RSVP.resolve(value < comparison_value);
 };
 
 /**
@@ -191,7 +191,7 @@ SimpleQuery.prototype["<="] = function (object_value, comparison_value) {
   if (typeof value === 'object') {
     value = value.content;
   }
-  return value <= comparison_value;
+  return RSVP.resolve(value <= comparison_value);
 };
 
 /**
@@ -212,7 +212,7 @@ SimpleQuery.prototype[">"] = function (object_value, comparison_value) {
   if (typeof value === 'object') {
     value = value.content;
   }
-  return value > comparison_value;
+  return RSVP.resolve(value > comparison_value);
 };
 
 /**
@@ -233,7 +233,7 @@ SimpleQuery.prototype[">="] = function (object_value, comparison_value) {
   if (typeof value === 'object') {
     value = value.content;
   }
-  return value >= comparison_value;
+  return RSVP.resolve(value >= comparison_value);
 };
 
 query_class_dict.simple = SimpleQuery;
