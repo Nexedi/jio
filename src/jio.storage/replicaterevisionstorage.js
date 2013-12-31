@@ -22,7 +22,7 @@
   module(jIO);
 }(['jio'], function (jIO) {
   "use strict";
-  jIO.addStorageType('replicaterevision', function (spec) {
+  jIO.addStorage('replicaterevision', function (spec) {
     var that = this, priv = {};
     spec = spec || {};
 
@@ -217,16 +217,9 @@
         command.success();
       }
       if (!param._id) {
-        return callback({
-          "status": 501
-        });
+        return callback({"status": 501});
       }
-      priv.check(
-        command,
-        param,
-        option,
-        callback
-      );
+      priv.check(command, param, option, callback);
     };
 
     /**
@@ -264,8 +257,18 @@
       callback = callback || priv.emptyFunction;
       option = option || {};
       functions.begin = function () {
-        // };
-        // functions.repairAllSubStorages = function () {
+      //   // XXX make revision storage check and repair
+      //   //     to enable check/repair sub storage from this storage
+      //   //     by calling this function just below
+      //   //functions.repairAllSubStorages();
+      //   //     else we assume that sub storages are good
+      //   functions.getAllDocuments(functions.newParam(
+      //     doc,
+      //     option,
+      //     repair
+      //   ));
+      // };
+      // functions.repairAllSubStorages = function () {
         var i;
         for (i = 0; i < priv.storage_list.length; i += 1) {
           priv.send(
@@ -315,8 +318,8 @@
               // 1: [responseB, [2]]
             ],
             "attachments": {
-              // attachmentA : {_id: attachmentA, _revs_info, _mimetype: ..}
-              // attachmentB : {_id: attachmentB, _revs_info, _mimetype: ..}
+              // attachmentA : {_id: attachmentA, _revs_info, _content_type: ..}
+              // attachmentB : {_id: attachmentB, _revs_info, _content_type: ..}
             }
           },
           "conflicts": {
@@ -333,9 +336,9 @@
         var i, metadata, cloned_option;
         metadata = priv.clone(param.doc);
         cloned_option = priv.clone(param.option);
-        option.conflicts = true;
-        option.revs = true;
-        option.revs_info = true;
+        cloned_option.conflicts = true;
+        cloned_option.revs = true;
+        cloned_option.revs_info = true;
         for (i = 0; i < priv.storage_list.length; i += 1) {
           // if the document is not loaded
           priv.send(command, "get", i,
@@ -356,7 +359,7 @@
               // get document failed, exit
               param.deal_result_state = "error";
               callback({
-                "status": "conflict",
+                "status": 409,
                 "message": "An error occured on the sub storage",
                 "reason": err.reason
               }, undefined);
@@ -378,6 +381,7 @@
 
           // this is now the last response
           functions.makeResponsesStats(param.responses);
+          //console.log(JSON.parse(JSON.stringify(param.responses)));
           if (param.responses.stats_items.length === 1) {
             // the responses are equals!
             response_object.ok = true;
@@ -394,7 +398,7 @@
           if (param.repair === false) {
             // do not repair
             callback({
-              "status": "conflict",
+              "status": 409,
               "message": "Some documents are different in the sub storages",
               "reason": "Storage contents differ"
             }, undefined);
@@ -460,7 +464,7 @@
           /*jslint unparam: true */
           if (err) {
             callback({
-              "status": "conflict",
+              "status": 409,
               "message": "Unable to retreive attachments",
               "reason": err.reason
             }, undefined);
@@ -513,7 +517,7 @@
           if (new_doc._attachments.hasOwnProperty(i)) {
             attachment_to_put.push({
               "_id": i,
-              "_mimetype": new_doc._attachments[i].content_type,
+              "_content_type": new_doc._attachments[i].content_type,
               "_revs_info": new_doc._revs_info
             });
           }
@@ -555,9 +559,7 @@
           var i, attachment;
           if (err) {
             return callback({
-              "status": 40,
-              "statusText": "Check Failed",
-              "error": "check_failed",
+              "status": 409,
               "message": "Unable to copy attachments",
               "reason": err.reason
             }, undefined);
@@ -566,7 +568,7 @@
             attachment = {
               "_id": param.doc._id,
               "_attachment": attachment_to_put[i]._id,
-              "_mimetype": attachment_to_put[i]._mimetype,
+              "_content_type": attachment_to_put[i]._content_type,
               "_revs_info": attachment_to_put[i]._revs_info,
               // "_revs_info": param.responses.list[index]._revs_info,
               "_data": param.responses.attachments[attachment_to_put[i]._id]
@@ -640,7 +642,7 @@
      * @param  {object} command The JIO command
      */
     that.post = function (command, metadata, option) {
-      that.genericRequest(command, "put", metadata, option);
+      that.genericRequest(command, "post", metadata, option);
     };
 
     /**
@@ -649,7 +651,7 @@
      * @param  {object} command The JIO command
      */
     that.put = function (command, metadata, option) {
-      that.genericRequest(command, "post", metadata, option);
+      that.genericRequest(command, "put", metadata, option);
     };
 
     /**
@@ -696,7 +698,5 @@
     that.removeAttachment = function (command, param, option) {
       that.genericRequest(command, "removeAttachment", param, option);
     };
-
-    return that;
   });
 }));
