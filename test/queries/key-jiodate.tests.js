@@ -15,7 +15,7 @@
 }(['complex_queries', 'jiodate', 'qunit'], function (complex_queries, jiodate) {
   "use strict";
 
-  module('JIODate with custom keys');
+  module('Custom Key Queries with JIODate');
 
   test('Stock comparison operators with year precision', function () {
     var doc_list, docList = function () {

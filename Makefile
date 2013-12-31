@@ -4,6 +4,7 @@ QUERIES_DIR = src/queries
 # files
 JIO         = jio.js
 JIO_MIN     = jio.min.js
+JIODATE_MIN = jiodate.min.js
 COMPLEX     = complex_queries.js
 COMPLEX_MIN = complex_queries.min.js
 PARSER_PAR  = $(QUERIES_DIR)/core/parser.par
@@ -90,6 +91,7 @@ clean:
 realclean:
 	rm -f "$(JIO)"
 	rm -f "$(JIO_MIN)"
+	rm -f "$(JIODATE_MIN)"
 	rm -f "$(COMPLEX)"
 	rm -f "$(COMPLEX_MIN)"
 	rm -f "$(PARSER_OUT)"

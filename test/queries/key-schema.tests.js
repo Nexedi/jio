@@ -15,6 +15,8 @@
 }(['complex_queries', 'qunit'], function (complex_queries) {
   "use strict";
 
+  module('Custom Key Queries with Schema');
+
   var translationEqualityMatcher = function (data) {
     return function (object_value, value) {
       value = data[value];
@@ -86,9 +88,6 @@
   };
   /*jslint unparam: false*/
 
-
-
-  module('Queries with Key Schema');
 
   test('Keys defined in a Schema can be used like metadata', function () {
     var doc_list, docList = function () {
@@ -247,6 +246,7 @@
     ], 'Key Schema: It should be possible to look for a translated string with operator =');
 
 
+// XXX not implemented yet
 //    doc_list = docList();
 //    complex_queries.QueryFactory.create({
 //      type: 'simple',
@@ -258,8 +258,6 @@
 //      {'identifier': '2', 'state': 'closed'}
 //    ], 'Key Schema: It should be possible to look for a translated string with operator !=');
 
-
   });
-
 
 }));
