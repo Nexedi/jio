@@ -145,7 +145,7 @@ property, that behaves like the ``compareFunction`` described in
     ...
     return {
       ...
-      'cmp': function (b) {
+      'cmp': function (b, wildcard_character) {
         if (a < b) {
           return -1;
         }
@@ -161,6 +161,7 @@ property, that behaves like the ``compareFunction`` described in
     cast_to: myType
   ...
 
+``wildcard_character`` is only passed by ``=`` and ``!=`` operators.
 
 If the < or > comparison makes no sense for the objects, the function should return ``undefined``.
 

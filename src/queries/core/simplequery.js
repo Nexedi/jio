@@ -205,7 +205,7 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
       return false;
     }
     if (value.cmp !== undefined) {
-      return value.cmp(comparison_value) === 0;
+      return value.cmp(comparison_value, wildcard_character) === 0;
     }
     if (
       convertStringToRegExp(
@@ -249,7 +249,7 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
       return true;
     }
     if (value.cmp !== undefined) {
-      return value.cmp(comparison_value) !== 0;
+      return value.cmp(comparison_value, wildcard_character) !== 0;
     }
     if (
       convertStringToRegExp(
