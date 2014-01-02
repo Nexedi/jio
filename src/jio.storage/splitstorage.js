@@ -329,9 +329,9 @@
         if (err) {
           err.message = "Unable to " + method + " document";
           delete err.index;
-          return that.error(err);
+          return command.error(err);
         }
-        that.success({"id": doc_underscores._id});
+        command.success({"id": doc_underscores._id});
       });
     };
 
