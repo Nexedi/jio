@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 100, nomen: true, vars: true */
 /*global define, exports, require, module, complex_queries, window, test, ok,
-  deepEqual, sinon */
+  deepEqual, sinon, start, stop, RSVP */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -17,13 +17,16 @@
 
   module('Custom Key Queries with Schema');
 
+  var noop = function () {
+    return; // use with RSVP.all
+  };
+
   var translationEqualityMatcher = function (data) {
     return function (object_value, value) {
       value = data[value];
       return (object_value === value);
     };
   };
-
 
   /*jslint unparam: true*/
   var key_schema = {
@@ -90,29 +93,37 @@
 
 
   test('Keys defined in a Schema can be used like metadata', function () {
-    var doc_list, docList = function () {
+    var docList = function () {
       return [
         {'identifier': 'a'},
         {'identifier': 'A'},
         {'identifier': 'b'}
       ];
-    };
+    }, promise = [];
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'simple',
-      key: 'case_insensitive_identifier',
-      value: 'A'
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list, [
-      {'identifier': 'a'},
-      {'identifier': 'A'}
-    ], 'Key Schema: case_insensitive_identifier');
+    stop();
+
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'simple',
+        key: 'case_insensitive_identifier',
+        value: 'A'
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'identifier': 'a'},
+            {'identifier': 'A'}
+          ], 'Key Schema: case_insensitive_identifier');
+        })
+    );
+
+    RSVP.all(promise).then(noop).always(start);
   });
 
 
   test('Standard date keys', function () {
-    var doc_list, docList = function () {
+    var docList = function () {
       return [
         {'identifier': 'a', 'date': '2013-01-01'},
         {'identifier': 'b', 'date': '2013-02-01'},
@@ -121,54 +132,58 @@
         {'identifier': 'c', 'date': '2013-03-03'},
         {'identifier': 'd', 'date': '2013-04-04'}
       ];
-    };
+    }, promise = [];
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'simple',
-      key: 'date_day',
-      value: '2013-02-02'
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list, [
-      {'identifier': 'bb', 'date': '2013-02-02'}
-    ], 'Key Schema: same_day');
+    stop();
 
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'simple',
+        key: 'date_day',
+        value: '2013-02-02'
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'identifier': 'bb', 'date': '2013-02-02'}
+          ], 'Key Schema: same_day');
+        })
+    );
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'simple',
-      key: 'date_month',
-      value: '2013-02-10'
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list, [
-      {
-        'date': '2013-02-01',
-        'identifier': 'b'
-      },
-      {
-        'date': '2013-02-02',
-        'identifier': 'bb'
-      },
-      {
-        'date': '2013-02-03',
-        'identifier': 'bbb'
-      }
-    ], 'Key Schema: date_month');
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'simple',
+        key: 'date_month',
+        value: '2013-02-10'
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'date': '2013-02-01', 'identifier': 'b'},
+            {'date': '2013-02-02', 'identifier': 'bb'},
+            {'date': '2013-02-03', 'identifier': 'bbb'}
+          ], 'Key Schema: date_month');
+        })
+    );
 
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'simple',
+        key: 'date_year',
+        value: '2013-02-10'
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl.length, 6, 'Key Schema: date_year');
+        })
+    );
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'simple',
-      key: 'date_year',
-      value: '2013-02-10'
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list.length, 6, 'Key Schema: date_year');
-
+    RSVP.all(promise).then(noop).always(start);
   });
 
 
   test('Test key schema + complex queries', function () {
-    var doc_list, docList = function () {
+    var docList = function () {
       return [
         {'identifier': '10', 'number': '10'},
         {'identifier': '19', 'number': '19'},
@@ -189,61 +204,77 @@
           cast_to: 'intType'
         }
       }
-    };
+    }, promise = [];
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'complex',
-      operator: 'OR',
-      query_list: [{
-        type: 'simple',
-        key: 'number',
-        operator: '<',
-        value: '19'
-      }, {
-        type: 'simple',
-        key: 'number',
-        operator: '=',
-        value: '19'
-      }]
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list, [
-      {'identifier': '10', 'number': '10'},
-      {'identifier': '19', 'number': '19'}
-    ], 'Key schema should be propagated from complex to simple queries');
+    stop();
 
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'complex',
+        operator: 'OR',
+        query_list: [{
+          type: 'simple',
+          key: 'number',
+          operator: '<',
+          value: '19'
+        }, {
+          type: 'simple',
+          key: 'number',
+          operator: '=',
+          value: '19'
+        }]
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'identifier': '10', 'number': '10'},
+            {'identifier': '19', 'number': '19'}
+          ], 'Key schema should be propagated from complex to simple queries');
+        })
+    );
+
+    RSVP.all(promise).then(noop).always(start);
   });
 
 
   test('Key Schema with translation lookup', function () {
-    var doc_list, docList = function () {
+    var docList = function () {
       return [
         {'identifier': '1', 'state': 'open'},
         {'identifier': '2', 'state': 'closed'}
       ];
-    };
+    }, promise = [];
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'simple',
-      key: 'translated_state',
-      value: 'ouvert'
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list, [
-      {'identifier': '1', 'state': 'open'}
-    ], 'Key Schema: It should be possible to look for a translated string');
+    stop();
 
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'simple',
+        key: 'translated_state',
+        value: 'ouvert'
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'identifier': '1', 'state': 'open'}
+          ], 'Key Schema: It should be possible to look for a translated string');
+        })
+    );
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'simple',
-      key: 'translated_state',
-      operator: '=',
-      value: 'ouvert'
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list, [
-      {'identifier': '1', 'state': 'open'}
-    ], 'Key Schema: It should be possible to look for a translated string with operator =');
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'simple',
+        key: 'translated_state',
+        operator: '=',
+        value: 'ouvert'
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'identifier': '1', 'state': 'open'}
+          ], 'Key Schema: It should be possible to look for a translated string with operator =');
+        })
+    );
 
 
 // XXX not implemented yet
@@ -258,6 +289,7 @@
 //      {'identifier': '2', 'state': 'closed'}
 //    ], 'Key Schema: It should be possible to look for a translated string with operator !=');
 
+    RSVP.all(promise).then(noop).always(start);
   });
 
 }));

@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 120, nomen: true, vars: true */
 /*global define, exports, require, module, complex_queries, jiodate, window, test, ok,
-  equal, deepEqual, sinon */
+  equal, deepEqual, sinon, start, stop, RSVP */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -17,8 +17,12 @@
 
   module('Custom Key Queries with JIODate');
 
+  var noop = function () {
+    return; // use with RSVP.all
+  };
+
   test('Stock comparison operators with year precision', function () {
-    var doc_list, docList = function () {
+    var docList = function () {
       return [
         {'identifier': 'twenty ten', 'date': '2010-03-04T08:52:13.746Z'},
         {'identifier': 'twenty eleven', 'date': '2011-03-04T08:52:13.746Z'},
@@ -31,75 +35,101 @@
           cast_to: jiodate.JIODate
         }
       }
-    }, query_list = null;
+    }, query_list = [], promise = [];
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'simple',
-      key: 'date',
-      value: '2011'
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list, [
-      {'date': '2011-03-04T08:52:13.746Z', 'identifier': 'twenty eleven'}
-    ], 'Match with "date = 2011" (query tree form)');
+    stop();
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'simple',
-      key: 'date',
-      operator: '!=',
-      value: '2011'
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list, [
-      {'date': '2010-03-04T08:52:13.746Z', 'identifier': 'twenty ten'},
-      {'date': '2012-03-04T08:52:13.746Z', 'identifier': 'twenty twelve'}
-    ], 'Match with "date != 2011" (query tree form)');
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'simple',
+        key: 'date',
+        value: '2011'
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'date': '2011-03-04T08:52:13.746Z', 'identifier': 'twenty eleven'}
+          ], 'Match with "date = 2011" (query tree form)');
+        })
+    );
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'simple',
-      key: 'date',
-      operator: '<',
-      value: '2011'
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list, [
-      {'date': '2010-03-04T08:52:13.746Z', 'identifier': 'twenty ten'}
-    ], 'Match with "date < 2011" (query tree form)');
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'simple',
+        key: 'date',
+        operator: '!=',
+        value: '2011'
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'date': '2010-03-04T08:52:13.746Z', 'identifier': 'twenty ten'},
+            {'date': '2012-03-04T08:52:13.746Z', 'identifier': 'twenty twelve'}
+          ], 'Match with "date != 2011" (query tree form)');
+        })
+    );
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'simple',
-      key: 'date',
-      operator: '<=',
-      value: '2011'
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list, [
-      {'date': '2010-03-04T08:52:13.746Z', 'identifier': 'twenty ten'},
-      {'date': '2011-03-04T08:52:13.746Z', 'identifier': 'twenty eleven'}
-    ], 'Match with "date <= 2011" (query tree form)');
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'simple',
+        key: 'date',
+        operator: '<',
+        value: '2011'
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'date': '2010-03-04T08:52:13.746Z', 'identifier': 'twenty ten'}
+          ], 'Match with "date < 2011" (query tree form)');
+        })
+    );
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'simple',
-      key: 'date',
-      operator: '>',
-      value: '2011'
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list, [
-      {'date': '2012-03-04T08:52:13.746Z', 'identifier': 'twenty twelve'}
-    ], 'Match with "date > 2011" (query tree form)');
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'simple',
+        key: 'date',
+        operator: '<=',
+        value: '2011'
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'date': '2010-03-04T08:52:13.746Z', 'identifier': 'twenty ten'},
+            {'date': '2011-03-04T08:52:13.746Z', 'identifier': 'twenty eleven'}
+          ], 'Match with "date <= 2011" (query tree form)');
+        })
+    );
 
-    doc_list = docList();
-    complex_queries.QueryFactory.create({
-      type: 'simple',
-      key: 'date',
-      operator: '>=',
-      value: '2011'
-    }, key_schema).exec(doc_list);
-    deepEqual(doc_list, [
-      {'date': '2011-03-04T08:52:13.746Z', 'identifier': 'twenty eleven'},
-      {'date': '2012-03-04T08:52:13.746Z', 'identifier': 'twenty twelve'}
-    ], 'Match with "date >= 2011" (query tree form)');
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'simple',
+        key: 'date',
+        operator: '>',
+        value: '2011'
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'date': '2012-03-04T08:52:13.746Z', 'identifier': 'twenty twelve'}
+          ], 'Match with "date > 2011" (query tree form)');
+        })
+    );
+
+    promise.push(
+      complex_queries.QueryFactory.create({
+        type: 'simple',
+        key: 'date',
+        operator: '>=',
+        value: '2011'
+      }, key_schema).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'date': '2011-03-04T08:52:13.746Z', 'identifier': 'twenty eleven'},
+            {'date': '2012-03-04T08:52:13.746Z', 'identifier': 'twenty twelve'}
+          ], 'Match with "date >= 2011" (query tree form)');
+        })
+    );
 
     query_list = [
       [
@@ -119,9 +149,13 @@
 
     query_list.forEach(function (o) {
       var qs = o[0], expected = o[1];
-      doc_list = docList();
-      complex_queries.QueryFactory.create(qs, key_schema).exec(doc_list);
-      deepEqual(doc_list, expected, "Match with '" + qs + "' (parsed query string)");
+      promise.push(
+        complex_queries.QueryFactory.create(qs, key_schema).
+          exec(docList()).
+          then(function (dl) {
+            deepEqual(dl, expected, "Match with '" + qs + "' (parsed query string)");
+          })
+      );
     });
 
     query_list = [
@@ -132,13 +166,17 @@
     ];
 
     query_list.forEach(function (qs) {
-      doc_list = docList();
-      complex_queries.QueryFactory.create(qs, key_schema).exec(doc_list);
-      deepEqual(doc_list, [
-      ], "Match with an invalid parsed string " + qs + " should return empty list but not raise errors");
+      promise.push(
+        complex_queries.QueryFactory.create(qs, key_schema).
+          exec(docList()).
+          then(function (dl) {
+            deepEqual(dl, [
+            ], "Match with an invalid parsed string " + qs + " should return empty list but not raise errors");
+          })
+      );
     });
 
+    RSVP.all(promise).then(noop).always(start);
   });
-
 
 }));

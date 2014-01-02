@@ -21,54 +21,6 @@
 
   local_storage.clear();
 
-  /**
-   * all(promises): Promise
-   *
-   * Produces a promise that is resolved when all the given promises are
-   * fulfilled. The resolved value is an array of each of the answers of the
-   * given promises.
-   *
-   * @param  {Array} promises The promises to use
-   * @return {Promise} A new promise
-   */
-  function all(promises) {
-    var results = [], i, count = 0;
-    function cancel() {
-      var j;
-      for (j = 0; j < promises.length; j += 1) {
-        if (typeof promises[j].cancel === 'function') {
-          promises[j].cancel();
-        }
-      }
-    }
-    return new RSVP.Promise(function (resolve, reject, notify) {
-      /*jslint unparam: true */
-      function succeed(j) {
-        return function (answer) {
-          results[j] = answer;
-          count += 1;
-          if (count !== promises.length) {
-            return;
-          }
-          resolve(results);
-        };
-      }
-      function notified(j) {
-        return function (answer) {
-          notify({
-            "promise": promises[j],
-            "index": j,
-            "notified": answer
-          });
-        };
-      }
-      for (i = 0; i < promises.length; i += 1) {
-        promises[i].then(succeed(i), succeed(i), notified(i));
-      }
-    }, cancel);
-  }
-
-
   var key_schema = {
     cast_lookup: {
       dateType: function (obj) {
@@ -105,7 +57,7 @@
     o.date_b = new Date();
 
     // put some document before listing them
-    all([
+    RSVP.all([
       jio.put({
         "_id": "a",
         "title": "one",
