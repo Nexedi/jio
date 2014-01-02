@@ -363,7 +363,7 @@
    */
   LocalStorage.prototype.removeAttachment = function (command, param) {
     var doc = this._storage.getItem(this._localpath + "/" + param._id);
-    if (typeof doc !== 'object') {
+    if (typeof doc !== 'object' || doc === null) {
       return command.error(
         "not_found",
         "missing document",
@@ -536,7 +536,7 @@
       }
 
       // check document type
-      if (typeof doc !== 'object') {
+      if (typeof doc !== 'object' || doc === null) {
         // wrong document
         if (!repair) {
           return {"error": true, "answers": [
