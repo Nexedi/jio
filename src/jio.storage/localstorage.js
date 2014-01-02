@@ -448,26 +448,27 @@
       }
       complex_queries.QueryFactory.create(options.query || "",
                                           this._key_schema).
-        exec(document_list, options);
-      document_list = document_list.map(function (value) {
-        var o = {
-          "id": value._id,
-          "key": value._id
-        };
-        if (options.include_docs === true) {
-          o.doc = document_object[value._id];
-          delete document_object[value._id];
-        }
-        if (delete_id) {
-          delete value._id;
-        }
-        o.value = value;
-        return o;
-      });
-      command.success({"data": {
-        "total_rows": document_list.length,
-        "rows": document_list
-      }});
+        exec(document_list, options).then(function () {
+          document_list = document_list.map(function (value) {
+            var o = {
+              "id": value._id,
+              "key": value._id
+            };
+            if (options.include_docs === true) {
+              o.doc = document_object[value._id];
+              delete document_object[value._id];
+            }
+            if (delete_id) {
+              delete value._id;
+            }
+            o.value = value;
+            return o;
+          });
+          command.success({"data": {
+            "total_rows": document_list.length,
+            "rows": document_list
+          }});
+        });
     }
   };
 

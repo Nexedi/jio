@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global Query: true, inherits: true, query_class_dict: true, _export: true,
-  convertStringToRegExp: true */
+  convertStringToRegExp, RSVP */
 
 var checkKeySchema = function (key_schema) {
   var prop;
@@ -185,7 +185,7 @@ SimpleQuery.prototype.serialized = function () {
  * @return {Boolean} true if match, false otherwise
  */
 SimpleQuery.prototype["="] = function (object_value, comparison_value,
-                      wildcard_character) {
+                                       wildcard_character) {
   var value, i;
   if (!Array.isArray(object_value)) {
     object_value = [object_value];
@@ -197,15 +197,16 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
     }
     if (comparison_value === undefined) {
       if (value === undefined) {
-        return true;
+        return RSVP.resolve(true);
       }
-      return false;
+      return RSVP.resolve(false);
     }
     if (value === undefined) {
-      return false;
+      return RSVP.resolve(false);
     }
     if (value.cmp !== undefined) {
-      return value.cmp(comparison_value, wildcard_character) === 0;
+      return RSVP.resolve(value.cmp(comparison_value,
+                                    wildcard_character) === 0);
     }
     if (
       convertStringToRegExp(
@@ -213,10 +214,10 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
         wildcard_character
       ).test(value.toString())
     ) {
-      return true;
+      return RSVP.resolve(true);
     }
   }
-  return false;
+  return RSVP.resolve(false);
 };
 
 /**
@@ -229,7 +230,7 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
  * @return {Boolean} true if not match, false otherwise
  */
 SimpleQuery.prototype["!="] = function (object_value, comparison_value,
-                       wildcard_character) {
+                                        wildcard_character) {
   var value, i;
   if (!Array.isArray(object_value)) {
     object_value = [object_value];
@@ -241,15 +242,16 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
     }
     if (comparison_value === undefined) {
       if (value === undefined) {
-        return false;
+        return RSVP.resolve(false);
       }
-      return true;
+      return RSVP.resolve(true);
     }
     if (value === undefined) {
-      return true;
+      return RSVP.resolve(true);
     }
     if (value.cmp !== undefined) {
-      return value.cmp(comparison_value, wildcard_character) !== 0;
+      return RSVP.resolve(value.cmp(comparison_value,
+                                    wildcard_character) !== 0);
     }
     if (
       convertStringToRegExp(
@@ -257,10 +259,10 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
         wildcard_character
       ).test(value.toString())
     ) {
-      return false;
+      return RSVP.resolve(false);
     }
   }
-  return true;
+  return RSVP.resolve(true);
 };
 
 /**
@@ -281,12 +283,12 @@ SimpleQuery.prototype["<"] = function (object_value, comparison_value) {
     value = value.content;
   }
   if (value === undefined || comparison_value === undefined) {
-    return false;
+    return RSVP.resolve(false);
   }
   if (value.cmp !== undefined) {
-    return value.cmp(comparison_value) < 0;
+    return RSVP.resolve(value.cmp(comparison_value) < 0);
   }
-  return value < comparison_value;
+  return RSVP.resolve(value < comparison_value);
 };
 
 /**
@@ -308,12 +310,12 @@ SimpleQuery.prototype["<="] = function (object_value, comparison_value) {
     value = value.content;
   }
   if (value === undefined || comparison_value === undefined) {
-    return false;
+    return RSVP.resolve(false);
   }
   if (value.cmp !== undefined) {
-    return value.cmp(comparison_value) <= 0;
+    return RSVP.resolve(value.cmp(comparison_value) <= 0);
   }
-  return value <= comparison_value;
+  return RSVP.resolve(value <= comparison_value);
 };
 
 /**
@@ -335,12 +337,12 @@ SimpleQuery.prototype[">"] = function (object_value, comparison_value) {
     value = value.content;
   }
   if (value === undefined || comparison_value === undefined) {
-    return false;
+    return RSVP.resolve(false);
   }
   if (value.cmp !== undefined) {
-    return value.cmp(comparison_value) > 0;
+    return RSVP.resolve(value.cmp(comparison_value) > 0);
   }
-  return value > comparison_value;
+  return RSVP.resolve(value > comparison_value);
 };
 
 /**
@@ -362,12 +364,12 @@ SimpleQuery.prototype[">="] = function (object_value, comparison_value) {
     value = value.content;
   }
   if (value === undefined || comparison_value === undefined) {
-    return false;
+    return RSVP.resolve(false);
   }
   if (value.cmp !== undefined) {
-    return value.cmp(comparison_value) >= 0;
+    return RSVP.resolve(value.cmp(comparison_value) >= 0);
   }
-  return value >= comparison_value;
+  return RSVP.resolve(value >= comparison_value);
 };
 
 query_class_dict.simple = SimpleQuery;
