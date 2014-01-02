@@ -5,7 +5,7 @@
  */
 
 /*jslint indent:2, maxlen: 80, nomen: true */
-/*global jIO, define */
+/*global jIO, define, Blob */
 
 /**
  * Provides a split storage for JIO. This storage splits data
@@ -462,17 +462,15 @@
         err,
         response
       ) {
-        var i, doc;
         if (err) {
           err.message = "Unable to get attachment";
           delete err.index;
           return command.error(err);
         }
-        doc = '';
-        for (i = 0; i < response.length; i += 1) {
-          doc += response[i].data;
-        }
-        that.success({"data": doc}); // XXX get mimetype
+
+        command.success({"data": new Blob(response.map(function (answer) {
+          return answer.data;
+        }), {"type": response[0].data.type})});
       });
     };
 
