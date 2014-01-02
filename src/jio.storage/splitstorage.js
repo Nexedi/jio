@@ -368,10 +368,10 @@
       var i, attachment_list = [], data = param._blob;
       for (i = 0; i < priv.storage_list.length; i += 1) {
         attachment_list[i] = jIO.util.deepClone(param);
-        attachment_list[i]._data = data.slice(
-          (data.length / priv.storage_list.length) * i,
-          (data.length / priv.storage_list.length) * (i + 1),
-          "application/octet-stream"
+        attachment_list[i]._blob = data.slice(
+          data.size * i / priv.storage_list.length,
+          data.size * (i + 1) / priv.storage_list.length,
+          data.type
         );
       }
       priv.send(
@@ -447,7 +447,7 @@
             }
           }
         }
-        that.success({"data": doc});
+        command.success({"data": doc});
       });
     };
 
