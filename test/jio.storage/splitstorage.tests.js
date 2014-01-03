@@ -90,12 +90,14 @@
     shared.local_storage_description1 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "post1"
+      "application_name": "post1",
+      "mode": "memory"
     };
     shared.local_storage_description2 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "post2"
+      "application_name": "post2",
+      "mode": "memory"
     };
     jio = jIO.createJIO({
       "type": "split",
@@ -219,12 +221,14 @@
     shared.local_storage_description1 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "putAttachment1"
+      "application_name": "putAttachment1",
+      "mode": "memory"
     };
     shared.local_storage_description2 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "putAttachment2"
+      "application_name": "putAttachment2",
+      "mode": "memory"
     };
     jio = jIO.createJIO({
       "type": "split",
@@ -362,12 +366,14 @@
     shared.local_storage_description1 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "get1"
+      "application_name": "get1",
+      "mode": "memory"
     };
     shared.local_storage_description2 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "get2"
+      "application_name": "get2",
+      "mode": "memory"
     };
     jio = jIO.createJIO({
       "type": "split",
@@ -446,12 +452,14 @@
     shared.local_storage_description1 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "getAttachment1"
+      "application_name": "getAttachment1",
+      "mode": "memory"
     };
     shared.local_storage_description2 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "getAttachment2"
+      "application_name": "getAttachment2",
+      "mode": "memory"
     };
     jio = jIO.createJIO({
       "type": "split",
@@ -535,12 +543,14 @@
     shared.local_storage_description1 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "removeAttachment1"
+      "application_name": "removeAttachment1",
+      "mode": "memory"
     };
     shared.local_storage_description2 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "removeAttachment2"
+      "application_name": "removeAttachment2",
+      "mode": "memory"
     };
     jio = jIO.createJIO({
       "type": "split",
@@ -661,12 +671,14 @@
     shared.local_storage_description1 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "remove1"
+      "application_name": "remove1",
+      "mode": "memory"
     };
     shared.local_storage_description2 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "remove2"
+      "application_name": "remove2",
+      "mode": "memory"
     };
     jio = jIO.createJIO({
       "type": "split",
@@ -765,12 +777,14 @@
     shared.local_storage_description1 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "put1"
+      "application_name": "put1",
+      "mode": "memory"
     };
     shared.local_storage_description2 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "put2"
+      "application_name": "put2",
+      "mode": "memory"
     };
     jio = jIO.createJIO({
       "type": "split",
@@ -843,12 +857,14 @@
     shared.local_storage_description1 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "alldocs1"
+      "application_name": "alldocs1",
+      "mode": "memory"
     };
     shared.local_storage_description2 = {
       "type": "local",
       "username": "splitstorage",
-      "application_name": "alldocs2"
+      "application_name": "alldocs2",
+      "mode": "memory"
     };
     jio = jIO.createJIO({
       "type": "split",
