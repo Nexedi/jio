@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global Query: true, query_class_dict: true, inherits: true,
-         _export: true, QueryFactory: true */
+         _export, QueryFactory, RSVP, sequence */
 
 /**
  * The ComplexQuery inherits from Query, and compares one or several metadata
@@ -56,8 +56,7 @@ ComplexQuery.prototype.toString = function () {
     str_list.push(query.toString());
     str_list.push(this_operator);
   });
-  str_list.pop(); // remove last operator
-  str_list.push(")");
+  str_list[str_list.length - 1] = ")"; // replace last operator
   return str_list.join(" ");
 };
 
@@ -86,13 +85,41 @@ ComplexQuery.prototype.serialized = function () {
  * @return {Boolean} true if all match, false otherwise
  */
 ComplexQuery.prototype.AND = function (item, wildcard_character) {
-  var i;
-  for (i = 0; i < this.query_list.length; i += 1) {
-    if (!this.query_list[i].match(item, wildcard_character)) {
-      return false;
+  var j, promises = [];
+  for (j = 0; j < this.query_list.length; j += 1) {
+    promises.push(this.query_list[j].match(item, wildcard_character));
+  }
+
+  function cancel() {
+    var i;
+    for (i = 0; i < promises.length; i += 1) {
+      if (typeof promises.cancel === 'function') {
+        promises.cancel();
+      }
     }
   }
-  return true;
+
+  return new RSVP.Promise(function (resolve, reject) {
+    var i, count = 0;
+    function resolver(value) {
+      if (!value) {
+        resolve(false);
+      }
+      count += 1;
+      if (count === promises.length) {
+        resolve(true);
+      }
+    }
+
+    function rejecter(err) {
+      reject(err);
+      cancel();
+    }
+
+    for (i = 0; i < promises.length; i += 1) {
+      promises[i].then(resolver, rejecter);
+    }
+  }, cancel);
 };
 
 /**
@@ -105,13 +132,41 @@ ComplexQuery.prototype.AND = function (item, wildcard_character) {
  * @return {Boolean} true if one match, false otherwise
  */
 ComplexQuery.prototype.OR =  function (item, wildcard_character) {
-  var i;
-  for (i = 0; i < this.query_list.length; i += 1) {
-    if (this.query_list[i].match(item, wildcard_character)) {
-      return true;
+  var j, promises = [];
+  for (j = 0; j < this.query_list.length; j += 1) {
+    promises.push(this.query_list[j].match(item, wildcard_character));
+  }
+
+  function cancel() {
+    var i;
+    for (i = 0; i < promises.length; i += 1) {
+      if (typeof promises.cancel === 'function') {
+        promises.cancel();
+      }
     }
   }
-  return false;
+
+  return new RSVP.Promise(function (resolve, reject) {
+    var i, count = 0;
+    function resolver(value) {
+      if (value) {
+        resolve(true);
+      }
+      count += 1;
+      if (count === promises.length) {
+        resolve(false);
+      }
+    }
+
+    function rejecter(err) {
+      reject(err);
+      cancel();
+    }
+
+    for (i = 0; i < promises.length; i += 1) {
+      promises[i].then(resolver, rejecter);
+    }
+  }, cancel);
 };
 
 /**
@@ -124,7 +179,11 @@ ComplexQuery.prototype.OR =  function (item, wildcard_character) {
  * @return {Boolean} true if one match, false otherwise
  */
 ComplexQuery.prototype.NOT = function (item, wildcard_character) {
-  return !this.query_list[0].match(item, wildcard_character);
+  return sequence([function () {
+    return this.query_list[0].match(item, wildcard_character);
+  }, function (answer) {
+    return !answer;
+  }]);
 };
 
 query_class_dict.complex = ComplexQuery;

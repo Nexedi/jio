@@ -719,28 +719,29 @@
         }
       }
       complex_queries.QueryFactory.create(option.query || '').
-        exec(db, option);
-      for (i = 0; i < db.length; i += 1) {
-        id = db[i]._id;
-        if (delete_id) {
-          delete db[i]._id;
-        }
-        if (option.include_docs) {
-          db[i] = {
-            "id": id,
-            "value": db[i],
-            "doc": db[i]["_" + now]
-          };
-          delete db[i].doc["_" + now];
-          delete db[i].value["_" + now];
-        } else {
-          db[i] = {
-            "id": id,
-            "value": db[i]
-          };
-        }
-      }
-      command.success(200, {"data": {"total_rows": db.length, "rows": db}});
+        exec(db, option).then(function () {
+          for (i = 0; i < db.length; i += 1) {
+            id = db[i]._id;
+            if (delete_id) {
+              delete db[i]._id;
+            }
+            if (option.include_docs) {
+              db[i] = {
+                "id": id,
+                "value": db[i],
+                "doc": db[i]["_" + now]
+              };
+              delete db[i].doc["_" + now];
+              delete db[i].value["_" + now];
+            } else {
+              db[i] = {
+                "id": id,
+                "value": db[i]
+              };
+            }
+          }
+          command.success(200, {"data": {"total_rows": db.length, "rows": db}});
+        });
     }, function (err) {
       if (err.status === 404) {
         return command.success(200, {"data": {"total_rows": 0, "rows": []}});

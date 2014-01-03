@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global define, exports, require, module, complex_queries, window, test, ok,
-  deepEqual, sinon */
+  deepEqual, stop, start */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -23,11 +23,14 @@
       {"identifier": "a"},
       {"identifier": ["b", "c"]}
     ];
-    complex_queries.QueryFactory.create('').exec(doc_list);
-    deepEqual(doc_list, [
-      {"identifier": "a"},
-      {"identifier": ["b", "c"]}
-    ], 'Nothing done on the list');
+    stop();
+    complex_queries.QueryFactory.create('').exec(doc_list).
+      then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "a"},
+          {"identifier": ["b", "c"]}
+        ], 'Nothing done on the list');
+      }).always(start);
   });
 
   test('Simple Query', function () {
@@ -35,20 +38,26 @@
       {"identifier": "a"},
       {"identifier": ["b", "c"]}
     ];
-    complex_queries.QueryFactory.create('identifier: "a"').exec(doc_list);
-    deepEqual(doc_list, [
-      {"identifier": "a"}
-    ], 'Document with several identifier should be removed');
+    stop();
+    complex_queries.QueryFactory.create('identifier: "a"').exec(doc_list).
+      then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "a"}
+        ], 'Document with several identifier should be removed');
 
-    doc_list = [
-      {"identifier": "a"},
-      {"identifier": ["a", "b"]}
-    ];
-    complex_queries.QueryFactory.create('identifier: "a"').exec(doc_list);
-    deepEqual(doc_list, [
-      {"identifier": "a"},
-      {"identifier": ["a", "b"]}
-    ], 'Document with several identifier should be kept');
+        doc_list = [
+          {"identifier": "a"},
+          {"identifier": ["a", "b"]}
+        ];
+
+        return complex_queries.QueryFactory.create('identifier: "a"').
+          exec(doc_list);
+      }).then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "a"},
+          {"identifier": ["a", "b"]}
+        ], 'Document with several identifier should be kept');
+      }).always(start);
   });
 
   test('Complex Query', function () {
@@ -56,35 +65,40 @@
       {"identifier": "a"},
       {"identifier": ["b", "c"]}
     ];
+    stop();
     complex_queries.QueryFactory.create(
       'identifier: "b" AND identifier: "c"'
-    ).exec(doc_list);
-    deepEqual(doc_list, [
-      {"identifier": ["b", "c"]}
-    ], 'Document with only one identifier should be removed');
+    ).exec(doc_list).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": ["b", "c"]}
+      ], 'Document with only one identifier should be removed');
 
-    doc_list = [
-      {"identifier": "a"},
-      {"identifier": ["b", "c"]}
-    ];
-    complex_queries.QueryFactory.create(
-      'identifier: "a" OR identifier: "c"'
-    ).exec(doc_list);
-    deepEqual(doc_list, [
-      {"identifier": "a"},
-      {"identifier": ["b", "c"]}
-    ], 'All document matches');
+      doc_list = [
+        {"identifier": "a"},
+        {"identifier": ["b", "c"]}
+      ];
+      return complex_queries.QueryFactory.create(
+        'identifier: "a" OR identifier: "c"'
+      ).exec(doc_list);
+    }).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": "a"},
+        {"identifier": ["b", "c"]}
+      ], 'All document matches');
 
-    doc_list = [
-      {"identifier": "a", "title": "o"},
-      {"identifier": ["b", "c"]}
-    ];
-    complex_queries.QueryFactory.create(
-      '(identifier: "a" OR identifier: "b") AND title: "o"'
-    ).exec(doc_list);
-    deepEqual(doc_list, [
-      {"identifier": "a", "title": "o"}
-    ], 'Only first document should be kept');
+      doc_list = [
+        {"identifier": "a", "title": "o"},
+        {"identifier": ["b", "c"]}
+      ];
+
+      return complex_queries.QueryFactory.create(
+        '(identifier: "a" OR identifier: "b") AND title: "o"'
+      ).exec(doc_list);
+    }).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": "a", "title": "o"}
+      ], 'Only first document should be kept');
+    }).always(start);
   });
 
   test('Wildcard Character', function () {
@@ -93,40 +107,43 @@
       {"identifier": "a%"},
       {"identifier": ["ab", "b"]}
     ];
+    stop();
     complex_queries.QueryFactory.create('identifier: "a%"').exec(doc_list, {
       // "wildcard_character": "%" // default
-    });
-    deepEqual(doc_list, [
-      {"identifier": "a"},
-      {"identifier": "a%"},
-      {"identifier": ["ab", "b"]}
-    ], 'All documents should be kept');
+    }).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": "a"},
+        {"identifier": "a%"},
+        {"identifier": ["ab", "b"]}
+      ], 'All documents should be kept');
 
-    doc_list = [
-      {"identifier": "a"},
-      {"identifier": "a%"},
-      {"identifier": ["ab", "b"]}
-    ];
-    complex_queries.QueryFactory.create('identifier: "a%"').exec(doc_list, {
-      "wildcard_character": null
-    });
-    deepEqual(doc_list, [
-      {"identifier": "a%"}
-    ], 'Document "a%" should be kept');
+      doc_list = [
+        {"identifier": "a"},
+        {"identifier": "a%"},
+        {"identifier": ["ab", "b"]}
+      ];
 
-    doc_list = [
-      {"identifier": "a"},
-      {"identifier": "a%"},
-      {"identifier": ["ab", "b"]}
-    ];
-    complex_queries.QueryFactory.create('identifier: "b"').exec(doc_list, {
-      "wildcard_character": "b"
-    });
-    deepEqual(doc_list, [
-      {"identifier": "a"},
-      {"identifier": "a%"},
-      {"identifier": ["ab", "b"]}
-    ], 'All documents should be kept');
+      return complex_queries.QueryFactory.create('identifier: "a%"').
+        exec(doc_list, {"wildcard_character": null});
+    }).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": "a%"}
+      ], 'Document "a%" should be kept');
+
+      doc_list = [
+        {"identifier": "a"},
+        {"identifier": "a%"},
+        {"identifier": ["ab", "b"]}
+      ];
+      return complex_queries.QueryFactory.create('identifier: "b"').
+        exec(doc_list, {"wildcard_character": "b"});
+    }).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": "a"},
+        {"identifier": "a%"},
+        {"identifier": ["ab", "b"]}
+      ], 'All documents should be kept');
+    }).always(start);
   });
 
   test("Additional Filters", function () {
@@ -135,14 +152,16 @@
       {"identifier": "a", "title": "f"},
       {"identifier": "b", "title": "d"}
     ];
+    stop();
     complex_queries.QueryFactory.create('').exec(doc_list, {
       "select_list": ["title"],
       "limit": [2, 1],
       "sort_on": [["identifier", "ascending"], ["title", "descending"]]
-    });
-    deepEqual(doc_list, [
-      {"title": "d"}
-    ], 'The first document should be kept');
+    }).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"title": "d"}
+      ], 'The first document should be kept');
+    }).always(start);
   });
 
 }));

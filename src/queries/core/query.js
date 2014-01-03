@@ -1,7 +1,7 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global parseStringToObject: true, emptyFunction: true, sortOn: true, limit:
   true, select: true, _export: true, stringEscapeRegexpCharacters: true,
-  deepClone: true */
+  deepClone, RSVP, sequence */
 
 /**
  * The query to use to filter a list of objects.
@@ -64,7 +64,7 @@ function Query() {
  *                 second is the length.
  */
 Query.prototype.exec = function (item_list, option) {
-  var i = 0;
+  var i, promises = [];
   if (!Array.isArray(item_list)) {
     throw new TypeError("Query().exec(): Argument 1 is not of type 'array'");
   }
@@ -78,20 +78,34 @@ Query.prototype.exec = function (item_list, option) {
   if (option.wildcard_character === undefined) {
     option.wildcard_character = '%';
   }
-  while (i < item_list.length) {
-    if (!item_list[i] || !this.match(item_list[i], option.wildcard_character)) {
-      item_list.splice(i, 1);
+  for (i = 0; i < item_list.length; i += 1) {
+    if (!item_list[i]) {
+      promises.push(RSVP.resolve(false));
     } else {
-      i += 1;
+      promises.push(this.match(item_list[i], option.wildcard_character));
     }
   }
-  if (option.sort_on) {
-    sortOn(option.sort_on, item_list);
-  }
-  if (option.limit) {
-    limit(option.limit, item_list);
-  }
-  select(option.select_list || [], item_list);
+  return sequence([function () {
+    return RSVP.all(promises);
+  }, function (answers) {
+    var j;
+    for (j = answers.length - 1; j >= 0; j -= 1) {
+      if (!answers[j]) {
+        item_list.splice(j, 1);
+      }
+    }
+    if (option.sort_on) {
+      return sortOn(option.sort_on, item_list);
+    }
+  }, function () {
+    if (option.limit) {
+      return limit(option.limit, item_list);
+    }
+  }, function () {
+    return select(option.select_list || [], item_list);
+  }, function () {
+    return item_list;
+  }]);
 };
 
 /**
@@ -103,7 +117,7 @@ Query.prototype.exec = function (item_list, option) {
  * @return {Boolean} true if match, false otherwise
  */
 Query.prototype.match = function () {
-  return true;
+  return RSVP.resolve(true);
 };
 
 
@@ -129,24 +143,39 @@ Query.prototype.parse = function (option) {
    * @return {Any} The parser result
    */
   function recParse(object, option) {
-    var i, query = object.parsed;
+    var query = object.parsed;
     if (query.type === "complex") {
-      for (i = 0; i < query.query_list.length; i += 1) {
-        object.parsed = query.query_list[i];
-        recParse(object, option);
-        query.query_list[i] = object.parsed;
-      }
-      object.parsed = query;
-      that.onParseComplexQuery(object, option);
-    } else if (query.type === "simple") {
-      that.onParseSimpleQuery(object, option);
+      return sequence([function () {
+        return sequence(query.query_list.map(function (v, i) {
+          /*jslint unparam: true */
+          return function () {
+            sequence([function () {
+              object.parsed = query.query_list[i];
+              return recParse(object, option);
+            }, function () {
+              query.query_list[i] = object.parsed;
+            }]);
+          };
+        }));
+      }, function () {
+        object.parsed = query;
+        return that.onParseComplexQuery(object, option);
+      }]);
+    }
+    if (query.type === "simple") {
+      return that.onParseSimpleQuery(object, option);
     }
   }
   object = {"parsed": JSON.parse(JSON.stringify(that.serialized()))};
-  that.onParseStart(object, option);
-  recParse(object, option);
-  that.onParseEnd(object, option);
-  return object.parsed;
+  return sequence([function () {
+    return that.onParseStart(object, option);
+  }, function () {
+    return recParse(object, option);
+  }, function () {
+    return that.onParseEnd(object, option);
+  }, function () {
+    return object.parsed;
+  }]);
 };
 
 /**

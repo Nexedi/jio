@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global _export: true */
+/*global _export, RSVP */
 
 /**
  * Escapes regexp special chars from a string.
@@ -287,3 +287,43 @@ function convertStringToRegExp(string, wildcard_character) {
 }
 
 _export('convertStringToRegExp', convertStringToRegExp);
+
+/**
+ * sequence(thens): Promise
+ *
+ * Executes a sequence of *then* callbacks. It acts like
+ * `smth().then(callback).then(callback)...`. The first callback is called with
+ * no parameter.
+ *
+ * Elements of `thens` array can be a function or an array contaning at most
+ * three *then* callbacks: *onFulfilled*, *onRejected*, *onNotified*.
+ *
+ * When `cancel()` is executed, each then promises are cancelled at the same
+ * time.
+ *
+ * @param  {Array} thens An array of *then* callbacks
+ * @return {Promise} A new promise
+ */
+function sequence(thens) {
+  var promises = [];
+  return new RSVP.Promise(function (resolve, reject, notify) {
+    var i;
+    promises[0] = new RSVP.Promise(function (resolve) {
+      resolve();
+    });
+    for (i = 0; i < thens.length; i += 1) {
+      if (Array.isArray(thens[i])) {
+        promises[i + 1] = promises[i].
+          then(thens[i][0], thens[i][1], thens[i][2]);
+      } else {
+        promises[i + 1] = promises[i].then(thens[i]);
+      }
+    }
+    promises[i].then(resolve, reject, notify);
+  }, function () {
+    var i;
+    for (i = 0; i < promises.length; i += 1) {
+      promises[i].cancel();
+    }
+  });
+}
