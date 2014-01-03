@@ -19,8 +19,8 @@
     return module(exports);
   }
   window.complex_queries = {};
-  module(window.complex_queries);
-}(['exports'], function (to_export) {
+  module(window.complex_queries, RSVP);
+}(['exports', 'rsvp'], function (to_export, RSVP) {
   "use strict";
 
   /**
