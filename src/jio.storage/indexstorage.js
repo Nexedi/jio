@@ -198,6 +198,24 @@
     that._database = spec.database || [];
 
     /**
+     * True if it has been modified
+     *
+     * @property modified
+     * @type Boolean
+     * @default false
+     */
+    that.modified = false;
+
+    /**
+     * Updates the modified date
+     *
+     * @method touch
+     */
+    that.touch = function () {
+      that.modified = true;
+    };
+
+    /**
      * Adds a metadata object in the database, replace if already exist
      *
      * @method put
@@ -232,10 +250,11 @@
           that._database.push(needed_meta);
           that._location[meta._id] = that._database.length - 1;
         }
+        that.modified = true;
         return true;
       }
       if (typeof that._location[meta._id] === "number") {
-        that.remove(meta);
+        return that.remove(meta);
       }
       return false;
     };
@@ -245,6 +264,7 @@
      *
      * @method remove
      * @param  {Object} meta The metadata to remove
+     * @return {Boolean} true if removed else false
      */
     that.remove = function (meta) {
       if (typeof meta._id !== "string") {
@@ -252,11 +272,13 @@
       }
       if (typeof that._location[meta._id] !== "number") {
         // throw new ReferenceError("Not Found");
-        return;
+        return false;
       }
       that._database[that._location[meta._id]] = null;
       that._free.push(that._location[meta._id]);
       delete that._location[meta._id];
+      that.modified = true;
+      return true;
     };
 
     /**
@@ -354,6 +376,8 @@
           that._database.splice(i, 1);
         }
       }
+      that.modified = true;
+      return true;
     };
 
     /**
@@ -454,11 +478,13 @@
   IndexStorage.prototype.getIndexDatabase = function (command, index) {
     index = this._indices[index];
     function makeNewIndex() {
-      return new JSONIndex({
+      var json_index =  new JSONIndex({
         "_id": index.id,
         "_attachment": index.attachment || "body",
         "indexing": index.index
       });
+      json_index.touch();
+      return json_index;
     }
     return command.storage(
       index.sub_storage || this._sub_storage
@@ -497,6 +523,9 @@
   IndexStorage.prototype.storeIndexDatabase = function (command, database,
                                                         index) {
     var that = this;
+    if (!database.modified) {
+      return RSVP.resolve({"result": "success"});
+    }
     index = this._indices[index];
     function putAttachment() {
       return command.storage(
