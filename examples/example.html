@@ -17,6 +17,7 @@ var log = function (o) {
   <div id="log">
   </div>
   <script src="../src/sha256.amd.js"></script>
+  <script src="../lib/rsvp/rsvp-custom.js"></script>
   <script src="../jio.js"></script>
   <script src="../complex_queries.js"></script>
   <script src="../src/jio.storage/localstorage.js"></script>
@@ -34,6 +35,11 @@ jio_instance = jIO.createJIO({
 });
 
 // Careful! These are asynchronous methods!
+// And they use promises with a custom version of RSVP.js
+// For more information, see
+// RSVP         https://github.com/tildeio/rsvp.js#rsvpjs--
+// Promises A+  http://promisesaplus.com/
+// CommonJS     http://wiki.commonjs.org/wiki/Promises
 log('-> post "video" document metadata to localStorage');
 
 jio_instance.post({
@@ -86,11 +92,11 @@ jio_instance.post({
 
   }).then(function (response) {
 
-    return jIO.util.blobAsBinaryString(response.data);
+    return jIO.util.readBlobAsBinaryString(response.data);
 
-  }).then(function (binary_string) {
+  }).then(function (event) {
 
-    log('Video content is: ' + binary_string);
+    log('Video content is: ' + event.target.result);
     log('-> remove "video" document from localStorage');
 
     return jio_instance.remove({"_id":'video'});

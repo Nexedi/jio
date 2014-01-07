@@ -20,7 +20,7 @@
   }
   window.complex_queries = {};
   module(window.complex_queries, RSVP);
-}(['exports'], function (to_export, RSVP) {
+}(['exports', 'rsvp'], function (to_export, RSVP) {
   "use strict";
 
   /**

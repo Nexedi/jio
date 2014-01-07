@@ -5,7 +5,7 @@
  */
 
 /*jslint indent:2, maxlen: 80, nomen: true */
-/*global jIO, define */
+/*global jIO, define, Blob */
 
 /**
  * Provides a split storage for JIO. This storage splits data
@@ -329,9 +329,9 @@
         if (err) {
           err.message = "Unable to " + method + " document";
           delete err.index;
-          return that.error(err);
+          return command.error(err);
         }
-        that.success({"id": doc_underscores._id});
+        command.success({"id": doc_underscores._id});
       });
     };
 
@@ -368,10 +368,10 @@
       var i, attachment_list = [], data = param._blob;
       for (i = 0; i < priv.storage_list.length; i += 1) {
         attachment_list[i] = jIO.util.deepClone(param);
-        attachment_list[i]._data = data.slice(
-          (data.length / priv.storage_list.length) * i,
-          (data.length / priv.storage_list.length) * (i + 1),
-          "application/octet-stream"
+        attachment_list[i]._blob = data.slice(
+          data.size * i / priv.storage_list.length,
+          data.size * (i + 1) / priv.storage_list.length,
+          data.type
         );
       }
       priv.send(
@@ -447,7 +447,7 @@
             }
           }
         }
-        that.success({"data": doc});
+        command.success({"data": doc});
       });
     };
 
@@ -462,17 +462,15 @@
         err,
         response
       ) {
-        var i, doc;
         if (err) {
           err.message = "Unable to get attachment";
           delete err.index;
           return command.error(err);
         }
-        doc = '';
-        for (i = 0; i < response.length; i += 1) {
-          doc += response[i].data;
-        }
-        that.success({"data": doc}); // XXX get mimetype
+
+        command.success({"data": new Blob(response.map(function (answer) {
+          return answer.data;
+        }), {"type": response[0].data.type})});
       });
     };
 

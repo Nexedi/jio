@@ -263,6 +263,43 @@
       (/\bPhantomJS\b/i).test(navigator.userAgent)) {
     window.Blob = Blob;
     window.FileReader = FileReader;
+    //console.warn("Blob and FileReader have been replaced!");
+  }
+
+  if (!Function.prototype.bind) {
+    //////////////////////////////////////////////////////////////////////
+    // https://github.com/TristanCavelier/notesntools/blob/master/javascript/\
+    // bind.js
+    /**
+     * Creates a new function that, when called, has its `this` keyword set to
+     * the provided value, with a given sequence of arguments preceding any
+     * provided when the new function is called. See Mozilla Developer Network:
+     * Function.prototype.bind
+     *
+     * In PhantomJS, their is a bug with `Function.prototype.bind`. You can
+     * reproduce this bug by testing this code:
+     *
+     *     function a(str) { console.log(this, str); }
+     *     var b = a.bind({"a": "b"}, "test");
+     *     b();
+     *
+     * @param {Object} thisArg The value to be passed as the `this` parameter to
+     *   the target function when the bound function is called. The value is
+     *   ignored if the bound function is constructed using the `new` operator.
+     *
+     * @param {Any} [arg]* Arguments to prepend to arguments provided to the
+     *   bound function when invoking the target function.
+     *
+     * @return {Function} The bound function.
+     */
+    Function.prototype.bind = function (thisArg) {
+      var fun = this, args = [].slice.call(arguments, 1);
+      return function () {
+        args.push.apply(args, arguments);
+        return fun.apply(thisArg, args);
+      };
+    };
+    //console.warn("Function.prototype.bind has been replaced!");
   }
 
 }());
