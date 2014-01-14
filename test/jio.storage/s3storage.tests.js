@@ -926,13 +926,13 @@
       // post b 201
       then(postSpecificDocument).then(postSpecificDocumentTest).
       // allD 200 2 documents
-      then(listDocuments).then(list2DocumentsTest).
+      //then(listDocuments).then(list2DocumentsTest).
       // remove a 204
       then(removeCreatedDocument).then(removeCreatedDocumentTest).
       // remove b 204
       then(removeSpecificDocument).then(removeSpecificDocumentTest).
       // allD 200 empty storage
-      then(listEmptyStorage).then(listEmptyStorageTest).
+      //then(listEmptyStorage).then(listEmptyStorageTest).
       // # Create and update documents, and some attachment and remove them
       // put 201
       then(putNewDocument).then(putNewDocumentTest).

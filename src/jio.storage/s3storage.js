@@ -295,6 +295,12 @@
       jio,
       isAttachment,
       callback) {
+      console.log(command)
+      console.log(obj)
+      console.log(http)
+      console.log(jio)
+      console.log(isAttachment)
+      console.log(callback)
       obj.onreadystatechange = function () {
         var response, err = '';
         if (obj.readyState === 4) {
@@ -527,9 +533,6 @@
       doc = metadata;
       doc_id = doc._id;
 
-      console.log(doc);
-      console.log(doc_id);
-
       function postDocument() {
         var http_response, fd, Signature, xhr;
         doc_id = priv.secureName(priv.idsToFileName(doc_id));
@@ -581,6 +584,7 @@
           if (response === '404') {
             postDocument();
           } else {
+            console.log('ERROR!');
           //si ce n'est pas une 404,
           //alors on renvoit une erreur 405
             return command.error(
@@ -964,46 +968,50 @@
 
         i = resultTable.length - 1;
 
-        if (command.getOption("include_docs") === true) {
 
-          for (i; i >= 0; i -= 1) {
-            keyId = resultTable[i];
-            Signature = that.encodeAuthorization(keyId);
-            callURL = 'http://' + priv.server + '.s3.amazonaws.com/' + keyId;
-            requestUTC = new Date().toUTCString();
-            parse = true;
 
-            allDocResponse.rows[i] = {
-              "id": priv.fileNameToIds(keyId).join(),
-              "key": keyId,
-              "value": {}
-            };
-            checkCounter = i;
 
-            $.ajax({
-              contentType : '',
-              crossdomain : true,
-              url : callURL,
-              type : 'GET',
-              headers : {
-                'Authorization' : "AWS"
-                  + " "
-                  + priv.AWSIdentifier
-                  + ":"
-                  + Signature,
-                'x-amz-date' : requestUTC,
-                'Content-Type' : 'application/json'
-                //'Content-MD5' : ''
-                //'Content-Length' : ,
-                //'Expect' : ,
-                //'x-amz-security-token' : ,
-              },
-              success : dealCallback(i, countB, allDocResponse),
-              error : errCallback(command.error)
-            });
-            countB += 1;
-          }
-        } else {
+        // if (command.getOption("include_docs") === true) {
+
+        //   for (i; i >= 0; i -= 1) {
+        //     keyId = resultTable[i];
+        //     Signature = that.encodeAuthorization(keyId);
+        //     callURL = 'http://' + priv.server + '.s3.amazonaws.com/' + keyId;
+        //     requestUTC = new Date().toUTCString();
+        //     parse = true;
+
+        //     allDocResponse.rows[i] = {
+        //       "id": priv.fileNameToIds(keyId).join(),
+        //       "key": keyId,
+        //       "value": {}
+        //     };
+        //     checkCounter = i;
+
+        //     $.ajax({
+        //       contentType : '',
+        //       crossdomain : true,
+        //       url : callURL,
+        //       type : 'GET',
+        //       headers : {
+        //         'Authorization' : "AWS"
+        //           + " "
+        //           + priv.AWSIdentifier
+        //           + ":"
+        //           + Signature,
+        //         'x-amz-date' : requestUTC,
+        //         'Content-Type' : 'application/json'
+        //         //'Content-MD5' : ''
+        //         //'Content-Length' : ,
+        //         //'Expect' : ,
+        //         //'x-amz-security-token' : ,
+        //       },
+        //       success : dealCallback(i, countB, allDocResponse),
+        //       error : errCallback(command.error)
+        //     });
+        //     countB += 1;
+        //   }
+        // } 
+        //else {
           for (i; i >= 0; i -= 1) {
             keyId = resultTable[i];
             allDocResponse.rows[i] = {
@@ -1013,7 +1021,7 @@
             };
           }
           command.success(allDocResponse);
-        }
+        //}
       }
 
       function getXML() {
