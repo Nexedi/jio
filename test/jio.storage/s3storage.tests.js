@@ -9,7 +9,6 @@
   if (typeof s3storage_spec === 'object') {
     use_fake_server = false;
     spec = s3storage_spec;
-    console.log(spec);
   } else {
     spec = dav_storage.createDescription(
       "http://localhost",
@@ -121,92 +120,10 @@
     }
 
     function listDocuments() {
+      //quelle utilité à pousser le xml ?
       responses.push([
-        207,
-        {"Content-Type": "text/xml"},
-        '<?xml version="1.0" encoding="utf-8"?>' +
-          '<D:multistatus xmlns:D="DAV:">' +
-          '<D:response xmlns:lp2="http://apache.' +
-          'org/dav/props/" xmlns:lp1="DAV:">' +
-          '<D:href>/uploads/</D:href>' +
-          '<D:propstat>' +
-          '<D:prop>' +
-          '<lp1:resourcetype><D:collection/></lp1:resourcetype>' +
-          '<lp1:creationdate>2013-09-19T11:54:43Z</lp1:creationdate>' +
-          '<lp1:getlastmodified>Thu, 19 Sep 2013 11:54:43 GMT' +
-          '</lp1:getlastmodified>' +
-          '<lp1:getetag>"240be-1000-4e6bb383e5fbb"</lp1:getetag>' +
-          '<D:supportedlock>' +
-          '<D:lockentry>' +
-          '<D:lockscope><D:exclusive/></D:lockscope>' +
-          '<D:locktype><D:write/></D:locktype>' +
-          '</D:lockentry>' +
-          '<D:lockentry>' +
-          '<D:lockscope><D:shared/></D:lockscope>' +
-          '<D:locktype><D:write/></D:locktype>' +
-          '</D:lockentry>' +
-          '</D:supportedlock>' +
-          '<D:lockdiscovery/>' +
-          '<D:getcontenttype>httpd/unix-directory</D:getcontenttype>' +
-          '</D:prop>' +
-          '<D:status>HTTP/1.1 200 OK</D:status>' +
-          '</D:propstat>' +
-          '</D:response>' +
-          '<D:response xmlns:lp2="http://apache.org/dav/props/" ' +
-          'xmlns:lp1="DAV:">' +
-          '<D:href>/uploads/' + shared.created_document_id + '</D:href>' +
-          '<D:propstat>' +
-          '<D:prop>' +
-          '<lp1:resourcetype/>' +
-          '<lp1:creationdate>2013-09-19T11:54:43Z</lp1:creationdate>' +
-          '<lp1:getcontentlength>66</lp1:getcontentlength>' +
-          '<lp1:getlastmodified>Thu, 19 Sep 2013 11:54:43 GMT' +
-          '</lp1:getlastmodified>' +
-          '<lp1:getetag>"20529-42-4e6bb383d0d30"</lp1:getetag>' +
-          '<lp2:executable>F</lp2:executable>' +
-          '<D:supportedlock>' +
-          '<D:lockentry>' +
-          '<D:lockscope><D:exclusive/></D:lockscope>' +
-          '<D:locktype><D:write/></D:locktype>' +
-          '</D:lockentry>' +
-          '<D:lockentry>' +
-          '<D:lockscope><D:shared/></D:lockscope>' +
-          '<D:locktype><D:write/></D:locktype>' +
-          '</D:lockentry>' +
-          '</D:supportedlock>' +
-          '<D:lockdiscovery/>' +
-          '</D:prop>' +
-          '<D:status>HTTP/1.1 200 OK</D:status>' +
-          '</D:propstat>' +
-          '</D:response>' +
-          '<D:response xmlns:lp2="http://apache.org/dav/props/" ' +
-          'xmlns:lp1="DAV:">' +
-          '<D:href>/uploads/b</D:href>' +
-          '<D:propstat>' +
-          '<D:prop>' +
-          '<lp1:resourcetype/>' +
-          '<lp1:creationdate>2013-09-19T11:54:43Z</lp1:creationdate>' +
-          '<lp1:getcontentlength>25</lp1:getcontentlength>' +
-          '<lp1:getlastmodified>Thu, 19 Sep 2013 11:54:43 GMT' +
-          '</lp1:getlastmodified>' +
-          '<lp1:getetag>"20da3-19-4e6bb383e5fbb"</lp1:getetag>' +
-          '<lp2:executable>F</lp2:executable>' +
-          '<D:supportedlock>' +
-          '<D:lockentry>' +
-          '<D:lockscope><D:exclusive/></D:lockscope>' +
-          '<D:locktype><D:write/></D:locktype>' +
-          '</D:lockentry>' +
-          '<D:lockentry>' +
-          '<D:lockscope><D:shared/></D:lockscope>' +
-          '<D:locktype><D:write/></D:locktype>' +
-          '</D:lockentry>' +
-          '</D:supportedlock>' +
-          '<D:lockdiscovery/>' +
-          '</D:prop>' +
-          '<D:status>HTTP/1.1 200 OK</D:status>' +
-          '</D:propstat>' +
-          '</D:response>' +
-          '</D:multistatus>'
+        200,
+        {"Content-Type": "text/xml"},''
       ]); // PROPFIND
       return jio.allDocs();
     }
@@ -279,7 +196,7 @@
 
     function listEmptyStorage() {
       responses.push([
-        207,
+        200,
         {"Content-Type": "text/xml"},
         '<?xml version="1.0" encoding="utf-8"?>' +
           '<D:multistatus xmlns:D="DAV:">' +
@@ -925,14 +842,16 @@
       then(getCreatedDocument).then(getCreatedDocumentTest).
       // post b 201
       then(postSpecificDocument).then(postSpecificDocumentTest).
+      //postSpecificDocument().then(postSpecificDocumentTest).
       // allD 200 2 documents
-      //then(listDocuments).then(list2DocumentsTest).
+      then(listDocuments).then(list2DocumentsTest).
+      //listDocuments().then(list2DocumentsTest).
       // remove a 204
       then(removeCreatedDocument).then(removeCreatedDocumentTest).
       // remove b 204
       then(removeSpecificDocument).then(removeSpecificDocumentTest).
       // allD 200 empty storage
-      //then(listEmptyStorage).then(listEmptyStorageTest).
+      then(listEmptyStorage).then(listEmptyStorageTest).
       // # Create and update documents, and some attachment and remove them
       // put 201
       then(putNewDocument).then(putNewDocumentTest).

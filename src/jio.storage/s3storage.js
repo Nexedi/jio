@@ -295,12 +295,6 @@
       jio,
       isAttachment,
       callback) {
-      console.log(command)
-      console.log(obj)
-      console.log(http)
-      console.log(jio)
-      console.log(isAttachment)
-      console.log(callback)
       obj.onreadystatechange = function () {
         var response, err = '';
         if (obj.readyState === 4) {
@@ -584,7 +578,6 @@
           if (response === '404') {
             postDocument();
           } else {
-            console.log('ERROR!');
           //si ce n'est pas une 404,
           //alors on renvoit une erreur 405
             return command.error(
@@ -933,7 +926,6 @@
         allDocResponse = {
           // document content will be added to response
           "total_rows": resultTable.length,
-          "offset": 0,
           "rows": []
         };
 
@@ -1016,11 +1008,32 @@
             keyId = resultTable[i];
             allDocResponse.rows[i] = {
               "id": priv.fileNameToIds(keyId).join(),
-              "key": keyId,
               "value": {}
             };
           }
+
+
+      //     allDocResponse = {
+      //   "data": {
+      //     "total_rows": 2,
+      //     "rows": [{
+      //       "id": "lol",
+      //       "value": {}
+      //     }, {
+      //       "id": "b",
+      //       "value": {}
+      //     }]
+      //   },
+      //   "method": "allDocs",
+      //   "result": "success",
+      //   "status": 200,
+      //   "statusText": "Ok"
+      // };
+
+
+      allDocResponse = {"data":allDocResponse};
           command.success(allDocResponse);
+
         //}
       }
 
@@ -1033,7 +1046,6 @@
           }
           );
       }
-
       getXML();
       //fin alldocs
     };
