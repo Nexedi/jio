@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global module, test, stop, start, expect, ok, deepEqual, location, sinon,
-  davstorage_spec, RSVP, jIO, test_util, dav_storage, btoa */
+  davstorage_spec, RSVP, jIO, test_util, dav_storage, btoa, s3storage_spec */
 
 (function () {
   "use strict";
@@ -9,11 +9,6 @@
   if (typeof s3storage_spec === 'object') {
     use_fake_server = false;
     spec = s3storage_spec;
-  } else {
-    spec = dav_storage.createDescription(
-      "http://localhost",
-      "none"
-    );
   }
 
   module("S3 Storage");
@@ -198,35 +193,7 @@
       responses.push([
         200,
         {"Content-Type": "text/xml"},
-        '<?xml version="1.0" encoding="utf-8"?>' +
-          '<D:multistatus xmlns:D="DAV:">' +
-          '<D:response xmlns:lp2="http://apache.org/dav/props/" ' +
-          'xmlns:lp1="DAV:">' +
-          '<D:href>/uploads/</D:href>' +
-          '<D:propstat>' +
-          '<D:prop>' +
-          '<lp1:resourcetype><D:collection/></lp1:resourcetype>' +
-          '<lp1:creationdate>2013-09-19T11:54:43Z</lp1:creationdate>' +
-          '<lp1:getlastmodified>Thu, 19 Sep 2013 11:54:43 GMT' +
-          '</lp1:getlastmodified>' +
-          '<lp1:getetag>"240be-1000-4e6bb3840a9ac"</lp1:getetag>' +
-          '<D:supportedlock>' +
-          '<D:lockentry>' +
-          '<D:lockscope><D:exclusive/></D:lockscope>' +
-          '<D:locktype><D:write/></D:locktype>' +
-          '</D:lockentry>' +
-          '<D:lockentry>' +
-          '<D:lockscope><D:shared/></D:lockscope>' +
-          '<D:locktype><D:write/></D:locktype>' +
-          '</D:lockentry>' +
-          '</D:supportedlock>' +
-          '<D:lockdiscovery/>' +
-          '<D:getcontenttype>httpd/unix-directory</D:getcontenttype>' +
-          '</D:prop>' +
-          '<D:status>HTTP/1.1 200 OK</D:status>' +
-          '</D:propstat>' +
-          '</D:response>' +
-          '</D:multistatus>'
+        ''
       ]); // PROPFIND
       return jio.allDocs();
     }
@@ -898,5 +865,8 @@
       always(server.restore.bind(server));
 
   });
+
+  module("SplitStorage + S3 Storage");
+
 
 }());

@@ -98,6 +98,8 @@ JobQueue.prototype.repair = function () {
  * @return {Number} The generated id
  */
 JobQueue.prototype.post = function (job) {
+  console.log('jio core');
+  console.log(job);
   var i, next = 1;
   // get next id
   for (i = 0; i < this._array.length; i += 1) {

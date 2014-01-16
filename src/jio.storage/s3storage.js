@@ -604,7 +604,7 @@
       that.XHRwrapper(command, docId, '', 'GET', mime, '', isJIO, false);
     };
 
-    that.getAttachment = function (command,param,option) {      
+    that.getAttachment = function (command,param,option) {
       var docId, attachId, isJIO, mime;
 
       function getTheAttachment(){
@@ -848,7 +848,8 @@
 
       function putDocument() {
         var data, doc;
-        data = JSON.parse(my_document);
+        //data = JSON.parse(my_document);
+        data = my_document;
         doc = priv.updateMeta(data, docId, attachId, "remove", '');
         that.XHRwrapper(command, docId, '', 'PUT', mime, doc,
           false, false, function (reponse) {
@@ -860,18 +861,35 @@
       function getDocument() {
         that.XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
           function (response) {
-            my_document = response;
-            if (JSON.parse(my_document)._attachments[attachId] !== undefined){
-              putDocument();
-            } else {
+            if (response == '404'){
               return command.error(
-                      404,
-                      "missing attachment",
-                      "This Attachment does not exist"
-                    );
+                404,
+                "missing document",
+                "This Document does not exist"
+              );
+            } else {
+              my_document = JSON.parse(response);
+              if (my_document._attachments == undefined){
+                return command.error(
+                  404,
+                  "missing attachment",
+                  "This Document has no attachments"
+                );
+              }
+              else {
+                if (my_document._attachments[attachId] !== undefined){
+                  putDocument();
+                } else {
+                  return command.error(
+                    404,
+                    "missing attachment",
+                    "This Attachment does not exist"
+                  );
+                }
+              }
             }
           }
-          );
+        );
       }
       getDocument();
     };
@@ -882,7 +900,7 @@
      * @param  {object} command The JIO command
     **/
 
-    that.allDocs = function (command) {
+    that.allDocs = function (command, param, options) {
       var my_document, mime;
       my_document = null;
       mime = 'text/plain; charset=UTF-8';
@@ -946,11 +964,6 @@
 
         errCallback = function (err) {
           if (err.status === 404) {
-            //status
-            //statustext "Not Found"
-            //error
-            //reason "reason"
-            //message "did not work"
             err.error = "not_found";
             command.error(err);
           } else {
@@ -960,81 +973,60 @@
 
         i = resultTable.length - 1;
 
-
-
-
+        ///* JONR : what is the replacement for command.getOption ? */
         // if (command.getOption("include_docs") === true) {
-
-        //   for (i; i >= 0; i -= 1) {
-        //     keyId = resultTable[i];
-        //     Signature = that.encodeAuthorization(keyId);
-        //     callURL = 'http://' + priv.server + '.s3.amazonaws.com/' + keyId;
-        //     requestUTC = new Date().toUTCString();
-        //     parse = true;
-
-        //     allDocResponse.rows[i] = {
-        //       "id": priv.fileNameToIds(keyId).join(),
-        //       "key": keyId,
-        //       "value": {}
-        //     };
-        //     checkCounter = i;
-
-        //     $.ajax({
-        //       contentType : '',
-        //       crossdomain : true,
-        //       url : callURL,
-        //       type : 'GET',
-        //       headers : {
-        //         'Authorization' : "AWS"
-        //           + " "
-        //           + priv.AWSIdentifier
-        //           + ":"
-        //           + Signature,
-        //         'x-amz-date' : requestUTC,
-        //         'Content-Type' : 'application/json'
-        //         //'Content-MD5' : ''
-        //         //'Content-Length' : ,
-        //         //'Expect' : ,
-        //         //'x-amz-security-token' : ,
-        //       },
-        //       success : dealCallback(i, countB, allDocResponse),
-        //       error : errCallback(command.error)
-        //     });
-        //     countB += 1;
-        //   }
-        // } 
-        //else {
+        ///*TRISTANC : 
+        //allDocs = function (command, param, options) {
+        //if (options.include_docs) {   
+        if (options.include_docs) { 
+           for (i; i >= 0; i -= 1) {
+             keyId = resultTable[i];
+             Signature = that.encodeAuthorization(keyId);
+             callURL = 'http://' + priv.server + '.s3.amazonaws.com/' + keyId;
+             requestUTC = new Date().toUTCString();
+             parse = true;
+            allDocResponse.rows[i] = {
+               "id": priv.fileNameToIds(keyId).join(),
+               "key": keyId,
+               "value": {}
+             };
+             checkCounter = i;
+            $.ajax({
+               contentType : '',
+               crossdomain : true,
+               url : callURL,
+               type : 'GET',
+               headers : {
+                 'Authorization' : "AWS"
+                   + " "
+                   + priv.AWSIdentifier
+                   + ":"
+                   + Signature,
+                 'x-amz-date' : requestUTC,
+                 'Content-Type' : 'application/json'
+                 //'Content-MD5' : ''
+                 //'Content-Length' : ,
+                 //'Expect' : ,
+                 //'x-amz-security-token' : ,
+               },
+               success : dealCallback(i, countB, allDocResponse),
+               error : errCallback(command.error)
+             });
+             countB += 1;
+           }
+         } 
+        else {
           for (i; i >= 0; i -= 1) {
             keyId = resultTable[i];
             allDocResponse.rows[i] = {
               "id": priv.fileNameToIds(keyId).join(),
+              "key": priv.fileNameToIds(keyId).join(),
               "value": {}
             };
           }
-
-
-      //     allDocResponse = {
-      //   "data": {
-      //     "total_rows": 2,
-      //     "rows": [{
-      //       "id": "lol",
-      //       "value": {}
-      //     }, {
-      //       "id": "b",
-      //       "value": {}
-      //     }]
-      //   },
-      //   "method": "allDocs",
-      //   "result": "success",
-      //   "status": 200,
-      //   "statusText": "Ok"
-      // };
-
-
-      allDocResponse = {"data":allDocResponse};
+          allDocResponse = {"data":allDocResponse};
           command.success(allDocResponse);
-
-        //}
+        }
       }
 
       function getXML() {
