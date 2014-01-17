@@ -23,7 +23,15 @@
   'jio'
 ], function (jIO) {
   "use strict";
-  var b64_hmac_sha1 = function (secret_key, message) {
+
+  function urlsafe_base64_encode(string) {
+    return string
+      .replace(/\+/g, '-') // Convert '+' to '-'
+      .replace(/\//g, '_'); // Convert '/' to '_'
+//     .replace(/=+$/, ''); // Remove ending '='
+  }
+
+  function b64_hmac_sha1(secret_key, message) {
     // https://parse.com/questions/hmac-sha1-byte-order
 
     // Not sure why we have to do this, but we need to swap
@@ -44,13 +52,10 @@
     // Make string from our array of bytes that we just ordered.
     encodedString = String.fromCharCode.apply(null, encodedArray);
 
-    return btoa(encodedString)
-      .replace(/\+/g, '-') // Convert '+' to '-'
-      .replace(/\//g, '_'); // Convert '/' to '_'
-//       .replace(/=+$/, ''); // Remove ending '='
-  },
-    UPLOAD_URL = "http://up.qiniu.com/",
-//     DEADLINE = 1451491200;
+    return urlsafe_base64_encode(btoa(encodedString));
+  }
+
+  var UPLOAD_URL = "http://up.qiniu.com/",
     DEADLINE = 2451491200;
 
   /**
@@ -116,16 +121,6 @@
       "type": "POST",
       "url": UPLOAD_URL,
       "data": data
-//     }).then(function (doc) {
-//       if (doc !== null) {
-//         command.success({"data": doc});
-//       } else {
-//         command.error(
-//           "not_found",
-//           "missing",
-//           "Cannot find document"
-//         );
-//       }
     });
 
   };
@@ -157,7 +152,7 @@
           "Cannot find document"
         );
       }
-    }, function (event) {
+    }).fail(function (event) {
       command.error(
         event.target.status,
         event.target.statusText,
@@ -188,7 +183,7 @@
           "Cannot find document"
         );
       }
-    }, function (event) {
+    }).fail(function (event) {
       command.error(
         event.target.status,
         event.target.statusText,
@@ -199,6 +194,7 @@
 
   QiniuStorage.prototype._get = function (key) {
     var download_url = 'http://' + this._bucket + '.u.qiniudn.com/' + key
+//     var download_url = 'http://' + this._bucket + '.dn.qbox.me/' + key
         + '?e=' + DEADLINE,
       token = b64_hmac_sha1(this._secret_key, download_url);
 
@@ -226,7 +222,7 @@
             "Cannot find document"
           );
         }
-      }, function (event) {
+      }).fail(function (event) {
         command.error(
           event.target.status,
           event.target.statusText,
@@ -256,7 +252,7 @@
             "Cannot find document"
           );
         }
-      }, function (event) {
+      }).fail(function (event) {
         command.error(
           event.target.status,
           event.target.statusText,
@@ -288,11 +284,86 @@
           "Cannot find document"
         );
       }
-    }, function (event) {
+    }).fail(function (event) {
       command.error(
         event.target.status,
         event.target.statusText,
         "Unable to put attachment"
+      );
+    });
+  };
+
+  /**
+   * Remove a document
+   *
+   * @method remove
+   * @param  {Object} command The JIO command
+   * @param  {Object} param The given parameters
+   */
+  QiniuStorage.prototype.remove = function (command, param) {
+
+    var DELETE_HOST = "http://rs.qiniu.com",
+      DELETE_PREFIX = "/delete/",
+      encoded_entry_uri = urlsafe_base64_encode(btoa(
+        this._bucket + ':' + param._id
+      )),
+      delete_url = DELETE_HOST + DELETE_PREFIX + encoded_entry_uri,
+      data = DELETE_PREFIX + encoded_entry_uri + '\n',
+      token = b64_hmac_sha1(this._secret_key, data);
+
+    jIO.util.ajax({
+      "type": "POST",
+      "url": delete_url,
+      "headers": {
+        Authorization: "QBox " + this._access_key + ':' + token,
+        "Content-Type": 'application/x-www-form-urlencoded'
+      }
+    }).then(
+      command.success
+    ).fail(function (error) {
+      command.error(
+        "not_found",
+        "missing",
+        "Unable to delete doc"
+      );
+    });
+  };
+
+  QiniuStorage.prototype.allDocs = function (command, param, options) {
+    var LIST_HOST = "http://rsf.qiniu.com",
+      LIST_PREFIX = "/list?bucket=" + this._bucket,
+      list_url = LIST_HOST + LIST_PREFIX,
+      data = LIST_PREFIX + '\n',
+      token = b64_hmac_sha1(this._secret_key, data);
+
+    jIO.util.ajax({
+      "type": "POST",
+      "url": list_url,
+      "headers": {
+        Authorization: "QBox " + this._access_key + ':' + token,
+        "Content-Type": 'application/x-www-form-urlencoded'
+      }
+    }).then(function (response) {
+      var data = JSON.parse(response.target.responseText),
+        count = data.items.length,
+        result = [],
+        item,
+        i;
+      for (i = 0; i < count; i += 1) {
+        item = data.items[i];
+        result.push({
+          id: item.key,
+          key: item.key,
+          doc: {},
+          value: {}
+        });
+      }
+      command.success({"data": {"rows": result, "total_rows": count}});
+    }).fail(function (error) {
+      command.error(
+        "error",
+        "did not work as expected",
+        "Unable to call allDocs"
       );
     });
 
