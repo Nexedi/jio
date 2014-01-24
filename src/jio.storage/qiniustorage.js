@@ -333,8 +333,7 @@
     var LIST_HOST = "http://rsf.qiniu.com",
       LIST_PREFIX = "/list?bucket=" + this._bucket,
       list_url = LIST_HOST + LIST_PREFIX,
-      data = LIST_PREFIX + '\n',
-      token = b64_hmac_sha1(this._secret_key, data);
+      token = b64_hmac_sha1(this._secret_key, LIST_PREFIX + '\n');
 
     jIO.util.ajax({
       "type": "POST",

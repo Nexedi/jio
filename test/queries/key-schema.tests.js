@@ -189,7 +189,7 @@
         {'identifier': '19', 'number': '19'},
         {'identifier': '100', 'number': '100'}
       ];
-    }, key_schema = {
+    }, test_key_schema = {
       cast_lookup: {
         intType: function (value) {
           if (typeof value === 'string') {
@@ -223,7 +223,7 @@
           operator: '=',
           value: '19'
         }]
-      }, key_schema).
+      }, test_key_schema).
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [

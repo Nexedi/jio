@@ -506,7 +506,7 @@
    */
   LocalStorage.prototype.genericRepair = function (command, param, repair) {
 
-    var that = this, result;
+    var that = this, final_result;
 
     function referenceAttachment(param, attachment) {
       if (param.referenced_attachments.indexOf(attachment) !== -1) {
@@ -660,14 +660,14 @@
     param.referenced_attachments = [];
     param.unreferenced_attachments = [];
     if (typeof param._id === 'string') {
-      result = repairOne(param, repair) || {};
+      final_result = repairOne(param, repair) || {};
     } else {
-      result = repairAll(param, repair) || {};
+      final_result = repairAll(param, repair) || {};
     }
-    if (result.error) {
-      return command.error.apply(command, result.answers || []);
+    if (final_result.error) {
+      return command.error.apply(command, final_result.answers || []);
     }
-    command.success.apply(command, result.answers || []);
+    command.success.apply(command, final_result.answers || []);
   };
 
   jIO.addStorage('local', LocalStorage);

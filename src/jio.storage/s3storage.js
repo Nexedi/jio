@@ -876,9 +876,9 @@
         counter = 0;
 
         keys.each(function () {
-          var that, filename, docId;
-          that = $(this);
-          filename = that.context.textContent;
+          var $this, filename, docId;
+          $this = $(this);
+          filename = $this.context.textContent;
           docId = priv.idsToFileName(priv.fileNameToIds(filename)[0]);
           if (counter === 0) {
             counter += 1;
