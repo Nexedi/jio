@@ -879,9 +879,9 @@
           return;
         }
 
-        e.target.response.data.rows.forEach(function (row) {
+        e.target.response.rows.forEach(function (row) {
           requests[requests.length] = that._get({"_id": row.id}).
-            done(function (e) {
+            then(function (e) {
               row.doc = e.target.response;
             });
         });
