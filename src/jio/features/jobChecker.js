@@ -17,8 +17,6 @@ function enableJobChecker(jio, shared, options) {
   // emits 'job:modified', 'job:start', 'job:resolved',
   // 'job:end', 'job:reject' events
 
-  var i;
-
   shared.job_rule_action_names = [undefined, "ok", "wait", "update", "deny"];
 
   shared.job_rule_actions = {
@@ -200,6 +198,8 @@ function enableJobChecker(jio, shared, options) {
     }
   }
 
+  var index;
+
   if (options.job_management !== false) {
 
     shared.job_rules = [{
@@ -239,8 +239,8 @@ function enableJobChecker(jio, shared, options) {
     }
 
     if (Array.isArray(options.job_rules)) {
-      for (i = 0; i < options.job_rules.length; i += 1) {
-        addJobRule(deepClone(options.job_rules[i]));
+      for (index = 0; index < options.job_rules.length; index += 1) {
+        addJobRule(deepClone(options.job_rules[index]));
       }
     }
 
