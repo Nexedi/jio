@@ -136,16 +136,16 @@ Storage connectors
 Storage handlers
 ^^^^^^^^^^^^^^^^
 
-* indexstorage.js (WIP)
-* gidstorage.js (WIP)
+* indexstorage.js
+* gidstorage.js
 * splitstorage.js (WIP)
 * replicatestorage.js (WIP)
 
 Revision based storage handlers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* revisionstorage.js (depends on sha256) (WIP)
-* replicaterevisionstorage.js (WIP)
+* revisionstorage.js (depends on sha256)
+* replicaterevisionstorage.js
 
 
 Unit tests

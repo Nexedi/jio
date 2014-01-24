@@ -1,3 +1,5 @@
+.. _revision-storages-conflicts-and-resolution:
+
 Revision Storages: Conflicts and Resolution
 ===========================================
 

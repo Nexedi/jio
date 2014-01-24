@@ -41,6 +41,13 @@ Examples:
     // to work on browser memory
     var jio = jIO.createJIO(local_storage.createMemoryDescription('me'));
 
+    // or
+    {
+      "type": "local",
+      "username": "me",
+      "application_name": "my app name", // optional
+      "mode": "memory" // optional, "localStorage" by default
+    }
 
 DavStorage
 ^^^^^^^^^^
@@ -52,8 +59,16 @@ NB: digest **is not implemented yet**.
 
 .. code-block:: javascript
 
-   dav_storage.createDescription(url, auth_type,
-                                 [realm], [username], [password]);
+  dav_storage.createDescription(url, auth_type,
+                                [realm], [username], [password]);
+  // or
+  {
+    "type": "dav",
+    "url": url,
+    "auth_type": "basic",
+    "username": "my user name",
+    "password": "my password"
+  }
 
 All parameters are strings.
 
@@ -75,12 +90,22 @@ for basic authentication, the password will just be base64 encoded.
 S3Storage
 ^^^^^^^^^
 
-Updating to v2.0
+Work is in progress. Documentation comming soon.
+
+.. code-block:: javascript
+
+  {
+    "type": "s3",
+    "AWSIdentifier": "my aws identifier",
+    "password": "my password",
+    "server": "bucket_name",
+    "url": "https://bucket_name.s3.amazonaws.com"
+  }
 
 XWikiStorage
 ^^^^^^^^^^^^
 
-Updating to v2.0
+Work is in progress.
 
 Handlers
 --------
@@ -129,17 +154,42 @@ GIDStorage
 
 :ref:`Full description here <gid-storage>`.
 
-Updating to v2.0
-
 SplitStorage
 ^^^^^^^^^^^^
 
-Updating to v2.0
+Work is in progress. The interoperability is not enabled yet.
+
+This storage splits metadata and attachment data to *n* parts where *n* is the
+number of sub storages. Each parts are stored on one sub storage only.
+
+.. code-block:: javascript
+
+   {
+     type: 'split',
+     storage_list: [
+       <sub storage description>,
+       ...
+     ]
+   }
+
+Other split modes will be added later.
+
 
 Replicate Storage
 ^^^^^^^^^^^^^^^^^
 
-Coming soon
+Work is in progress.
+
+.. code-block:: javascript
+
+   {
+     type: 'replicate',
+     storage_list: [
+       <sub storage description>,
+       ...
+     ]
+   }
+
 
 Revision Based Handlers
 -----------------------
@@ -160,11 +210,32 @@ options **conflicts: true**, **revs: true** or **revs_info: true** are set.
 Revision Storage
 ^^^^^^^^^^^^^^^^
 
-Updating to v2.0
+This backend uses its sub storage to manage document and their revision. For
+more information, :ref:`see here <revision-storages-conflicts-and-resolution>`.
+
+Description:
+
+.. code-block:: javascript
+
+  {
+    "type": "revision",
+    "sub_storage": <sub storage description>
+  }
+
 
 Replicate Revision Storage
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Updating to v2.0
+Replicate revisions across multiple revision based storages.
 
+Description:
 
+.. code-block:: javascript
+
+  {
+    "type": "revision",
+    "storage_list": [
+      <revision based sub storage description>,
+      ...
+    ]
+  }
