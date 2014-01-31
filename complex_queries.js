@@ -1363,6 +1363,9 @@ SimpleQuery.prototype.match = function (item, wildcard_character) {
     object_value = item[key];
     value = this.value;
   }
+  if (object_value === undefined || value === undefined) {
+    return RSVP.resolve(false);
+  }
   return matchMethod(object_value, value, wildcard_character);
 };
 
@@ -1406,15 +1409,6 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
     if (typeof value === 'object' && value.hasOwnProperty('content')) {
       value = value.content;
     }
-    if (comparison_value === undefined) {
-      if (value === undefined) {
-        return RSVP.resolve(true);
-      }
-      return RSVP.resolve(false);
-    }
-    if (value === undefined) {
-      return RSVP.resolve(false);
-    }
     if (value.cmp !== undefined) {
       return RSVP.resolve(value.cmp(comparison_value,
                                     wildcard_character) === 0);
@@ -1451,15 +1445,6 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
     if (typeof value === 'object' && value.hasOwnProperty('content')) {
       value = value.content;
     }
-    if (comparison_value === undefined) {
-      if (value === undefined) {
-        return RSVP.resolve(false);
-      }
-      return RSVP.resolve(true);
-    }
-    if (value === undefined) {
-      return RSVP.resolve(true);
-    }
     if (value.cmp !== undefined) {
       return RSVP.resolve(value.cmp(comparison_value,
                                     wildcard_character) !== 0);
@@ -1493,9 +1478,6 @@ SimpleQuery.prototype["<"] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
-  if (value === undefined || comparison_value === undefined) {
-    return RSVP.resolve(false);
-  }
   if (value.cmp !== undefined) {
     return RSVP.resolve(value.cmp(comparison_value) < 0);
   }
@@ -1519,9 +1501,6 @@ SimpleQuery.prototype["<="] = function (object_value, comparison_value) {
   value = object_value[0];
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
-  }
-  if (value === undefined || comparison_value === undefined) {
-    return RSVP.resolve(false);
   }
   if (value.cmp !== undefined) {
     return RSVP.resolve(value.cmp(comparison_value) <= 0);
@@ -1547,9 +1526,6 @@ SimpleQuery.prototype[">"] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
-  if (value === undefined || comparison_value === undefined) {
-    return RSVP.resolve(false);
-  }
   if (value.cmp !== undefined) {
     return RSVP.resolve(value.cmp(comparison_value) > 0);
   }
@@ -1573,9 +1549,6 @@ SimpleQuery.prototype[">="] = function (object_value, comparison_value) {
   value = object_value[0];
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
-  }
-  if (value === undefined || comparison_value === undefined) {
-    return RSVP.resolve(false);
   }
   if (value.cmp !== undefined) {
     return RSVP.resolve(value.cmp(comparison_value) >= 0);

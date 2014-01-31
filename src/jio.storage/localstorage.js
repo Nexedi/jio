@@ -124,9 +124,8 @@
    * @constructor
    */
   function LocalStorage(spec) {
-    if (typeof spec.username !== 'string' && !spec.username) {
-      throw new TypeError("LocalStorage 'username' must be a string " +
-                          "which contains more than one character.");
+    if (typeof spec.username !== 'string' || spec.username === '') {
+      throw new TypeError("LocalStorage 'username' must be a non-empty string");
     }
     this._localpath = 'jio/localstorage/' + spec.username + '/' + (
       spec.application_name === null || spec.application_name ===
