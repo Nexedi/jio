@@ -335,6 +335,13 @@ function ajax(param) {
     if (typeof param.beforeSend === 'function') {
       param.beforeSend(xhr);
     }
+    if (typeof param.xhrFields === 'object' && param.xhrFields !== null) {
+      for (k in param.xhrFields) {
+        if (param.xhrFields.hasOwnProperty(k)) {
+          xhr[k] = param.xhrFields[k];
+        }
+      }
+    }
     xhr.send(param.data);
   }, function () {
     xhr.abort();
