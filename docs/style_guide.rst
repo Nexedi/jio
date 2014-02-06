@@ -214,34 +214,157 @@ Good Example
       "name": "Batman"
     };
   }
+
+
+Variable Declaration Location
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Every variables should be declared at the top of its function.
+
+Bad Example
+
+.. code-block:: javascript
+
+  function first() {
+    var a = 1, b = 2,
+      c, d;
+
+    // ...
+  }
+
+  function second() {
+    var a = 1, b = 2, c;
+    var d;
+
+    // ...
+  }
+
+Good Example
+
+.. code-block:: javascript
+
+  function third() {
+    var a = 1, b = 2, c, d;
+
+    // ...
+  }
+
+  function fourth() {
+    var a = 1,
+      b = 2,
+      c,
+      d;
+
+    // ...
   }
 
 
 Function Declaration Location
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Non anonymous functions should be declared before use.
+Non anonymous functions should be declared before use and before every statements.
 
 Bad Example
 
 .. code-block:: javascript
 
-  return {
-    "namedFunction": function namedFunction() {
-      return;
-    }
-  };
+  if (...) {
+    return {
+      "namedFunction": function namedFunction() { ... }
+    };
+  }
+
+  // or
+  if (...) {
+    function namedFunction() { ... }
+    return {
+      "namedFunction": namedFunction
+    };
+  }
 
 Good Example
 
 .. code-block:: javascript
 
-  function namedFunction() {
-    return;
+  function namedFunction() { ... }
+
+  if (...) {
+    return {
+      "namedFunction": namedFunction
+    };
   }
-  return {
-    "namedFunction": namedFunction
-  };
+
+
+Anonymous Function Location
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Execept if you want to keep your function without name, anonymous functions must
+not be declared in the same place as the variables.
+
+Bad Example
+
+.. code-block:: javascript
+
+  function first() {
+    var a = 1, b = 2, func = function () {
+      return a;
+    };
+    // ...
+  }
+
+Good Example
+
+.. code-block:: javascript
+
+  function second() {
+    var a = 1, b = 2;
+
+    function func() {
+      return a;
+    };
+    // ...
+  }
+
+You can assign a variable to an anonymous function inside **non-loop** statements.
+
+Bad Example
+
+.. code-block:: javascript
+
+  function third() {
+    var a = 1, b = 2, func;
+
+    for (...) {
+      b.forEach(function () { ... });
+    }
+    // ...
+  }
+
+Good Example
+
+.. code-block:: javascript
+
+  function fourth() {
+    var a = 1, b = 2, func;
+
+    if (...) {
+      func = function () { ... };
+    } else {
+      func = function () { ... };
+    }
+    // ...
+  }
+
+  function fifth() {
+    var a = [], b = [];
+
+    function func() { ... }
+
+    for (...) {
+      b.forEach(func);
+    }
+    // ...
+  }
 
 
 Naming Conventions
