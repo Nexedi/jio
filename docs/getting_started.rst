@@ -127,6 +127,7 @@ Storage connectors
 
 * localstorage.js
 * davstorage.js
+* searchableencryptionstorage.js (depends on sjcl) (WIP)
 * s3storage.js (depends on sha1, jQuery) (WIP)
 * xwikistorage.js (depends on jQuery) (WIP)
 * erp5storage.js (depends on jQuery) (WIP)

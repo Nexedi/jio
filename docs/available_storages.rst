@@ -107,6 +107,21 @@ XWikiStorage
 
 Work is in progress.
 
+Searchable Encryption Storage
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Comes with a specific server with can query encrypted documents.
+
+Work is in progress. Documentation comming soon.
+
+.. code-block:: javascript
+
+  {
+    "type": "searchableencryption",
+    "password": "your password",
+    "url": "http://your/url"
+  }
+
 Handlers
 --------
 
