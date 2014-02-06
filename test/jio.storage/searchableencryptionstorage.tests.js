@@ -8,7 +8,13 @@
 /*global module, test, stop, start, ok, deepEqual, RSVP, jIO, test_util, sjcl,
   define, Blob */
 
-(function () {
+(function (dependencies, module) {
+  "use strict";
+  if (typeof define === "function" && define.amd) {
+    return define(dependencies, module);
+  }
+  module(RSVP, jIO);
+}(["rsvp", "jio", "qunit"], function (RSVP, jIO) {
   "use strict";
 
   var spec;
@@ -607,4 +613,4 @@
 //      always(server.restore.bind(server));
   });
 
-}());
+}));
