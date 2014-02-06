@@ -115,12 +115,12 @@ Core
 Storage dependencies
 ^^^^^^^^^^^^^^^^^^^^
 
-.. XXX this is a little confusing. Also, the link to sha1.js is broken (404)
+.. XXX this is a little confusing.
 
 * `jquery.js <http://code.jquery.com/jquery.js>`_
-* `Stanford Javascript Crypto Library <http://bitwiseshiftleft.github.io/sjcl/>`_, [`sjcl.zip <https://crypto.stanford.edu/sjcl/sjcl.zip>`_]
-* `sha1 <http://pajhome.org.uk/crypt/md5/sha1.html>`_, [`sha1.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/lib/jsSha1/sha1.js>`_], AMD-compatible version: `sha1.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha1.amd.js>`_
-* `sha2, sha256 <http://anmar.eu.org/projects/jssha2/>`_, `jssha2.zip <http://anmar.eu.org/projects/jssha2/files/jssha2-0.3.zip>`_, AMD-compatible versions: `sha2.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha2.amd.js>`_, `sha256.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha256.amd.js>`_
+* `Stanford Javascript Crypto Library <http://bitwiseshiftleft.github.io/sjcl/>`_, `sjcl.zip <https://crypto.stanford.edu/sjcl/sjcl.zip>`_
+* `pajhome.org.uk sha1 <http://pajhome.org.uk/crypt/md5/sha1.html>`_, AMD-compatible version: `sha1.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha1.amd.js>`_
+* `anmar.eu.org jssha2 <http://anmar.eu.org/projects/jssha2/>`_, `jssha2.zip <http://anmar.eu.org/projects/jssha2/files/jssha2-0.3.zip>`_, AMD-compatible versions: `sha2.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha2.amd.js>`_, `sha256.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha256.amd.js>`_
 
 Storage connectors
 ^^^^^^^^^^^^^^^^^^
@@ -130,7 +130,7 @@ Storage connectors
 * searchableencryptionstorage.js (depends on sjcl) (WIP)
 * s3storage.js (depends on sha1, jQuery) (WIP)
 * xwikistorage.js (depends on jQuery) (WIP)
-* erp5storage.js (depends on jQuery) (WIP)
+* erp5storage.js (WIP)
 * restsqlstorage.js (depends on jQuery) (WIP)
 * mioga2storage.js (depends on jQuery) (WIP)
 
