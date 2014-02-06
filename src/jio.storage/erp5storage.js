@@ -9,7 +9,7 @@
 //   url: {string}
 // }
 
-/*jslint nomen: true, unparam: true */
+/*jslint indent: 2, nomen: true, unparam: true */
 /*global jIO, complex_queries, console, UriTemplate, FormData, RSVP */
 
 (function (jIO, complex_queries) {
