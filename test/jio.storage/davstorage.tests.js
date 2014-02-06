@@ -62,7 +62,7 @@
    *   X-Requested-With, X-HTTP-Method-Override, Accept, Authorization,
    *   Depth"
    */
-  test("Scenario", 33, function () {
+  test("Scenario", 34, function () {
 
     var server, responses = [], shared = {}, jio = jIO.createJIO(spec, {
       "workspace": {},
@@ -755,6 +755,30 @@
       }, "Unable to post the same document (conflict)");
     }
 
+    function putAttachmentToNonExistentDocument() {
+      responses.push([404, {}, ""]); // GET
+      return success(jio.putAttachment({
+        "_id": "ahaha",
+        "_attachment": "aa",
+        "_data": "aaa",
+        "_content_type": "text/plain"
+      }));
+    }
+
+    function putAttachmentToNonExistentDocumentTest(answer) {
+      deepEqual(answer, {
+        "attachment": "aa",
+        "error": "not_found",
+        "id": "ahaha",
+        "message": "DavStorage unable to put attachment",
+        "method": "putAttachment",
+        "reason": "Not Found",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "Put attachment to a non existent document -> 404 Not Found");
+    }
+
     function createAttachment() {
       responses.push([200, {
         "Content-Type": "application/octet-stream"
@@ -1311,6 +1335,9 @@
       then(getCreatedDocument2).then(getCreatedDocument2Test).
       // post 409
       then(postSameDocument).then(postSameDocumentTest).
+      // putA 404
+      then(putAttachmentToNonExistentDocument).
+      then(putAttachmentToNonExistentDocumentTest).
       // putA a 204
       then(createAttachment).then(createAttachmentTest).
       // putA a 204
