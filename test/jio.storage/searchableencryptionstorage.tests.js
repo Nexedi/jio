@@ -6,7 +6,7 @@
 
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global module, test, stop, start, ok, deepEqual, RSVP, jIO, test_util, sjcl,
-  define, Blob */
+  define, Blob, searchableencryptionstorage_spec */
 
 (function (dependencies, module) {
   "use strict";
@@ -17,12 +17,21 @@
 }(["rsvp", "jio", "qunit"], function (RSVP, jIO) {
   "use strict";
 
-  var spec;
-  spec = {
-    "type": "searchableencryption",
-    "url": "http://fakeserver",
-    "password": "coincoin"
-  };
+  var spec, use_fake_server = true, jIOUtilAjaxWrapper;
+  if (typeof searchableencryptionstorage_spec === "object") {
+    use_fake_server = false;
+    spec = {
+      "type": "searchableencryption",
+      "url": searchableencryptionstorage_spec.url,
+      "password": searchableencryptionstorage_spec.password
+    };
+  } else {
+    spec = {
+      "type": "searchableencryption",
+      "url": "http://fakeserver",
+      "password": "coincoin"
+    };
+  }
 
   function reverse(promise) {
     return new RSVP.Promise(function (resolve, reject, notify) {
@@ -32,7 +41,7 @@
     });
   }
 
-  jIO.util.ajax = (function () {
+  jIOUtilAjaxWrapper = (function () {
     /*jslint regexp: true */
     // TEST SERVER
     var dataBase, baseURLRe = /^http:\/\/fakeserver(\/[^\/]+)?(\/[^\/]+)?$/;
@@ -209,6 +218,10 @@
 
     return ServerAjax;
   }());
+
+  if (use_fake_server) {
+    jIO.util.ajax = jIOUtilAjaxWrapper;
+  }
 
   module("Searchable Encryption Storage");
 
