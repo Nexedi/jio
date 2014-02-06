@@ -44,7 +44,7 @@ Getting started
     functions) to specific storages.
     You can use both handlers and available storages to build a storage
     tree across which all documents will be maintained and managed by jIO.
-    
+
     .. code-block:: javascript
 
         // create your jio instance
@@ -163,5 +163,3 @@ Feel free to use any of them.
 * `GitHub <https://github.com/nexedi/jio>`_: ``git clone https://github.com/nexedi/jio.git``
 * `Gitorius <https://gitorious.org/nexedi/jio>`_: ``git clone https://git.gitorious.org/nexedi/jio.git``
 * `Git Erp5 <http://git.erp5.org/gitweb/jio.git>`_ (read only): ``git clone http://git.erp5.org/repos/jio.git``
-
-
