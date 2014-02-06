@@ -25,19 +25,19 @@ Good Example
 
 .. code-block:: javascript
 
-  function sum(x, y) { 
-    var result = x + y; 
-    return result; 
+  function sum(x, y) {
+    var result = x + y;
+    return result;
   }
 
 Bad Example
 
 .. code-block:: javascript
 
-  function sum(x, y) { 
-    // missing var declaration, implied global 
-    result = x + y; 
-    return result; 
+  function sum(x, y) {
+    // missing var declaration, implied global
+    result = x + y;
+    return result;
   }
 
 
@@ -61,7 +61,7 @@ In this project, JavaScript sources have to begin with the header:
 .. code-block:: javascript
 
     /*jslint indent: 2, maxlen: 80, nomen: true */
-    
+
 which means it uses two spaces indentation, 80
 maximum characters per line and allows variable names starting with '_'.
 Other JSLint options can be added in sub functions if necessary.
@@ -111,22 +111,22 @@ Good Example
         };
       };
     }
-    return inner; 
-  }  
+    return inner;
+  }
 
 Bad Example
 
 .. code-block:: javascript
 
-  function outer(a, b) { 
-  var c = 1, 
-  d = 2, 
-  inner; 
-    
-  if (a > b) { 
-  inner = function () { 
-  return { 
-  r: c - d 
+  function outer(a, b) {
+  var c = 1,
+  d = 2,
+  inner;
+
+  if (a > b) {
+  inner = function () {
+  return {
+  r: c - d
   }}}};
 
 
@@ -170,12 +170,12 @@ Bad Example
 
 .. code-block:: javascript
 
-  function func() 
+  function func()
   {
-    return 
-    { 
-      "name": "Batman" 
-    }; 
+    return
+    {
+      "name": "Batman"
+    };
   }
 
 
@@ -183,9 +183,9 @@ Good Example
 
 .. code-block:: javascript
 
-  function func() { 
-    return { 
-      "name": "Batman" 
+  function func() {
+    return {
+      "name": "Batman"
     };
   }
 
@@ -200,19 +200,20 @@ Bad Example
 .. code-block:: javascript
 
   function func() {
-    return { 
-             "name": "Batman" 
-           }; 
+    return {
+             "name": "Batman"
+           };
   }
 
 Good Example
 
 .. code-block:: javascript
 
-  function func() { 
-    return { 
-      "name": "Batman" 
-    }; 
+  function func() {
+    return {
+      "name": "Batman"
+    };
+  }
   }
 
 
@@ -355,7 +356,7 @@ Example
   test.setAttribute("id", "uniqueIdentifier");
 
   // good example
-  test.setAttribute("id", "unique_identifier");  
+  test.setAttribute("id", "unique_identifier");
 
 Discuss - checked with jQuery UI/jQuery Mobile, they don't use written name conventions, only
 
@@ -374,29 +375,29 @@ Good Example
 
 .. code-block:: javascript
 
-  var person = { 
-    "getName": function () { 
-      return this._getFirst() + " " + this._getLast(); 
-    }, 
-    "_getFirst": function () { 
-      // ... 
-    }, 
-    "_getLast": function () { 
-      // ... 
-    } 
-  };  
+  var person = {
+    "getName": function () {
+      return this._getFirst() + " " + this._getLast();
+    },
+    "_getFirst": function () {
+      // ...
+    },
+    "_getLast": function () {
+      // ...
+    }
+  };
 
 Bad Example
 
 .. code-block:: javascript
 
-  var person = { 
-    "getName": function () { 
-      return this.getFirst() + " " + this.getLast(); 
-    }, 
+  var person = {
+    "getName": function () {
+      return this.getFirst() + " " + this.getLast();
+    },
     // private function
-    "getFirst": function () { 
-      // ... 
+    "getFirst": function () {
+      // ...
     }
   };
 
@@ -448,19 +449,19 @@ Good Example
   var person = {
     // returns full name string
     "getName": function () {
-      return this._getFirst() + " " + this._getLast(); 
+      return this._getFirst() + " " + this._getLast();
     }
-  }; 
+  };
 
 Bad Example
 
 .. code-block:: javascript
 
-  var person = { 
-    "getName": function () { 
-      return this._getFirst() + " " + this._getLast(); 
+  var person = {
+    "getName": function () {
+      return this._getFirst() + " " + this._getLast();
     }
-  }; 
+  };
 
 
 Documentation
@@ -474,14 +475,14 @@ Good Example
 
 .. code-block:: javascript
 
-  /** 
+  /**
    * Reverse a string
    *
-   * @param  {String} input_string String to reverse 
-   * @return {String} The reversed string 
-   */ 
-  function reverse(input_string) { 
-    // ... 
+   * @param  {String} input_string String to reverse
+   * @return {String} The reversed string
+   */
+  function reverse(input_string) {
+    // ...
     return output_string;
   };
 
@@ -489,10 +490,10 @@ Bad Example
 
 .. code-block:: javascript
 
-  function reverse(input_string) { 
-    // ... 
+  function reverse(input_string) {
+    // ...
     return output_string;
-  };  
+  };
 
 
 Additional Readings
@@ -504,5 +505,3 @@ Resources, additional reading materials and links:
 * `JSLint <http://www.jslint.com/>`_, code quality tool.
 * `JSLint Error Explanations <http://jslinterrors.com/>`_, a useful reference.
 * `YUIDoc <http://yuilibrary.com/projects/yuidoc>`_, generate documentation from code.
-
-
