@@ -5,12 +5,13 @@
 ***********************************************************************/
 
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global module, test, stop, start, ok, deepEqual, RSVP, jIO, test_util, sjcl */
+/*global module, test, stop, start, ok, deepEqual, RSVP, jIO, test_util, sjcl,
+  define, Blob */
 
 (function () {
   "use strict";
 
-  var spec, use_fake_server = true;
+  var spec;
   spec = {
     "type": "searchableencryption",
     "url": "http://fakeserver",
@@ -26,10 +27,10 @@
   }
 
   jIO.util.ajax = (function () {
+    /*jslint regexp: true */
     // TEST SERVER
-    var baseURLRe = /^http:\/\/fakeserver(\/[^\/]+)?(\/[^\/]+)?$/;
-
-    var dataBase = {};
+    var dataBase, baseURLRe = /^http:\/\/fakeserver(\/[^\/]+)?(\/[^\/]+)?$/;
+    dataBase = {};
 
     function bigModulo(arr, mod) {
       var i, result = 0, base = 1, maxIter = (2 * arr.length);
@@ -222,32 +223,13 @@
    */
   test("Scenario", function () {
 
-    var server, responses = [], shared = {}, jio = jIO.createJIO(spec, {
+    var jio = jIO.createJIO(spec, {
       "workspace": {},
       "max_retry": 2
     });
 
     stop();
 
-/*     function postNewDocument() {
-      return jio.post({"title": "Unique ID"});
-    }
-
-    function postNewDocumentTest(answer) {
-      var uuid = answer.id;
-      answer.id = "<uuid>";
-      deepEqual(answer, {
-        "id": "<uuid>",
-        "method": "post",
-        "result": "success",
-        "status": 201,
-        "statusText": "Created"
-      }, "Post a new document");
-      ok(test_util.isUuid(uuid), "New document id should look like " +
-         "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + uuid);
-      shared.created_document_id = uuid;
-    }
- */
     function getCreatedDocument() {
       return jio.get({"_id": "a"});
     }
@@ -265,22 +247,6 @@
         "status": 200,
         "statusText": "Ok"
       }, "Get new document");
-    }
-
-    function postSpecificDocument() {
-      responses.push([404, {}, '']); // GET
-      responses.push([201, {}, '']); // PUT
-      return jio.post({"_id": "b", "title": "Bee"});
-    }
-
-    function postSpecificDocumentTest(answer) {
-      deepEqual(answer, {
-        "id": "b",
-        "method": "post",
-        "result": "success",
-        "status": 201,
-        "statusText": "Created"
-      }, "Post specific document");
     }
 
     function listDocuments() {
@@ -388,37 +354,6 @@
       }, "Remove first document.");
     }
 
-    function removeSpecificDocument() {
-      return jio.remove({"_id": "b"});
-    }
-
-    function removeSpecificDocumentTest(answer) {
-      deepEqual(answer, {
-        "id": "b",
-        "method": "remove",
-        "result": "success",
-        "status": 204,
-        "statusText": "No Content"
-      }, "Remove second document.");
-    }
-
-    function listEmptyStorage() {
-      return jio.allDocs();
-    }
-
-    function listEmptyStorageTest(answer) {
-      deepEqual(answer, {
-        "data": {
-          "total_rows": 0,
-          "rows": []
-        },
-        "method": "allDocs",
-        "result": "success",
-        "status": 200,
-        "statusText": "Ok"
-      }, "List empty storage");
-    }
-
     function putNewDocument() {
       return jio.put({
         "_id": "a",
@@ -517,23 +452,6 @@
       }, "Get new document");
     }
 
-    function postSameDocument() {
-      return success(jio.post({"_id": "a", "title": "Hoo"}));
-    }
-
-    function postSameDocumentTest(answer) {
-      deepEqual(answer, {
-        "error": "conflict",
-        "id": "a",
-        "message": "DavStorage, cannot overwrite document metadata.",
-        "method": "post",
-        "reason": "Document exists",
-        "result": "error",
-        "status": 409,
-        "statusText": "Conflict"
-      }, "Unable to post the same document (conflict)");
-    }
-
     function createAttachment() {
       return jio.putAttachment({
         "_id": "a",
@@ -595,7 +513,7 @@
     }
 
     function updateLastDocument() {
-      return jio.put({"_id": "a", "title": "Hoo", "keywords": ["1","2","3"]});
+      return jio.put({"_id": "a", "title": "Hoo", "keywords": ["1", "2", "3"]});
     }
 
     function updateLastDocumentTest(answer) {
@@ -606,233 +524,6 @@
         "status": 204,
         "statusText": "No Content"
       }, "Update document metadata");
-    }
-
-    function getFirstAttachment() {
-      return jio.getAttachment({"_id": "a", "_attachment": "aa"});
-    }
-
-    function getFirstAttachmentTest(answer) {
-      var blob = answer.data;
-      answer.data = "<blob>";
-      deepEqual(answer, {
-        "attachment": "aa",
-        "data": "<blob>",
-        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
-          "0728e095ff24218119d51bd22475363",
-        "id": "a",
-        "method": "getAttachment",
-        "result": "success",
-        "status": 200,
-        "statusText": "Ok"
-      }, "Get first attachment");
-      return jIO.util.readBlobAsText(blob).then(function (e) {
-        deepEqual(blob.type, "text/plain", "Check blob type");
-        deepEqual(e.target.result, "aab", "Check blob text content");
-      }, function (err) {
-        deepEqual(err, "no error", "Check blob text content");
-      });
-    }
-
-    function getSecondAttachment() {
-      return jio.getAttachment({"_id": "a", "_attachment": "ab"});
-    }
-
-    function getSecondAttachmentTest(answer) {
-      var blob = answer.data;
-      answer.data = "<blob>";
-      deepEqual(answer, {
-        "attachment": "ab",
-        "data": "<blob>",
-        "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
-          "ed343e6c739e54131fcb3a56e4bc1bd",
-        "id": "a",
-        "method": "getAttachment",
-        "result": "success",
-        "status": 200,
-        "statusText": "Ok"
-      }, "Get first attachment");
-      return jIO.util.readBlobAsText(blob).then(function (e) {
-        deepEqual(blob.type, "text/plain", "Check blob type");
-        deepEqual(e.target.result, "aba", "Check blob text content");
-      }, function (err) {
-        deepEqual(err, "no error", "Check blob text content");
-      });
-    }
-
-    function getLastDocument() {
-      return jio.get({"_id": "a"});
-    }
-
-    function getLastDocumentTest(answer) {
-      deepEqual(answer, {
-        "data": {
-          "_id": "a",
-          "title": "Hoo",
-          "_attachments": {
-            "aa": {
-              "content_type": "text/plain",
-              "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
-                "0728e095ff24218119d51bd22475363",
-              "length": 3
-            },
-            "ab": {
-              "content_type": "text/plain",
-              "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
-                "ed343e6c739e54131fcb3a56e4bc1bd",
-              "length": 3
-            }
-          }
-        },
-        "id": "a",
-        "method": "get",
-        "result": "success",
-        "status": 200,
-        "statusText": "Ok"
-      }, "Get last document metadata");
-    }
-
-    function removeSecondAttachment() {
-      return jio.removeAttachment({"_id": "a", "_attachment": "ab"});
-    }
-
-    function removeSecondAttachmentTest(answer) {
-      deepEqual(answer, {
-        "attachment": "ab",
-        "id": "a",
-        "method": "removeAttachment",
-        "result": "success",
-        "status": 204,
-        "statusText": "No Content"
-      }, "Remove second document");
-    }
-
-    function getInexistentSecondAttachment() {
-      return reverse(jio.getAttachment({"_id": "a", "_attachment": "ab"}));
-    }
-
-    function getInexistentSecondAttachmentTest(answer) {
-      deepEqual(answer, {
-        "attachment": "ab",
-        "error": "not_found",
-        "id": "a",
-        "message": "DavStorage, unable to get attachment.",
-        "method": "getAttachment",
-        "reason": "missing attachment",
-        "result": "error",
-        "status": 404,
-        "statusText": "Not Found"
-      }, "Get inexistent second attachment");
-    }
-
-    function getOneAttachmentDocument() {
-      return jio.get({"_id": "a"});
-    }
-
-    function getOneAttachmentDocumentTest(answer) {
-      deepEqual(answer, {
-        "data": {
-          "_attachments": {
-            "aa": {
-              "content_type": "text/plain",
-              "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
-                "0728e095ff24218119d51bd22475363",
-              "length": 3
-            }
-          },
-          "_id": "a",
-          "title": "Hoo"
-        },
-        "id": "a",
-        "method": "get",
-        "result": "success",
-        "status": 200,
-        "statusText": "Ok"
-      }, "Get document metadata");
-    }
-
-    function removeSecondAttachmentAgain() {
-      return success(jio.removeAttachment({"_id": "a", "_attachment": "ab"}));
-    }
-
-    function removeSecondAttachmentAgainTest(answer) {
-      deepEqual(answer, {
-        "attachment": "ab",
-        "error": "not_found",
-        "id": "a",
-        "message": "DavStorage, document attachment not found.",
-        "method": "removeAttachment",
-        "reason": "missing attachment",
-        "result": "error",
-        "status": 404,
-        "statusText": "Not Found"
-      }, "Remove inexistent attachment");
-    }
-
-    function removeDocument() {
-      return jio.remove({"_id": "a"});
-    }
-
-    function removeDocumentTest(answer) {
-      deepEqual(answer, {
-        "id": "a",
-        "method": "remove",
-        "result": "success",
-        "status": 204,
-        "statusText": "No Content"
-      }, "Remove document and its attachments");
-    }
-
-    function getInexistentFirstAttachment() {
-      return success(jio.getAttachment({"_id": "a", "_attachment": "aa"}));
-    }
-
-    function getInexistentFirstAttachmentTest(answer) {
-      deepEqual(answer, {
-        "attachment": "aa",
-        "error": "not_found",
-        "id": "a",
-        "message": "DavStorage, unable to get attachment.",
-        "method": "getAttachment",
-        "reason": "missing document",
-        "result": "error",
-        "status": 404,
-        "statusText": "Not Found"
-      }, "Get inexistent first attachment");
-    }
-
-    function getInexistentDocument() {
-      return success(jio.get({"_id": "a"}));
-    }
-
-    function getInexistentDocumentTest(answer) {
-      deepEqual(answer, {
-        "error": "not_found",
-        "id": "a",
-        "message": "DavStorage, unable to get document.",
-        "method": "get",
-        "reason": "Not Found",
-        "result": "error",
-        "status": 404,
-        "statusText": "Not Found"
-      }, "Get inexistent document");
-    }
-
-    function removeInexistentDocument() {
-      return success(jio.remove({"_id": "a"}));
-    }
-
-    function removeInexistentDocumentTest(answer) {
-      deepEqual(answer, {
-        "error": "not_found",
-        "id": "a",
-        "message": "DavStorage, unable to get metadata.",
-        "method": "remove",
-        "reason": "Not Found",
-        "result": "error",
-        "status": 404,
-        "statusText": "Not Found"
-      }, "Remove already removed document");
     }
 
     function unexpectedError(error) {
@@ -903,7 +594,7 @@
       // remove 204
 //      then(removeDocument).then(removeDocumentTest).
       // getA a 404
-//      then(getInexistentFirstAttachment).then(getInexistentFirstAttachmentTest).
+//    then(getInexistentFirstAttachment).then(getInexistentFirstAttachmentTest).
       // get 404
 //      then(getInexistentDocument).then(getInexistentDocumentTest).
       // remove 404
