@@ -437,7 +437,7 @@ W3C Date function
    */
   function getW3CDate(use_utc) {
     var d = new Date(), offset;
-    if (use_utc === true) {
+    if (use_utc) {
       return d.toISOString();
     }
     offset = - d.getTimezoneOffset();
@@ -449,9 +449,9 @@ W3C Date function
         d.getMinutes() + ":" +
         d.getSeconds() + "." +
         d.getMilliseconds() +
-        (offset < 0 ? "-" : "+") +
-        (offset / 60) + ":" +
-        (offset % 60)
+        (offset < 0 ?
+         "-" + parseInt(-offset / 60, 10) + ":" + (-offset % 60) :
+         "+" + parseInt(offset / 60, 10) + ":" + (offset % 60))
     ).replace(/[0-9]+/g, function (found) {
       if (found.length < 2) {
         return '0' + found;
