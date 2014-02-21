@@ -47,8 +47,9 @@ See below XML and its JSON equivalent:
 |      http://my/resource                    |     {                                 |
 |    </dc:identifier>                        |       "scheme": "DCTERMS.URI",        |
 |    <dc:identifier>                         |       "content": "http://my/resource" |
-|      Xaoe41PAPNIWz                         |      },                               |
-|    </dc:identifier>                        |     "Xaoe41PAPNIWz"]}                 |
+|      Xaoe41PAPNIWz                         |     },                                |
+|    </dc:identifier>                        |     "Xaoe41PAPNIWz"                   |
+|                                            |   ]}                                  |
 +--------------------------------------------+---------------------------------------+
 
 List of metadata to use
@@ -425,10 +426,8 @@ With complex query:
 .. code-block:: javascript
 
   jio.allDocs({
-              "query": 'subject: "jIO" AND category: "resilience"'
-              },
-              callbacks);
-
+    "query": 'subject: "jIO" AND category: "resilience"'
+  });
 
 
 Tools
