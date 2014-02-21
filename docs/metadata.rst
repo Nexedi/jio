@@ -249,8 +249,7 @@ Posting a webpage for jIO
 
 .. code-block:: javascript
 
-  jio.put({
-    "_id"        : "...",
+  jio.post({
     "identifier" : "http://domain/jio_home_page",
     "format"     : ["text/html", "52 kB"],
     "date"       : new Date(),
@@ -261,8 +260,7 @@ Posting a webpage for jIO
     "description": "Simple guide to show the basics of jIO",
     "category"   : ["resilience/jio", "webpage"],
     "language"   : "en"
-  }, callbacks); // send content as attachment
-
+  }); // send content as attachment
 
 
 Posting jIO library
@@ -270,8 +268,7 @@ Posting jIO library
 
 .. code-block:: javascript
 
-  jio.put({
-    "_id"        : "...",
+  jio.post({
     "identifier" : "jio.js",
     "date"       : "2013-02-15",
     "format"     : "application/javascript",
@@ -289,7 +286,7 @@ Posting jIO library
                    ]
     "description": "jIO is a client-side JavaScript library to " +
                    "manage documents across multiple storages."
-  }, callbacks); // send content as attachment
+  }); // send content as attachment
 
 
 Posting a webpage for interoperability levels
@@ -297,8 +294,7 @@ Posting a webpage for interoperability levels
 
 .. code-block:: javascript
 
-  jio.put({
-    "_id"        : "...",
+  jio.post({
     "identifier" : "http://dublincore.org/documents/" +
                        "interoperability-levels/",
     "date"       : "2009-05-01",
@@ -315,7 +311,7 @@ Posting a webpage for interoperability levels
                    "involved in designing applications for " +
                    "different types of interoperability. [...]",
     "language"   : "en"
-  }, callbacks); // send content as attachment
+  }); // send content as attachment
 
 
 Posting an image
@@ -323,8 +319,7 @@ Posting an image
 
 .. code-block:: javascript
 
-  jio.put({
-    "_id"        : "...",
+  jio.post({
     "identifier" : "new_york_city_at_night",
     "format"     : ["image/jpeg", "7.2 MB", "8192 x 4096 pixels"],
     "date"       : "1999",
@@ -334,8 +329,7 @@ Posting an image
     "subject"    : ["New York"],
     "description": "A photo of New York City taken just after midnight",
     "coverage"   : ["New York", "1996-1997"]
-  }, callbacks); // send content as attachment
-
+  }); // send content as attachment
 
 
 Posting a book
@@ -343,8 +337,7 @@ Posting a book
 
 .. code-block:: javascript
 
-  jio.put({
-    "_id"        : "...",
+  jio.post({
     "identifier" : {
                        "scheme": "DCTERMS.URI",
                        "content": "urn:ISBN:0385424728"
@@ -362,7 +355,7 @@ Posting a book
                        "scheme": "DCTERMS.RFC4646",
                        "content": "en-GB"
                    }
-  }, callbakcs); // send content as attachment
+  }); // send content as attachment
 
 
 Posting a video
@@ -370,8 +363,7 @@ Posting a video
 
 .. code-block:: javascript
 
-  jio.put({
-    "_id"        : "...",
+  jio.post({
     "identifier" : "my_video",
     "format"     : ["video/ogg", "130 MB", "1080p", "20 seconds"],
     "date"       : getW3CDate(), // see tools below
@@ -379,8 +371,7 @@ Posting a video
     "creator"    : "Me",
     "title"      : "My life",
     "description": "A video about my life"
-  }, callbacks); // send content as attachment
-
+  }); // send content as attachment
 
 
 Posting a job announcement
@@ -396,16 +387,14 @@ Posting a job announcement
     "publisher"  : "Morgan Healey Ltd",
     "title"      : "E-Commerce Product Manager",
     "subject"    : "Job Announcement",
-    "description": "...",
+    "description": "Announcement for e-commerce product manager job",
     "language"   : "en-GB",
     "source"     : "James@morganhealey.com",
     "relation"   : ["Totaljobs"],
     "coverage"   : "London, South East",
     "job_type"   : "Permanent",
     "salary"     : "£45,000 per annum"
-  }, callbacks); // send content as attachment
-  // result: http://www.totaljobs.com/JobSeeking/E-Commerce-Product-Manager_job55787655
-
+  }); // send content as attachment
 
 
 Getting a list of document created by someone
@@ -415,7 +404,7 @@ With complex query:
 
 .. code-block:: javascript
 
-  jio.allDocs({"query": "creator: \"someone\""}, callbacks);
+  jio.allDocs({"query": "creator: \"someone\""});
 
 
 Getting all documents about jIO in the resilience project
