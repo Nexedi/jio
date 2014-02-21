@@ -332,15 +332,15 @@ function ajax(param) {
     });
     xhr.addEventListener("error", reject);
     xhr.addEventListener("progress", notify);
-    if (typeof param.beforeSend === 'function') {
-      param.beforeSend(xhr);
-    }
     if (typeof param.xhrFields === 'object' && param.xhrFields !== null) {
       for (k in param.xhrFields) {
         if (param.xhrFields.hasOwnProperty(k)) {
           xhr[k] = param.xhrFields[k];
         }
       }
+    }
+    if (typeof param.beforeSend === 'function') {
+      param.beforeSend(xhr);
     }
     xhr.send(param.data);
   }, function () {
