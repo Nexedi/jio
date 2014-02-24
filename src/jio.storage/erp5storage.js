@@ -170,6 +170,11 @@
   };
 
   ERP5Storage.prototype.allDocs = function (command, param, options) {
+    if (typeof options.query !== "string") {
+      options.query = (options.query ?
+                       complex_queries.objectToSearchText(options.query) :
+                       undefined);
+    }
     return this._getSiteDocument()
       .then(function (site_hal) {
         return jIO.util.ajax({
