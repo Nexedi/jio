@@ -10,9 +10,9 @@
 // }
 
 /*jslint indent: 2, nomen: true, unparam: true */
-/*global jIO, complex_queries, console, UriTemplate, FormData, RSVP */
+/*global jIO, complex_queries, console, UriTemplate, FormData, RSVP, URI */
 
-(function (jIO, complex_queries) {
+(function (jIO, complex_queries, URI) {
   "use strict";
 
   function ERP5Storage(spec) {
@@ -96,26 +96,9 @@
         });
       }).then(function (doc) {
         // XXX Really depend on server response...
-        var new_document_url = doc.target.getResponseHeader("Location");
-        return jIO.util.ajax({
-          "type": "GET",
-          "url": new_document_url,
-          "xhrFields": {
-            withCredentials: true
-          }
-        });
-      }).then(function (response) {
-        var doc_hal = JSON.parse(response.target.responseText);
-        if (doc_hal !== null) {
-          command.success({"id": doc_hal._relative_url});
-        } else {
-          command.error(
-            "not_found",
-            "missing",
-            "Cannot find document"
-          );
-        }
-      }, function (error) {
+        var uri = new URI(doc.target.getResponseHeader("X-Location"));
+        command.success({"id": uri.segment(2)});
+      }).fail(function (error) {
         console.error(error);
         command.error(
           500,
@@ -193,15 +176,16 @@
         var data = catalog_json._embedded.contents,
           count = data.length,
           i,
+          uri,
           item,
           result = [],
           promise_list = [result];
         for (i = 0; i < count; i += 1) {
           item = data[i];
-          item._id = item._relative_url;
+          uri = new URI(item._links.self.href);
           result.push({
-            id: item._relative_url,
-            key: item._relative_url,
+            id: uri.segment(2),
+            key: uri.segment(2),
             doc: {},
             value: item
           });
@@ -231,4 +215,4 @@
 
   jIO.addStorage("erp5", ERP5Storage);
 
-}(jIO, complex_queries));
+}(jIO, complex_queries, URI));
