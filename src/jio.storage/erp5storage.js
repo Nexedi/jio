@@ -11,9 +11,15 @@
 
 /*jslint indent: 2, nomen: true, unparam: true */
 /*global jIO, complex_queries, console, UriTemplate, FormData, RSVP,
-  ProgressEvent */
+  ProgressEvent, define */
 
-(function (jIO, complex_queries) {
+(function (dependencies, module) {
+  "use strict";
+  if (typeof define === 'function' && define.amd) {
+    return define(dependencies, module);
+  }
+  module(RSVP, jIO, complex_queries);
+}(['rsvp', 'jio', 'complex_queries'], function (RSVP, jIO, complex_queries) {
   "use strict";
 
   function ERP5Storage(spec) {
@@ -249,4 +255,4 @@
 
   jIO.addStorage("erp5", ERP5Storage);
 
-}(jIO, complex_queries));
+}));
