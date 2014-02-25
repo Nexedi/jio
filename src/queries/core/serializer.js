@@ -14,8 +14,8 @@ function objectToSearchText(query) {
     return str_list.join(" ");
   }
   if (query.type === "simple") {
-    return query.id + (query.id ? ": " : "") + (query.operator || "=") + ' "' +
-      query.value + '"';
+    return (query.key ? query.key + ": " : "") +
+      (query.operator || "=") + ' "' + query.value + '"';
   }
   throw new TypeError("This object is not a query");
 }
