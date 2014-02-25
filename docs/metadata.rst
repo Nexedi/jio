@@ -422,25 +422,27 @@ With complex query:
 Tools
 -----
 
-W3C Date function
-^^^^^^^^^^^^^^^^^
+Date functions
+^^^^^^^^^^^^^^
 
 .. code-block:: javascript
 
+  // Get RFC1123 date format "Tue, 13 Dec 2011 13:15:16 GMT"
+  new Date().toUTCString();
+
+  // Get ISO8601 date format "2011-12-13T13:15:16.433Z"
+  new Date().toISOString();
+
   /**
-   * Tool to get the date in W3C date format
-   * - "2011-12-13T14:15:16+01:00" with use_utc = false (by default)
-   * - "2011-12-13T13:15:16Z" with use_utc = true
+   * Tool to get the date in W3C date format.
    *
-   * @param  {Boolean} use_utc Use UTC format
+   *     "2011-12-13T14:15:16.433+01:00"
+   *
+   * @param  {Date} [date] The date to convert
    * @return {String} The date in W3C date format
    */
-  function getW3CDate(use_utc) {
-    var d = new Date(), offset;
-    if (use_utc) {
-      return d.toISOString();
-    }
-    offset = - d.getTimezoneOffset();
+  function getW3CDate(date) {
+    var d = date || new Date(), offset = - d.getTimezoneOffset();
     return (
       d.getFullYear() + "-" +
         (d.getMonth() + 1) + "-" +
@@ -481,4 +483,3 @@ Sources
 
   * https://en.wikipedia.org/wiki/Internet_media_type
   * https://www.iana.org/assignments/media-types
-
