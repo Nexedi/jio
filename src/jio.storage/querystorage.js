@@ -1,14 +1,13 @@
 /*jslint indent: 2, maxlen: 80, nomen: true, regexp: true, unparam: true */
-/*global define, window, RSVP, jIO, complex_queries */
+/*global define, RSVP, jIO, complex_queries */
 
 (function (dependencies, module) {
   "use strict";
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  window.query_storage = {};
-  module(window.query_storage, RSVP, jIO);
-}(['exports', 'rsvp', 'jio'], function (exports, RSVP, jIO) {
+  module(RSVP, complex_queries, jIO);
+}(['rsvp', 'complex_queries', 'jio'], function (RSVP, complex_queries, jIO) {
   "use strict";
 
 
