@@ -10,7 +10,8 @@
 // }
 
 /*jslint indent: 2, nomen: true, unparam: true */
-/*global jIO, complex_queries, console, UriTemplate, FormData, RSVP */
+/*global jIO, complex_queries, console, UriTemplate, FormData, RSVP,
+  ProgressEvent */
 
 (function (jIO, complex_queries) {
   "use strict";
@@ -62,14 +63,17 @@
       .then(function (response) {
         command.success({"data": response});
       })
-      .fail(function (error) {
-        console.error(error);
+      .fail(function (event) {
+        console.error(event);
+        if (event instanceof ProgressEvent) {
+          command.error(
+            event.target.status,
+            event.target.statusText,
+            "Cannot find document"
+          );
+        }
         // XXX How to propagate the error
-        command.error(
-          "not_found",
-          "missing",
-          "Cannot find document"
-        );
+        command.error(event);
       });
   };
 
@@ -115,13 +119,16 @@
             "Cannot find document"
           );
         }
-      }, function (error) {
-        console.error(error);
-        command.error(
-          500,
-          "Too bad...",
-          "Unable to post doc"
-        );
+      }, function (event) {
+        console.error(event);
+        if (event instanceof ProgressEvent) {
+          return command.error(
+            event.target.status,
+            event.target.statusText,
+            "Unable to post doc"
+          );
+        }
+        command.error(event);
       });
   };
 
@@ -158,13 +165,16 @@
       .then(function (result) {
         command.success(result);
       })
-      .fail(function (error) {
-        console.error(error);
-        command.error(
-          "error",
-          "did not work as expected",
-          "Unable to call put"
-        );
+      .fail(function (event) {
+        console.error(event);
+        if (event instanceof ProgressEvent) {
+          return command.error(
+            event.target.status,
+            event.target.statusText,
+            "Unable to call put"
+          );
+        }
+        command.error(event);
       });
 
   };
@@ -223,13 +233,16 @@
           count = result.length;
         command.success({"data": {"rows": result, "total_rows": count}});
       })
-      .fail(function (error) {
-        console.error(error);
-        command.error(
-          "error",
-          "did not work as expected",
-          "Unable to call allDocs"
-        );
+      .fail(function (event) {
+        console.error(event);
+        if (event instanceof ProgressEvent) {
+          return command.error(
+            event.target.status,
+            event.target.statusText,
+            "Cannot get list of document"
+          );
+        }
+        command.error(event);
       });
 
   };
