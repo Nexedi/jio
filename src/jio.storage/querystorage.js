@@ -18,7 +18,7 @@
    * @constructor
    */
   function QueryStorage(spec) {
-    this._substorage = jIO.createJIO(spec.sub_storage);
+    this._sub_storage = spec.sub_storage;
     this._key_schema = spec.key_schema;
   }
 
@@ -31,8 +31,9 @@
    * @param  {Object} command The JIO command
    */
   QueryStorage.prototype.get = function (command) {
-    var args = [].slice.call(arguments, 1);
-    this._substorage.get.apply(this._substorage, args).
+    var args = [].slice.call(arguments, 1), substorage;
+    substorage = command.storage(this._sub_storage);
+    substorage.get.apply(substorage, args).
       then(command.success, command.error, command.notify);
   };
 
@@ -45,8 +46,9 @@
    * @param  {Object} command The JIO command
    */
   QueryStorage.prototype.post = function (command) {
-    var args = [].slice.call(arguments, 1);
-    this._substorage.post.apply(this._substorage, args).
+    var args = [].slice.call(arguments, 1), substorage;
+    substorage = command.storage(this._sub_storage);
+    substorage.post.apply(substorage, args).
       then(command.success, command.error, command.notify);
   };
 
@@ -59,8 +61,9 @@
    * @param  {Object} command The JIO command
    */
   QueryStorage.prototype.put = function (command) {
-    var args = [].slice.call(arguments, 1);
-    this._substorage.put.apply(this._substorage, args).
+    var args = [].slice.call(arguments, 1), substorage;
+    substorage = command.storage(this._sub_storage);
+    substorage.put.apply(substorage, args).
       then(command.success, command.error, command.notify);
   };
 
@@ -73,8 +76,9 @@
    * @param  {Object} command The JIO command
    */
   QueryStorage.prototype.remove = function (command) {
-    var args = [].slice.call(arguments, 1);
-    this._substorage.remove.apply(this._substorage, args).
+    var args = [].slice.call(arguments, 1), substorage;
+    substorage = command.storage(this._sub_storage);
+    substorage.remove.apply(substorage, args).
       then(command.success, command.error, command.notify);
   };
 
@@ -87,8 +91,9 @@
    * @param  {Object} command The JIO command
    */
   QueryStorage.prototype.getAttachment = function (command) {
-    var args = [].slice.call(arguments, 1);
-    this._substorage.getAttachment.apply(this._substorage, args).
+    var args = [].slice.call(arguments, 1), substorage;
+    substorage = command.storage(this._sub_storage);
+    substorage.getAttachment.apply(substorage, args).
       then(command.success, command.error, command.notify);
   };
 
@@ -101,8 +106,9 @@
    * @param  {Object} command The JIO command
    */
   QueryStorage.prototype.putAttachment = function (command) {
-    var args = [].slice.call(arguments, 1);
-    this._substorage.putAttachment.apply(this._substorage, args).
+    var args = [].slice.call(arguments, 1), substorage;
+    substorage = command.storage(this._sub_storage);
+    substorage.putAttachment.apply(substorage, args).
       then(command.success, command.error, command.notify);
   };
 
@@ -115,8 +121,9 @@
    * @param  {Object} command The JIO command
    */
   QueryStorage.prototype.removeAttachment = function (command) {
-    var args = [].slice.call(arguments, 1);
-    this._substorage.removeAttachment.apply(this._substorage, args).
+    var args = [].slice.call(arguments, 1), substorage;
+    substorage = command.storage(this._sub_storage);
+    substorage.removeAttachment.apply(substorage, args).
       then(command.success, command.error, command.notify);
   };
 
@@ -132,11 +139,12 @@
    */
   QueryStorage.prototype.allDocs = function (command, param, options) {
     var that = this,
+      substorage = command.storage(this._sub_storage),
       // we need the full documents in order to perform the query, will
       // remove them later if they were not required.
       include_docs = (options.include_docs || options.query) ? true : false;
 
-    this._substorage.allDocs({include_docs: include_docs}).
+    substorage.allDocs({include_docs: include_docs}).
       then(function (response) {
 
         if (options.query) {
