@@ -68,8 +68,9 @@
         "status": 204,
         "statusText": "No Content"
       }, "Post a new document");
-      ok(/^no_document_id_[0-9]+$/.test(uuid), "New document id should look like " +
-         "no_document_id_479658600408584 : " + uuid);
+      ok(/^no_document_id_[0-9]+$/.test(uuid),
+         "New document id should look like no_document_id_479658600408584 : " +
+         uuid);
       shared.created_document_id = uuid;
 
     }
@@ -118,7 +119,7 @@
       //quelle utilité à pousser le xml ?
       responses.push([
         200,
-        {"Content-Type": "text/xml"},''
+        {"Content-Type": "text/xml"}, ''
       ]); // PROPFIND
       return jio.allDocs();
     }
@@ -294,8 +295,8 @@
     function createAttachmentTest(answer) {
       deepEqual(answer, {
         "attachment": "aa",
-        "digest":"sha256-9834876dcfb05cb167a5c24953eba58c4"+
-        "ac89b1adf57f28f2f9d09af107ee8f0",
+        "digest": "sha256-9834876dcfb05cb167a5c24953eba58c4" +
+          "ac89b1adf57f28f2f9d09af107ee8f0",
         "id": "a",
         "method": "putAttachment",
         "result": "success",
@@ -313,8 +314,8 @@
         "_attachments": {
           "aa": {
             "content_type": "text/plain",
-            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5"+
-            "0728e095ff24218119d51bd22475363",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
             "length": 3
           }
         }
@@ -332,8 +333,8 @@
     function updateAttachmentTest(answer) {
       deepEqual(answer, {
         "attachment": "aa",
-        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5"+
-        "0728e095ff24218119d51bd22475363",
+        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+          "0728e095ff24218119d51bd22475363",
         "id": "a",
         "method": "putAttachment",
         "result": "success",
@@ -351,8 +352,8 @@
         "_attachments": {
           "aa": {
             "content_type": "text/plain",
-            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5"+
-        "0728e095ff24218119d51bd22475363",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
             "length": 3
           }
         }
@@ -389,8 +390,8 @@
         "_attachments": {
           "aa": {
             "content_type": "text/plain",
-            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5"+
-            "0728e095ff24218119d51bd22475363",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
             "length": 3
           },
           "ab": {
@@ -424,8 +425,8 @@
         "_attachments": {
           "aa": {
             "content_type": "text/plain",
-            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5"+
-            "0728e095ff24218119d51bd22475363",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
             "length": 3
           },
           "ab": {
@@ -448,8 +449,8 @@
       deepEqual(answer, {
         "attachment": "aa",
         "data": "<blob>",
-        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5"+
-        "0728e095ff24218119d51bd22475363",
+        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+          "0728e095ff24218119d51bd22475363",
         "id": "a",
         "method": "getAttachment",
         "result": "success",
@@ -473,8 +474,8 @@
         "_attachments": {
           "aa": {
             "content_type": "text/plain",
-            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5"+
-            "0728e095ff24218119d51bd22475363",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
             "length": 3
           },
           "ab": {
@@ -522,8 +523,8 @@
         "_attachments": {
           "aa": {
             "content_type": "text/plain",
-            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5"+
-            "0728e095ff24218119d51bd22475363",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
             "length": 3
           },
           "ab": {
@@ -545,8 +546,8 @@
           "_attachments": {
             "aa": {
               "content_type": "text/plain",
-              "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5"+
-              "0728e095ff24218119d51bd22475363",
+              "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+                "0728e095ff24218119d51bd22475363",
               "length": 3
             },
             "ab": {
@@ -574,8 +575,8 @@
         "_attachments": {
           "aa": {
             "content_type": "text/plain",
-            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5"+
-            "0728e095ff24218119d51bd22475363",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
             "length": 3
           },
           "ab": {
@@ -611,8 +612,8 @@
         "_attachments": {
           "aa": {
             "content_type": "text/plain",
-            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5"+
-            "0728e095ff24218119d51bd22475363",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
             "length": 3
           }
         }
@@ -804,7 +805,7 @@
 
     // # Post new documents, list them and remove them
     // post a 201
-      postNewDocument().then(postNewDocumentTest).
+    postNewDocument().then(postNewDocumentTest).
       // get 200
       then(getCreatedDocument).then(getCreatedDocumentTest).
       // post b 201
