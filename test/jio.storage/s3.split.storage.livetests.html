@@ -13,6 +13,7 @@
   <script src="../../complex_queries.js"></script>
   <script src="../../src/sha1.amd.js"></script>
   <script src="../../src/jio.storage/s3storage.js"></script>
+  <script src="../../src/jio.storage/splitstorage.js"></script>
   <script src="../jio/util.js"></script>
 </head>
 <body>
@@ -35,6 +36,7 @@ location.href.split('?')[1].split('&').forEach(function (item) {
   </form>
   <br />
   <div id="qunit"></div>
-  <script src="s3storage.tests.js"></script>
+  <!--<script src="s3storage.tests.js"></script>-->
+  <script src="split.s3storage.tests.js"></script>
 </body>
 </html>

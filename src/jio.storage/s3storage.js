@@ -979,15 +979,14 @@
         //allDocs = function (command, param, options) {
         //if (options.include_docs) {   
         if (options.include_docs) { 
-           for (i; i >= 0; i -= 1) {
+          for (i; i >= 0; i -= 1) {
              keyId = resultTable[i];
              Signature = that.encodeAuthorization(keyId);
              callURL = 'http://' + priv.server + '.s3.amazonaws.com/' + keyId;
              requestUTC = new Date().toUTCString();
              parse = true;
-            allDocResponse.rows[i] = {
+             allDocResponse.rows[i] = {
                "id": priv.fileNameToIds(keyId).join(),
-               "key": keyId,
                "value": {}
              };
              checkCounter = i;
@@ -1020,7 +1019,6 @@
             keyId = resultTable[i];
             allDocResponse.rows[i] = {
               "id": priv.fileNameToIds(keyId).join(),
-              "key": priv.fileNameToIds(keyId).join(),
               "value": {}
             };
           }
