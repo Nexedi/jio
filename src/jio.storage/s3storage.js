@@ -16,17 +16,22 @@
   "use strict";
   var b64_hmac_sha1 = sha1.b64_hmac_sha1;
 
-  jIO.addStorageType("s3", function (spec, my) {
-    var that, priv = {};
-    spec = spec || {};
-    that = my.basicStorage(spec, my);
+  jIO.addStorage("s3", function (spec) {
+    var that, priv = {}, lastDigest, isDelete;
+    that = this;
+
+    //nomenclature param
+
+    // param._id,
+    //       ._attachment,
+    //       ._blob
 
     // attributes
     priv.username = spec.username || '';
     priv.AWSIdentifier = spec.AWSIdentifier || '';
     priv.password = spec.password || '';
-    priv.server = spec.server || ''; /*|| jiobucket ||*/
-    priv.acl = spec.acl || '';
+    priv.server = spec.server || '';
+
 
     /*||> "private,
           public-read,
@@ -35,8 +40,8 @@
           bucket-owner-read,
           bucket-owner-full-control" <||*/
 
+    priv.acl = spec.acl || '';
     priv.actionStatus = spec.actionStatus || '';
-
     priv.contenTType = spec.contenTType || '';
 
     /**
@@ -255,9 +260,6 @@
       return StringToSign;
     };
 
-
-
-
     that.encodePolicy = function () {
       //generates the policy
       //enables the choice for the http response code
@@ -268,10 +270,7 @@
           {"bucket": priv.server },
           ["starts-with", "$key", ""],
           {"acl": priv.acl },
-          {"success_action_redirect": ""},
-          {"success_action_status": undefined }, // http_code
-          ["starts-with", "$Content-Type", ""],
-          ["content-length-range", 0, 524288000]
+          ["starts-with", "$Content-Type", ""]
         ]
       };
 
@@ -303,52 +302,41 @@
               this.status === 200) {
             switch (http) {
             case "POST":
-              that.success({
-                ok: true,
-                id: docId
-              });
+              command.success(this.status, {id: docId});
               break;
             case 'PUT':
               if (jio === true) {
-                that.success({
-                  ok: true,
-                  id: command.getDocId()
-                });
+                command.success(this.status);
               } else {
                 callback(this.responseText);
               }
               break;
             case 'GET':
               if (jio === true) {
-                if (typeof this.responseText !== 'string') {
-                  response = JSON.parse(this.responseText);
-                  response._attachments = response._attachments || {};
-                  delete response._attachments;
-                  that.success(JSON.stringify(response));
+                if (isAttachment === true) {
+                  //méthode that.getAttachment
+                  response = this.response;
+                  command.success(
+                    this.status,
+                    {'data': response, 'digest': lastDigest}
+                  );
                 } else {
-                  if (isAttachment === true) {
-                    that.success(this.responseText);
-                  } else {
-                    that.success(JSON.parse(this.responseText));
-                  }
+                  // this is not an attachment
+                  // that.get method
+                  response = JSON.parse(this.responseText);
+                  command.success(this.status, {'data': response});
                 }
               } else {
                 callback(this.responseText);
               }
+
               break;
             case 'DELETE':
               if (jio === true) {
                 if (isAttachment === false) {
-                  that.success({
-                    ok: true,
-                    id: command.getDocId()
-                  });
+                  command.success(this.status);
                 } else {
-                  that.success({
-                    ok: true,
-                    id: command.getDocId(),
-                    attachment: command.getAttachmentId()
-                  });
+                  command.success(this.status);
                 }
               } else {
                 callback(this.responseText);
@@ -364,7 +352,7 @@
                 //reason "reason"
                 //message "did not work"
               err.error = "not_allowed";
-              that.error(err);
+              command.error(err);
             }
             if (this.status === 404) {
               if (http === 'GET') {
@@ -374,32 +362,48 @@
                   //error
                   //reason "reason"
                   //message "did not work"
-                  err.statustext = "not_foud";
-                  err.reason = "file does not exist";
-                  err.error = "not_found";
-                  that.error(err);
-                } else {
-
-                  callback('404');
+                  return command.error(
+                    404,
+                    "Not Found",
+                    "File does not exist"
+                  );
                 }
+                //not jio
+
+                if (isDelete === true) {
+                  isDelete = false;
+                  return command.error(
+                    404,
+                    "Not Found",
+                    "File does not exist"
+                  );
+                }
+                callback('404');
               } else {
                 //status
                 //statustext "Not Found"
                 //error
                 //reason "reason"
                 //message "did not work"
-                err.error = "not_found";
-                that.error(err);
+                return command.error(
+                  404,
+                  "Not Found",
+                  "File does not exist"
+                );
               }
+              //fin 404
             }
             if (this.status === 409) {
-                //status
-                //statustext "Not Found"
-                //error
-                //reason "reason"
-                //message "did not work"
-              err.error = "already_exists";
-              that.error(err);
+              //status
+              //statustext "Not Found"
+              //error
+              //reason "reason"
+              //message "did not work"
+              return command.error(
+                409,
+                "Already Exists",
+                "File does exist"
+              );
             }
           }
         }
@@ -430,30 +434,6 @@
       return doc;
     };
 
-    priv.createError = function (status, message, reason) {
-      var error = {
-        "status": status,
-        "message": message,
-        "reason": reason
-      };
-      switch (status) {
-      case 404:
-        error.statusText = "Not found";
-        break;
-      case 405:
-        error.statusText = "Method Not Allowed";
-        break;
-      case 409:
-        error.statusText = "Conflicts";
-        break;
-      case 24:
-        error.statusText = "Corrupted Document";
-        break;
-      }
-      error.error = error.statusText.toLowerCase().split(" ").join("_");
-      return error;
-    };
-
     that.encodeAuthorization = function (key) {
       //GET oriented method
       var requestUTC, httpVerb, StringToSign, Signature;
@@ -472,14 +452,14 @@
     };
 
     that.XHRwrapper = function (command,
-                        docId,
-                        attachId,
-                        http,
-                        mime,
-                        data,
-                        jio,
-                        is_attachment,
-                        callback) {
+                                docId,
+                                attachId,
+                                http,
+                                mime,
+                                data,
+                                jio,
+                                is_attachment,
+                                callback) {
 
       var docFile, requestUTC, StringToSign, url, Signature, xhr;
       docFile = priv.secureName(priv.idsToFileName(docId,
@@ -509,7 +489,13 @@
         + ":"
         + Signature);
       xhr.setRequestHeader("Content-Type", mime);
-      xhr.responseType = 'text';
+
+      if (http === 'GET' && jio === true && is_attachment === true) {
+        xhr.responseType = 'blob';
+      } else {
+        //défaut
+        xhr.responseType = 'text';
+      }
 
       xhr_onreadystatechange(docId,
         command,
@@ -533,21 +519,20 @@
      * @param  {object} command The JIO command
     **/
 
-    that.post = function (command) {
+    that.post = function (command, metadata) {
       //as S3 encoding key are directly inserted within the FormData(),
       //use of XHRwrapper function ain't pertinent
 
       var doc, doc_id, mime;
-      doc = command.cloneDoc();
-      doc_id = command.getDocId();
+      doc = metadata;
+      doc_id = doc._id;
 
       function postDocument() {
-        var http_response, fd, Signature, xhr;
+        var fd, Signature, xhr;
         doc_id = priv.secureName(priv.idsToFileName(doc_id));
         //Meant to deep-serialize in order to avoid
         //conflicts due to the multipart enctype
         doc = JSON.stringify(doc);
-        http_response = '';
         fd = new FormData();
         //virtually builds the form fields
         //filename
@@ -559,15 +544,15 @@
         priv.contenTType = "text/plain";
         fd.append('Content-Type', priv.contenTType);
         //allows specification of a success url redirection
-        fd.append('success_action_redirect', '');
+        //fd.append('success_action_redirect', '');
         //allows to specify the http code response if the request is successful
-        fd.append('success_action_status', http_response);
+        //fd.append('success_action_status', http_response);
         //login AWS
         fd.append('AWSAccessKeyId', priv.AWSIdentifier);
         //exchange policy with the amazon s3 service
         //can be common to all uploads or specific
+        //that.encodePolicy(fd);
         that.encodePolicy(fd);
-        //priv.b64_policy = that.encodePolicy(fd);
         fd.append('policy', priv.b64_policy);
         //signature through the base64.hmac.sha1(secret key, policy) method
         Signature = b64_hmac_sha1(priv.password, priv.b64_policy);
@@ -594,14 +579,13 @@
           } else {
           //si ce n'est pas une 404,
           //alors on renvoit une erreur 405
-            return that.error(priv.createError(
+            return command.error(
               409,
-              "Cannot create document",
-              "Document already exists"
-            ));
+              "Document already exists",
+              "Cannot create document"
+            );
           }
-        }
-        );
+        });
     };
 
     /**
@@ -610,22 +594,50 @@
     * @param  {object} command The JIO command
     **/
 
-    that.get = function (command) {
-      var docId, attachId, isJIO, mime;
-      docId = command.getDocId();
-      attachId = command.getAttachmentId() || '';
+    that.get = function (command, metadata) {
+      var docId, isJIO, mime;
+      docId = metadata._id;
       isJIO = true;
       mime = 'text/plain; charset=UTF-8';
-      that.XHRwrapper(command, docId, attachId, 'GET', mime, '', isJIO, false);
+      that.XHRwrapper(command, docId, '', 'GET', mime, '', isJIO, false);
     };
 
-    that.getAttachment = function (command) {
+    that.getAttachment = function (command, param) {
       var docId, attachId, isJIO, mime;
-      docId = command.getDocId();
-      attachId = command.getAttachmentId();
-      isJIO = true;
-      mime = 'text/plain; charset=UTF-8';
-      that.XHRwrapper(command, docId, attachId, 'GET', mime, '', isJIO, true);
+
+      function getTheAttachment() {
+        docId = param._id;
+        attachId = param._attachment;
+        isJIO = true;
+        mime = 'text/plain; charset=UTF-8';
+        that.XHRwrapper(command, docId, attachId, 'GET', mime, '', isJIO, true);
+      }
+
+      function getDoc() {
+        docId = param._id;
+        isJIO = false;
+        mime = 'text/plain; charset=UTF-8';
+        that.XHRwrapper(command, docId, '', 'GET', mime, '', isJIO, false,
+          function (response) {
+            var responseObj = JSON.parse(response)._attachments;
+            if (responseObj !== undefined) {
+              if (responseObj[param._attachment] !== undefined) {
+                lastDigest = JSON.parse(response).
+                  _attachments[param._attachment].digest;
+              }
+            }
+            getTheAttachment();
+          });
+      }
+
+      getDoc();
+
+      //docId = param._id;
+      //attachId = param._attachment;
+      //isJIO = true;
+      //mime = 'text/plain; charset=UTF-8';
+      //that.XHRwrapper(command, docId, attachId, 'GET', mime,
+      //                '', isJIO, true);
     };
 
     /**
@@ -634,10 +646,10 @@
      * @param  {object} command The JIO command
      **/
 
-    that.put = function (command) {
+    that.put = function (command, metadata) {
       var doc, docId, mime;
-      doc = command.cloneDoc();
-      docId = command.getDocId();
+      doc = metadata;
+      docId = doc._id;
       mime = 'text/plain; charset=UTF-8';
       //pas d'attachment dans un put simple
       function putDocument() {
@@ -657,94 +669,95 @@
 
       that.XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
         function (response) {
-          //if (response === '404') {}
-          if (response._attachments !== undefined) {
-            doc._attachments = response._attachments;
+          var responseObj = JSON.parse(response);
+
+          if (responseObj._attachments !== undefined) {
+            doc._attachments = responseObj._attachments;
           }
+
           putDocument();
-        }
-        );
+          // XXX control non existing document to throw a 201 http code
+        });
     };
 
-    that.putAttachment = function (command) {
-      var mon_document,
+    that.putAttachment = function (command, param) {
+      var my_document,
         docId,
         attachId,
         mime,
         attachment_data,
-        attachment_md5,
+        attachment_digest,
         attachment_mimetype,
         attachment_length;
 
-      mon_document = null;
-      docId = command.getDocId();
-      attachId = command.getAttachmentId() || '';
-      mime = 'text/plain; charset=UTF-8';
-      //récupération des variables de l'attachement
+      my_document = null;
+      docId = param._id;
+      attachId = param._attachment;
+      mime = param._blob.type;
 
-      //attachment_id = command.getAttachmentId();
-      attachment_data = command.getAttachmentData();
-      attachment_md5 = command.md5SumAttachmentData();
-      attachment_mimetype = command.getAttachmentMimeType();
-      attachment_length = command.getAttachmentLength();
+      attachment_data = param._blob;
 
-      function putAttachment() {
-        that.XHRwrapper(command,
-          docId,
-          attachId,
-          'PUT',
-          mime,
-          attachment_data,
-          false,
-          true,
-          function () {
-            that.success({
-              // response
-              "ok": true,
-              "id": docId,
-              "attachment": attachId
-              //"rev": current_revision
-            });
-          }
-          );
-      }
+      jIO.util.readBlobAsBinaryString(param._blob).then(function (e) {
+        var binary_string = e.target.result;
+        attachment_digest = jIO.util.makeBinaryStringDigest(binary_string);
 
-      function putDocument() {
-        var attachment_obj, data, doc;
-        attachment_obj = {
-          //"revpos": 3, // optional
-          "digest": attachment_md5,
-          "content_type": attachment_mimetype,
-          "length": attachment_length
-        };
-        data = JSON.parse(mon_document);
-
-        doc = priv.updateMeta(data, docId, attachId, "add", attachment_obj);
-
-        that.XHRwrapper(command, docId, '', 'PUT', mime, doc, false, false,
-          function () {
-            putAttachment();
-          }
-          );
-      }
-
-      function getDocument() {
-        //XHRwrapper(command,'PUT','text/plain; charset=UTF-8',true);
-        that.XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
-          function (reponse) {
-            if (reponse === '404') {
-              return that.error(priv.createError(
-                404,
-                "Cannot find document",
-                "Document does not exist"
-              ));
+        function putAttachment() {
+          that.XHRwrapper(
+            command,
+            docId,
+            attachId,
+            'PUT',
+            mime,
+            attachment_data,
+            false,
+            true,
+            function () {
+              command.success({
+                // response
+                "digest": attachment_digest
+              });
             }
-            mon_document = reponse;
-            putDocument();
-          }
           );
-      }
-      getDocument();
+        }
+
+        function putDocument() {
+          var attachment_obj, data, doc;
+          attachment_mimetype = param._blob.type;
+          attachment_length = param._blob.size;
+
+          attachment_obj = {
+            //"revpos": 3, // optional
+            "digest": attachment_digest,
+            "content_type": attachment_mimetype,
+            "length": attachment_length
+          };
+
+          data = JSON.parse(my_document);
+
+          doc = priv.updateMeta(data, docId, attachId, "add", attachment_obj);
+
+          that.XHRwrapper(command, docId, '', 'PUT', mime, doc, false, false,
+            function () {
+              putAttachment();
+            });
+        }
+
+        function getDocument() {
+          that.XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
+            function (response) {
+              if (response === '404') {
+                return command.error(
+                  404,
+                  "Document does not exist",
+                  "Cannot find document"
+                );
+              }
+              my_document = response;
+              putDocument();
+            });
+        }
+        getDocument();
+      });
     };
 
     /**
@@ -753,15 +766,16 @@
      * @param  {object} command The JIO command
      */
 
-    that.remove = function (command) {
+    that.remove = function (command, param) {
       var docId, mime;
-      docId = command.getDocId();
+      docId = param._id;
       mime = 'text/plain; charset=UTF-8';
-
+      isDelete = true;
       function deleteDocument() {
+        isDelete = false;
         that.XHRwrapper(command, docId, '', 'DELETE', mime, '', true, false,
           function () {
-            that.success({
+            command.success({
               // response
               "ok": true,
               "id": docId
@@ -798,23 +812,23 @@
         );
     };
 
-    that.removeAttachment = function (command) {
-      var mon_document,
+    that.removeAttachment = function (command, param) {
+      var my_document,
         docId,
         attachId,
         mime;
 
-      mon_document = null;
-      docId = command.getDocId();
-      attachId = command.getAttachmentId() || '';
+      my_document = null;
+      docId = param._id;
+      attachId = param._attachment;
       mime = 'text/plain; charset=UTF-8';
       //récupération des variables de l'attachement
 
-      // attachment_id = command.getAttachmentId();
-      // attachment_data = command.getAttachmentData();
-      // attachment_md5 = command.md5SumAttachmentData();
-      // attachment_mimetype = command.getAttachmentMimeType();
-      // attachment_length = command.getAttachmentLength();
+      //attachment_id = command.getAttachmentId();
+      //attachment_data = command.getAttachmentData();
+      //attachment_md5 = command.md5SumAttachmentData();
+      //attachment_mimetype = command.getAttachmentMimeType();
+      //attachment_length = command.getAttachmentLength();
 
       function removeAttachment() {
         that.XHRwrapper(command, docId, attachId, 'DELETE', mime, '', true,
@@ -825,7 +839,8 @@
 
       function putDocument() {
         var data, doc;
-        data = JSON.parse(mon_document);
+        //data = JSON.parse(my_document);
+        data = my_document;
         doc = priv.updateMeta(data, docId, attachId, "remove", '');
         that.XHRwrapper(command, docId, '', 'PUT', mime, doc,
           false, false, function () {
@@ -835,11 +850,32 @@
 
       function getDocument() {
         that.XHRwrapper(command, docId, '', 'GET', mime, '', false, false,
-          function (reponse) {
-            mon_document = reponse;
-            putDocument();
-          }
-          );
+          function (response) {
+            if (response === '404') {
+              return command.error(
+                404,
+                "missing document",
+                "This Document does not exist"
+              );
+            }
+            my_document = JSON.parse(response);
+            if (my_document._attachments === undefined) {
+              return command.error(
+                404,
+                "missing attachment",
+                "This Document has no attachments"
+              );
+            }
+            if (my_document._attachments[attachId] !== undefined) {
+              putDocument();
+            } else {
+              return command.error(
+                404,
+                "missing attachment",
+                "This Attachment does not exist"
+              );
+            }
+          });
       }
       getDocument();
     };
@@ -850,9 +886,10 @@
      * @param  {object} command The JIO command
     **/
 
-    that.allDocs = function (command) {
-      var mon_document, mime;
-      mon_document = null;
+    that.allDocs = function (command, param, options) {
+      /*jslint unparam: true */
+      var my_document, mime;
+      my_document = null;
       mime = 'text/plain; charset=UTF-8';
 
       function makeJSON() {
@@ -870,7 +907,7 @@
           callURL,
           requestUTC;
 
-        keys = $(mon_document).find('Key');
+        keys = $(my_document).find('Key');
 
         resultTable = [];
         counter = 0;
@@ -892,7 +929,6 @@
         allDocResponse = {
           // document content will be added to response
           "total_rows": resultTable.length,
-          "offset": 0,
           "rows": []
         };
 
@@ -905,7 +941,7 @@
           return function (doc, statustext, response) {
             allDoc.rows[i].doc = response.responseText;
             if (count === 0) {
-              that.success(allDoc);
+              command.success(allDoc);
             } else {
               count -= 1;
             }
@@ -914,13 +950,8 @@
 
         errCallback = function (err) {
           if (err.status === 404) {
-            //status
-            //statustext "Not Found"
-            //error
-            //reason "reason"
-            //message "did not work"
             err.error = "not_found";
-            that.error(err);
+            command.error(err);
           } else {
             return that.retry(err);
           }
@@ -928,20 +959,16 @@
 
         i = resultTable.length - 1;
 
-        if (command.getOption("include_docs") === true) {
-
+        if (options.include_docs) {
           for (i; i >= 0; i -= 1) {
             keyId = resultTable[i];
             Signature = that.encodeAuthorization(keyId);
             callURL = 'http://' + priv.server + '.s3.amazonaws.com/' + keyId;
             requestUTC = new Date().toUTCString();
-
             allDocResponse.rows[i] = {
               "id": priv.fileNameToIds(keyId).join(),
-              "key": keyId,
               "value": {}
             };
-
             $.ajax({
               contentType : '',
               crossdomain : true,
@@ -961,7 +988,7 @@
                 //'x-amz-security-token' : ,
               },
               success : dealCallback(i, countB, allDocResponse),
-              error : errCallback(that.error)
+              error : errCallback(command.error)
             });
             countB += 1;
           }
@@ -970,11 +997,11 @@
             keyId = resultTable[i];
             allDocResponse.rows[i] = {
               "id": priv.fileNameToIds(keyId).join(),
-              "key": keyId,
               "value": {}
             };
           }
-          that.success(allDocResponse);
+          allDocResponse = {"data": allDocResponse};
+          command.success(allDocResponse);
         }
       }
 
@@ -982,16 +1009,13 @@
         //XHRwrapper(command,'PUT','text/plain; charset=UTF-8',true);
         that.XHRwrapper(command, '', '', 'GET', mime, '', false, false,
           function (reponse) {
-            mon_document = reponse;
+            my_document = reponse;
             makeJSON();
           }
           );
       }
-
       getXML();
       //fin alldocs
     };
-    return that;
   });
-
 }));
