@@ -109,6 +109,7 @@
     jio_s3_list[0] = jIO.createJIO(shared.s3_storage_description1, {
       "workspace": shared.workspace
     });
+    console.log(jio_s3_list[0])
     jio_s3_list[1] = jIO.createJIO(shared.s3_storage_description2, {
       "workspace": shared.workspace
     });

@@ -27,28 +27,6 @@
   "use strict";
 
   /**
-   * Generate a new uuid
-   *
-   * @method generateUuid
-   * @private
-   * @return {String} The new uuid
-   */
-  function generateUuid() {
-    function S4() {
-      /* 65536 */
-      var i, string = Math.floor(
-        Math.random() * 0x10000
-      ).toString(16);
-      for (i = string.length; i < 4; i += 1) {
-        string = '0' + string;
-      }
-      return string;
-    }
-    return S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() +
-      S4() + S4();
-  }
-
-  /**
    * Select a storage to put the document part
    *
    * @method selectStorage
@@ -225,9 +203,10 @@
    * A split storage instance is able to i/o on several sub storages with
    * split documents.
    *
-   * @class SplitStorage
+   * @class MultiSplitStorage
    */
-  function SplitStorage(spec) {
+  function MultiSplitStorage(spec) {
+    console.info('mutli creation');
     var that = this, priv = {};
 
     /**
@@ -261,7 +240,7 @@
      * @param  {Object} option The command option
      * @param  {Function} callback Called at the end
      */
-    priv.send = function (command, method, doc, option, callback) {
+    function send(command, method, doc, option, callback) {
       var i, answer_list = [], failed = false, currentServer;
       function onEnd() {
         i += 1;
@@ -343,11 +322,8 @@
      * @param  {String} method The command method ('post' or 'put')
      */
     priv.postOrPut = function (command, doc, option, method) {
+      console.log("multi post or put");
       var i, data, doc_list = [], doc_underscores = {};
-      if (!doc._id) {
-        doc._id = generateUuid(); // XXX should let gidstorage guess uid
-        // in the future, complete id with gidstorage
-      }
       for (i in doc) {
         if (doc.hasOwnProperty(i)) {
           if (i[0] === "_") {
@@ -377,12 +353,13 @@
         );
       }
 
-      priv.send(command, method, doc_list, option, function (err) {
+      send(command, method, doc_list, option, function (err) {
         if (err) {
           err.message = "Unable to " + method + " document";
           delete err.index;
           return command.error(err);
         }
+        console.log("post or put succes", doc_underscores._id);
         command.success({"id": doc_underscores._id});
       });
     };
@@ -426,7 +403,7 @@
           data.type
         );
       }
-      priv.send(
+      send(
         command,
         'putAttachment',
         attachment_list,
@@ -450,7 +427,8 @@
      */
     that.get = function (command, param, option) {
       var doc = param;
-      priv.send(command, 'get', doc, option, function (err, response) {
+
+      send(command, 'get', doc, option, function (err, response) {
         var i, k;
         if (err) {
           err.message = "Unable to get document";
@@ -510,7 +488,7 @@
      * @param  {Object} command The JIO command
      */
     that.getAttachment = function (command, param, option) {
-      priv.send(command, 'getAttachment', param, option, function (
+      send(command, 'getAttachment', param, option, function (
         err,
         response
       ) {
@@ -533,7 +511,7 @@
      * @param  {Object} command The JIO command
      */
     that.remove = function (command, param, option) {
-      priv.send(
+      send(
         command,
         'remove',
         param,
@@ -556,7 +534,7 @@
      * @param  {Object} command The JIO command
      */
     that.removeAttachment = function (command, param, option) {
-      priv.send(
+      send(
         command,
         'removeAttachment',
         param,
@@ -583,7 +561,7 @@
      */
     that.allDocs = function (command, param, option) {
       option = {"include_docs": option.include_docs};
-      priv.send(
+      send(
         command,
         'allDocs',
         param,
@@ -601,8 +579,8 @@
         }
       );
     };
+    console.info('mutli created');
+  } // end of MultiplitStorage
 
-  } // end of splitStorage
-
-  jIO.addStorage('split', SplitStorage);
+  jIO.addStorage('multisplit', MultiSplitStorage);
 }));
