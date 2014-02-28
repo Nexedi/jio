@@ -30,7 +30,7 @@ function inherits(constructor, superConstructor) {
 }
 
 /**
- * Clones jsonable object in deep
+ * Clones jsonable object in depth
  *
  * @param  {A} object The jsonable object to clone
  * @return {A} The cloned object
@@ -51,7 +51,7 @@ exports.util.jsonDeepClone = jsonDeepClone;
  * It can also clone object which are serializable, like Date.
  *
  * To make a class serializable, you need to implement the `toJSON` function
- * which returns a JSON representation of the object. The return value is used
+ * which returns a JSON representation of the object. The returned value is used
  * as first parameter of the object constructor.
  *
  * @param  {A} object The object to clone
@@ -81,12 +81,12 @@ function deepClone(object) {
     }
     if (object instanceof Date) {
       // XXX this block is to enable phantomjs and browsers compatibility with
-      // Date.prototype.toJSON when it is a invalid date. In phantomjs, it
+      // Date.prototype.toJSON when it is an invalid date. In phantomjs, it
       // returns `"Invalid Date"` but in browsers it returns `null`. In
-      // browsers, give `null` as parameter to `new Date()` doesn't return an
+      // browsers, giving `null` as parameter to `new Date()` doesn't return an
       // invalid date.
 
-      // Clonning date with `return new Date(object)` make problems on Firefox.
+      // Cloning a date with `return new Date(object)` has problems on Firefox.
       // I don't know why...  (Tested on Firefox 23)
 
       if (isFinite(object.getTime())) {
@@ -106,7 +106,7 @@ function deepClone(object) {
 exports.util.deepClone = deepClone;
 
 /**
- * Update a dictionnary by adding/replacing key values from another dict.
+ * Update a dictionary by adding/replacing key values from another dict.
  * Enumerable values equal to undefined are also used.
  *
  * @param  {Object} original The dict to update
@@ -298,7 +298,7 @@ exports.util.readBlobAsText = readBlobAsText;
 
 /**
  * Send request with XHR and return a promise. xhr.onload: The promise is
- * resolve when the status code is lower than 400 with the xhr object as first
+ * resolved when the status code is lower than 400 with the xhr object as first
  * parameter. xhr.onerror: reject with xhr object as first
  * parameter. xhr.onprogress: notifies the xhr object.
  *
@@ -307,7 +307,7 @@ exports.util.readBlobAsText = readBlobAsText;
  * @param  {String} [param.dataType=""] The data type to retrieve
  * @param  {String} param.url The url
  * @param  {Any} [param.data] The data to send
- * @param  {Function} [param.beforeSend] A function called just before send
+ * @param  {Function} [param.beforeSend] A function called just before the send
  *   request. The first parameter of this function is the XHR object.
  * @return {Promise} The promise
  */
