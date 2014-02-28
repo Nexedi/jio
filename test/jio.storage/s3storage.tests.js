@@ -68,11 +68,13 @@
         "status": 204,
         "statusText": "No Content"
       }, "Post a new document");
-      ok(/^no_document_id_[0-9]+$/.test(uuid),
-         "New document id should look like no_document_id_479658600408584 : " +
-         uuid);
+      //ok(/^no_document_id_[0-9]+$/.test(uuid),
+         //"New document id should look like no_document_id_479658600408584 : " +
+         //uuid);
+      //shared.created_document_id = uuid;
+      ok(test_util.isUuid(uuid), "New document id should look like " +
+         "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + uuid);
       shared.created_document_id = uuid;
-
     }
 
     function getCreatedDocument() {

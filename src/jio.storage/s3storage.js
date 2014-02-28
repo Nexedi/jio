@@ -76,18 +76,18 @@
      * ["substring to select", "selected substring replaced by this string"].
      * @return {string} The replaced string
      */
-    priv.recursiveReplace = function (string, list_of_replacement) {
-      var i, split_string = string.split(list_of_replacement[0][0]);
-      if (list_of_replacement[1]) {
-        for (i = 0; i < split_string.length; i += 1) {
-          split_string[i] = priv.recursiveReplace(
-            split_string[i],
-            list_of_replacement.slice(1)
-          );
-        }
-      }
-      return split_string.join(list_of_replacement[0][1]);
-    };
+    //priv.recursiveReplace = function (string, list_of_replacement) {
+      //var i, split_string = string.split(list_of_replacement[0][0]);
+      //if (list_of_replacement[1]) {
+        //for (i = 0; i < split_string.length; i += 1) {
+          //split_string[i] = priv.recursiveReplace(
+            //split_string[i],
+            //list_of_replacement.slice(1)
+          //);
+        //}
+      //}
+      //return split_string.join(list_of_replacement[0][1]);
+    //};
 
     /**
      * Changes / to %2F, % to %25 and . to _.
@@ -95,9 +95,9 @@
      * @param  {string} name The name to secure
      * @return {string} The secured name
      */
-    priv.secureName = function (name) {
-      return priv.recursiveReplace(name, [["/", "%2F"], ["%", "%25"]]);
-    };
+    //priv.secureName = function (name) {
+      //return priv.recursiveReplace(name, [["/", "%2F"], ["%", "%25"]]);
+    //};
 
     /**
      * Restores the original name from a secured name
@@ -105,9 +105,9 @@
      * @param  {string} secured_name The secured name to restore
      * @return {string} The original name
      */
-    priv.restoreName = function (secured_name) {
-      return priv.recursiveReplace(secured_name, [["%2F", "/"], ["%25", "%"]]);
-    };
+    //priv.restoreName = function (secured_name) {
+      //return priv.recursiveReplace(secured_name, [["%2F", "/"], ["%25", "%"]]);
+    //};
 
     /**
      * Convert document id and attachment id to a file name
@@ -116,14 +116,14 @@
      * @param  {string} attachment_id The attachment id (optional)
      * @return {string} The file name
      */
-    priv.idsToFileName = function (doc_id, attachment_id) {
-      doc_id = priv.secureName(doc_id).split(".").join("_.");
-      if (typeof attachment_id === "string") {
-        attachment_id = priv.secureName(attachment_id).split(".").join("_.");
-        return doc_id + "." + attachment_id;
-      }
-      return doc_id;
-    };
+    //priv.idsToFileName = function (doc_id, attachment_id) {
+      //doc_id = priv.secureName(doc_id).split(".").join("_.");
+      //if (typeof attachment_id === "string") {
+        //attachment_id = priv.secureName(attachment_id).split(".").join("_.");
+        //return doc_id + "." + attachment_id;
+      //}
+      //return doc_id;
+    //};
 
     /**
      * Convert a file name to a document id (and attachment id if there)
@@ -131,27 +131,69 @@
      * @param  {string} file_name The file name to convert
      * @return {array} ["document id", "attachment id"] or ["document id"]
      */
-    priv.fileNameToIds = function (file_name) {
-      var separator_index = -1, split = file_name.split(".");
-      split.slice(0, -1).forEach(function (file_name_part, index) {
-        if (file_name_part.slice(-1) !== "_") {
-          separator_index = index;
-        }
-      });
-      if (separator_index === -1) {
-        return [priv.restoreName(priv.restoreName(
-          file_name
-        ).split("_.").join("."))];
+    //priv.fileNameToIds = function (file_name) {
+      //var separator_index = -1, split = file_name.split(".");
+      //split.slice(0, -1).forEach(function (file_name_part, index) {
+        //if (file_name_part.slice(-1) !== "_") {
+          //separator_index = index;
+        //}
+      //});
+      //if (separator_index === -1) {
+        //return [priv.restoreName(priv.restoreName(
+          //file_name
+        //).split("_.").join("."))];
+      //}
+      //return [
+        //priv.restoreName(priv.restoreName(
+          //split.slice(0, separator_index + 1).join(".")
+        //).split("_.").join(".")),
+        //priv.restoreName(priv.restoreName(
+          //split.slice(separator_index + 1).join(".")
+        //).split("_.").join("."))
+      //];
+    //};
+
+    priv.fileNameToIds = function (resourcename) {
+      var split, el, id = "", attmt = "", last;
+      split = resourcename.split('.');
+    
+      function replaceAndNotLast() {
+        last = false;
+        return '.';
       }
-      return [
-        priv.restoreName(priv.restoreName(
-          split.slice(0, separator_index + 1).join(".")
-        ).split("_.").join(".")),
-        priv.restoreName(priv.restoreName(
-          split.slice(separator_index + 1).join(".")
-        ).split("_.").join("."))
-      ];
-    };
+    
+      /*jslint ass: true */
+      while ((el = split.shift()) !== undefined) {
+        /*jslint ass: false */
+        last = true;
+        el = el.replace(/__/g, '%2595');
+        el = el.replace(/_$/, replaceAndNotLast);
+        id += el.replace(/%2595/g, '_');
+        if (last) {
+          break;
+        }
+      }
+    
+      attmt = split.join('.');
+    
+      return [id, attmt];
+    }
+    
+    priv.idsToFileName = function (document_id, attachment_id) {
+      document_id = encodeURI(document_id).
+        replace(/\//g, "%2F").
+        replace(/\?/g, "%3F");
+      document_id = encodeURI(document_id).
+        replace(/_/g, "__").
+        replace(/\./g, "_.");
+      if (attachment_id) {
+        attachment_id = encodeURI(attachment_id).
+          replace(/\//g, "%2F").
+          replace(/\?/g, "%3F");
+        return document_id + "." + attachment_id;
+      }
+      return document_id;
+    }
 
     /**
      * Removes the last character if it is a "/". "/a/b/c/" become "/a/b/c"
@@ -165,6 +207,29 @@
       }
       return string;
     };
+
+
+  /**
+   * Generate a new uuid
+   *
+   * @method generateUuid
+   * @private
+   * @return {String} The new uuid
+   */
+  function generateUuid() {
+    function S4() {
+      /* 65536 */
+      var i, string = Math.floor(
+        Math.random() * 0x10000
+      ).toString(16);
+      for (i = string.length; i < 4; i += 1) {
+        string = '0' + string;
+      }
+      return string;
+    }
+    return S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() +
+      S4() + S4();
+  }
 
 
 
@@ -460,10 +525,17 @@
                                 jio,
                                 is_attachment,
                                 callback) {
-
       var docFile, requestUTC, StringToSign, url, Signature, xhr;
-      docFile = priv.secureName(priv.idsToFileName(docId,
-        attachId || undefined));
+
+      if (command.method === "alldocs"){
+        docFile = '';
+      } else {        
+        docFile = priv.idsToFileName(docId,
+          attachId || undefined);
+      }
+
+      console.trace('ma trace');
+      console.info('docfile = '+docId, attachId, docFile);
 
       requestUTC = new Date().toUTCString();
 
@@ -520,16 +592,20 @@
     **/
 
     that.post = function (command, metadata) {
+      console.info('S3 post')
       //as S3 encoding key are directly inserted within the FormData(),
       //use of XHRwrapper function ain't pertinent
-
+      console.log(metadata)
       var doc, doc_id, mime;
       doc = metadata;
+      //doc_id = (!doc._id) ? generateUuid() : doc._id;
+      doc._id = doc._id || generateUuid();
       doc_id = doc._id;
 
       function postDocument() {
         var fd, Signature, xhr;
-        doc_id = priv.secureName(priv.idsToFileName(doc_id));
+        doc_id = priv.idsToFileName(doc_id);
+        console.log(doc_id);
         //Meant to deep-serialize in order to avoid
         //conflicts due to the multipart enctype
         doc = JSON.stringify(doc);
@@ -566,9 +642,8 @@
       }
 
       if (doc_id === '' || doc_id === undefined) {
-        doc_id = 'no_document_id_'
-          + ((Math.random() * 10).toString().split('.'))[1];
-        doc._id = doc_id;
+       // doc_id = 'no_document_id_' + ((Math.random() * 10).toString().split('.'))[1];
+        doc._id = generateUuid();
       }
 
       mime = 'text/plain; charset=UTF-8';
@@ -595,6 +670,7 @@
     **/
 
     that.get = function (command, metadata) {
+      console.info('S3 get')
       var docId, isJIO, mime;
       docId = metadata._id;
       isJIO = true;
@@ -647,6 +723,7 @@
      **/
 
     that.put = function (command, metadata) {
+      console.info('S3 put')
       var doc, docId, mime;
       doc = metadata;
       docId = doc._id;
@@ -681,6 +758,7 @@
     };
 
     that.putAttachment = function (command, param) {
+      console.info('S3 putAttachment');
       var my_document,
         docId,
         attachId,
@@ -767,6 +845,7 @@
      */
 
     that.remove = function (command, param) {
+      console.info('S3 remove')
       var docId, mime;
       docId = param._id;
       mime = 'text/plain; charset=UTF-8';
@@ -887,6 +966,12 @@
     **/
 
     that.allDocs = function (command, param, options) {
+      console.info('S3 allDocs');
+      var _succ = command.success;
+      command.success = function(){
+          console.log.apply(console, arguments);
+        _succ.apply(this, arguments)
+      }
       /*jslint unparam: true */
       var my_document, mime;
       my_document = null;
@@ -906,8 +991,17 @@
           Signature,
           callURL,
           requestUTC;
+            
+            keys = $($.parseXML(my_document)).find('Key');
 
-        keys = $(my_document).find('Key');
+        if (keys.length === 0) {
+          return command.success( {"data": 
+            {
+              "total_rows": 0,
+              "rows": []
+            }
+          });
+        }
 
         resultTable = [];
         counter = 0;
@@ -939,22 +1033,33 @@
         dealCallback = function (i, countB, allDoc) {
           /*jslint unparam: true */
           return function (doc, statustext, response) {
-            allDoc.rows[i].doc = response.responseText;
+            allDoc.rows[i].doc = JSON.parse(response.responseText);
             if (count === 0) {
-              command.success(allDoc);
+              return command.success({
+                "data": allDoc
+              });
             } else {
               count -= 1;
             }
           };
         };
 
-        errCallback = function (err) {
-          if (err.status === 404) {
-            err.error = "not_found";
-            command.error(err);
-          } else {
-            return that.retry(err);
-          }
+        errCallback = function (jQxhr) {
+          command.error(
+            jQxhr.status,
+            jQxhr.statusText,
+            "S3 Alldocs failed."
+            )
+          //if (obj.status === 404) {
+            //obj.error = "not_found";
+            //console.info(obj);
+            //command.error(obj.error);
+          //} else {
+            ////return command.retry(err);
+            //console.info(obj);
+            //return command.error(obj);
+          //}
+
         };
 
         i = resultTable.length - 1;
@@ -962,11 +1067,12 @@
         if (options.include_docs) {
           for (i; i >= 0; i -= 1) {
             keyId = resultTable[i];
+             console.log(keyId);
             Signature = that.encodeAuthorization(keyId);
             callURL = 'http://' + priv.server + '.s3.amazonaws.com/' + keyId;
             requestUTC = new Date().toUTCString();
             allDocResponse.rows[i] = {
-              "id": priv.fileNameToIds(keyId).join(),
+              "id": priv.fileNameToIds(keyId)[0],
               "value": {}
             };
             $.ajax({
@@ -988,28 +1094,30 @@
                 //'x-amz-security-token' : ,
               },
               success : dealCallback(i, countB, allDocResponse),
-              error : errCallback(command.error)
+              error : errCallback
             });
             countB += 1;
           }
         } else {
           for (i; i >= 0; i -= 1) {
             keyId = resultTable[i];
+            console.log(keyId);
             allDocResponse.rows[i] = {
-              "id": priv.fileNameToIds(keyId).join(),
+              "id": priv.fileNameToIds(keyId)[0],
               "value": {}
             };
           }
           allDocResponse = {"data": allDocResponse};
+
           command.success(allDocResponse);
         }
       }
 
       function getXML() {
-        //XHRwrapper(command,'PUT','text/plain; charset=UTF-8',true);
+        command.method = 'alldocs';
         that.XHRwrapper(command, '', '', 'GET', mime, '', false, false,
-          function (reponse) {
-            my_document = reponse;
+          function (response) {
+            my_document = response;
             makeJSON();
           }
           );
