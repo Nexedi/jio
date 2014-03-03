@@ -90,7 +90,9 @@ for basic authentication, the password will just be base64 encoded.
 S3Storage
 ^^^^^^^^^
 
-Work is in progress. Documentation comming soon.
+Live tests OK!
+
+Here is a basic description for jIO. Documentation comming soon.
 
 .. code-block:: javascript
 
@@ -98,8 +100,7 @@ Work is in progress. Documentation comming soon.
     "type": "s3",
     "AWSIdentifier": "my aws identifier",
     "password": "my password",
-    "server": "bucket_name",
-    "url": "https://bucket_name.s3.amazonaws.com"
+    "server": "bucket_name"
   }
 
 XWikiStorage
