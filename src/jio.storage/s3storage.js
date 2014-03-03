@@ -19,7 +19,6 @@
 
 
   jIO.addStorage("s3", function (spec) {
-    console.info('S3 creation');
     var that, priv = {}, lastDigest, isDelete;
     that = this;
 
@@ -78,6 +77,7 @@
         last = false;
         return '.';
       }
+      /*jslint ass: true */
       while ((el = split.shift()) !== undefined) {
         last = true;
         el = el.replace(/__/g, '%2595');
@@ -510,7 +510,6 @@
       function postDocument() {
         var fd, Signature, xhr;
         doc_id = priv.idsToFileName(doc_id);
-        console.log(doc_id);
         //Meant to deep-serialize in order to avoid
         //conflicts due to the multipart enctype
         doc = JSON.stringify(doc);
@@ -660,7 +659,6 @@
     };
 
     that.putAttachment = function (command, param) {
-      console.info('S3 putAttachment');
       var my_document,
         docId,
         attachId,
@@ -871,7 +869,6 @@
       var _succ, my_document, mime;
       _succ = command.success;
       command.success = function () {
-        console.log.apply(console, arguments);
         _succ.apply(this, arguments);
       };
       my_document = null;
@@ -989,7 +986,6 @@
         } else {
           for (i; i >= 0; i -= 1) {
             keyId = resultTable[i];
-            console.log(keyId);
             allDocResponse.rows[i] = {
               "id": priv.fileNameToIds(keyId)[0],
               "value": {}
@@ -1014,6 +1010,5 @@
       //fin alldocs
     };
 
-    console.info('S3 created');
   });
 }));

@@ -206,7 +206,6 @@
    * @class MultiSplitStorage
    */
   function MultiSplitStorage(spec) {
-    console.info('mutli creation');
     var that = this, priv = {};
 
     /**
@@ -310,7 +309,7 @@
 
       //re-init
       i = 0;
-    };
+    }
 
     /**
      * Split document metadata then store them to the sub storages.
@@ -322,7 +321,6 @@
      * @param  {String} method The command method ('post' or 'put')
      */
     priv.postOrPut = function (command, doc, option, method) {
-      console.log("multi post or put");
       var i, data, doc_list = [], doc_underscores = {};
       for (i in doc) {
         if (doc.hasOwnProperty(i)) {
@@ -359,7 +357,6 @@
           delete err.index;
           return command.error(err);
         }
-        console.log("post or put succes", doc_underscores._id);
         command.success({"id": doc_underscores._id});
       });
     };
@@ -579,7 +576,6 @@
         }
       );
     };
-    console.info('mutli created');
   } // end of MultiplitStorage
 
   jIO.addStorage('multisplit', MultiSplitStorage);

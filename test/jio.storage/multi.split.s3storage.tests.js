@@ -16,7 +16,6 @@
   'gidstorage',
   's3storage',
   'multisplitstorage'
-  
 ], function (jIO, util, RSVP) {
   "use strict";
 
@@ -58,25 +57,29 @@
       "password": "/YHoa5r2X6EUHfvP31jdYx6t75h81pAjIZ4Mt94y"
     };
 
-    var jio_gid_description = {}, jio_gid_description2 = {};
-    jio_gid_description.type = jio_gid_description2.type = "gid";
-    jio_gid_description.constraints = jio_gid_description2.constraints = {
-      "default": {
-        "title": "string"
-      }
-    };
-    jio_gid_description.sub_storage = shared.s3_storage_description1;
-    jio_gid_description2.sub_storage = shared.s3_storage_description2;
+    shared.jio_gid_description = {};
+    shared.jio_gid_description2 = {};
+    shared.jio_gid_description.type = shared.jio_gid_description2.type = "gid";
+    shared.jio_gid_description.constraints =
+      shared.jio_gid_description2.constraints = {
+        "default": {
+          "title": "string"
+        }
+      };
+    shared.jio_gid_description.sub_storage = shared.s3_storage_description1;
+    shared.jio_gid_description2.sub_storage = shared.s3_storage_description2;
 
-    var jio_multisplit_description = {
+    shared.jio_multisplit_description = {
       "type": "multisplit",
       "storage_list": [
-        jio_gid_description,
-        jio_gid_description2
+        shared.jio_gid_description,
+        shared.jio_gid_description2
       ]
     };
 
-    jio = jIO.createJIO(jio_multisplit_description, {"workspace": shared.workspace});
+    jio = jIO.createJIO(shared.jio_multisplit_description, {
+      "workspace": shared.workspace
+    });
     jio_s3_list[0] = jIO.createJIO(shared.s3_storage_description1, {
       "workspace": shared.workspace
     });
