@@ -321,8 +321,7 @@
       }
       complex_query = gidToComplexQuery(gid);
       command.storage(priv.sub_storage).allDocs({
-        "query": complex_query,
-        "wildcard_character": null
+        "query": complex_query
       }).then(function (response) {
         var update_method = method;
         response = response.data;
@@ -381,8 +380,7 @@
       }
       complex_query = gidToComplexQuery(gid_object);
       command.storage(priv.sub_storage).allDocs({
-        "query": complex_query,
-        "wildcard_character": null
+        "query": complex_query
       }).then(function (response) {
         response = response.data;
         if (response.total_rows === 0) {
@@ -459,7 +457,6 @@
       complex_query = gidToComplexQuery(gid_object);
       command.storage(priv.sub_storage).allDocs({
         "query": complex_query,
-        "wildcard_character": null,
         "include_docs": true
       }).then(function (response) {
         response = response.data;
@@ -507,8 +504,7 @@
       }
       complex_query = gidToComplexQuery(gid_object);
       command.storage(priv.sub_storage).allDocs({
-        "query": complex_query,
-        "wildcard_character": null
+        "query": complex_query
       }).then(function (response) {
         response = response.data;
         if (response.total_rows === 0) {

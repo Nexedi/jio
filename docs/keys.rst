@@ -17,15 +17,13 @@ Let's start with a simple search:
   }
 
 Each of the ``.someproperty`` attribute in objects' metadata is compared with
-``comparison_value`` through a function defined by the '=' operator. Normally,
-it would be a string match that uses the wildcard_character, if present.
+``comparison_value`` through a function defined by the '=' operator.
 
 You can provide your own function to be used as '=' operator:
 
 .. code-block:: javascript
 
-  var strictEqual = function (object_value, comparison_value,
-                              wildcard_character) {
+  var strictEqual = function (object_value, comparison_value) {
     return comparison_value === object_value;
   };
 
@@ -38,7 +36,7 @@ You can provide your own function to be used as '=' operator:
     value: comparison_value
   }
 
-Inside ``equal_match``, you can decide to interpret the ``wildcard_character``
+Inside ``equal_match``, you can decide to interpret the wildcard character ``%``
 or just ignore it, as in this case.
 
 If you need to convert or preprocess the values before comparison, you can provide
@@ -145,7 +143,7 @@ property, that behaves like the ``compareFunction`` described in
     ...
     return {
       ...
-      'cmp': function (b, wildcard_character) {
+      'cmp': function (b) {
         if (a < b) {
           return -1;
         }
@@ -160,8 +158,6 @@ property, that behaves like the ``compareFunction`` described in
   ...
     cast_to: myType
   ...
-
-``wildcard_character`` is only passed by ``=`` and ``!=`` operators.
 
 If the < or > comparison makes no sense for the objects, the function should return ``undefined``.
 
@@ -280,5 +276,3 @@ A schema can be used:
     application_name: '...',
     key_schema: key_schema
   });
-
-

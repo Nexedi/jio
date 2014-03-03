@@ -68,8 +68,7 @@ Example:
         ['last_modified', 'descending'],
         ['creation_date', 'descending']
       ],
-      select_list: ['title'],
-      wildcard_character: '%'
+      select_list: ['title']
     };
 
     // execution
@@ -93,7 +92,7 @@ for how to use these methods, in and outside jIO. The module provides:
       select: [Function: select],
       sortOn: [Function: sortOn],
       limit: [Function: limit],
-      convertStringToRegExp: [Function: convertStringToRegExp],
+      searchTextToRegExp: [Function: searchTextToRegExp],
       QueryFactory: { [Function: QueryFactory] create: [Function] },
       Query: [Function: Query],
       SimpleQuery: {
@@ -161,16 +160,18 @@ are available in the index.
 Matching properties
 ^^^^^^^^^^^^^^^^^^^
 
-Complex Queries select items which exactly match the value given in the
-query. You can use wildcards ('%' is the default wildcard character), and you
-can change the wildcard character in the query options object. If you don't
-want to use a wildcard, just set the wildcard character to an empty string.
+Complex Queries select items which exactly match the value given in the query
+but you can also use wildcards (``%``).  If you don't want to use a wildcard,
+just set the operator to ``=``.
 
 .. code-block:: javascript
 
-    var query = {
-      query: 'creator:"* Doe"',
-      wildcard_character: '*'
+    var option = {
+      query: 'creator:"% Doe"' // use wildcard
+    };
+
+    var option = {
+      query: 'creator:="25%"' // don't use wildcard
     };
 
 
@@ -191,24 +192,22 @@ Example, convert Query object into a human readable string:
 .. code-block:: javascript
 
     var query = complex_queries.QueryFactory.
-                               create('year: < 2000 OR title: "*a"'),
+      create('year: < 2000 OR title: "%a"'),
       option = {
-        wildcard_character: '*',
         limit: [0, 10]
       },
       human_read = {
+        "": "matches ",
         "<": "is lower than ",
         "<=": "is lower or equal than ",
         ">": "is greater than ",
         ">=": "is greater or equal than ",
-        "=": "matches ",
-        "!=": "doesn't match "
+        "=": "is equal to ",
+        "!=": "is different than "
       };
 
     query.onParseStart = function (object, option) {
-      object.start = "The wildcard character is '" +
-        (option.wildcard_character || "%") +
-        "' and we need only the " +
+      object.start = "We need only the " +
         option.limit[1] +
         " elements from the number " +
         option.limit[0] + ". ";
@@ -216,16 +215,15 @@ Example, convert Query object into a human readable string:
 
     query.onParseSimpleQuery = function (object, option) {
       object.parsed = object.parsed.key +
-        " " + human_read[object.parsed.operator] +
+        " " + human_read[object.parsed.operator || ""] +
         object.parsed.value;
     };
 
     query.onParseComplexQuery = function (object, option) {
       object.parsed = "I want all document where " +
-        object.parsed.query_list.join(" " +
-                              object.parsed.operator.toLowerCase() +
-                              " ") +
-        ". ";
+        object.parsed.query_list.join(
+          " " + object.parsed.operator.toLowerCase() + " "
+        ) + ". ";
     };
 
     query.onParseEnd = function (object, option) {
@@ -233,10 +231,8 @@ Example, convert Query object into a human readable string:
     };
 
     console.log(query.parse(option));
-    // logged: "The wildcard character is '*' and we need
-    // only the 10 elements from the number 0. I want all
-    // document where year is lower than 2000 or title
-    // matches *a. Thank you!"
+    // logged: "We need only the 10 elements from the number 0. I want all
+    // document where year is lower than 2000 or title matches %a. Thank you!"
 
 
 JSON Schemas and Grammar
@@ -276,8 +272,8 @@ Below you can find schemas for constructing queries.
         }
       }
     }
-  
-  
+
+
 * Simple Queries JSON Schema:
 
   .. code-block:: javascript
@@ -293,8 +289,8 @@ Below you can find schemas for constructing queries.
         },
         "operator": {
           "type": "string",
-          "default": "=",
-          "format": "(>=?|<=?|!?=)",
+          "default": "",
+          "format": "(>=?|<=?|!?=|)",
           "description": "The operator used to compare."
         },
         "id": {
@@ -318,28 +314,28 @@ Below you can find schemas for constructing queries.
         : and_expression
         | and_expression search_text
         | and_expression OR search_text
-  
+
     and_expression
         : boolean_expression
         | boolean_expression AND and_expression
-  
+
     boolean_expression
         : NOT expression
         | expression
-  
+
     expression
         : ( search_text )
         | COLUMN expression
         | value
-  
+
     value
         : OPERATOR string
         | string
-  
+
     string
         : WORD
         | STRING
-  
+
     terminal:
         OR               -> /OR[ ]/
         AND              -> /AND[ ]/
@@ -350,7 +346,5 @@ Below you can find schemas for constructing queries.
         OPERATOR         -> /(>=?|<=?|!?=)/
         LEFT_PARENTHESE  -> /\(/
         RIGHT_PARENTHESE -> /\)/
-  
+
     ignore: " "
-
-

@@ -16,15 +16,11 @@
   <table>
     <tr>
       <td>Query (String):<br /><textarea id="str">title:abc AND format:def</textarea></td>
-      <td>Query (Object):<br /><textarea id="obj">{&quot;type&quot;:&quot;complex&quot;,&quot;operator&quot;:&quot;AND&quot;,&quot;query_list&quot;:[{&quot;type&quot;:&quot;simple&quot;,&quot;operator&quot;:&quot;=&quot;,&quot;key&quot;:&quot;title&quot;,&quot;value&quot;:&quot;abc&quot;},{&quot;type&quot;:&quot;simple&quot;,&quot;operator&quot;:&quot;=&quot;,&quot;key&quot;:&quot;format&quot;,&quot;value&quot;:&quot;def&quot;}]}</textarea></td>
+      <td>Query (Object):<br /><textarea id="obj">{&quot;type&quot;:&quot;complex&quot;,&quot;operator&quot;:&quot;AND&quot;,&quot;query_list&quot;:[{&quot;type&quot;:&quot;simple&quot;,&quot;key&quot;:&quot;title&quot;,&quot;value&quot;:&quot;abc&quot;},{&quot;type&quot;:&quot;simple&quot;,&quot;key&quot;:&quot;format&quot;,&quot;value&quot;:&quot;def&quot;}]}</textarea></td>
     </tr>
     <tr>
       <td>Item list (to filter, from 'Query (Object)'):<br /><textarea id="list">[{&quot;title&quot;:&quot;abc&quot;,&quot;format&quot;:&quot;def&quot;},{&quot;title&quot;:&quot;def&quot;,&quot;format&quot;:&quot;abc&quot;}]</textarea></td>
       <td>Result list:<br /><textarea id="result"></textarea></td>
-    </tr>
-    <tr>
-      <td><label for="wildcard">Wildcard char: </label></td>
-      <td><input type="text" id="wildcard" name="wildcard" value="%" /></td>
     </tr>
     <tr>
       <td><label for="sort_on">Sort on: </label></td>
@@ -77,7 +73,6 @@ function query() {
   ).exec(
     list,
     {
-      "wildcard_character": $('#wildcard').attr('value'),
       "sort_on": JSON.parse($("#sort_on").attr("value")),
       "limit": JSON.parse($("#limit").attr("value")),
       "select_list": JSON.parse($("#select_list").attr("value"))
