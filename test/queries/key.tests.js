@@ -22,7 +22,6 @@
   };
 
   test('Simple Key with read_from', function () {
-    /*jslint unparam: true*/
     var docList = function () {
       return [
         {'identifier': 'a'},
@@ -35,12 +34,11 @@
       },
       case_insensitive_identifier: {
         read_from: 'identifier',
-        equal_match: function (object_value, value, wildcard_character) {
+        equal_match: function (object_value, value) {
           return (object_value.toLowerCase() === value.toLowerCase());
         }
       }
     }, promise = [];
-    /*jslint unparam: false*/
 
     stop();
 

@@ -48,8 +48,12 @@ inherits(ComplexQuery, Query);
 /**
  * #crossLink "Query/match:method"
  */
-ComplexQuery.prototype.match = function (item, wildcard_character) {
-  return this[this.operator](item, wildcard_character);
+ComplexQuery.prototype.match = function (item) {
+  var operator = this.operator;
+  if (!(/^(?:AND|OR|NOT)$/i.test(operator))) {
+    operator = "AND";
+  }
+  return this[operator.toUpperCase()](item);
 };
 
 /**
@@ -79,6 +83,7 @@ ComplexQuery.prototype.serialized = function () {
   });
   return s;
 };
+ComplexQuery.prototype.toJSON = ComplexQuery.prototype.serialized;
 
 /**
  * Comparison operator, test if all sub queries match the
@@ -86,13 +91,12 @@ ComplexQuery.prototype.serialized = function () {
  *
  * @method AND
  * @param  {Object} item The item to match
- * @param  {String} wildcard_character The wildcard character
  * @return {Boolean} true if all match, false otherwise
  */
-ComplexQuery.prototype.AND = function (item, wildcard_character) {
+ComplexQuery.prototype.AND = function (item) {
   var j, promises = [];
   for (j = 0; j < this.query_list.length; j += 1) {
-    promises.push(this.query_list[j].match(item, wildcard_character));
+    promises.push(this.query_list[j].match(item));
   }
 
   function cancel() {
@@ -133,13 +137,12 @@ ComplexQuery.prototype.AND = function (item, wildcard_character) {
  *
  * @method OR
  * @param  {Object} item The item to match
- * @param  {String} wildcard_character The wildcard character
  * @return {Boolean} true if one match, false otherwise
  */
-ComplexQuery.prototype.OR =  function (item, wildcard_character) {
+ComplexQuery.prototype.OR =  function (item) {
   var j, promises = [];
   for (j = 0; j < this.query_list.length; j += 1) {
-    promises.push(this.query_list[j].match(item, wildcard_character));
+    promises.push(this.query_list[j].match(item));
   }
 
   function cancel() {
@@ -180,12 +183,11 @@ ComplexQuery.prototype.OR =  function (item, wildcard_character) {
  *
  * @method NOT
  * @param  {Object} item The item to match
- * @param  {String} wildcard_character The wildcard character
  * @return {Boolean} true if one match, false otherwise
  */
-ComplexQuery.prototype.NOT = function (item, wildcard_character) {
+ComplexQuery.prototype.NOT = function (item) {
   return sequence([function () {
-    return this.query_list[0].match(item, wildcard_character);
+    return this.query_list[0].match(item);
   }, function (answer) {
     return !answer;
   }]);

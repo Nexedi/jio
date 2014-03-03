@@ -264,29 +264,27 @@ _export('limit', limit);
  * Convert a search text to a regexp.
  *
  * @param  {String} string The string to convert
- * @param  {String} [wildcard_character=undefined] The wildcard chararter
+ * @param  {Boolean} [use_wildcard_character=true] Use wildcard "%" and "_"
  * @return {RegExp} The search text regexp
  */
-function convertStringToRegExp(string, wildcard_character) {
+function searchTextToRegExp(string, use_wildcard_characters) {
   if (typeof string !== 'string') {
-    throw new TypeError("complex_queries.convertStringToRegExp(): " +
+    throw new TypeError("complex_queries.searchTextToRegExp(): " +
                         "Argument 1 is not of type 'string'");
   }
-  if (wildcard_character === undefined ||
-      wildcard_character === null || wildcard_character === '') {
+  if (use_wildcard_characters === false) {
     return new RegExp("^" + stringEscapeRegexpCharacters(string) + "$");
   }
-  if (typeof wildcard_character !== 'string' || wildcard_character.length > 1) {
-    throw new TypeError("complex_queries.convertStringToRegExp(): " +
-                        "Optional argument 2 must be a string of length <= 1");
-  }
   return new RegExp("^" + stringEscapeRegexpCharacters(string).replace(
-    new RegExp(stringEscapeRegexpCharacters(wildcard_character), 'g'),
-    '.*'
+    /%/g,
+    ".*"
+  ).replace(
+    /_/g,
+    "."
   ) + "$");
 }
 
-_export('convertStringToRegExp', convertStringToRegExp);
+_export("searchTextToRegExp", searchTextToRegExp);
 
 /**
  * sequence(thens): Promise

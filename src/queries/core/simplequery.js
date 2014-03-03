@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global Query: true, inherits: true, query_class_dict: true, _export: true,
-  convertStringToRegExp, RSVP */
+  searchTextToRegExp, RSVP */
 
 var checkKeySchema = function (key_schema) {
   var prop;
@@ -54,10 +54,9 @@ function SimpleQuery(spec, key_schema) {
    *
    * @attribute operator
    * @type String
-   * @default "="
    * @optional
    */
-  this.operator = spec.operator || "=";
+  this.operator = spec.operator;
 
   /**
    * Key of the object which refers to the value to compare
@@ -105,15 +104,28 @@ var checkKey = function (key) {
 /**
  * #crossLink "Query/match:method"
  */
-SimpleQuery.prototype.match = function (item, wildcard_character) {
+SimpleQuery.prototype.match = function (item) {
   var object_value = null,
     equal_match = null,
     cast_to = null,
     matchMethod = null,
+    operator = this.operator,
     value = null,
     key = this.key;
 
-  matchMethod = this[this.operator];
+  /*jslint regexp: true */
+  if (!(/^(?:!?=|<=?|>=?)$/i.test(operator))) {
+    // `operator` is not correct, we have to change it to "like" or "="
+    if (/%/.test(this.value)) {
+      // `value` contains a non escaped `%`
+      operator = "like";
+    } else {
+      // `value` does not contain non escaped `%`
+      operator = "=";
+    }
+  }
+
+  matchMethod = this[operator];
 
   if (this._key_schema.key_set && this._key_schema.key_set[key] !== undefined) {
     key = this._key_schema.key_set[key];
@@ -133,7 +145,8 @@ SimpleQuery.prototype.match = function (item, wildcard_character) {
 
     // equal_match overrides the default '=' operator
     if (equal_match !== undefined) {
-      matchMethod = (this.operator === '=') ? equal_match : matchMethod;
+      matchMethod = (operator === "=" || operator === "like" ?
+                     equal_match : matchMethod);
     }
 
     value = this.value;
@@ -155,28 +168,32 @@ SimpleQuery.prototype.match = function (item, wildcard_character) {
   if (object_value === undefined || value === undefined) {
     return RSVP.resolve(false);
   }
-  return matchMethod(object_value, value, wildcard_character);
+  return matchMethod(object_value, value);
 };
 
 /**
  * #crossLink "Query/toString:method"
  */
 SimpleQuery.prototype.toString = function () {
-  return (this.key ? this.key + ": " : "") + (this.operator || "=") + ' "' +
-    this.value + '"';
+  return (this.key ? this.key + ":" : "") +
+    (this.operator ? " " + this.operator : "") + ' "' + this.value + '"';
 };
 
 /**
  * #crossLink "Query/serialized:method"
  */
 SimpleQuery.prototype.serialized = function () {
-  return {
+  var object = {
     "type": "simple",
-    "operator": this.operator,
     "key": this.key,
     "value": this.value
   };
+  if (this.operator !== undefined) {
+    object.operator = this.operator;
+  }
+  return object;
 };
+SimpleQuery.prototype.toJSON = SimpleQuery.prototype.serialized;
 
 /**
  * Comparison operator, test if this query value matches the item value
@@ -184,11 +201,9 @@ SimpleQuery.prototype.serialized = function () {
  * @method =
  * @param  {String} object_value The value to compare
  * @param  {String} comparison_value The comparison value
- * @param  {String} wildcard_character The wildcard_character
  * @return {Boolean} true if match, false otherwise
  */
-SimpleQuery.prototype["="] = function (object_value, comparison_value,
-                                       wildcard_character) {
+SimpleQuery.prototype["="] = function (object_value, comparison_value) {
   var value, i;
   if (!Array.isArray(object_value)) {
     object_value = [object_value];
@@ -198,15 +213,42 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
     if (typeof value === 'object' && value.hasOwnProperty('content')) {
       value = value.content;
     }
-    if (value.cmp !== undefined) {
-      return RSVP.resolve(value.cmp(comparison_value,
-                                    wildcard_character) === 0);
+    if (typeof value.cmp === "function") {
+      return RSVP.resolve(value.cmp(comparison_value) === 0);
     }
     if (
-      convertStringToRegExp(
-        comparison_value.toString(),
-        wildcard_character
-      ).test(value.toString())
+      searchTextToRegExp(comparison_value.toString(), false).
+        test(value.toString())
+    ) {
+      return RSVP.resolve(true);
+    }
+  }
+  return RSVP.resolve(false);
+};
+
+/**
+ * Comparison operator, test if this query value matches the item value
+ *
+ * @method like
+ * @param  {String} object_value The value to compare
+ * @param  {String} comparison_value The comparison value
+ * @return {Boolean} true if match, false otherwise
+ */
+SimpleQuery.prototype.like = function (object_value, comparison_value) {
+  var value, i;
+  if (!Array.isArray(object_value)) {
+    object_value = [object_value];
+  }
+  for (i = 0; i < object_value.length; i += 1) {
+    value = object_value[i];
+    if (typeof value === 'object' && value.hasOwnProperty('content')) {
+      value = value.content;
+    }
+    if (typeof value.cmp === "function") {
+      return RSVP.resolve(value.cmp(comparison_value) === 0);
+    }
+    if (
+      searchTextToRegExp(comparison_value.toString()).test(value.toString())
     ) {
       return RSVP.resolve(true);
     }
@@ -220,11 +262,9 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
  * @method !=
  * @param  {String} object_value The value to compare
  * @param  {String} comparison_value The comparison value
- * @param  {String} wildcard_character The wildcard_character
  * @return {Boolean} true if not match, false otherwise
  */
-SimpleQuery.prototype["!="] = function (object_value, comparison_value,
-                                        wildcard_character) {
+SimpleQuery.prototype["!="] = function (object_value, comparison_value) {
   var value, i;
   if (!Array.isArray(object_value)) {
     object_value = [object_value];
@@ -234,15 +274,12 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
     if (typeof value === 'object' && value.hasOwnProperty('content')) {
       value = value.content;
     }
-    if (value.cmp !== undefined) {
-      return RSVP.resolve(value.cmp(comparison_value,
-                                    wildcard_character) !== 0);
+    if (typeof value.cmp === "function") {
+      return RSVP.resolve(value.cmp(comparison_value) !== 0);
     }
     if (
-      convertStringToRegExp(
-        comparison_value.toString(),
-        wildcard_character
-      ).test(value.toString())
+      searchTextToRegExp(comparison_value.toString(), false).
+        test(value.toString())
     ) {
       return RSVP.resolve(false);
     }
@@ -267,7 +304,7 @@ SimpleQuery.prototype["<"] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
-  if (value.cmp !== undefined) {
+  if (typeof value.cmp === "function") {
     return RSVP.resolve(value.cmp(comparison_value) < 0);
   }
   return RSVP.resolve(value < comparison_value);
@@ -291,7 +328,7 @@ SimpleQuery.prototype["<="] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
-  if (value.cmp !== undefined) {
+  if (typeof value.cmp === "function") {
     return RSVP.resolve(value.cmp(comparison_value) <= 0);
   }
   return RSVP.resolve(value <= comparison_value);
@@ -315,7 +352,7 @@ SimpleQuery.prototype[">"] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
-  if (value.cmp !== undefined) {
+  if (typeof value.cmp === "function") {
     return RSVP.resolve(value.cmp(comparison_value) > 0);
   }
   return RSVP.resolve(value > comparison_value);
@@ -339,7 +376,7 @@ SimpleQuery.prototype[">="] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
-  if (value.cmp !== undefined) {
+  if (typeof value.cmp === "function") {
     return RSVP.resolve(value.cmp(comparison_value) >= 0);
   }
   return RSVP.resolve(value >= comparison_value);

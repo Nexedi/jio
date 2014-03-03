@@ -56,7 +56,6 @@ function Query() {
  * @method exec
  * @param  {Array} item_list The list of object
  * @param  {Object} [option] Some operation option
- * @param  {String} [option.wildcard_character="%"] The wildcard character
  * @param  {Array} [option.select_list] A object keys to retrieve
  * @param  {Array} [option.sort_on] Couples of object keys and "ascending"
  *                 or "descending"
@@ -75,14 +74,11 @@ Query.prototype.exec = function (item_list, option) {
     throw new TypeError("Query().exec(): " +
                         "Optional argument 2 is not of type 'object'");
   }
-  if (option.wildcard_character === undefined) {
-    option.wildcard_character = '%';
-  }
   for (i = 0; i < item_list.length; i += 1) {
     if (!item_list[i]) {
       promises.push(RSVP.resolve(false));
     } else {
-      promises.push(this.match(item_list[i], option.wildcard_character));
+      promises.push(this.match(item_list[i]));
     }
   }
   return sequence([function () {
@@ -113,7 +109,6 @@ Query.prototype.exec = function (item_list, option) {
  *
  * @method match
  * @param  {Object} item The object to test
- * @param  {String} wildcard_character The wildcard character to use
  * @return {Boolean} true if match, false otherwise
  */
 Query.prototype.match = function () {

@@ -105,44 +105,66 @@
     var doc_list = [
       {"identifier": "a"},
       {"identifier": "a%"},
+      {"identifier": "a\\%"},
       {"identifier": ["ab", "b"]}
     ];
     stop();
-    complex_queries.QueryFactory.create('identifier: "a%"').exec(doc_list, {
-      // "wildcard_character": "%" // default
-    }).then(function (doc_list) {
+    complex_queries.QueryFactory.create('identifier: "a%"').exec(
+      doc_list
+    ).then(function (doc_list) {
       deepEqual(doc_list, [
         {"identifier": "a"},
         {"identifier": "a%"},
+        {"identifier": "a\\%"},
         {"identifier": ["ab", "b"]}
       ], 'All documents should be kept');
 
       doc_list = [
         {"identifier": "a"},
         {"identifier": "a%"},
+        {"identifier": "a\\%"},
         {"identifier": ["ab", "b"]}
       ];
 
-      return complex_queries.QueryFactory.create('identifier: "a%"').
-        exec(doc_list, {"wildcard_character": null});
+      return complex_queries.QueryFactory.create('identifier: "a\\%"').
+        exec(doc_list);
     }).then(function (doc_list) {
       deepEqual(doc_list, [
-        {"identifier": "a%"}
-      ], 'Document "a%" should be kept');
+        {"identifier": "a\\%"}
+      ], 'Only third document should be kept');
+      // yes.. it's weird but ERP5 acts like that.
+      // `\` (or "\\") is taken literaly (= /\\/)
 
       doc_list = [
         {"identifier": "a"},
         {"identifier": "a%"},
+        {"identifier": "a\\%"},
         {"identifier": ["ab", "b"]}
       ];
-      return complex_queries.QueryFactory.create('identifier: "b"').
-        exec(doc_list, {"wildcard_character": "b"});
+
+      return complex_queries.QueryFactory.create('identifier: "__"').
+        exec(doc_list);
     }).then(function (doc_list) {
       deepEqual(doc_list, [
+      ], 'Should keep nothing');
+
+      doc_list = [
         {"identifier": "a"},
         {"identifier": "a%"},
+        {"identifier": "a\\%"},
         {"identifier": ["ab", "b"]}
-      ], 'All documents should be kept');
+      ];
+
+      return complex_queries.QueryFactory.create('identifier: "__%"').
+        exec(doc_list);
+    }).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": "a%"},
+        {"identifier": "a\\%"},
+        {"identifier": ["ab", "b"]}
+      ], 'First should not be kept');
+      // yes.. it's weird but ERP5 acts like that.
+      // `_` is not considered as wildcard (= /./)
     }).always(start);
   });
 
@@ -162,6 +184,48 @@
         {"title": "d"}
       ], 'The first document should be kept');
     }).always(start);
+  });
+
+  test("JSON query", function () {
+    var jsoned = complex_queries.QueryFactory.create(
+      "NOT(a:=b OR c:% AND d:<2)"
+    ).toJSON();
+    deepEqual(
+      jsoned,
+      {
+        "type": "complex",
+        "operator": "NOT",
+        "query_list": [{
+          "type": "complex",
+          "operator": "OR",
+          "query_list": [{
+            "key": "a",
+            "operator": "=",
+            "type": "simple",
+            "value": "b"
+          }, {
+            "type": "complex",
+            "operator": "AND",
+            "query_list": [{
+              "key": "c",
+              "type": "simple",
+              "value": "%"
+            }, {
+              "key": "d",
+              "operator": "<",
+              "type": "simple",
+              "value": "2"
+            }]
+          }]
+        }]
+      },
+      "\"NOT(a:=b OR c:% AND d:<2)\".toJSON()"
+    );
+    deepEqual(
+      complex_queries.parseStringToObject("NOT(a:=b OR c:% AND d:<2)"),
+      jsoned,
+      "parseStringToObject(\"NOT(a:=b OR c:% AND d:<2)\");"
+    );
   });
 
 }));

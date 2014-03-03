@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global _export: true, to_export: true */
+/*global _export: true */
 
 function objectToSearchText(query) {
   var str_list = [];
@@ -15,7 +15,7 @@ function objectToSearchText(query) {
   }
   if (query.type === "simple") {
     return (query.key ? query.key + ": " : "") +
-      (query.operator || "=") + ' "' + query.value + '"';
+      (query.operator || "") + ' "' + query.value + '"';
   }
   throw new TypeError("This object is not a query");
 }

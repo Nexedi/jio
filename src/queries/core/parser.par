@@ -62,7 +62,11 @@ var arrayExtend = function () {
   return newlist;
 
 }, mkSimpleQuery = function (key, value, operator) {
-  return {"type": "simple", "operator": "=", "key": key, "value": value};
+  var object = {"type": "simple", "key": key, "value": value};
+  if (operator !== undefined) {
+    object.operator = operator;
+  }
+  return object;
 
 }, mkNotQuery = function (query) {
   if (query.operator === "NOT") {
