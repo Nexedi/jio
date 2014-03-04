@@ -56,7 +56,9 @@ zip:
 	@mkdir $(TMPDIR)/jio/storage
 	@echo "Minimizing JS..."
 	@cp jio.min.js                                 $(TMPDIR)/jio/
+	@cp jio.min.map                                $(TMPDIR)/jio/
 	@cp jiodate.min.js                             $(TMPDIR)/jio/
+	@cp jiodate.min.map                            $(TMPDIR)/jio/
 	@$(UGLIFY) src/sha1.amd.js                     >$(TMPDIR)/jio/sha1.amd.min.js 2>/dev/null
 	@$(UGLIFY) src/sha2.amd.js                     >$(TMPDIR)/jio/sha2.amd.min.js 2>/dev/null
 	@$(UGLIFY) src/sha256.amd.js                   >$(TMPDIR)/jio/sha256.amd.min.js 2>/dev/null

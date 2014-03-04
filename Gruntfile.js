@@ -82,11 +82,17 @@ module.exports = function (grunt) {
       },
       jio: {
         src: 'jio.js', // '<%= pkg.name %>.js'
-        dest: 'jio.min.js'
+        dest: 'jio.min.js',
+        options: {
+          sourceMap: "jio.min.map"
+        }
       },
       jiodate: {
         src: 'src/jio.date/jiodate.js',
-        dest: 'jiodate.min.js'
+        dest: 'jiodate.min.js',
+        options: {
+          sourceMap: "jiodate.min.map"
+        }
       }
     },
     qunit: {
