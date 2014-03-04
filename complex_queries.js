@@ -688,7 +688,11 @@ var arrayExtend = function () {
   return newlist;
 
 }, mkSimpleQuery = function (key, value, operator) {
-  return {"type": "simple", "operator": "=", "key": key, "value": value};
+  var object = {"type": "simple", "key": key, "value": value};
+  if (operator !== undefined) {
+    object.operator = operator;
+  }
+  return object;
 
 }, mkNotQuery = function (query) {
   if (query.operator === "NOT") {
@@ -796,8 +800,12 @@ inherits(ComplexQuery, Query);
 /**
  * #crossLink "Query/match:method"
  */
-ComplexQuery.prototype.match = function (item, wildcard_character) {
-  return this[this.operator](item, wildcard_character);
+ComplexQuery.prototype.match = function (item) {
+  var operator = this.operator;
+  if (!(/^(?:AND|OR|NOT)$/i.test(operator))) {
+    operator = "AND";
+  }
+  return this[operator.toUpperCase()](item);
 };
 
 /**
@@ -827,6 +835,7 @@ ComplexQuery.prototype.serialized = function () {
   });
   return s;
 };
+ComplexQuery.prototype.toJSON = ComplexQuery.prototype.serialized;
 
 /**
  * Comparison operator, test if all sub queries match the
@@ -834,13 +843,12 @@ ComplexQuery.prototype.serialized = function () {
  *
  * @method AND
  * @param  {Object} item The item to match
- * @param  {String} wildcard_character The wildcard character
  * @return {Boolean} true if all match, false otherwise
  */
-ComplexQuery.prototype.AND = function (item, wildcard_character) {
+ComplexQuery.prototype.AND = function (item) {
   var j, promises = [];
   for (j = 0; j < this.query_list.length; j += 1) {
-    promises.push(this.query_list[j].match(item, wildcard_character));
+    promises.push(this.query_list[j].match(item));
   }
 
   function cancel() {
@@ -881,13 +889,12 @@ ComplexQuery.prototype.AND = function (item, wildcard_character) {
  *
  * @method OR
  * @param  {Object} item The item to match
- * @param  {String} wildcard_character The wildcard character
  * @return {Boolean} true if one match, false otherwise
  */
-ComplexQuery.prototype.OR =  function (item, wildcard_character) {
+ComplexQuery.prototype.OR =  function (item) {
   var j, promises = [];
   for (j = 0; j < this.query_list.length; j += 1) {
-    promises.push(this.query_list[j].match(item, wildcard_character));
+    promises.push(this.query_list[j].match(item));
   }
 
   function cancel() {
@@ -928,12 +935,11 @@ ComplexQuery.prototype.OR =  function (item, wildcard_character) {
  *
  * @method NOT
  * @param  {Object} item The item to match
- * @param  {String} wildcard_character The wildcard character
  * @return {Boolean} true if one match, false otherwise
  */
-ComplexQuery.prototype.NOT = function (item, wildcard_character) {
+ComplexQuery.prototype.NOT = function (item) {
   return sequence([function () {
-    return this.query_list[0].match(item, wildcard_character);
+    return this.query_list[0].match(item);
   }, function (answer) {
     return !answer;
   }]);
@@ -1001,7 +1007,6 @@ function Query() {
  * @method exec
  * @param  {Array} item_list The list of object
  * @param  {Object} [option] Some operation option
- * @param  {String} [option.wildcard_character="%"] The wildcard character
  * @param  {Array} [option.select_list] A object keys to retrieve
  * @param  {Array} [option.sort_on] Couples of object keys and "ascending"
  *                 or "descending"
@@ -1020,14 +1025,11 @@ Query.prototype.exec = function (item_list, option) {
     throw new TypeError("Query().exec(): " +
                         "Optional argument 2 is not of type 'object'");
   }
-  if (option.wildcard_character === undefined) {
-    option.wildcard_character = '%';
-  }
   for (i = 0; i < item_list.length; i += 1) {
     if (!item_list[i]) {
       promises.push(RSVP.resolve(false));
     } else {
-      promises.push(this.match(item_list[i], option.wildcard_character));
+      promises.push(this.match(item_list[i]));
     }
   }
   return sequence([function () {
@@ -1058,7 +1060,6 @@ Query.prototype.exec = function (item_list, option) {
  *
  * @method match
  * @param  {Object} item The object to test
- * @param  {String} wildcard_character The wildcard character to use
  * @return {Boolean} true if match, false otherwise
  */
 Query.prototype.match = function () {
@@ -1187,7 +1188,7 @@ QueryFactory.create = function (object, key_schema) {
 _export("QueryFactory", QueryFactory);
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global _export: true, to_export: true */
+/*global _export: true */
 
 function objectToSearchText(query) {
   var str_list = [];
@@ -1203,7 +1204,7 @@ function objectToSearchText(query) {
   }
   if (query.type === "simple") {
     return (query.key ? query.key + ": " : "") +
-      (query.operator || "=") + ' "' + query.value + '"';
+      (query.operator || "") + ' "' + query.value + '"';
   }
   throw new TypeError("This object is not a query");
 }
@@ -1211,7 +1212,7 @@ _export("objectToSearchText", objectToSearchText);
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global Query: true, inherits: true, query_class_dict: true, _export: true,
-  convertStringToRegExp, RSVP */
+  searchTextToRegExp, RSVP */
 
 var checkKeySchema = function (key_schema) {
   var prop;
@@ -1265,10 +1266,9 @@ function SimpleQuery(spec, key_schema) {
    *
    * @attribute operator
    * @type String
-   * @default "="
    * @optional
    */
-  this.operator = spec.operator || "=";
+  this.operator = spec.operator;
 
   /**
    * Key of the object which refers to the value to compare
@@ -1316,15 +1316,28 @@ var checkKey = function (key) {
 /**
  * #crossLink "Query/match:method"
  */
-SimpleQuery.prototype.match = function (item, wildcard_character) {
+SimpleQuery.prototype.match = function (item) {
   var object_value = null,
     equal_match = null,
     cast_to = null,
     matchMethod = null,
+    operator = this.operator,
     value = null,
     key = this.key;
 
-  matchMethod = this[this.operator];
+  /*jslint regexp: true */
+  if (!(/^(?:!?=|<=?|>=?)$/i.test(operator))) {
+    // `operator` is not correct, we have to change it to "like" or "="
+    if (/%/.test(this.value)) {
+      // `value` contains a non escaped `%`
+      operator = "like";
+    } else {
+      // `value` does not contain non escaped `%`
+      operator = "=";
+    }
+  }
+
+  matchMethod = this[operator];
 
   if (this._key_schema.key_set && this._key_schema.key_set[key] !== undefined) {
     key = this._key_schema.key_set[key];
@@ -1344,7 +1357,8 @@ SimpleQuery.prototype.match = function (item, wildcard_character) {
 
     // equal_match overrides the default '=' operator
     if (equal_match !== undefined) {
-      matchMethod = (this.operator === '=') ? equal_match : matchMethod;
+      matchMethod = (operator === "=" || operator === "like" ?
+                     equal_match : matchMethod);
     }
 
     value = this.value;
@@ -1366,28 +1380,32 @@ SimpleQuery.prototype.match = function (item, wildcard_character) {
   if (object_value === undefined || value === undefined) {
     return RSVP.resolve(false);
   }
-  return matchMethod(object_value, value, wildcard_character);
+  return matchMethod(object_value, value);
 };
 
 /**
  * #crossLink "Query/toString:method"
  */
 SimpleQuery.prototype.toString = function () {
-  return (this.key ? this.key + ": " : "") + (this.operator || "=") + ' "' +
-    this.value + '"';
+  return (this.key ? this.key + ":" : "") +
+    (this.operator ? " " + this.operator : "") + ' "' + this.value + '"';
 };
 
 /**
  * #crossLink "Query/serialized:method"
  */
 SimpleQuery.prototype.serialized = function () {
-  return {
+  var object = {
     "type": "simple",
-    "operator": this.operator,
     "key": this.key,
     "value": this.value
   };
+  if (this.operator !== undefined) {
+    object.operator = this.operator;
+  }
+  return object;
 };
+SimpleQuery.prototype.toJSON = SimpleQuery.prototype.serialized;
 
 /**
  * Comparison operator, test if this query value matches the item value
@@ -1395,11 +1413,9 @@ SimpleQuery.prototype.serialized = function () {
  * @method =
  * @param  {String} object_value The value to compare
  * @param  {String} comparison_value The comparison value
- * @param  {String} wildcard_character The wildcard_character
  * @return {Boolean} true if match, false otherwise
  */
-SimpleQuery.prototype["="] = function (object_value, comparison_value,
-                                       wildcard_character) {
+SimpleQuery.prototype["="] = function (object_value, comparison_value) {
   var value, i;
   if (!Array.isArray(object_value)) {
     object_value = [object_value];
@@ -1409,15 +1425,42 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
     if (typeof value === 'object' && value.hasOwnProperty('content')) {
       value = value.content;
     }
-    if (value.cmp !== undefined) {
-      return RSVP.resolve(value.cmp(comparison_value,
-                                    wildcard_character) === 0);
+    if (typeof value.cmp === "function") {
+      return RSVP.resolve(value.cmp(comparison_value) === 0);
     }
     if (
-      convertStringToRegExp(
-        comparison_value.toString(),
-        wildcard_character
-      ).test(value.toString())
+      searchTextToRegExp(comparison_value.toString(), false).
+        test(value.toString())
+    ) {
+      return RSVP.resolve(true);
+    }
+  }
+  return RSVP.resolve(false);
+};
+
+/**
+ * Comparison operator, test if this query value matches the item value
+ *
+ * @method like
+ * @param  {String} object_value The value to compare
+ * @param  {String} comparison_value The comparison value
+ * @return {Boolean} true if match, false otherwise
+ */
+SimpleQuery.prototype.like = function (object_value, comparison_value) {
+  var value, i;
+  if (!Array.isArray(object_value)) {
+    object_value = [object_value];
+  }
+  for (i = 0; i < object_value.length; i += 1) {
+    value = object_value[i];
+    if (typeof value === 'object' && value.hasOwnProperty('content')) {
+      value = value.content;
+    }
+    if (typeof value.cmp === "function") {
+      return RSVP.resolve(value.cmp(comparison_value) === 0);
+    }
+    if (
+      searchTextToRegExp(comparison_value.toString()).test(value.toString())
     ) {
       return RSVP.resolve(true);
     }
@@ -1431,11 +1474,9 @@ SimpleQuery.prototype["="] = function (object_value, comparison_value,
  * @method !=
  * @param  {String} object_value The value to compare
  * @param  {String} comparison_value The comparison value
- * @param  {String} wildcard_character The wildcard_character
  * @return {Boolean} true if not match, false otherwise
  */
-SimpleQuery.prototype["!="] = function (object_value, comparison_value,
-                                        wildcard_character) {
+SimpleQuery.prototype["!="] = function (object_value, comparison_value) {
   var value, i;
   if (!Array.isArray(object_value)) {
     object_value = [object_value];
@@ -1445,15 +1486,12 @@ SimpleQuery.prototype["!="] = function (object_value, comparison_value,
     if (typeof value === 'object' && value.hasOwnProperty('content')) {
       value = value.content;
     }
-    if (value.cmp !== undefined) {
-      return RSVP.resolve(value.cmp(comparison_value,
-                                    wildcard_character) !== 0);
+    if (typeof value.cmp === "function") {
+      return RSVP.resolve(value.cmp(comparison_value) !== 0);
     }
     if (
-      convertStringToRegExp(
-        comparison_value.toString(),
-        wildcard_character
-      ).test(value.toString())
+      searchTextToRegExp(comparison_value.toString(), false).
+        test(value.toString())
     ) {
       return RSVP.resolve(false);
     }
@@ -1478,7 +1516,7 @@ SimpleQuery.prototype["<"] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
-  if (value.cmp !== undefined) {
+  if (typeof value.cmp === "function") {
     return RSVP.resolve(value.cmp(comparison_value) < 0);
   }
   return RSVP.resolve(value < comparison_value);
@@ -1502,7 +1540,7 @@ SimpleQuery.prototype["<="] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
-  if (value.cmp !== undefined) {
+  if (typeof value.cmp === "function") {
     return RSVP.resolve(value.cmp(comparison_value) <= 0);
   }
   return RSVP.resolve(value <= comparison_value);
@@ -1526,7 +1564,7 @@ SimpleQuery.prototype[">"] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
-  if (value.cmp !== undefined) {
+  if (typeof value.cmp === "function") {
     return RSVP.resolve(value.cmp(comparison_value) > 0);
   }
   return RSVP.resolve(value > comparison_value);
@@ -1550,7 +1588,7 @@ SimpleQuery.prototype[">="] = function (object_value, comparison_value) {
   if (typeof value === 'object' && value.hasOwnProperty('content')) {
     value = value.content;
   }
-  if (value.cmp !== undefined) {
+  if (typeof value.cmp === "function") {
     return RSVP.resolve(value.cmp(comparison_value) >= 0);
   }
   return RSVP.resolve(value >= comparison_value);
@@ -1826,29 +1864,27 @@ _export('limit', limit);
  * Convert a search text to a regexp.
  *
  * @param  {String} string The string to convert
- * @param  {String} [wildcard_character=undefined] The wildcard chararter
+ * @param  {Boolean} [use_wildcard_character=true] Use wildcard "%" and "_"
  * @return {RegExp} The search text regexp
  */
-function convertStringToRegExp(string, wildcard_character) {
+function searchTextToRegExp(string, use_wildcard_characters) {
   if (typeof string !== 'string') {
-    throw new TypeError("complex_queries.convertStringToRegExp(): " +
+    throw new TypeError("complex_queries.searchTextToRegExp(): " +
                         "Argument 1 is not of type 'string'");
   }
-  if (wildcard_character === undefined ||
-      wildcard_character === null || wildcard_character === '') {
+  if (use_wildcard_characters === false) {
     return new RegExp("^" + stringEscapeRegexpCharacters(string) + "$");
   }
-  if (typeof wildcard_character !== 'string' || wildcard_character.length > 1) {
-    throw new TypeError("complex_queries.convertStringToRegExp(): " +
-                        "Optional argument 2 must be a string of length <= 1");
-  }
   return new RegExp("^" + stringEscapeRegexpCharacters(string).replace(
-    new RegExp(stringEscapeRegexpCharacters(wildcard_character), 'g'),
-    '.*'
+    /%/g,
+    ".*"
+  ).replace(
+    /_/g,
+    "."
   ) + "$");
 }
 
-_export('convertStringToRegExp', convertStringToRegExp);
+_export("searchTextToRegExp", searchTextToRegExp);
 
 /**
  * sequence(thens): Promise
