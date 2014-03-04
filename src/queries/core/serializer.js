@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global _export: true */
+/*global Query, exports */
 
 function objectToSearchText(query) {
   var str_list = [];
@@ -19,4 +19,4 @@ function objectToSearchText(query) {
   }
   throw new TypeError("This object is not a query");
 }
-_export("objectToSearchText", objectToSearchText);
+Query.objectToSearchText = objectToSearchText;

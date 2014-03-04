@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, exports, require, module, complex_queries, window, test, ok,
+/*global define, exports, require, module, jIO, window, test, ok,
   deepEqual, stop, start */
 
 // define([module_name], [dependencies], module);
@@ -9,13 +9,13 @@
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    return module(require('complex_queries'));
+    return module(require('jio'));
   }
-  module(complex_queries);
-}(['complex_queries', 'qunit'], function (complex_queries) {
+  module(jIO);
+}(['jio', 'qunit'], function (jIO) {
   "use strict";
 
-  module('Complex Queries');
+  module('Query');
 
   // XXX test documentation
   test('Empty Query', function () {
@@ -24,7 +24,7 @@
       {"identifier": ["b", "c"]}
     ];
     stop();
-    complex_queries.QueryFactory.create('').exec(doc_list).
+    jIO.QueryFactory.create('').exec(doc_list).
       then(function (doc_list) {
         deepEqual(doc_list, [
           {"identifier": "a"},
@@ -39,7 +39,7 @@
       {"identifier": ["b", "c"]}
     ];
     stop();
-    complex_queries.QueryFactory.create('identifier: "a"').exec(doc_list).
+    jIO.QueryFactory.create('identifier: "a"').exec(doc_list).
       then(function (doc_list) {
         deepEqual(doc_list, [
           {"identifier": "a"}
@@ -50,7 +50,7 @@
           {"identifier": ["a", "b"]}
         ];
 
-        return complex_queries.QueryFactory.create('identifier: "a"').
+        return jIO.QueryFactory.create('identifier: "a"').
           exec(doc_list);
       }).then(function (doc_list) {
         deepEqual(doc_list, [
@@ -66,7 +66,7 @@
       {"identifier": ["b", "c"]}
     ];
     stop();
-    complex_queries.QueryFactory.create(
+    jIO.QueryFactory.create(
       'identifier: "b" AND identifier: "c"'
     ).exec(doc_list).then(function (doc_list) {
       deepEqual(doc_list, [
@@ -77,7 +77,7 @@
         {"identifier": "a"},
         {"identifier": ["b", "c"]}
       ];
-      return complex_queries.QueryFactory.create(
+      return jIO.QueryFactory.create(
         'identifier: "a" OR identifier: "c"'
       ).exec(doc_list);
     }).then(function (doc_list) {
@@ -91,7 +91,7 @@
         {"identifier": ["b", "c"]}
       ];
 
-      return complex_queries.QueryFactory.create(
+      return jIO.QueryFactory.create(
         '(identifier: "a" OR identifier: "b") AND title: "o"'
       ).exec(doc_list);
     }).then(function (doc_list) {
@@ -109,7 +109,7 @@
       {"identifier": ["ab", "b"]}
     ];
     stop();
-    complex_queries.QueryFactory.create('identifier: "a%"').exec(
+    jIO.QueryFactory.create('identifier: "a%"').exec(
       doc_list
     ).then(function (doc_list) {
       deepEqual(doc_list, [
@@ -126,7 +126,7 @@
         {"identifier": ["ab", "b"]}
       ];
 
-      return complex_queries.QueryFactory.create('identifier: "a\\%"').
+      return jIO.QueryFactory.create('identifier: "a\\%"').
         exec(doc_list);
     }).then(function (doc_list) {
       deepEqual(doc_list, [
@@ -142,7 +142,7 @@
         {"identifier": ["ab", "b"]}
       ];
 
-      return complex_queries.QueryFactory.create('identifier: "__"').
+      return jIO.QueryFactory.create('identifier: "__"').
         exec(doc_list);
     }).then(function (doc_list) {
       deepEqual(doc_list, [
@@ -155,7 +155,7 @@
         {"identifier": ["ab", "b"]}
       ];
 
-      return complex_queries.QueryFactory.create('identifier: "__%"').
+      return jIO.QueryFactory.create('identifier: "__%"').
         exec(doc_list);
     }).then(function (doc_list) {
       deepEqual(doc_list, [
@@ -175,7 +175,7 @@
       {"identifier": "b", "title": "d"}
     ];
     stop();
-    complex_queries.QueryFactory.create('').exec(doc_list, {
+    jIO.QueryFactory.create('').exec(doc_list, {
       "select_list": ["title"],
       "limit": [2, 1],
       "sort_on": [["identifier", "ascending"], ["title", "descending"]]
@@ -187,7 +187,7 @@
   });
 
   test("JSON query", function () {
-    var jsoned = complex_queries.QueryFactory.create(
+    var jsoned = jIO.QueryFactory.create(
       "NOT(a:=b OR c:% AND d:<2)"
     ).toJSON();
     deepEqual(
@@ -222,7 +222,7 @@
       "\"NOT(a:=b OR c:% AND d:<2)\".toJSON()"
     );
     deepEqual(
-      complex_queries.parseStringToObject("NOT(a:=b OR c:% AND d:<2)"),
+      jIO.Query.parseStringToObject("NOT(a:=b OR c:% AND d:<2)"),
       jsoned,
       "parseStringToObject(\"NOT(a:=b OR c:% AND d:<2)\");"
     );

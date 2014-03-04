@@ -15,7 +15,6 @@ Getting started
       <script src="jio.js"></script>
 
       <!-- storages + dependencies -->
-      <script src="complex_queries.js"></script>
       <script src="localstorage.js"></script>
       <script src="davstorage.js"></script>
 
@@ -33,7 +32,6 @@ Getting started
                 rsvp: 'rsvp-custom',
                 jio: 'jio',
                 // storages + dependencies
-                complex_queries: 'complex_queries',
                 localstorage: 'localstorage',
                 davstorage: 'davstorage'
             }
@@ -110,7 +108,6 @@ Core
 * sha256.amd.js
 * rsvp-custom.js, AMD only version: rsvp-custom.amd.js
 * jio.js
-* complex_queries.js
 
 Storage dependencies
 ^^^^^^^^^^^^^^^^^^^^

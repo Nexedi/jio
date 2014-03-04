@@ -54,26 +54,25 @@ module.exports = function (grunt) {
         // duplicate files are ignored
         src: [
           'src/jio/intro.js',
+
+          // core
           'src/jio/core/globals.js',
           'src/jio/core/util.js',
           'src/jio/core/**/*.js',
           'src/jio/features/**/*.js',
-          'src/jio/outro.js'
-        ],
-        dest: 'jio.js'
-      },
-      queries: {
-        src: [
-          'src/queries/begin.js',
+
+          // queries
+          'src/queries/core/globals.js',
+          'src/queries/core/query.js',
           'src/queries/parser-begin.js',
           'src/queries/build/parser.js',
           'src/queries/parser-end.js',
-          'src/queries/core/globals.js',
           'src/queries/core/tools.js',
           'src/queries/core/**/*.js',
-          'src/queries/end.js'
+
+          'src/jio/outro.js'
         ],
-        dest: 'complex_queries.js'
+        dest: 'jio.js'
       }
     },
     uglify: {
@@ -88,10 +87,6 @@ module.exports = function (grunt) {
       jiodate: {
         src: 'src/jio.date/jiodate.js',
         dest: 'jiodate.min.js'
-      },
-      queries: {
-        src: 'complex_queries.js',
-        dest: 'complex_queries.min.js'
       }
     },
     qunit: {

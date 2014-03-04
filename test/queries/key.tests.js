@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 120, nomen: true, vars: true */
-/*global define, exports, require, module, complex_queries, window, test, ok,
+/*global define, exports, require, module, jIO, window, test, ok,
   equal, deepEqual, sinon, stop, start, RSVP */
 
 // define([module_name], [dependencies], module);
@@ -9,10 +9,10 @@
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    return module(require('complex_queries'));
+    return module(require('jio'));
   }
-  module(complex_queries);
-}(['complex_queries', 'qunit'], function (complex_queries) {
+  module(jIO);
+}(['jio', 'qunit'], function (jIO) {
   "use strict";
 
   module('Custom Key Queries');
@@ -43,7 +43,7 @@
     stop();
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.title,
         value: 'a'
@@ -57,7 +57,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.case_insensitive_identifier,
         value: 'A'
@@ -136,7 +136,7 @@
     stop();
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.day,
         value: '2013-02-02'
@@ -150,7 +150,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.month,
         value: '2013-02-10'
@@ -166,7 +166,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.year,
         value: '2013-02-10'
@@ -199,7 +199,7 @@
     stop();
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.mydate,
         operator: '=',
@@ -214,7 +214,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.mydate,
         operator: '!=',
@@ -230,7 +230,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.mydate,
         operator: '<=',
@@ -246,7 +246,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.mydate,
         operator: '<',
@@ -261,7 +261,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.mydate,
         operator: '>',
@@ -276,7 +276,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.mydate,
         operator: '>=',
@@ -315,7 +315,7 @@
     stop();
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.mydate,
         value: '2013-02-02'
@@ -329,7 +329,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.mydate,
         operator: '=',
@@ -344,7 +344,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.mydate,
         operator: '>=',
@@ -381,7 +381,7 @@
     stop();
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: {
           read_from: 'number',
@@ -399,7 +399,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: {
           read_from: 'number',
@@ -417,7 +417,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'complex',
         operator: 'OR',
         query_list: [{
@@ -477,7 +477,7 @@
     stop();
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.translated_state,
         value: 'ouvert'
@@ -492,7 +492,7 @@
 
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.translated_state,
         operator: '=',
@@ -508,7 +508,7 @@
 
 // XXX not implemented yet
 //    doc_list = docList();
-//    complex_queries.QueryFactory.create({
+//    jIO.QueryFactory.create({
 //      type: 'simple',
 //      key: keys.translated_state,
 //      operator: '!=',
@@ -579,7 +579,7 @@
     stop();
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: keys.identifier,
         value: 'aei%'

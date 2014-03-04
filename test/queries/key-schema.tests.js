@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 100, nomen: true, vars: true */
-/*global define, exports, require, module, complex_queries, window, test, ok,
+/*global define, exports, require, module, jIO, window, test, ok,
   deepEqual, sinon, start, stop, RSVP */
 
 // define([module_name], [dependencies], module);
@@ -9,10 +9,10 @@
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    return module(require('complex_queries'));
+    return module(require('jio'));
   }
-  module(complex_queries);
-}(['complex_queries', 'qunit'], function (complex_queries) {
+  module(jIO);
+}(['jio', 'qunit'], function (jIO) {
   "use strict";
 
   module('Custom Key Queries with Schema');
@@ -104,7 +104,7 @@
     stop();
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: 'case_insensitive_identifier',
         value: 'A'
@@ -137,7 +137,7 @@
     stop();
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: 'date_day',
         value: '2013-02-02'
@@ -151,7 +151,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: 'date_month',
         value: '2013-02-10'
@@ -167,7 +167,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: 'date_year',
         value: '2013-02-10'
@@ -182,7 +182,7 @@
   });
 
 
-  test('Test key schema + complex queries', function () {
+  test('Test key schema + jio query', function () {
     var docList = function () {
       return [
         {'identifier': '10', 'number': '10'},
@@ -209,7 +209,7 @@
     stop();
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'complex',
         operator: 'OR',
         query_list: [{
@@ -248,7 +248,7 @@
     stop();
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: 'translated_state',
         value: 'ouvert'
@@ -262,7 +262,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: 'translated_state',
         operator: '=',
@@ -279,7 +279,7 @@
 
 // XXX not implemented yet
 //    doc_list = docList();
-//    complex_queries.QueryFactory.create({
+//    jIO.QueryFactory.create({
 //      type: 'simple',
 //      key: 'translated_state',
 //      operator: '!=',

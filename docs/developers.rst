@@ -5,7 +5,7 @@ Quick start
 -----------
 
 The source repository includes ready-to-use files, so in case you do
-not want to build jIO yourself, just use *jio.js* as well as *complex_queries.js*
+not want to build jIO yourself, just use *sha256.amd.js*, *rsvp.js*, *jio.js*
 plus the storages and dependencies you need and you will be good to go.
 
 If you want to modify or build jIO yourself, you need to
@@ -21,15 +21,15 @@ If you want to modify or build jIO yourself, you need to
   ``# npm -g install grunt-cli``
 
 * Install the dependencies.
-  
+
   ``$ npm install``
 
 * Compile the JS/CC parser.
-  
+
   ``$ make`` (until we find out how to compile it with grunt)
 
 * Run build.
-  
+
   ``$ grunt``
 
 
@@ -311,4 +311,3 @@ Or you can just clear all rules before adding new ones:
         // ...
       }]
     });
-

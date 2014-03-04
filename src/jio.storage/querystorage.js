@@ -1,13 +1,13 @@
 /*jslint indent: 2, maxlen: 80, nomen: true, regexp: true, unparam: true */
-/*global define, RSVP, jIO, complex_queries */
+/*global define, RSVP, jIO */
 
 (function (dependencies, module) {
   "use strict";
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  module(RSVP, complex_queries, jIO);
-}(['rsvp', 'complex_queries', 'jio'], function (RSVP, complex_queries, jIO) {
+  module(RSVP, jIO);
+}(['rsvp', 'jio'], function (RSVP, jIO) {
   "use strict";
 
 
@@ -131,7 +131,7 @@
   /**
    * Retrieve documents.
    * This method performs an .allDocs() call on the substorage,
-   * retrieving everything, then runs a complex query on the result.
+   * retrieving everything, then runs a query on the result.
    *
    * @method allDocs
    * @param  {Object} command The given parameters
@@ -157,8 +157,8 @@
             rows_map[row.id] = row;
           });
 
-          return complex_queries.QueryFactory.create(options.query,
-                                                     that._key_schema).
+          return jIO.QueryFactory.create(options.query,
+                                         that._key_schema).
             exec(docs, options).
             then(function (filtered_docs) {
               // reconstruct filtered rows, preserving the order from docs

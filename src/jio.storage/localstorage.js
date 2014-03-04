@@ -5,7 +5,7 @@
  */
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, regexp: true */
-/*global jIO, localStorage, setTimeout, complex_queries, window, define,
+/*global jIO, localStorage, setTimeout, window, define,
   exports, require */
 
 /**
@@ -54,15 +54,14 @@
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    return module(exports, require('jio'), require('complex_queries'));
+    return module(exports, require('jio'));
   }
   window.local_storage = {};
-  module(window.local_storage, jIO, complex_queries);
+  module(window.local_storage, jIO);
 }([
   'exports',
-  'jio',
-  'complex_queries'
-], function (exports, jIO, complex_queries) {
+  'jio'
+], function (exports, jIO) {
   "use strict";
 
   /**
@@ -403,7 +402,7 @@
     rows = [];
     document_list = [];
     path_re = new RegExp(
-      "^" + complex_queries.stringEscapeRegexpCharacters(this._localpath) +
+      "^" + jIO.Query.stringEscapeRegexpCharacters(this._localpath) +
         "/[^/]+$"
     );
     if (options.query === undefined && options.sort_on === undefined &&
@@ -426,7 +425,7 @@
       }
       command.success({"data": {"rows": rows, "total_rows": rows.length}});
     } else {
-      // create complex query object from returned results
+      // create jio query object from returned results
       for (i in this._database) {
         if (this._database.hasOwnProperty(i)) {
           if (path_re.test(i)) {
@@ -445,8 +444,8 @@
           document_object[meta._id] = meta;
         });
       }
-      complex_queries.QueryFactory.create(options.query || "",
-                                          this._key_schema).
+      jIO.QueryFactory.create(options.query || "",
+                              this._key_schema).
         exec(document_list, options).then(function () {
           document_list = document_list.map(function (value) {
             var o = {

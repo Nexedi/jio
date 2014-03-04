@@ -16,7 +16,6 @@ depending on type of storages being used):
 <script src="jio.js"></script>
 
 <!-- jio storage libraries -->
-<script src="complex-queries.js"></script>
 <script src="localstorage.js"></script>
 
 <script ...>
@@ -309,13 +308,12 @@ var jio_instance = jIO.createJIO({
 For more information on the specific storages including guidelines on how to
 create your own connector, please also refer to the [documentation](https://www.j-io.org/documentation/jio-documentation).
 
-### Complex Queries
+### jIO Query
 
-jIO uses complex-queries manager, which can be run on top of the allDocs()
-method to query documents in the storage tree. A sample query would look like
-this (note that not all storages support allDocs and complex queries, and
-that pre-querying of documents on distant storages should best be done
-server-side):
+jIO can use queries, which can be run in the allDocs() method to query document
+lists. A sample query would look like this (note that not all storages support
+allDocs and jio queries, and that pre-querying of documents on distant storages
+should best be done server-side):
 
 ```javascript
 // run allDocs with query option on an existing jIO
@@ -342,7 +340,7 @@ jio_instance.allDocs({
 });
 ```
 
-To find out more about complex queries, please refer to the documentation.
+To find out more about queries, please refer to the documentation.
 
 ### Task Management
 

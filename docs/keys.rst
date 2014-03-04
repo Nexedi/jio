@@ -161,7 +161,7 @@ property, that behaves like the ``compareFunction`` described in
 
 If the < or > comparison makes no sense for the objects, the function should return ``undefined``.
 
-The ``.cmp()`` property is also used, if present, by the sorting feature of complex queries.
+The ``.cmp()`` property is also used, if present, by the sorting feature of queries.
 
 
 
@@ -262,7 +262,7 @@ A schema can be used:
 
 .. code-block:: javascript
 
-  complex_queries.QueryFactory.create({...}, key_schema).exec(...);
+  jIO.QueryFactory.create({...}, key_schema).exec(...);
 
 
 * In the ``jIO.createJIO()`` method. The same schema will be used

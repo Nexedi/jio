@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global _export, RSVP */
+/*global Query, RSVP, deepClone */
 
 /**
  * Escapes regexp special chars from a string.
@@ -11,11 +11,11 @@ function stringEscapeRegexpCharacters(string) {
   if (typeof string === "string") {
     return string.replace(/([\\\.\$\[\]\(\)\{\}\^\?\*\+\-])/g, "\\$1");
   }
-  throw new TypeError("complex_queries.stringEscapeRegexpCharacters(): " +
+  throw new TypeError("Query.stringEscapeRegexpCharacters(): " +
                       "Argument no 1 is not of type 'string'");
 }
 
-_export("stringEscapeRegexpCharacters", stringEscapeRegexpCharacters);
+Query.stringEscapeRegexpCharacters = stringEscapeRegexpCharacters;
 
 /**
  * Convert metadata values to array of strings. ex:
@@ -100,36 +100,8 @@ function sortFunction(key, way) {
       return 0;
     };
   }
-  throw new TypeError("complex_queries.sortFunction(): " +
+  throw new TypeError("Query.sortFunction(): " +
                       "Argument 2 must be 'ascending' or 'descending'");
-}
-
-/**
- * Clones all native object in deep. Managed types: Object, Array, String,
- * Number, Boolean, null.
- *
- * @param  {A} object The object to clone
- * @return {A} The cloned object
- */
-function deepClone(object) {
-  var i, cloned;
-  if (Array.isArray(object)) {
-    cloned = [];
-    for (i = 0; i < object.length; i += 1) {
-      cloned[i] = deepClone(object[i]);
-    }
-    return cloned;
-  }
-  if (typeof object === "object") {
-    cloned = {};
-    for (i in object) {
-      if (object.hasOwnProperty(i)) {
-        cloned[i] = deepClone(object[i]);
-      }
-    }
-    return cloned;
-  }
-  return object;
 }
 
 /**
@@ -171,11 +143,11 @@ function emptyFunction() {
 function select(select_option, list, clone) {
   var i, j, new_item;
   if (!Array.isArray(select_option)) {
-    throw new TypeError("complex_queries.select(): " +
+    throw new TypeError("jioquery.select(): " +
                         "Argument 1 is not of type Array");
   }
   if (!Array.isArray(list)) {
-    throw new TypeError("complex_queries.select(): " +
+    throw new TypeError("jioquery.select(): " +
                         "Argument 2 is not of type Array");
   }
   if (clone === true) {
@@ -198,7 +170,7 @@ function select(select_option, list, clone) {
   return list;
 }
 
-_export('select', select);
+Query.select = select;
 
 /**
  * Sort a list of items, according to keys and directions. If `clone` is true,
@@ -212,7 +184,7 @@ _export('select', select);
 function sortOn(sort_on_option, list, clone) {
   var sort_index;
   if (!Array.isArray(sort_on_option)) {
-    throw new TypeError("complex_queries.sortOn(): " +
+    throw new TypeError("jioquery.sortOn(): " +
                         "Argument 1 is not of type 'array'");
   }
   if (clone) {
@@ -228,7 +200,7 @@ function sortOn(sort_on_option, list, clone) {
   return list;
 }
 
-_export('sortOn', sortOn);
+Query.sortOn = sortOn;
 
 /**
  * Limit a list of items, according to index and length. If `clone` is true,
@@ -241,11 +213,11 @@ _export('sortOn', sortOn);
  */
 function limit(limit_option, list, clone) {
   if (!Array.isArray(limit_option)) {
-    throw new TypeError("complex_queries.limit(): " +
+    throw new TypeError("jioquery.limit(): " +
                         "Argument 1 is not of type 'array'");
   }
   if (!Array.isArray(list)) {
-    throw new TypeError("complex_queries.limit(): " +
+    throw new TypeError("jioquery.limit(): " +
                         "Argument 2 is not of type 'array'");
   }
   if (clone) {
@@ -258,7 +230,7 @@ function limit(limit_option, list, clone) {
   return list;
 }
 
-_export('limit', limit);
+Query.limit = limit;
 
 /**
  * Convert a search text to a regexp.
@@ -269,7 +241,7 @@ _export('limit', limit);
  */
 function searchTextToRegExp(string, use_wildcard_characters) {
   if (typeof string !== 'string') {
-    throw new TypeError("complex_queries.searchTextToRegExp(): " +
+    throw new TypeError("jioquery.searchTextToRegExp(): " +
                         "Argument 1 is not of type 'string'");
   }
   if (use_wildcard_characters === false) {
@@ -284,7 +256,7 @@ function searchTextToRegExp(string, use_wildcard_characters) {
   ) + "$");
 }
 
-_export("searchTextToRegExp", searchTextToRegExp);
+Query.searchTextToRegExp = searchTextToRegExp;
 
 /**
  * sequence(thens): Promise

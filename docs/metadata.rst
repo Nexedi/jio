@@ -400,7 +400,7 @@ Posting a job announcement
 Getting a list of document created by someone
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-With complex query:
+With query:
 
 .. code-block:: javascript
 
@@ -410,7 +410,7 @@ With complex query:
 Getting all documents about jIO in the resilience project
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-With complex query:
+With query:
 
 .. code-block:: javascript
 

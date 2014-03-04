@@ -1,40 +1,41 @@
 
-jIO Complex Queries
-===================
+jIO Query
+=========
 
-What are Complex Queries?
--------------------------
+What are Queries?
+-----------------
 
-In jIO, a complex query can ask a storage server to select, filter, sort, or
-limit a document list before sending it back. If the server is not able to do
-so, the complex query tool can do the filtering by itself on the client. Only the
-``.allDocs()`` method can use complex queries.
+In jIO,  a query can ask  a storage server to  select, filter, sort, or  limit a
+document list before  sending it back. If the  server is not able to  do so, the
+jio  query  tool can  do  the  filtering by  itself  on  the client.   Only  the
+``.allDocs()`` method can use jio queries.
 
-A query can either be a string (using a specific language useful for writing
-queries), or it can be a tree of objects (useful to browse queries). To handle
-complex queries, jIO uses a parsed grammar file which is compiled using `JSCC <http://jscc.phorward-software.com/>`_.
+A query  can either be  a string (using a  specific language useful  for writing
+queries), or it can  be a tree of objects (useful to  browse queries). To handle
+queries,  jIO  uses  a  parsed  grammar  file  which  is  compiled  using  `JSCC
+<http://jscc.phorward-software.com/>`_.
 
-Why use Complex Queries?
-------------------------
+Why use JIO Queries?
+--------------------
 
-Complex queries can be used like database queries, for tasks such as:
+JIO queries can be used like database queries, for tasks such as:
 
 * search a specific document
 * sort a list of documents in a certain order
 * avoid retrieving a list of ten thousand documents
 * limit the list to show only N documents per page
 
-For some storages (like localStorage), complex queries can be a powerful tool
-to query accessible documents. When querying documents on a distant storage,
-some server-side logic should be run to avoid returning too many documents
-to the client. If distant storages are static, an alternative would be to use
-an indexStorage with appropriate indices as complex queries will always try
-to run the query on the index before querying documents itself.
+For some  storages (like localStorage),  jio queries can  be a powerful  tool to
+query accessible documents.  When querying  documents on a distant storage, some
+server-side logic  should be run  to avoid returning  too many documents  to the
+client.   If distant  storages are  static, an  alternative would  be to  use an
+indexStorage with appropriate indices as jio  queries will always try to run the
+query on the index before querying documents itself.
 
-How to use Complex Queries with jIO?
-------------------------------------
+How to use Queries with jIO?
+----------------------------
 
-Complex queries can be triggered by including the option named **query** in the ``.allDocs()`` method call.
+Queries can be triggered by including the option named **query** in the ``.allDocs()`` method call.
 
 Example:
 
@@ -75,31 +76,29 @@ Example:
     jio_instance.allDocs(options, callback);
 
 
-How to use Complex Queries outside jIO?
----------------------------------------
+How to use Queries outside jIO?
+-------------------------------
 
-.. XXX 404 page missing on complex_example.html
-
-Complex Queries provides an API - which namespace is complex_queries.
-Refer to the `Complex Queries sample page <http://git.erp5.org/gitweb/jio.git/blob/HEAD:/examples/complex_example.html?js=1>`_
+Refer to the `JIO Query sample page <http://git.erp5.org/gitweb/jio.git/blob/HEAD:/examples/example-queries.html?js=1>`_
 for how to use these methods, in and outside jIO. The module provides:
 
 .. code-block:: javascript
 
-    {
-      parseStringToObject: [Function: parseStringToObject],
-      stringEscapeRegexpCharacters: [Function: stringEscapeRegexpCharacters],
-      select: [Function: select],
-      sortOn: [Function: sortOn],
-      limit: [Function: limit],
-      searchTextToRegExp: [Function: searchTextToRegExp],
+    jIO: {
       QueryFactory: { [Function: QueryFactory] create: [Function] },
-      Query: [Function: Query],
+      Query: { [Function: Query],
+        parseStringToObject: [Function],
+        stringEscapeRegexpCharacters: [Function],
+        select: [Function],
+        sortOn: [Function],
+        limit: [Function],
+        searchTextToRegExp: [Function],
+      }
       SimpleQuery: {
-          [Function: SimpleQuery] super_: [Function: Query]
+        [Function: SimpleQuery] super_: [Function: Query]
       },
       ComplexQuery: {
-          [Function: ComplexQuery] super_: [Function: Query]
+        [Function: ComplexQuery] super_: [Function: Query]
       }
     }
 
@@ -119,7 +118,7 @@ Basic example:
     var query = 'title: "Document number 1"';
 
     // running the query
-    var result = complex_queries.QueryFactory.create(query).exec(object_list);
+    var result = jIO.QueryFactory.create(query).exec(object_list);
     // console.log(result);
     // [ { "title": "Document number 1", "creator": "John Doe"} ]
 
@@ -128,7 +127,7 @@ Other example:
 
 .. code-block:: javascript
 
-    var result = complex_queries.QueryFactory.create(query).exec(
+    var result = jIO.QueryFactory.create(query).exec(
       object_list,
       {
         "select": ['title', 'year'],
@@ -138,18 +137,18 @@ Other example:
       }
     );
     // this case is equal to:
-    var result = complex_queries.QueryFactory.
-                                create(query).exec(object_list);
-    complex_queries.sortOn([
-                            ['title', 'ascending'],
-                            ['year', 'descending']
-                           ], result);
-    complex_queries.limit([20, 20], result);
-    complex_queries.select(['title', 'year'], result);
+    var result = jIO.QueryFactory.
+      create(query).exec(object_list);
+    jIO.Query.sortOn([
+      ['title', 'ascending'],
+      ['year', 'descending']
+    ], result);
+    jIO.Query.limit([20, 20], result);
+    jIO.Query.select(['title', 'year'], result);
 
 
-Complex Queries in storage connectors
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Query in storage connectors
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The query exec method must only be used if the server is not able to pre-select
 documents. As mentioned before, you could use an indexStorage to maintain
@@ -160,7 +159,7 @@ are available in the index.
 Matching properties
 ^^^^^^^^^^^^^^^^^^^
 
-Complex Queries select items which exactly match the value given in the query
+Queries select items which exactly match the value given in the query
 but you can also use wildcards (``%``).  If you don't want to use a wildcard,
 just set the operator to ``=``.
 
@@ -184,14 +183,14 @@ component (change ``limit: [0, 10]`` to ``limit: [10, 10]`` or ``sort_on: [['tit
 'ascending']]`` to ``sort_on: [['creator', 'ascending']]``) and each component must
 have its own default properties to keep their own behavior.
 
-Convert Complex Queries into another type
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Query into another type
+^^^^^^^^^^^^^^^^^^^^^^^
 
 Example, convert Query object into a human readable string:
 
 .. code-block:: javascript
 
-    var query = complex_queries.QueryFactory.
+    var query = jIO.QueryFactory.
       create('year: < 2000 OR title: "%a"'),
       option = {
         limit: [0, 10]
@@ -240,7 +239,7 @@ JSON Schemas and Grammar
 
 Below you can find schemas for constructing queries.
 
-* Complex Queries JSON Schema:
+* Complex Query JSON Schema:
 
   .. code-block:: javascript
 
@@ -274,7 +273,7 @@ Below you can find schemas for constructing queries.
     }
 
 
-* Simple Queries JSON Schema:
+* Simple Query JSON Schema:
 
   .. code-block:: javascript
 
@@ -308,7 +307,7 @@ Below you can find schemas for constructing queries.
 
 
 
-* Complex Queries Grammar::
+* JIO Query Grammar::
 
     search_text
         : and_expression

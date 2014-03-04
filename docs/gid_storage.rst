@@ -9,7 +9,8 @@ A storage to enable interoperability between all kind of storages.
 A global ID (GID) is a document id which represents a unique document. This ID
 is then used to find this unique document on all types of backends.
 
-This storage uses sub storage ``.allDocs()`` and complex queries to find unique documents, and converts their ids to gids.
+This storage uses sub storage ``.allDocs()`` and queries to find unique
+documents, and converts their ids to gids.
 
 Where it can be used
 --------------------
@@ -125,7 +126,7 @@ Storage Requirements
 --------------------
 
 * This storage is not compatible with *RevisionStorage* and *ReplicateRevisionStorage*.
-* Sub storages have to support options for ``complex queries`` and ``include_docs``.
+* Sub storages have to support options for queries and ``include_docs``.
 
 
 Dependencies
@@ -158,5 +159,3 @@ Offline application usage::
       `-- Local Storage
 
 **CAUTION: All gid storage must have the same description!**
-
-

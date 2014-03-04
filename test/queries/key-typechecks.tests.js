@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 90, nomen: true */
-/*global define, exports, require, module, complex_queries, window, test,
+/*global define, exports, require, module, jIO, window, test,
   raises, ok, equal, deepEqual, sinon */
 
 // define([module_name], [dependencies], module);
@@ -9,17 +9,17 @@
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    return module(require('complex_queries'));
+    return module(require('jio'));
   }
-  module(complex_queries);
-}(['complex_queries', 'qunit'], function (complex_queries) {
+  module(jIO);
+}(['jio', 'qunit'], function (jIO) {
   "use strict";
 
   module('Key and key_schema objects validation');
 
   test('Check the parameters passed to exec() and create()', function () {
     try {
-      complex_queries.QueryFactory.create('').exec('gnegne');
+      jIO.QueryFactory.create('').exec('gnegne');
       ok(false, 'argument 1 not checked');
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
@@ -29,7 +29,7 @@
     }
 
     try {
-      complex_queries.QueryFactory.create({});
+      jIO.QueryFactory.create({});
       ok(false, 'argument 1 not checked');
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
@@ -39,7 +39,7 @@
     }
 
     try {
-      complex_queries.QueryFactory.create('').exec([], 1);
+      jIO.QueryFactory.create('').exec([], 1);
       ok(false, 'argument 2 not checked');
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
@@ -49,7 +49,7 @@
     }
 
     try {
-      complex_queries.QueryFactory.create({type: 'simple'}, '');
+      jIO.QueryFactory.create({type: 'simple'}, '');
       ok(false, 'key_schema type is not checked');
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
@@ -59,7 +59,7 @@
     }
 
     try {
-      complex_queries.QueryFactory.create({type: 'simple'}, {});
+      jIO.QueryFactory.create({type: 'simple'}, {});
       ok(false, 'key_schema.key_set is not checked');
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
@@ -69,7 +69,9 @@
     }
 
     try {
-      complex_queries.QueryFactory.create({type: 'simple'}, {key_set: {}, foobar: {}});
+      jIO.QueryFactory.create({
+        type: 'simple'
+      }, {key_set: {}, foobar: {}});
       ok(false, 'unknown key_schema properties are not checked');
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
@@ -87,7 +89,7 @@
     ];
 
     try {
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: {},
         value: 'a'
@@ -101,7 +103,7 @@
     }
 
     try {
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: {
           read_from: 'identifier',

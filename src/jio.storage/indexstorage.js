@@ -17,7 +17,7 @@
  */
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, regexp: true */
-/*global window, exports, require, define, jIO, RSVP, complex_queries */
+/*global window, exports, require, define, jIO, RSVP */
 
 /**
  * JIO Index Storage.
@@ -122,18 +122,16 @@
     return module(
       exports,
       require('jio'),
-      require('rsvp'),
-      require('complex_queries')
+      require('rsvp')
     );
   }
   window.index_storage = {};
-  module(window.index_storage, jIO, RSVP, complex_queries);
+  module(window.index_storage, jIO, RSVP);
 }([
   'exports',
   'jio',
-  'rsvp',
-  'complex_queries'
-], function (exports, jIO, RSVP, complex_queries) {
+  'rsvp'
+], function (exports, jIO, RSVP) {
   "use strict";
 
   /**
@@ -747,7 +745,7 @@
           db[i]["_" + now] = db[i];
         }
       }
-      complex_queries.QueryFactory.create(option.query || '').
+      jIO.QueryFactory.create(option.query || '').
         exec(db, option).then(function () {
           for (i = 0; i < db.length; i += 1) {
             id = db[i]._id;

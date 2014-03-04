@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global parseStringToObject: true, emptyFunction: true, sortOn: true, limit:
-  true, select: true, _export: true, stringEscapeRegexpCharacters: true,
+  true, select: true, exports, stringEscapeRegexpCharacters: true,
   deepClone, RSVP, sequence */
 
 /**
@@ -194,4 +194,4 @@ Query.prototype.serialized = function () {
   return undefined;
 };
 
-_export("Query", Query);
+exports.Query = Query;

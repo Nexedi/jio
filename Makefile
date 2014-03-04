@@ -5,8 +5,6 @@ QUERIES_DIR = src/queries
 JIO         = jio.js
 JIO_MIN     = jio.min.js
 JIODATE_MIN = jiodate.min.js
-COMPLEX     = complex_queries.js
-COMPLEX_MIN = complex_queries.min.js
 PARSER_PAR  = $(QUERIES_DIR)/core/parser.par
 PARSER_OUT  = $(QUERIES_DIR)/build/parser.js
 UGLIFY      = ./node_modules/grunt-contrib-uglify/node_modules/uglify-js/bin/uglifyjs
@@ -28,7 +26,7 @@ zip:
 	@mkdir $(TMPDIR)/jio
 	@mkdir $(TMPDIR)/jio/storage
 	@cp jio.js                              $(TMPDIR)/jio/
-	@cp complex_queries.js                  $(TMPDIR)/jio/
+	@cp jioquery.js                         $(TMPDIR)/jio/
 	@cp src/sha1.amd.js                     $(TMPDIR)/jio/
 	@cp src/sha2.amd.js                     $(TMPDIR)/jio/
 	@cp src/sha256.amd.js                   $(TMPDIR)/jio/
@@ -57,7 +55,6 @@ zip:
 	@mkdir $(TMPDIR)/jio/storage
 	@echo "Minimizing JS..."
 	@cp jio.min.js                                 $(TMPDIR)/jio/
-	@cp complex_queries.min.js                     $(TMPDIR)/jio/
 	@$(UGLIFY) src/sha1.amd.js                     >$(TMPDIR)/jio/sha1.amd.min.js 2>/dev/null
 	@$(UGLIFY) src/sha2.amd.js                     >$(TMPDIR)/jio/sha2.amd.min.js 2>/dev/null
 	@$(UGLIFY) src/sha256.amd.js                   >$(TMPDIR)/jio/sha256.amd.min.js 2>/dev/null
@@ -92,6 +89,4 @@ realclean:
 	rm -f "$(JIO)"
 	rm -f "$(JIO_MIN)"
 	rm -f "$(JIODATE_MIN)"
-	rm -f "$(COMPLEX)"
-	rm -f "$(COMPLEX_MIN)"
 	rm -f "$(PARSER_OUT)"

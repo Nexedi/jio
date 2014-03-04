@@ -10,7 +10,7 @@
 // }
 
 /*jslint indent: 2, nomen: true, unparam: true */
-/*global jIO, complex_queries, console, UriTemplate, FormData, RSVP, URI,
+/*global jIO, console, UriTemplate, FormData, RSVP, URI,
   ProgressEvent, define */
 
 (function (dependencies, module) {
@@ -18,13 +18,12 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  module(RSVP, jIO, complex_queries, URI);
+  module(RSVP, jIO, URI);
 }([
   'rsvp',
   'jio',
-  'complex_queries',
   'uri'
-], function (RSVP, jIO, complex_queries, URI) {
+], function (RSVP, jIO, URI) {
   "use strict";
 
   function ERP5Storage(spec) {
@@ -176,7 +175,7 @@
   ERP5Storage.prototype.allDocs = function (command, param, options) {
     if (typeof options.query !== "string") {
       options.query = (options.query ?
-                       complex_queries.objectToSearchText(options.query) :
+                       jIO.Query.objectToSearchText(options.query) :
                        undefined);
     }
     return this._getSiteDocument()

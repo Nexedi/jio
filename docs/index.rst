@@ -41,10 +41,9 @@ jIO documentation
     revision_storages
     available_storages
     gid_storage
-    complex_queries
+    query
     keys
     metadata
     developers
     style_guide
     authors
-

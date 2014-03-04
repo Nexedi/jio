@@ -23,7 +23,7 @@
  * JIO GID Storage. Type = 'gid'.
  * Identifies document with their global identifier representation
  *
- * Sub storages must support complex queries and include_docs options.
+ * Sub storages must support queries and include_docs options.
  *
  * Storage Description:
  *
@@ -216,12 +216,12 @@
   }
 
   /**
-   * Convert a gid to a complex query.
+   * Convert a gid to a jio query.
    *
    * @param  {Object,String} gid The gid
-   * @return {Object} A complex serialized object
+   * @return {Object} A jio serialized query
    */
-  function gidToComplexQuery(gid) {
+  function gidToJIOQuery(gid) {
     var k, i, result = [], meta, content;
     if (typeof gid === 'string') {
       gid = JSON.parse(gid);
@@ -300,7 +300,7 @@
      * Generic command for post or put one.
      *
      * This command will check if the document already exist with an allDocs
-     * and a complex query. If exist, then post will fail. Put will update the
+     * and a jio query. If exist, then post will fail. Put will update the
      * retrieved document thanks to its real id. If no documents are found, post
      * and put will create a new document with the sub storage id generator.
      *
@@ -310,7 +310,7 @@
      * @param  {String} method The command method
      */
     priv.putOrPost = function (command, metadata, method) {
-      var gid, complex_query, doc = tool.deepClone(metadata);
+      var gid, jio_query, doc = tool.deepClone(metadata);
       gid = gidFormat(doc, priv.constraints);
       if (gid === undefined || (doc._id && gid !== doc._id)) {
         return command.error(
@@ -319,9 +319,9 @@
           "Cannot " + method + " document"
         );
       }
-      complex_query = gidToComplexQuery(gid);
+      jio_query = gidToJIOQuery(gid);
       command.storage(priv.sub_storage).allDocs({
-        "query": complex_query
+        "query": jio_query
       }).then(function (response) {
         var update_method = method;
         response = response.data;
@@ -359,7 +359,7 @@
      * Generic command for putAttachment, getAttachment or removeAttachment.
      *
      * This command will check if the document exist with an allDocs and a
-     * complex query. If not exist, then it returns 404. Otherwise the
+     * jio query. If not exist, then it returns 404. Otherwise the
      * action will be done on the attachment of the found document.
      *
      * @method putGetOrRemoveAttachment
@@ -369,7 +369,7 @@
      * @param  {String} method The command method
      */
     priv.putGetOrRemoveAttachment = function (command, doc, method) {
-      var gid_object, complex_query;
+      var gid_object, jio_query;
       gid_object = gidParse(doc._id, priv.constraints);
       if (gid_object === undefined) {
         return command.error(
@@ -378,9 +378,9 @@
           "Cannot " + method + " attachment"
         );
       }
-      complex_query = gidToComplexQuery(gid_object);
+      jio_query = gidToJIOQuery(gid_object);
       command.storage(priv.sub_storage).allDocs({
-        "query": complex_query
+        "query": jio_query
       }).then(function (response) {
         response = response.data;
         if (response.total_rows === 0) {
@@ -429,7 +429,7 @@
 
     /**
      * Puts an attachment to a document thank to its gid, a sub allDocs and a
-     * complex query.
+     * jio query.
      *
      * @method putAttachment
      * @param  {Command} command The JIO command
@@ -439,13 +439,13 @@
     };
 
     /**
-     * Gets a document thank to its gid, a sub allDocs and a complex query.
+     * Gets a document thank to its gid, a sub allDocs and a jio query.
      *
      * @method get
      * @param  {Object} command The JIO command
      */
     that.get = function (command, param) {
-      var gid_object, complex_query;
+      var gid_object, jio_query;
       gid_object = gidParse(param._id, priv.constraints);
       if (gid_object === undefined) {
         return command.error(
@@ -454,9 +454,9 @@
           "Cannot get document"
         );
       }
-      complex_query = gidToComplexQuery(gid_object);
+      jio_query = gidToJIOQuery(gid_object);
       command.storage(priv.sub_storage).allDocs({
-        "query": complex_query,
+        "query": jio_query,
         "include_docs": true
       }).then(function (response) {
         response = response.data;
@@ -477,7 +477,7 @@
 
     /**
      * Gets an attachment from a document thank to its gid, a sub allDocs and a
-     * complex query.
+     * jio query.
      *
      * @method getAttachment
      * @param  {Command} command The JIO command
@@ -487,13 +487,13 @@
     };
 
     /**
-     * Remove a document thank to its gid, sub allDocs and a complex query.
+     * Remove a document thank to its gid, sub allDocs and a jio query.
      *
      * @method remove
      * @param  {Command} command The JIO command.
      */
     that.remove = function (command, doc) {
-      var gid_object, complex_query;
+      var gid_object, jio_query;
       gid_object = gidParse(doc._id, priv.constraints);
       if (gid_object === undefined) {
         return command.error(
@@ -502,9 +502,9 @@
           "Cannot remove document"
         );
       }
-      complex_query = gidToComplexQuery(gid_object);
+      jio_query = gidToJIOQuery(gid_object);
       command.storage(priv.sub_storage).allDocs({
-        "query": complex_query
+        "query": jio_query
       }).then(function (response) {
         response = response.data;
         if (response.total_rows === 0) {
@@ -533,7 +533,7 @@
 
     /**
      * Removes an attachment to a document thank to its gid, a sub allDocs and a
-     * complex query.
+     * jio query.
      *
      * @method removeAttachment
      * @param  {Command} command The JIO command

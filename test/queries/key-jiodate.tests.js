@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 120, nomen: true, vars: true */
-/*global define, exports, require, module, complex_queries, jiodate, window, test, ok,
-  equal, deepEqual, sinon, start, stop, RSVP */
+/*global define, exports, require, module, jIO, jiodate, window, test,
+  ok, equal, deepEqual, sinon, start, stop, RSVP */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -9,10 +9,10 @@
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    return module(require('complex_queries'), require('jiodate'));
+    return module(require('jio'), require('jiodate'));
   }
-  module(complex_queries, jiodate);
-}(['complex_queries', 'jiodate', 'qunit'], function (complex_queries, jiodate) {
+  module(jIO, jiodate);
+}(['jio', 'jiodate', 'qunit'], function (jIO, jiodate) {
   "use strict";
 
   module('Custom Key Queries with JIODate');
@@ -40,7 +40,7 @@
     stop();
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: 'date',
         value: '2011'
@@ -54,7 +54,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: 'date',
         operator: '!=',
@@ -70,7 +70,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: 'date',
         operator: '<',
@@ -85,7 +85,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: 'date',
         operator: '<=',
@@ -101,7 +101,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: 'date',
         operator: '>',
@@ -116,7 +116,7 @@
     );
 
     promise.push(
-      complex_queries.QueryFactory.create({
+      jIO.QueryFactory.create({
         type: 'simple',
         key: 'date',
         operator: '>=',
@@ -150,7 +150,7 @@
     query_list.forEach(function (o) {
       var qs = o[0], expected = o[1];
       promise.push(
-        complex_queries.QueryFactory.create(qs, key_schema).
+        jIO.QueryFactory.create(qs, key_schema).
           exec(docList()).
           then(function (dl) {
             deepEqual(dl, expected, "Match with '" + qs + "' (parsed query string)");
@@ -167,7 +167,7 @@
 
     query_list.forEach(function (qs) {
       promise.push(
-        complex_queries.QueryFactory.create(qs, key_schema).
+        jIO.QueryFactory.create(qs, key_schema).
           exec(docList()).
           then(function (dl) {
             deepEqual(dl, [

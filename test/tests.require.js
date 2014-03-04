@@ -14,8 +14,7 @@
       "test_util":   "jio/util",
       "fakestorage": "jio/fakestorage",
 
-      "complex_queries":    "../complex_queries",
-      "complex_queries_tests": "queries/tests",
+      "jioquery_tests": "queries/tests",
 
       "localstorage":       "../src/jio.storage/localstorage",
       "localstorage_tests": "jio.storage/localstorage.tests",
@@ -53,7 +52,7 @@
   require([
     "sinon_qunit",
     "jio_tests",
-    "complex_queries_tests",
+    "jioquery_tests",
     "localstorage_tests",
     "davstorage_tests",
     "indexstorage_tests",
