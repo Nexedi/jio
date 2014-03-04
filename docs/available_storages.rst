@@ -61,14 +61,6 @@ NB: digest **is not implemented yet**.
 
   dav_storage.createDescription(url, auth_type,
                                 [realm], [username], [password]);
-  // or
-  {
-    "type": "dav",
-    "url": url,
-    "auth_type": "basic",
-    "username": "my user name",
-    "password": "my password"
-  }
 
 All parameters are strings.
 
@@ -83,6 +75,25 @@ parameter       required?
 =============   ========================
 
 If ``auth_type`` is the string ``"none"``, then ``realm``, ``username`` and ``password`` are never used.
+
+Descriptions:
+
+.. code-block:: javascript
+
+  // No authentication
+  {
+    "type": "dav",
+    "url": url
+  }
+
+  // Basic authentication
+  {
+    "type": "dav",
+    "url": "url,
+    "basic_login": btoa(username + ":" + password)
+  }
+
+  // Digest authentication is not implemented
 
 **Be careful**: The generated description never contains a readable password, but
 for basic authentication, the password will just be base64 encoded.
