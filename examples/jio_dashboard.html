@@ -21,8 +21,10 @@
         <button onclick="fillLocalDescription()">Local</button>
         <button onclick="fillDavDescription()">WebDAV</button>
         <button onclick="fillERP5Description()">ERP5</button>
-        <button onclick="fillCustomDescription()">Custom</button>
+        <button onclick="fillCustomDescription()">Custom</button> -
         <button onclick="fillLastDescription()">Last</button>
+        <button onclick="loadDescription()">Load</button>
+        <button onclick="saveDescription()">Save</button>
       </td>
     </tr>
     <tr>
@@ -176,6 +178,16 @@ function fillCustomDescription() {
 function fillLastDescription() {
   select("#storagedescription").value =
     localStorage.getItem("last_jio_description") || "{}";
+}
+function saveDescription() {
+  localStorage.setItem(
+    "saved_jio_description",
+    select("#storagedescription").value
+  );
+}
+function loadDescription() {
+  select("#storagedescription").value =
+    localStorage.getItem("saved_jio_description") || "{}";
 }
 fillLastDescription();
 
