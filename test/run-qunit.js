@@ -1,7 +1,5 @@
-/*jslint indent: 2, maxlen: 80 */
-/*global require: true, phantom: true, document: true */
-
-"use strict";
+/*jslint indent: 2, maxlen: 80, sloppy: true */
+/*global require, phantom, document, console, setInterval, clearInterval */
 
 var system = require('system');
 
@@ -17,7 +15,7 @@ var system = require('system');
  */
 function waitFor(testFx, onReady, time_out_millis) {
   var maxtime_out_millis, start, condition, interval;
-  maxtime_out_millis = time_out_millis || 10001;
+  maxtime_out_millis = time_out_millis || (5 * 60 * 1000 + 1);
   start = new Date().getTime();
   condition = false;
   interval = setInterval(function () {
@@ -69,13 +67,15 @@ page.open(system.args[1], function (status) {
   }, function () {
     var failedNum = page.evaluate(function () {
       console.log("========================================================");
+      console.log("<!DOCTYPE html><html>");
       console.log(document.documentElement.innerHTML);
+      console.log("</html>");
       console.log("========================================================");
       var el = document.getElementById('qunit-testresult');
       console.log(el.innerText);
       try {
         return el.getElementsByClassName('failed')[0].innerHTML;
-      } catch (e) { }
+      } catch (ignore) {}
       return 10000;
     });
     phantom.exit((parseInt(failedNum, 10) > 0) ? 1 : 0);

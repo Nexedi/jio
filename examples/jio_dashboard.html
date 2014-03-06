@@ -5,102 +5,42 @@
   <title>jIO Dashboard</title>
 </head>
 <body>
-  <script type="text/javascript">
-    <!--
-var log_color = 'cyan';
-var logGetColor = function () {
-  if (log_color === 'white') {
-    log_color = 'cyan';
-  } else {
-    log_color = 'white';
-  }
-  return log_color;
-};
-var log = function (o) {
-  var node = document.createElement('div');
-  node.setAttribute('style', 'background-color:'+logGetColor()+';');
-  if (typeof o === 'string') {
-    node.textContent = o;
-  } else {
-    node.textContent = JSON.stringify(o);
-  }
-  document.getElementById('log').appendChild(node);
-};
-var error = function (o) {
-  var node = document.createElement('div');
-  node.setAttribute('style', 'background-color:'+logGetColor()+
-                    ';color:red;font-weight:bold');
-  if (typeof o === 'string') {
-    node.textContent = o;
-  } else {
-    node.textContent = JSON.stringify(o);
-  }
-  document.getElementById('log').appendChild(node);
-};
-var clearlog = function () {
-  document.getElementById('log').innerHTML = '';
-};
-        //-->
-  </script>
   <table border="1" style="width: 100%;">
     <tr style="font-style:italic;">
-      <th>simple storage</th><th>multi storage</th><th>distant storage</th>
-      <th>revision managing</th><th>custom storage description</th>
+      <th>Storage Description</th>
     </tr>
     <tr>
-      <th>local</th><th>crypt & local</th><th>dav</th>
-      <th>revision & local</th><th>custom</th>
-    </tr>
-    <tr>
-      <th>
-        <input type="text" id="localuser" value="localuser" placeholder="username" /><br />
-        <input type="text" id="localapp" value="localapp" placeholder="application_name" /><br />
-      </th>
-      <th>
-        <input type="text" id="cryptuser" value="cryptuser" placeholder="username" /><br />
-        <input type="text" id="cryptapp" value="cryptapp" placeholder="application_name" /><br />
-        <input type="password" id="cryptpassword" value="pwd" placeholder="password" /><br />
-      </th>
-      <th>
-        <input type="text" id="davurl" value="http://dav.com/uploads" placeholder="url" /><br />
-        <input type="text" id="davauthtype" value="basic" placeholder="auth_type" disabled /> <br />
-        <input type="text" id="davuser" value="davuser" placeholder="username" /><br />
-        <input type="password" id="davpassword" value="pwd" placeholder="password" /><br />
-      </th>
-      <th>
-        <input type="text" id="revisionuser" value="localuser" placeholder="username" /><br />
-        <input type="text" id="revisionapp" value="localapp" placeholder="application_name" /><br />
-      </th>
       <th style="width:100%;">
-        <textarea id="customstorage" style="width:98%;">{&quot;type&quot;:&quot;local&quot;,&quot;username&quot;:&quot;customuser&quot;,&quot;application_name&quot;:&quot;customapp&quot;,&quot;customkey&quot;:&quot;customvalue&quot;}</textarea>
+        <textarea id="storagedescription" rows="10"
+                  style="width:98%;"></textarea>
       </th>
     </tr>
     <tr>
-      <th><button onclick="newLocalJio()">Create New jIO</button></th>
-      <th><button onclick="newCryptJio()">Create New jIO</button></th>
-      <th><button onclick="newDavJio()">Create New jIO</button></th>
-      <th><button onclick="newRevisionJio()">Create New jIO</button></th>
-      <th><button onclick="newCustomJio()">Create New jIO</button></th>
+      <td style="text-align: center;">
+        <button onclick="fillMemoryDescription()">Memory</button>
+        <button onclick="fillLocalDescription()">Local</button>
+        <button onclick="fillDavDescription()">WebDAV</button>
+        <button onclick="fillERP5Description()">ERP5</button>
+        <button onclick="fillCustomDescription()">Custom</button> -
+        <button onclick="fillLastDescription()">Last</button>
+        <button onclick="loadDescription()">Load</button>
+        <button onclick="saveDescription()">Save</button>
+      </td>
+    </tr>
+    <tr>
+      <th><button onclick="createJIO()">Create JIO</button></th>
     </tr>
   </table>
   <br />
   <table border="1" style="width: 100%;">
     <tr>
       <td colspan="1" style="width: 50%;">
-        <label for="metadata">Metadata or document id:</label>
+        <label for="metadata">Metadata or Parameters:</label>
         <textarea id="metadata" rows="3" style="width: 98%;">{}</textarea>
       </td>
       <td colspan="1" style="text-align: center;">
         Options:<br />
-        <label for="show_conflicts">Get Conflicts</label>
-        <input type="checkbox" id="show_conflicts" /><br />
-        <label for="show_revision_history">Get Revision History</label>
-        <input type="checkbox" id="show_revision_history" /><br />
-        <label for="show_revision_info">Get Revision Info</label>
-        <input type="checkbox" id="show_revision_info" /><br />
-        <label for="max_retry">Max Retry</label>
-        <input type="number" id="max_retry" value="0" style="width: 3em;"/>
-        (0 = infinite)
+        <textarea id="options" rows="3" style="width: 98%;">{}</textarea>
       </td>
     </tr>
     <tr>
@@ -112,31 +52,17 @@ var clearlog = function () {
         - <button onclick="putAttachment()">putAttachment</button>
         <button onclick="getAttachment()">getAttachment</button>
         <button onclick="removeAttachment()">removeAttachment</button>
-      </td>
-    </tr>
-    <tr>
-      <td colspan="1" style="width: 50%;">
-        <label for="query">AllDocs Query:</label>
-        <textarea id="query" rows="3" style="width: 98%;">a: 2</textarea>
-      </td>
-      <td colspan="1" style="text-align: center;">
-        AllDocs Options:<br />
-        <label for="include_docs">Include Docs</label>
-        <input type="checkbox" id="include_docs" /><br />
-        <label for="wildcard">Wildcard char: </label>
-        <input type="text" id="wildcard" name="wildcard" value="%" maxlength="1" style="width: 1em;"/><br />
-        <label for="sort_on">Sort on: </label>
-        <input type="text" id="sort_on" name="sort_on" value="[[&quot;author&quot;, &quot;ascending&quot;], [&quot;title&quot;, &quot;descending&quot;]]"
-               style="width: 80%;"/><br />
-        <label for="select_list">Select_list: </label>
-        <input type="text" id="select_list" name="select_list" value="[&quot;author&quot;, &quot;title&quot;]" style="width: 80%;"/><br />
-        <label for="limit">Limit: </label>
-        <input type="text" id="limit" name="limit" value="[0, 100]" style="width: 80%;"/><br />
+        - <button onclick="allDocs()">allDocs</button>
+        - <button onclick="check()">check</button>
+        <button onclick="repair()">repair</button>
       </td>
     </tr>
     <tr>
       <td colspan="2" style="text-align: center;">
-        <button onclick="allDocs()">allDocs</button>
+        <label for="times">Times</label>
+        <input id="times" type="text" value="1" />
+        <input id="times-lock" type="checkbox" checked="1" />
+        <label for="times-lock">lock</label>
       </td>
     </tr>
   </table>
@@ -149,151 +75,220 @@ var clearlog = function () {
   <hr />
   <div id="log">
   </div>
-  <script type="text/javascript" src="../lib/md5/md5.js"></script>
-  <script type="text/javascript" src="../complex_queries.js"></script>
-  <script type="text/javascript" src="../jio.js"></script>
-  <script type="text/javascript" src="../src/jio.storage/localstorage.js">
-  </script>
-  <script type="text/javascript" src="../lib/jquery/jquery.min.js"></script>
-  <script type="text/javascript" src="../src/jio.storage/davstorage.js">
-  </script>
-  <script type="text/javascript" src="../src/jio.storage/erp5storage.js">
-  </script>
-  <script type="text/javascript" src="../lib/jsSha2/sha2.js"></script>
-  <script type="text/javascript" src="../src/jio.storage/revisionstorage.js">
-  </script>
-  <script type="text/javascript" src="../src/jio.storage/splitstorage.js">
-  </script>
-  <script type="text/javascript" src="../src/jio.storage/gidstorage.js">
-  </script>
-  <script type="text/javascript" src="../src/jio.storage/indexstorage.js">
-  </script>
-  <script type="text/javascript" src="../lib/sjcl/sjcl.min.js"></script>
   <script type="text/javascript">
     <!--
-var my_jio = null;
-var newLocalJio = function () {
-  var localuser, localapp;
-  localuser = $('#localuser').attr('value');
-  localapp = $('#localapp').attr('value');
-  var spec = {type: 'local', username: localuser, application_name: localapp};
-  if (my_jio) { log('closing older jio'); my_jio.close(); }
-  log('local storage description object: ' + JSON.stringify(spec));
-  my_jio = jIO.newJio(spec);
-};
-var newCryptJio = function () {
-  var user, app, pwd;
-  user = $('#cryptuser').attr('value');
-  app = $('#cryptapp').attr('value');
-  pwd = $('#cryptpassword').attr('value');
-  var spec = {type: 'crypt', username: user, password: pwd, storage:{
-    type: 'local', username: user, application_name: app
-  }};
-  if (my_jio) { log('closing older jio'); my_jio.close(); }
-  log('crypt storage description object: ' + JSON.stringify(spec));
-  my_jio = jIO.newJio(spec);
-};
-var newDavJio = function () {
-  var user, app, pwd, url;
-  user = $('#davuser').attr('value');
-  pwd = $('#davpassword').attr('value');
-  url = $('#davurl').attr('value');
-  var spec = {
-    "type": "dav",
-    "url": url,
-    "auth_type": "basic",
-    "username": user,
-    "password": pwd
-  };
-  if (my_jio) { log('closing older jio'); my_jio.close(); }
-  log('dav storage description object: ' + JSON.stringify(spec));
-  my_jio = jIO.newJio(spec);
-};
-var newRevisionJio = function () {
-  var user, app;
-  user = $('#revisionuser').attr('value');
-  app = $('#revisionapp').attr('value');
-  var spec = {
-    type: 'revision', sub_storage: {
-      type: 'local', username: user, application_name: app
-    }
-  };
-  if (my_jio) { log('closing older jio'); my_jio.close(); }
-  log('revision storage description object: '+JSON.stringify(spec));
-  my_jio = jIO.newJio(spec);
-};
-var newCustomJio = function () {
-  var spec = JSON.parse ($('#customstorage').attr('value'));
-  if (my_jio) { log('closing older jio'); my_jio.close(); }
-  log('custom storage description object: '+JSON.stringify(spec));
-  my_jio = jIO.newJio(spec);
-};
-var printLocalStorage = function () {
-  var i;
-  log('LOCALSTORAGE');
-  for (i in localStorage) {
-    log('- '+ i +': '+localStorage[i]);
+var log_color = "white";
+
+function select(string) {
+  return document.querySelector(string);
+}
+function logGetColor() {
+  if (log_color === "white") {
+    log_color = "cyan";
+  } else {
+    log_color = "white";
   }
-  log('------------------------------');
-};
-var callback = function (err, val, begin_date) {
+  return log_color;
+}
+function log(o) {
+  var node = document.createElement("pre");
+  node.setAttribute(
+    "style",
+    "background-color:" + logGetColor() +
+      ";margin:0;padding:0;"
+  );
+  if (typeof o === "string") {
+    node.textContent = o;
+  } else {
+    node.textContent = JSON.stringify(o, null, "  ");
+  }
+  select("#log").appendChild(node);
+}
+function error(o) {
+  var node = document.createElement("pre");
+  node.setAttribute(
+    "style",
+    "background-color:" + logGetColor() +
+      ";margin:0;padding:0;"
+  );
+  if (typeof o === "string") {
+    node.textContent = o;
+  } else {
+    node.textContent = JSON.stringify(o);
+  }
+  select("#log").appendChild(node);
+}
+function clearlog() {
+  select("#log").innerHTML = "";
+}
+// clear log on Alt+L
+document.addEventListener("keypress", function (event) {
+  if (event.altKey === true && event.charCode === 108) {
+    clearlog();
+  }
+});
+        //-->
+  </script>
+  <script src="../lib/rsvp/rsvp-custom.js"></script>
+  <script src="../src/sha256.amd.js"></script>
+  <script src="../jio.js"></script>
+  <script src="../src/jio.storage/localstorage.js"></script>
+  <script src="http://git.erp5.org/gitweb/uritemplate-js.git/blob_plain/HEAD:/bin/uritemplate-min.js"></script>
+  <script src="../lib/uri/URI.js"></script>
+  <script src="../src/jio.storage/erp5storage.js"></script>
+  <script type="text/javascript">
+    <!--
+
+var my_jio = null;
+
+function fillMemoryDescription() {
+  select("#storagedescription").value = JSON.stringify({
+    "type": "local",
+    "username": "<username>",
+    "application_name": "<app_name>",
+    "mode": "memory"
+  }, null, "  ")
+}
+function fillLocalDescription() {
+  select("#storagedescription").value = JSON.stringify({
+    "type": "local",
+    "username": "<username>",
+    "application_name": "<app_name>"
+  }, null, "  ")
+}
+function fillDavDescription() {
+  select("#storagedescription").value = JSON.stringify({
+    "type": "dav",
+    "auth_type": "basic",
+    "username": "<username>",
+    "password": "<password>"
+  }, null, "  ")
+}
+function fillERP5Description() {
+  select("#storagedescription").value = JSON.stringify({
+    "type": "erp5",
+    "url": "<url/hateoas>"
+  }, null, "  ")
+}
+function fillCustomDescription() {
+  select("#storagedescription").value = JSON.stringify({
+    "type": "<type>"
+  }, null, "  ")
+}
+function fillLastDescription() {
+  select("#storagedescription").value =
+    localStorage.getItem("last_jio_description") || "{}";
+}
+function saveDescription() {
+  localStorage.setItem(
+    "saved_jio_description",
+    select("#storagedescription").value
+  );
+}
+function loadDescription() {
+  select("#storagedescription").value =
+    localStorage.getItem("saved_jio_description") || "{}";
+}
+fillLastDescription();
+
+function createJIO() {
+  var description;
+  try {
+    description = JSON.parse(select("#storagedescription").value);
+    my_jio = jIO.createJIO(description);
+    description = JSON.stringify(description, null, "  ");
+    log("JIO created\n" + description);
+    localStorage.setItem("last_jio_description", description);
+  } catch (e) {
+    error("Storage description is not JSON parsable");
+  }
+}
+
+function printLocalStorage() {
+  log("localStorage content\n" + JSON.stringify(localStorage, null, "  "));
+}
+
+function callback(err, val, begin_date) {
   log('time : ' + (Date.now() - begin_date));
   if (err) {
-    return error('return :' + JSON.stringify(err));
+    return error('return :' + JSON.stringify(err, null, "  "));
   }
-  log('return : ' + JSON.stringify(val));
-};
-var command = function (method) {
+  log('return : ' + JSON.stringify(val, null, "  "));
+}
+
+function command(method) {
   var begin_date = Date.now(), doc = {}, opts = {};
-  log(method);
+
   if (!my_jio) {
     return error('no jio set');
   }
 
-  opts.query = $('#query').attr('value');
-  opts.include_docs = $('#include_docs').attr('checked') ? true : false;
-  opts.wildcard_character = $('#wildcard').attr('value') || "";
-  opts.sort_on = JSON.parse($('#sort_on').attr('value') || null);
-  opts.select_list = JSON.parse($('#select_list').attr('value') || null);
-  opts.limit = JSON.parse($('#limit').attr('value') || null);
+  doc = JSON.parse(select('#metadata').value);
+  opts = JSON.parse(select("#options").value);
 
-  opts.conflicts = $('#show_conflicts').attr('checked') ? true : false;
-  opts.revs = $('#show_revision_history').attr('checked') ? true : false;
-  opts.revs_info = $('#show_revision_info').attr('checked') ? true : false;
-  opts.max_retry = parseInt($('#max_retry').attr('value') || '0');
+  log(method + '\ndoc: ' + JSON.stringify(doc, null, "  ") +
+      '\nopts: ' + JSON.stringify(opts, null, "  "));
 
-  doc = JSON.parse($('#metadata').attr('value'));
-  log('doc: ' + JSON.stringify(doc));
-  log('opts: ' + JSON.stringify(opts));
+  if (method === "allDocs") {
+    my_jio.allDocs(opts).then(function (answer) {
+      callback(undefined, answer, begin_date);
+    }, function (error) {
+      callback(error, undefined, begin_date);
+    });
+  } else {
+    my_jio[method](doc, opts).then(function (answer) {
+      callback(undefined, answer, begin_date);
+    }, function (error) {
+      callback(error, undefined, begin_date);
+    });
+  }
+}
 
-  my_jio[method](doc, opts, function (err, val) {
-    callback(err, val, begin_date);
-  });
-};
-var post = function () {
-  command('post');
-};
-var put = function () {
-  command('put');
-};
-var get = function () {
-  command('get');
-};
-var remove = function () {
-  command('remove');
-};
-var allDocs = function () {
-  command('allDocs');
-};
-var putAttachment = function () {
-  command('putAttachment');
-};
-var getAttachment = function () {
-  command('getAttachment');
-};
-var removeAttachment = function () {
-  command('removeAttachment');
-};
+function doCommandNTimes(method) {
+  var i = -1, n = 0, lock;
+  n = parseInt(select("#times").value, 10);
+  lock = select("#times-lock").checked;
+  if (!lock) {
+    select("#times").value = "1";
+  }
+  if (!isFinite(n)) {
+    n = 1;
+  }
+  while (++i < n) {
+    command(method);
+  }
+}
+
+function post() {
+  doCommandNTimes("post");
+}
+function put() {
+  doCommandNTimes("put");
+}
+function get() {
+  doCommandNTimes("get");
+}
+function remove() {
+  doCommandNTimes("remove");
+}
+function putAttachment() {
+  doCommandNTimes("putAttachment");
+}
+function getAttachment() {
+  doCommandNTimes("getAttachment");
+}
+function removeAttachment() {
+  doCommandNTimes("removeAttachment");
+}
+function allDocs() {
+  doCommandNTimes("allDocs");
+}
+function check() {
+  doCommandNTimes("check");
+}
+function repair() {
+  doCommandNTimes("repair");
+}
         //-->
   </script>
 </body>

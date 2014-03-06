@@ -5,7 +5,7 @@
  */
 
 /*jslint indent:2, maxlen: 80, nomen: true */
-/*global jIO: true, exports: true, define: true */
+/*global jIO, define, Blob */
 
 /**
  * Provides a split storage for JIO. This storage splits data
@@ -16,23 +16,15 @@
  *       "storage_list": [<storage description>, ...]
  *     }
  */
-(function () {
+// define([dependencies], module);
+(function (dependencies, module) {
   "use strict";
-
-  var queries;
-
-  /**
-   * Get the real type of an object
-   *
-   * @param  {Any} value The value to check
-   * @return {String} The value type
-   */
-  function type(value) {
-    // returns "String", "Object", "Array", "RegExp", ...
-    return (/^\[object ([a-zA-Z]+)\]$/).exec(
-      Object.prototype.toString.call(value)
-    )[1];
+  if (typeof define === 'function' && define.amd) {
+    return define(dependencies, module);
   }
+  module(jIO);
+}(['jio'], function (jIO) {
+  "use strict";
 
   /**
    * Generate a new uuid
@@ -121,11 +113,12 @@
     if (this.response_list.length === 0) {
       return [];
     }
-    while ((row = this.response_list[0].rows.shift()) !== undefined) {
+    /*jslint ass: true */
+    while ((row = this.response_list[0].data.rows.shift()) !== undefined) {
       to_merge[0] = row;
       for (i = 1; i < this.response_list.length; i += 1) {
         to_merge[i] = AllDocsResponseMerger.listPopFromRowId(
-          this.response_list[i].rows,
+          this.response_list[i].data.rows,
           row.id
         );
         if (to_merge[i] === undefined) {
@@ -205,6 +198,7 @@
       delete rows.dict[doc_id];
       return row;
     }
+    /*jslint ass: true*/
     while ((row = rows.shift()) !== undefined) {
       if (row.id === doc_id) {
         return row;
@@ -220,10 +214,10 @@
    * A split storage instance is able to i/o on several sub storages with
    * split documents.
    *
-   * @class splitStorage
+   * @class SplitStorage
    */
-  function splitStorage(spec, my) {
-    var that = my.basicStorage(spec, my), priv = {};
+  function SplitStorage(spec) {
+    var that = this, priv = {};
 
     /**
      * The list of sub storages we want to use to store part of documents.
@@ -233,24 +227,6 @@
      * @type {Array} Array of storage descriptions
      */
     priv.storage_list = spec.storage_list;
-
-    //////////////////////////////////////////////////////////////////////
-    // Overrides
-
-    /**
-     * Overrides the original {{#crossLink "storage/specToStore:method"}}
-     * specToStore method{{/crossLink}}.
-     *
-     * @method specToStore
-     * @return {Object} The specificities to store
-     */
-    that.specToStore = function () {
-      return {"storage_list": priv.storage_list};
-    };
-
-    /**
-     * TODO validateState
-     */
 
     //////////////////////////////////////////////////////////////////////
     // Tools
@@ -274,7 +250,7 @@
      * @param  {Object} option The command option
      * @param  {Function} callback Called at the end
      */
-    priv.send = function (method, doc, option, callback) {
+    priv.send = function (command, method, doc, option, callback) {
       var i, answer_list = [], failed = false;
       function onEnd() {
         i += 1;
@@ -299,27 +275,21 @@
           }
         };
       }
-      if (type(doc) !== "Array") {
+      if (!Array.isArray(doc)) {
         for (i = 0; i < priv.storage_list.length; i += 1) {
-          that.addJob(
-            method,
-            priv.storage_list[i],
-            doc,
-            option,
-            onSuccess(i),
-            onError(i)
-          );
+          if (method === 'allDocs') {
+            command.storage(priv.storage_list[i])[method](option).
+              then(onSuccess(i), onError(i));
+          } else {
+            command.storage(priv.storage_list[i])[method](doc, option).
+              then(onSuccess(i), onError(i));
+          }
         }
       } else {
         for (i = 0; i < priv.storage_list.length; i += 1) {
-          that.addJob(
-            method,
-            priv.storage_list[i],
-            doc[i],
-            option,
-            onSuccess(i),
-            onError(i)
-          );
+          // we assume that alldocs is not called if the there is several docs
+          command.storage(priv.storage_list[i])[method](doc[i], option).
+            then(onSuccess(i), onError(i));
         }
       }
       i = 0;
@@ -334,10 +304,10 @@
      * @param  {Object} option Command option properties
      * @param  {String} method The command method ('post' or 'put')
      */
-    priv.postOrPut = function (doc, option, method) {
+    priv.postOrPut = function (command, doc, option, method) {
       var i, data, doc_list = [], doc_underscores = {};
       if (!doc._id) {
-        doc._id = generateUuid();
+        doc._id = generateUuid(); // XXX should let gidstorage guess uid
       }
       for (i in doc) {
         if (doc.hasOwnProperty(i)) {
@@ -355,13 +325,13 @@
           (data.length / priv.storage_list.length) * (i + 1)
         );
       }
-      priv.send(method, doc_list, option, function (err, response) {
+      priv.send(command, method, doc_list, option, function (err) {
         if (err) {
           err.message = "Unable to " + method + " document";
           delete err.index;
-          return that.error(err);
+          return command.error(err);
         }
-        that.success({"ok": true, "id": doc_underscores._id});
+        command.success({"id": doc_underscores._id});
       });
     };
 
@@ -372,52 +342,50 @@
      * Split document metadata then store them to the sub storages.
      *
      * @method post
-     * @param  {Command} command The JIO command
+     * @param  {Object} command The JIO command
      */
-    that.post = function (command) {
-      priv.postOrPut(command.cloneDoc(), command.cloneOption(), 'post');
+    that.post = function (command, metadata, option) {
+      priv.postOrPut(command, metadata, option, 'post');
     };
 
     /**
      * Split document metadata then store them to the sub storages.
      *
      * @method put
-     * @param  {Command} command The JIO command
+     * @param  {Object} command The JIO command
      */
-    that.put = function (command) {
-      priv.postOrPut(command.cloneDoc(), command.cloneOption(), 'put');
+    that.put = function (command, metadata, option) {
+      priv.postOrPut(command, metadata, option, 'put');
     };
 
     /**
      * Puts an attachment to the sub storages.
      *
      * @method putAttachment
-     * @param  {Command} command The JIO command
+     * @param  {Object} command The JIO command
      */
-    that.putAttachment = function (command) {
-      var i, attachment_list = [], data = command.getAttachmentData();
+    that.putAttachment = function (command, param, option) {
+      var i, attachment_list = [], data = param._blob;
       for (i = 0; i < priv.storage_list.length; i += 1) {
-        attachment_list[i] = command.cloneDoc();
-        attachment_list[i]._data = data.slice(
-          (data.length / priv.storage_list.length) * i,
-          (data.length / priv.storage_list.length) * (i + 1)
+        attachment_list[i] = jIO.util.deepClone(param);
+        attachment_list[i]._blob = data.slice(
+          data.size * i / priv.storage_list.length,
+          data.size * (i + 1) / priv.storage_list.length,
+          data.type
         );
       }
       priv.send(
+        command,
         'putAttachment',
         attachment_list,
-        command.cloneOption(),
-        function (err, response) {
+        option,
+        function (err) {
           if (err) {
             err.message = "Unable to put attachment";
             delete err.index;
-            return that.error(err);
+            return command.error(err);
           }
-          that.success({
-            "ok": true,
-            "id": command.getDocId(),
-            "attachment": command.getAttachmentId()
-          });
+          command.success();
         }
       );
     };
@@ -426,21 +394,20 @@
      * Gets splited document metadata then returns real document.
      *
      * @method get
-     * @param  {Command} command The JIO command
+     * @param  {Object} command The JIO command
      */
-    that.get = function (command) {
-      var doc, option, data, attachments;
-      doc = command.cloneDoc();
-      option = command.cloneOption();
-      priv.send('get', doc, option, function (err, response) {
+    that.get = function (command, param, option) {
+      var doc = param;
+      priv.send(command, 'get', doc, option, function (err, response) {
         var i, k;
         if (err) {
           err.message = "Unable to get document";
           delete err.index;
-          return that.error(err);
+          return command.error(err);
         }
         doc = '';
         for (i = 0; i < response.length; i += 1) {
+          response[i] = response[i].data;
           doc += response[i].data;
         }
         doc = JSON.parse(doc);
@@ -480,8 +447,7 @@
             }
           }
         }
-        doc._id = command.getDocId();
-        that.success(doc);
+        command.success({"data": doc});
       });
     };
 
@@ -489,24 +455,22 @@
      * Gets splited document attachment then returns real attachment data.
      *
      * @method getAttachment
-     * @param  {Command} command The JIO command
+     * @param  {Object} command The JIO command
      */
-    that.getAttachment = function (command) {
-      var doc, option;
-      doc = command.cloneDoc();
-      option = command.cloneOption();
-      priv.send('getAttachment', doc, option, function (err, response) {
-        var i, k;
+    that.getAttachment = function (command, param, option) {
+      priv.send(command, 'getAttachment', param, option, function (
+        err,
+        response
+      ) {
         if (err) {
           err.message = "Unable to get attachment";
           delete err.index;
-          return that.error(err);
+          return command.error(err);
         }
-        doc = '';
-        for (i = 0; i < response.length; i += 1) {
-          doc += response[i];
-        }
-        that.success(doc);
+
+        command.success({"data": new Blob(response.map(function (answer) {
+          return answer.data;
+        }), {"type": response[0].data.type})});
       });
     };
 
@@ -514,20 +478,21 @@
      * Removes a document from the sub storages.
      *
      * @method remove
-     * @param  {Command} command The JIO command
+     * @param  {Object} command The JIO command
      */
-    that.remove = function (command) {
+    that.remove = function (command, param, option) {
       priv.send(
+        command,
         'remove',
-        command.cloneDoc(),
-        command.cloneOption(),
-        function (err, response_list) {
+        param,
+        option,
+        function (err) {
           if (err) {
             err.message = "Unable to remove document";
             delete err.index;
-            return that.error(err);
+            return command.error(err);
           }
-          that.success({"id": command.getDocId(), "ok": true});
+          command.success();
         }
       );
     };
@@ -536,25 +501,21 @@
      * Removes an attachment from the sub storages.
      *
      * @method removeAttachment
-     * @param  {Command} command The JIO command
+     * @param  {Object} command The JIO command
      */
-    that.removeAttachment = function (command) {
-      var doc = command.cloneDoc();
+    that.removeAttachment = function (command, param, option) {
       priv.send(
+        command,
         'removeAttachment',
-        doc,
-        command.cloneOption(),
-        function (err, response_list) {
+        param,
+        option,
+        function (err) {
           if (err) {
             err.message = "Unable to remove attachment";
             delete err.index;
-            return that.error(err);
+            return command.error(err);
           }
-          that.success({
-            "id": doc._id,
-            "attachment": doc._attachment,
-            "ok": true
-          });
+          command.success();
         }
       );
     };
@@ -566,46 +527,30 @@
      * the first sub storage. Else, it will merge results and return.
      *
      * @method allDocs
-     * @param  {Command} command The JIO command
+     * @param  {Object} command The JIO command
      */
-    that.allDocs = function (command) {
-      var option = command.cloneOption();
+    that.allDocs = function (command, param, option) {
       option = {"include_docs": option.include_docs};
       priv.send(
+        command,
         'allDocs',
-        command.cloneDoc(),
+        param,
         option,
         function (err, response_list) {
           var all_docs_merger;
           if (err) {
             err.message = "Unable to retrieve document list";
             delete err.index;
-            return that.error(err);
+            return command.error(err);
           }
           all_docs_merger = new AllDocsResponseMerger();
           all_docs_merger.addResponseList(response_list);
-          return that.success(all_docs_merger.merge(option));
+          return command.success({"data": all_docs_merger.merge(option)});
         }
       );
     };
 
-    return that;
   } // end of splitStorage
 
-  //////////////////////////////
-  // exports to JIO
-  if (typeof define === "function" && define.amd) {
-    define(['jio'], function (jio) {
-      try {
-        queries = require('complex_queries');
-      } catch (e) {}
-      jio.addStorageType('split', splitStorage);
-    });
-  } else if (typeof require === "function") {
-    require('jio').addStorageType('split', splitStorage);
-  } else if (typeof jIO === "object") {
-    jIO.addStorageType('split', splitStorage);
-  } else {
-    throw new Error("Unable to export splitStorage to JIO.");
-  }
-}());
+  jIO.addStorage('split', SplitStorage);
+}));

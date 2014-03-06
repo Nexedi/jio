@@ -4,3 +4,5 @@
 
 #dolphin
 .directory
+
+node_modules/*

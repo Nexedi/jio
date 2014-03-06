@@ -1,8 +1,6 @@
 /*jslint indent: 2,
     maxlen: 80,
-    sloppy: true,
-    nomen: true,
-    plusplus: true
+    nomen: true
 */
 /*global
     define: true,
@@ -11,13 +9,16 @@
     XMLHttpRequest: true,
     Blob: true,
     FormData: true,
-    window: true
+    window: true,
+    setTimeout: true
 */
 /**
  * JIO XWiki Storage. Type = 'xwiki'.
  * XWiki Document/Attachment storage.
  */
 (function () {
+  "use strict";
+
   var $, store;
   store = function (spec, my) {
 
@@ -86,7 +87,7 @@
                 priv.xwikiurl + "]",
             "reason": cause
           });
-        },
+        }
       });
     };
 
@@ -117,7 +118,7 @@
         BB = (window.MozBlobBuilder || window.WebKitBlobBuilder
           || window.BlobBuilder);
         bb = new BB();
-        for (i = 0; i < contentArray.length; i++) {
+        for (i = 0; i < contentArray.length; i += 1) {
           bb.append(contentArray[i]);
         }
         return bb.getBlob(options ? options.type : undefined);
@@ -125,7 +126,7 @@
     };
 
     priv.isBlob = function (potentialBlob) {
-      return typeof (potentialBlob) !== 'undefined' &&
+      return potentialBlob !== undefined &&
         potentialBlob.toString() === "[object Blob]";
     };
 
@@ -225,7 +226,7 @@
           xhr.responseType = 'text';
         }
 
-        xhr.onload = function (e) {
+        xhr.onload = function () {
           if (xhr.status === 200) {
             var contentType = xhr.getResponseHeader("Content-Type");
             if (contentType.indexOf(';') > -1) {
@@ -327,7 +328,7 @@
           xhr = new XMLHttpRequest();
           xhr.open('POST', priv.xwikiurl + "/bin/upload/" +
                            parts.space + '/' + parts.page, true);
-          xhr.onload = function (e) {
+          xhr.onload = function () {
             if (xhr.status === 302 || xhr.status === 200) {
               andThen(null);
             } else {
@@ -481,16 +482,16 @@
     // getAttachment() rather than strings.
     priv.useBlobs = spec.useBlobs || false;
 
-  // If true then Blob objects will be returned by
-  // getAttachment() rather than strings.
-  priv.useBlobs = spec.useBlobs || false;
+    // If true then Blob objects will be returned by
+    // getAttachment() rather than strings.
+    priv.useBlobs = spec.useBlobs || false;
 
 
     that.specToStore = function () {
       return {
         "username": priv.username,
         "language": priv.language,
-        "xwikiurl": priv.xwikiurl,
+        "xwikiurl": priv.xwikiurl
       };
     };
 
@@ -666,16 +667,16 @@
      * @param  {object} command The JIO command
      */
     that.remove = that.removeAttachment = function (command) {
-      var notFoundError, objId, complete;
-      notFoundError = function (word) {
-        that.error({
-          "status": 404,
-          "statusText": "Not Found",
-          "error": "not_found",
-          "message": word + " not found",
-          "reason": "missing"
-        });
-      };
+      var objId, complete;
+      // notFoundError = function (word) {
+      //   that.error({
+      //     "status": 404,
+      //     "statusText": "Not Found",
+      //     "error": "not_found",
+      //     "message": word + " not found",
+      //     "reason": "missing"
+      //   });
+      // };
 
       objId = command.getDocId();
       complete = function (err) {
@@ -718,15 +719,10 @@
     return that;
   };
 
-  if (typeof (define) === 'function' && define.amd) {
-    define(['jquery', 'jiobase', 'module'], function (jquery, j, mod) {
+  if (typeof define === 'function' && define.amd) {
+    define(['jquery', 'jio'], function (jquery, jIO) {
       $ = jquery;
       jIO.addStorageType('xwiki', store);
-
-      var conf = mod.config();
-      conf.type = 'xwiki';
-
-      return jIO.newJio(conf);
     });
   } else {
     jIO.addStorageType('xwiki', store);

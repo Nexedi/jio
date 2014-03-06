@@ -5,139 +5,196 @@
 
 ### Getting Started
 
-To set up jIO include jio.js, dependencies and the connectors for the storages
-you want to use in your page header (note that more dependencies may be required
+To set up jIO you should include jio.js, dependencies and the connectors for the storages
+you want to use in the HTML page header (note that more dependencies may be required
 depending on type of storages being used):
 
-    <!-- jio + dependency -->
-    <script src="md5.js"></script>
-    <script src="jio.js"></script>
-    <!-- jio storage libraries -->
-    <script src="localstorage.js">
-    <script src="revisionstorage.js">
-    <script ...>
+```html
+<!-- jio + dependency -->
+<script src="sha256.amd.js"></script>
+<script src="rsvp-custom.js"></script>
+<script src="jio.js"></script>
+
+<!-- jio storage libraries -->
+<script src="localstorage.js"></script>
+
+<script ...>
+```
 
 Then create your jIO instance like this:
 
-    // create a new jio (type = localStorage)
-    var jio = jIO.newJio({
-      "type": "local",
-      "username": "your_username",
-      "application_name": "your_application_name"
-    });
+```javascript
+// create a new jio (type = localStorage)
+var jio_instance = jIO.createJIO({
+  "type": "local",
+  "username": "your_username",
+  "application_name": "your_application_name"
+});
+```
 
 ### Documents and Methods
 
-Documents are JSON strings that contain _meta-data_ (properties, like a filename)
-and _attachments_ (optional content, for example a base64 encoded image).
+Documents are JSON strings that contain *metadata* (properties, like a filename)
+and *attachments* (optional content, for example *image.jpg*).
 
-jIO exposes the following methods to _create_, _read_, _update_ and _delete_ documents
+jIO exposes the following methods to *create*, *read*, *update* and *delete* documents
 (for more information, including revision management and available options for
 each method, please refer to the documentation):
 
-    // create and store new document
-    jio.post({"title": "some title"}, function (err, response) {
-      // console.log(response):
-      // {"ok": "true", "id": "cabc9...826" }
-    });
+```javascript
+// create and store new document
+jio_instance.post({"title": "some title"}).
+  then(function (response) {
+    // console.log(response);
+    // {
+    //   "result": "success",
+    //   "id": "404aef5e-22cc-4a64-a292-37776c6464a3" // Generated id
+    //   ...
+    // }
+  });
 
-    // create or update an existing document
-    jio.put({"_id": "my_document", "title": "New Title"}, function (err, response) {
-    // console.log(response):
-    // {"ok": "true", "id": "my_document"}
-    });
+// create or update an existing document
+jio_instance.put({"_id": "my_document", "title": "New Title"}).
+  then(function (response) {
+    // console.log(response);
+    // {
+    //   "result": "success",
+    //   "id": "my_document",
+    //   ...
+    // }
+  });
 
-    // add an attachement to a document
-    jio.putAttachment({"_id": "my_document", "_attachment": "its_attachment",
-                       "_data":"abc", "_mimetype": "text/plain"}, function (err, response) {
-      // console.log(response):
-      // {"ok":"true", "id": "my_document", "attachment": "its_attachment"}
-    });
+// add an attachement to a document
+jio_instance.putAttachment({"_id": "my_document", "_attachment": "its_attachment",
+                            "_data": "abc", "_mimetype": "text/plain"}).
+  then(function (response) {
+    // console.log(response);
+    // {
+    //   "result": "success",
+    //   "id": "my_document",
+    //   "attachment": "its_attachment"
+    //   ...
+    // }
+  });
 
-    // read a document
-    jio.get({"_id": "my_document"}, function (err, response) {
-      // console.log(response);
-      // {
-      //   "_id": "my_document",
-      //   "title": "New Title",
-      //   "_attachments": {
-      //     "its_attachment": {
-      //       "length": 3,
-      //       "digest": "md5-e7248fce8990089e402b00f89dc8d14d",
-      //       "content_type": "text/plain"
-      //     }
-      //   }
-      // }
-    });
+// read a document
+jio_instance.get({"_id": "my_document"}).
+  then(function (response) {
+    // console.log(response);
+    // {
+    //   "data": {
+    //     "_id": "my_document",
+    //     "title": "New Title",
+    //     "_attachments": {
+    //       "its_attachment": {
+    //         "length": 3,
+    //         "digest": "sha256-ba7816bf8f1cfea414140de5dae2223b0361a396177a9cb410ff61f2015ad",
+    //         "content_type": "text/plain"
+    //       }
+    //     }
+    //   },
+    //   ...
+    // }
+  });
 
-    // read an attachement
-    jio.getAttachment({"_id": "my_document", "_attachment": "its_attachment"}, function (err, response) {
-      // console.log(response);
-      // "<Base64 Image>"
-    });
+// read an attachement
+jio_instance.getAttachment({"_id": "my_document", "_attachment": "its_attachment"}).
+  then(function (response) {
+    // console.log(response);
+    // {
+    //   "data": Blob, // contains the attachment data + content type
+    //   ...
+    // }
+  });
 
-    // delete a document and its attachment(s)
-    jio.remove({"_id": "my_document"}, function (err, response) {
-      // console.log(response):
-      // {"ok": "true", "id": "my_document"}
-    });
+// delete a document and its attachment(s)
+jio_instance.remove({"_id": "my_document"}).
+  then(function (response) {
+    // console.log(response);
+    // {
+    //   "result": "success",
+    //   "id": "my_document"
+    // }
+  });
 
-    // delete an attachement
-    jio.removeAttachment({"_id": "my_document", "_attachment": "its_attachment"}, function (err, response) {
-      // console.log(response):
-      // {"ok": true, "id": "my_document", "attachment": "its_attachment"}
-    });
+// delete an attachement
+jio_instance.removeAttachment({"_id": "my_document", "_attachment": "its_attachment"}).
+  then(function (response) {
+    // console.log(response);
+    // {
+    //   "result": "success",
+    //   "id": "my_document",
+    //   "attachment": "its_attachment"
+    // }
+  });
 
-    // get all documents
-    jio.allDocs(function (err, response){
-      // console.log(response):
-      // {
-      //   "total_rows": 1,
-      //   "rows": [{
-      //     "id": "my_document",
-      //     "key": "my_document",
-      //     "value": {}
-      //   }]
-      // }
-    });
+// get all documents
+jio_instance.allDocs().then(function (response) {
+  // console.log(response);
+  // {
+  //   "data": {
+  //     "total_rows": 1,
+  //     "rows": [{
+  //       "id": "my_document",
+  //       "value": {}
+  //     }]
+  //   }
+  // }
+});
+```
+
 
 ### Example
 
 This is an example of how to store a video file with one attachment in local
-storage . Note that attachments should best be added inside one of the available
-document callback methods (success & error or callback)
+storage. Note that attachments should be added after document creation.
 
-    // create a new localStorage
-    var jio = JIO.newJio({
-    "type":"local",
-      "username":"user",
-      "application_name":"app"
-    });
-    // post the document
-    jio.post({
-      "_id"         : "myVideo",
-      "title"       : "My Video",
-      "videoCodec"  : "vorbis",
-      "language"    : "en",
-      "description" : "Images Compilation"
-    }, function (err, response) {
-      if (err) {
-        alert('Error when posting the document description');
-      } else {
-        // if successful, add video attachment (base64 encoded)
-        jio.putAttachment({
-          "_id": "myVideo/video",
-          "_data": Base64(my_video),
-          "_mimetype":"video/ogg"
-        }, function (err, response) {
-          if (err) {
-            alert('Error when attaching the video');
-          } else {
-            alert('Video Stored');
-          }
-        });
-      }
-    });
+```javascript
+// create a new localStorage
+var jio_instance = jIO.createJIO({
+  "type": "local",
+  "username": "user",
+  "application_name": "app"
+});
+
+var my_video_blob = new Blob([my_video_binary_string], {
+  "type": "video/ogg"
+});
+
+// post the document
+jio_instance.post({
+  "_id"         : "myVideo",
+  "title"       : "My Video",
+  "format"      : ["video/ogg", "vorbis", "HD"],
+  "language"    : "en",
+  "description" : "Images Compilation"
+}).then(function (response) {
+
+  // add video attachment
+  return jio_instance.putAttachment({
+    "_id": "myVideo",
+    "_attachment": "video.ogv",
+    "_data": my_video_blob,
+  });
+
+}).then(function (response) {
+
+  alert('Video Stored');
+
+}, function (err) {
+
+  if (err.method === "post") {
+    alert('Error when posting the document description');
+  } else {
+    alert('Error when attaching the video');
+  }
+
+}, function (progression) {
+
+  console.log(progression);
+
+});
+```
 
 ### Storage Locations
 
@@ -147,155 +204,158 @@ like revision management or indices to a child storage (sub_storage).
 
 The following storages are currently supported:
 
-DummyStorage (custom storage prototype)
+- LocalStorage (browser local storage)
 
-      // initialize a dummy storage
-      var jio = JIO.newJio({
-        "type": <string>
-      });
+```javascript
+// initialize a local storage
+var jio_instance = jIO.createJIO({
+  "type" : "local",
+  "username" : "me"
+});
+```
 
-LocalStorage (browser local storage)
+- DAVStorage (connect to webDAV, more information on the
+  [documentation](https://www.j-io.org/documentation/jio-documentation/))
 
-    // initialize a local storage
-    var jio = JIO.newJio({
-      "type" : "local",
-      "username" : <string>,
-      "application_name" : <string>
-    });
+```javascript
+// initialize a webDAV storage (without authentication)
+var jio_instance = jIO.createJIO({
+  "type": "dav",
+  "url": "http://my.dav.srv/uploads"
+});
+```
 
-DAVStorage (connect to webDAV)
+<!-- - xWiki storage (connect to xWiki) -->
 
-    // initialize a webDAV storage
-    var jio = JIO.newJio({
-      "type" : "dav",
-      "username" : <string>,
-      "password" : <string>,
-      "url" : <string>
-    });
+<!--         // initialize a connection to xWiki -->
+<!--         var jio_instance = jIO.createJIO({ -->
+<!--           "type": "xwiki", -->
+<!--           "xwikiurl": "http://my.site.com/xwiki", -->
+<!--           "username": "me", -->
+<!--           "password": "pwd" -->
+<!--         }); -->
 
-xWiki storage (connect to xWiki)
+<!-- - S3 storage (connect to S3) -->
 
-    // initialize a connection to xWiki storage
-    coming soon
+<!--         // initialize a connection to S3 storage -->
+<!--         var jio_instance = jIO.createJIO({ -->
+<!--           "type": "s3", -->
+<!--           "AWSIdentifier": "AWS Identifier ID", -->
+<!--           "password": "AWS Secret key", -->
+<!--           "server": "Destination bucket" -->
+<!--         }); -->
 
-S3 storage (connect to S3)
+<!-- - IndexStorage (maintains indices of documents in a substorage) -->
 
-    // initialize a connection to S3 storage
-    coming soon
+<!--         // initialize an indexStorage (for a local storage) -->
+<!--         var jio_instance = jIO.createJIO({ -->
+<!--           "type": "indexed", -->
+<!--           "sub_storage": { -->
+<!--             "type": "local" // for instance -->
+<!--             "username": "me" -->
+<!--           }, -->
+<!--           "indices": [{ -->
+<!--             "id": "index_database.json", -->
+<!--             "index": ["title", "author", "subject", "posted_date"] -->
+<!--           }] -->
+<!--         }); -->
 
-IndexStorage (maintains indices of documents in a substorage)
+<!-- - SplitStorage (simply split data into several parts): -->
 
-    // initialize an indexStorage (for a local storage)
-    var jio = JIO.newJio({
-      "type": "indexed",
-      "sub_storage": {
-        "type": "local",
-        "username": <string>,
-        "application_name": <string>
-      },
-      // create two indices for the substorage with fields A and A,B
-      "indices": [
-        {"name":<string>, "fields":[<string A>]},
-        {"name":<string>, "fields":[<string A>, <string B>]}
-      ],
-      // pass the field type into the index
-      "field_types": {
-        <string A>: "string",
-        <string B>: "number"
-      }
-    });
+<!--         // initialize a splitStorage -->
+<!--         var jio_instance = jIO.createJIO({ -->
+<!--           "type": "split", -->
+<!--           "storage_list": [<storage description>, ...] -->
+<!--         }); -->
 
-CryptStorage (encrypt/decrypt substorage files)
+<!-- - Revision Storage (add revision management to a substorage) -->
 
-    // initialize a cryptStorage (to encrypt data on a storage)
-    coming soon
+<!--         // initialize a revison storage on a local storage -->
+<!--         // (revision-format 1-9ccd039de0674d935f3c6bae61afc9b7038d1df97d586507aa62336a02f9ee2a) -->
+<!--         var jio_instance = jIO.createJIO({ -->
+<!--           "type": "revision", -->
+<!--           "sub_storage": { -->
+<!--             "type": "local", -->
+<!--             "username": "me" -->
+<!--           } -->
+<!--         }); -->
 
-Revision Storage (add revision management to a substorage)
+<!-- - Replicate Revision Storage (replicate documents across multiple storages) -->
 
-    // initialize a revison storage on a local storage
-    // (revision-format 1-9ccd039de0674d935f3c6bae61afc9b7038d1df97d586507aa62336a02f9ee2a)
-    var jio = JIO.newJio({
-      "type": "revision",
-      "sub_storage": {
-        "type": "local",
-        "username": <string>,
-        "application_name": <string>
-      }
-    });
+<!--         // initialize a replicate revision storage (with local and webDAV as substorages) -->
+<!--         var jio_instance = jIO.createJIO({ -->
+<!--           "type": "replicaterevision", -->
+<!--           "storage_list": [{ -->
+<!--             "type": "revision", -->
+<!--             "sub_storage": { -->
+<!--               "type": "local", -->
+<!--               "username": "me" -->
+<!--             } -->
+<!--            }, { -->
+<!--             "type": "revision", -->
+<!--             "sub_storage": { -->
+<!--               "type" : "dav", -->
+<!--               "auth_type": "basic", -->
+<!--               "username" : "me", -->
+<!--               "password" : "pwd", -->
+<!--               "url" : "http://my.dav.srv/uploads" -->
+<!--             } -->
+<!--           }] -->
+<!--         }); -->
 
-Replicate Revision Storage (replicate documents across multiple storages)
+- [And more!](https://www.j-io.org/documentation/jio-documentation#List of Available Storages)
 
-    // initialize a replicate revision storage (with local and webDAV as substorages)
-    var jio = JIO.newJio({
-      "type": "replicaterevision",
-      "storage_list": [{
-        "type": "revision",
-        "sub_storage": {
-          "type": "local",
-          "username": <string>,
-          "application_name": <string>
-        }
-      }, {
-        "type": "revision",
-        "sub_storage": {
-          "type" : "dav",
-          "username" : <string>,
-          "password" : <string>,
-          "url" : <string>
-        }
-      }]
-    });
+For more information on the specific storages including guidelines on how to
+create your own connector, please also refer to the [documentation](https://www.j-io.org/documentation/jio-documentation).
 
-For more information on the specific storages including guidelines on how to create your own connector, please also refer to the documentation.
+### jIO Query
 
-### Complex Queries
+jIO can use queries, which can be run in the allDocs() method to query document
+lists. A sample query would look like this (note that not all storages support
+allDocs and jio queries, and that pre-querying of documents on distant storages
+should best be done server-side):
 
-jIO includes a complex-queries manager, which can be run on top of the allDocs()
-method to query documents in the storage tree. A sample query would look like
-this (note, that allDocs and complex queries cannot be run on every storage and
-that pre-querying of documents on distant storages should best be done
-server-side):
+```javascript
+// run allDocs with query option on an existing jIO
+jio_instance.allDocs({
+  "query": '(fieldX: >= "string" AND fieldY: < "string")',
+  // records to display ("from to")
+  "limit": [0, 5],
+  // sort by
+  "sort_on": [[<string A>, 'descending']],
+  // fields to return in response
+  "select_list": [<string A>, <string B>]
+}).then(function (response) {
+  // console.log(response);
+  // {
+  //   "total_rows": 1,
+  //   "rows": [{
+  //     "id": <string>,
+  //     "value": {
+  //       <string A>: <string>,
+  //       <string B>: <string>
+  //     }
+  //   }, { .. }]
+  // }
+});
+```
 
-    // run allDocs with query option on an existing jIO
-    jio.allDocs({
-      "query":{
-        "query": '(fieldX: >= <string> AND fieldY: < <string>)',
-        "filter": {
-          // records to display ("from to")
-          "limit": [0, 5],
-          // sort by
-          "sort_on": [[<string A>, 'descending']],
-          // fields to return in response
-          "select_list": [<string A>, <string B>]
-        },
-        "wildcard_character": '%'
-      }
-    }, function (err, response) {
-      // console.log(response):
-      // [{
-      //   "id": <string>,
-      //   <string A>: <string>,
-      //   <string B>: <string>
-      // }]
-    });
-
-To find out more about complex queries, please refer to the documentation
+To find out more about queries, please refer to the documentation.
 
 ### Task Management
 
 jIO is running a task queue manager in the background which processes incoming
-tasks according to set of defined rules. To find out more and including how to
-define your own execution rules, please refer to the
-[documentation](https://www.j-io.org/documentation).
+tasks according to a set of defined rules. To find out more including how to
+define your own execution rules, please refer to the documentation.
 
 ### Conflict Management
 
-As jIO allows to manage and share documents across multiple storage locactions
-it is likely for conflicts to occur (= multiple versions of a single document
+As jIO allows to manage and share documents across multiple storage locactions,
+conflicts may happen (i.e. multiple versions of a single document
 existing in the storage tree). jIO manages conflicts by ensuring that every
 version of a document is available on every storage and that conflicts are
-accessible (and solvable) using the `conflicts: true` option when using the
-respective jIO methods. For more info on conflicts and available options, please
+accessible (and solvable) using the *conflicts: true* option when using the
+related jIO methods. For more info on conflicts and available options, please
 refer to the documentation.
 
 ### Crash-Proof

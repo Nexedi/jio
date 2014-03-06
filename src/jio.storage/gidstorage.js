@@ -17,13 +17,13 @@
  */
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global jIO: true, setTimeout: true, complex_queries: true */
+/*global define, jIO */
 
 /**
  * JIO GID Storage. Type = 'gid'.
  * Identifies document with their global identifier representation
  *
- * Sub storages must support complex queries and include_docs options.
+ * Sub storages must support queries and include_docs options.
  *
  * Storage Description:
  *
@@ -45,9 +45,17 @@
  *       }
  *     }
  */
-(function () {
+// define([module_name], [dependencies], module);
+(function (dependencies, module) {
+  "use strict";
+  if (typeof define === 'function' && define.amd) {
+    return define(dependencies, module);
+  }
+  module(jIO);
+}(['jio'], function (jIO) {
+  "use strict";
 
-  var dcmi_types, metadata_actions, content_type_re;
+  var dcmi_types, metadata_actions, content_type_re, tool;
   dcmi_types = {
     'Collection': 'Collection',
     'Dataset': 'Dataset',
@@ -155,8 +163,14 @@
       }
     }
   };
-  content_type_re =
-    /^([a-z]+\/[a-zA-Z0-9\+\-\.]+)(?:\s*;\s*charset\s*=\s*([a-zA-Z0-9\-]+))?$/;
+  content_type_re = new RegExp(
+    '^([a-z]+\\/[a-zA-Z0-9\\+\\-\\.]+)' +
+      '((?:\\s*;\\s*[a-zA-Z\\+\\-\\.]+\\s*=' +
+      '\\s*[a-zA-Z0-9\\-\\+\\.,]+)*)$'
+  );
+  tool = {
+    "deepClone": jIO.util.deepClone
+  };
 
   /**
    * Creates a gid from metadata and constraints.
@@ -202,13 +216,12 @@
   }
 
   /**
-   * Convert a gid to a complex query.
+   * Convert a gid to a jio query.
    *
    * @param  {Object,String} gid The gid
-   * @param  {Object} constraints The constraints
-   * @return {Object} A complex serialized object
+   * @return {Object} A jio serialized query
    */
-  function gidToComplexQuery(gid, contraints) {
+  function gidToJIOQuery(gid) {
     var k, i, result = [], meta, content;
     if (typeof gid === 'string') {
       gid = JSON.parse(gid);
@@ -268,10 +281,10 @@
    * to generate global ids can be define in the storage description. It allows
    * us use duplicating storage with different sub storage kind.
    *
-   * @class gidStorage
+   * @class GidStorage
    */
-  function gidStorage(spec, my) {
-    var that = my.basicStorage(spec, my), priv = {};
+  function GidStorage(spec) {
+    var that = this, priv = {};
 
     priv.sub_storage = spec.sub_storage;
     priv.constraints = spec.constraints || {
@@ -281,22 +294,13 @@
       }
     };
 
-    // Overrides
-
-    that.specToStore = function () {
-      return {
-        "sub_storage": priv.sub_storage,
-        "constraints": priv.constraints
-      };
-    };
-
     // JIO Commands
 
     /**
      * Generic command for post or put one.
      *
      * This command will check if the document already exist with an allDocs
-     * and a complex query. If exist, then post will fail. Put will update the
+     * and a jio query. If exist, then post will fail. Put will update the
      * retrieved document thanks to its real id. If no documents are found, post
      * and put will create a new document with the sub storage id generator.
      *
@@ -305,54 +309,49 @@
      * @param  {Command} command The JIO command
      * @param  {String} method The command method
      */
-    priv.putOrPost = function (command, method) {
-      setTimeout(function () {
-        var gid, complex_query, doc = command.cloneDoc();
-        gid = gidFormat(doc, priv.constraints);
-        if (gid === undefined || (doc._id && gid !== doc._id)) {
-          return that.error({
-            "status": 400,
-            "statusText": "Bad Request",
-            "error": "bad_request",
-            "message": "Cannot " + method + " document",
-            "reason": "metadata should respect constraints"
-          });
-        }
-        complex_query = gidToComplexQuery(gid);
-        that.addJob('allDocs', priv.sub_storage, {}, {
-          "query": complex_query,
-          "wildcard_character": null
-        }, function (response) {
-          var update_method = method;
-          if (response.total_rows !== 0) {
-            if (method === 'post') {
-              return that.error({
-                "status": 409,
-                "statusText": "Conflict",
-                "error": "conflict",
-                "message": "Cannot " + method + " document",
-                "reason": "Document already exist"
-              });
-            }
-            doc = command.cloneDoc();
-            doc._id = response.rows[0].id;
-          } else {
-            doc = command.cloneDoc();
-            delete doc._id;
-            update_method = 'post';
+    priv.putOrPost = function (command, metadata, method) {
+      var gid, jio_query, doc = tool.deepClone(metadata);
+      gid = gidFormat(doc, priv.constraints);
+      if (gid === undefined || (doc._id && gid !== doc._id)) {
+        return command.error(
+          "bad_request",
+          "metadata should respect constraints",
+          "Cannot " + method + " document"
+        );
+      }
+      jio_query = gidToJIOQuery(gid);
+      command.storage(priv.sub_storage).allDocs({
+        "query": jio_query
+      }).then(function (response) {
+        var update_method = method;
+        response = response.data;
+        if (response.total_rows !== 0) {
+          if (method === 'post') {
+            return command.error(
+              "conflict",
+              "Document already exists",
+              "Cannot " + method + " document"
+            );
           }
-          that.addJob(update_method, priv.sub_storage, doc, {
-          }, function (response) {
-            response.id = gid;
-            that.success(response);
-          }, function (err) {
-            err.message = "Cannot " + method + " document";
-            that.error(err);
-          });
+          doc = tool.deepClone(metadata);
+          doc._id = response.rows[0].id;
+        } else {
+          doc = tool.deepClone(metadata);
+          delete doc._id;
+          update_method = 'post';
+        }
+        command.storage(priv.sub_storage)[update_method](
+          doc
+        ).then(function (response) {
+          response.id = gid;
+          command.success(response);
         }, function (err) {
           err.message = "Cannot " + method + " document";
-          that.error(err);
+          command.error(err);
         });
+      }, function (err) {
+        err.message = "Cannot " + method + " document";
+        command.error(err);
       });
     };
 
@@ -360,57 +359,51 @@
      * Generic command for putAttachment, getAttachment or removeAttachment.
      *
      * This command will check if the document exist with an allDocs and a
-     * complex query. If not exist, then it returns 404. Otherwise the
+     * jio query. If not exist, then it returns 404. Otherwise the
      * action will be done on the attachment of the found document.
      *
      * @method putGetOrRemoveAttachment
      * @private
-     * @param  {Command} command The JIO command
+     * @param  {Object} command The JIO command
+     * @param  {Object} doc The command parameters
      * @param  {String} method The command method
      */
-    priv.putGetOrRemoveAttachment = function (command, method) {
-      setTimeout(function () {
-        var gid_object, complex_query, doc = command.cloneDoc();
-        gid_object = gidParse(doc._id, priv.constraints);
-        if (gid_object === undefined) {
-          return that.error({
-            "status": 400,
-            "statusText": "Bad Request",
-            "error": "bad_request",
-            "message": "Cannot " + method + " attachment",
-            "reason": "metadata should respect constraints"
-          });
+    priv.putGetOrRemoveAttachment = function (command, doc, method) {
+      var gid_object, jio_query;
+      gid_object = gidParse(doc._id, priv.constraints);
+      if (gid_object === undefined) {
+        return command.error(
+          "bad_request",
+          "metadata should respect constraints",
+          "Cannot " + method + " attachment"
+        );
+      }
+      jio_query = gidToJIOQuery(gid_object);
+      command.storage(priv.sub_storage).allDocs({
+        "query": jio_query
+      }).then(function (response) {
+        response = response.data;
+        if (response.total_rows === 0) {
+          return command.error(
+            "not_found",
+            "Document already exists",
+            "Cannot " + method + " attachment"
+          );
         }
-        complex_query = gidToComplexQuery(gid_object);
-        that.addJob('allDocs', priv.sub_storage, {}, {
-          "query": complex_query,
-          "wildcard_character": null
-        }, function (response) {
-          if (response.total_rows === 0) {
-            return that.error({
-              "status": 404,
-              "statusText": "Not Found",
-              "error": "not_found",
-              "message": "Cannot " + method + " attachment",
-              "reason": "Document already exist"
-            });
-          }
-          gid_object = doc._id;
-          doc._id = response.rows[0].id;
-          that.addJob(method + "Attachment", priv.sub_storage, doc, {
-          }, function (response) {
-            if (method !== 'get') {
-              response.id = gid_object;
-            }
-            that.success(response);
-          }, function (err) {
-            err.message = "Cannot " + method + " attachment";
-            that.error(err);
-          });
+        gid_object = doc._id;
+        doc._id = response.rows[0].id;
+        command.storage(priv.sub_storage)[method + "Attachment"](
+          doc
+        ).then(function (response) {
+          response.id = gid_object;
+          command.success(response);
         }, function (err) {
           err.message = "Cannot " + method + " attachment";
-          that.error(err);
+          command.error(err);
         });
+      }, function (err) {
+        err.message = "Cannot " + method + " attachment";
+        command.error(err);
       });
     };
 
@@ -420,8 +413,8 @@
      * @method post
      * @param  {Command} command The JIO command
      */
-    that.post = function (command) {
-      priv.putOrPost(command, 'post');
+    that.post = function (command, metadata) {
+      priv.putOrPost(command, metadata, 'post');
     };
 
     /**
@@ -430,134 +423,123 @@
      * @method put
      * @param  {Command} command The JIO command
      */
-    that.put = function (command) {
-      priv.putOrPost(command, 'put');
+    that.put = function (command, metadata) {
+      priv.putOrPost(command, metadata, 'put');
     };
 
     /**
      * Puts an attachment to a document thank to its gid, a sub allDocs and a
-     * complex query.
+     * jio query.
      *
      * @method putAttachment
      * @param  {Command} command The JIO command
      */
-    that.putAttachment = function (command) {
-      priv.putGetOrRemoveAttachment(command, 'put');
+    that.putAttachment = function (command, param) {
+      priv.putGetOrRemoveAttachment(command, param, 'put');
     };
 
     /**
-     * Gets a document thank to its gid, a sub allDocs and a complex query.
+     * Gets a document thank to its gid, a sub allDocs and a jio query.
      *
      * @method get
-     * @param  {Command} command The JIO command
+     * @param  {Object} command The JIO command
      */
-    that.get = function (command) {
-      setTimeout(function () {
-        var gid_object, complex_query;
-        gid_object = gidParse(command.getDocId(), priv.constraints);
-        if (gid_object === undefined) {
-          return that.error({
-            "status": 400,
-            "statusText": "Bad Request",
-            "error": "bad_request",
-            "message": "Cannot get document",
-            "reason": "metadata should respect constraints"
-          });
+    that.get = function (command, param) {
+      var gid_object, jio_query;
+      gid_object = gidParse(param._id, priv.constraints);
+      if (gid_object === undefined) {
+        return command.error(
+          "bad_request",
+          "metadata should respect constraints",
+          "Cannot get document"
+        );
+      }
+      jio_query = gidToJIOQuery(gid_object);
+      command.storage(priv.sub_storage).allDocs({
+        "query": jio_query,
+        "include_docs": true
+      }).then(function (response) {
+        response = response.data;
+        if (response.total_rows === 0) {
+          return command.error(
+            "not_found",
+            "missing",
+            "Cannot get document"
+          );
         }
-        complex_query = gidToComplexQuery(gid_object);
-        that.addJob('allDocs', priv.sub_storage, {}, {
-          "query": complex_query,
-          "wildcard_character": null,
-          "include_docs": true
-        }, function (response) {
-          if (response.total_rows === 0) {
-            return that.error({
-              "status": 404,
-              "statusText": "Not Found",
-              "error": "not_found",
-              "message": "Cannot get document",
-              "reason": "missing"
-            });
-          }
-          response.rows[0].doc._id = command.getDocId();
-          return that.success(response.rows[0].doc);
-        }, function (err) {
-          err.message = "Cannot get document";
-          return that.error(err);
-        });
+        response.rows[0].doc._id = param._id;
+        return command.success({"data": response.rows[0].doc});
+      }, function (err) {
+        err.message = "Cannot get document";
+        return command.error(err);
       });
     };
 
     /**
      * Gets an attachment from a document thank to its gid, a sub allDocs and a
-     * complex query.
+     * jio query.
      *
      * @method getAttachment
      * @param  {Command} command The JIO command
      */
-    that.getAttachment = function (command) {
-      priv.putGetOrRemoveAttachment(command, 'get');
+    that.getAttachment = function (command, param) {
+      priv.putGetOrRemoveAttachment(command, param, 'get');
     };
 
     /**
-     * Remove a document thank to its gid, sub allDocs and a complex query.
+     * Remove a document thank to its gid, sub allDocs and a jio query.
      *
      * @method remove
      * @param  {Command} command The JIO command.
      */
-    that.remove = function (command) {
-      setTimeout(function () {
-        var gid_object, complex_query, doc = command.cloneDoc();
-        gid_object = gidParse(doc._id, priv.constraints);
-        if (gid_object === undefined) {
-          return that.error({
-            "status": 400,
-            "statusText": "Bad Request",
-            "error": "bad_request",
-            "message": "Cannot remove document",
-            "reason": "metadata should respect constraints"
-          });
+    that.remove = function (command, doc) {
+      var gid_object, jio_query;
+      gid_object = gidParse(doc._id, priv.constraints);
+      if (gid_object === undefined) {
+        return command.error(
+          "bad_request",
+          "metadata should respect constraints",
+          "Cannot remove document"
+        );
+      }
+      jio_query = gidToJIOQuery(gid_object);
+      command.storage(priv.sub_storage).allDocs({
+        "query": jio_query
+      }).then(function (response) {
+        response = response.data;
+        if (response.total_rows === 0) {
+          return command.error(
+            "not_found",
+            "missing",
+            "Cannot remove document"
+          );
         }
-        complex_query = gidToComplexQuery(gid_object);
-        that.addJob('allDocs', priv.sub_storage, {}, {
-          "query": complex_query,
-          "wildcard_character": null
-        }, function (response) {
-          if (response.total_rows === 0) {
-            return that.error({
-              "status": 404,
-              "statusText": "Not found",
-              "error": "not_found",
-              "message": "Cannot remove document",
-              "reason": "missing"
-            });
-          }
-          gid_object = doc._id;
-          doc = {"_id": response.rows[0].id};
-          that.addJob('remove', priv.sub_storage, doc, {
-          }, function (response) {
-            response.id = gid_object;
-            that.success(response);
-          }, function (err) {
-            err.message = "Cannot remove document";
-            that.error(err);
-          });
+        gid_object = doc._id;
+        doc = {"_id": response.rows[0].id};
+        command.storage(priv.sub_storage).remove(
+          doc
+        ).then(function (response) {
+          response.id = gid_object;
+          command.success(response);
         }, function (err) {
           err.message = "Cannot remove document";
-          that.error(err);
+          command.error(err);
         });
+      }, function (err) {
+        err.message = "Cannot remove document";
+        command.error(err);
       });
     };
 
     /**
      * Removes an attachment to a document thank to its gid, a sub allDocs and a
-     * complex query.
+     * jio query.
      *
      * @method removeAttachment
      * @param  {Command} command The JIO command
      */
-    that.removeAttachment = function (command) {
-      priv.putGetOrRemoveAttachment(command, 'remove');
+    that.removeAttachment = function (command, param) {
+      priv.putGetOrRemoveAttachment(command, param, 'remove');
     };
 
     /**
@@ -566,42 +548,46 @@
      * @method allDocs
      * @param  {Command} command The JIO command
      */
-    that.allDocs = function (command) {
-      setTimeout(function () {
-        var options = command.cloneOption(), include_docs;
-        include_docs = options.include_docs;
-        options.include_docs = true;
-        that.addJob('allDocs', priv.sub_storage, {
-        }, options, function (response) {
-          var result = [], doc_gids = {}, i, row, gid;
-          while ((row = response.rows.shift()) !== undefined) {
-            if ((gid = gidFormat(row.doc, priv.constraints)) !== undefined) {
-              if (!doc_gids[gid]) {
-                doc_gids[gid] = true;
-                row.id = gid;
-                delete row.key;
-                result[result.length] = row;
-                if (include_docs === true) {
-                  row.doc._id = gid;
-                } else {
-                  delete row.doc;
-                }
+    that.allDocs = function (command, param, options) {
+      /*jslint unparam: true */
+      var include_docs;
+      include_docs = options.include_docs;
+      options.include_docs = true;
+      command.storage(priv.sub_storage).allDocs(
+        options
+      ).then(function (response) {
+        /*jslint ass: true */
+        var result = [], doc_gids = {}, row, gid;
+        response = response.data;
+        while ((row = response.rows.shift()) !== undefined) {
+          gid = gidFormat(row.doc, priv.constraints);
+          if (gid !== undefined) {
+            if (!doc_gids[gid]) {
+              doc_gids[gid] = true;
+              row.id = gid;
+              delete row.key;
+              result[result.length] = row;
+              if (include_docs === true) {
+                row.doc._id = gid;
+              } else {
+                delete row.doc;
               }
             }
           }
-          doc_gids = undefined; // free memory
-          row = undefined;
-          that.success({"total_rows": result.length, "rows": result});
-        }, function (err) {
-          err.message = "Cannot get all documents";
-          return that.error(err);
-        });
+        }
+        doc_gids = undefined; // free memory
+        row = undefined;
+        command.success({"data": {
+          "total_rows": result.length,
+          "rows": result
+        }});
+      }, function (err) {
+        err.message = "Cannot get all documents";
+        return command.error(err);
       });
     };
-
-    return that;
   }
 
-  jIO.addStorageType('gid', gidStorage);
+  jIO.addStorage('gid', GidStorage);
 
-}());
+}));

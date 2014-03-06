@@ -17,7 +17,7 @@ class JIOTest(TestCase):
     command = ["%s %s %s; exit 0" % (
           '%s/bin/phantomjs' % root_directory,
           '%s/parts/jio/test/run-qunit.js' % root_directory,
-          '%s/parts/jio/test/jiotests_withoutrequirejs.html' % root_directory)]
+          '%s/parts/jio/test/tests.html' % root_directory)]
     print command
     result = subprocess.check_output(
        command,

@@ -1,4 +1,4 @@
   return result;
 } // parseStringToObject
 
-_export('parseStringToObject', parseStringToObject);
+Query.parseStringToObject = parseStringToObject;

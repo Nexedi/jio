@@ -16,11 +16,10 @@ var log = function (o) {
   </script>
   <div id="log">
   </div>
-  <script type="text/javascript" src="../lib/md5/md5.js"></script>
-  <script type="text/javascript" src="../jio.js"></script>
-  <script type="text/javascript" src="../src/jio.storage/localstorage.js">
-  </script>
-  <script type="text/javascript" src="../lib/jquery/jquery.min.js"></script>
+  <script src="../src/sha256.amd.js"></script>
+  <script src="../lib/rsvp/rsvp-custom.js"></script>
+  <script src="../jio.js"></script>
+  <script src="../src/jio.storage/localstorage.js"></script>
   <script type="text/javascript">
     <!--
 var jio_instance = null;
@@ -28,13 +27,18 @@ var jio_instance = null;
 log('Welcome to the jIO example.html!')
 log('-> Create jIO instance');
 
-jio_instance = jIO.newJio({
+jio_instance = jIO.createJIO({
   "type": 'local',
   "username": 'jIOtest',
   "applicationname": 'example'
 });
 
 // Careful! These are asynchronous methods!
+// And they use promises with a custom version of RSVP.js
+// For more information, see
+// RSVP         https://github.com/tildeio/rsvp.js#rsvpjs--
+// Promises A+  http://promisesaplus.com/
+// CommonJS     http://wiki.commonjs.org/wiki/Promises
 log('-> post "video" document metadata to localStorage');
 
 jio_instance.post({
@@ -43,52 +47,67 @@ jio_instance.post({
   "codec": 'vorbis',
   "language": 'en',
   "description": 'Image compilation'
-}, function (response) {
+}).then(function () {
 
   log('-> put "thumbnail" attachment to localStorage');
 
-  jio_instance.putAttachment({
+  return jio_instance.putAttachment({
     "_id": "video",
     "_attachment": "thumb.jpg",
-    "_data": "BASE64DATA",
+    "_data": "This is the thumbnail content",
     "_mimetype": 'image/jpeg'
-  }, function (response) {
-
-    log('-> put "video" attachment to localStorage');
-
-    jio_instance.putAttachment({
-      "_id":"video",
-      "_attachment": "myvideo.ogg",
-      "_data": "BASE64DATATOO",
-      "_mimetype":'video/ogg'
-    }, function (val) {
-      log('Done! Refresh the page to see get and remove command.');
-    }, function (err) {
-      log('Error! '+ err.reason);
-    });
-
-  }, function (err) {
-    log('Error! ' + err.reason);
   });
+
+}).then(function () {
+
+  log('-> put "video" attachment to localStorage');
+
+  return jio_instance.putAttachment({
+    "_id":"video",
+    "_attachment": "myvideo.ogg",
+    "_data": new Blob(["This is the video content"], {"type": "video/ogg"})
+  });
+
+}).then(function (response) {
+
+  log('Done! Refresh the page to see get and remove command.');
 
 }, function (err) {
 
-  log('Error! ' + err.reason);
+  log('Error! ' + err.statusText + ": " + err.reason + ", " + err.message);
   log('-> get "video" document metadata from localStorage');
 
-  jio_instance.get('video', function (val) {
+  jio_instance.get({
+    "_id": "video"
+  }).then(function (response) {
 
-    log('Title is: "' + val["title"] + '"');
-    log('-> remove "video" document from localStorage');
+    log('Title is: "' + response.data.title + '"');
+    log('-> get "video" attachment content');
 
-    jio_instance.remove({"_id":'video'}, function (val) {
-      log('Done! Refresh the page to see post and putAttachment command.');
-    }, function (err) {
-      log('Error! ' + err.reason);
+    return jio_instance.getAttachment({
+      "_id": "video",
+      "_attachment": "myvideo.ogg"
     });
 
+  }).then(function (response) {
+
+    return jIO.util.readBlobAsBinaryString(response.data);
+
+  }).then(function (event) {
+
+    log('Video content is: ' + event.target.result);
+    log('-> remove "video" document from localStorage');
+
+    return jio_instance.remove({"_id":'video'});
+
+  }).then(function (response) {
+
+    log('Done! Refresh the page to see post and putAttachment command.');
+
   }, function (err) {
-    log('Error! ' + err.reason);
+
+    log('Error! ' + err.statusText + ": " + err.reason + ", " + err.message);
+
   });
 
 });

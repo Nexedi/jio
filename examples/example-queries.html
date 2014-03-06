@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Complex Queries Example</title>
+  <title>JIO Query Example</title>
   <style type="text/css" media="screen">
     table, textarea, input {
         width: 100%;
@@ -15,24 +15,20 @@
 <body>
   <table>
     <tr>
-      <td>Query (String):<br /><textarea id="str">1:abc AND 2:def</textarea></td>
-      <td>Query (Object):<br /><textarea id="obj">{&quot;type&quot;:&quot;complex&quot;,&quot;operator&quot;:&quot;AND&quot;,&quot;query_list&quot;:[{&quot;type&quot;:&quot;simple&quot;,&quot;operator&quot;:&quot;=&quot;,&quot;key&quot;:&quot;1&quot;,&quot;value&quot;:&quot;abc&quot;},{&quot;type&quot;:&quot;simple&quot;,&quot;operator&quot;:&quot;=&quot;,&quot;key&quot;:&quot;2&quot;,&quot;value&quot;:&quot;def&quot;}]}</textarea></td>
+      <td>Query (String):<br /><textarea id="str">title:abc AND format:def</textarea></td>
+      <td>Query (Object):<br /><textarea id="obj">{&quot;type&quot;:&quot;complex&quot;,&quot;operator&quot;:&quot;AND&quot;,&quot;query_list&quot;:[{&quot;type&quot;:&quot;simple&quot;,&quot;key&quot;:&quot;title&quot;,&quot;value&quot;:&quot;abc&quot;},{&quot;type&quot;:&quot;simple&quot;,&quot;key&quot;:&quot;format&quot;,&quot;value&quot;:&quot;def&quot;}]}</textarea></td>
     </tr>
     <tr>
-      <td>Item list (to filter, from 'Query (Object)'):<br /><textarea id="list">[{&quot;1&quot;:&quot;abc&quot;,&quot;2&quot;:&quot;def&quot;},{&quot;1&quot;:&quot;def&quot;,&quot;2&quot;:&quot;abc&quot;}]</textarea></td>
-      <td>Result list:<br /><textarea id="result">[{&quot;1&quot;:&quot;abc&quot;,&quot;2&quot;:&quot;def&quot;}]</textarea></td>
-    </tr>
-    <tr>
-      <td><label for="wildcard">Wildcard char: </label></td>
-      <td><input type="text" id="wildcard" name="wildcard" value="%" /></td>
+      <td>Item list (to filter, from 'Query (Object)'):<br /><textarea id="list">[{&quot;title&quot;:&quot;abc&quot;,&quot;format&quot;:&quot;def&quot;},{&quot;title&quot;:&quot;def&quot;,&quot;format&quot;:&quot;abc&quot;}]</textarea></td>
+      <td>Result list:<br /><textarea id="result"></textarea></td>
     </tr>
     <tr>
       <td><label for="sort_on">Sort on: </label></td>
-      <td><input type="text" id="sort_on" name="sort_on" value="[[&quot;1&quot;,&quot;ascending&quot;],[&quot;2&quot;,&quot;descending&quot;]]" /></td>
+      <td><input type="text" id="sort_on" name="sort_on" value="[[&quot;title&quot;,&quot;ascending&quot;],[&quot;format&quot;,&quot;descending&quot;]]" /></td>
     </tr>
     <tr>
       <td><label for="select_list">Select_list: </label></td>
-      <td><input type="text" id="select_list" name="select_list" value="[&quot;1&quot;,&quot;2&quot;]" /></td>
+      <td><input type="text" id="select_list" name="select_list" value="[&quot;title&quot;,&quot;format&quot;]" /></td>
     </tr>
     <tr>
       <td><label for="limit">Limit: </label></td>
@@ -42,34 +38,48 @@
   <button onclick="searchTextToJson()">Search text to JSON</button>
   <button onclick="jsonToSearchText()">JSON to Search text</button>
   <button onclick="query()">Query</button>
-  <script type="text/javascript" src="../lib/md5/md5.js"></script>
-  <script type="text/javascript" src="../lib/jsSha2/sha2.js"></script>
-  <script type="text/javascript" src="../lib/sjcl/sjcl.min.js"></script>
-  <script type="text/javascript" src="../jio.min.js"></script>
-  <script type="text/javascript" src="../complex_queries.min.js"></script>
+  <script type="text/javascript" src="../lib/rsvp/rsvp-custom.js"></script>
   <script type="text/javascript"
     src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
   <script type="text/javascript">
     <!--
-var searchTextToJson = function () {
-  $("#obj").attr("value", JSON.stringify(complex_queries.Query.parseStringToObject($("#str").attr("value"))));
-};
-var jsonToSearchText = function () {
-  $("#str").attr("value", complex_queries.QueryFactory.create(JSON.parse($("#obj").attr("value"))).toString());
-};
-var query = function () {
+function searchTextToJson() {
+  $("#obj").attr(
+    "value",
+    JSON.stringify(
+      jIO.QueryFactory.create(
+        $("#str").attr("value")
+      ).serialized()
+    )
+  );
+}
+function jsonToSearchText() {
+  $("#str").attr(
+    "value",
+    jIO.QueryFactory.create(
+      JSON.parse(
+        $("#obj").attr("value")
+      )
+    ).toString()
+  );
+}
+function query() {
   var list = JSON.parse($("#list").attr("value"));
-  $("#str").attr("value", complex_queries.QueryFactory.create(JSON.parse($("#obj").attr("value"))).exec(
+  jIO.QueryFactory.create(
+    JSON.parse(
+      $("#obj").attr("value")
+    )
+  ).exec(
     list,
     {
-      "wildcard_character": $('#wildcard').attr('value'),
       "sort_on": JSON.parse($("#sort_on").attr("value")),
       "limit": JSON.parse($("#limit").attr("value")),
       "select_list": JSON.parse($("#select_list").attr("value"))
     }
-  ));
-  $("#result").attr("value", JSON.stringify(list));
-};
+  ).then(function (list) {
+    $("#result").attr("value", JSON.stringify(list));
+  });
+}
         // -->
   </script>
 </body>

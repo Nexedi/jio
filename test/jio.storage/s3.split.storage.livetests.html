@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>JIO S3 Storage Qunit Live Tests</title>
+  <link rel="stylesheet" href="../../lib/qunit/qunit.css" />
+  <script src="../../lib/qunit/qunit.js"></script>
+
+  <script src="../../lib/rsvp/rsvp-custom.js"></script>
+  <script src="../../lib/jquery/jquery.min.js"></script>
+  <script src="../../src/sha256.amd.js"></script>
+  <script src="../../jio.js"></script>
+  <script src="../../src/sha1.amd.js"></script>
+  <script src="../../src/jio.storage/s3storage.js"></script>
+  <script src="../../src/jio.storage/splitstorage.js"></script>
+  <script src="../jio/util.js"></script>
+</head>
+<body>
+  <script>
+var s3storage_spec = {};
+console.log(location.href);
+location.href.split('?')[1].split('&').forEach(function (item) {
+  s3storage_spec[item.split('=')[0]] = decodeURI(item.split('=').slice(1).join('=')).
+    replace(/%3A/ig, ':').replace(/%2F/ig, '/');
+});
+  </script>
+  <h3>JIO initialization</h3>
+  <form method="get" action="">
+    <input type="hidden" name="type" value="s3"/>
+    <input type="text" name="url" placeholder="URL" value="https://jiobucket.s3.amazonaws.com"/>
+    <input type="text" name="server" placeholder="Bucket" value="jiobucket"/>
+    <input type="text" name="AWSIdentifier" placeholder="AWSIdentifier" value="AKIAJLNYGVLTV66RHPEQ"/>
+    <input type="password" name="password" placeholder="Password" value="/YHoa5r2X6EUHfvP31jdYx6t75h81pAjIZ4Mt94y"/>
+    <input type="submit" value="Run Tests"/>
+  </form>
+  <br />
+  <div id="qunit"></div>
+  <!--<script src="s3storage.tests.js"></script>-->
+  <script src="split.s3storage.tests.js"></script>
+</body>
+</html>

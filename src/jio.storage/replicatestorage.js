@@ -1,110 +1,507 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global jIO: true */
-jIO.addStorageType('replicate', function (spec, my) {
+/*
+ * JIO extension for resource replication.
+ * Copyright (C) 2013  Nexedi SA
+ *
+ *   This library is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Lesser General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This library is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU Lesser General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Lesser General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-  var that, cloned_option, priv = {},
-    super_serialized = that.serialized;
+/*jslint indent: 2, maxlen: 80, nomen: true */
+/*global define, module, require, jIO, RSVP */
 
-  spec = spec || {};
-  that = my.basicStorage(spec, my);
+(function (root, dependencies, factory) {
+  "use strict";
+  if (typeof define === 'function' && define.amd) {
+    return define(dependencies, function () {
+      return factory(require);
+    });
+  }
+  if (typeof require === 'function') {
+    module.exports = factory(require);
+    return;
+  }
+  root.replicate_storage = factory(function (name) {
+    return {
+      "jio": jIO,
+      "rsvp": RSVP
+    }[name];
+  });
+}(this, ['jio', 'rsvp'], function (require) {
+  "use strict";
 
-  priv.return_value_array = [];
-  priv.storagelist = spec.storagelist || [];
-  priv.nb_storage = priv.storagelist.length;
+  var Promise = require('rsvp').Promise,
+    all = require('rsvp').all,
+    dictUpdate = require('jio').util.dictUpdate,
+    addStorageFunction = require('jio').addStorage;
 
-  that.serialized = function () {
-    var o = super_serialized();
-    o.storagelist = priv.storagelist;
-    return o;
-  };
-
-  that.validateState = function () {
-    if (priv.storagelist.length === 0) {
-      return 'Need at least one parameter: "storagelist" ' +
-        'containing at least one storage.';
+  /**
+   * Test if the a value is a date
+   *
+   * @param  {String,Number,Date} date The date to test
+   * @return {Boolean} true if success, else false
+   */
+  function isDate(date) {
+    if (!isNaN((new Date(date === null ? undefined : date)).getTime())) {
+      return true;
     }
-    return '';
-  };
+    return false;
+  }
 
-  priv.isTheLast = function (error_array) {
-    return (error_array.length === priv.nb_storage);
-  };
+  /**
+   * Executes a sequence of *then* callbacks. It acts like
+   * `smth().then(callback).then(callback)...`. The first callback is called
+   * with no parameter.
+   *
+   * Elements of `then_list` array can be a function or an array contaning at
+   * most three *then* callbacks: *onFulfilled*, *onRejected*, *onNotified*.
+   *
+   * When `cancel()` is executed, each then promises are cancelled at the same
+   * time.
+   *
+   *     sequence(then_list): Promise
+   *
+   * @param  {Array} then_list An array of *then* callbacks
+   * @return {Promise} A new promise
+   */
+  function sequence(then_list) {
+    var promise_list = [];
+    return new Promise(function (resolve, reject, notify) {
+      var i, length = then_list.length;
+      promise_list[0] = new Promise(function (resolve) {
+        resolve();
+      });
+      for (i = 0; i < length; i += 1) {
+        if (Array.isArray(then_list[i])) {
+          promise_list[i + 1] = promise_list[i].
+            then(then_list[i][0], then_list[i][1], then_list[i][2]);
+        } else {
+          promise_list[i + 1] = promise_list[i].then(then_list[i]);
+        }
+      }
+      promise_list[i].then(resolve, reject, notify);
+    }, function () {
+      var i, length = promise_list.length;
+      for (i = 0; i < length; i += 1) {
+        promise_list[i].cancel();
+      }
+    });
+  }
 
-  priv.doJob = function (command, errormessage, nodocid) {
-    var done = false,
-      error_array = [],
-      i,
-      error = function (err) {
-        if (!done) {
-          error_array.push(err);
-          if (priv.isTheLast(error_array)) {
-            that.error({
-              status: 207,
-              statusText: 'Multi-Status',
-              error: 'multi_status',
-              message: 'All ' + errormessage + (!nodocid ? ' "' +
-                command.getDocId() + '"' : ' ') + ' requests have failed.',
-              reason: 'requests fail',
-              array: error_array
-            });
+  function success(promise) {
+    return new Promise(function (resolve, reject, notify) {
+      /*jslint unparam: true*/
+      promise.then(resolve, resolve, notify);
+    }, function () {
+      promise.cancel();
+    });
+  }
+
+  // /**
+  //  * Awaits for an answer from one promise only. Promises are cancelled only
+  //  * by calling `first(promise_list).cancel()`.
+  //  *
+  //  *     first(promise_list): Promise
+  //  *
+  //  * @param  {Array} promise_list An array of promises
+  //  * @return {Promise} A new promise
+  //  */
+  // function first(promise_list) {
+  //   var length = promise_list.length;
+  //   promise_list = promise_list.slice();
+  //   return new Promise(function (resolve, reject, notify) {
+  //     var index, count = 0;
+  //     function rejecter(answer) {
+  //       count += 1;
+  //       if (count === length) {
+  //         return reject(answer);
+  //       }
+  //     }
+  //     function notifier(index) {
+  //       return function (notification) {
+  //         notify({
+  //           "index": index,
+  //           "value": notification
+  //         });
+  //       };
+  //     }
+  //     for (index = 0; index < length; index += 1) {
+  //       promise_list[index].then(resolve, rejecter, notifier(index));
+  //     }
+  //   }, function () {
+  //     var index;
+  //     for (index = 0; index < length; index += 1) {
+  //       promise_list[index].cancel();
+  //     }
+  //   });
+  // }
+
+  /**
+   * Responds with the last resolved promise answer recieved. If all promises
+   * are rejected, it returns the latest rejected promise answer
+   * received. Promises are cancelled only by calling
+   * `last(promise_list).cancel()`.
+   *
+   *     last(promise_list): Promise
+   *
+   * @param  {Array} promise_list An array of promises
+   * @return {Promise} A new promise
+   */
+  function last(promise_list) {
+    var length = promise_list.length;
+    promise_list = promise_list.slice();
+    return new Promise(function (resolve, reject, notify) {
+      var index, last_answer, count = 0, error_count = 0;
+      function resolver() {
+        return function (answer) {
+          count += 1;
+          if (count === length) {
+            return resolve(answer);
+          }
+          last_answer = answer;
+        };
+      }
+      function rejecter() {
+        return function (answer) {
+          error_count += 1;
+          if (error_count === length) {
+            return reject(answer);
+          }
+          count += 1;
+          if (count === length) {
+            return resolve(last_answer);
+          }
+        };
+      }
+      function notifier(index) {
+        return function (notification) {
+          notify({
+            "index": index,
+            "value": notification
+          });
+        };
+      }
+      for (index = 0; index < length; index += 1) {
+        promise_list[index].then(resolver(), rejecter(), notifier(index));
+      }
+    }, function () {
+      var index;
+      for (index = 0; index < length; index += 1) {
+        promise_list[index].cancel();
+      }
+    });
+  }
+
+  /**
+   * Responds with the last modified document recieved. If all promises are
+   * rejected, it returns the latest rejected promise answer received. Promises
+   * are cancelled only by calling `lastModified(promise_list).cancel()`. USE
+   * THIS FUNCTION ONLY FOR GET METHOD!
+   *
+   *     lastModified(promise_list): Promise
+   *
+   * @param  {Array} promise_list An array of promises
+   * @return {Promise} A new promise
+   */
+  function lastModified(promise_list) {
+    var length = promise_list.length;
+    promise_list = promise_list.slice();
+    return new Promise(function (resolve, reject, notify) {
+      var index, last_good_answer, last_answer, count = 0, error_count = 0;
+      function resolver(answer) {
+        last_answer = answer;
+        if (last_good_answer === undefined) {
+          if (isDate(answer.data.modified)) {
+            last_good_answer = answer;
+          }
+        } else {
+          if (isDate(answer.data.modified)) {
+            if (new Date(last_good_answer.data.modified) <
+                new Date(answer.data.modified)) {
+              last_good_answer = answer;
+            }
           }
         }
-      },
-      success = function (val) {
-        if (!done) {
-          done = true;
-          that.success(val);
+        count += 1;
+        if (count === length) {
+          return resolve(last_good_answer);
         }
-      };
-    for (i = 0; i < priv.nb_storage; i += 1) {
-      cloned_option = command.cloneOption();
-      that.addJob(command.getLabel(), priv.storagelist[i],
-        command.cloneDoc(), cloned_option, success, error);
+      }
+      function rejecter(answer) {
+        error_count += 1;
+        if (error_count === length) {
+          return reject(answer);
+        }
+        count += 1;
+        if (count === length) {
+          return resolve(last_good_answer || last_answer);
+        }
+      }
+      function notifier(index) {
+        return function (notification) {
+          notify({
+            "index": index,
+            "value": notification
+          });
+        };
+      }
+      for (index = 0; index < length; index += 1) {
+        promise_list[index].then(resolver, rejecter, notifier(index));
+      }
+    }, function () {
+      var index;
+      for (index = 0; index < length; index += 1) {
+        promise_list[index].cancel();
+      }
+    });
+  }
+
+  // /**
+  //  * An Universal Unique ID generator
+  //  *
+  //  * @return {String} The new UUID.
+  //  */
+  // function generateUuid() {
+  //   function S4() {
+  //     return ('0000' + Math.floor(
+  //       Math.random() * 0x10000 /* 65536 */
+  //     ).toString(16)).slice(-4);
+  //   }
+  //   return S4() + S4() + "-" +
+  //     S4() + "-" +
+  //     S4() + "-" +
+  //     S4() + "-" +
+  //     S4() + S4() + S4();
+  // }
+
+  function ReplicateStorage(spec) {
+    if (!Array.isArray(spec.storage_list)) {
+      throw new TypeError("ReplicateStorage(): " +
+                          "storage_list is not of type array");
     }
+    this._storage_list = spec.storage_list;
+  }
+
+  ReplicateStorage.prototype.post = function (command, metadata, option) {
+    var promise_list = [], index, length = this._storage_list.length;
+    if (!isDate(metadata.modified)) {
+      command.error(
+        409,
+        "invalid 'modified' metadata",
+        "The metadata 'modified' should be a valid date string or date object"
+      );
+      return;
+    }
+    for (index = 0; index < length; index += 1) {
+      promise_list[index] = success(
+        command.storage(this._storage_list[index]).post(metadata, option)
+      );
+    }
+    sequence([function () {
+      return last(promise_list);
+    }, [command.success, command.error]]);
   };
 
-  that.post = function (command) {
-    priv.doJob(command, 'post');
-    that.end();
+  ReplicateStorage.prototype.put = function (command, metadata, option) {
+    var promise_list = [], index, length = this._storage_list.length;
+    if (!isDate(metadata.modified)) {
+      command.error(
+        409,
+        "invalid 'modified' metadata",
+        "The metadata 'modified' should be a valid date string or date object"
+      );
+      return;
+    }
+    for (index = 0; index < length; index += 1) {
+      promise_list[index] =
+        command.storage(this._storage_list[index]).put(metadata, option);
+    }
+    sequence([function () {
+      return last(promise_list);
+    }, [command.success, command.error]]);
   };
 
-  /**
-   * Save a document in several storages.
-   * @method put
-   */
-  that.put = function (command) {
-    priv.doJob(command, 'put');
-    that.end();
+  ReplicateStorage.prototype.putAttachment = function (command, param, option) {
+    var promise_list = [], index, length = this._storage_list.length;
+    for (index = 0; index < length; index += 1) {
+      promise_list[index] = success(
+        command.storage(this._storage_list[index]).putAttachment(param, option)
+      );
+    }
+    sequence([function () {
+      return last(promise_list);
+    }, [command.success, command.error]]);
   };
 
-  /**
-   * Load a document from several storages, and send the first retreived
-   * document.
-   * @method get
-   */
-  that.get = function (command) {
-    priv.doJob(command, 'get');
-    that.end();
+  ReplicateStorage.prototype.remove = function (command, param, option) {
+    var promise_list = [], index, length = this._storage_list.length;
+    for (index = 0; index < length; index += 1) {
+      promise_list[index] = success(
+        command.storage(this._storage_list[index]).remove(param, option)
+      );
+    }
+    sequence([function () {
+      return last(promise_list);
+    }, [command.success, command.error]]);
   };
 
-  /**
-   * Get a document list from several storages, and returns the first
-   * retreived document list.
-   * @method allDocs
-   */
-  that.allDocs = function (command) {
-    priv.doJob(command, 'allDocs', true);
-    that.end();
+  ReplicateStorage.prototype.removeAttachment = function (
+    command,
+    param,
+    option
+  ) {
+    var promise_list = [], index, length = this._storage_list.length;
+    for (index = 0; index < length; index += 1) {
+      promise_list[index] = success(
+        command.storage(this._storage_list[index]).
+          removeAttachment(param, option)
+      );
+    }
+    sequence([function () {
+      return last(promise_list);
+    }, [command.success, command.error]]);
   };
 
-  /**
-   * Remove a document from several storages.
-   * @method remove
-   */
-  that.remove = function (command) {
-    priv.doJob(command, 'remove');
-    that.end();
+  ReplicateStorage.prototype.get = function (command, param, option) {
+    var promise_list = [], index, length = this._storage_list.length;
+    for (index = 0; index < length; index += 1) {
+      promise_list[index] =
+        command.storage(this._storage_list[index]).get(param, option);
+    }
+    sequence([function () {
+      return lastModified(promise_list);
+    }, [command.success, command.error]]);
   };
 
-  return that;
-});
+  ReplicateStorage.prototype.getAttachment = function (command, param, option) {
+    var promise_list = [], index, length = this._storage_list.length;
+    for (index = 0; index < length; index += 1) {
+      promise_list[index] = success(
+        command.storage(this._storage_list[index]).getAttachment(param, option)
+      );
+    }
+    sequence([function () {
+      return last(promise_list);
+    }, [command.success, command.error]]);
+  };
+
+  ReplicateStorage.prototype.allDocs = function (command, param, option) {
+    /*jslint unparam: true */
+    var promise_list = [], index, length = this._storage_list.length;
+    for (index = 0; index < length; index += 1) {
+      promise_list[index] =
+        success(command.storage(this._storage_list[index]).allDocs(option));
+    }
+    sequence([function () {
+      return all(promise_list);
+    }, function (answers) {
+      // merge responses
+      var i, j, k, found, rows;
+      // browsing answers
+      for (i = 0; i < answers.length; i += 1) {
+        if (answers[i].result === "success") {
+          if (!rows) {
+            rows = answers[i].data.rows;
+          } else {
+            // browsing answer rows
+            for (j = 0; j < answers[i].data.rows.length; j += 1) {
+              found = false;
+              // browsing result rows
+              for (k = 0; k < rows.length; k += 1) {
+                if (rows[k].id === answers[i].data.rows[j].id) {
+                  found = true;
+                  break;
+                }
+              }
+              if (!found) {
+                rows.push(answers[i].data.rows[j]);
+              }
+            }
+          }
+        }
+      }
+      return {"data": {"total_rows": (rows || []).length, "rows": rows || []}};
+    }, [command.success, command.error]]);
+  };
+
+  ReplicateStorage.prototype.check = function (command, param, option) {
+    var promise_list = [], index, length = this._storage_list.length;
+    for (index = 0; index < length; index += 1) {
+      promise_list[index] = success(
+        command.storage(this._storage_list[index]).check(param, option)
+      );
+    }
+    sequence([function () {
+      return all(promise_list);
+    }, [command.success, command.error]]);
+  };
+
+  ReplicateStorage.prototype.repair = function (command, param) {
+    var promise_list = [], index, that, length = this._storage_list.length;
+    that = this;
+    if (typeof param._id !== 'string' || !param._id) {
+      command.success();
+      return;
+    }
+    for (index = 0; index < length; index += 1) {
+      promise_list[index] =
+        success(command.storage(this._storage_list[index]).get(param));
+    }
+    sequence([function () {
+      return all(promise_list);
+    }, function (answers) {
+      var i, list = [], winner = null;
+      for (i = 0; i < answers.length; i += 1) {
+        if (answers[i].result === "success") {
+          if (isDate(answers[i].data.modified)) {
+            list[i] = answers[i].data;
+            if (winner === null ||
+                new Date(winner.modified) <
+                new Date(answers[i].data.modified)) {
+              winner = answers[i].data;
+            }
+          }
+        } else if (answers[i].status === 404) {
+          list[i] = 0;
+        }
+      }
+      for (i = 0; i < list.length; i += 1) {
+        if (list[i] && new Date(list[i].modified) < new Date(winner.modified)) {
+          list[i] = success(command.storage(that._storage_list[i]).put(winner));
+        } else if (list[i] === 0) {
+          list[i] = dictUpdate({}, winner);
+          delete list[i]._id;
+          list[i] =
+            success(command.storage(that._storage_list[i]).post(list[i]));
+        }
+      }
+      list = list.reduce(function (previous, current) {
+        if (current) {
+          previous.push(current);
+        }
+        return previous;
+      }, []);
+      return all(list);
+    }, function (answers) {
+      var i;
+      for (i = 0; i < answers.length; i += 1) {
+        if (answers[i].result !== "success") {
+          return command.error(409);
+        }
+      }
+      command.success();
+    }]);
+  };
+
+  addStorageFunction('replicate', ReplicateStorage);
+
+}));

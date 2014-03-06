@@ -1,68 +1,89 @@
 # dir
-JIO_DIR     = src/jio
-STORAGE_DIR = src/jio.storage
 QUERIES_DIR = src/queries
 
 # files
 JIO         = jio.js
 JIO_MIN     = jio.min.js
-COMPLEX     = complex_queries.js
-COMPLEX_MIN = complex_queries.min.js
-PARSER_PAR  = $(QUERIES_DIR)/parser.par
-PARSER_OUT  = $(QUERIES_DIR)/parser.js
+JIODATE_MIN = jiodate.min.js
+PARSER_PAR  = $(QUERIES_DIR)/core/parser.par
+PARSER_OUT  = $(QUERIES_DIR)/build/parser.js
+UGLIFY      = ./node_modules/grunt-contrib-uglify/node_modules/uglify-js/bin/uglifyjs
+ZIP_FULL    = jio.zip
+ZIP_MINI    = jio-min.zip
 
-## install npm package system wide -> npm -g install <package>
+# npm install jscc-node
+JSCC_CMD   	= node ./node_modules/jscc-node/jscc.js -t ./node_modules/jscc-node/driver_node.js_
 
-## js/cc using rhino
-#JSCC_CMD    = rhino ~/modules/jscc/jscc.js -t ~/modules/jscc/driver_web.js_
-# sh -c 'cd ; npm install jscc-node'
-JSCC_CMD   	= node ~/node_modules/jscc-node/jscc.js -t ~/node_modules/jscc-node/driver_node.js_
-# sh -c 'cd ; npm install jslint'
-LINT_CMD	= $(shell which jslint || echo node ~/node_modules/jslint/bin/jslint.js) --terse
-# sh -c 'cd ; npm install uglify-js'
-UGLIFY_CMD	= $(shell which uglifyjs || echo node ~/node_modules/uglify-js/bin/uglifyjs)
-# sh -c 'cd ; npm install phantomjs'
-PHANTOM_CMD	= $(shell which phantomjs || echo ~/node_modules/phantomjs/bin/phantomjs)
+auto: compile
 
-auto: compile build lint
-build: concat uglify
-
-# The order is important!
-CONCAT_JIO_NAMES = intro exceptions jio.intro storages/* commands/* jobs/status/* jobs/job announcements/announcement activityUpdater announcements/announcer jobs/jobIdHandler jobs/jobManager jobs/jobRules jio.core jio.outro jioNamespace outro
-CONCAT_STORAGE_NAMES = *
-CONCAT_QUERIES_NAMES = begin parser-begin parser parser-end tool queryfactory query simplequery complexquery end
-LINT_NAMES  = exceptions storages/* commands/* jobs/status/* jobs/* announcements/* activityUpdater jio.core jioNamespace
-
-CONCAT_QUERIES_FILES = $(CONCAT_QUERIES_NAMES:%=$(QUERIES_DIR)/%.js)
-CONCAT_JIO_FILES = $(CONCAT_JIO_NAMES:%=$(JIO_DIR)/%.js)
-LINT_FILES  = $(LINT_NAMES:%=$(JIO_DIR)/%.js) $(CONCAT_STORAGE_NAMES:%=$(STORAGE_DIR)/%.js)
-
-# build parser.js
 compile:
+	mkdir -p $(dir $(PARSER_OUT))
 	$(JSCC_CMD) -o $(PARSER_OUT) $(PARSER_PAR)
 
-# concat source files into jio.js and complex-queries.js
-concat:
-	cat $(CONCAT_JIO_FILES) > "$(JIO)"
-	cat $(CONCAT_QUERIES_FILES) > "$(COMPLEX)"
+TMPDIR := $(shell mktemp -d)
+zip:
+	@echo "Preparing $(ZIP_FULL)"
+	@mkdir $(TMPDIR)/jio
+	@mkdir $(TMPDIR)/jio/storage
+	@cp jio.js                              $(TMPDIR)/jio/
+	@cp jiodate.js                          $(TMPDIR)/jio/
+	@cp jioquery.js                         $(TMPDIR)/jio/
+	@cp src/sha1.amd.js                     $(TMPDIR)/jio/
+	@cp src/sha2.amd.js                     $(TMPDIR)/jio/
+	@cp src/sha256.amd.js                   $(TMPDIR)/jio/
+	@cp lib/rsvp/rsvp-custom.js             $(TMPDIR)/jio/
+	@cp lib/rsvp/rsvp-custom.amd.js         $(TMPDIR)/jio/
+	@cp lib/jquery/jquery.js                $(TMPDIR)/jio/
+	@cp lib/require/require.js              $(TMPDIR)/jio/
+	@cp src/jio.storage/localstorage.js     $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/davstorage.js       $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/erp5storage.js      $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/indexstorage.js     $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/gidstorage.js       $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/replicatestorage.js $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/splitstorage.js     $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/cryptstorage.js     $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/revisionstorage.js  $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/replicaterevisionstorage.js     $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/s3storage.js        $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/splitstorage.js     $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/xwikistorage.js     $(TMPDIR)/jio/storage/
+	@cd $(TMPDIR) && zip -q $(ZIP_FULL) -r jio
+	@mv $(TMPDIR)/$(ZIP_FULL) ./
+	@rm -rf $(TMPDIR)/jio
+	@echo "Preparing $(ZIP_MINI)"
+	@mkdir $(TMPDIR)/jio
+	@mkdir $(TMPDIR)/jio/storage
+	@echo "Minimizing JS..."
+	@cp jio.min.js                                 $(TMPDIR)/jio/
+	@cp jio.min.map                                $(TMPDIR)/jio/
+	@cp jiodate.min.js                             $(TMPDIR)/jio/
+	@cp jiodate.min.map                            $(TMPDIR)/jio/
+	@$(UGLIFY) src/sha1.amd.js                     >$(TMPDIR)/jio/sha1.amd.min.js 2>/dev/null
+	@$(UGLIFY) src/sha2.amd.js                     >$(TMPDIR)/jio/sha2.amd.min.js 2>/dev/null
+	@$(UGLIFY) src/sha256.amd.js                   >$(TMPDIR)/jio/sha256.amd.min.js 2>/dev/null
+	@$(UGLIFY) lib/rsvp/rsvp-custom.js             >$(TMPDIR)/jio/rsvp-custom.min.js 2>/dev/null
+	@$(UGLIFY) lib/rsvp/rsvp-custom.amd.js         >$(TMPDIR)/jio/rsvp-custom.amd.min.js 2>/dev/null
+	@cp lib/jquery/jquery.min.js                   $(TMPDIR)/jio/
+	@$(UGLIFY) lib/require/require.js              >$(TMPDIR)/jio/require.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/localstorage.js     >$(TMPDIR)/jio/storage/localstorage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/davstorage.js       >$(TMPDIR)/jio/storage/davstorage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/erp5storage.js      >$(TMPDIR)/jio/storage/erp5storage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/indexstorage.js     >$(TMPDIR)/jio/storage/indexstorage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/gidstorage.js       >$(TMPDIR)/jio/storage/gidstorage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/replicatestorage.js >$(TMPDIR)/jio/storage/replicatestorage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/splitstorage.js     >$(TMPDIR)/jio/storage/splitstorage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/cryptstorage.js     >$(TMPDIR)/jio/storage/cryptstorage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/revisionstorage.js     >$(TMPDIR)/jio/storage/revisionstorage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/replicaterevisionstorage.js     >$(TMPDIR)/jio/storage/replicaterevisionstorage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/s3storage.js        >$(TMPDIR)/jio/storage/s3storage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/splitstorage.js     >$(TMPDIR)/jio/storage/splitstorage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/xwikistorage.js     >$(TMPDIR)/jio/storage/xwikistorage.min.js 2>/dev/null
+	@cd $(TMPDIR) && zip -q $(ZIP_MINI) -r jio
+	@mv $(TMPDIR)/$(ZIP_MINI) ./
+	@rm -rf $(TMPDIR)
 
-# uglify into jio.min.js and complex.min.js
-uglify:
-	$(UGLIFY_CMD) "$(JIO)" > "$(JIO_MIN)"
-	$(UGLIFY_CMD) "$(COMPLEX)" > "$(COMPLEX_MIN)"
 
-# lint all files in JIO and STORAGE and QUERIES DIR
-# command: jslint [options] file
-# [options] are defined at the top of the source file:
-# Example:
-# /*jslint indent: 2, maxlen: 80 */
-# /*global hex_sha256: true, jQuery: true */
-lint:
-	$(LINT_CMD) $(LINT_FILES)
-
-phantom:
-	$(PHANTOM_CMD) test/run-qunit.js test/jiotests_withoutrequirejs.html | awk 'BEGIN {print "<!DOCTYPE html><html>"} /^<head>$$/, /^<\/body>$$/ {print} END {print "</html>"}' | sed -e 's,^ *<\(/\|\)script.*>$$,,g' > test/unit_test_result.html
-	grep '^  <title>✔ ' test/unit_test_result.html > /dev/null
 
 .phony: clean
 clean:
@@ -71,6 +92,5 @@ clean:
 realclean:
 	rm -f "$(JIO)"
 	rm -f "$(JIO_MIN)"
-	rm -f "$(COMPLEX)"
-	rm -f "$(COMPLEX_MIN)"
+	rm -f "$(JIODATE_MIN)"
 	rm -f "$(PARSER_OUT)"
