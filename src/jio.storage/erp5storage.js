@@ -27,7 +27,7 @@
   "use strict";
 
   function ERP5Storage(spec) {
-    if (typeof spec.url !== 'string' && !spec.url) {
+    if (typeof spec.url !== "string" || !spec.url) {
       throw new TypeError("ERP5 'url' must be a string " +
                           "which contains more than one character.");
     }
