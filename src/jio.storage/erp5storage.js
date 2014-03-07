@@ -246,6 +246,10 @@
       .then(function (response) {
         var result = JSON.parse(response.target.responseText);
         result._id = param._id;
+        delete result._embedded;
+        delete result._links;
+        delete result._debug;
+        new jIO.Metadata(result).format();
         return {"data": result};
       });
   }
