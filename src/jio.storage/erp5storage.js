@@ -169,6 +169,7 @@
                           "which contains more than one character.");
     }
     this._url = spec.url;
+    this._default_view = spec.default_view;
   }
 
   // XXX docstring
@@ -176,7 +177,7 @@
     return function (command, param, options) {
       RSVP.resolve().
         then(function () {
-          var view = ERP5Storage.onView[options._view] ||
+          var view = ERP5Storage.onView[options._view || this._default_view] ||
             ERP5Storage.onView.default;
           if (typeof view[method] !== "function") {
             view = ERP5Storage.onView.default;
@@ -227,7 +228,7 @@
   ERP5Storage.onView.default = {};
 
   // XXX docstring
-  function onViewDefaultGet(param) {
+  function onViewDefaultGet(param, options) {
     return getSiteDocument(this._url).
       then(function (site_hal) {
         return jIO.util.ajax({
@@ -235,7 +236,7 @@
           "url": UriTemplate.parse(site_hal._links.traverse.href)
                             .expand({
               relative_url: param._id,
-              view: "metadata"
+              view: options._view || "view"
             }),
           "xhrFields": {
             withCredentials: true
