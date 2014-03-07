@@ -18,9 +18,14 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  var namespace = module(RSVP, jIO, URI);
+  var namespace = module(RSVP, jIO, URI, UriTemplate);
   if (namespace !== undefined) { root.ERP5Storage = namespace; }
-}(this, ["rsvp", "jio", "uri"], function (RSVP, jIO, URI) {
+}(this, [
+  "rsvp",
+  "jio",
+  "uri",
+  "uritemplate"
+], function (RSVP, jIO, URI, UriTemplate) {
   "use strict";
 
   var hasOwnProperty = Function.prototype.call.bind(
