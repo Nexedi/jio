@@ -6,6 +6,10 @@
 </head>
 <body>
   <table border="1" style="width: 100%;">
+    <tr>
+      <th style="text-align: center;" id="script_injection_space">
+      </th>
+    </tr>
     <tr style="font-style:italic;">
       <th>Storage Description</th>
     </tr>
@@ -121,6 +125,56 @@ function error(o) {
 function clearlog() {
   select("#log").innerHTML = "";
 }
+
+function injectScript(url) {
+  var script = document.createElement("script");
+  script.setAttribute("src", url);
+  document.body.appendChild(script);
+}
+function injectLastScripts() {
+  var i, scripts = JSON.parse(localStorage.getItem("jio_dashboard_injected_scripts") || "{}");
+  for (i in scripts) {
+    if (i) {
+      injectScript(i);
+    }
+  }
+}
+function saveScripts() {
+  var scripts = {};
+  [].forEach.call(document.querySelectorAll("#script_injection_space input[type=\"text\"]"), function (input) {
+    return scripts[input.value] = true;
+  });
+
+  localStorage.setItem("jio_dashboard_injected_scripts", JSON.stringify(scripts));
+  location.href = location.href;
+}
+function buildScriptFields() {
+  var space, el, i, count = 0, scripts;
+  function createInput(value) {
+    var e = document.createElement("input");
+    e.setAttribute("type", "text");
+    e.setAttribute("style", "width: 98%;");
+    if (value) { e.value = value; }
+    count += 1;
+    return e;
+  }
+  scripts = JSON.parse(localStorage.getItem("jio_dashboard_injected_scripts") || "{}");
+  space = select("#script_injection_space");
+  el = document.createElement("div");
+  el.textContent = "Additional scripts:";
+  space.appendChild(el);
+  for (i in scripts) {
+    if (i) {
+      space.appendChild(createInput(i));
+    }
+  }
+  space.appendChild(createInput());
+  el = document.createElement("input");
+  el.setAttribute("type", "button");
+  el.value = "Save scripts and refresh page";
+  el.onclick = saveScripts;
+  space.appendChild(el);
+}
 // clear log on Alt+L
 document.addEventListener("keypress", function (event) {
   if (event.altKey === true && event.charCode === 108) {
@@ -140,6 +194,9 @@ document.addEventListener("keypress", function (event) {
     <!--
 
 var my_jio = null;
+
+injectLastScripts();
+buildScriptFields();
 
 function fillMemoryDescription() {
   select("#storagedescription").value = JSON.stringify({
