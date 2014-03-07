@@ -26,6 +26,10 @@
 ], function (RSVP, jIO, URI) {
   "use strict";
 
+  var hasOwnProperty = Function.prototype.call.bind(
+    Object.prototype.hasOwnProperty
+  );
+
   function ERP5Storage(spec) {
     if (typeof spec.url !== "string" || !spec.url) {
       throw new TypeError("ERP5 'url' must be a string " +
@@ -95,7 +99,7 @@
           key;
 
         for (key in metadata) {
-          if (metadata.hasOwnProperty(key)) {
+          if (hasOwnProperty(metadata, key)) {
             // XXX Not a form dialog in this case but distant script
             data.append(key, metadata[key]);
           }
@@ -135,10 +139,10 @@
         data.append(renderer_form.form_id.key,
                     renderer_form.form_id['default']);
         for (key in metadata) {
-          if (metadata.hasOwnProperty(key)) {
+          if (hasOwnProperty(metadata, key)) {
             if (key !== "_id") {
               // Hardcoded my_ ERP5 behaviour
-              if (renderer_form.hasOwnProperty("my_" + key)) {
+              if (hasOwnProperty(renderer_form, "my_" + key)) {
                 data.append(renderer_form["my_" + key].key, metadata[key]);
               } else {
                 throw new Error("Can not save property " + key);
