@@ -286,7 +286,7 @@
   };
 
   // XXX docstring
-  ERP5Storage.onView.default.put = function (command, metadata, options) {
+  ERP5Storage.onView.default.put = function (metadata, options) {
     return onViewDefaultGet.call(this, metadata, options)
       .then(function (result) {
         /*jslint forin: true */
@@ -319,7 +319,7 @@
       });
   };
 
-  ERP5Storage.onView.default.allDocs = function (command, param, options) {
+  ERP5Storage.onView.default.allDocs = function (param, options) {
     if (typeof options.query !== "string") {
       options.query = (options.query ?
                        jIO.Query.objectToSearchText(options.query) :
