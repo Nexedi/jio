@@ -287,9 +287,23 @@
 
   // XXX docstring
   ERP5Storage.onView.default.put = function (metadata, options) {
-    return onViewDefaultGet.call(this, metadata, options)
+    return getSiteDocument(this._url).
+      then(function (site_hal) {
+        return jIO.util.ajax({
+          "type": "GET",
+          "url": UriTemplate.parse(site_hal._links.traverse.href)
+                            .expand({
+              relative_url: metadata._id,
+              view: options._view || "view"
+            }),
+          "xhrFields": {
+            withCredentials: true
+          }
+        });
+      })
       .then(function (result) {
         /*jslint forin: true */
+        result = JSON.parse(result.target.responseText);
         var put_action = result._embedded._view._actions.put,
           renderer_form = result._embedded._view,
           data = new FormData(),
