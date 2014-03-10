@@ -130,6 +130,10 @@
         read_from: 'date',
         cast_to: dateCast,
         equal_match: sameYear
+      },
+      broken: {
+        read_from: 'date',
+        cast_to: function () { throw new Error('Broken!'); }
       }
     };
 
@@ -175,6 +179,19 @@
         then(function (dl) {
           deepEqual(dl.length, 6,
                     'It should be possible to compare dates with sameYear');
+        })
+    );
+
+    promise.push(
+      jIO.QueryFactory.create({
+        type: 'simple',
+        key: keys.broken,
+        value: '2013-02-10'
+      }).
+        exec(docList()).
+        then(function (dl) {
+          deepEqual(dl.length, 0,
+                    'Constructors that throw exceptions should not break a query, but silently fail comparisons');
         })
     );
 
