@@ -26,11 +26,10 @@ zip:
 	@mkdir $(TMPDIR)/jio
 	@mkdir $(TMPDIR)/jio/storage
 	@cp jio.js                              $(TMPDIR)/jio/
-	@cp jiodate.js                          $(TMPDIR)/jio/
-	@cp jioquery.js                         $(TMPDIR)/jio/
 	@cp src/sha1.amd.js                     $(TMPDIR)/jio/
 	@cp src/sha2.amd.js                     $(TMPDIR)/jio/
 	@cp src/sha256.amd.js                   $(TMPDIR)/jio/
+	@cp src/jio.date/jiodate.js             $(TMPDIR)/jio/
 	@cp lib/rsvp/rsvp-custom.js             $(TMPDIR)/jio/
 	@cp lib/rsvp/rsvp-custom.amd.js         $(TMPDIR)/jio/
 	@cp lib/jquery/jquery.js                $(TMPDIR)/jio/
