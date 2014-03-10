@@ -77,6 +77,7 @@ function SimpleQuery(spec, key_schema) {
 }
 inherits(SimpleQuery, Query);
 
+SimpleQuery.prototype.type = "simple";
 
 var checkKey = function (key) {
   var prop;

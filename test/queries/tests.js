@@ -226,6 +226,29 @@
       jsoned,
       "parseStringToObject(\"NOT(a:=b OR c:% AND d:<2)\");"
     );
+
+    deepEqual(
+      jIO.QueryFactory.create(
+        "NOT(a:=b OR c:% AND d:<2)"
+      ),
+      jIO.QueryFactory.create(
+        jIO.QueryFactory.create(
+          "NOT(a:=b OR c:% AND d:<2)"
+        )
+      ),
+      "create(create(\"NOT(a:=b OR c:% AND d:<2)\"));"
+    );
+
+    deepEqual(
+      jIO.QueryFactory.create(
+        jIO.QueryFactory.create(
+          "NOT(a:=b OR c:% AND d:<2)"
+        )
+      ).toString(),
+      "NOT ( ( a: = \"b\" ) OR ( ( c: \"%\" ) AND ( d: < \"2\" ) ) )",
+      "create(create(\"NOT(a:=b OR c:% AND d:<2)\")).toString();"
+    );
+
   });
 
 }));
