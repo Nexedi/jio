@@ -24,7 +24,7 @@ function ComplexQuery(spec, key_schema) {
    * @default "AND"
    * @optional
    */
-  this.operator = spec.operator || "AND";
+  this.operator = spec.operator;
 
   /**
    * The sub Query list which are used to query an item.
@@ -45,6 +45,9 @@ function ComplexQuery(spec, key_schema) {
 }
 inherits(ComplexQuery, Query);
 
+ComplexQuery.prototype.operator = "AND";
+ComplexQuery.prototype.type = "complex";
+
 /**
  * #crossLink "Query/match:method"
  */
@@ -60,12 +63,20 @@ ComplexQuery.prototype.match = function (item) {
  * #crossLink "Query/toString:method"
  */
 ComplexQuery.prototype.toString = function () {
-  var str_list = ["("], this_operator = this.operator;
+  var str_list = [], this_operator = this.operator;
+  if (this.operator === "NOT") {
+    str_list.push("NOT (");
+    str_list.push(this.query_list[0].toString());
+    str_list.push(")");
+    return str_list.join(" ");
+  }
   this.query_list.forEach(function (query) {
+    str_list.push("(");
     str_list.push(query.toString());
+    str_list.push(")");
     str_list.push(this_operator);
   });
-  str_list[str_list.length - 1] = ")"; // replace last operator
+  str_list.length -= 1;
   return str_list.join(" ");
 };
 
@@ -79,7 +90,9 @@ ComplexQuery.prototype.serialized = function () {
     "query_list": []
   };
   this.query_list.forEach(function (query) {
-    s.query_list.push(query.serialized());
+    s.query_list.push(
+      typeof query.toJSON === "function" ? query.toJSON() : query
+    );
   });
   return s;
 };
