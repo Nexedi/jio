@@ -160,8 +160,7 @@
   };
 
   ////////////////////////////////////////////////////////////
-  // https://github.com/TristanCavelier/notesntools/blob/\
-  // master/javascript/emitter.js
+
   function FileReader() {
     return;
   }
