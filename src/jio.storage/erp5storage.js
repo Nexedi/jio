@@ -45,7 +45,7 @@
 
   // XXX docstring
   function formatGetSuccessAnswer(answer) {
-    if (!answer) { return answer; }
+    if (answer === undefined || answer === null) { throw answer; }
     var result;
     if (typeof answer.data === "object" && answer.data) {
       return answer;
@@ -79,11 +79,10 @@
 
   // XXX docstring
   function formatUpdateSuccessAnswer(answer) {
-    if (!answer) { return; }
+    if (answer === undefined || answer === null) { throw answer; }
     var result;
-    if (answer.target &&
-        typeof answer.target.status === "number" &&
-        typeof answer.target.statusText === "string") {
+    if (typeof answer.target === "object" && answer.target !== null &&
+        typeof answer.target.status === "number") {
       result = {
         "status": answer.target.status
       };
@@ -94,7 +93,7 @@
 
   // XXX docstring
   function formatErrorAnswer(answer) {
-    if (!answer) { return; }
+    if (answer === undefined || answer === null) { throw answer; }
     var result, dom;
     if (answer.target &&
         typeof answer.target.status === "number" &&
