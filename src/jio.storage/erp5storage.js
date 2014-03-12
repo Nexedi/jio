@@ -177,9 +177,9 @@
       RSVP.resolve().
         then(function () {
           var view = ERP5Storage.onView[options._view || this._default_view] ||
-            ERP5Storage.onView.default;
+            ERP5Storage.onView["default"];
           if (typeof view[method] !== "function") {
-            view = ERP5Storage.onView.default;
+            view = ERP5Storage.onView["default"];
           }
           return view[method].call(this, param, options);
         }.bind(this)).
@@ -224,7 +224,7 @@
   ERP5Storage.getSiteDocument = getSiteDocument;
 
   ERP5Storage.onView = {};
-  ERP5Storage.onView.default = {};
+  ERP5Storage.onView["default"] = {};
 
   // XXX docstring
   function onViewDefaultGet(param, options) {
@@ -252,10 +252,10 @@
         return {"data": result};
       });
   }
-  ERP5Storage.onView.default.get = onViewDefaultGet;
+  ERP5Storage.onView["default"].get = onViewDefaultGet;
 
   // XXX docstring
-  ERP5Storage.onView.default.post = function (metadata, options) {
+  ERP5Storage.onView["default"].post = function (metadata, options) {
     return getSiteDocument(this._url)
       .then(function (site_hal) {
         /*jslint forin: true */
@@ -285,7 +285,7 @@
   };
 
   // XXX docstring
-  ERP5Storage.onView.default.put = function (metadata, options) {
+  ERP5Storage.onView["default"].put = function (metadata, options) {
     return getSiteDocument(this._url).
       then(function (site_hal) {
         return jIO.util.ajax({
@@ -332,7 +332,7 @@
       });
   };
 
-  ERP5Storage.onView.default.allDocs = function (param, options) {
+  ERP5Storage.onView["default"].allDocs = function (param, options) {
     if (typeof options.query !== "string") {
       options.query = (options.query ?
                        jIO.Query.objectToSearchText(options.query) :
