@@ -191,16 +191,10 @@
 
   ERP5Storage.onView.taskmanager = {};
   ERP5Storage.onView.taskmanager.get = function (param, options) {
-    return getHatoas.call(this, param, options).
-      then(function (response) {
-        var result = JSON.parse(response.target.responseText);
-        result._id = param._id;
-        delete result._embedded;
-        delete result._links;
-        delete result._debug;
-        result = toJIOMetadata(result);
-        new jIO.Metadata(result).format();
-        return {"data": result};
+    return ERP5Storage.onView["default"].get.call(this, param, options).
+      then(function (answer) {
+        answer.data = toJIOMetadata(answer.data);
+        return answer;
       });
   };
 
