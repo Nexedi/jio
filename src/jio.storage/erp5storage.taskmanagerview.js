@@ -198,6 +198,47 @@
       });
   };
 
+  ERP5Storage.onView.taskmanager.post = function (metadata, options) {
+    var final_response;
+    return ERP5Storage.getSiteDocument(this._url).
+      then(function (site_hal) {
+        /*jslint forin: true */
+        var post_action = site_hal._actions.add,
+          data = new FormData();
+
+        data.append("portal_type", metadata.type);
+
+        // for (key in metadata) {
+        //   if (hasOwnProperty(metadata, key)) {
+        //     // XXX Not a form dialog in this case but distant script
+        //     data.append(key, metadata[key]);
+        //   }
+        // }
+        return jIO.util.ajax({
+          "type": post_action.method,
+          "url": post_action.href,
+          "data": data,
+          "xhrFields": {
+            withCredentials: true
+          }
+        });
+      }).
+      then(function (event) {
+        final_response = {"status": event.target.status};
+        if (!metadata._id) {
+          // XXX Really depend on server response...
+          var uri = new URI(event.target.getResponseHeader("X-Location"));
+          final_response.id = uri.segment(2);
+          metadata._id = final_response.id;
+        }
+        console.log(metadata);
+      }).
+      then(ERP5Storage.onView.taskmanager.put.bind(this, metadata, options)).
+      then(function () {
+        return final_response;
+      });
+  };
+
   ERP5Storage.onView.taskmanager.put = function (metadata, options) {
     return getHatoas.call(this, metadata, options).
       then(function (event) {
