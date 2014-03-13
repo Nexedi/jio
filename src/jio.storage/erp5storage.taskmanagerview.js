@@ -210,7 +210,8 @@
         data.append(renderer_form.form_id.key,
                     renderer_form.form_id['default']);
         metadata = toERP5Metadata(metadata);
-        if (metadata.translated_simulation_state_title !==
+        if (typeof metadata.translated_simulation_state_title === "string" &&
+            metadata.translated_simulation_state_title !==
             result.translated_simulation_state_title) {
           action = constant.task_state_to_action[
             metadata.translated_simulation_state_title
