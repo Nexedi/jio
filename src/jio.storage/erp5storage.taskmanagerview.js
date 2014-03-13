@@ -261,9 +261,9 @@
                   vars.renderer_form["my_" + key].key,
                   metadata[key]
                 );
-              } else {
-                throw new Error("Can not save property " + key);
-              }
+              } // else {
+              //   throw new Error("Can not save property " + key);
+              // }
             }
           }
         }
