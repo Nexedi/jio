@@ -21,7 +21,7 @@ Getting started
       <script ...>
 
 
-    With `RequireJS <http://requirejs.org/>`_, the main.js will look like:
+    With `RequireJS <http://requirejs.org/>`_, the main.js should look like:
 
     .. code-block:: javascript
 

@@ -244,12 +244,12 @@ A key_schema object can have three properties:
 
 * ``key_set`` - required.
 
-* ``cast_lookup`` - optional, a mapping of name: function that will
-  be used if cast_to is a string. If cast_lookup is not provided,
+* ``cast_lookup`` - optional, an object of the form ``{name: function}`` that is
+  used if cast_to is a string. If cast_lookup is not provided,
   then cast_to must be a function.
 
-* ``match_lookup`` - optional, a mapping of name: function that will
-  be used if ``equal_match`` is a string. If match_lookup is not provided,
+* ``match_lookup`` - optional, an object of the form ``{name: function}`` that is
+  used if ``equal_match`` is a string. If match_lookup is not provided,
   then ``equal_match`` must be a function.
 
 
