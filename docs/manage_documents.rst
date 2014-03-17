@@ -154,11 +154,11 @@ To retrieve jIO responses, you have to provide callbacks like this:
 Here is a list of responses returned by jIO according to methods and options:
 
 
-==================   ==============================================   ===============================================
- Option              Available for                                    Response (Callback first parameter)
-==================   ==============================================   ===============================================
-Any                  ``.post()``, ``.put()``, ``.remove()``           .. code-block:: javascript
- 
+==============================================   ==================   ===============================================
+Available for                                    Option               Response (Callback first parameter)
+==============================================   ==================   ===============================================
+``.post()``, ``.put()``, ``.remove()``           Any                  .. code-block:: javascript
+                                                  
                                                                        {
                                                                          result: 'success',
                                                                          method: 'post',
@@ -167,8 +167,8 @@ Any                  ``.post()``, ``.put()``, ``.remove()``           .. code-bl
                                                                          status: 204,
                                                                          statusText: 'No Content'
                                                                        }
-Any                  ``.putAttachment()``, ``.removeAttachment()``    .. code-block:: javascript
-
+``.putAttachment()``, ``.removeAttachment()``    Any                  .. code-block:: javascript
+                                                 
                                                                        {
                                                                          result: 'success',
                                                                          method: 'putAttachment',
@@ -178,8 +178,8 @@ Any                  ``.putAttachment()``, ``.removeAttachment()``    .. code-bl
                                                                          status: 204,
                                                                          statusText: 'No Content'
                                                                        }
-Any                  ``.get()``                                       .. code-block:: javascript
-
+``.get()``                                       Any                  .. code-block:: javascript
+                                                 
                                                                        {
                                                                          result: 'success',
                                                                          method: 'get',
@@ -190,8 +190,8 @@ Any                  ``.get()``                                       .. code-bl
                                                                            // Here, the document metadata
                                                                          }
                                                                        }
-Any                  ``.getAttachment()``                             .. code-block:: javascript
-
+``.getAttachment()``                             Any                  .. code-block:: javascript
+                                                 
                                                                        {
                                                                          result: 'success',
                                                                          method: 'getAttachment',
@@ -201,8 +201,8 @@ Any                  ``.getAttachment()``                             .. code-bl
                                                                          statusText: 'Ok',
                                                                          data: Blob // Here, the attachment content
                                                                        }
-No option            ``.allDocs()``                                   .. code-block:: javascript
-
+``.allDocs()``                                   No option            .. code-block:: javascript
+                                                 
                                                                        {
                                                                          result: 'success',
                                                                          method: 'allDocs',
@@ -218,8 +218,8 @@ No option            ``.allDocs()``                                   .. code-bl
                                                                            }]
                                                                          }
                                                                        }
-include_docs: true   ``.allDocs()``                                   .. code-block:: javascript
-
+``.allDocs()``                                   include_docs: true   .. code-block:: javascript
+                                                 
                                                                        {
                                                                          result: 'success',
                                                                          method: 'allDocs',
@@ -238,7 +238,7 @@ include_docs: true   ``.allDocs()``                                   .. code-bl
                                                                            }]
                                                                          }
                                                                        }
-==================   ==============================================   ===============================================
+==============================================   ==================   ===============================================
 
 
 
