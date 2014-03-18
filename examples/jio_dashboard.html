@@ -272,19 +272,24 @@ function printLocalStorage() {
   log("localStorage content\n" + JSON.stringify(localStorage, null, "  "));
 }
 
-function callback(err, val, begin_date) {
+function logError(begin_date, err) {
   log('time : ' + (Date.now() - begin_date));
-  if (err) {
-    return error('return :' + JSON.stringify(err, null, "  "));
-  }
+  error('return :' + JSON.stringify(err, null, "  "));
+  throw err;
+}
+
+function logAnswer(begin_date, val) {
+  log('time : ' + (Date.now() - begin_date));
   log('return : ' + JSON.stringify(val, null, "  "));
+  return val;
 }
 
 function command(method, num) {
   var begin_date = Date.now(), doc = {}, opts = {};
 
   if (!my_jio) {
-    return error('no jio set');
+    error('no jio set');
+    return;
   }
 
   doc = select('#metadata').value;
@@ -302,22 +307,20 @@ function command(method, num) {
       '\nopts: ' + JSON.stringify(opts, null, "  "));
 
   if (method === "allDocs") {
-    my_jio.allDocs(opts).then(function (answer) {
-      callback(undefined, answer, begin_date);
-    }, function (error) {
-      callback(error, undefined, begin_date);
-    });
+    return my_jio.allDocs(opts).then(
+      logAnswer.bind(null, begin_date),
+      logError.bind(null, begin_date)
+    );
   } else {
-    my_jio[method](doc, opts).then(function (answer) {
-      callback(undefined, answer, begin_date);
-    }, function (error) {
-      callback(error, undefined, begin_date);
-    });
+    return my_jio[method](doc, opts).then(
+      logAnswer.bind(null, begin_date),
+      logError.bind(null, begin_date)
+    );
   }
 }
 
 function doCommandNTimes(method) {
-  var i = -1, n = 0, lock;
+  var i = -1, n = 0, lock, promise_list = [];
   n = parseInt(select("#times").value, 10);
   lock = select("#times-lock").checked;
   if (!lock) {
@@ -327,39 +330,40 @@ function doCommandNTimes(method) {
     n = 1;
   }
   while (++i < n) {
-    command(method, i);
+    promise_list.push(command(method, i));
   }
+  return RSVP.all(promise_list);
 }
 
 function post() {
-  doCommandNTimes("post");
+  return doCommandNTimes("post");
 }
 function put() {
-  doCommandNTimes("put");
+  return doCommandNTimes("put");
 }
 function get() {
-  doCommandNTimes("get");
+  return doCommandNTimes("get");
 }
 function remove() {
-  doCommandNTimes("remove");
+  return doCommandNTimes("remove");
 }
 function putAttachment() {
-  doCommandNTimes("putAttachment");
+  return doCommandNTimes("putAttachment");
 }
 function getAttachment() {
-  doCommandNTimes("getAttachment");
+  return doCommandNTimes("getAttachment");
 }
 function removeAttachment() {
-  doCommandNTimes("removeAttachment");
+  return doCommandNTimes("removeAttachment");
 }
 function allDocs() {
-  doCommandNTimes("allDocs");
+  return doCommandNTimes("allDocs");
 }
 function check() {
-  doCommandNTimes("check");
+  return doCommandNTimes("check");
 }
 function repair() {
-  doCommandNTimes("repair");
+  return doCommandNTimes("repair");
 }
         //-->
   </script>
