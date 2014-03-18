@@ -170,6 +170,18 @@
   });
 
 
+  test("The toString() method should retain the precision", function () {
+    var d;
+
+    d = JIODate('2012-05-08');
+    strictEqual(d.toString(), '2012-05-08');
+    d = JIODate('2012-05');
+    strictEqual(d.toString(), '2012-05');
+    d = JIODate('2012');
+    strictEqual(d.toString(), '2012');
+  });
+
+
   test("Parsing of partial timestamp values with any precision", function () {
     var d;
 
@@ -207,7 +219,6 @@
     strictEqual(d.getPrecision(), 'year');
     strictEqual(d.toPrecisionString(), '2012');
     strictEqual(d.mom.toISOString(), '2012-01-01T00:00:00.000Z');
-
   });
 
 
@@ -272,7 +283,6 @@
     strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:07')), +1);
     strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:08')), 0);
     strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:09')), -1);
-
   });
 
 

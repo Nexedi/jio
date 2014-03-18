@@ -72,6 +72,7 @@
     }
 
     this.mom = null;
+    this._str = str;
 
     // http://www.w3.org/TR/NOTE-datetime
     // http://dotat.at/tmp/ISO_8601-2004_E.pdf
@@ -152,6 +153,11 @@
     }
 
     return this.mom.format(fmt);
+  };
+
+
+  JIODate.prototype.toString = function () {
+    return this._str;
   };
 
 
