@@ -24,6 +24,7 @@
         <button onclick="fillMemoryDescription()">Memory</button>
         <button onclick="fillLocalDescription()">Local</button>
         <button onclick="fillDavDescription()">WebDAV</button>
+        <button onclick="fillDavBasicDescription()">WebDAV Basic</button>
         <button onclick="fillERP5Description()">ERP5</button>
         <button onclick="fillCustomDescription()">Custom</button> -
         <button onclick="fillLastDescription()">Last</button>
@@ -217,9 +218,14 @@ function fillLocalDescription() {
 function fillDavDescription() {
   select("#storagedescription").value = JSON.stringify({
     "type": "dav",
-    "auth_type": "basic",
-    "username": "<username>",
-    "password": "<password>"
+    "url": "<url>"
+  }, null, "  ")
+}
+function fillDavBasicDescription() {
+  select("#storagedescription").value = JSON.stringify({
+    "type": "dav",
+    "url": "<url>",
+    "basic_login": "<btoa(username + ':' + password)>"
   }, null, "  ")
 }
 function fillERP5Description() {
