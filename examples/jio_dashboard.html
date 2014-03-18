@@ -280,15 +280,23 @@ function callback(err, val, begin_date) {
   log('return : ' + JSON.stringify(val, null, "  "));
 }
 
-function command(method) {
+function command(method, num) {
   var begin_date = Date.now(), doc = {}, opts = {};
 
   if (!my_jio) {
     return error('no jio set');
   }
 
-  doc = JSON.parse(select('#metadata').value);
-  opts = JSON.parse(select("#options").value);
+  doc = select('#metadata').value;
+  opts = select("#options").value;
+
+  if (num !== undefined) {
+    doc = doc.replace(/\\u0000/g, num);
+    opts = opts.replace(/\\u0000/g, num);
+  }
+
+  doc = JSON.parse(doc);
+  opts = JSON.parse(opts);
 
   log(method + '\ndoc: ' + JSON.stringify(doc, null, "  ") +
       '\nopts: ' + JSON.stringify(opts, null, "  "));
@@ -319,7 +327,7 @@ function doCommandNTimes(method) {
     n = 1;
   }
   while (++i < n) {
-    command(method);
+    command(method, i);
   }
 }
 
