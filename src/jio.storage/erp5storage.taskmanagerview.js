@@ -182,7 +182,7 @@
           "url": UriTemplate.parse(site_hal._links.traverse.href)
                             .expand({
               relative_url: param._id,
-              view: "view"
+              view: "taskmanrecord"
             }),
           "xhrFields": {
             withCredentials: true
@@ -193,6 +193,7 @@
 
   ERP5Storage.onView.taskmanager = {};
   ERP5Storage.onView.taskmanager.get = function (param, options) {
+    options._view = "taskmanrecord";
     return ERP5Storage.onView["default"].get.call(this, param, options).
       then(function (answer) {
         answer.data = toJIOMetadata(answer.data);
