@@ -126,10 +126,12 @@
     constant.mapping_erp5_to_jio[erp5_type] = jio_type;
   }
   addMetadataMapping("type", "portal_type");
-  addMetadataMapping("state", "translated_simulation_state_title");
-  addMetadataMapping("project", "source_project_title");
+  addMetadataMapping("state", "translated_simulation_state_title_text");
+  addMetadataMapping("project", "source_project_title_text");
   addMetadataMapping("start", "start_date");
   addMetadataMapping("stop", "stop_date");
+  addMetadataMapping("modified", "modification_date");
+  addMetadataMapping("date", "creation_date");
 
   // addMetadataMapping("location", "destination_title");
   // addMetadataMapping("source", "source_title");
@@ -352,7 +354,7 @@
               "portal_type",
               "title",
               "reference",
-              "translated_simulation_state_title",
+              "translated_simulation_state_title_text",
               "description"
             ],
             limit: options.limit
