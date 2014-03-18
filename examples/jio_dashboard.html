@@ -268,10 +268,6 @@ function createJIO() {
   }
 }
 
-function printLocalStorage() {
-  log("localStorage content\n" + JSON.stringify(localStorage, null, "  "));
-}
-
 function logError(begin_date, err) {
   log('time : ' + (Date.now() - begin_date));
   error('return :' + JSON.stringify(err, null, "  "));
@@ -364,6 +360,25 @@ function check() {
 }
 function repair() {
   return doCommandNTimes("repair");
+}
+
+//////////////////////////////////////////////////////////////////////
+// scripts
+
+function scriptLogLocalStorage() {
+  log("localStorage content\n" + JSON.stringify(localStorage, null, "  "));
+}
+
+function scriptRemoveAllDocs() {
+  var original_metadata_value = select('#metadata').value;
+  return command("allDocs").then(function (answer) {
+    return RSVP.all(answer.data.rows.map(function (row) {
+      select("#metadata").value = JSON.stringify({"_id": row.id});
+      return command("remove");
+    }));;
+  }).then(function () {
+    select('#metadata').value = original_metadata_value;
+  });
 }
         //-->
   </script>
