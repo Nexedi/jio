@@ -111,12 +111,11 @@
         }
       } else if (typeof answer.target.responseText === "string") {
         dom = new DOMParser().parseFromString(
-          "<stubelementjusttocreateafirstelementchildattributetodom>" +
-            answer.target.responseText +
-            "</stubelementjusttocreateafirstelementchildattributetodom>",
-          "text/xml"
+          answer.target.responseText,
+          "text/html"
         );
-        result.message = dom.firstElementChild.textContent;
+        result.message = (dom.querySelector('#master') ||
+                          dom.firstElementChild).textContent;
         if (!result.message) { delete result.message; }
       }
       throw result;
