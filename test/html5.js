@@ -106,8 +106,59 @@
 
   ////////////////////////////////////////////////////////////
 
+  function Uint8Array(one) { // , two, three
+    /*jslint bitwise: true */
+    var i;
+    if (one instanceof Uint8Array) {
+      for (i = 0; i < one.length; i += 1) {
+        this[i] = one[i] & 0xFF;
+      }
+      this.length = one.length;
+      return;
+    }
+    if (typeof one === "number" && isFinite(one)) {
+      for (i = 0; i < one; i += 1) {
+        this[i] = 0;
+      }
+      this.length = one;
+      return;
+    }
+    // if (one instanceof ArrayBuffer) {
+    //   two === byteOffset
+    //   three === length
+    // }
+    this.length = 0;
+  }
+
+  Uint8Array.prototype.set = function () {
+    throw new Error("Not implemented");
+  };
+
+  Uint8Array.prototype.subarray = function (begin, end) {
+    if (typeof begin !== "number" || !isFinite(begin) || begin < 0) {
+      begin = 0;
+    }
+    if (begin > this.length) {
+      begin = this.length;
+    }
+    if (typeof end !== "number" || !isFinite(end) || end > this.length) {
+      end = this.length;
+    }
+    if (end < begin) {
+      end = begin;
+    }
+    var i, j, uint8array = new Uint8Array(end - begin);
+    /*jslint bitwise: true */
+    for (i = begin, j = 0; i < end; i += 1, j += 1) {
+      uint8array[j] = this[i] & 0xFF;
+    }
+    return uint8array;
+  };
+
+  ////////////////////////////////////////////////////////////
+
   function Blob(parts, properties) {
-    var i, part, raw = '', type;
+    var i, j, part, raw = '', type;
     type = (properties && properties.type && properties.type.toString()) || "";
     if (!Array.isArray(parts)) {
       throw new TypeError("The method parameter is missing or invalid.");
@@ -121,6 +172,11 @@
       part = parts[i];
       if (part instanceof Blob) {
         raw += part._data;
+      } else if (part instanceof Uint8Array) {
+        /*jslint bitwise: true */
+        for (j = 0; j < part.length; j += 1) {
+          raw += String.fromCharCode(part[j] & 0xFF);
+        }
       } else if (part) {
         raw += stringToUtf8ByteString(part.toString());
       } else if (part === undefined) {
@@ -160,8 +216,7 @@
   };
 
   ////////////////////////////////////////////////////////////
-  // https://github.com/TristanCavelier/notesntools/blob/\
-  // master/javascript/emitter.js
+
   function FileReader() {
     return;
   }
@@ -263,7 +318,8 @@
       (/\bPhantomJS\b/i).test(navigator.userAgent)) {
     window.Blob = Blob;
     window.FileReader = FileReader;
-    //console.warn("Blob and FileReader have been replaced!");
+    window.Uint8Array = Uint8Array;
+    //console.warn("Blob, FileReader and Uint8Array have been replaced!");
   }
 
   if (!Function.prototype.bind) {

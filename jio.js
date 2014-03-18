@@ -4773,8 +4773,17 @@ SimpleQuery.prototype.match = function (item) {
         cast_to = this._key_schema.cast_lookup[cast_to];
       }
 
-      value = cast_to(value);
-      object_value = cast_to(object_value);
+      try {
+        value = cast_to(value);
+      } catch (e) {
+        value = undefined;
+      }
+
+      try {
+        object_value = cast_to(object_value);
+      } catch (e) {
+        object_value = undefined;
+      }
     }
   } else {
     object_value = item[key];

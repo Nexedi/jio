@@ -5,7 +5,7 @@
  */
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, regexp: true */
-/*global jIO, localStorage, setTimeout, window, define,
+/*global jIO, localStorage, setTimeout, window, define, Blob, Uint8Array,
   exports, require */
 
 /**
@@ -286,7 +286,7 @@
    * @param  {Object} options The command options
    */
   LocalStorage.prototype.getAttachment = function (command, param) {
-    var doc;
+    var doc, i, uint8array, binarystring;
     doc = this._storage.getItem(this._localpath + "/" + param._id);
     if (doc === null) {
       return command.error(
@@ -305,13 +305,22 @@
       );
     }
 
+    // Storing data twice in binarystring and in uint8array (in memory)
+    // is not a problem here because localStorage <= 5MB
+    binarystring = this._storage.getItem(
+      this._localpath + "/" + param._id + "/" + param._attachment
+    ) || "";
+    uint8array = new Uint8Array(binarystring.length);
+    for (i = 0; i < binarystring.length; i += 1) {
+      uint8array[i] = binarystring.charCodeAt(i); // mask `& 0xFF` not necessary
+    }
+    uint8array = new Blob([uint8array], {
+      "type": doc._attachments[param._attachment].content_type || ""
+    });
+
     command.success({
-      "data": this._storage.getItem(
-        this._localpath + "/" + param._id +
-          "/" + param._attachment
-      ) || "",
-      "digest": doc._attachments[param._attachment].digest,
-      "content_type": doc._attachments[param._attachment].content_type || ""
+      "data": uint8array,
+      "digest": doc._attachments[param._attachment].digest
     });
   };
 

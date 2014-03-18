@@ -34,11 +34,11 @@ See below XML and its JSON equivalent:
 +============================================+=======================================+
 | .. code-block:: xml                        | .. code-block:: javascript            |
 |                                            |                                       |
-|   <dc:title>My Title</dc:title>            |   {"title":"My Title"}                |
+|   <dc:title>My Title</dc:title>            |   {"title": "My Title"}               |
 +--------------------------------------------+---------------------------------------+
 | .. code-block:: xml                        | .. code-block:: javascript            |
 |                                            |                                       |
-|   <dc:contributor>Me</dc:contributor>      |   {"contributor":["Me", "And You"]}   |
+|   <dc:contributor>Me</dc:contributor>      |   {"contributor": ["Me", "And You"]}  |
 |   <dc:contributor>And You</dc:contributor> |                                       |
 +--------------------------------------------+---------------------------------------+
 | .. code-block:: xml                        | .. code-block:: javascript            |
@@ -63,7 +63,7 @@ Identification
   A specific jIO metadata which helps the storage to find a document
   (can be a real path name, a dc:identifier, a uuid, ...). **String Only**
 
-* **identifer**
+* **identifier**
 
   | ``{"identifier": "http://domain/jio_home_page"}``
   | ``{"identifier": "urn:ISBN:978-1-2345-6789-X"}``
@@ -73,7 +73,7 @@ Identification
   best practice is to identify the resource with a string or number
   conforming to a formal identification system. Examples of formal identification
   systems include the `Uniform Resource Identifier <http://en.wikipedia.org/wiki/URI>`_ (URI)
-  (including the `Uniform Resource Locator <http://en.wikipedia.org/wiki/URL>`_ (URL),
+  (including the `Uniform Resource Locator <http://en.wikipedia.org/wiki/URL>`_ (URL)),
   the `Digital Object Identifier <http://en.wikipedia.org/wiki/Digital_object_identifier>`_ (DOI)
   and the `International Standard Book Number <http://en.wikipedia.org/wiki/Isbn>`_ (ISBN).
 
