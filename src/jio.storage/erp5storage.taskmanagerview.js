@@ -248,62 +248,19 @@
         var result = JSON.parse(event.target.responseText),
           put_action = result._embedded._view._actions.put,
           renderer_form = result._embedded._view,
-          data = new FormData(),
-          action,
-          action_url;
+          data = new FormData();
         data.append(renderer_form.form_id.key,
                     renderer_form.form_id['default']);
         metadata = toERP5Metadata(metadata);
-        if (typeof metadata.translated_simulation_state_title === "string" &&
-            metadata.translated_simulation_state_title !==
-            result.translated_simulation_state_title) {
-          action = constant.task_state_to_action[
-            metadata.translated_simulation_state_title
-          ];
-          if (!action) {
-            throw new Error(
-              "State \"" +
-                metadata.translated_simulation_state_title +
-                "\" is not available."
-            );
-          }
-          if (result._links && Array.isArray(result._links.action_workflow)) {
-            result._links.action_workflow.some(function (workflow) {
-              if (workflow.name === action + "_action") {
-                action_url = workflow.href;
-                return true;
-              }
-              return false;
-            });
-          }
-          if (!action_url) {
-            throw new Error("Can not change state.");
-          }
-          // XXX ERP5 side need to implement this feature
-          // -> do on action_url, then return vars;
-          console.warn("NotImplemented");
-          console.log("Do on:", action_url);
-          return {
-            "put_action": put_action,
-            "renderer_form": renderer_form,
-            "data": data
-          };
-        }
-        return {
-          "put_action": put_action,
-          "renderer_form": renderer_form,
-          "data": data
-        };
-      }).then(function (vars) {
         /*jslint forin: true */
         var key;
         for (key in metadata) {
           if (hasOwnProperty(metadata, key)) {
             if (key !== "_id") {
               // Hardcoded my_ ERP5 behaviour
-              if (hasOwnProperty(vars.renderer_form, "my_" + key)) {
-                vars.data.append(
-                  vars.renderer_form["my_" + key].key,
+              if (hasOwnProperty(renderer_form, "my_" + key)) {
+                data.append(
+                  renderer_form["my_" + key].key,
                   metadata[key]
                 );
               } // else {
@@ -313,9 +270,9 @@
           }
         }
         return jIO.util.ajax({
-          "type": vars.put_action.method,
-          "url": vars.put_action.href,
-          "data": vars.data,
+          "type": put_action.method,
+          "url": put_action.href,
+          "data": data,
           "xhrFields": {
             withCredentials: true
           }
