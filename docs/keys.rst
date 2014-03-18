@@ -209,11 +209,8 @@ you can group all of them in a schema object for reuse:
       }
     },
     cast_lookup: {
-      dateType: function (obj) {
-        if (Object.prototype.toString.call(obj) === '[object Date]') {
-          return obj;
-        }
-        return new Date(obj);
+      dateType: function (str) {
+        return new Date(str);
       }
     },
     match_lookup: {
