@@ -144,7 +144,7 @@ Query.prototype.parse = function (option) {
         return sequence(query.query_list.map(function (v, i) {
           /*jslint unparam: true */
           return function () {
-            sequence([function () {
+            return sequence([function () {
               object.parsed = query.query_list[i];
               return recParse(object, option);
             }, function () {
