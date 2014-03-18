@@ -182,6 +182,36 @@
   };
 
 
+  /**
+   * Check a document
+   * Parameters are passed through to the sub storage.
+   *
+   * @method check
+   * @param  {Object} command The JIO command
+   */
+  QueryStorage.prototype.check = function (command) {
+    var args = [].slice.call(arguments, 1), substorage;
+    substorage = command.storage(this._sub_storage);
+    substorage.check.apply(substorage, args).
+      then(command.success, command.error, command.notify);
+  };
+
+
+  /**
+   * Repair a document
+   * Parameters are passed through to the sub storage.
+   *
+   * @method repair
+   * @param  {Object} command The JIO command
+   */
+  QueryStorage.prototype.repair = function (command) {
+    var args = [].slice.call(arguments, 1), substorage;
+    substorage = command.storage(this._sub_storage);
+    substorage.repair.apply(substorage, args).
+      then(command.success, command.error, command.notify);
+  };
+
+
   jIO.addStorage('query', QueryStorage);
 
 }));

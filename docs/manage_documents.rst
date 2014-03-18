@@ -124,7 +124,7 @@ see how method calls should be made with either of these storages.
 Promises
 --------
 
-Each jIO method returns a Promise object, which allows us to get responses into
+Each jIO method (with the exception of ``.createJIO()``) returns a Promise object, which allows us to get responses into
 callback parameters and to chain callbacks with other returned values.
 
 jIO uses a custom version of `RSVP.js <https://github.com/tildeio/rsvp.js>`_, adding canceler and progression features.
@@ -154,11 +154,11 @@ To retrieve jIO responses, you have to provide callbacks like this:
 Here is a list of responses returned by jIO according to methods and options:
 
 
-==================   ==============================================   ===============================================
- Option              Available for                                    Response (Callback first parameter)
-==================   ==============================================   ===============================================
-No options           ``.post()``, ``.put()``, ``.remove()``           .. code-block:: javascript
- 
+==============================================   ==================   ===============================================
+Available for                                    Option               Response (Callback first parameter)
+==============================================   ==================   ===============================================
+``.post()``, ``.put()``, ``.remove()``           Any                  .. code-block:: javascript
+                                                  
                                                                        {
                                                                          result: 'success',
                                                                          method: 'post',
@@ -167,8 +167,8 @@ No options           ``.post()``, ``.put()``, ``.remove()``           .. code-bl
                                                                          status: 204,
                                                                          statusText: 'No Content'
                                                                        }
-No options           ``.putAttachment()``, ``.removeAttachment()``    .. code-block:: javascript
-
+``.putAttachment()``, ``.removeAttachment()``    Any                  .. code-block:: javascript
+                                                 
                                                                        {
                                                                          result: 'success',
                                                                          method: 'putAttachment',
@@ -178,8 +178,8 @@ No options           ``.putAttachment()``, ``.removeAttachment()``    .. code-bl
                                                                          status: 204,
                                                                          statusText: 'No Content'
                                                                        }
-No options           ``.get()``                                       .. code-block:: javascript
-
+``.get()``                                       Any                  .. code-block:: javascript
+                                                 
                                                                        {
                                                                          result: 'success',
                                                                          method: 'get',
@@ -190,8 +190,8 @@ No options           ``.get()``                                       .. code-bl
                                                                            // Here, the document metadata
                                                                          }
                                                                        }
-No options           ``.getAttachment()``                             .. code-block:: javascript
-
+``.getAttachment()``                             Any                  .. code-block:: javascript
+                                                 
                                                                        {
                                                                          result: 'success',
                                                                          method: 'getAttachment',
@@ -201,8 +201,8 @@ No options           ``.getAttachment()``                             .. code-bl
                                                                          statusText: 'Ok',
                                                                          data: Blob // Here, the attachment content
                                                                        }
-No option            ``.allDocs()``                                   .. code-block:: javascript
-
+``.allDocs()``                                   No option            .. code-block:: javascript
+                                                 
                                                                        {
                                                                          result: 'success',
                                                                          method: 'allDocs',
@@ -218,8 +218,8 @@ No option            ``.allDocs()``                                   .. code-bl
                                                                            }]
                                                                          }
                                                                        }
-include_docs: true   ``.allDocs()``                                   .. code-block:: javascript
-
+``.allDocs()``                                   include_docs: true   .. code-block:: javascript
+                                                 
                                                                        {
                                                                          result: 'success',
                                                                          method: 'allDocs',
@@ -238,12 +238,12 @@ include_docs: true   ``.allDocs()``                                   .. code-bl
                                                                            }]
                                                                          }
                                                                        }
-==================   ==============================================   ===============================================
+==============================================   ==================   ===============================================
 
 
 
 
-In case of error, the ``errorCallback`` first parameter will look like:
+In case of error, the ``errorCallback`` first parameter looks like:
 
 .. code-block:: javascript
 

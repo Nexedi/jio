@@ -93,7 +93,7 @@ Identification
   | ``{"date": {"scheme": "DCTERMS.W3CDTF", "content": "2011-12-13"}}``
 
   A date associated with an event in the life cycle of the resource. Typically,
-  Date will be associated with the creation or availability of the resource.
+  Date is associated with the creation or availability of the resource.
   Recommended best practice for encoding the date value is defined in a profile
   of ISO 8601 `Date and Time Formats, W3C Note <http://www.w3.org/TR/NOTE-datetime>`_
   and follows the YYYY-MM-DD format.
@@ -107,7 +107,7 @@ Identification
   The nature or genre of the content of the resource. Type includes terms describing
   general categories, functions, genres, or aggregation levels for content.
   Recommended best practice is to select a value from a controlled vocabulary.
-  **The type is not a MIME Type!**
+  **This type is not a MIME Type!**
 
 
 Intellectual property
@@ -145,7 +145,7 @@ Intellectual property
   | ``{"rights": "https://www.j-io.org/documentation/jio-documentation/#copyright-and-license"}``
 
   Information about rights held in and over the resource. Typically a Rights
-  element will contain a rights management statement for the resource, or
+  element should contain a rights management statement for the resource, or
   reference a service providing such information. Rights information often
   encompasses Intellectual Property Rights (IPR), Copyright, and various Property
   Rights. If the rights element is absent, no assumptions can be made about the
@@ -159,14 +159,14 @@ Content
 
   | ``{"title": "jIO Home Page"}``
 
-  The name given to the resource. Typically, a Title will be a name by which the resource is formally known.
+  The name given to the resource. Typically, a Title is a name by which the resource is formally known.
 
 * **subject**
 
   | ``{"subject": "jIO"}``
   | ``{"subject": ["jIO", "basics"]}``
 
-  The topic of the content of the resource. Typically, a Subject will be
+  The topic of the content of the resource. Typically, a Subject is
   expressed as keywords or key phrases or classification codes that describe the
   topic of the resource. Recommended best practice is to select a value from a
   controlled vocabulary or formal classification scheme.
@@ -212,7 +212,7 @@ Content
 
   | ``{"coverage": "France"}``
 
-  The extent or scope of the content of the resource. Coverage will typically
+  The extent or scope of the content of the resource. Coverage would typically
   include spatial location (a place name or geographic co-ordinates), temporal
   period (a period label, date, or date range) or jurisdiction (such as a named
   administrative entity). Recommended best practice is to select a value from a

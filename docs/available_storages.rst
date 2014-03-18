@@ -96,7 +96,7 @@ Descriptions:
   // Digest authentication is not implemented
 
 **Be careful**: The generated description never contains a readable password, but
-for basic authentication, the password will just be base64 encoded.
+for basic authentication, the password is just base64 encoded.
 
 S3Storage
 ^^^^^^^^^
