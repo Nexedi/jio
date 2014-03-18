@@ -245,6 +245,7 @@
       .then(function (response) {
         var result = JSON.parse(response.target.responseText);
         result._id = param._id;
+        result.portal_type = result._links.type.name;
         delete result._embedded;
         delete result._links;
         delete result._debug;
