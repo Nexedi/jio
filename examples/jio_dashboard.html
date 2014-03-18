@@ -26,8 +26,8 @@
         <button onclick="fillDavDescription()">WebDAV</button>
         <button onclick="fillDavBasicDescription()">WebDAV Basic</button>
         <button onclick="fillERP5Description()">ERP5</button>
-        <button onclick="fillCustomDescription()">Custom</button> -
-        <button onclick="fillLastDescription()">Last</button>
+        <button onclick="fillCustomDescription()">Custom</button>
+        <br /><button onclick="fillLastDescription()">Last</button>
         <button onclick="loadDescription()">Load</button>
         <button onclick="saveDescription()">Save</button>
       </td>
@@ -73,10 +73,13 @@
   </table>
   <br />
   <div style="text-align: center;">
-    <button onclick="printLocalStorage()">print localStorage</button>
-    <button onclick="localStorage.clear()">clear localStorage</button><br />
-    <button onclick="clearlog()">Clear Log</button>
+    Useful functions:
+    <button onclick="scriptLogLocalStorage()">log localStorage</button>
+    <button onclick="localStorage.clear()">clear localStorage</button>
+    <button onclick="scriptRemoveAllDocs()">removeAllDocs</button>
   </div>
+  <hr />
+  <button onclick="clearlog()">Clear Log</button>
   <hr />
   <div id="log">
   </div>
@@ -231,7 +234,7 @@ function fillDavBasicDescription() {
 function fillERP5Description() {
   select("#storagedescription").value = JSON.stringify({
     "type": "erp5",
-    "url": "<url/hateoas>"
+    "url": "<url to hateoas web site>"
   }, null, "  ")
 }
 function fillCustomDescription() {
