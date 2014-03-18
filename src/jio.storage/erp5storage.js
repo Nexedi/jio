@@ -7,6 +7,7 @@
 // {
 //   type: "erp5"
 //   url: {string}
+//   default_view: {string} (optional)
 // }
 
 /*jslint indent: 2, nomen: true, unparam: true */
