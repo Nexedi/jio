@@ -245,7 +245,7 @@
   ERP5Storage.onView.taskmanager.put = function (metadata, options) {
     return getHatoas.call(this, metadata, options).
       then(function (event) {
-        var result = JSON.parse(event.target.responseText),
+        var key, result = JSON.parse(event.target.responseText),
           put_action = result._embedded._view._actions.put,
           renderer_form = result._embedded._view,
           data = new FormData();
@@ -253,7 +253,6 @@
                     renderer_form.form_id['default']);
         metadata = toERP5Metadata(metadata);
         /*jslint forin: true */
-        var key;
         for (key in metadata) {
           if (hasOwnProperty(metadata, key)) {
             if (key !== "_id") {
