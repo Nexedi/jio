@@ -6,6 +6,10 @@
 </head>
 <body>
   <table border="1" style="width: 100%;">
+    <tr>
+      <th style="text-align: center;" id="script_injection_space">
+      </th>
+    </tr>
     <tr style="font-style:italic;">
       <th>Storage Description</th>
     </tr>
@@ -20,9 +24,10 @@
         <button onclick="fillMemoryDescription()">Memory</button>
         <button onclick="fillLocalDescription()">Local</button>
         <button onclick="fillDavDescription()">WebDAV</button>
+        <button onclick="fillDavBasicDescription()">WebDAV Basic</button>
         <button onclick="fillERP5Description()">ERP5</button>
-        <button onclick="fillCustomDescription()">Custom</button> -
-        <button onclick="fillLastDescription()">Last</button>
+        <button onclick="fillCustomDescription()">Custom</button>
+        <br /><button onclick="fillLastDescription()">Last</button>
         <button onclick="loadDescription()">Load</button>
         <button onclick="saveDescription()">Save</button>
       </td>
@@ -48,7 +53,7 @@
         <button onclick="post()">post</button>
         <button onclick="put()">put</button>
         <button onclick="get()">get</button>
-        <button onclick="remove()">remove</button>
+        <button onclick="window.remove()">remove</button>
         - <button onclick="putAttachment()">putAttachment</button>
         <button onclick="getAttachment()">getAttachment</button>
         <button onclick="removeAttachment()">removeAttachment</button>
@@ -68,10 +73,13 @@
   </table>
   <br />
   <div style="text-align: center;">
-    <button onclick="printLocalStorage()">print localStorage</button>
-    <button onclick="localStorage.clear()">clear localStorage</button><br />
-    <button onclick="clearlog()">Clear Log</button>
+    Useful functions:
+    <button onclick="scriptLogLocalStorage()">log localStorage</button>
+    <button onclick="localStorage.clear()">clear localStorage</button>
+    <button onclick="scriptRemoveAllDocs()">removeAllDocs</button>
   </div>
+  <hr />
+  <button onclick="clearlog()">Clear Log</button>
   <hr />
   <div id="log">
   </div>
@@ -121,6 +129,56 @@ function error(o) {
 function clearlog() {
   select("#log").innerHTML = "";
 }
+
+function injectScript(url) {
+  var script = document.createElement("script");
+  script.setAttribute("src", url);
+  document.body.appendChild(script);
+}
+function injectLastScripts() {
+  var i, scripts = JSON.parse(localStorage.getItem("jio_dashboard_injected_scripts") || "{}");
+  for (i in scripts) {
+    if (i) {
+      injectScript(i);
+    }
+  }
+}
+function saveScripts() {
+  var scripts = {};
+  [].forEach.call(document.querySelectorAll("#script_injection_space input[type=\"text\"]"), function (input) {
+    return scripts[input.value] = true;
+  });
+
+  localStorage.setItem("jio_dashboard_injected_scripts", JSON.stringify(scripts));
+  location.href = location.href;
+}
+function buildScriptFields() {
+  var space, el, i, count = 0, scripts;
+  function createInput(value) {
+    var e = document.createElement("input");
+    e.setAttribute("type", "text");
+    e.setAttribute("style", "width: 98%;");
+    if (value) { e.value = value; }
+    count += 1;
+    return e;
+  }
+  scripts = JSON.parse(localStorage.getItem("jio_dashboard_injected_scripts") || "{}");
+  space = select("#script_injection_space");
+  el = document.createElement("div");
+  el.textContent = "Additional scripts:";
+  space.appendChild(el);
+  for (i in scripts) {
+    if (i) {
+      space.appendChild(createInput(i));
+    }
+  }
+  space.appendChild(createInput());
+  el = document.createElement("input");
+  el.setAttribute("type", "button");
+  el.value = "Save scripts and refresh page";
+  el.onclick = saveScripts;
+  space.appendChild(el);
+}
 // clear log on Alt+L
 document.addEventListener("keypress", function (event) {
   if (event.altKey === true && event.charCode === 108) {
@@ -133,6 +191,7 @@ document.addEventListener("keypress", function (event) {
   <script src="../src/sha256.amd.js"></script>
   <script src="../jio.js"></script>
   <script src="../src/jio.storage/localstorage.js"></script>
+  <script src="../src/jio.storage/davstorage.js"></script>
   <script src="http://git.erp5.org/gitweb/uritemplate-js.git/blob_plain/HEAD:/bin/uritemplate-min.js"></script>
   <script src="../lib/uri/URI.js"></script>
   <script src="../src/jio.storage/erp5storage.js"></script>
@@ -140,6 +199,9 @@ document.addEventListener("keypress", function (event) {
     <!--
 
 var my_jio = null;
+
+injectLastScripts();
+buildScriptFields();
 
 function fillMemoryDescription() {
   select("#storagedescription").value = JSON.stringify({
@@ -159,15 +221,20 @@ function fillLocalDescription() {
 function fillDavDescription() {
   select("#storagedescription").value = JSON.stringify({
     "type": "dav",
-    "auth_type": "basic",
-    "username": "<username>",
-    "password": "<password>"
+    "url": "<url>"
+  }, null, "  ")
+}
+function fillDavBasicDescription() {
+  select("#storagedescription").value = JSON.stringify({
+    "type": "dav",
+    "url": "<url>",
+    "basic_login": "<btoa(username + ':' + password)>"
   }, null, "  ")
 }
 function fillERP5Description() {
   select("#storagedescription").value = JSON.stringify({
     "type": "erp5",
-    "url": "<url/hateoas>"
+    "url": "<url to hateoas web site>"
   }, null, "  ")
 }
 function fillCustomDescription() {
@@ -204,48 +271,55 @@ function createJIO() {
   }
 }
 
-function printLocalStorage() {
-  log("localStorage content\n" + JSON.stringify(localStorage, null, "  "));
-}
-
-function callback(err, val, begin_date) {
+function logError(begin_date, err) {
   log('time : ' + (Date.now() - begin_date));
-  if (err) {
-    return error('return :' + JSON.stringify(err, null, "  "));
-  }
-  log('return : ' + JSON.stringify(val, null, "  "));
+  error('return :' + JSON.stringify(err, null, "  "));
+  throw err;
 }
 
-function command(method) {
+function logAnswer(begin_date, val) {
+  log('time : ' + (Date.now() - begin_date));
+  log('return : ' + JSON.stringify(val, null, "  "));
+  return val;
+}
+
+function command(method, num) {
   var begin_date = Date.now(), doc = {}, opts = {};
 
   if (!my_jio) {
-    return error('no jio set');
+    error('no jio set');
+    return;
   }
 
-  doc = JSON.parse(select('#metadata').value);
-  opts = JSON.parse(select("#options").value);
+  doc = select('#metadata').value;
+  opts = select("#options").value;
+
+  if (num !== undefined) {
+    doc = doc.replace(/\\u0000/g, num);
+    opts = opts.replace(/\\u0000/g, num);
+  }
+
+  doc = JSON.parse(doc);
+  opts = JSON.parse(opts);
 
   log(method + '\ndoc: ' + JSON.stringify(doc, null, "  ") +
       '\nopts: ' + JSON.stringify(opts, null, "  "));
 
   if (method === "allDocs") {
-    my_jio.allDocs(opts).then(function (answer) {
-      callback(undefined, answer, begin_date);
-    }, function (error) {
-      callback(error, undefined, begin_date);
-    });
+    return my_jio.allDocs(opts).then(
+      logAnswer.bind(null, begin_date),
+      logError.bind(null, begin_date)
+    );
   } else {
-    my_jio[method](doc, opts).then(function (answer) {
-      callback(undefined, answer, begin_date);
-    }, function (error) {
-      callback(error, undefined, begin_date);
-    });
+    return my_jio[method](doc, opts).then(
+      logAnswer.bind(null, begin_date),
+      logError.bind(null, begin_date)
+    );
   }
 }
 
 function doCommandNTimes(method) {
-  var i = -1, n = 0, lock;
+  var i = -1, n = 0, lock, promise_list = [];
   n = parseInt(select("#times").value, 10);
   lock = select("#times-lock").checked;
   if (!lock) {
@@ -255,39 +329,59 @@ function doCommandNTimes(method) {
     n = 1;
   }
   while (++i < n) {
-    command(method);
+    promise_list.push(command(method, i));
   }
+  return RSVP.all(promise_list);
 }
 
 function post() {
-  doCommandNTimes("post");
+  return doCommandNTimes("post");
 }
 function put() {
-  doCommandNTimes("put");
+  return doCommandNTimes("put");
 }
 function get() {
-  doCommandNTimes("get");
+  return doCommandNTimes("get");
 }
 function remove() {
-  doCommandNTimes("remove");
+  return doCommandNTimes("remove");
 }
 function putAttachment() {
-  doCommandNTimes("putAttachment");
+  return doCommandNTimes("putAttachment");
 }
 function getAttachment() {
-  doCommandNTimes("getAttachment");
+  return doCommandNTimes("getAttachment");
 }
 function removeAttachment() {
-  doCommandNTimes("removeAttachment");
+  return doCommandNTimes("removeAttachment");
 }
 function allDocs() {
-  doCommandNTimes("allDocs");
+  return doCommandNTimes("allDocs");
 }
 function check() {
-  doCommandNTimes("check");
+  return doCommandNTimes("check");
 }
 function repair() {
-  doCommandNTimes("repair");
+  return doCommandNTimes("repair");
+}
+
+//////////////////////////////////////////////////////////////////////
+// scripts
+
+function scriptLogLocalStorage() {
+  log("localStorage content\n" + JSON.stringify(localStorage, null, "  "));
+}
+
+function scriptRemoveAllDocs() {
+  var original_metadata_value = select('#metadata').value;
+  return command("allDocs").then(function (answer) {
+    return RSVP.all(answer.data.rows.map(function (row) {
+      select("#metadata").value = JSON.stringify({"_id": row.id});
+      return command("remove");
+    }));;
+  }).then(function () {
+    select('#metadata').value = original_metadata_value;
+  });
 }
         //-->
   </script>

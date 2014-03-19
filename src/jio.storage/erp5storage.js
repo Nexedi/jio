@@ -7,99 +7,271 @@
 // {
 //   type: "erp5"
 //   url: {string}
+//   default_view: {string} (optional)
 // }
 
 /*jslint indent: 2, nomen: true, unparam: true */
-/*global jIO, console, UriTemplate, FormData, RSVP, URI,
+/*global jIO, UriTemplate, FormData, RSVP, URI, DOMParser, Blob,
   ProgressEvent, define */
 
-(function (dependencies, module) {
+(function (root, dependencies, module) {
   "use strict";
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  module(RSVP, jIO, URI);
-}([
-  'rsvp',
-  'jio',
-  'uri'
-], function (RSVP, jIO, URI) {
+  var namespace = module(RSVP, jIO, URI, UriTemplate);
+  if (namespace !== undefined) { root.ERP5Storage = namespace; }
+}(this, [
+  "rsvp",
+  "jio",
+  "uri",
+  "uritemplate"
+], function (RSVP, jIO, URI, UriTemplate) {
   "use strict";
 
+  var hasOwnProperty = Function.prototype.call.bind(
+    Object.prototype.hasOwnProperty
+  ), constant = {};
+
+  constant.method_notification_message_obj = {
+    "get": "Getting document.",
+    "post": "Posting document.",
+    "put": "Putting document.",
+    "remove": "Removing document.",
+    "getAttachment": "Getting attachment.",
+    "putAttachment": "Putting attachment.",
+    "removeAttacment": "Removing attachment.",
+    "allDocs": "Getting document list."
+  };
+
+  // XXX docstring
+  function formatGetSuccessAnswer(answer) {
+    if (answer === undefined || answer === null) { throw answer; }
+    var result;
+    if (typeof answer.data === "object" && answer.data) {
+      return answer;
+    }
+    if (answer.target &&
+        typeof answer.target.status === "number" &&
+        typeof answer.target.statusText === "string") {
+      result = {
+        "status": answer.target.status
+      };
+      if (typeof answer.target.response === "object" &&
+          answer.target.response !== null) {
+        if (typeof answer.target.response.toJSON === "function") {
+          result.data = answer.target.response.toJSON();
+        } else {
+          result.data = answer.target.response;
+        }
+      } else if (answer.target.response instanceof Blob) {
+        return jIO.util.readBlobAsText(answer.target.response).
+          then(function (text) {
+            result.data = JSON.parse(text);
+            return result;
+          }, null, function () {
+            throw null; // dont propagate blob notifications
+          });
+      }
+      return result;
+    }
+    return answer;
+  }
+
+  // XXX docstring
+  function formatUpdateSuccessAnswer(answer) {
+    if (answer === undefined || answer === null) { throw answer; }
+    var result;
+    if (typeof answer.target === "object" && answer.target !== null &&
+        typeof answer.target.status === "number") {
+      result = {
+        "status": answer.target.status
+      };
+      return result;
+    }
+    return answer;
+  }
+
+  // XXX docstring
+  function formatErrorAnswer(answer) {
+    if (answer === undefined || answer === null) { throw answer; }
+    var result, dom;
+    if (answer.target &&
+        typeof answer.target.status === "number" &&
+        typeof answer.target.statusText === "string") {
+      // seams to be a ProgressEvent
+      result = {
+        "status": answer.target.status
+      };
+      if (typeof answer.target.response === "object" &&
+          answer.target.response !== null) {
+        if (typeof answer.target.response.toJSON === "function") {
+          result.data = answer.target.response.toJSON();
+        } else {
+          result.data = answer.target.response;
+        }
+      } else if (typeof answer.target.responseText === "string") {
+        dom = new DOMParser().parseFromString(
+          answer.target.responseText,
+          "text/html"
+        );
+        result.message = (dom.querySelector('#master') ||
+                          dom.firstElementChild).textContent;
+        if (!result.message) { delete result.message; }
+      }
+      throw result;
+    }
+    throw answer;
+  }
+
+  // XXX docstring
+  function formatNotification(method, notif) {
+    var result;
+    if (notif) {
+      if (typeof notif.loaded === "number" &&
+          typeof notif.total === "number") {
+        result = {};
+        // can be a ProgressEvent or a jIO notification
+        if (notif.method !== method) {
+          result = {
+            "method": method,
+            "loaded": notif.loaded,
+            "total": notif.total
+          };
+          if (typeof notif.percentage === "number") {
+            result.percentage = notif.percentage;
+          }
+        }
+        if (typeof notif.message === "string") {
+          result.message = notif.message;
+        } else {
+          result.message = constant.method_notification_message_obj[method];
+        }
+        return result;
+      }
+    }
+    throw null; // stop propagation
+  }
+
+  constant.formatSuccessAnswerFor = {
+    "post": formatUpdateSuccessAnswer,
+    "put": formatUpdateSuccessAnswer,
+    "get": formatGetSuccessAnswer
+  };
+
+  //////////////////////////////////////////////////////////////////////
+
+  // XXX docstring
   function ERP5Storage(spec) {
-    if (typeof spec.url !== 'string' && !spec.url) {
+    if (typeof spec.url !== "string" || !spec.url) {
       throw new TypeError("ERP5 'url' must be a string " +
                           "which contains more than one character.");
     }
     this._url = spec.url;
+    this._default_view = spec.default_view;
   }
 
-  ERP5Storage.prototype._getSiteDocument = function () {
+  // XXX docstring
+  function methodGenerator(method) {
+    return function (command, param, options) {
+      RSVP.resolve().
+        then(function () {
+          var view = ERP5Storage.onView[options._view || this._default_view] ||
+            ERP5Storage.onView["default"];
+          if (typeof view[method] !== "function") {
+            view = ERP5Storage.onView["default"];
+          }
+          return view[method].call(this, param, options);
+        }.bind(this)).
+        then(constant.formatSuccessAnswerFor[method]).
+        then(null, formatErrorAnswer, formatNotification.bind(null, method)).
+        then(command.success, command.error, command.progress);
+    };
+  }
+
+  // XXX docstring
+  [
+    "post",
+    "put",
+    "get",
+    "remove",
+    "putAttachment",
+    "getAttachment",
+    "removeAttachment",
+    "allDocs",
+    "check",
+    "repair"
+  ].forEach(function (method) {
+    ERP5Storage.prototype[method] = methodGenerator(method);
+  });
+  // XXX docstring
+  function getSiteDocument(url) {
+    if (typeof url !== "string" &&
+        typeof (this && this._url) !== "string") {
+      throw new TypeError("ERP5Storage.getSiteDocument(): Argument 1 `url` " +
+                          "or `this._url` are not of type string.");
+    }
     return jIO.util.ajax({
       "type": "GET",
-      "url": this._url,
+      "url": url || this._url,
       "xhrFields": {
         withCredentials: true
       }
-    }).then(function (response) {
-      return JSON.parse(response.target.responseText);
+    }).then(function (event) {
+      return JSON.parse(event.target.responseText);
     });
-  };
+  }
+  ERP5Storage.getSiteDocument = getSiteDocument;
 
-  ERP5Storage.prototype._get = function (param, options) {
-    return this._getSiteDocument()
-      .then(function (site_hal) {
+  // XXX docstring
+  function getDocumentAndHatoas(param, options) {
+    var this_ = this;
+    return ERP5Storage.getSiteDocument(this._url).
+      then(function (site_hal) {
+        // XXX need to get modified metadata
         return jIO.util.ajax({
           "type": "GET",
           "url": UriTemplate.parse(site_hal._links.traverse.href)
                             .expand({
               relative_url: param._id,
-              view: options._view
+              view: options._view || this_._default_view || "view"
             }),
           "xhrFields": {
             withCredentials: true
           }
         });
-      })
-      .then(function (response) {
+      });
+  }
+
+  ERP5Storage.onView = {};
+  ERP5Storage.onView["default"] = {};
+
+  // XXX docstring
+  ERP5Storage.onView["default"].get = function (param, options) {
+    return getDocumentAndHatoas.call(this, param, options).
+      then(function (response) {
         var result = JSON.parse(response.target.responseText);
         result._id = param._id;
-        return result;
+        result.portal_type = result._links.type.name;
+        delete result._embedded;
+        delete result._links;
+        delete result._debug;
+        new jIO.Metadata(result).format();
+        return {"data": result};
       });
   };
 
-  ERP5Storage.prototype.get = function (command, param, options) {
-    this._get(param, options)
-      .then(function (response) {
-        command.success({"data": response});
-      })
-      .fail(function (event) {
-        console.error(event);
-        if (event instanceof ProgressEvent) {
-          command.error(
-            event.target.status,
-            event.target.statusText,
-            "Cannot find document"
-          );
-        }
-        // XXX How to propagate the error
-        command.error(event);
-      });
-  };
-
-  ERP5Storage.prototype.post = function (command, metadata, options) {
-    return this._getSiteDocument()
+  // XXX docstring
+  ERP5Storage.onView["default"].post = function (metadata, options) {
+    var final_response;
+    return getSiteDocument(this._url)
       .then(function (site_hal) {
+        /*jslint forin: true */
         var post_action = site_hal._actions.add,
-          data = new FormData(),
-          key;
+          data = new FormData();
 
-        for (key in metadata) {
-          if (metadata.hasOwnProperty(key)) {
-            // XXX Not a form dialog in this case but distant script
-            data.append(key, metadata[key]);
-          }
-        }
+        data.append("portal_type", metadata.portal_type);
+
         return jIO.util.ajax({
           "type": post_action.method,
           "url": post_action.href,
@@ -108,26 +280,25 @@
             withCredentials: true
           }
         });
-      }).then(function (doc) {
-        // XXX Really depend on server response...
-        var uri = new URI(doc.target.getResponseHeader("X-Location"));
-        command.success({"id": uri.segment(2)});
-      }).fail(function (event) {
-        console.error(event);
-        if (event instanceof ProgressEvent) {
-          return command.error(
-            event.target.status,
-            event.target.statusText,
-            "Unable to post doc"
-          );
+      }).then(function (event) {
+        final_response = {"status": event.target.status};
+        if (!metadata._id) {
+          // XXX Really depend on server response...
+          var uri = new URI(event.target.getResponseHeader("X-Location"));
+          final_response.id = uri.segment(2);
+          metadata._id = final_response.id;
         }
-        command.error(event);
-      });
+      }).
+      then(ERP5Storage.onView["default"].put.bind(this, metadata, options)).
+      then(function () { return final_response; });
   };
 
-  ERP5Storage.prototype.put = function (command, metadata, options) {
-    return this._get(metadata, options)
-      .then(function (result) {
+  // XXX docstring
+  ERP5Storage.onView["default"].put = function (metadata, options) {
+    return getDocumentAndHatoas.call(this, metadata, options).
+      then(function (result) {
+        /*jslint forin: true */
+        result = JSON.parse(result.target.responseText);
         var put_action = result._embedded._view._actions.put,
           renderer_form = result._embedded._view,
           data = new FormData(),
@@ -135,13 +306,11 @@
         data.append(renderer_form.form_id.key,
                     renderer_form.form_id['default']);
         for (key in metadata) {
-          if (metadata.hasOwnProperty(key)) {
+          if (hasOwnProperty(metadata, key)) {
             if (key !== "_id") {
               // Hardcoded my_ ERP5 behaviour
-              if (renderer_form.hasOwnProperty("my_" + key)) {
+              if (hasOwnProperty(renderer_form, "my_" + key)) {
                 data.append(renderer_form["my_" + key].key, metadata[key]);
-              } else {
-                throw new Error("Can not save property " + key);
               }
             }
           }
@@ -154,31 +323,16 @@
             withCredentials: true
           }
         });
-      })
-      .then(function (result) {
-        command.success(result);
-      })
-      .fail(function (event) {
-        console.error(event);
-        if (event instanceof ProgressEvent) {
-          return command.error(
-            event.target.status,
-            event.target.statusText,
-            "Unable to call put"
-          );
-        }
-        command.error(event);
       });
-
   };
 
-  ERP5Storage.prototype.allDocs = function (command, param, options) {
+  ERP5Storage.onView["default"].allDocs = function (param, options) {
     if (typeof options.query !== "string") {
       options.query = (options.query ?
                        jIO.Query.objectToSearchText(options.query) :
                        undefined);
     }
-    return this._getSiteDocument()
+    return getSiteDocument(this._url)
       .then(function (site_hal) {
         return jIO.util.ajax({
           "type": "GET",
@@ -223,24 +377,13 @@
         return RSVP.all(promise_list);
       })
       .then(function (promise_list) {
-        var result = promise_list[0],
-          count = result.length;
-        command.success({"data": {"rows": result, "total_rows": count}});
-      })
-      .fail(function (event) {
-        console.error(event);
-        if (event instanceof ProgressEvent) {
-          return command.error(
-            event.target.status,
-            event.target.statusText,
-            "Cannot get list of document"
-          );
-        }
-        command.error(event);
+        var result = promise_list[0];
+        return {"data": {"rows": result, "total_rows": result.length}};
       });
-
   };
 
   jIO.addStorage("erp5", ERP5Storage);
+
+  return ERP5Storage;
 
 }));
