@@ -5,7 +5,7 @@
  */
 
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global jIO, UriTemplate, FormData, RSVP, URI, DOMParser, Blob, console,
+/*global jIO, UriTemplate, FormData, RSVP, URI, DOMParser, Blob,
   ProgressEvent, define, ERP5Storage */
 
 (function (dependencies, module) {
@@ -173,24 +173,6 @@
     return result;
   }
 
-  function getHatoas(param) {
-    return ERP5Storage.getSiteDocument(this._url).
-      then(function (site_hal) {
-        // XXX need to get modified metadata
-        return jIO.util.ajax({
-          "type": "GET",
-          "url": UriTemplate.parse(site_hal._links.traverse.href)
-                            .expand({
-              relative_url: param._id,
-              view: "taskmanrecord"
-            }),
-          "xhrFields": {
-            withCredentials: true
-          }
-        });
-      });
-  }
-
   ERP5Storage.onView.taskmanager = {};
   ERP5Storage.onView.taskmanager.get = function (param, options) {
     options._view = "taskmanrecord";
@@ -202,81 +184,15 @@
   };
 
   ERP5Storage.onView.taskmanager.post = function (metadata, options) {
-    var final_response;
-    return ERP5Storage.getSiteDocument(this._url).
-      then(function (site_hal) {
-        /*jslint forin: true */
-        var post_action = site_hal._actions.add,
-          data = new FormData();
-
-        data.append("portal_type", metadata.type);
-
-        // for (key in metadata) {
-        //   if (hasOwnProperty(metadata, key)) {
-        //     // XXX Not a form dialog in this case but distant script
-        //     data.append(key, metadata[key]);
-        //   }
-        // }
-        return jIO.util.ajax({
-          "type": post_action.method,
-          "url": post_action.href,
-          "data": data,
-          "xhrFields": {
-            withCredentials: true
-          }
-        });
-      }).
-      then(function (event) {
-        final_response = {"status": event.target.status};
-        if (!metadata._id) {
-          // XXX Really depend on server response...
-          var uri = new URI(event.target.getResponseHeader("X-Location"));
-          final_response.id = uri.segment(2);
-          metadata._id = final_response.id;
-        }
-        console.log(metadata);
-      }).
-      then(ERP5Storage.onView.taskmanager.put.bind(this, metadata, options)).
-      then(function () {
-        return final_response;
-      });
+    metadata = toERP5Metadata(metadata);
+    options._view = "taskmanrecord";
+    return ERP5Storage.onView["default"].post.call(this, metadata, options);
   };
 
   ERP5Storage.onView.taskmanager.put = function (metadata, options) {
-    return getHatoas.call(this, metadata, options).
-      then(function (event) {
-        var key, result = JSON.parse(event.target.responseText),
-          put_action = result._embedded._view._actions.put,
-          renderer_form = result._embedded._view,
-          data = new FormData();
-        data.append(renderer_form.form_id.key,
-                    renderer_form.form_id['default']);
-        metadata = toERP5Metadata(metadata);
-        /*jslint forin: true */
-        for (key in metadata) {
-          if (hasOwnProperty(metadata, key)) {
-            if (key !== "_id") {
-              // Hardcoded my_ ERP5 behaviour
-              if (hasOwnProperty(renderer_form, "my_" + key)) {
-                data.append(
-                  renderer_form["my_" + key].key,
-                  metadata[key]
-                );
-              } // else {
-              //   throw new Error("Can not save property " + key);
-              // }
-            }
-          }
-        }
-        return jIO.util.ajax({
-          "type": put_action.method,
-          "url": put_action.href,
-          "data": data,
-          "xhrFields": {
-            withCredentials: true
-          }
-        });
-      });
+    metadata = toERP5Metadata(metadata);
+    options._view = "taskmanrecord";
+    return ERP5Storage.onView["default"].put.call(this, metadata, options);
   };
 
   ERP5Storage.onView.taskmanager.allDocs = function (param, options) {

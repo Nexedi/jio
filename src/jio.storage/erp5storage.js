@@ -223,26 +223,33 @@
   }
   ERP5Storage.getSiteDocument = getSiteDocument;
 
-  ERP5Storage.onView = {};
-  ERP5Storage.onView["default"] = {};
-
   // XXX docstring
-  function onViewDefaultGet(param, options) {
-    return getSiteDocument(this._url).
+  function getDocumentAndHatoas(param, options) {
+    var this_ = this;
+    return ERP5Storage.getSiteDocument(this._url).
       then(function (site_hal) {
+        // XXX need to get modified metadata
         return jIO.util.ajax({
           "type": "GET",
           "url": UriTemplate.parse(site_hal._links.traverse.href)
                             .expand({
               relative_url: param._id,
-              view: options._view || "view"
+              view: options._view || this_._default_view || "view"
             }),
           "xhrFields": {
             withCredentials: true
           }
         });
-      })
-      .then(function (response) {
+      });
+  }
+
+  ERP5Storage.onView = {};
+  ERP5Storage.onView["default"] = {};
+
+  // XXX docstring
+  ERP5Storage.onView["default"].get = function (param, options) {
+    return getDocumentAndHatoas.call(this, param, options).
+      then(function (response) {
         var result = JSON.parse(response.target.responseText);
         result._id = param._id;
         result.portal_type = result._links.type.name;
@@ -252,24 +259,19 @@
         new jIO.Metadata(result).format();
         return {"data": result};
       });
-  }
-  ERP5Storage.onView["default"].get = onViewDefaultGet;
+  };
 
   // XXX docstring
   ERP5Storage.onView["default"].post = function (metadata, options) {
+    var final_response;
     return getSiteDocument(this._url)
       .then(function (site_hal) {
         /*jslint forin: true */
         var post_action = site_hal._actions.add,
-          data = new FormData(),
-          key;
+          data = new FormData();
 
-        for (key in metadata) {
-          if (hasOwnProperty(metadata, key)) {
-            // XXX Not a form dialog in this case but distant script
-            data.append(key, metadata[key]);
-          }
-        }
+        data.append("portal_type", metadata.portal_type);
+
         return jIO.util.ajax({
           "type": post_action.method,
           "url": post_action.href,
@@ -278,30 +280,23 @@
             withCredentials: true
           }
         });
-      }).then(function (doc) {
-        // XXX Really depend on server response...
-        var uri = new URI(doc.target.getResponseHeader("X-Location"));
-        return {"id": uri.segment(2)};
-      });
+      }).then(function (event) {
+        final_response = {"status": event.target.status};
+        if (!metadata._id) {
+          // XXX Really depend on server response...
+          var uri = new URI(event.target.getResponseHeader("X-Location"));
+          final_response.id = uri.segment(2);
+          metadata._id = final_response.id;
+        }
+      }).
+      then(ERP5Storage.onView["default"].put.bind(this, metadata, options)).
+      then(function () { return final_response; });
   };
 
   // XXX docstring
   ERP5Storage.onView["default"].put = function (metadata, options) {
-    return getSiteDocument(this._url).
-      then(function (site_hal) {
-        return jIO.util.ajax({
-          "type": "GET",
-          "url": UriTemplate.parse(site_hal._links.traverse.href)
-                            .expand({
-              relative_url: metadata._id,
-              view: options._view || "view"
-            }),
-          "xhrFields": {
-            withCredentials: true
-          }
-        });
-      })
-      .then(function (result) {
+    return getDocumentAndHatoas.call(this, metadata, options).
+      then(function (result) {
         /*jslint forin: true */
         result = JSON.parse(result.target.responseText);
         var put_action = result._embedded._view._actions.put,
@@ -316,8 +311,6 @@
               // Hardcoded my_ ERP5 behaviour
               if (hasOwnProperty(renderer_form, "my_" + key)) {
                 data.append(renderer_form["my_" + key].key, metadata[key]);
-              } else {
-                throw new Error("Can not save property " + key);
               }
             }
           }
