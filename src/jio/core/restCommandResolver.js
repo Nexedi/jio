@@ -21,8 +21,8 @@ function restCommandResolver(param, args) {
   args = Array.prototype.slice.call(args);
   arg = args.shift();
 
-  // priority 3 - never change
-  current_priority = priority[3];
+  // priority 4 - never change
+  current_priority = priority[4];
   if (param.kwargs._id) {
     current_priority.id = param.kwargs._id;
   }
