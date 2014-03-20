@@ -377,10 +377,10 @@ function scriptRemoveAllDocs() {
   return command("allDocs").then(function (answer) {
     return RSVP.all(answer.data.rows.map(function (row) {
       select("#metadata").value = JSON.stringify({"_id": row.id});
-      return command("remove");
-    }));;
-  }).then(function () {
-    select('#metadata').value = original_metadata_value;
+      var ret = command("remove");
+      select('#metadata').value = original_metadata_value;
+      return ret;
+    }));
   });
 }
         //-->
