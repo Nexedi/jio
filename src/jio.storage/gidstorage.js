@@ -585,6 +585,41 @@
         err.message = "Cannot get all documents";
         return command.error(err);
       });
+
+    };
+
+    that.check = function (command, param, options) {
+      return that.repair(command, param, options, "check");
+    };
+
+    that.repair = function (command, param, options, action) {
+      var gid_object, jio_query, sub_storage;
+      if (typeof param._id !== "string" || !param._id) {
+        return command.error("bad_request", "document id must be provided");
+      }
+      if (action === undefined) {
+        action = "repair";
+      }
+      gid_object = gidParse(param._id, priv.constraints);
+      if (gid_object === undefined) {
+        return command.error(
+          "bad_request",
+          "metadata should respect constraints",
+          "Cannot " + action + " document"
+        );
+      }
+      jio_query = gidToJIOQuery(gid_object);
+      sub_storage = command.storage(priv.sub_storage);
+      sub_storage.allDocs({
+        "query": jio_query
+      }).then(function (response) {
+        response = response.data;
+        if (response.total_rows === 0) {
+          // document not found, nothing to repair or check
+          return command.success();
+        }
+        return sub_storage[action]({"_id": response.rows[0].id}, options);
+      }).then(command.success, command.error);
     };
   }
 
