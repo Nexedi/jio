@@ -41,8 +41,8 @@
 
   var Promise = require('rsvp').Promise,
     all = require('rsvp').all,
-    dictUpdate = require('jio').util.dictUpdate,
-    addStorageFunction = require('jio').addStorage;
+    addStorageFunction = require('jio').addStorage,
+    uniqueJSONStringify = require('jio').util.uniqueJSONStringify;
 
   /**
    * Test if the a value is a date
@@ -436,70 +436,98 @@
   ReplicateStorage.prototype.check = function (command, param, option) {
     var promise_list = [], index, length = this._storage_list.length;
     for (index = 0; index < length; index += 1) {
-      promise_list[index] = success(
-        command.storage(this._storage_list[index]).check(param, option)
-      );
+      promise_list[index] =
+        command.storage(this._storage_list[index]).check(param, option);
     }
-    sequence([function () {
-      return all(promise_list);
-    }, [command.success, command.error]]);
+    return all(promise_list).
+      then(function () { return; }).
+      then(command.success, command.error, command.notify);
   };
 
-  ReplicateStorage.prototype.repair = function (command, param) {
-    var promise_list = [], index, that, length = this._storage_list.length;
-    that = this;
+  ReplicateStorage.prototype.repair = function (command, param, option) {
+    var storage_list = this._storage_list, length = storage_list.length;
+
     if (typeof param._id !== 'string' || !param._id) {
-      command.success();
+      command.error("bad_request");
       return;
     }
-    for (index = 0; index < length; index += 1) {
-      promise_list[index] =
-        success(command.storage(this._storage_list[index]).get(param));
-    }
-    sequence([function () {
+
+    storage_list = storage_list.map(function (description) {
+      return command.storage(description);
+    });
+
+    function repairSubStorages() {
+      var promise_list = [], i;
+      for (i = 0; i < length; i += 1) {
+        promise_list[i] = storage_list[i].repair(param, option);
+      }
       return all(promise_list);
-    }, function (answers) {
-      var i, list = [], winner = null;
+    }
+
+    function getSubStoragesDocument() {
+      var promise_list = [], i;
+      for (i = 0; i < length; i += 1) {
+        promise_list[i] = success(storage_list[i].get(param));
+      }
+      return all(promise_list);
+    }
+
+    function synchronizeDocument(answers) {
+      var i, tmp, winner, winner_str, promise_list = [],
+        metadata_dict = {}, not_found_dict = {}, modified_list = [];
       for (i = 0; i < answers.length; i += 1) {
-        if (answers[i].result === "success") {
-          if (isDate(answers[i].data.modified)) {
-            list[i] = answers[i].data;
-            if (winner === null ||
-                new Date(winner.modified) <
-                new Date(answers[i].data.modified)) {
-              winner = answers[i].data;
-            }
-          }
-        } else if (answers[i].status === 404) {
-          list[i] = 0;
+        if (answers[i].result !== "success") {
+          not_found_dict[i] = true;
+        } else {
+          metadata_dict[i] = answers[i].data;
+          tmp = metadata_dict[i].modified;
+          tmp = new Date(tmp === undefined ? NaN : tmp);
+          tmp.index = i;
+          modified_list.push(tmp);
         }
       }
-      for (i = 0; i < list.length; i += 1) {
-        if (list[i] && new Date(list[i].modified) < new Date(winner.modified)) {
-          list[i] = success(command.storage(that._storage_list[i]).put(winner));
-        } else if (list[i] === 0) {
-          list[i] = dictUpdate({}, winner);
-          delete list[i]._id;
-          list[i] =
-            success(command.storage(that._storage_list[i]).post(list[i]));
+      modified_list.sort();
+
+      if (modified_list.length === 0) {
+        // do nothing because no document was found
+        return [];
+      }
+
+      tmp = modified_list.pop();
+      winner = metadata_dict[tmp.index];
+      winner_str = uniqueJSONStringify(winner);
+      tmp = tmp.index;
+
+      // if no document has valid modified metadata
+      // just take the first one and replicate to the other one
+
+      for (i = 0; i < length; i += 1) {
+        if (i !== tmp && winner_str !== uniqueJSONStringify(metadata_dict[i])) {
+          // console.log("Synchronizing document `" + winner_str +
+          //             "` into storage number " + i + " by doing a `" +
+          //             (not_found_dict[i] ? "post" : "put") + "`. ");
+          promise_list.push(
+            storage_list[i][not_found_dict[i] ? "post" : "put"](winner)
+          );
         }
       }
-      list = list.reduce(function (previous, current) {
-        if (current) {
-          previous.push(current);
-        }
-        return previous;
-      }, []);
-      return all(list);
-    }, function (answers) {
+      return all(promise_list);
+    }
+
+    function checkAnswers(answers) {
       var i;
       for (i = 0; i < answers.length; i += 1) {
         if (answers[i].result !== "success") {
-          return command.error(409);
+          throw answers[i];
         }
       }
-      command.success();
-    }]);
+    }
+
+    return repairSubStorages().
+      then(getSubStoragesDocument).
+      then(synchronizeDocument).
+      then(checkAnswers).
+      then(command.success, command.error, command.notify);
   };
 
   addStorageFunction('replicate', ReplicateStorage);
