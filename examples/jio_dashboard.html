@@ -77,6 +77,7 @@
     <button onclick="scriptLogLocalStorage()">log localStorage</button>
     <button onclick="localStorage.clear()">clear localStorage</button>
     <button onclick="scriptRemoveAllDocs()">removeAllDocs</button>
+    <button onclick="scriptRepairAllDocs()">repairAllDocs</button>
   </div>
   <hr />
   <button onclick="clearlog()">Clear Log</button>
@@ -378,6 +379,18 @@ function scriptRemoveAllDocs() {
     return RSVP.all(answer.data.rows.map(function (row) {
       select("#metadata").value = JSON.stringify({"_id": row.id});
       var ret = command("remove");
+      select('#metadata').value = original_metadata_value;
+      return ret;
+    }));
+  });
+}
+
+function scriptRepairAllDocs() {
+  var original_metadata_value = select('#metadata').value;
+  return command("allDocs").then(function (answer) {
+    return RSVP.all(answer.data.rows.map(function (row) {
+      select("#metadata").value = JSON.stringify({"_id": row.id});
+      var ret = command("repair");
       select('#metadata').value = original_metadata_value;
       return ret;
     }));
