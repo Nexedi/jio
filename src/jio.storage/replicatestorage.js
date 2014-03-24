@@ -51,10 +51,7 @@
    * @return {Boolean} true if success, else false
    */
   function isDate(date) {
-    if (!isNaN((new Date(date === null ? undefined : date)).getTime())) {
-      return true;
-    }
-    return false;
+    return !isNaN((new Date(date === null ? undefined : date)).getTime());
   }
 
   /**
