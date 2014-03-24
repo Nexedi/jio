@@ -113,46 +113,6 @@
   exports.createDescription = createDescription;
 
   /**
-   * sequence(thens): Promise
-   *
-   * Executes a sequence of *then* callbacks. It acts like
-   * `smth().then(callback).then(callback)...`. The first callback is called
-   * with no parameter.
-   *
-   * Elements of `thens` array can be a function or an array contaning at most
-   * three *then* callbacks: *onFulfilled*, *onRejected*, *onNotified*.
-   *
-   * When `cancel()` is executed, each then promises are cancelled at the same
-   * time.
-   *
-   * @param  {Array} thens An array of *then* callbacks
-   * @return {Promise} A new promise
-   */
-  function sequence(thens) {
-    var promises = [];
-    return new RSVP.Promise(function (resolve, reject, notify) {
-      var i;
-      promises[0] = new RSVP.Promise(function (resolve) {
-        resolve();
-      });
-      for (i = 0; i < thens.length; i += 1) {
-        if (Array.isArray(thens[i])) {
-          promises[i + 1] = promises[i].
-            then(thens[i][0], thens[i][1], thens[i][2]);
-        } else {
-          promises[i + 1] = promises[i].then(thens[i]);
-        }
-      }
-      promises[i].then(resolve, reject, notify);
-    }, function () {
-      var i;
-      for (i = 0; i < promises.length; i += 1) {
-        promises[i].cancel();
-      }
-    });
-  }
-
-  /**
    * Changes spaces to %20, / to %2f, % to %25 and ? to %3f
    *
    * @param  {String} name The name to secure
@@ -960,19 +920,17 @@
    */
   DavStorage.prototype.genericRepair = function (command, param, repair) {
 
-    var that = this, repair_promise, command_promise;
+    var that = this, repair_promise;
 
     // returns a jio object
     function getAllFile() {
-      return sequence([function () {
-        return ajax[that._auth_type](
-          "PROPFIND",
-          "text",
-          that._url + '/',
-          null,
-          that._login
-        );
-      }, [function (e) { // on success
+      return ajax[that._auth_type](
+        "PROPFIND",
+        "text",
+        that._url + '/',
+        null,
+        that._login
+      ).then(function (e) { // on success
         var i, length, rows = new DOMParser().parseFromString(
           e.target.responseText,
           "text/xml"
@@ -1000,15 +958,13 @@
         // then propagate
         throw {"status": e.target.status,
                "reason": e.target.statusText};
-      }]]);
+      });
     }
 
     // returns jio object
     function repairOne(shared, repair) {
       var modified = false, document_id = shared._id;
-      return sequence([function () {
-        return that._get({"_id": document_id});
-      }, [function (event) {
+      return that._get({"_id": document_id}).then(function (event) {
         var attachment_id, metadata = event.target.response;
 
         // metadata should be an object
@@ -1128,21 +1084,19 @@
         // then propagate
         throw {"status": event.target.status,
                "reason": event.target.statustext};
-      }], function (dict) {
+      }).then(function (dict) {
         if (dict.modified) {
           return this._put(dict.metadata);
         }
         return null;
-      }, function () {
+      }).then(function () {
         return "no_content";
-      }]);
+      });
     }
 
     // returns jio object
     function repairAll(shared, repair) {
-      return sequence([function () {
-        return getAllFile();
-      }, function (answer) {
+      return getAllFile().then(function (answer) {
         var index, data = answer.data, length = data.length, id_list,
           document_list = [];
         for (index = 0; index < length; index += 1) {
@@ -1167,16 +1121,14 @@
           document_list[index] = repairOne(shared, repair);
         }
 
-        function fileRemover(name) {
-          return function () {
-            return ajax[that._auth_type](
-              "DELETE",
-              null,
-              that._url + '/' + name + "?_=" + Date.now(),
-              null,
-              that._login
-            );
-          };
+        function removeFile(name) {
+          return ajax[that._auth_type](
+            "DELETE",
+            null,
+            that._url + '/' + name + "?_=" + Date.now(),
+            null,
+            that._login
+          );
         }
 
         function errorEventConverter(event) {
@@ -1186,16 +1138,16 @@
 
         length = shared.unknown_file_list.length;
         for (index = 0; index < length; index += 1) {
-          document_list.push(sequence([
-            fileRemover(shared.unknown_file_list[index]),
-            [null, errorEventConverter]
-          ]));
+          document_list.push(
+            removeFile(shared.unknown_file_list[index]).
+              then(null, errorEventConverter)
+          );
         }
 
         return RSVP.all(document_list);
-      }, function () {
+      }).then(function () {
         return "no_content";
-      }]);
+      });
     }
 
     if (typeof param._id === 'string') {
@@ -1207,13 +1159,8 @@
       repair_promise = repairAll(param, repair);
     }
 
-    command_promise = sequence([function () {
-      return repair_promise;
-    }, [command.success, command.error]]);
+    repair_promise.then(command.success, command.error, command.notify);
 
-    command.oncancel = function () {
-      command_promise.cancel();
-    };
   };
 
   jIO.addStorage('dav', DavStorage);
