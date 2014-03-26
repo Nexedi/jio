@@ -619,7 +619,7 @@
           return command.success();
         }
         return sub_storage[action]({"_id": response.rows[0].id}, options);
-      }).then(command.success, command.error);
+      }).then(command.success, command.error, command.notify);
     };
   }
 
