@@ -234,6 +234,9 @@
               "title",
               "reference",
               "translated_simulation_state_title_text",
+              "start_date",
+              "stop_date",
+              "source_project_title_text",
               "description",
               "modification_date",
               "creation_date"
