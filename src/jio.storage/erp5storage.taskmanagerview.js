@@ -3,6 +3,12 @@
  * Released under the LGPL license.
  * http://www.gnu.org/licenses/lgpl.html
  */
+// JIO ERP5 Storage Description :
+// {
+//   type: "erp5"
+//   url: {string}
+//   default_view: "taskmanager"
+// }
 
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global jIO, UriTemplate, FormData, RSVP, URI, DOMParser, Blob,
