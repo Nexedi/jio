@@ -633,7 +633,6 @@
                 "title": "two"
               },
               "id": "b",
-              "key": "b",
               "value": {}
             },
             {
@@ -643,7 +642,6 @@
                 "title": "two"
               },
               "id": "d",
-              "key": "d",
               "value": {}
             }
           ],
@@ -670,12 +668,10 @@
           "rows": [
             {
               "id": "a",
-              "key": "a",
               "value": {}
             },
             {
               "id": "c",
-              "key": "c",
               "value": {}
             }
           ],
@@ -716,7 +712,6 @@
                 "title": "one"
               },
               "id": "a",
-              "key": "a",
               "value": {}
             },
             {
@@ -726,7 +721,6 @@
                 "title": "one"
               },
               "id": "c",
-              "key": "c",
               "value": {}
             }
           ],
