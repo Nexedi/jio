@@ -288,13 +288,6 @@
       null,
       this._login
     );
-    // .then(function (v) { // for sinon js compatibility
-    //   return {"target": {
-    //     "status": v.target.status,
-    //     "statusText": v.target.statusText,
-    //     "response": new Blob([v.target.responseText])
-    //   }};
-    // });
   };
 
   DavStorage.prototype._remove = function (param) {
