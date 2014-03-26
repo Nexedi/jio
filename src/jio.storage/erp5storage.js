@@ -326,6 +326,10 @@
       });
   };
 
+  ERP5Storage.onView["default"].remove = function () {
+    return;
+  };
+
   ERP5Storage.onView["default"].allDocs = function (param, options) {
     if (typeof options.query !== "string") {
       options.query = (options.query ?
@@ -380,6 +384,14 @@
         var result = promise_list[0];
         return {"data": {"rows": result, "total_rows": result.length}};
       });
+  };
+
+  ERP5Storage.onView["default"].check = function () {
+    return;
+  };
+
+  ERP5Storage.onView["default"].repair = function () {
+    return;
   };
 
   jIO.addStorage("erp5", ERP5Storage);
