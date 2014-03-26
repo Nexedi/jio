@@ -228,7 +228,9 @@
               "title",
               "reference",
               "translated_simulation_state_title_text",
-              "description"
+              "description",
+              "modification_date",
+              "creation_date"
             ],
             limit: options.limit
           }),
