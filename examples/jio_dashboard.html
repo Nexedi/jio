@@ -319,8 +319,9 @@ function command(method, num) {
   }
 }
 
-function doCommandNTimes(method) {
-  var i = -1, n = 0, lock, promise_list = [];
+function doCommandNTimes(method, i) {
+  var n = 0, lock, promise_list = [];
+  i = i > 0 ? i : 0;
   n = parseInt(select("#times").value, 10);
   lock = select("#times-lock").checked;
   if (!lock) {
@@ -329,10 +330,13 @@ function doCommandNTimes(method) {
   if (!isFinite(n)) {
     n = 1;
   }
-  while (++i < n) {
-    promise_list.push(command(method, i));
-  }
-  return RSVP.all(promise_list);
+  return command(method, ++i).
+    then(function (answer) {
+      if (i < n) {
+        return doCommandNTimes(method, i);
+      }
+      return answer;
+    });
 }
 
 function post() {
@@ -376,24 +380,24 @@ function scriptLogLocalStorage() {
 function scriptRemoveAllDocs() {
   var original_metadata_value = select('#metadata').value;
   return command("allDocs").then(function (answer) {
-    return RSVP.all(answer.data.rows.map(function (row) {
+    return jIO.util.forEach(answer.data.rows, function (row) {
       select("#metadata").value = JSON.stringify({"_id": row.id});
       var ret = command("remove");
       select('#metadata').value = original_metadata_value;
       return ret;
-    }));
+    });
   });
 }
 
 function scriptRepairAllDocs() {
   var original_metadata_value = select('#metadata').value;
   return command("allDocs").then(function (answer) {
-    return RSVP.all(answer.data.rows.map(function (row) {
+    return jIO.util.forEach(answer.data.rows, function (row) {
       select("#metadata").value = JSON.stringify({"_id": row.id});
       var ret = command("repair");
-      select('#metadata').value = original_metadata_value;
+      select("#metadata").value = original_metadata_value;
       return ret;
-    }));
+    });
   });
 }
         //-->
