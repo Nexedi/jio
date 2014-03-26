@@ -144,41 +144,63 @@
       // remove them later if they were not required.
       include_docs = (options.include_docs || options.query) ? true : false;
 
-    substorage.allDocs({include_docs: include_docs}).
-      then(function (response) {
+    substorage.allDocs({
+      "include_docs": include_docs
+    }).then(function (response) {
 
-        if (options.query) {
-          var docs = response.data.rows.map(function (row) {
-            return row.doc;
-          }), rows_map = {};
+      var data_rows = response.data.rows, docs = {}, row, i, l;
 
-          // build a mapping to avoid slowness
-          response.data.rows.forEach(function (row) {
-            rows_map[row.id] = row;
-          });
+      if (!include_docs) {
+        return response;
+      }
 
-          return jIO.QueryFactory.create(options.query,
-                                         that._key_schema).
-            exec(docs, options).
-            then(function (filtered_docs) {
-              // reconstruct filtered rows, preserving the order from docs
-              var rows = filtered_docs.map(function (doc) {
-                var row = rows_map[doc._id];
-                // remove docs if not needed in the original call
-                if (!options.include_docs) {
-                  delete row.doc;
-                }
-                return row;
-              });
-              response.data.rows = rows;
-              response.data.total_rows = rows.length;
-              return response;
-            });
+      if (options.include_docs) {
+        for (i = 0, l = data_rows.length; i < l; i += 1) {
+          row = data_rows[i];
+          docs[row.id] = JSON.parse(JSON.stringify(row.doc));
+          row.doc._id = row.id;
+          data_rows[i] = row.doc;
         }
-        return RSVP.resolve(response);
+      } else {
+        for (i = 0, l = data_rows.length; i < l; i += 1) {
+          row = data_rows[i];
+          row.doc._id = row.id;
+          data_rows[i] = row.doc;
+        }
+      }
 
-      }).
-      then(command.success, command.error, command.notify);
+      if (options.select_list) {
+        options.select_list.push("_id");
+      }
+
+      return jIO.QueryFactory.create(options.query || "", that._key_schema).
+        exec(data_rows, options).
+        then(function (filtered_docs) {
+          // reconstruct filtered rows, preserving the order from docs
+          if (options.include_docs) {
+            for (i = 0, l = filtered_docs.length; i < l; i += 1) {
+              filtered_docs[i] = {
+                "id": filtered_docs[i]._id,
+                "doc": docs[filtered_docs[i]._id],
+                "value": options.select_list ? filtered_docs[i] : {}
+              };
+              delete filtered_docs[i].value._id;
+            }
+          } else {
+            for (i = 0, l = filtered_docs.length; i < l; i += 1) {
+              filtered_docs[i] = {
+                "id": filtered_docs[i]._id,
+                "value": options.select_list ? filtered_docs[i] : {}
+              };
+              delete filtered_docs[i].value._id;
+            }
+          }
+          response.data.rows = filtered_docs;
+          response.data.total_rows = filtered_docs.length;
+          return response;
+        });
+
+    }).then(command.success, command.error, command.notify);
   };
 
 
