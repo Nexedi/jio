@@ -69,8 +69,6 @@
           then(function (text) {
             result.data = JSON.parse(text);
             return result;
-          }, null, function () {
-            throw null; // dont propagate blob notifications
           });
       }
       return result;
