@@ -168,16 +168,14 @@ exports.util.dictFilter = dictFilter;
  * @return {Object} The type dict
  */
 function arrayValuesToTypeDict(array) {
-  var i, type, types = {};
-  for (i = 0; i < array.length; i += 1) {
-    type = Array.isArray(array[i]) ? 'array' : typeof array[i];
-    if (!types[type]) {
-      types[type] = [array[i]];
-    } else {
-      types[type][types[type].length] = array[i];
-    }
+  var i, l, type_object = {}, type, v;
+  for (i = 0, l = array.length; i < l; i += 1) {
+    v = array[i];
+    type = Array.isArray(v) ? "array" : typeof v;
+    /*jslint ass: true */
+    (type_object[type] = type_object[type] || []).push(v);
   }
-  return types;
+  return type_object;
 }
 
 /**
