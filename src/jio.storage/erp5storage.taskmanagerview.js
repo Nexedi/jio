@@ -146,16 +146,18 @@
   // addMetadataMapping("category", "category_list");
 
   // XXX docstring
-  function toERP5Metadata(jio_type) {
+  function toERP5Metadata(jio_type, additional) {
     /*jslint forin: true */
     if (typeof jio_type === "string") {
-      return constant.mapping_jio_to_erp5[jio_type] || jio_type;
+      additional = additional || {};
+      return additional[jio_type] ||
+        constant.mapping_jio_to_erp5[jio_type] || jio_type;
     }
     var result = {}, key;
     if (typeof jio_type === "object" && jio_type) {
       for (key in jio_type) {
         if (hasOwnProperty(jio_type, key)) {
-          result[toERP5Metadata(key)] = jio_type[key];
+          result[toERP5Metadata(key, additional)] = jio_type[key];
         }
       }
     }
@@ -163,16 +165,18 @@
   }
 
   // XXX docstring
-  function toJIOMetadata(erp5_type) {
+  function toJIOMetadata(erp5_type, additional) {
     /*jslint forin: true */
     if (typeof erp5_type === "string") {
-      return constant.mapping_erp5_to_jio[erp5_type] || erp5_type;
+      additional = additional || {};
+      return additional[erp5_type] ||
+        constant.mapping_erp5_to_jio[erp5_type] || erp5_type;
     }
     var result = {}, key;
     if (typeof erp5_type === "object" && erp5_type) {
       for (key in erp5_type) {
         if (hasOwnProperty(erp5_type, key)) {
-          result[toJIOMetadata(key)] = erp5_type[key];
+          result[toJIOMetadata(key, additional)] = erp5_type[key];
         }
       }
     }
@@ -206,12 +210,16 @@
     /*jslint unparam: true */
     function changeQueryKeysToERP5Metadata() {
       if (Array.isArray(options.select_list)) {
-        options.select_list = options.select_list.map(toERP5Metadata);
+        options.select_list = options.select_list.map(toERP5Metadata, {
+          "translated_state": "translated_simulation_state_title_text"
+        });
       }
       try {
         options.query = jIO.QueryFactory.create(options.query);
         options.query.onParseSimpleQuery = function (object) {
-          object.parsed.key = toERP5Metadata(object.parsed.key);
+          object.parsed.key = toERP5Metadata(object.parsed.key, {
+            "translated_state": "translated_simulation_state_title_text"
+          });
         };
         return options.query.parse().then(function (query) {
           options.query = jIO.QueryFactory.create(query).toString();
@@ -261,7 +269,12 @@
         item = data[i];
         uri = new URI(item._links.self.href);
         delete item._links;
-        item = toJIOMetadata(item);
+        item = toJIOMetadata(item, {
+          "translated_simulation_state_title_text": "translated_state"
+        });
+        if (item.translated_state) {
+          item.state = item.translated_state;
+        }
         result.push({
           id: uri.segment(2),
           doc: item,
