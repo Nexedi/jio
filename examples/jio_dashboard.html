@@ -50,16 +50,16 @@
     </tr>
     <tr>
       <td colspan="2" style="text-align: center;">
-        <button onclick="post()">post</button>
-        <button onclick="put()">put</button>
-        <button onclick="get()">get</button>
-        <button onclick="window.remove()">remove</button>
-        - <button onclick="putAttachment()">putAttachment</button>
-        <button onclick="getAttachment()">getAttachment</button>
-        <button onclick="removeAttachment()">removeAttachment</button>
-        - <button onclick="allDocs()">allDocs</button>
-        - <button onclick="check()">check</button>
-        <button onclick="repair()">repair</button>
+        <button onclick="command('post')">post</button>
+        <button onclick="command('put')">put</button>
+        <button onclick="command('get')">get</button>
+        <button onclick="command('remove')">remove</button>
+        - <button onclick="command('putAttachment')">putAttachment</button>
+        <button onclick="command('getAttachment')">getAttachment</button>
+        <button onclick="command('removeAttachment')">removeAttachment</button>
+        - <button onclick="command('allDocs')">allDocs</button>
+        - <button onclick="command('check')">check</button>
+        <button onclick="command('repair')">repair</button>
       </td>
     </tr>
     <tr>
@@ -284,90 +284,54 @@ function logAnswer(begin_date, val) {
   return val;
 }
 
-function command(method, num) {
-  var begin_date = Date.now(), doc = {}, opts = {};
+function command(method) {
+  var doc = {}, opts = {}, lock, n, jio;
 
   if (!my_jio) {
     error('no jio set');
     return;
   }
 
-  doc = select('#metadata').value;
-  opts = select("#options").value;
+  jio = my_jio;
 
-  if (num !== undefined) {
-    doc = doc.replace(/\\u0000/g, num);
-    opts = opts.replace(/\\u0000/g, num);
-  }
-
-  doc = JSON.parse(doc);
-  opts = JSON.parse(opts);
-
-  log(method + '\ndoc: ' + JSON.stringify(doc, null, "  ") +
-      '\nopts: ' + JSON.stringify(opts, null, "  "));
-
-  if (method === "allDocs") {
-    return my_jio.allDocs(opts).then(
-      logAnswer.bind(null, begin_date),
-      logError.bind(null, begin_date)
-    );
-  } else {
-    return my_jio[method](doc, opts).then(
-      logAnswer.bind(null, begin_date),
-      logError.bind(null, begin_date)
-    );
-  }
-}
-
-function doCommandNTimes(method, i) {
-  var n = 0, lock, promise_list = [];
-  i = i > 0 ? i : 0;
   n = parseInt(select("#times").value, 10);
+
   lock = select("#times-lock").checked;
+
   if (!lock) {
     select("#times").value = "1";
   }
+
   if (!isFinite(n)) {
     n = 1;
   }
-  return command(method, ++i).
-    then(function (answer) {
-      if (i < n) {
-        return doCommandNTimes(method, i);
-      }
-      return answer;
-    });
-}
 
-function post() {
-  return doCommandNTimes("post");
-}
-function put() {
-  return doCommandNTimes("put");
-}
-function get() {
-  return doCommandNTimes("get");
-}
-function remove() {
-  return doCommandNTimes("remove");
-}
-function putAttachment() {
-  return doCommandNTimes("putAttachment");
-}
-function getAttachment() {
-  return doCommandNTimes("getAttachment");
-}
-function removeAttachment() {
-  return doCommandNTimes("removeAttachment");
-}
-function allDocs() {
-  return doCommandNTimes("allDocs");
-}
-function check() {
-  return doCommandNTimes("check");
-}
-function repair() {
-  return doCommandNTimes("repair");
+  doc = select("#metadata").value;
+  opts = select("#options").value;
+
+  return jIO.util.range(n, function (index) {
+    var param = doc, options = opts, begin = Date.now(), promise;
+
+    param = param.replace(/\\u0000/g, index);
+    options = options.replace(/\\u0000/g, index);
+
+    param = JSON.parse(param);
+    options = JSON.parse(options);
+
+    if (method === "allDocs") {
+      log(method + "\nopts: " + JSON.stringify(options, null, "  "));
+      promise = jio.allDocs(options);
+    } else {
+      log(method + "\ndoc: " + JSON.stringify(param, null, "  ") +
+          "\nopts: " + JSON.stringify(options, null, "  "));
+      promise = jio[method](param, options);
+    }
+
+    return promise.
+      then(logAnswer.bind(null, begin), logError.bind(null, begin));
+  }).then(null, function (e) {
+    error(e.toString());
+  });
 }
 
 //////////////////////////////////////////////////////////////////////
