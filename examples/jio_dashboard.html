@@ -330,7 +330,9 @@ function command(method) {
     return promise.
       then(logAnswer.bind(null, begin), logError.bind(null, begin));
   }).then(null, function (e) {
-    error(e.toString());
+    if (e instanceof Error) {
+      error(e.toString());
+    }
   });
 }
 
