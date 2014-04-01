@@ -687,16 +687,14 @@ exports.util.dictFilter = dictFilter;
  * @return {Object} The type dict
  */
 function arrayValuesToTypeDict(array) {
-  var i, type, types = {};
-  for (i = 0; i < array.length; i += 1) {
-    type = Array.isArray(array[i]) ? 'array' : typeof array[i];
-    if (!types[type]) {
-      types[type] = [array[i]];
-    } else {
-      types[type][types[type].length] = array[i];
-    }
+  var i, l, type_object = {}, type, v;
+  for (i = 0, l = array.length; i < l; i += 1) {
+    v = array[i];
+    type = Array.isArray(v) ? "array" : typeof v;
+    /*jslint ass: true */
+    (type_object[type] = type_object[type] || []).push(v);
   }
-  return types;
+  return type_object;
 }
 
 /**
@@ -932,6 +930,169 @@ function methodType(method) {
     return 'unknown';
   }
 }
+
+/**
+ *     forEach(array, callback[, thisArg]): Promise
+ *
+ * It executes the provided `callback` once for each element of the array with
+ * an assigned value asynchronously. If the `callback` returns a promise, then
+ * the function will wait for its fulfillment before executing the next
+ * iteration.
+ *
+ * `callback` is invoked with three arguments:
+ *
+ * - the element value
+ * - the element index
+ * - the array being traversed
+ *
+ * If a `thisArg` parameter is provided to `forEach`, it will be passed to
+ * `callback` when invoked, for use as its `this` value.  Otherwise, the value
+ * `undefined` will be passed for use as its `this` value.
+ *
+ * Unlike `Array.prototype.forEach`, you can stop the iteration by throwing
+ * something, or by doing a `cancel` to the returned promise if it is
+ * cancellable promise.
+ *
+ * Inspired by `Array.prototype.forEach` from Mozilla Developer Network.
+ *
+ * @param  {Array} array The array to parse
+ * @param  {Function} callback Function to execute for each element.
+ * @param  {Any} [thisArg] Value to use as `this` when executing `callback`.
+ * @param  {Promise} A new promise.
+ */
+function forEach(array, fn, thisArg) {
+  if (arguments.length === 0) {
+    throw new TypeError("missing argument 0 when calling function forEach");
+  }
+  if (!Array.isArray(array)) {
+    throw new TypeError(array + " is not an array");
+  }
+  if (arguments.length === 1) {
+    throw new TypeError("missing argument 1 when calling function forEach");
+  }
+  if (typeof fn !== "function") {
+    throw new TypeError(fn + " is not a function");
+  }
+  var cancelled, current_promise = RSVP.resolve();
+  return new RSVP.Promise(function (done, fail, notify) {
+    var i = 0;
+    function next() {
+      if (cancelled) {
+        fail(new Error("Cancelled"));
+        return;
+      }
+      if (i < array.length) {
+        current_promise =
+          current_promise.then(fn.bind(thisArg, array[i], i, array));
+        current_promise.then(next, fail, notify);
+        i += 1;
+        return;
+      }
+      done();
+    }
+    next();
+  }, function () {
+    cancelled = true;
+    if (typeof current_promise.cancel === "function") {
+      current_promise.cancel();
+    }
+  });
+}
+exports.util.forEach = forEach;
+
+/**
+ *     range(stop, callback): Promise
+ *     range(start, stop[, step], callback): Promise
+ *
+ * It executes the provided `callback` once for each step between `start` and
+ * `stop`. If the `callback` returns a promise, then the function will wait
+ * for its fulfillment before executing the next iteration.
+ *
+ * `callback` is invoked with one argument:
+ *
+ * - the index of the step
+ *
+ * `start`, `stop` and `step` must be finite numbers. If `step` is not
+ * provided, then the default step will be `1`. If `start` and `step` are not
+ * provided, `start` will be `0` and `step` will be `1`.
+ *
+ * Inspired by `range()` from Python 3 built-in functions.
+ *
+ *     range(10, function (index) {
+ *       return notifyIndex(index);
+ *     }).then(onDone, onError, onNotify);
+ *
+ * @param  {Number} [start=0] The start index
+ * @param  {Number} stop The stop index
+ * @param  {Number} [step=1] One step
+ * @param  {Function} callback Function to execute on each iteration.
+ * @param  {Promise} A new promise with no fulfillment value.
+ */
+function range(start, stop, step, callback) {
+  var type_object, cancelled, current_promise;
+  type_object = arrayValuesToTypeDict([start, stop, step, callback]);
+
+  if (type_object["function"].length !== 1) {
+    throw new TypeError("range(): only one callback is needed");
+  }
+  start = type_object.number.length;
+  if (start < 1) {
+    throw new TypeError("range(): 1, 2 or 3 numbers are needed");
+  }
+  if (start > 3) {
+    throw new TypeError("range(): only 1, 2 or 3 numbers are needed");
+  }
+
+  callback = type_object["function"][0];
+
+  if (start === 1) {
+    start = 0;
+    stop = type_object.number[0];
+    step = 1;
+  }
+
+  if (start === 2) {
+    start = type_object.number[0];
+    stop = type_object.number[1];
+    step = 1;
+  }
+
+  if (start === 3) {
+    start = type_object.number[0];
+    stop = type_object.number[1];
+    step = type_object.number[2];
+    if (step === 0) {
+      throw new TypeError("range(): step must not be zero");
+    }
+  }
+
+  type_object = undefined;
+  current_promise = RSVP.resolve();
+  return new RSVP.Promise(function (done, fail, notify) {
+    var i = start, test;
+    function next() {
+      if (cancelled) {
+        fail(new Error("Cancelled"));
+        return;
+      }
+      test = step > 0 ? i < stop : i > stop;
+      if (test) {
+        current_promise = current_promise.then(callback.bind(null, i));
+        current_promise.then(next, fail, notify);
+        i += step;
+        return;
+      }
+      done();
+    }
+    next();
+  }, function () {
+    cancelled = true;
+    if (typeof current_promise.cancel === "function") {
+      current_promise.cancel();
+    }
+  });
+}
+exports.util.range = range;
 
 /*jslint indent: 2, maxlen: 80, nomen: true, sloppy: true */
 /*global secureMethods, exports, console */
@@ -2250,8 +2411,8 @@ function restCommandResolver(param, args) {
   args = Array.prototype.slice.call(args);
   arg = args.shift();
 
-  // priority 3 - never change
-  current_priority = priority[3];
+  // priority 4 - never change
+  current_priority = priority[4];
   if (param.kwargs._id) {
     current_priority.id = param.kwargs._id;
   }
