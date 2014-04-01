@@ -88,10 +88,11 @@
         // If we reach this point, the database is created.
         // There is no way to cancel the operation from here.
         // So let's continue.
-        var db = request.result;
-        db.createObjectStore("metadata", {
+        var db = request.result,
+         store = db.createObjectStore("metadata", {
           "keyPath": "_id"
         });
+        store.createIndex("_id", "_id");
         status = "created";
       };
       request.onerror = function () {
@@ -225,6 +226,57 @@
       then(function () {
         command.success(status || "no_content");
       }, command.error, command.notify);
+  };
+
+  IndexedDBStorage.prototype.getList = function () {
+    var rows = [], onCancel, request = indexedDB.open(this._database_name);
+    return new Promise(function (resolve, reject) {
+      request.onsuccess = function () {
+        var db, tx, store, index, indexrequest;
+        db = request.result;
+        tx = db.transaction("metadata", "readonly");
+        onCancel = function () {
+          tx.abort();
+          db.close();
+        };
+        store = tx.objectStore("metadata");
+        index = store.index("_id");
+
+        indexrequest = index.openCursor();
+        indexrequest.onsuccess = function () {
+          var cursor = indexrequest.result;
+          if (cursor) {
+            // Called for each matching record.
+            rows.push({
+              "id": cursor.value._id,
+              "doc": cursor.value,
+              "values": {}
+            });
+            cursor.continue();
+          } else {
+            // No more matching records.
+            resolve({"data": {"rows": rows, "total_rows": rows.length}});
+            db.close();
+          }
+        };
+      };
+      request.onerror = function () {
+        reject(request.error);
+        var db = request.result;
+        if (db) { db.close(); }
+      };
+    }, function () {
+      if (typeof onCancel === "function") {
+        onCancel();
+      }
+    });
+  };
+
+  IndexedDBStorage.prototype.allDocs = function (command, param, option) {
+    /*jslint unparam: true */
+    this.createDBIfNecessary().
+      then(this.getList.bind(this)).
+      then(command.success, command.error, command.notify);
   };
 
   jIO.addStorage("indexeddb", IndexedDBStorage);
