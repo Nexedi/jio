@@ -250,7 +250,7 @@
             rows.push({
               "id": cursor.value._id,
               "doc": cursor.value,
-              "values": {}
+              "value": {}
             });
             cursor.continue();
           } else {
