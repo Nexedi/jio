@@ -388,6 +388,15 @@
             var cursor = event.target.result, now;
             if (cursor) {
               // Called for each matching record.
+
+              // notification management
+              now = Date.now();
+              if (date <= now - 1000) {
+                notify({"loaded": rows.length});
+                date = now;
+              }
+
+              // option.limit management
               if (Array.isArray(option.limit)) {
                 if (option.limit.length > 1) {
                   if (option.limit[0] > 0) {
@@ -411,6 +420,7 @@
                 }
               }
 
+              // option.include_docs management
               if (option.include_docs) {
                 rows.push({
                   "id": cursor.value._id,
@@ -423,11 +433,8 @@
                   "value": {}
                 });
               }
-              now = Date.now();
-              if (date <= now - 1000) {
-                notify({"loaded": rows.length});
-                date = now;
-              }
+
+              // continue to next iteration
               cursor.continue();
             } else {
               notify({"loaded": rows.length});
