@@ -418,6 +418,14 @@
       then(command.success, command.error, command.notify);
   };
 
+  IndexedDBStorage.prototype.check = function (command) {
+    command.success();
+  };
+
+  IndexedDBStorage.prototype.repair = function (command) {
+    command.success();
+  };
+
   jIO.addStorage("indexeddb", IndexedDBStorage);
 
 }));
