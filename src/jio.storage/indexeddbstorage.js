@@ -364,7 +364,7 @@
   };
 
   // XXX doc string
-  IndexedDBStorage.prototype.getList = function () {
+  IndexedDBStorage.prototype.getList = function (option) {
     var rows = [], onCancel, open_req = indexedDB.open(this._database_name);
     return new Promise(function (resolve, reject, notify) {
       open_req.onerror = function () {
@@ -388,11 +388,18 @@
             var cursor = index_req.result, now;
             if (cursor) {
               // Called for each matching record.
-              rows.push({
-                "id": cursor.value._id,
-                "doc": cursor.value,
-                "value": {}
-              });
+              if (option.include_docs) {
+                rows.push({
+                  "id": cursor.value._id,
+                  "doc": cursor.value,
+                  "value": {}
+                });
+              } else {
+                rows.push({
+                  "id": cursor.value._id,
+                  "value": {}
+                });
+              }
               now = Date.now();
               if (date <= now - 1000) {
                 notify({"loaded": rows.length});
@@ -421,7 +428,7 @@
   IndexedDBStorage.prototype.allDocs = function (command, param, option) {
     /*jslint unparam: true */
     this.createDBIfNecessary().
-      then(this.getList.bind(this)).
+      then(this.getList.bind(this, option)).
       then(command.success, command.error, command.notify);
   };
 
