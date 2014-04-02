@@ -44,7 +44,7 @@
 }(["jio", "rsvp"], function (jIO, RSVP) {
   "use strict";
 
-  var Promise = RSVP.Promise;
+  var Promise = RSVP.Promise, generateUuid = jIO.util.generateUuid;
 
   // XXX doc string
   function metadataObjectToString(value) {
@@ -284,6 +284,30 @@
       then(this.getMetadata.bind(this, param._id)).
       then(function (data) {
         command.success({"data": data});
+      }, command.error, command.notify);
+  };
+
+  // XXX doc string
+  IndexedDBStorage.prototype.post = function (command, metadata) {
+    var promise;
+    promise = this.createDBIfNecessary();
+    if (metadata._id) {
+      promise = promise.
+        then(this.getMetadata.bind(this, metadata._id)).
+        then(function () {
+          throw "conflict";
+        }, function (error) {
+          if (error === "not_found") {
+            return;
+          }
+          throw error;
+        });
+    } else {
+      metadata._id = generateUuid();
+    }
+    promise.then(this.putMetadata.bind(this, metadata)).
+      then(function () {
+        command.success({"id": metadata._id});
       }, command.error, command.notify);
   };
 
