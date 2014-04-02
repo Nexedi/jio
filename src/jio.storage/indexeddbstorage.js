@@ -24,6 +24,7 @@
  * For more informations:
  *
  * - http://www.w3.org/TR/IndexedDB/
+ * - https://developer.mozilla.org/en-US/docs/IndexedDB/Using_IndexedDB
  */
 
 /*jslint indent: 2, maxlen: 80 */
