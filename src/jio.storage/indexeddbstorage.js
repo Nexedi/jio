@@ -366,13 +366,13 @@
   // XXX doc string
   IndexedDBStorage.prototype.getList = function () {
     var rows = [], onCancel, open_req = indexedDB.open(this._database_name);
-    return new Promise(function (resolve, reject) {
+    return new Promise(function (resolve, reject, notify) {
       open_req.onerror = function () {
         if (open_req.result) { open_req.result.close(); }
         reject(open_req.error);
       };
       open_req.onsuccess = function () {
-        var tx, store, index, index_req, db = open_req.result;
+        var tx, store, index, date, index_req, db = open_req.result;
         try {
           tx = db.transaction("metadata", "readonly");
           onCancel = function () {
@@ -383,8 +383,9 @@
           index = store.index("_id");
 
           index_req = index.openCursor();
+          date = Date.now();
           index_req.onsuccess = function () {
-            var cursor = index_req.result;
+            var cursor = index_req.result, now;
             if (cursor) {
               // Called for each matching record.
               rows.push({
@@ -392,8 +393,14 @@
                 "doc": cursor.value,
                 "value": {}
               });
+              now = Date.now();
+              if (date <= now - 1000) {
+                notify({"loaded": rows.length});
+                date = now;
+              }
               cursor.continue();
             } else {
+              notify({"loaded": rows.length});
               // No more matching records.
               resolve({"data": {"rows": rows, "total_rows": rows.length}});
               db.close();
