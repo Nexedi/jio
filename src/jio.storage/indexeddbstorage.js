@@ -27,8 +27,8 @@
  * - https://developer.mozilla.org/en-US/docs/IndexedDB/Using_IndexedDB
  */
 
-/*jslint indent: 2, maxlen: 80 */
-/*global define, module, indexedDB, jIO, RSVP */
+/*jslint indent: 2, maxlen: 80, nomen: true */
+/*global define, module, require, indexedDB, jIO, RSVP */
 
 (function (dependencies, factory) {
   "use strict";
@@ -256,12 +256,11 @@
             db.close();
           };
           store = tx.objectStore("metadata");
-          store.delete(id);
+          store["delete"](id);
           // store.onsuccess = function () {
           //   // *Called at t + 2*
           // };
         } catch (e) {
-          console.log(e);
           reject(e);
           db.close();
         }
@@ -401,7 +400,7 @@
                 if (option.limit.length > 1) {
                   if (option.limit[0] > 0) {
                     option.limit[0] -= 1;
-                    cursor.continue();
+                    cursor["continue"]();
                     return;
                   }
                   if (option.limit[1] <= 0) {
@@ -444,7 +443,7 @@
               }
 
               // continue to next iteration
-              cursor.continue();
+              cursor["continue"]();
             } else {
               notify({"loaded": rows.length});
               // No more matching records.
