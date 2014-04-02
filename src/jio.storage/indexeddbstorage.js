@@ -81,27 +81,39 @@
 
   // XXX doc string
   IndexedDBStorage.prototype.createDBIfNecessary = function () {
-    var status, request = indexedDB.open(this._database_name);
+    var status, open_req = indexedDB.open(this._database_name);
     // No request.abort() is provided so we cannot cancel database creation
     return new Promise(function (resolve, reject) {
-      request.onupgradeneeded = function () {
+      open_req.onupgradeneeded = function () {
+        // *Called at t + 1*
+        var store, db = open_req.result;
         // If we reach this point, the database is created.
         // There is no way to cancel the operation from here.
         // So let's continue.
-        var db = request.result,
-         store = db.createObjectStore("metadata", {
-          "keyPath": "_id"
-        });
-        store.createIndex("_id", "_id");
-        status = "created";
+        try {
+          store = db.createObjectStore("metadata", {
+            "keyPath": "_id"
+          });
+          // `createObjectStore` can throw InvalidStateError - open_req.onerror
+          // and db.onerror won't be called.
+          store.createIndex("_id", "_id");
+          // `store.createIndex` can throw an error
+          status = "created";
+          // store.transaction.oncomplete = function () {
+          //   // *Called at t + 2*
+          // };
+        } catch (e) {
+          reject(e);
+          db.close();
+        }
       };
-      request.onerror = function () {
-        var db = request.result;
-        if (db) { db.close(); }
-        reject(request.error);
+      open_req.onerror = function () {
+        if (open_req.result) { open_req.result.close(); }
+        reject(open_req.error);
       };
-      request.onsuccess = function () {
-        request.result.close();
+      open_req.onsuccess = function () {
+        // *Called at t + 3*
+        open_req.result.close();
         resolve(status || "no_content");
       };
     });
@@ -109,42 +121,59 @@
 
   // XXX doc string
   IndexedDBStorage.prototype.getMetadata = function (id) {
-    var onCancel, request = indexedDB.open(this._database_name);
+    var onCancel, open_req = indexedDB.open(this._database_name);
     return new Promise(function (resolve, reject) {
-      request.onerror = function () {
-        var db = request.result;
-        reject(request.error);
-        if (db) { db.close(); }
+      open_req.onerror = function () {
+        if (open_req.result) { open_req.result.close(); }
+        reject(open_req.error);
       };
-      request.onsuccess = function () {
+      open_req.onsuccess = function () {
+        // *Called at t + 1*
+        var tx, store, get_req, err, res, db = open_req.result;
         try {
-          var db, tx, store, getrequest;
-          db = request.result;
+          db.onerror = function () {
+            db.close();
+          };
           tx = db.transaction("metadata", "readonly");
-          store = tx.objectStore("metadata");
+          // `db.transaction` can throw an error
+          tx.onerror = function () {
+            reject(err || tx.error);
+            db.close();
+          };
+          tx.oncomplete = function () {
+            // *Called at t + 3*
+            if (err) {
+              reject(err);
+            } else {
+              resolve(res);
+            }
+            db.close();
+          };
           // we can cancel the transaction from here
           onCancel = function () {
             tx.abort();
             db.close();
           };
-          getrequest = store.get(id);
-          getrequest.onabort = function () {
-            // if cancelled, the getrequest should fail
-            reject(getrequest.error);
-            db.close();
+          store = tx.objectStore("metadata");
+          get_req = store.get(id);
+          get_req.onabort = function () {
+            // if cancelled, the get_req should fail
+            // and I hope the tx.onerror is called
+            err = get_req.error;
           };
-          getrequest.onerror = getrequest.onabort;
-          getrequest.onsuccess = function () {
-            // if cancelled, this function should not be called
-            if (!getrequest.result) {
-              reject("not_found");
+          get_req.onerror = get_req.onabort;
+          get_req.onsuccess = function () {
+            // *Called at t + 2*
+            // if cancelled, this listener should not be called
+            if (!get_req.result) {
+              err = "not_found";
               return;
             }
-            resolve(getrequest.result);
-            db.close();
+            res = get_req.result;
           };
         } catch (e) {
           reject(e);
+          db.close();
         }
       };
     }, function () {
@@ -156,31 +185,39 @@
 
   // XXX doc string
   IndexedDBStorage.prototype.putMetadata = function (metadata) {
-    var onCancel, request = indexedDB.open(this._database_name);
+    var onCancel, open_req = indexedDB.open(this._database_name);
     return new Promise(function (resolve, reject) {
-      request.onerror = function () {
-        var db = request.result;
-        reject(request.error);
-        if (db) { db.close(); }
+      open_req.onerror = function () {
+        if (open_req.result) { open_req.result.close(); }
+        reject(open_req.error);
       };
-      request.onsuccess = function () {
+      open_req.onsuccess = function () {
+        // *Called at t + 1*
+        var tx, store, db = open_req.result;
         try {
-          var db, tx, store;
-          db = request.result;
           tx = db.transaction("metadata", "readwrite");
-          store = tx.objectStore("metadata");
+          tx.onerror = function () {
+            reject(tx.error);
+            db.close();
+          };
+          tx.oncomplete = function () {
+            // *Called at t + 3*
+            resolve();
+            db.close();
+          };
           // we can cancel the transaction from here
           onCancel = function () {
             tx.abort();
             db.close();
           };
+          store = tx.objectStore("metadata");
           store.put(metadata);
-          tx.oncomplete = function () {
-            resolve();
-            db.close();
-          };
+          // store.onsuccess = function () {
+          //   // *Called at t + 2*
+          // };
         } catch (e) {
           reject(e);
+          db.close();
         }
       };
     }, function () {
@@ -229,41 +266,44 @@
   };
 
   IndexedDBStorage.prototype.getList = function () {
-    var rows = [], onCancel, request = indexedDB.open(this._database_name);
+    var rows = [], onCancel, open_req = indexedDB.open(this._database_name);
     return new Promise(function (resolve, reject) {
-      request.onsuccess = function () {
-        var db, tx, store, index, indexrequest;
-        db = request.result;
-        tx = db.transaction("metadata", "readonly");
-        onCancel = function () {
-          tx.abort();
-          db.close();
-        };
-        store = tx.objectStore("metadata");
-        index = store.index("_id");
-
-        indexrequest = index.openCursor();
-        indexrequest.onsuccess = function () {
-          var cursor = indexrequest.result;
-          if (cursor) {
-            // Called for each matching record.
-            rows.push({
-              "id": cursor.value._id,
-              "doc": cursor.value,
-              "value": {}
-            });
-            cursor.continue();
-          } else {
-            // No more matching records.
-            resolve({"data": {"rows": rows, "total_rows": rows.length}});
-            db.close();
-          }
-        };
+      open_req.onerror = function () {
+        if (open_req.result) { open_req.result.close(); }
+        reject(open_req.error);
       };
-      request.onerror = function () {
-        reject(request.error);
-        var db = request.result;
-        if (db) { db.close(); }
+      open_req.onsuccess = function () {
+        var tx, store, index, index_req, db = open_req.result;
+        try {
+          tx = db.transaction("metadata", "readonly");
+          onCancel = function () {
+            tx.abort();
+            db.close();
+          };
+          store = tx.objectStore("metadata");
+          index = store.index("_id");
+
+          index_req = index.openCursor();
+          index_req.onsuccess = function () {
+            var cursor = index_req.result;
+            if (cursor) {
+              // Called for each matching record.
+              rows.push({
+                "id": cursor.value._id,
+                "doc": cursor.value,
+                "value": {}
+              });
+              cursor.continue();
+            } else {
+              // No more matching records.
+              resolve({"data": {"rows": rows, "total_rows": rows.length}});
+              db.close();
+            }
+          };
+        } catch (e) {
+          reject(e);
+          db.close();
+        }
       };
     }, function () {
       if (typeof onCancel === "function") {
