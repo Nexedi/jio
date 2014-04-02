@@ -384,10 +384,33 @@
 
           index_req = index.openCursor();
           date = Date.now();
-          index_req.onsuccess = function () {
-            var cursor = index_req.result, now;
+          index_req.onsuccess = function (event) {
+            var cursor = event.target.result, now;
             if (cursor) {
               // Called for each matching record.
+              if (Array.isArray(option.limit)) {
+                if (option.limit.length > 1) {
+                  if (option.limit[0] > 0) {
+                    option.limit[0] -= 1;
+                    cursor.continue();
+                    return;
+                  }
+                  if (option.limit[1] <= 0) {
+                    // end
+                    index_req.onsuccess({"target": {}});
+                    return;
+                  }
+                  option.limit[1] -= 1;
+                } else {
+                  if (option.limit[0] <= 0) {
+                    // end
+                    index_req.onsuccess({"target": {}});
+                    return;
+                  }
+                  option.limit[0] -= 1;
+                }
+              }
+
               if (option.include_docs) {
                 rows.push({
                   "id": cursor.value._id,
