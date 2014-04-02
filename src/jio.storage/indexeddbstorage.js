@@ -228,6 +228,57 @@
   };
 
   // XXX doc string
+  IndexedDBStorage.prototype.removeMetadata = function (id) {
+    var onCancel, open_req = indexedDB.open(this._database_name);
+    return new Promise(function (resolve, reject) {
+      open_req.onerror = function () {
+        if (open_req.result) { open_req.result.close(); }
+        reject(open_req.error);
+      };
+      open_req.onsuccess = function () {
+        // *Called at t + 1*
+        var tx, store, db = open_req.result;
+        try {
+          tx = db.transaction("metadata", "readwrite");
+          tx.onerror = function () {
+            reject(tx.error);
+            db.close();
+          };
+          tx.oncomplete = function () {
+            // *Called at t + 3*
+            resolve();
+            db.close();
+          };
+          // we can cancel the transaction from here
+          onCancel = function () {
+            tx.abort();
+            db.close();
+          };
+          store = tx.objectStore("metadata");
+          store.delete(id);
+          // store.onsuccess = function () {
+          //   // *Called at t + 2*
+          // };
+        } catch (e) {
+          console.log(e);
+          reject(e);
+          db.close();
+        }
+      };
+    }, function () {
+      if (typeof onCancel === "function") {
+        onCancel();
+      }
+    });
+  };
+
+  // XXX doc string
+  IndexedDBStorage.prototype.removeAttachments = function (id, attachment_ids) {
+    /*jslint unparam: true */
+    return new Promise(function (done) { done(); });
+  };
+
+  // XXX doc string
   IndexedDBStorage.prototype.get = function (command, param) {
     this.createDBIfNecessary().
       then(this.getMetadata.bind(this, param._id)).
@@ -265,6 +316,29 @@
       }, command.error, command.notify);
   };
 
+  // XXX doc string
+  IndexedDBStorage.prototype.remove = function (command, param) {
+    var this_ = this;
+    this.createDBIfNecessary().
+      then(this.getMetadata.bind(this, param._id)).
+      then(function (metadata) {
+        var attachments = metadata._attachments, promise;
+        promise = this_.removeMetadata(param._id);
+        if (typeof attachments === "object" && attachments !== null) {
+          promise.then(function (answer) {
+            return this_.removeAttachments(
+              param._id,
+              Object.keys(attachments)
+            ).then(null, function () { return; }).
+              then(function () { return answer; });
+          });
+        }
+        return promise;
+      }).
+      then(command.success, command.error, command.notify);
+  };
+
+  // XXX doc string
   IndexedDBStorage.prototype.getList = function () {
     var rows = [], onCancel, open_req = indexedDB.open(this._database_name);
     return new Promise(function (resolve, reject) {
