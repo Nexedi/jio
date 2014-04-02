@@ -385,7 +385,7 @@
           index_req = index.openCursor();
           date = Date.now();
           index_req.onsuccess = function (event) {
-            var cursor = event.target.result, now;
+            var cursor = event.target.result, now, value, i, key;
             if (cursor) {
               // Called for each matching record.
 
@@ -420,17 +420,26 @@
                 }
               }
 
+              value = {};
+              // option.select_list management
+              if (option.select_list) {
+                for (i = 0; i < option.select_list.length; i += 1) {
+                  key = option.select_list[i];
+                  value[key] = cursor.value[key];
+                }
+              }
+
               // option.include_docs management
               if (option.include_docs) {
                 rows.push({
                   "id": cursor.value._id,
                   "doc": cursor.value,
-                  "value": {}
+                  "value": value
                 });
               } else {
                 rows.push({
                   "id": cursor.value._id,
-                  "value": {}
+                  "value": value
                 });
               }
 
