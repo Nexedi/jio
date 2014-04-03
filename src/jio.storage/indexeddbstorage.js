@@ -81,33 +81,36 @@
   }
 
   // XXX doc string
+  function openRequestOnUpgradeNeeded(shared, event) {
+    if (shared.aborted) { return; }
+    shared.db = event.target.result;
+    try {
+      shared.store = shared.db.createObjectStore("metadata", {
+        "keyPath": "_id"
+        //"autoIncrement": true
+      });
+      // `createObjectStore` can throw InvalidStateError - open_req.onerror
+      // and db.onerror won't be called.
+      shared.store.createIndex("_id", "_id");
+      // `store.createIndex` can throw an error
+      shared.db_created = true;
+      shared.store.transaction.oncomplete = function () {
+        delete shared.store;
+      };
+    } catch (e) {
+      shared.reject(e);
+      shared.db.close();
+      shared.aborted = true;
+    }
+  }
+
   IndexedDBStorage.prototype.createDBIfNecessary = function () {
-    var status, open_req = indexedDB.open(this._database_name);
+    var shared = {}, open_req = indexedDB.open(this._database_name);
     // No request.abort() is provided so we cannot cancel database creation
     return new Promise(function (resolve, reject) {
-      open_req.onupgradeneeded = function () {
-        // *Called at t + 1*
-        var store, db = open_req.result;
-        // If we reach this point, the database is created.
-        // There is no way to cancel the operation from here.
-        // So let's continue.
-        try {
-          store = db.createObjectStore("metadata", {
-            "keyPath": "_id"
-          });
-          // `createObjectStore` can throw InvalidStateError - open_req.onerror
-          // and db.onerror won't be called.
-          store.createIndex("_id", "_id");
-          // `store.createIndex` can throw an error
-          status = "created";
-          // store.transaction.oncomplete = function () {
-          //   // *Called at t + 2*
-          // };
-        } catch (e) {
-          reject(e);
-          db.close();
-        }
-      };
+      shared.reject = reject;
+      open_req.onupgradeneeded =
+        openRequestOnUpgradeNeeded.bind(open_req, shared);
       open_req.onerror = function () {
         if (open_req.result) { open_req.result.close(); }
         reject(open_req.error);
@@ -115,7 +118,7 @@
       open_req.onsuccess = function () {
         // *Called at t + 3*
         open_req.result.close();
-        resolve(status || "no_content");
+        resolve(shared.db_created ? "created" : "no_content");
       };
     });
   };
@@ -280,86 +283,256 @@
 
   // XXX doc string
   IndexedDBStorage.prototype.get = function (command, param) {
-    this.createDBIfNecessary().
-      then(this.getMetadata.bind(this, param._id)).
-      then(function (data) {
-        command.success({"data": data});
-      }, command.error, command.notify);
+    var shared = {"connector": this};
+    new Promise(function (resolve, reject) {
+      shared.reject = reject;
+
+      // Open DB //
+      var open_req = indexedDB.open(shared.connector._database_name);
+      open_req.onerror = function (event) {
+        reject(event.target.errorCode);
+      };
+
+      // Create DB if necessary //
+      open_req.onupgradeneeded =
+        openRequestOnUpgradeNeeded.bind(open_req, shared);
+
+      open_req.onsuccess = function (event) {
+        if (shared.aborted) { return; }
+        try {
+          shared.db = event.target.result;
+          // Open transaction //
+          shared.tx = shared.db.transaction("metadata", "readonly");
+          shared.tx.onerror = function () {
+            reject(shared.tx.error);
+            shared.db.close();
+          };
+          shared.onCancel = function () {
+            shared.tx.abort();
+            shared.db.close();
+          };
+
+          // Get index //
+          shared.store = shared.tx.objectStore("metadata");
+          shared.index_request = shared.store.index("_id");
+
+          // Get metadata //
+          shared.index_request.get(param._id).onsuccess = function (event) {
+            if (shared.aborted) { return; }
+            if (event.target.result === undefined) {
+              reject({"status": 404});
+              return;
+            }
+            shared.final_result = {"data": event.target.result};
+          };
+
+          // Respond to jIO //
+          shared.tx.oncomplete = function () {
+            resolve(shared.final_result);
+            shared.db.close();
+          };
+        } catch (e1) {
+          reject(e1);
+          shared.db.close();
+        }
+      };
+    }).then(command.success, command.error, command.notify);
   };
 
   // XXX doc string
   IndexedDBStorage.prototype.post = function (command, metadata) {
-    var promise;
-    promise = this.createDBIfNecessary();
-    if (metadata._id) {
-      promise = promise.
-        then(this.getMetadata.bind(this, metadata._id)).
-        then(function () {
-          throw "conflict";
-        }, function (error) {
-          if (error === "not_found") {
-            return;
-          }
-          throw error;
-        });
-    } else {
+    var shared = {"connector": this};
+    if (!metadata._id) {
       metadata._id = generateUuid();
     }
-    promise.then(this.putMetadata.bind(this, metadata)).
-      then(function () {
-        command.success({"id": metadata._id});
-      }, command.error, command.notify);
+    new Promise(function (resolve, reject) {
+      shared.reject = reject;
+
+      // Open DB //
+      var open_req = indexedDB.open(shared.connector._database_name);
+      open_req.onerror = function (event) {
+        reject(event.target.errorCode);
+      };
+
+      // Create DB if necessary //
+      open_req.onupgradeneeded =
+        openRequestOnUpgradeNeeded.bind(open_req, shared);
+
+      open_req.onsuccess = function (event) {
+        if (shared.aborted) { return; }
+        try {
+          shared.db = event.target.result;
+          // Open transaction //
+          shared.tx = shared.db.transaction("metadata", "readwrite");
+          shared.tx.onerror = function () {
+            reject(shared.tx.error);
+            shared.db.close();
+          };
+          shared.onCancel = function () {
+            shared.tx.abort();
+            shared.db.close();
+          };
+
+          // Get index //
+          shared.store = shared.tx.objectStore("metadata");
+          shared.index_request = shared.store.index("_id");
+
+          // Get metadata //
+          shared.index_request.get(metadata._id).onsuccess = function (event) {
+            if (shared.aborted) { return; }
+            if (event.target.result !== undefined) {
+              shared.db.close();
+              reject({"status": 409, "reason": "document already exist"});
+              return;
+            }
+            delete metadata._attachments;
+            // Push metadata //
+            shared.store.put(metadata);
+          };
+
+          shared.tx.oncomplete = function () {
+            // Respond to jIO //
+            shared.db.close();
+            resolve({"id": metadata._id});
+          };
+        } catch (e1) {
+          reject(e1);
+          shared.db.close();
+        }
+      };
+    }).then(command.success, command.error, command.notify);
   };
 
   // XXX doc string
   IndexedDBStorage.prototype.put = function (command, metadata) {
-    var status;
-    this.createDBIfNecessary().
-      then(this.getMetadata.bind(this, metadata._id)).
-      then(null, function (error) {
-        if (error === "not_found") {
-          status = "created";
-          return {};
+    var shared = {"connector": this};
+    new Promise(function (resolve, reject) {
+      shared.reject = reject;
+
+      // Open DB //
+      var open_req = indexedDB.open(shared.connector._database_name);
+      open_req.onerror = function (event) {
+        reject(event.target.errorCode);
+      };
+
+      // Create DB if necessary //
+      open_req.onupgradeneeded =
+        openRequestOnUpgradeNeeded.bind(open_req, shared);
+
+      open_req.onsuccess = function (event) {
+        if (shared.aborted) { return; }
+        try {
+          shared.db = event.target.result;
+          // Open transaction //
+          shared.tx = shared.db.transaction("metadata", "readwrite");
+          shared.tx.onerror = function () {
+            reject(shared.tx.error);
+            shared.db.close();
+          };
+          shared.onCancel = function () {
+            shared.tx.abort();
+            shared.db.close();
+          };
+
+          // Get index //
+          shared.store = shared.tx.objectStore("metadata");
+          shared.index = shared.store.index("_id");
+
+          // Get metadata //
+          shared.index.get(metadata._id).onsuccess = function (event) {
+            if (shared.aborted) { return; }
+            var i, l, key, array, data;
+            if (event.target.result !== undefined) {
+              shared.found = true;
+              data = event.target.result;
+              // Update metadata //
+              array = Object.keys(metadata);
+              for (i = 0, l = array.length; i < l; i += 1) {
+                key = array[i];
+                metadata[key] = metadataObjectToString(metadata[key]);
+              }
+              if (data._attachments) {
+                metadata._attachments = data._attachments;
+              }
+            } else {
+              delete metadata._attachments;
+            }
+            // Push metadata //
+            shared.store.put(metadata);
+          };
+
+          shared.tx.oncomplete = function () {
+            // Respond to jIO //
+            shared.db.close();
+            resolve({"status": shared.found ? 204 : 201});
+          };
+        } catch (e1) {
+          reject(e1);
+          shared.db.close();
         }
-        throw error;
-      }).
-      then(function (data) {
-        var i, l, key, array;
-        array = Object.keys(metadata);
-        for (i = 0, l = array.length; i < l; i += 1) {
-          key = array[i];
-          metadata[key] = metadataObjectToString(metadata[key]);
-        }
-        if (data._attachments) {
-          metadata._attachments = data._attachments;
-        }
-      }).
-      then(this.putMetadata.bind(this, metadata)).
-      then(function () {
-        command.success(status || "no_content");
-      }, command.error, command.notify);
+      };
+    }).then(command.success, command.error, command.notify);
   };
 
   // XXX doc string
   IndexedDBStorage.prototype.remove = function (command, param) {
-    var this_ = this;
-    this.createDBIfNecessary().
-      then(this.getMetadata.bind(this, param._id)).
-      then(function (metadata) {
-        var attachments = metadata._attachments, promise;
-        promise = this_.removeMetadata(param._id);
-        if (typeof attachments === "object" && attachments !== null) {
-          promise.then(function (answer) {
-            return this_.removeAttachments(
-              param._id,
-              Object.keys(attachments)
-            ).then(null, function () { return; }).
-              then(function () { return answer; });
-          });
+    var shared = {"connector": this};
+    new Promise(function (resolve, reject) {
+      shared.reject = reject;
+
+      // Open DB //
+      var open_req = indexedDB.open(shared.connector._database_name);
+      open_req.onerror = function (event) {
+        reject(event.target.errorCode);
+      };
+
+      // Create DB if necessary //
+      open_req.onupgradeneeded =
+        openRequestOnUpgradeNeeded.bind(open_req, shared);
+
+      open_req.onsuccess = function (event) {
+        if (shared.aborted) { return; }
+        try {
+          shared.db = event.target.result;
+          // Open transaction //
+          shared.tx = shared.db.transaction("metadata", "readwrite");
+          shared.tx.onerror = function () {
+            reject(shared.tx.error);
+            shared.db.close();
+          };
+          shared.onCancel = function () {
+            shared.tx.abort();
+            shared.db.close();
+          };
+
+          // Get index //
+          shared.store = shared.tx.objectStore("metadata");
+          shared.index = shared.store.index("_id");
+
+          // Get metadata //
+          shared.index.get(param._id).onsuccess = function (event) {
+            if (shared.aborted) { return; }
+            if (event.target.result === undefined) {
+              shared.db.close();
+              reject({"status": 404});
+              return;
+            }
+            // Delete metadata //
+            shared.store["delete"](param._id);
+            // XXX Delete attachments //
+          };
+
+          shared.tx.oncomplete = function () {
+            // Respond to jIO //
+            shared.db.close();
+            resolve();
+          };
+        } catch (e1) {
+          reject(e1);
+          shared.db.close();
         }
-        return promise;
-      }).
-      then(command.success, command.error, command.notify);
+      };
+    }).then(command.success, command.error, command.notify);
   };
 
   // XXX doc string
