@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, regexp: true */
-/*global constants, dictUpdate, deepClone */
+/*global constants, dictUpdate, deepClone, DOMException */
 
 function restCommandRejecter(param, args) {
   // reject(status, reason, message, {"custom": "value"});
@@ -72,8 +72,22 @@ function restCommandRejecter(param, args) {
     if ((arg.statusText || arg.status >= 0)) {
       current_priority.status = arg.statusText || arg.status;
     }
-    if (arg instanceof Error) {
-      current_priority.reason = arg.message || "";
+    if (arg instanceof Error || arg instanceof DOMException) {
+      if (arg.code !== undefined && arg.code !== null) {
+        current_priority.code = arg.code;
+      }
+      if (arg.lineNumber !== undefined && arg.lineNumber !== null) {
+        current_priority.lineNumber = arg.lineNumber;
+      }
+      if (arg.columnNumber !== undefined && arg.columnNumber !== null) {
+        current_priority.columnNumber = arg.columnNumber;
+      }
+      if (arg.filename !== undefined && arg.filename !== null) {
+        current_priority.filename = arg.filename;
+      }
+      if (arg.message !== undefined && arg.message !== null) {
+        current_priority.reason = arg.message;
+      }
       current_priority.error = arg.name;
     }
   }
