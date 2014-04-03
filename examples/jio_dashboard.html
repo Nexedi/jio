@@ -327,9 +327,12 @@ function command(method) {
       promise = jio[method](param, options);
     }
 
-    return promise.
-      then(logAnswer.bind(null, begin), logError.bind(null, begin));
-  }).then(null, function (e) {
+    return promise.then(function (answer) {
+      n = answer;
+      logAnswer(begin, answer);
+      return answer;
+    }, logError.bind(null, begin));
+  }).then(function () { return n; }, function (e) {
     if (e instanceof Error) {
       error(e.toString());
     }
