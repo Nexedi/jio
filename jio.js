@@ -2280,7 +2280,7 @@ function addJobRuleCondition(name, method) {
 exports.addJobRuleCondition = addJobRuleCondition;
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, regexp: true */
-/*global constants, dictUpdate, deepClone */
+/*global constants, dictUpdate, deepClone, DOMException */
 
 function restCommandRejecter(param, args) {
   // reject(status, reason, message, {"custom": "value"});
@@ -2353,8 +2353,22 @@ function restCommandRejecter(param, args) {
     if ((arg.statusText || arg.status >= 0)) {
       current_priority.status = arg.statusText || arg.status;
     }
-    if (arg instanceof Error) {
-      current_priority.reason = arg.message || "";
+    if (arg instanceof Error || arg instanceof DOMException) {
+      if (arg.code !== undefined && arg.code !== null) {
+        current_priority.code = arg.code;
+      }
+      if (arg.lineNumber !== undefined && arg.lineNumber !== null) {
+        current_priority.lineNumber = arg.lineNumber;
+      }
+      if (arg.columnNumber !== undefined && arg.columnNumber !== null) {
+        current_priority.columnNumber = arg.columnNumber;
+      }
+      if (arg.filename !== undefined && arg.filename !== null) {
+        current_priority.filename = arg.filename;
+      }
+      if (arg.message !== undefined && arg.message !== null) {
+        current_priority.reason = arg.message;
+      }
       current_priority.error = arg.name;
     }
   }
@@ -2385,6 +2399,7 @@ function restCommandRejecter(param, args) {
     priority.error = priority.statusText.toLowerCase().replace(/ /g, '_').
       replace(/[^_a-z]/g, '');
   }
+  param.storage_response = priority;
   return param.solver.reject(deepClone(priority));
 }
 
@@ -2512,6 +2527,7 @@ function restCommandResolver(param, args) {
     ]);
   }
 
+  param.storage_response = priority;
   return param.solver.resolve(deepClone(priority));
 }
 
@@ -2558,11 +2574,11 @@ function enableJobChecker(jio, shared, options) {
         if (!original_job.solver) {
           original_job.solver = new_job.solver;
         } else {
-          original_job.promise.then(
-            new_job.command.resolve,
-            new_job.command.reject,
-            new_job.command.notify
-          );
+          original_job.promise.then(function () {
+            new_job.command.resolve(deepClone(original_job.storage_response));
+          }, function () {
+            new_job.command.reject(deepClone(original_job.storage_response));
+          }, new_job.command.notify);
         }
       }
       new_job.state = 'running';
@@ -3111,9 +3127,10 @@ function enableJobRecovery(jio, shared, options) {
 
   var i, job_array, delay, deadline, recovery_delay;
 
-  recovery_delay = numberOrDefault(options.recovery_delay, 10000);
+  // 1 m 30 s  ===  default firefox request timeout
+  recovery_delay = numberOrDefault(options.recovery_delay, 90000);
   if (recovery_delay < 0) {
-    recovery_delay = 10000;
+    recovery_delay = 90000;
   }
 
   if (options.job_management !== false && options.job_recovery !== false) {
@@ -3314,8 +3331,8 @@ function enableJobTimeout(jio, shared, options) {
             number : default_value);
   }
 
-  // 10 seconds by default
-  var default_timeout = positiveNumberOrDefault(options.default_timeout, 10000);
+  // Infinity by default
+  var default_timeout = positiveNumberOrDefault(options.default_timeout, 0);
 
   function timeoutReject(param) {
     return function () {
@@ -3330,7 +3347,8 @@ function enableJobTimeout(jio, shared, options) {
   }
 
   function initJob(job) {
-    if (typeof job.timeout !== 'number' || job.timeout < 0) {
+    if (typeof job.timeout !== 'number' || !isFinite(job.timeout) ||
+        job.timeout < 0) {
       job.timeout = positiveNumberOrDefault(
         job.options.timeout,
         default_timeout
