@@ -118,5 +118,6 @@ function restCommandRejecter(param, args) {
     priority.error = priority.statusText.toLowerCase().replace(/ /g, '_').
       replace(/[^_a-z]/g, '');
   }
+  param.storage_response = priority;
   return param.solver.reject(deepClone(priority));
 }

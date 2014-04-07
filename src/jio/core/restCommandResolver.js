@@ -122,5 +122,6 @@ function restCommandResolver(param, args) {
     ]);
   }
 
+  param.storage_response = priority;
   return param.solver.resolve(deepClone(priority));
 }

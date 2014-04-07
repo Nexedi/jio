@@ -41,11 +41,11 @@ function enableJobChecker(jio, shared, options) {
         if (!original_job.solver) {
           original_job.solver = new_job.solver;
         } else {
-          original_job.promise.then(
-            new_job.command.resolve,
-            new_job.command.reject,
-            new_job.command.notify
-          );
+          original_job.promise.then(function () {
+            new_job.command.resolve(deepClone(original_job.storage_response));
+          }, function () {
+            new_job.command.reject(deepClone(original_job.storage_response));
+          }, new_job.command.notify);
         }
       }
       new_job.state = 'running';
