@@ -25,8 +25,8 @@ function enableJobTimeout(jio, shared, options) {
             number : default_value);
   }
 
-  // 10 seconds by default
-  var default_timeout = positiveNumberOrDefault(options.default_timeout, 10000);
+  // Infinity by default
+  var default_timeout = positiveNumberOrDefault(options.default_timeout, 0);
 
   function timeoutReject(param) {
     return function () {
@@ -41,7 +41,8 @@ function enableJobTimeout(jio, shared, options) {
   }
 
   function initJob(job) {
-    if (typeof job.timeout !== 'number' || job.timeout < 0) {
+    if (typeof job.timeout !== 'number' || !isFinite(job.timeout) ||
+        job.timeout < 0) {
       job.timeout = positiveNumberOrDefault(
         job.options.timeout,
         default_timeout

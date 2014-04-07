@@ -82,54 +82,13 @@
 
   module('JIO timeout');
 
-  test('should fail after default command timeout', 2, function () {
-    var i, called = false, jio = new JIO({
-      "type": "fake",
-      "id": "1 No Respons"
-    }, {
-      "workspace": {}
-    });
-
-    stop();
-    jio.post({}).always(function (answer) {
-      var message = (answer && answer.message) || "Timeout";
-      called = true;
-      if (i !== undefined) {
-        start();
-        clearTimeout(i);
-      }
-      delete answer.message;
-      deepEqual(answer, {
-        "error": "request_timeout",
-        "method": "post",
-        "result": "error",
-        "reason": "timeout",
-        "status": 408,
-        "statusText": "Request Timeout"
-      }, message);
-    });
-
-    setTimeout(function () {
-      ok(!called, "callback " + (called ? "" : "not") + " called");
-    }, 9999);
-
-    setTimeout(function () {
-      commands['1 No Respons/post'].free();
-    }, 100);
-
-    i = setTimeout(function () {
-      i = undefined;
-      start();
-      ok(false, "No response");
-    }, 11000);
-  });
-
   test('should fail after storage inactivity timeout', 2, function () {
     var i, called = false, jio = new JIO({
       "type": "fake",
       "id": "2 No Respons"
     }, {
-      "workspace": {}
+      "workspace": {},
+      "default_timeout": 10000
     });
 
     stop();
@@ -742,7 +701,7 @@
         "state": "ready", // deferred writing "running"
         //"modified": new Date(),
         "max_retry": 2,
-        "timeout": 10000,
+        "timeout": 0,
         "id": 2
       };
 
@@ -788,7 +747,8 @@
       "type": "fake",
       "id": "Job Recove"
     }, {
-      "workspace": workspace
+      "workspace": workspace,
+      "default_timeout": 10000
     });
 
     stop();
@@ -804,7 +764,8 @@
       "type": "fake",
       "id": "Job Recove"
     }, {
-      "workspace": workspace
+      "workspace": workspace,
+      "recovery_delay": 10000
     });
 
     setTimeout(function () {
@@ -839,7 +800,8 @@
       "type": "fake",
       "id": "Job Recovw"
     }, {
-      "workspace": workspace
+      "workspace": workspace,
+      "default_timeout": 10000
     });
 
     stop();
@@ -863,7 +825,8 @@
         "type": "fake",
         "id": "Job Recovw"
       }, {
-        "workspace": workspace
+        "workspace": workspace,
+        "recovery_delay": 10000
       });
 
       setTimeout(function () {
