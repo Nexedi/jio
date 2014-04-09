@@ -340,14 +340,14 @@
 
   ReplicateStorage.prototype.post = function (command, metadata, option) {
     var promise_list = [], index, length = this._storage_list.length;
-    if (!isDate(metadata.modified)) {
-      command.error(
-        409,
-        "invalid 'modified' metadata",
-        "The metadata 'modified' should be a valid date string or date object"
-      );
-      return;
-    }
+    // if (!isDate(metadata.modified)) {
+    //   command.error(
+    //     409,
+    //     "invalid 'modified' metadata",
+   //     "The metadata 'modified' should be a valid date string or date object"
+    //   );
+    //   return;
+    // }
     for (index = 0; index < length; index += 1) {
       promise_list[index] = success(
         command.storage(this._storage_list[index]).post(metadata, option)
@@ -360,14 +360,14 @@
 
   ReplicateStorage.prototype.put = function (command, metadata, option) {
     var promise_list = [], index, length = this._storage_list.length;
-    if (!isDate(metadata.modified)) {
-      command.error(
-        409,
-        "invalid 'modified' metadata",
-        "The metadata 'modified' should be a valid date string or date object"
-      );
-      return;
-    }
+    // if (!isDate(metadata.modified)) {
+    //   command.error(
+    //     409,
+    //     "invalid 'modified' metadata",
+   //     "The metadata 'modified' should be a valid date string or date object"
+    //   );
+    //   return;
+    // }
     for (index = 0; index < length; index += 1) {
       promise_list[index] =
         command.storage(this._storage_list[index]).put(metadata, option);
