@@ -257,6 +257,52 @@
     });
   }
 
+  /**
+   *     firstFulfilled(promises): promises< last_fulfilment_value >
+   *
+   * Responds with the first resolved promise answer recieved. If all promises
+   * are rejected, it returns the latest rejected promise answer
+   * received. Promises are cancelled only by calling
+   * `firstFulfilled(promises).cancel()`.
+   *
+   * @param  {Array} promises An array of promises
+   * @return {Promise} A new promise
+   */
+  function firstFulfilled(promises) {
+    var length = promises.length;
+
+    function onCancel() {
+      var i, l, promise;
+      for (i = 0, l = promises.length; i < l; i += 1) {
+        promise = promises[i];
+        if (typeof promise.cancel === "function") {
+          promise.cancel();
+        }
+      }
+    }
+
+    return new Promise(function (resolve, reject, notify) {
+      var i, count = 0;
+      function resolver(answer) {
+        resolve(answer);
+        onCancel();
+      }
+
+      function rejecter(answer) {
+        count += 1;
+        if (count === length) {
+          return reject(answer);
+        }
+      }
+
+      for (i = 0; i < length; i += 1) {
+        promises[i].then(resolver, rejecter, notify);
+      }
+    }, onCancel);
+  }
+
+  // //////////////////////////////////////////////////////////////////////
+
   // /**
   //  * An Universal Unique ID generator
   //  *
@@ -349,13 +395,11 @@
     //   return;
     // }
     for (index = 0; index < length; index += 1) {
-      promise_list[index] = success(
-        command.storage(this._storage_list[index]).post(metadata, option)
-      );
+      promise_list[index] =
+        command.storage(this._storage_list[index]).post(metadata, option);
     }
-    sequence([function () {
-      return last(promise_list);
-    }, [command.success, command.error]]);
+    firstFulfilled(promise_list).
+      then(command.success, command.error, command.notify);
   };
 
   ReplicateStorage.prototype.put = function (command, metadata, option) {
@@ -372,33 +416,28 @@
       promise_list[index] =
         command.storage(this._storage_list[index]).put(metadata, option);
     }
-    sequence([function () {
-      return last(promise_list);
-    }, [command.success, command.error]]);
+    firstFulfilled(promise_list).
+      then(command.success, command.error, command.notify);
   };
 
   ReplicateStorage.prototype.putAttachment = function (command, param, option) {
     var promise_list = [], index, length = this._storage_list.length;
     for (index = 0; index < length; index += 1) {
-      promise_list[index] = success(
-        command.storage(this._storage_list[index]).putAttachment(param, option)
-      );
+      promise_list[index] =
+        command.storage(this._storage_list[index]).putAttachment(param, option);
     }
-    sequence([function () {
-      return last(promise_list);
-    }, [command.success, command.error]]);
+    firstFulfilled(promise_list).
+      then(command.success, command.error, command.notify);
   };
 
   ReplicateStorage.prototype.remove = function (command, param, option) {
     var promise_list = [], index, length = this._storage_list.length;
     for (index = 0; index < length; index += 1) {
-      promise_list[index] = success(
-        command.storage(this._storage_list[index]).remove(param, option)
-      );
+      promise_list[index] =
+        command.storage(this._storage_list[index]).remove(param, option);
     }
-    sequence([function () {
-      return last(promise_list);
-    }, [command.success, command.error]]);
+    firstFulfilled(promise_list).
+      then(command.success, command.error, command.notify);
   };
 
   ReplicateStorage.prototype.removeAttachment = function (
@@ -408,14 +447,12 @@
   ) {
     var promise_list = [], index, length = this._storage_list.length;
     for (index = 0; index < length; index += 1) {
-      promise_list[index] = success(
+      promise_list[index] =
         command.storage(this._storage_list[index]).
-          removeAttachment(param, option)
-      );
+        removeAttachment(param, option);
     }
-    sequence([function () {
-      return last(promise_list);
-    }, [command.success, command.error]]);
+    firstFulfilled(promise_list).
+      then(command.success, command.error, command.notify);
   };
 
   /**
@@ -476,13 +513,11 @@
   ReplicateStorage.prototype.getAttachment = function (command, param, option) {
     var promise_list = [], index, length = this._storage_list.length;
     for (index = 0; index < length; index += 1) {
-      promise_list[index] = success(
-        command.storage(this._storage_list[index]).getAttachment(param, option)
-      );
+      promise_list[index] =
+        command.storage(this._storage_list[index]).getAttachment(param, option);
     }
-    sequence([function () {
-      return last(promise_list);
-    }, [command.success, command.error]]);
+    firstFulfilled(promise_list).
+      then(command.success, command.error, command.notify);
   };
 
   ReplicateStorage.prototype.allDocs = function (command, param, option) {
