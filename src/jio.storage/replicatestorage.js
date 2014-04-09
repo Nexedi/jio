@@ -283,6 +283,61 @@
     this._storage_list = spec.storage_list;
   }
 
+  ReplicateStorage.prototype.syncGetAnswerList = function (command,
+                                                           answer_list) {
+    console.log("Starting synchro");
+    var i, l, answer, answer_modified_date, winner, winner_modified_date,
+      winner_str, promise_list = [], winner_index, winner_id;
+    /*jslint continue: true */
+    for (i = 0, l = answer_list.length; i < l; i += 1) {
+      answer = answer_list[i];
+      if (!answer || answer === 404) { continue; }
+      if (!winner) {
+        winner = answer;
+        winner_index = i;
+        winner_modified_date = new Date(answer.data.modified).getTime();
+      } else {
+        answer_modified_date = new Date(answer.data.modified).getTime();
+        if (isFinite(answer_modified_date) &&
+            answer_modified_date > winner_modified_date) {
+          winner = answer;
+          winner_index = i;
+          winner_modified_date = answer_modified_date;
+        }
+      }
+    }
+    winner = winner.data;
+    if (!winner) { return; }
+    // winner_attachments = winner._attachments;
+    delete winner._attachments;
+    winner_id = winner._id;
+    winner_str = uniqueJSONStringify(winner);
+    console.log('winner', winner_str);
+
+    // document synchronisation
+    for (i = 0, l = answer_list.length; i < l; i += 1) {
+      answer = answer_list[i];
+      if (!answer) { continue; }
+      if (i === winner_index) { continue; }
+      if (answer === 404) {
+        delete winner._id;
+        console.log("Synchronizing (post) " + winner_index + " to " + i);
+        promise_list.push(command.storage(this._storage_list[i]).post(winner));
+        winner._id = winner_id;
+        // delete _id AND reassign _id -> avoid modifying document before
+        // resolving the get method.
+        continue;
+      }
+      delete answer._attachments;
+      if (uniqueJSONStringify(answer) !== winner_str) {
+        console.log("Synchronizing (put) " + winner_index + " to " + i);
+        promise_list.push(command.storage(this._storage_list[i]).put(winner));
+      }
+    }
+    return all(promise_list);
+    // XXX .then synchronize attachments
+  };
+
   ReplicateStorage.prototype.post = function (command, metadata, option) {
     var promise_list = [], index, length = this._storage_list.length;
     if (!isDate(metadata.modified)) {
@@ -363,15 +418,59 @@
     }, [command.success, command.error]]);
   };
 
+  /**
+   * Respond with the first get answer received and synchronize the document to
+   * the other storages in the background.
+   */
   ReplicateStorage.prototype.get = function (command, param, option) {
-    var promise_list = [], index, length = this._storage_list.length;
+    var promise_list = [], index, length = this._storage_list.length,
+      answer_list = [], this_ = this;
     for (index = 0; index < length; index += 1) {
       promise_list[index] =
         command.storage(this._storage_list[index]).get(param, option);
     }
-    sequence([function () {
-      return lastModified(promise_list);
-    }, [command.success, command.error]]);
+
+    new Promise(function (resolve, reject, notify) {
+      var count = 0, error_count = 0;
+      function resolver(index) {
+        return function (answer) {
+          console.log(index, answer);
+          count += 1;
+          if (count === 1) {
+            resolve(answer);
+          }
+          answer_list[index] = answer;
+          console.log(count, error_count, length);
+          if (count + error_count === length && count > 0) {
+            this_.syncGetAnswerList(command, answer_list);
+          }
+        };
+      }
+
+      function rejecter(index) {
+        return function (reason) {
+          error_count += 1;
+          if (reason.status === 404) {
+            answer_list[index] = 404;
+          }
+          if (error_count === length) {
+            reject(reason);
+          }
+          console.log(count, error_count, length);
+          if (count + error_count === length && count > 0) {
+            this_.syncGetAnswerList(command, answer_list);
+          }
+        };
+      }
+
+      for (index = 0; index < length; index += 1) {
+        promise_list[index].then(resolver(index), rejecter(index), notify);
+      }
+    }, function () {
+      for (index = 0; index < length; index += 1) {
+        promise_list[index].cancel();
+      }
+    }).then(command.success, command.error, command.notify);
   };
 
   ReplicateStorage.prototype.getAttachment = function (command, param, option) {
