@@ -95,12 +95,7 @@
   }
 
   function success(promise) {
-    return new Promise(function (resolve, reject, notify) {
-      /*jslint unparam: true*/
-      promise.then(resolve, resolve, notify);
-    }, function () {
-      promise.cancel();
-    });
+    return promise.then(null, function (reason) { return reason; });
   }
 
   // /**
