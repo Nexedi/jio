@@ -521,42 +521,42 @@
   };
 
   ReplicateStorage.prototype.allDocs = function (command, param, option) {
-    /*jslint unparam: true */
     var promise_list = [], index, length = this._storage_list.length;
     for (index = 0; index < length; index += 1) {
       promise_list[index] =
         success(command.storage(this._storage_list[index]).allDocs(option));
     }
-    sequence([function () {
-      return all(promise_list);
-    }, function (answers) {
+    all(promise_list).then(function (answers) {
       // merge responses
       var i, j, k, found, rows;
       // browsing answers
       for (i = 0; i < answers.length; i += 1) {
         if (answers[i].result === "success") {
-          if (!rows) {
-            rows = answers[i].data.rows;
-          } else {
-            // browsing answer rows
-            for (j = 0; j < answers[i].data.rows.length; j += 1) {
-              found = false;
-              // browsing result rows
-              for (k = 0; k < rows.length; k += 1) {
-                if (rows[k].id === answers[i].data.rows[j].id) {
-                  found = true;
-                  break;
-                }
+          rows = answers[i].data.rows;
+          break;
+        }
+      }
+      for (i += 1; i < answers.length; i += 1) {
+        if (answers[i].result === "success") {
+          // browsing answer rows
+          for (j = 0; j < answers[i].data.rows.length; j += 1) {
+            found = false;
+            // browsing result rows
+            for (k = 0; k < rows.length; k += 1) {
+              if (rows[k].id === answers[i].data.rows[j].id) {
+                found = true;
+                break;
               }
-              if (!found) {
-                rows.push(answers[i].data.rows[j]);
-              }
+            }
+            if (!found) {
+              rows.push(answers[i].data.rows[j]);
             }
           }
         }
       }
       return {"data": {"total_rows": (rows || []).length, "rows": rows || []}};
-    }, [command.success, command.error]]);
+    }).then(command.success, command.error, command.notify);
+    /*jslint unparam: true */
   };
 
   ReplicateStorage.prototype.check = function (command, param, option) {
