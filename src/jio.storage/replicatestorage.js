@@ -19,10 +19,10 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global define, module, require, jIO, RSVP */
 
-(function (root, dependencies, factory) {
+(function (factory) {
   "use strict";
   if (typeof define === 'function' && define.amd) {
-    return define(dependencies, function () {
+    return define(["jio", "rsvp"], function () {
       return factory(require);
     });
   }
@@ -30,13 +30,13 @@
     module.exports = factory(require);
     return;
   }
-  root.replicate_storage = factory(function (name) {
+  factory(function (name) {
     return {
       "jio": jIO,
       "rsvp": RSVP
     }[name];
   });
-}(this, ['jio', 'rsvp'], function (require) {
+}(function (require) {
   "use strict";
 
   var Promise = require('rsvp').Promise,
