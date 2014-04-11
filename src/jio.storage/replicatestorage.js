@@ -122,7 +122,6 @@
 
   ReplicateStorage.prototype.syncGetAnswerList = function (command,
                                                            answer_list) {
-    console.log("Starting synchro");
     var i, l, answer, answer_modified_date, winner, winner_modified_date,
       winner_str, promise_list = [], winner_index, winner_id;
     /*jslint continue: true */
@@ -149,7 +148,6 @@
     delete winner._attachments;
     winner_id = winner._id;
     winner_str = uniqueJSONStringify(winner);
-    console.log('winner', winner_str);
 
     // document synchronisation
     for (i = 0, l = answer_list.length; i < l; i += 1) {
@@ -158,17 +156,19 @@
       if (i === winner_index) { continue; }
       if (answer === 404) {
         delete winner._id;
-        console.log("Synchronizing (post) " + winner_index + " to " + i);
-        promise_list.push(command.storage(this._storage_list[i]).post(winner));
+        promise_list.push(success(
+          command.storage(this._storage_list[i]).post(winner)
+        ));
         winner._id = winner_id;
         // delete _id AND reassign _id -> avoid modifying document before
         // resolving the get method.
         continue;
       }
       delete answer._attachments;
-      if (uniqueJSONStringify(answer) !== winner_str) {
-        console.log("Synchronizing (put) " + winner_index + " to " + i);
-        promise_list.push(command.storage(this._storage_list[i]).put(winner));
+      if (uniqueJSONStringify(answer.data) !== winner_str) {
+        promise_list.push(success(
+          command.storage(this._storage_list[i]).put(winner)
+        ));
       }
     }
     return all(promise_list);
@@ -262,13 +262,11 @@
       var count = 0, error_count = 0;
       function resolver(index) {
         return function (answer) {
-          console.log(index, answer);
           count += 1;
           if (count === 1) {
             resolve(answer);
           }
           answer_list[index] = answer;
-          console.log(count, error_count, length);
           if (count + error_count === length && count > 0) {
             this_.syncGetAnswerList(command, answer_list);
           }
@@ -284,7 +282,6 @@
           if (error_count === length) {
             reject(reason);
           }
-          console.log(count, error_count, length);
           if (count + error_count === length && count > 0) {
             this_.syncGetAnswerList(command, answer_list);
           }
@@ -362,7 +359,8 @@
   };
 
   ReplicateStorage.prototype.repair = function (command, param, option) {
-    var storage_list = this._storage_list, length = storage_list.length;
+    var storage_list = this._storage_list, length = storage_list.length,
+      this_ = this;
 
     if (typeof param._id !== 'string' || !param._id) {
       command.error("bad_request");
@@ -390,45 +388,14 @@
     }
 
     function synchronizeDocument(answers) {
-      var i, tmp, winner, winner_str, promise_list = [],
-        metadata_dict = {}, not_found_dict = {}, modified_list = [];
-      for (i = 0; i < answers.length; i += 1) {
-        if (answers[i].result !== "success") {
-          not_found_dict[i] = true;
-        } else {
-          metadata_dict[i] = answers[i].data;
-          tmp = metadata_dict[i].modified;
-          tmp = new Date(tmp === undefined ? NaN : tmp);
-          tmp.index = i;
-          modified_list.push(tmp);
+      return this_.syncGetAnswerList(answers.map(function (answer) {
+        if (answer.result === "success") {
+          return answer;
         }
-      }
-      modified_list.sort();
-
-      if (modified_list.length === 0) {
-        // do nothing because no document was found
-        return [];
-      }
-
-      tmp = modified_list.pop();
-      winner = metadata_dict[tmp.index];
-      winner_str = uniqueJSONStringify(winner);
-      tmp = tmp.index;
-
-      // if no document has valid modified metadata
-      // just take the first one and replicate to the other one
-
-      for (i = 0; i < length; i += 1) {
-        if (i !== tmp && winner_str !== uniqueJSONStringify(metadata_dict[i])) {
-          // console.log("Synchronizing document `" + winner_str +
-          //             "` into storage number " + i + " by doing a `" +
-          //             (not_found_dict[i] ? "post" : "put") + "`. ");
-          promise_list.push(
-            storage_list[i][not_found_dict[i] ? "post" : "put"](winner)
-          );
+        if (answer.status === 404) {
+          return 404;
         }
-      }
-      return all(promise_list);
+      }));
     }
 
     function checkAnswers(answers) {
