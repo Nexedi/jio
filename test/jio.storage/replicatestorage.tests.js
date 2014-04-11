@@ -628,6 +628,209 @@
       then(start, start);
   });
 
+  test("Remove", function () {
+    var shared = {}, i, jio_list, replicate_jio;
+
+    // this test can work with at least 2 sub storages
+    shared.gid_description = {
+      "type": "gid",
+      "constraints": {
+        "default": {
+          "identifier": "list"
+        }
+      },
+      "sub_storage": null
+    };
+
+    shared.storage_description_list = [];
+    for (i = 0; i < 4; i += 1) {
+      shared.storage_description_list[i] = jsonClone(shared.gid_description);
+      shared.storage_description_list[i].sub_storage = {
+        "type": "local",
+        "username": "replicate scenario test for remove method - " + (i + 1),
+        "mode": "memory"
+      };
+    }
+
+    shared.replicate_storage_description = {
+      "type": "replicate",
+      "storage_list": shared.storage_description_list
+    };
+
+    shared.workspace = {};
+    shared.jio_option = {
+      "workspace": shared.workspace,
+      "max_retry": 0
+    };
+
+    jio_list = shared.storage_description_list.map(function (description) {
+      return jIO.createJIO(description, shared.jio_option);
+    });
+    replicate_jio = jIO.createJIO(
+      shared.replicate_storage_description,
+      shared.jio_option
+    );
+
+    stop();
+
+    function setFakeStorage() {
+      setFakeStorage.original = shared.storage_description_list[0].sub_storage;
+      shared.storage_description_list[0].sub_storage = {
+        "type": "fake",
+        "id": "replicate scenario test for remove method - 1"
+      };
+      jio_list[0] = jIO.createJIO(
+        shared.storage_description_list[0],
+        shared.jio_option
+      );
+      replicate_jio = jIO.createJIO(
+        shared.replicate_storage_description,
+        shared.jio_option
+      );
+    }
+
+    function unsetFakeStorage() {
+      shared.storage_description_list[0].sub_storage = setFakeStorage.original;
+      jio_list[0] = jIO.createJIO(
+        shared.storage_description_list[0],
+        shared.jio_option
+      );
+      replicate_jio = jIO.createJIO(
+        shared.replicate_storage_description,
+        shared.jio_option
+      );
+    }
+
+    function putSomeDocuments() {
+      return all(jio_list.map(function (jio) {
+        return jio.post({"identifier": "a"});
+      }));
+    }
+
+    function removeDocument() {
+      return replicate_jio.remove({"_id": "{\"identifier\":[\"a\"]}"});
+    }
+
+    function removeDocumentTest(answer) {
+      deepEqual(answer, {
+        "id": "{\"identifier\":[\"a\"]}",
+        "method": "remove",
+        "result": "success",
+        "status": 204,
+        "statusText": "No Content"
+      }, "Remove document");
+    }
+
+    function checkStorageContent() {
+      // check storage state
+      return all(jio_list.map(function (jio) {
+        return reverse(jio.get({"_id": "{\"identifier\":[\"a\"]}"}));
+      })).then(function (answers) {
+        answers.forEach(function (answer) {
+          deepEqual(answer, {
+            "error": "not_found",
+            "id": "{\"identifier\":[\"a\"]}",
+            "message": "Cannot get document",
+            "method": "get",
+            "reason": "missing",
+            "result": "error",
+            "status": 404,
+            "statusText": "Not Found"
+          }, "Check storage content");
+        });
+      });
+    }
+
+    function putSomeDocuments2() {
+      return all(jio_list.map(function (jio) {
+        return jio.post({"identifier": "b"});
+      }));
+    }
+
+    function removeDocumentWithUnavailableStorage() {
+      setFakeStorage();
+      setTimeout(function () {
+        fake_storage.commands[
+          "replicate scenario test for remove method - 1/allDocs"
+        ].error({"status": 0});
+      }, 100);
+      return replicate_jio.remove({"_id": "{\"identifier\":[\"b\"]}"});
+    }
+
+    function removeDocumentWithUnavailableStorageTest(answer) {
+      deepEqual(answer, {
+        "id": "{\"identifier\":[\"b\"]}",
+        "method": "remove",
+        "result": "success",
+        "status": 204,
+        "statusText": "No Content"
+      }, "Remove document with unavailable storage");
+
+      return sleep(100);
+    }
+
+    function checkStorageContent2() {
+      unsetFakeStorage();
+      // check storage state
+      return all(jio_list.map(function (jio, i) {
+        if (i === 0) {
+          return jio.get({"_id": "{\"identifier\":[\"b\"]}"});
+        }
+        return reverse(jio.get({"_id": "{\"identifier\":[\"b\"]}"}));
+      })).then(function (answers) {
+        deepEqual(answers[0], {
+          "data": {
+            "_id": "{\"identifier\":[\"b\"]}",
+            "identifier": "b"
+          },
+          "id": "{\"identifier\":[\"b\"]}",
+          "method": "get",
+          "result": "success",
+          "status": 200,
+          "statusText": "Ok"
+        }, "Check storage content");
+        answers.slice(1).forEach(function (answer) {
+          deepEqual(answer, {
+            "error": "not_found",
+            "id": "{\"identifier\":[\"b\"]}",
+            "message": "Cannot get document",
+            "method": "get",
+            "reason": "missing",
+            "result": "error",
+            "status": 404,
+            "statusText": "Not Found"
+          }, "Check storage content");
+        });
+      });
+    }
+
+    function unexpectedError(error) {
+      if (error instanceof Error) {
+        deepEqual([
+          error.name + ": " + error.message,
+          error
+        ], "NO ERROR", "Unexpected error");
+      } else {
+        deepEqual(error, "NO ERROR", "Unexpected error");
+      }
+    }
+
+    chain().
+      // remove document
+      then(putSomeDocuments).
+      then(removeDocument).
+      then(removeDocumentTest).
+      then(checkStorageContent).
+      // remove document with unavailable storage
+      then(putSomeDocuments2).
+      then(removeDocumentWithUnavailableStorage).
+      then(removeDocumentWithUnavailableStorageTest).
+      then(checkStorageContent2).
+      // End of scenario
+      then(null, unexpectedError).
+      then(start, start);
+  });
+
   test("AllDocs", function () {
     var shared = {}, i, jio_list, replicate_jio;
 
