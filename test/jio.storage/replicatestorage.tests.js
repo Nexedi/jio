@@ -394,7 +394,7 @@
       then(start, start);
   });
 
-  test("Post", function () {
+  test("Post + Put", function () {
     var shared = {}, i, jio_list, replicate_jio;
 
     // this test can work with at least 2 sub storages
@@ -502,6 +502,46 @@
       });
     }
 
+    function updateDocument() {
+      return replicate_jio.put({
+        "_id": "{\"identifier\":[\"a\"]}",
+        "identifier": "a",
+        "title": "b"
+      });
+    }
+
+    function updateDocumentTest(answer) {
+      deepEqual(answer, {
+        "id": "{\"identifier\":[\"a\"]}",
+        "method": "put",
+        "result": "success",
+        "status": 204,
+        "statusText": "No Content"
+      }, "Update document");
+    }
+
+    function checkStorageContent3() {
+      // check storage state
+      return all(jio_list.map(function (jio) {
+        return jio.get({"_id": "{\"identifier\":[\"a\"]}"});
+      })).then(function (answers) {
+        answers.forEach(function (answer) {
+          deepEqual(answer, {
+            "data": {
+              "_id": "{\"identifier\":[\"a\"]}",
+              "identifier": "a",
+              "title": "b"
+            },
+            "id": "{\"identifier\":[\"a\"]}",
+            "method": "get",
+            "result": "success",
+            "status": 200,
+            "statusText": "Ok"
+          }, "Check storage content");
+        });
+      });
+    }
+
     function createDocumentWithUnavailableStorage() {
       setFakeStorage();
       setTimeout(function () {
@@ -575,6 +615,10 @@
       then(createDocument).
       then(createDocumentTest).
       then(checkStorageContent).
+      // update document
+      then(updateDocument).
+      then(updateDocumentTest).
+      then(checkStorageContent3).
       // create a document with unavailable storage
       then(createDocumentWithUnavailableStorage).
       then(createDocumentWithUnavailableStorageTest).
