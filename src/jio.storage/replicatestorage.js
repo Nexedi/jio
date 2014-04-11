@@ -374,28 +374,29 @@
     function repairSubStorages() {
       var promise_list = [], i;
       for (i = 0; i < length; i += 1) {
-        promise_list[i] = storage_list[i].repair(param, option);
+        promise_list[i] = success(storage_list[i].repair(param, option));
       }
       return all(promise_list);
+    }
+
+    function returnThe404ReasonsElseNull(reason) {
+      if (reason.status === 404) {
+        return 404;
+      }
+      return null;
     }
 
     function getSubStoragesDocument() {
       var promise_list = [], i;
       for (i = 0; i < length; i += 1) {
-        promise_list[i] = success(storage_list[i].get(param));
+        promise_list[i] =
+          storage_list[i].get(param).then(null, returnThe404ReasonsElseNull);
       }
       return all(promise_list);
     }
 
     function synchronizeDocument(answers) {
-      return this_.syncGetAnswerList(answers.map(function (answer) {
-        if (answer.result === "success") {
-          return answer;
-        }
-        if (answer.status === 404) {
-          return 404;
-        }
-      }));
+      return this_.syncGetAnswerList(command, answers);
     }
 
     function checkAnswers(answers) {
