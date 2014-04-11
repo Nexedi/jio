@@ -66,6 +66,9 @@
       },
       free: function () {
         delete fakestorage[that._id + '/' + method];
+      },
+      setCanceller: function () {
+        return command.setCanceller.apply(command, arguments);
       }
     };
   };

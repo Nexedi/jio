@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80 */
 /*global define, exports, window, require, localStorage, start, ok, deepEqual,
-  sinon */
+  sinon, setTimeout, clearTimeout */
 
 (function (dependencies, module) {
   "use strict";
@@ -19,6 +19,28 @@
 
   //////////////////////////////////////////////////////////////////////////////
   // Tools
+
+  /**
+   * Creates a QUnit.start wrapper that allows to trigger start several times.
+   *
+   * @param  {Number} num Timeout in ms
+   * @return {Function} The wrapper
+   */
+  function starter(num) {
+    var started = false, ident;
+    function startFn() {
+      if (!started) {
+        started = true;
+        clearTimeout(ident);
+        start();
+      }
+    }
+    if (num) {
+      ident = setTimeout(startFn, num);
+    }
+    return startFn;
+  }
+  exports.starter = starter;
 
   /**
    * Test if the string is an Uuid

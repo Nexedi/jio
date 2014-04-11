@@ -61,6 +61,7 @@ function enableRestAPI(jio, shared) { // (jio, shared, options)
       param.solver.reject = reject;
       param.solver.notify = notify;
     }, function () {
+      if (!param.cancellers) { return; }
       var k;
       for (k in param.cancellers) {
         if (param.cancellers.hasOwnProperty(k)) {

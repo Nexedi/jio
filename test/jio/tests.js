@@ -1,18 +1,25 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global define, window, exports, require, jIO, fake_storage, ok, module, test,
   stop, start, deepEqual, FileReader, Blob, setTimeout, clearTimeout,
-  localStorage */
+  localStorage, test_util */
 
-(function (dependencies, module) {
+(function (dependencies, factory) {
   "use strict";
-  if (typeof define === 'function' && define.amd) {
-    return define(dependencies, module);
+  if (typeof define === "function" && define.amd) {
+    return define(dependencies, factory);
   }
-  if (typeof exports === 'object') {
-    return module(require('fakestorage'), require('jio'));
+  if (typeof module === "object" && module !== null &&
+      typeof module.exports === "object" && module.exports !== null &&
+      typeof require === "function") {
+    return factory(dependencies.map(require));
   }
-  module(fake_storage, jIO);
-}(['fakestorage', 'jio', 'sinon_qunit'], function (fake_storage, jIO) {
+  factory(fake_storage, jIO, test_util);
+}([
+  'fakestorage',
+  'jio',
+  'test_util',
+  'sinon_qunit'
+], function (fake_storage, jIO, util) {
   "use strict";
   var test_name, JIO = jIO.JIO, commands = fake_storage.commands;
 
@@ -350,6 +357,40 @@
       notify(1);
       commands['Valid noti/put'].success();
       notify(2);
+    }, 50);
+  });
+
+  test('should be cancelled', 1, function () {
+    var time_array = [], put_promise,
+      start = util.starter(1000),
+      jio = new JIO({
+        "type": "fake",
+        "id": "Cancel Err"
+      }, {
+        "workspace": {}
+      });
+
+    stop();
+    put_promise = jio.put({"_id": "a"});
+    put_promise.then(start, function (answer) {
+      time_array.push(answer);
+      deepEqual(time_array, ["cancelled", {
+        "error": "cancelled",
+        "id": "a",
+        "message": "Command failed",
+        "method": "put",
+        "reason": "unknown",
+        "result": "error",
+        "status": 555,
+        "statusText": "Cancelled"
+      }]);
+      start();
+    });
+    setTimeout(function () {
+      commands['Cancel Err/put'].setCanceller(function () {
+        time_array.push("cancelled");
+      });
+      put_promise.cancel();
     }, 50);
   });
 

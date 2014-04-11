@@ -58,6 +58,13 @@ function enableJobMaker(jio, shared, options) {
     job.command.storage = function () {
       return shared.createRestApi.apply(null, arguments);
     };
+    job.command.setCanceller = function (canceller) {
+      job.cancellers["command:canceller"] = canceller;
+    };
+    job.cancellers = job.cancellers || {};
+    job.cancellers["job:canceller"] = function () {
+      shared.emit("job:reject", job, ["cancelled"]);
+    };
   }
 
   function createJobFromRest(param) {
