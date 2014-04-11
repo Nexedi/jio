@@ -198,8 +198,22 @@ function generateUuid() {
 exports.util.generateUuid = generateUuid;
 
 /**
- * JSON stringify a value. Dict keys are sorted in order to make a kind of
- * deepEqual thanks to a simple strict equal string comparison.
+ * Concatenate a `string` `n` times.
+ *
+ * @param  {String} string The string to concat
+ * @param  {Number} n The number of time to concat
+ * @return {String} The concatenated string
+ */
+function concatStringNTimes(string, n) {
+  /*jslint plusplus: true */
+  var res = "";
+  while (--n >= 0) { res += string; }
+  return res;
+}
+
+/**
+ * JSON stringify a value. Object keys are sorted in order to make a kind of
+ * deepEqual thanks to a simple string comparison.
  *
  *     JSON.stringify({"a": "b", "c": "d"}) ===
  *       JSON.stringify({"c": "d", "a": "b"})                 // false
@@ -210,43 +224,84 @@ exports.util.generateUuid = generateUuid;
  *       uniqueJSONStringify({"c": "d", "a": "b"})            // true
  *
  * @param  {Any} value The value to stringify
- * @param  {Function} [replacer] A function to replace values during parse
+ * @param  {Function,Array} [replacer] A function to replace values during parse
+ * @param  {String,Number} [space] Causes the result to be pretty-printed
+ * @return {String} The unique JSON stringified value
  */
-function uniqueJSONStringify(value, replacer) {
-  function subStringify(value, key) {
-    var i, res;
-    if (typeof replacer === 'function') {
+function uniqueJSONStringify(value, replacer, space) {
+  var indent, key_value_space = "";
+  if (typeof space === "string") {
+    if (space !== "") {
+      indent = space;
+      key_value_space = " ";
+    }
+  } else if (typeof space === "number") {
+    if (isFinite(space) && space > 0) {
+      indent = concatStringNTimes(" ", space);
+      key_value_space = " ";
+    }
+  }
+
+  function uniqueJSONStringifyRec(key, value, deep) {
+    var i, l, res, my_space;
+    if (value && typeof value.toJSON === "function") {
+      value = value.toJSON();
+    }
+    if (typeof replacer === "function") {
       value = replacer(key, value);
+    }
+
+    if (indent) {
+      my_space = concatStringNTimes(indent, deep);
     }
     if (Array.isArray(value)) {
       res = [];
       for (i = 0; i < value.length; i += 1) {
-        res[res.length] = subStringify(value[i], i);
+        res[res.length] = uniqueJSONStringifyRec(i, value[i], deep + 1);
         if (res[res.length - 1] === undefined) {
-          res[res.length - 1] = 'null';
+          res[res.length - 1] = "null";
         }
       }
-      return '[' + res.join(',') + ']';
+      if (res.length === 0) { return "[]"; }
+      if (indent) {
+        return "[\n" + my_space + indent +
+          res.join(",\n" + my_space + indent) +
+          "\n" + my_space + "]";
+      }
+      return "[" + res.join(",") + "]";
     }
-    if (typeof value === 'object' && value !== null &&
-        typeof value.toJSON !== 'function') {
-      res = [];
-      for (i in value) {
-        if (value.hasOwnProperty(i)) {
-          res[res.length] = subStringify(value[i], i);
-          if (res[res.length - 1] !== undefined) {
-            res[res.length - 1] = JSON.stringify(i) + ":" + res[res.length - 1];
-          } else {
-            res.length -= 1;
-          }
-        }
+    if (typeof value === "object" && value !== null) {
+      if (Array.isArray(replacer)) {
+        res = replacer.reduce(function (p, c) {
+          p.push(c);
+          return p;
+        }, []);
+      } else {
+        res = Object.keys(value);
       }
       res.sort();
-      return '{' + res.join(',') + '}';
+      for (i = 0, l = res.length; i < l; i += 1) {
+        key = res[i];
+        res[i] = uniqueJSONStringifyRec(key, value[key], deep + 1);
+        if (res[i] !== undefined) {
+          res[i] = JSON.stringify(key) + ":" + key_value_space + res[i];
+        } else {
+          res.splice(i, 1);
+          l -= 1;
+          i -= 1;
+        }
+      }
+      if (res.length === 0) { return "{}"; }
+      if (indent) {
+        return "{\n" + my_space + indent +
+          res.join(",\n" + my_space + indent) +
+          "\n" + my_space + "}";
+      }
+      return "{" + res.join(",") + "}";
     }
     return JSON.stringify(value);
   }
-  return subStringify(value, '');
+  return uniqueJSONStringifyRec("", value, 0);
 }
 exports.util.uniqueJSONStringify = uniqueJSONStringify;
 
