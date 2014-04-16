@@ -139,18 +139,49 @@
    */
   QueryStorage.prototype.allDocs = function (command, param, options) {
     var that = this,
-      substorage = command.storage(this._sub_storage),
-      // we need the full documents in order to perform the query, will
-      // remove them later if they were not required.
-      include_docs = (options.include_docs || options.query) ? true : false;
+      supported_options = {
+        "limit": true,
+        "query": true,
+        "select_list": true,
+        "sort_on": true
+        // include_docs too, but it should be managed by sub storage
+      },
+      cloned_options = JSON.parse(JSON.stringify(options)),
+      substorage = command.storage(this._sub_storage);
 
-    substorage.allDocs({
-      "include_docs": include_docs
+    substorage.allDocs(cloned_options).then(null, function (reason) {
+      if (reason.error !== "UnsupportedOptionError" ||
+          !Array.isArray(reason["arguments"]) ||
+          reason["arguments"].length === 0) {
+        throw reason;
+      }
+      var offset = 0;
+      reason["arguments"].slice().forEach(function (unsupported_option, i) {
+        if (supported_options[unsupported_option]) {
+          reason["arguments"].splice(i + offset, 1);
+          offset -= 1;
+          if ({"query": 1, "sort_on": 1}[unsupported_option]) {
+            cloned_options.include_docs = true;
+            delete cloned_options.limit;
+          } else if ({"select_list": 1}[unsupported_option]) {
+            cloned_options.include_docs = true;
+          }
+        }
+        delete cloned_options[unsupported_option];
+      });
+      if (reason["arguments"].length > 0) {
+        throw {
+          "status": 501,
+          "error": "UnsupportedOptionError",
+          "reason": "unspported option",
+          "arguments": reason["arguments"]
+        };
+      }
+      return substorage.allDocs(cloned_options);
     }).then(function (response) {
-
       var data_rows = response.data.rows, docs = {}, row, i, l;
 
-      if (!include_docs) {
+      if (!cloned_options.include_docs) {
         return response;
       }
 
