@@ -13,12 +13,14 @@
  *
  *    {
  *      "type": "indexeddb",
- *      "database": <string>
+ *      "database": <string>,
+ *      "version": <number>, (default is `1`)
+ *      "indices": <array of strings>
  *    }
  *
  * The database name will be prefixed by "jio:", so if the database property is
  * "hello", then you can manually reach this database with
- * `indexedDB.open("jio:hello");`. (Or
+ * `indexedDB.open("jio:hello", <version>);`. (Or
  * `indexedDB.deleteDatabase("jio:hello");`.)
  *
  * For more informations:
@@ -78,6 +80,19 @@
                           "must be a non-empty string");
     }
     this._database_name = "jio:" + description.database;
+    if (Array.isArray(description.indices)) {
+      this._indices = description.indices;
+    } else {
+      this._indices = [];
+    }
+    var i, l, index;
+    for (i = 0, l = this._indices.length; i < l; i += 1) {
+      index = this._indices[i];
+      if (typeof index !== "string" || index === "") {
+        throw new TypeError("IndexedDBStorage 'indices' must be an " +
+                            "array of non empty strings.");
+      }
+    }
   }
 
   // XXX doc string
@@ -85,18 +100,53 @@
     if (shared.aborted) { return; }
     shared.db = event.target.result;
     try {
-      shared.store = shared.db.createObjectStore("metadata", {
-        "keyPath": "_id"
-        //"autoIncrement": true
-      });
+      try {
+        shared.store = shared.db.createObjectStore("metadata", {
+          "keyPath": "_id"
+          //"autoIncrement": true
+        });
+      } catch (e0) {
+        // store already exists
+        shared.store = event.target.transaction.objectStore("metadata");
+      }
       // `createObjectStore` can throw InvalidStateError - open_req.onerror
       // and db.onerror won't be called.
-      shared.store.createIndex("_id", "_id");
-      // `store.createIndex` can throw an error
-      shared.db_created = true;
+      try {
+        shared.store.createIndex("_id", "_id");
+        // `store.createIndex` can throw an error
+      } catch (ignore) {
+        // index already exists
+      }
+
+      var i, l, index;
+      for (i = 0, l = shared.connector._indices.length; i < l; i += 1) {
+        index = shared.connector._indices[i];
+        try {
+          shared.store.createIndex(index, index);
+        } catch (ignore) {
+          // index already exist
+        }
+      }
+
+      try {
+        shared.store = shared.db.createObjectStore("attachment", {
+          "keyPath": ["id", "attachment"]
+        });
+      } catch (ignore) {
+        // store already exists
+      }
+
+      try {
+        shared.store.createIndex("id,attachment", ["id", "attachment"]);
+      } catch (ignore) {
+        // index already exist
+      }
+
       shared.store.transaction.oncomplete = function () {
         delete shared.store;
       };
+
+      shared.db_created = true;
     } catch (e) {
       shared.reject(e);
       shared.db.close();
