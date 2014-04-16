@@ -429,7 +429,25 @@
 
   // XXX doc string
   IndexedDBStorage.prototype.getList = function (option) {
-    var rows = [], onCancel, open_req = indexedDB.open(this._database_name);
+    var rejected_options = [], supported_options = {
+      "limit": true,
+      "select_list": true,
+      "include_docs": true
+    }, rows = [], onCancel, open_req;
+    Object.keys(option).forEach(function (opt) {
+      if (!supported_options[opt]) {
+        rejected_options.push(opt);
+      }
+    });
+    if (rejected_options.length) {
+      throw {
+        "status": 501,
+        "error": "UnsupportedOptionError",
+        "reason": "unsupported option",
+        "arguments": rejected_options
+      };
+    }
+    open_req = indexedDB.open(this._database_name);
     return new Promise(function (resolve, reject, notify) {
       open_req.onerror = function () {
         if (open_req.result) { open_req.result.close(); }
