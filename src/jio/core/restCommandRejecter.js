@@ -5,7 +5,7 @@ function restCommandRejecter(param, args) {
   // reject(status, reason, message, {"custom": "value"});
   // reject(status, reason, {..});
   // reject(status, {..});
-  var arg, current_priority, priority = [
+  var arg, current_priority, i, l, priority = [
     // 0 - custom parameter values
     {},
     // 1 - default values
@@ -72,7 +72,29 @@ function restCommandRejecter(param, args) {
     if ((arg.statusText || arg.status >= 0)) {
       current_priority.status = arg.statusText || arg.status;
     }
-    if (arg instanceof Error || arg instanceof DOMException) {
+    if (arg.error === "UnsupportedOptionError" &&
+        Array.isArray(arg["arguments"])) {
+      l = arg["arguments"].length;
+      if ((typeof arg.message !== "string" || arg.message === "") &&
+          l > 0) {
+        current_priority.message = "Option ";
+        if (0 < l) {
+          current_priority.message += "`" + arg["arguments"][0] + "`";
+        }
+        i = 1;
+        while (i < l - 1) {
+          current_priority.message += ", `" + arg["arguments"][i] + "`";
+          i += 1;
+        }
+        if (i < l) {
+          current_priority.message += " and `" + arg["arguments"][i] +
+            "` are not supported.";
+        } else {
+          current_priority.message += " is not supported.";
+        }
+        current_priority["arguments"] = arg["arguments"];
+      }
+    } else if (arg instanceof Error || arg instanceof DOMException) {
       if (arg.code !== undefined && arg.code !== null) {
         current_priority.code = arg.code;
       }
