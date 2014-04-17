@@ -140,9 +140,9 @@
       this._database = localStorage;
       this._storage = localstorage;
       this._mode = "localStorage";
-      this._key_schema = spec.key_schema;
       break;
     }
+    this._key_schema = spec.key_schema;
   }
 
 
