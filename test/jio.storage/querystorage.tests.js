@@ -8,7 +8,7 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  module(test_util, RSVP, jIO, local_storage);
+  module(test_util, RSVP, jIO);
 }([
   'test_util',
   'rsvp',
@@ -16,15 +16,19 @@
   'localstorage',
   'qunit',
   'querystorage'
-], function (test_util, RSVP, jIO, local_storage) {
+], function (test_util, RSVP, jIO) {
   "use strict";
 
   module("QueryStorage");
 
   function createQueryStorage(name, key_schema) {
-    var local_description = local_storage.createDescription(name,
-                                                            name,
-                                                            'memory');
+    var local_description = {
+      "type": "local",
+      "username": name,
+      "application_name": name,
+      "mode": "memory",
+      "key_schema": key_schema
+    };
     return jIO.createJIO({
       type: 'query',
       sub_storage: local_description,
