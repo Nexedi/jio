@@ -17,7 +17,7 @@
 ], function (RSVP, jIO, local_storage) {
   "use strict";
 
-  module("LocalStorage");
+  module("LocalStorage Key Schema");
 
   local_storage.clear();
 
