@@ -415,8 +415,7 @@
         "/[^/]+$"
     );
     if (options.query === undefined && options.sort_on === undefined &&
-        options.select_list === undefined &&
-        options.include_docs === undefined) {
+        options.select_list === undefined) {
       rows = [];
       for (i in this._database) {
         if (this._database.hasOwnProperty(i)) {
@@ -425,7 +424,7 @@
             row = { value: {} };
             row.id = i.split('/').slice(-1)[0];
             if (options.include_docs) {
-              row.doc = JSON.parse(this._storage.getItem(i));
+              row.doc = this._storage.getItem(i);
             }
             rows.push(row);
           }
