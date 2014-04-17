@@ -71,9 +71,10 @@ Some allowed options are:
 * ``ass: true`` if assignment should be allowed outside of statement position.
 * ``bitwise: true`` if bitwise operators should be allowed.
 * ``continue: true`` if the continue statement should be allowed.
+* ``forin: true`` if unfiltered ``for in`` statement should be allowed. (*you should set your own way to filter properties*)
 * ``newcap: true`` if Initial Caps with constructor function is optional.
 * ``regexp: true`` if ``.`` and ``[^...]`` should be allowed in RegExp literals. They match more material than might be expected, allowing attackers to confuse applications. These forms should not be used when validating in secure applications.
-* ``unparam: true`` if warnings should be silenced for unused parameters.
+* ``unparam: true`` if warnings should be silenced for unused parameters (*must be set at the end of the concerned function!*).
 
 
 Coding Conventions
