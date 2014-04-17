@@ -68,6 +68,24 @@
     Function.prototype.call.bind(Object.prototype.hasOwnProperty);
 
   /**
+   *     filterMap(array, callback) : array
+   *
+   * Acts like `Array.prototype.map` but does not produces a new array, it
+   * modifies the original array instead.
+   *
+   * @param  {Array} array The array to modify
+   * @param  {Function} callback Called in each element being parsed
+   * @return {Array} The modified array
+   */
+  function filterMap(array, callback) {
+    var i;
+    for (i = 0; i < array.length; i += 1) {
+      array[i] = callback(array[i], i, array);
+    }
+    return array;
+  }
+
+  /**
    * Checks if an object has no enumerable keys
    *
    * @param  {Object} obj The object
@@ -456,8 +474,8 @@
       }
       jIO.QueryFactory.create(options.query || "",
                               this._key_schema).
-        exec(document_list, options).then(function () {
-          document_list = document_list.map(function (value) {
+        exec(document_list, options).then(function (document_list) {
+          filterMap(document_list, function (value) {
             var o = {
               "id": value._id
             };
