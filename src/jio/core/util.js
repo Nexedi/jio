@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true, sloppy: true */
 /*global exports, Blob, FileReader, RSVP, hex_sha256, XMLHttpRequest,
-  constants */
+  constants, URL, Worker */
 
 /**
  * Do not exports these tools unless they are not writable, not configurable.
@@ -629,3 +629,77 @@ function range(start, stop, step, callback) {
   });
 }
 exports.util.range = range;
+
+/**
+ *     worker(script) : task
+ *
+ * Produces a function `task` which is able to execute a `script` in a web
+ * worker. Each time the `task` is launched, a new web worker is created and
+ * executed.
+ *
+ * `task` can take one serializable parameter which will be the `onmessage`
+ * event data in the web worker.
+ *
+ * `script` can be a function or a string. If the script is a string, then it
+ * should contains an assignement to the global `onmessage` listener.
+ * Otherwise, the `script` function will be automatically assigned to
+ * `onmessage`.
+ *
+ *     var task = worker(function (event) {
+ *       /\*global resolve, reject, notify *\/
+ *       notify(event.data + 1);
+ *       notify(event.data + 2);
+ *       resolve(event.data + 3);
+ *     });
+ *     task(3).then(console.log, console.warn, console.info);
+ *     // (i)> 4
+ *     // (i)> 5
+ *     //    > 6
+ *
+ * @param  {Function|String} script The script to run in the web worker.
+ * @return {Function} The worker function.
+ */
+function worker(script) {
+  if (typeof script === "function") {
+    script = "onmessage = " + script.toString() + ";";
+  }
+  script = URL.createObjectURL(new Blob([
+    'function resolve(v){postMessage({command:"resolve",value:v});}' +
+      'function reject(v){postMessage({command:"reject",value:v});}' +
+      'function notify(v){postMessage({command:"notify",value:v});}' +
+      'onerror=function(e){reject(e);e.preventDefault();};' +
+      script
+  ], {"type": "application/javascript"}));
+  return function (data) {
+    var w = new Worker(script);
+    return new RSVP.Promise(function (done, fail, notify) {
+      w.onmessage = function (event) {
+        if (typeof event.data === "object" && event.data !== null) {
+          switch (event.data.command) {
+          case "resolve":
+            done(event.data.value);
+            w.terminate();
+            return;
+          case "reject":
+            fail(event.data.value);
+            w.terminate();
+            return;
+          case "notify":
+            if (typeof notify === "function") {
+              notify(event.data.value);
+            }
+            return;
+          }
+        }
+      };
+      w.onerror = function (event) {
+        fail(event);
+        w.terminate();
+      };
+      w.postMessage(data);
+    }, function () {
+      w.terminate();
+    });
+  };
+}
+exports.util.worker = worker;
