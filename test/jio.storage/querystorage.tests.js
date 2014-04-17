@@ -586,22 +586,18 @@
           "rows": [
             {
               "id": "a",
-              "key": "a",
               "value": {}
             },
             {
               "id": "b",
-              "key": "b",
               "value": {}
             },
             {
               "id": "c",
-              "key": "c",
               "value": {}
             },
             {
               "id": "d",
-              "key": "d",
               "value": {}
             }
           ],

@@ -90,19 +90,15 @@
         "data": {
           "rows": [{
             "id": "a",
-            "key": "a",
             "value": {}
           }, {
             "id": "b",
-            "key": "b",
             "value": {}
           }, {
             "id": "c",
-            "key": "c",
             "value": {}
           }, {
             "id": "d",
-            "key": "d",
             "value": {}
           }],
           "total_rows": 4
@@ -142,7 +138,6 @@
               "title": "one"
             },
             "id": "a",
-            "key": "a",
             "value": {
               "date": o.date_a.toJSON(),
               "title": "one"
@@ -154,7 +149,6 @@
               "title": "two"
             },
             "id": "d",
-            "key": "d",
             "value": {
               "date": o.date_b.toJSON(),
               "title": "two"
@@ -166,7 +160,6 @@
               "title": "two"
             },
             "id": "b",
-            "key": "b",
             "value": {
               "date": o.date_a.toJSON(),
               "title": "two"
@@ -196,11 +189,9 @@
         "data": {
           "rows": [{
             "id": "a",
-            "key": "a",
             "value": {}
           }, {
             "id": "b",
-            "key": "b",
             "value": {}
           }],
           "total_rows": 2

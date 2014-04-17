@@ -936,23 +936,18 @@
         "total_rows": 5,
         "rows": [{
           "id": "doc0",
-          "key": "doc0",
           "value": {}
         }, {
           "id": "doc1",
-          "key": "doc1",
           "value": {}
         }, {
           "id": "doc2",
-          "key": "doc2",
           "value": {}
         }, {
           "id": "doc3",
-          "key": "doc3",
           "value": {}
         }, {
           "id": "doc4",
-          "key": "doc4",
           "value": {}
         }]
       }, "AllDocs with document ids only");

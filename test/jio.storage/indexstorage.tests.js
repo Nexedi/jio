@@ -341,35 +341,27 @@
           "total_rows": 8,
           "rows": [{
             "id": "A",
-            "key": "A",
             "value": {}
           }, {
             "id": "B",
-            "key": "B",
             "value": {}
           }, {
             "id": "C",
-            "key": "C",
             "value": {}
           }, {
             "id": "D",
-            "key": "D",
             "value": {}
           }, {
             "id": "b",
-            "key": "b",
             "value": {}
           }, {
             "id": "ce",
-            "key": "ce",
             "value": {}
           }, {
             "id": "dee",
-            "key": "dee",
             "value": {}
           }, {
             "id": shared.created_document_id,
-            "key": shared.created_document_id,
             "value": {}
           }]
         },

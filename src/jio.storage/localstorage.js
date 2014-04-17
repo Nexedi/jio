@@ -424,7 +424,6 @@
           if (path_re.test(i)) {
             row = { value: {} };
             row.id = i.split('/').slice(-1)[0];
-            row.key = row.id;
             if (options.include_docs) {
               row.doc = JSON.parse(this._storage.getItem(i));
             }
@@ -458,8 +457,7 @@
         exec(document_list, options).then(function () {
           document_list = document_list.map(function (value) {
             var o = {
-              "id": value._id,
-              "key": value._id
+              "id": value._id
             };
             if (options.include_docs === true) {
               o.doc = document_object[value._id];
