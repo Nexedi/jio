@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global Query, RSVP, deepClone */
+/*global Query, RSVP, deepClone, background, jIO */
 
 /**
  * Escapes regexp special chars from a string.
@@ -173,31 +173,41 @@ function select(select_option, list, clone) {
 Query.select = select;
 
 /**
- * Sort a list of items, according to keys and directions. If `clone` is true,
- * then the method will act on a cloned list.
+ * Sort a list of items, according to keys and directions. This function acts on
+ * a cloned list.
  *
  * @param  {Array} sort_on_option List of couples [key, direction]
  * @param  {Array} list The item list to sort
- * @param  {Boolean} [clone=false] If true, modifies a clone of the list
  * @return {Array} The filtered list
  */
-function sortOn(sort_on_option, list, clone) {
-  var sort_index;
+function sortOn(sort_on_option, list) {
+  if (!background.sortOn) {
+    background.sortOn = function (event) {
+      var sort_index, option = event.data.option, array = event.data.array;
+      for (sort_index = option.length - 1; sort_index >= 0;
+           sort_index -= 1) {
+        array.sort(sortFunction(
+          option[sort_index][0],
+          option[sort_index][1]
+        ));
+      }
+      /*global resolve*/
+      resolve(array);
+    };
+    background.sortOn = jIO.util.worker(
+      metadataValueToStringArray.toString() +
+      sortFunction.toString() +
+        "onmessage = " + background.sortOn.toString()
+    );
+  }
   if (!Array.isArray(sort_on_option)) {
     throw new TypeError("jioquery.sortOn(): " +
                         "Argument 1 is not of type 'array'");
   }
-  if (clone) {
-    list = deepClone(list);
-  }
-  for (sort_index = sort_on_option.length - 1; sort_index >= 0;
-       sort_index -= 1) {
-    list.sort(sortFunction(
-      sort_on_option[sort_index][0],
-      sort_on_option[sort_index][1]
-    ));
-  }
-  return list;
+  return background.sortOn({
+    "option": sort_on_option,
+    "array": list
+  });
 }
 
 Query.sortOn = sortOn;

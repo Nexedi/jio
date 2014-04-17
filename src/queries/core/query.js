@@ -91,9 +91,14 @@ Query.prototype.exec = function (item_list, option) {
       }
     }
     if (option.sort_on) {
-      return sortOn(option.sort_on, item_list);
+      j = sortOn(option.sort_on, item_list);
+      // sortOn clones the list, to avoid to get it twice, free memory
+      item_list = undefined;
+      return j;
     }
-  }, function () {
+    return item_list;
+  }, function (list) {
+    item_list = list;
     if (option.limit) {
       return limit(option.limit, item_list);
     }
