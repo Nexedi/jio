@@ -64,6 +64,9 @@
 ], function (exports, jIO) {
   "use strict";
 
+  var ram = {}, memorystorage, localstorage, hasOwnProperty =
+    Function.prototype.call.bind(Object.prototype.hasOwnProperty);
+
   /**
    * Checks if an object has no enumerable keys
    *
@@ -71,16 +74,15 @@
    * @return {Boolean} true if empty, else false
    */
   function objectIsEmpty(obj) {
+    /*jslint forin: true */
     var k;
     for (k in obj) {
-      if (obj.hasOwnProperty(k)) {
+      if (hasOwnProperty(obj, k)) {
         return false;
       }
     }
     return true;
   }
-
-  var ram = {}, memorystorage, localstorage;
 
   /*
    * Wrapper for the localStorage used to simplify instion of any kind of
@@ -414,11 +416,12 @@
       "^" + jIO.Query.stringEscapeRegexpCharacters(this._localpath) +
         "/[^/]+$"
     );
+    /*jslint forin: true */
     if (options.query === undefined && options.sort_on === undefined &&
         options.select_list === undefined) {
       rows = [];
       for (i in this._database) {
-        if (this._database.hasOwnProperty(i)) {
+        if (hasOwnProperty(this._database, i)) {
           // filter non-documents
           if (path_re.test(i)) {
             row = { value: {} };
@@ -434,7 +437,7 @@
     } else {
       // create jio query object from returned results
       for (i in this._database) {
-        if (this._database.hasOwnProperty(i)) {
+        if (hasOwnProperty(this._database, i)) {
           if (path_re.test(i)) {
             document_list.push(this._storage.getItem(i));
           }
