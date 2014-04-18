@@ -565,7 +565,7 @@
         "include_docs": true,
         "sort_on": [['title', 'ascending'], ['date', 'descending']],
         "select_list": ['title', 'date'],
-        "limit": [1] // ==> equal [1, 3] in this case
+        "limit": [1, 3]
       });
 
     }).always(function (answer) {

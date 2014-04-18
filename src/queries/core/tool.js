@@ -233,9 +233,13 @@ function limit(limit_option, list, clone) {
   if (clone) {
     list = deepClone(list);
   }
-  list.splice(0, limit_option[0]);
-  if (limit_option[1]) {
-    list.splice(limit_option[1]);
+  if (limit_option.length > 1) {
+    list.splice(0, limit_option[0]);
+    if (limit_option[1]) {
+      list.length = limit_option[1];
+    }
+  } else if (limit_option.length === 1) {
+    list.length = limit_option[0];
   }
   return list;
 }
