@@ -1,7 +1,8 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global parseStringToObject: true, emptyFunction: true, sortOn: true, limit:
   true, select: true, exports, stringEscapeRegexpCharacters: true,
-  deepClone, RSVP, sequence */
+  deepClone, RSVP, sequence, background, jIO, metadataValueToStringArray,
+  sortFunction */
 
 /**
  * The query to use to filter a list of objects.
@@ -63,6 +64,39 @@ function Query() {
  *                 second is the length.
  */
 Query.prototype.exec = function (item_list, option) {
+  if (!background.removeUnmatchedSortLimitAndSelect) {
+    background.removeUnmatchedSortLimitAndSelect = function (event) {
+      var j, task = event.data.option, array = event.data.item_list;
+      // remove unmatched documents
+      if (task.match_list) {
+        for (j = task.match_list.length - 1; j >= 0; j -= 1) {
+          if (!task.match_list[j]) {
+            array.splice(j, 1);
+          }
+        }
+      }
+      // sort documents
+      if (task.sort_on) {
+        sortOn(task.sort_on, array);
+      }
+      // limit documents
+      if (task.limit) {
+        limit(task.limit, array);
+      }
+      // select values
+      select(task.select_list || [], array);
+      /*global resolve */
+      resolve(array);
+    };
+    background.removeUnmatchedSortLimitAndSelect = jIO.util.worker(
+      metadataValueToStringArray.toString() +
+        sortFunction.toString() +
+        sortOn.toString() +
+        limit.toString() +
+        select.toString() +
+        "onmessage = " + background.removeUnmatchedSortLimitAndSelect.toString()
+    );
+  }
   var i, promises = [];
   if (!Array.isArray(item_list)) {
     throw new TypeError("Query().exec(): Argument 1 is not of type 'array'");
@@ -84,28 +118,18 @@ Query.prototype.exec = function (item_list, option) {
   return sequence([function () {
     return RSVP.all(promises);
   }, function (answers) {
-    var j;
-    for (j = answers.length - 1; j >= 0; j -= 1) {
-      if (!answers[j]) {
-        item_list.splice(j, 1);
-      }
-    }
-    if (option.sort_on) {
-      j = sortOn(option.sort_on, item_list);
-      // sortOn clones the list, to avoid to get it twice, free memory
-      item_list = undefined;
-      return j;
-    }
-    return item_list;
-  }, function (list) {
-    item_list = list;
-    if (option.limit) {
-      return limit(option.limit, item_list);
-    }
-  }, function () {
-    return select(option.select_list || [], item_list);
-  }, function () {
-    return item_list;
+    option = {
+      "match_list": answers,
+      "limit": option.limit,
+      "sort_on": option.sort_on,
+      "select_list": option.select_list
+    };
+    var tmp = background.removeUnmatchedSortLimitAndSelect({
+      "item_list": item_list,
+      "option": option
+    });
+    item_list = undefined; // free memory
+    return tmp;
   }]);
 };
 
