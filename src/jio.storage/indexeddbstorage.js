@@ -573,6 +573,181 @@
     });
   };
 
+
+  /**
+   * Add an attachment to a document
+   *
+   * @param  {Object} command The JIO command
+   * @param  {Object} metadata The data
+   */
+
+  IndexedDBStorage.prototype.putAttachment = function (command, metadata) {
+    var jio_storage = this,
+      transaction,
+      global_db,
+      BlobInfo,
+      digest;
+    new RSVP.Queue()
+        .push(jIO.util.readBlobAsBinaryString(metadata._blob).
+        then(function (e) {
+          digest = jIO.util.makeBinaryStringDigest(e.target.result);
+          BlobInfo = {
+            "content_type": metadata._blob.type,
+            "digest": digest,
+            "length": metadata._blob.size
+          };
+        }, function () {
+          command.error("conflict", "broken blob",
+                      "Cannot read data to put");
+        }))
+        .push(function () {
+        return openIndexedDB(jio_storage._database_name);
+      })
+        .push(function (db) {
+        global_db = db;
+        transaction = db.transaction(["attachment",
+                                      "blob"], "readwrite");
+        return promiseResearch(transaction, metadata._id, "attachment", "_id");
+      })
+        .push(function (researchResult) {
+        if (researchResult.result === undefined) {
+          throw ({"status": 404, "reason": "Not Found",
+                  "message": "indexeddbStorage unable to put attachment"});
+        }
+        //update attachment
+        researchResult.result._attachment = researchResult.result._attachment
+                                      || {};
+        researchResult.result._attachment[metadata._attachment] =
+                BlobInfo;
+        return putIndexedDB(researchResult.store, researchResult.result);
+      })
+       .push(function () {
+        //put in blob
+        var store = transaction.objectStore("blob");
+        return putIndexedDB(store, {"_id": metadata._id,
+                                    "_attachment" : metadata._attachment,
+                                    "blob": metadata._blob});
+      })
+       .push(function () {
+        return ({"digest": digest});
+      })
+        .push(undefined, function (error) {
+        // Check if transaction is ongoing, if so, abort it
+        if (transaction !== undefined) {
+          transaction.abort();
+        }
+        if (global_db !== undefined) {
+          global_db.close();
+        }
+        throw error;
+      })
+        .push(command.success, command.error, command.notify);
+  };
+
+  /**
+   * Retriev a document attachment
+   *
+   * @param  {Object} command The JIO command
+   * @param  {Object} param The command parameter
+   */
+  IndexedDBStorage.prototype.getAttachment = function (command, param) {
+    var jio_storage = this,
+      transaction,
+      global_db,
+      _id_attachment = [param._id, param._attachment];
+    new RSVP.Queue()
+        .push(function () {
+        return openIndexedDB(jio_storage._database_name);
+      })
+        .push(function (db) {
+        global_db = db;
+        transaction = db.transaction(["blob"], "readwrite");
+        //check if the attachment exists
+        return promiseResearch(transaction, _id_attachment,
+                               "blob", "_id_attachment");
+      })
+        .push(function (researchResult) {
+        if (researchResult.result === undefined) {
+          throw ({"status": 404, "reason": "missing attachment",
+                  "message": "IndexeddbStorage, unable to get attachment."});
+        }
+        return getIndexedDB(researchResult.store, _id_attachment);
+      })
+       .push(function (result) {
+       //get data
+        return ({ "data": result.blob});
+      })
+       .push(undefined, function (error) {
+        // Check if transaction is ongoing, if so, abort it
+        if (transaction !== undefined) {
+          transaction.abort();
+        }
+        if (global_db !== undefined) {
+          global_db.close();
+        }
+        throw error;
+      })
+        .push(command.success, command.error, command.notify);
+  };
+
+  /**
+   * Remove an attachment
+   *
+   * @method removeAttachment
+   * @param  {Object} command The JIO command
+   * @param  {Object} param The command parameters
+   */
+  IndexedDBStorage.prototype.removeAttachment = function (command, param) {
+    var jio_storage = this,
+      transaction,
+      global_db,
+      _id_attachment = [param._id, param._attachment];
+    new RSVP.Queue()
+        .push(function () {
+        return openIndexedDB(jio_storage._database_name);
+      })
+        .push(function (db) {
+        global_db = db;
+        transaction = db.transaction(["attachment", "blob"], "readwrite");
+        //check if the attachment exists
+        return promiseResearch(transaction, _id_attachment,
+                               "blob", "_id_attachment");
+      })
+        .push(function (researchResult) {
+        if (researchResult.result === undefined) {
+          throw ({"status": 404, "reason": "missing attachment",
+                  "message":
+                  "IndexeddbStorage, document attachment not found."});
+        }
+        return removeIndexedDB(researchResult.store, _id_attachment);
+      })
+       .push(function () {
+        //updata attachment
+        var store = transaction.objectStore("attachment");
+        return getIndexedDB(store, param._id);
+      })
+       .push(function (result) {
+        delete result._attachment[param._attachment];
+        var store = transaction.objectStore("attachment");
+        return putIndexedDB(store, result);
+      })
+       .push(function () {
+        return ({ "status": 204 });
+      })
+       .push(undefined, function (error) {
+        // Check if transaction is ongoing, if so, abort it
+        if (transaction !== undefined) {
+          transaction.abort();
+        }
+        if (global_db !== undefined) {
+          global_db.close();
+        }
+        throw error;
+      })
+        .push(command.success, command.error, command.notify);
+  };
+
+
   IndexedDBStorage.prototype.allDocs = function (command, param, option) {
     /*jslint unparam: true */
     this.createDBIfNecessary().
