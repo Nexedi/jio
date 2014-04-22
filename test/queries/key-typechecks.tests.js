@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 90, nomen: true */
-/*global define, exports, require, module, jIO, window, test,
-  raises, ok, equal, deepEqual, sinon */
+/*global define, exports, require, module, jIO, test, stop,
+  raises, ok, equal, deepEqual, sinon, test_util */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -11,8 +11,8 @@
   if (typeof exports === 'object') {
     return module(require('jio'));
   }
-  module(jIO);
-}(['jio', 'qunit'], function (jIO) {
+  module(jIO, test_util);
+}(['jio', 'test_util', 'qunit'], function (jIO, util) {
   "use strict";
 
   module('Key and key_schema objects validation');
@@ -83,41 +83,52 @@
   });
 
 
-  test('Check the key options', function () {
-    var doc_list = [
+  test("missing `key` property", function () {
+    stop();
+    var start = util.starter(1000), doc_list = [
       {'identifier': 'a'}
     ];
 
-    try {
-      jIO.QueryFactory.create({
-        type: 'simple',
-        key: {},
-        value: 'a'
-      }).exec(doc_list);
+    jIO.QueryFactory.create({
+      type: 'simple',
+      key: {},
+      value: 'a'
+    }).exec(doc_list).then(function () {
       ok(false, 'key.read_from is not checked');
-    } catch (e) {
+      start();
+    }, function (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
       equal(e.message,
          "Custom key is missing the read_from property",
          'wrong exception message');
-    }
+      start();
+    });
 
-    try {
-      jIO.QueryFactory.create({
-        type: 'simple',
-        key: {
-          read_from: 'identifier',
-          foobar: ''
-        },
-        value: 'a'
-      }).exec(doc_list);
+  });
+
+  test("`key` has unknown property", function () {
+    stop();
+    var start = util.starter(1000), doc_list = [
+      {"identifier": "a"}
+    ];
+
+    jIO.QueryFactory.create({
+      type: 'simple',
+      key: {
+        read_from: 'identifier',
+        foobar: ''
+      },
+      value: 'a'
+    }).exec(doc_list).then(function () {
       ok(false, 'unknown key properties are not checked');
-    } catch (e) {
+      start();
+    }, function (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
       equal(e.message,
          "Custom key has unknown property 'foobar'",
          'wrong exception message');
-    }
+      start();
+    });
   });
 
 }));
