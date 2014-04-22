@@ -746,7 +746,7 @@
         }
       }
       jIO.QueryFactory.create(option.query || '').
-        exec(db, option).then(function () {
+        exec(db, option).then(function (db) {
           for (i = 0; i < db.length; i += 1) {
             id = db[i]._id;
             if (delete_id) {
