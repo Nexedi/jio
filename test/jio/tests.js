@@ -146,6 +146,11 @@
     });
 
     stop();
+
+    setTimeout(function () {
+      ok(!called, "callback " + (called ? "" : "not") + " called");
+    }, 1999);
+
     jio.post({}).always(function (answer) {
       var message = (answer && answer.message) || "Timeout";
       called = true;
@@ -168,10 +173,6 @@
       commands['3 No Respons/post'].free();
     }, 100);
 
-    setTimeout(function () {
-      ok(!called, "callback " + (called ? "" : "not") + " called");
-    }, 1999);
-
     i = setTimeout(function () {
       i = undefined;
       start();
@@ -189,6 +190,11 @@
     });
 
     stop();
+
+    setTimeout(function () {
+      ok(!called, "callback " + (called ? "" : "not") + " called");
+    }, 2999);
+
     jio.post({}, {"timeout": 3000}).always(function (answer) {
       var message = (answer && answer.message) || "Timeout";
       called = true;
@@ -210,10 +216,6 @@
     setTimeout(function () {
       commands['4 No Respons/post'].free();
     }, 1000);
-
-    setTimeout(function () {
-      ok(!called, "callback " + (called ? "" : "not") + " called");
-    }, 2999);
 
     i = setTimeout(function () {
       i = undefined;
