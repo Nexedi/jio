@@ -2,7 +2,7 @@
 /*global parseStringToObject: true, emptyFunction: true, sortOn: true, limit:
   true, select: true, exports, stringEscapeRegexpCharacters: true,
   deepClone, RSVP, sequence, background, jIO, metadataValueToStringArray,
-  sortFunction */
+  sortFunction, setTimeout, clearTimeout */
 
 /**
  * The query to use to filter a list of objects.
@@ -68,11 +68,9 @@ Query.prototype.exec = function (item_list, option) {
     background.removeUnmatchedSortLimitAndSelect = function (event) {
       var j, task = event.data.option, array = event.data.item_list;
       // remove unmatched documents
-      if (task.match_list) {
-        for (j = task.match_list.length - 1; j >= 0; j -= 1) {
-          if (!task.match_list[j]) {
-            array.splice(j, 1);
-          }
+      for (j = array.length - 1; j >= 0; j -= 1) {
+        if (!array[j]) {
+          array.splice(j, 1);
         }
       }
       // sort documents
@@ -97,7 +95,6 @@ Query.prototype.exec = function (item_list, option) {
         "onmessage = " + background.removeUnmatchedSortLimitAndSelect.toString()
     );
   }
-  var i, promises = [];
   if (!Array.isArray(item_list)) {
     throw new TypeError("Query().exec(): Argument 1 is not of type 'array'");
   }
@@ -108,18 +105,54 @@ Query.prototype.exec = function (item_list, option) {
     throw new TypeError("Query().exec(): " +
                         "Optional argument 2 is not of type 'object'");
   }
-  for (i = 0; i < item_list.length; i += 1) {
-    if (!item_list[i]) {
-      promises.push(RSVP.resolve(false));
-    } else {
-      promises.push(this.match(item_list[i]));
-    }
+  function sleep(delay, value) {
+    var ident;
+    return new RSVP.Promise(function (done) {
+      ident = setTimeout(done, delay, value);
+    }, function () {
+      clearTimeout(ident);
+    });
   }
+  var this_ = this;
   return sequence([function () {
-    return RSVP.all(promises);
-  }, function (answers) {
+    // sequential operation
+    var begin = Date.now();
+    return jIO.util.forEach(item_list, function (value, i) {
+      if (value) {
+        return sequence([function () {
+          return this_.match(item_list[i]);
+        }, function (answer) {
+          if (!answer) {
+            item_list[i] = false;
+          }
+          var now = Date.now();
+          if (begin <= now - 50) {
+            begin = now;
+            return sleep(4);
+          }
+        }]);
+      }
+      item_list[i] = false;
+    });
+    // // parallel operation
+    // var i, promises = [];
+    // function setToFalseIfNotMatch(i) {
+    //   return function (a) {
+    //     if (!a) {
+    //       item_list[i] = false;
+    //     }
+    //   };
+    // }
+    // for (i = 0; i < item_list.length; i += 1) {
+    //   if (!item_list[i]) {
+    //     promises.push(RSVP.resolve(false));
+    //   } else {
+    //   promises.push(this_.match(item_list[i]).then(setToFalseIfNotMatch(i)));
+    //   }
+    // }
+    // return RSVP.all(promises);
+  }, function () {
     option = {
-      "match_list": answers,
       "limit": option.limit,
       "sort_on": option.sort_on,
       "select_list": option.select_list
