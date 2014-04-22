@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global define, RSVP, jIO, fake_storage, module, test, stop, start, deepEqual,
-  setTimeout, clearTimeout, XMLHttpRequest, window */
+  setTimeout, clearTimeout, XMLHttpRequest, window, ok */
 
 (function (dependencies, factory) {
   "use strict";
@@ -163,7 +163,7 @@
       }, "Get document, nothing to synchronize.");
 
       // check storage state
-      return sleep(500).
+      return sleep(1000).
         // possible synchronization in background (should not occur)
         then(function () {
           return all(jio_list.map(function (jio) {
@@ -201,11 +201,16 @@
     }
 
     function getDocumentWithSynchronizationTest(answer) {
+      if (answer && answer.data) {
+        ok(shared.modified_date_list.map(function (v) {
+          return (v && v.toJSON()) || undefined;
+        }).indexOf(answer.data.modified) !== -1, "Should be a known date");
+        delete answer.data.modified;
+      }
       deepEqual(answer, {
         "data": {
           "_id": "{\"identifier\":[\"b\"]}",
-          "identifier": "b",
-          "modified": shared.modified_date_list[0].toJSON()
+          "identifier": "b"
         },
         "id": "{\"identifier\":[\"b\"]}",
         "method": "get",
@@ -215,7 +220,7 @@
       }, "Get document, pending synchronization.");
 
       // check storage state
-      return sleep(500).
+      return sleep(1000).
         // synchronizing in background
         then(function () {
           return all(jio_list.map(function (jio) {
@@ -251,11 +256,16 @@
     }
 
     function getDocumentWith404SynchronizationTest(answer) {
+      if (answer && answer.data) {
+        ok(shared.modified_date_list.map(function (v) {
+          return (v && v.toJSON()) || undefined;
+        }).indexOf(answer.data.modified) !== -1, "Should be a known date");
+        delete answer.data.modified;
+      }
       deepEqual(answer, {
         "data": {
           "_id": "{\"identifier\":[\"c\"]}",
-          "identifier": "c",
-          "modified": shared.modified_date_list[1].toJSON()
+          "identifier": "c"
         },
         "id": "{\"identifier\":[\"c\"]}",
         "method": "get",
@@ -265,7 +275,7 @@
       }, "Get document, synchronizing with not found document.");
 
       // check storage state
-      return sleep(500).
+      return sleep(1000).
         // synchronizing in background
         then(function () {
           return all(jio_list.map(function (jio) {
@@ -309,11 +319,16 @@
     }
 
     function getDocumentWithUnavailableStorageTest(answer) {
+      if (answer && answer.data) {
+        ok(shared.modified_date_list.map(function (v) {
+          return (v && v.toJSON()) || undefined;
+        }).indexOf(answer.data.modified) !== -1, "Should be a known date");
+        delete answer.data.modified;
+      }
       deepEqual(answer, {
         "data": {
           "_id": "{\"identifier\":[\"d\"]}",
-          "identifier": "d",
-          "modified": shared.modified_date_list[1].toJSON()
+          "identifier": "d"
         },
         "id": "{\"identifier\":[\"d\"]}",
         "method": "get",
@@ -324,7 +339,7 @@
 
       unsetFakeStorage();
       // check storage state
-      return sleep(500).
+      return sleep(1000).
         // synchronizing in background
         then(function () {
           return all(jio_list.map(function (jio) {
@@ -479,6 +494,8 @@
         "status": 201,
         "statusText": "Created"
       }, "Post document");
+
+      return sleep(100);
     }
 
     function checkStorageContent() {
@@ -518,6 +535,8 @@
         "status": 204,
         "statusText": "No Content"
       }, "Update document");
+
+      return sleep(100);
     }
 
     function checkStorageContent3() {
@@ -719,6 +738,8 @@
         "status": 204,
         "statusText": "No Content"
       }, "Remove document");
+
+      return sleep(100);
     }
 
     function checkStorageContent() {
@@ -1234,12 +1255,12 @@
         fake_storage.commands[
           "replicate scenario test for repair method - 1/allDocs"
         ].error({"status": 0});
-      }, 100);
+      }, 250);
       setTimeout(function () {
         fake_storage.commands[
           "replicate scenario test for repair method - 1/allDocs"
         ].error({"status": 0});
-      }, 200);
+      }, 500);
       return replicate_jio.repair({"_id": "{\"identifier\":[\"d\"]}"});
     }
 
