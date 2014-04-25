@@ -496,41 +496,52 @@ function methodType(method) {
  * @param  {Any} [thisArg] Value to use as `this` when executing `callback`.
  * @param  {Promise} A new promise.
  */
-function forEach(array, fn, thisArg) {
+function forEach(array, callback, thisArg) {
   if (arguments.length === 0) {
-    throw new TypeError("missing argument 0 when calling function forEach");
+    throw new TypeError("forEach(): missing argument 1");
   }
   if (!Array.isArray(array)) {
-    throw new TypeError(array + " is not an array");
+    throw new TypeError("forEach(): argument 1 is not an array");
   }
   if (arguments.length === 1) {
-    throw new TypeError("missing argument 1 when calling function forEach");
+    throw new TypeError("forEach(): missing argument 2");
   }
-  if (typeof fn !== "function") {
-    throw new TypeError(fn + " is not a function");
+  if (typeof callback !== "function") {
+    throw new TypeError("forEach(): argument 2 is not a function");
   }
-  var cancelled, current_promise = RSVP.resolve();
+  var cancelled, p1 = RSVP.resolve(), p2;
   return new RSVP.Promise(function (done, fail, notify) {
-    var i = 0;
+    var i = 0, value;
     function next() {
-      if (cancelled) {
-        fail(new Error("Cancelled"));
-        return;
-      }
+      // if cancelled before `next` execution, `next` should not be called
       if (i < array.length) {
-        current_promise =
-          current_promise.then(fn.bind(thisArg, array[i], i, array));
-        current_promise.then(next, fail, notify);
+        try {
+          value = callback.call(thisArg, array[i], i, array);
+        } catch (e) {
+          fail(e);
+          return;
+        }
+        // can be cancelled during callback
+        if (cancelled) { return; }
         i += 1;
+        if (value && typeof value.then === "function") {
+          p1 = value;
+          p2 = value.then(next, fail, notify);
+        } else {
+          p2 = p2.then(next, fail, notify);
+        }
         return;
       }
       done();
     }
-    next();
+    p2 = p1.then(next);
   }, function () {
     cancelled = true;
-    if (typeof current_promise.cancel === "function") {
-      current_promise.cancel();
+    if (typeof p1.cancel === "function") {
+      p1.cancel();
+    }
+    if (typeof p2.cancel === "function") {
+      p2.cancel();
     }
   });
 }
