@@ -127,6 +127,14 @@
       then(command.success, command.error, command.notify);
   };
 
+  function makeUnsupportedOptionsError(rejected_options) {
+    throw {
+      "status": 501,
+      "error": "UnsupportedOptionError",
+      "reason": "unsupported option",
+      "arguments": rejected_options
+    };
+  }
 
   /**
    * Retrieve documents.
@@ -160,6 +168,9 @@
         if (supported_options[unsupported_option]) {
           reason["arguments"].splice(i + offset, 1);
           offset -= 1;
+          if ({"query": 1}[unsupported_option]) {
+            cloned_options.partial_query = cloned_options.query;
+          }
           if ({"query": 1, "sort_on": 1}[unsupported_option]) {
             cloned_options.include_docs = true;
             delete cloned_options.limit;
@@ -170,18 +181,32 @@
         delete cloned_options[unsupported_option];
       });
       if (reason["arguments"].length > 0) {
-        throw {
-          "status": 501,
-          "error": "UnsupportedOptionError",
-          "reason": "unspported option",
-          "arguments": reason["arguments"]
-        };
+        throw makeUnsupportedOptionsError(reason["arguments"]);
       }
-      return substorage.allDocs(cloned_options);
+      return substorage.allDocs(cloned_options).then(null, function (reason) {
+        if (reason.error !== "UnsupportedOptionError" ||
+            !Array.isArray(reason["arguments"]) ||
+            reason["arguments"].length === 0) {
+          throw reason;
+        }
+        var partial_query_issue = true;
+        reason["arguments"].slice().forEach(function (unsupported_option, i) {
+          if (unsupported_option !== "partial_query") {
+            partial_query_issue = false;
+          }
+          delete cloned_options[unsupported_option];
+        });
+        if (!partial_query_issue) {
+          throw makeUnsupportedOptionsError(reason["arguments"]);
+        }
+        return substorage.allDocs(cloned_options);
+      });
     }).then(function (response) {
       var data_rows = response.data.rows, docs = {}, row, i, l;
 
-      if (!cloned_options.include_docs) {
+      if (!cloned_options.include_docs ||
+          !(options.query || options.select_list ||
+            options.sort_on || options.limit)) {
         return response;
       }
 
