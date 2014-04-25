@@ -85,13 +85,25 @@
     } else {
       this._indices = [];
     }
-    var i, l, index;
-    for (i = 0, l = this._indices.length; i < l; i += 1) {
-      index = this._indices[i];
-      if (typeof index !== "string" || index === "") {
+    if (typeof description.version === "number" &&
+        isFinite(description.version)) {
+      this._version = description.version;
+    } else {
+      this._version = 1;
+    }
+    function checkIndexedValue(indexed) {
+      if (typeof indexed !== "string" || indexed === "") {
         throw new TypeError("IndexedDBStorage 'indices' must be an " +
                             "array of non empty strings.");
       }
+    }
+    var i, l, index;
+    for (i = 0, l = this._indices.length; i < l; i += 1) {
+      index = this._indices[i];
+      if (!Array.isArray(index)) {
+        index = [index];
+      }
+      index.forEach(checkIndexedValue);
     }
   }
 
@@ -122,7 +134,8 @@
       for (i = 0, l = shared.connector._indices.length; i < l; i += 1) {
         index = shared.connector._indices[i];
         try {
-          shared.store.createIndex(index, index);
+          //console.log('creating index', JSON.stringify(index), index);
+          shared.store.createIndex(JSON.stringify(index), index);
         } catch (ignore) {
           // index already exist
         }
@@ -155,7 +168,10 @@
   }
 
   IndexedDBStorage.prototype.createDBIfNecessary = function () {
-    var shared = {}, open_req = indexedDB.open(this._database_name);
+    var shared = {"connector": this}, open_req = indexedDB.open(
+      this._database_name,
+      this._version
+    );
     // No request.abort() is provided so we cannot cancel database creation
     return new Promise(function (resolve, reject) {
       shared.reject = reject;
@@ -180,7 +196,10 @@
       shared.reject = reject;
 
       // Open DB //
-      var open_req = indexedDB.open(shared.connector._database_name);
+      var open_req = indexedDB.open(
+        shared.connector._database_name,
+        shared.connector._version
+      );
       open_req.onerror = function (event) {
         reject(event.target.errorCode);
       };
@@ -241,7 +260,10 @@
       shared.reject = reject;
 
       // Open DB //
-      var open_req = indexedDB.open(shared.connector._database_name);
+      var open_req = indexedDB.open(
+        shared.connector._database_name,
+        shared.connector._version
+      );
       open_req.onerror = function (event) {
         reject(event.target.errorCode);
       };
@@ -302,7 +324,10 @@
       shared.reject = reject;
 
       // Open DB //
-      var open_req = indexedDB.open(shared.connector._database_name);
+      var open_req = indexedDB.open(
+        shared.connector._database_name,
+        shared.connector._version
+      );
       open_req.onerror = function (event) {
         reject(event.target.errorCode);
       };
@@ -373,7 +398,10 @@
       shared.reject = reject;
 
       // Open DB //
-      var open_req = indexedDB.open(shared.connector._database_name);
+      var open_req = indexedDB.open(
+        shared.connector._database_name,
+        shared.connector._version
+      );
       open_req.onerror = function (event) {
         reject(event.target.errorCode);
       };
@@ -427,27 +455,32 @@
     }).then(command.success, command.error, command.notify);
   };
 
+  function makeUnsupportedOptionsError(rejected_options) {
+    throw {
+      "status": 501,
+      "error": "UnsupportedOptionError",
+      "reason": "unsupported option",
+      "arguments": rejected_options
+    };
+  }
+
   // XXX doc string
   IndexedDBStorage.prototype.getList = function (option) {
     var rejected_options = [], supported_options = {
       "limit": true,
       "select_list": true,
-      "include_docs": true
-    }, rows = [], onCancel, open_req;
+      "include_docs": true,
+      "partial_query": true
+    }, rows = [], onCancel, open_req, indexeddbstorage = this;
     Object.keys(option).forEach(function (opt) {
       if (!supported_options[opt]) {
         rejected_options.push(opt);
       }
     });
     if (rejected_options.length) {
-      throw {
-        "status": 501,
-        "error": "UnsupportedOptionError",
-        "reason": "unsupported option",
-        "arguments": rejected_options
-      };
+      throw makeUnsupportedOptionsError(rejected_options);
     }
-    open_req = indexedDB.open(this._database_name);
+    open_req = indexedDB.open(this._database_name, this._version);
     return new Promise(function (resolve, reject, notify) {
       open_req.onerror = function () {
         if (open_req.result) { open_req.result.close(); }
@@ -456,13 +489,49 @@
       open_req.onsuccess = function () {
         var tx, store, index, date, index_req, db = open_req.result;
         try {
+          if (option.partial_query !== undefined) {
+            // translate query to a string like
+            // "\"metadata\"" or "[\"metadata1\",\"metadata2\"]"
+            option.partial_query =
+              jIO.QueryFactory.create(option.partial_query);
+            //console.log("original query (as object)", option.partial_query);
+            if (option.partial_query.type === "simple") {
+              option.partial_query = JSON.stringify(option.partial_query.key);
+            } else if (option.partial_query.operator === "AND") {
+              option.partial_query =
+                JSON.stringify(
+                  option.partial_query.query_list.map(function (query) {
+                    if (query.type === "simple") {
+                      return query.key;
+                    }
+                    throw makeUnsupportedOptionsError(["partial_query"]);
+                  })
+                );
+            } else {
+              throw makeUnsupportedOptionsError(["partial_query"]);
+            }
+            // choose good index according to translated query
+            indexeddbstorage._indices.some(function (indexed) {
+              indexed = JSON.stringify(indexed);
+              if (indexed === option.partial_query) {
+                index = indexed;
+                return true;
+              }
+              return false;
+            });
+            if (index === undefined) {
+              throw makeUnsupportedOptionsError(["partial_query"]);
+            }
+          }
+
           tx = db.transaction("metadata", "readonly");
           onCancel = function () {
             tx.abort();
             db.close();
           };
           store = tx.objectStore("metadata");
-          index = store.index("_id");
+          //console.log('using index', index || "_id");
+          index = store.index(index || "_id");
 
           index_req = index.openCursor();
           date = Date.now();
