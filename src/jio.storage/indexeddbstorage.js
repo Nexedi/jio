@@ -456,7 +456,7 @@
   };
 
   function makeUnsupportedOptionsError(rejected_options) {
-    throw {
+    return {
       "status": 501,
       "error": "UnsupportedOptionError",
       "reason": "unsupported option",
