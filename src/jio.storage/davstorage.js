@@ -800,6 +800,15 @@
       then(o.success, o.reject, o.notifyProgress);
   };
 
+  function makeUnsupportedOptionsError(rejected_options) {
+    return {
+      "status": 501,
+      "error": "UnsupportedOptionError",
+      "reason": "unsupported option",
+      "arguments": rejected_options
+    };
+  }
+
   /**
    * Retrieve a list of present document
    *
@@ -871,8 +880,18 @@
           e.target.statusText,
           o.error_message
         );
-      }
+      },
+      rejected_options: []
     };
+
+    Object.keys(options).forEach(function (opt) {
+      if (opt !== "include_docs") {
+        o.rejected_options.push(opt);
+      }
+    });
+    if (o.rejected_options.length) {
+      return command.error(makeUnsupportedOptionsError(o.rejected_options));
+    }
 
     this._allDocs(param, options).
       then(o.getAllMetadataIfNecessary).
