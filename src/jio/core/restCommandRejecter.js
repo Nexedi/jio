@@ -82,6 +82,9 @@ function restCommandRejecter(param, args) {
       if (arg.columnNumber !== undefined && arg.columnNumber !== null) {
         current_priority.columnNumber = arg.columnNumber;
       }
+      if (arg.fileName !== undefined && arg.fileName !== null) {
+        current_priority.fileName = arg.fileName;
+      }
       if (arg.filename !== undefined && arg.filename !== null) {
         current_priority.filename = arg.filename;
       }
