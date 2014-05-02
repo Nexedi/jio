@@ -600,7 +600,7 @@
      */
     that.allDocs = function (command, param, options) {
       /*jslint unparam: true */
-      var include_docs, limit_start, limit_length, rows, i = 0;
+      var include_docs, limit_start, limit_length, rows, end, i = 0;
       include_docs = options.include_docs;
       options.include_docs = true;
 
@@ -627,6 +627,10 @@
         return command.storage(priv.sub_storage).allDocs(
           options
         ).then(function (response) {
+          if (response.data.total_rows === 0) {
+            end = true;
+            return [];
+          }
           /*jslint ass: true */
           var result = [], doc_gids = {}, row, gid;
           response = response.data;
@@ -657,6 +661,9 @@
       doWhile(function () {
         /*jslint plusplus: true */
         return doAllDocs(i++).then(function () {
+          if (end) {
+            return false;
+          }
           if (limit_length) {
             if (rows.length < limit_length) {
               return true;
