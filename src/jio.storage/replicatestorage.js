@@ -187,6 +187,9 @@
         if (error_count === length) {
           reject(err);
         }
+        if (count === length) {
+          resolve(results);
+        }
       }
 
       for (i = 0; i < length; i += 1) {
