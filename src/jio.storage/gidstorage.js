@@ -17,7 +17,7 @@
  */
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global define, jIO */
+/*global define, jIO, RSVP */
 
 /**
  * JIO GID Storage. Type = 'gid'.
@@ -51,8 +51,8 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  module(jIO);
-}(['jio'], function (jIO) {
+  module(jIO, RSVP);
+}(['jio', 'rsvp'], function (jIO, RSVP) {
   "use strict";
 
   var dcmi_types, metadata_actions, content_type_re, tool;
@@ -271,6 +271,56 @@
       return;
     }
     return object;
+  }
+
+  function doWhile(callback) {
+    var cancelled, p1 = RSVP.resolve(), p2;
+    return new RSVP.Promise(function (done, fail, notify) {
+      function next(value) {
+        if (value) {
+          try {
+            value = callback();
+          } catch (e) {
+            return fail(e);
+          }
+          if (cancelled) { return; }
+          if (value && typeof value.then === "function") {
+            p1 = value;
+            p2 = value.then(next, fail, notify);
+          } else {
+            p2 = p2.then(next.bind(null, value), fail, notify);
+          }
+          return;
+        }
+        done();
+      }
+      p2 = p1.then(next.bind(null, true));
+    }, function () {
+      cancelled = true;
+      if (typeof p1.cancel === "function") { p1.cancel(); }
+      if (typeof p2.cancel === "function") { p2.cancel(); }
+    });
+  }
+
+  function arrayExtend(aThis) {
+    /*jslint plusplus: true */
+    var nArgIndex, nArgLength, value, nValueIndex, nValueLength, nThisLength;
+    nThisLength = aThis.length;
+    for (nArgIndex = 1, nArgLength = arguments.length;
+         nArgIndex < nArgLength;
+         nArgIndex += 1) {
+      value = arguments[nArgIndex];
+      if (Array.isArray(value)) {
+        for (nValueIndex = 0, nValueLength = value.length;
+             nValueIndex < nValueLength;
+             nValueIndex += 1) {
+          aThis[nThisLength++] = value[nValueIndex];
+        }
+      } else {
+        aThis[nThisLength++] = value;
+      }
+    }
+    return aThis;
   }
 
   /**
@@ -550,41 +600,77 @@
      */
     that.allDocs = function (command, param, options) {
       /*jslint unparam: true */
-      var include_docs;
+      var include_docs, limit_start, limit_length, rows, i = 0;
       include_docs = options.include_docs;
       options.include_docs = true;
-      command.storage(priv.sub_storage).allDocs(
-        options
-      ).then(function (response) {
-        /*jslint ass: true */
-        var result = [], doc_gids = {}, row, gid;
-        response = response.data;
-        while ((row = response.rows.shift()) !== undefined) {
-          gid = gidFormat(row.doc, priv.constraints);
-          if (gid !== undefined) {
-            if (!doc_gids[gid]) {
-              doc_gids[gid] = true;
-              row.id = gid;
-              delete row.key;
-              result[result.length] = row;
-              if (include_docs === true) {
-                row.doc._id = gid;
-              } else {
-                delete row.doc;
+
+      if (Array.isArray(options.limit)) {
+        if (options.limit.length > 1) {
+          limit_start = options.limit[0];
+          limit_length = options.limit[1];
+        } else {
+          limit_start = 0;
+          limit_length = options.limit[0];
+        }
+      } else if (typeof options.limit === "number") {
+        limit_start = 0;
+        limit_length = options.limit;
+      }
+
+      function doAllDocs(i) {
+        if (limit_length) {
+          options.limit = [
+            limit_start + (limit_length * i),
+            limit_length
+          ];
+        }
+        return command.storage(priv.sub_storage).allDocs(
+          options
+        ).then(function (response) {
+          /*jslint ass: true */
+          var result = [], doc_gids = {}, row, gid;
+          response = response.data;
+          while ((row = response.rows.shift()) !== undefined) {
+            gid = gidFormat(row.doc, priv.constraints);
+            if (gid !== undefined) {
+              if (!doc_gids[gid]) {
+                doc_gids[gid] = true;
+                row.id = gid;
+                delete row.key;
+                result[result.length] = row;
+                if (include_docs === true) {
+                  row.doc._id = gid;
+                } else {
+                  delete row.doc;
+                }
               }
             }
           }
-        }
-        doc_gids = undefined; // free memory
-        row = undefined;
+          if (rows) {
+            arrayExtend(rows, result);
+          } else {
+            rows = result;
+          }
+        });
+      }
+
+      doWhile(function () {
+        /*jslint plusplus: true */
+        return doAllDocs(i++).then(function () {
+          if (limit_length) {
+            if (rows.length < limit_length) {
+              return true;
+            }
+            rows.length = limit_length;
+          }
+          return false;
+        });
+      }).then(function () {
         command.success({"data": {
-          "total_rows": result.length,
-          "rows": result
+          "total_rows": rows.length,
+          "rows": rows
         }});
-      }, function (err) {
-        err.message = "Cannot get all documents";
-        return command.error(err);
-      });
+      }, command.error);
 
     };
 
