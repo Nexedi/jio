@@ -600,7 +600,7 @@
      */
     that.allDocs = function (command, param, options) {
       /*jslint unparam: true */
-      var include_docs, limit_start, limit_length, rows, end, i = 0;
+      var include_docs, limit_start, limit_length, rows = [], end, i = 0;
       include_docs = options.include_docs;
       options.include_docs = true;
 
@@ -650,11 +650,7 @@
               }
             }
           }
-          if (rows) {
-            arrayExtend(rows, result);
-          } else {
-            rows = result;
-          }
+          arrayExtend(rows, result);
         });
       }
 
