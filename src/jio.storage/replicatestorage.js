@@ -176,7 +176,7 @@
           count += 1;
           results[i] = value;
           if (count === length) {
-            resolve(results);
+            return resolve(results);
           }
         };
       }
@@ -185,10 +185,10 @@
         error_count += 1;
         count += 1;
         if (error_count === length) {
-          reject(err);
+          return reject(err);
         }
         if (count === length) {
-          resolve(results);
+          return resolve(results);
         }
       }
 
@@ -452,10 +452,11 @@
     });
     p.then(deleteCache, deleteCache);
     if (this._cache.batch_index === 0) {
+      this._cache.batch_index = 1;
       // no global synchronisation is on going
       p.then(function () {
         return doWhile(function () {
-          var i = it._cache.batch_index, l = it._batch_length, test = true;
+          var i = it._cache.batch_index - 1, l = it._batch_length, test = true;
           it._cache.batch_index += 1;
           return it._allDocs(command, {}, {
             "limit": [i * l, l]
