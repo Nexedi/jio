@@ -205,17 +205,38 @@ Other split modes will be added later.
 Replicate Storage
 ^^^^^^^^^^^^^^^^^
 
-Work is in progress.
+Replicates all data sent to the sub storages and synchronizes the sub storages
+content in the background. The synchronization starts by doing an ``allDocs``
+and tries to synchronize the touched documents as main priority, the documents
+which needs to be synchronized after, and then the other documents.
+
+The sub storages set in ``storage_list`` should return the same document id even
+with the ``post`` method. We suggest to use the *GID Storage* on top of the sub
+storages.
+
+The ``cache_storage`` does not have to use the *GID* mechanism and is
+optional. If set, *Replicate* will use it to store document which needs to be
+synchronized (updated or deleted).
+
+To synchronize a document in all sub storages, it will retrieve the document
+``modified`` date metadata. The winner will be the document with the latest
+date. If the other documents does not contain this metadata, then the winner
+will be the one which has this property. If no document contains this date, the
+winner will be the one retrieved by the first sub storages set in the
+description.
 
 .. code-block:: javascript
 
    {
      type: 'replicate',
+     cache_storage: <optional sub storage description>
      storage_list: [
        <sub storage description>,
        ...
      ]
    }
+
+**No unit tests are provided yet.**
 
 
 Revision Based Handlers
