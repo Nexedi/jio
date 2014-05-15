@@ -314,7 +314,7 @@
     for (i = 0; i < binarystring.length; i += 1) {
       uint8array[i] = binarystring.charCodeAt(i); // mask `& 0xFF` not necessary
     }
-    uint8array = new Blob([uint8array], {
+    uint8array = new Blob([uint8array.buffer], {
       "type": doc._attachments[param._attachment].content_type || ""
     });
 
