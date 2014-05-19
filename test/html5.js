@@ -108,6 +108,7 @@
 
   function Uint8Array(one) { // , two, three
     /*jslint bitwise: true */
+    this.buffer = this;
     var i;
     if (one instanceof Uint8Array) {
       for (i = 0; i < one.length; i += 1) {
