@@ -1,5 +1,23 @@
-/*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, jIO, jio_tests, test, ok, sinon, module */
+/*jslint
+    indent: 2,
+    maxlen: 80,
+    plusplus: true,
+    nomen: true,
+    regexp: true
+*/
+/*global
+    define,
+    jIO,
+    test,
+    ok,
+    sinon,
+    module,
+    clearTimeout,
+    setTimeout,
+    start,
+    stop,
+    deepEqual
+*/
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -7,34 +25,103 @@
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  module(jIO, jio_tests);
-}(['jio', 'jio_tests', 'xwikistorage'], function (jIO, util) {
+  module(jIO);
+}(['jio', 'xwikistorage'], function (jIO) {
   "use strict";
 
-  function generateTools() {
-    var o = {
-      clock: sinon.useFakeTimers(),
-      spy: util.ospy,
-      tick: util.otick
+  function nThen(next) {
+    var funcs = [],
+      timeouts = [],
+      calls = 0,
+      abort,
+      ret,
+      waitFor;
+    waitFor = function (func) {
+      calls++;
+      return function () {
+        if (func) {
+          func.apply(null, arguments);
+        }
+        calls = (calls || 1) - 1;
+        while (!calls && funcs.length && !abort) {
+          funcs.shift()(waitFor);
+        }
+      };
     };
-    function addFakeServerResponse(type, method, path, status, response) {
-      /*jslint unparam: true */
-      o.server.respondWith(method, new RegExp(path), [
-        status,
-        {"Content-Type": 'application/xml'},
-        response
-      ]);
-    }
-    o.addFakeServerResponse = addFakeServerResponse;
-    return o;
+    waitFor.abort = function () {
+      timeouts.forEach(clearTimeout);
+      abort = 1;
+    };
+    ret = {
+      nThen: function (next) {
+        if (!abort) {
+          if (!calls) {
+            next(waitFor);
+          } else {
+            funcs.push(next);
+          }
+        }
+        return ret;
+      },
+      orTimeout: function (func, milliseconds) {
+        var cto, timeout;
+        if (abort) { return ret; }
+        if (!milliseconds) {
+          throw new Error("Must specify milliseconds to orTimeout()");
+        }
+        timeout = setTimeout(function () {
+          var f;
+          while (f !== cto) { f = funcs.shift(); }
+          func(waitFor);
+          calls = (calls || 1) - 1;
+          while (!calls && funcs.length) { funcs.shift()(waitFor); }
+        }, milliseconds);
+        cto = function () {
+          var i;
+          for (i = 0; i < timeouts.length; i++) {
+            if (timeouts[i] === timeout) {
+              timeouts.splice(i, 1);
+              clearTimeout(timeout);
+              return;
+            }
+          }
+          throw new Error('timeout not listed in array');
+        };
+        funcs.push(cto);
+        timeouts.push(timeout);
+        return ret;
+      }
+    };
+    return ret.nThen(next);
   }
 
   module('XWikiStorage');
 
-  function setUp(that) {
-    var o = generateTools(that);
-    o.server = sinon.fakeServer.create();
-    o.jio = jIO.newJio({type: 'xwiki', formTokenPath: 'form_token'});
+  function setUp() {
+    var o = {
+      sinon: sinon.sandbox.create()
+    };
+    o.addFakeServerResponse =
+      function (type, method, path, status, response, t) {
+        t = t || 'application/xml';
+        /*jslint unparam: true */
+        o.sinon.server.respondWith(method, new RegExp(path), [
+          status,
+          {"Content-Type": t},
+          response
+        ]);
+      };
+    o.sinon.useFakeTimers();
+    o.sinon.useFakeServer();
+
+    o.respond = function () {
+      o.sinon.clock.tick(5000);
+      o.sinon.server.respond();
+    };
+
+    o.jio = jIO.createJIO(
+      {type: 'xwiki', formTokenPath: 'form_token', xwikiurl: ''}
+    );
     o.addFakeServerResponse("xwiki", "GET", "form_token", 200,
                             '<meta name="form_token" content="OMGHAX"/>');
     o._addFakeServerResponse = o.addFakeServerResponse;
@@ -46,11 +133,11 @@
     o.assertReqs = function (count, message) {
       var i, j, req, expected, ex;
       o.requests = (o.requests || 0) + count;
-      ok(o.server.requests.length === o.requests,
+      ok(o.sinon.server.requests.length === o.requests,
          message + "[expected [" + count + "] got [" +
-         (o.server.requests.length - (o.requests - count)) + "]]");
+         (o.sinon.server.requests.length - (o.requests - count)) + "]]");
       for (i = 1; i <= count; i += 1) {
-        req = o.server.requests[o.server.requests.length - i];
+        req = o.sinon.server.requests[o.sinon.server.requests.length - i];
         if (!req) {
           break;
         }
@@ -70,242 +157,588 @@
     return o;
   }
 
+  function nThenTest(o, nt) {
+    stop();
+    nt.nThen(function () {
+      o.sinon.restore();
+      start();
+
+    }).orTimeout(function () {
+      o.sinon.restore();
+      ok(0);
+      start();
+    }, 1000);
+  }
+
   test("Post", function () {
 
     var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
 
-    // post without id
-    o.spy(o, "status", 405, "Post without id");
-    o.jio.post({}, o.f);
-    o.clock.tick(5000);
-    o.assertReqs(0, "no id -> no request");
+      // post non empty document
+      o.addFakeServerResponse("xwiki", "POST", "myFile1", 201, "HTML RESPONSE");
+      o.jio.post({"_id": "myFile1", "title": "hello there"}).
+        then(waitFor(function (ret) {
+          deepEqual({
+            id: "myFile1",
+            method: "post",
+            result: "success",
+            status: 201,
+            statusText: "Created"
+          }, ret);
 
-    // post non empty document
-    o.addFakeServerResponse("xwiki", "POST", "myFile", 201, "HTML RESPONSE");
-    o.spy(o, "value", {"id": "myFile", "ok": true},
-          "Create = POST non empty document");
-    o.jio.post({"_id": "myFile", "title": "hello there"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(
-      3,
-      "put -> 1 request to get csrf token, 1 to get doc and 1 to post data"
-    );
+        }));
 
-    // post but document already exists (post = error!, put = ok)
-    o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<page xmlns="http://www.xwiki.org"><title>hello there</title></page>';
-    o.addFakeServerResponse("xwiki", "GET", "myFile2", 200, o.answer);
-    o.spy(o, "status", 409, "Post but document already exists");
-    o.jio.post({"_id": "myFile2", "title": "hello again"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(1, "post w/ existing doc -> 1 request to get doc then fail");
+      o.respond();
 
-    util.closeAndcleanUpJio(o.jio);
+    }).nThen(function () {
+      o.assertReqs(
+        3,
+        "post -> 1 request to get csrf token, 1 to get doc and 1 to post data"
+      );
+    }));
+  });
+
+  test("Post2", function () {
+
+    var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+
+      // post but document already exists (post = error!, put = ok)
+      o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<page xmlns="http://www.xwiki.org"><title>hello there</title></page>';
+      o.addFakeServerResponse("xwiki", "GET", "pages/myFile2", 200, o.answer);
+
+      o.jio.post({"_id": "myFile2", "title": "hello again"}).
+        then(function () {
+          ok(0);
+        }, waitFor(function (err) {
+          deepEqual({
+            error: "conflict",
+            id: "myFile2",
+            message: "Cannot create a new document",
+            method: "post",
+            reason: "document exists",
+            result: "error",
+            status: 409,
+            statusText: "Conflict"
+          }, err);
+        }));
+
+      o.respond();
+
+    }).nThen(function () {
+
+      o.assertReqs(2, "post w/ existing doc -> 2 request to get doc then fail");
+
+    }));
+
+  });
+
+  test("PutNoId", function () {
+
+    var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+
+      // put without id => id required
+      o.jio.put({}).then(function () {
+        ok(0);
+      }, waitFor(function (err) {
+        deepEqual({
+          "error": "bad_request",
+          "message": "Document id must be a non empty string.",
+          "method": "put",
+          "reason": "wrong document id",
+          "result": "error",
+          "status": 400,
+          "statusText": "Bad Request"
+        }, err);
+      }));
+
+    }).nThen(function () {
+
+      o.assertReqs(0, "put w/o id -> 0 requests");
+
+    }));
   });
 
   test("Put", function () {
-
     var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
 
-    // put without id => id required
-    o.spy(o, "status", 20, "Put without id");
-    o.jio.put({}, o.f);
-    o.clock.tick(5000);
-    o.assertReqs(0, "put w/o id -> 0 requests");
+      // put non empty document
+      o.addFakeServerResponse("xwiki", "POST", "put1", 201, "HTML RESPONSE");
+      o.jio.put({"_id": "put1", "title": "myPut1"}).
+        then(waitFor(function (res) {
+          deepEqual({
+            "id": "put1",
+            "method": "put",
+            "result": "success",
+            "status": 201,
+            "statusText": "Created"
+          }, res);
+        }));
 
-    // put non empty document
-    o.addFakeServerResponse("xwiki", "POST", "put1", 201, "HTML RESPONSE");
-    o.spy(o, "value", {"ok": true, "id": "put1"},
-          "Create = PUT non empty document");
-    o.jio.put({"_id": "put1", "title": "myPut1"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(
-      3,
-      "put normal doc -> 1 req to get doc, 1 for csrf token, 1 to post"
-    );
+      o.respond();
 
-    // put but document already exists = update
-    o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<page xmlns="http://www.xwiki.org"><title>mtPut1</title></page>';
-    o.addFakeServerResponse("xwiki", "GET", "put2", 200, o.answer);
-    o.addFakeServerResponse("xwiki", "POST", "put2", 201, "HTML RESPONSE");
-    o.spy(o, "value", {"ok": true, "id": "put2"}, "Updated the document");
-    o.jio.put({"_id": "put2", "title": "myPut2abcdedg"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(
-      3,
-      "put update doc -> 1 req to get doc, 1 for csrf token, 1 to post"
-    );
+    }).nThen(function () {
 
-    util.closeAndcleanUpJio(o.jio);
+      o.assertReqs(
+        3,
+        "put normal doc -> 1 req to get doc (404), 1 for csrf token, 1 to post"
+      );
+
+    }));
   });
 
-  test("PutAttachment", function () {
-
+  test("PutUpdateDoc", function () {
     var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
 
-    // putAttachment without doc id => id required
-    o.spy(o, "status", 20, "PutAttachment without doc id");
-    o.jio.putAttachment({}, o.f);
-    o.clock.tick(5000);
-    o.assertReqs(0, "put attach w/o doc id -> 0 requests");
+      // put but document already exists = update
+      o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<page xmlns="http://www.xwiki.org"><title>mtPut1</title></page>';
+      o.addFakeServerResponse("xwiki", "GET", "put2", 200, o.answer);
+      o.addFakeServerResponse("xwiki", "POST", "put2", 201, "HTML RESPONSE");
 
-    // putAttachment without attachment id => attachment id required
-    o.spy(o, "status", 22, "PutAttachment without attachment id");
-    o.jio.putAttachment({"_id": "putattmt1"}, o.f);
-    o.clock.tick(5000);
-    o.assertReqs(0, "put attach w/o attach id -> 0 requests");
+      o.jio.put({"_id": "put2", "title": "myPut2abcdedg"}).
+        then(waitFor(function (ret) {
+          deepEqual({
+            "id": "put2",
+            "method": "put",
+            "result": "success",
+            "status": 204,
+            "statusText": "No Content"
+          }, ret);
+        }));
 
-    // putAttachment without underlying document => not found
-    o.addFakeServerResponse("xwiki", "GET", "putattmtx", 404, "HTML RESPONSE");
-    o.spy(o, "status", 404, "PutAttachment without document");
-    o.jio.putAttachment({"_id": "putattmtx", "_attachment": "putattmt2"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(1, "put attach w/o existing document -> 1 request to get doc");
+      o.respond();
 
-    // putAttachment with document without data
-    o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<page xmlns="http://www.xwiki.org"><title>myPutAttm</title></page>';
-    o.addFakeServerResponse("xwiki", "GET", "putattmt1", 200, o.answer);
-    o.addFakeServerResponse(
-      "xwiki",
-      "POST",
-      "putattmt1/putattmt2",
-      201,
-      "HTML RESPONSE"
-    );
-    o.spy(o, "value", {"ok": true, "id": "putattmt1/putattmt2"},
-          "PutAttachment with document, without data");
-    o.jio.putAttachment({"_id": "putattmt1", "_attachment": "putattmt2"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(3, "put attach -> 1 request to get document, 1 to put " +
-                 "attach, 1 to get csrf token");
+    }).nThen(function () {
 
-    util.closeAndcleanUpJio(o.jio);
+      o.assertReqs(
+        4,
+        "put update doc -> 2 req to get doc, 1 for csrf token, 1 to post"
+      );
+
+    }));
   });
 
-  test("Get", function () {
-
+  test("PutAttachmentNoDocId", function () {
     var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+      // putAttachment without doc id => id required
+      o.jio.putAttachment({}, function () {
+        ok(0);
+      }, waitFor(function (err) {
+        deepEqual({
+          "attachment": undefined,
+          "error": "bad_request",
+          "message": "Document id must be a non empty string.",
+          "method": "putAttachment",
+          "reason": "wrong document id",
+          "result": "error",
+          "status": 400,
+          "statusText": "Bad Request"
+        }, err);
+      }));
 
-    // get inexistent document
-    o.spy(o, "status", 404, "Get non existing document");
-    o.jio.get("get1", o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(1, "try to get nonexistent doc -> 1 request");
+      o.respond();
 
-    // get inexistent attachment
-    o.spy(o, "status", 404, "Get non existing attachment");
-    o.jio.get("get1/get2", o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(1, "try to get nonexistent attach -> 1 request");
-
-    // get document
-    o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<page xmlns="http://www.xwiki.org"><title>some title</title></page>';
-    o.addFakeServerResponse("xwiki", "GET", "get3", 200, o.answer);
-    o.spy(o, "value", {"_id": "get3", "title": "some title"}, "Get document");
-    o.jio.get("get3", o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(1, "get document -> 1 request");
-
-    // get inexistent attachment (document exists)
-    o.spy(o, "status", 404, "Get non existing attachment (doc exists)");
-    o.jio.get({"_id": "get3", "_attachment": "getx"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(1, "get nonexistant attachment -> 1 request");
-
-    // get attachment
-    o.answer = JSON.stringify({"_id": "get4", "title": "some attachment"});
-    o.addFakeServerResponse("xwiki", "GET", "get3/get4", 200, o.answer);
-    o.spy(o, "value", {"_id": "get4", "title": "some attachment"},
-          "Get attachment");
-    o.jio.get({"_id": "get3", "_attachment": "get4"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(1, "get attachment -> 1 request");
-
-    util.closeAndcleanUpJio(o.jio);
+    }).nThen(function () {
+      o.assertReqs(0, "put attach w/o doc id -> 0 requests");
+    }));
   });
 
-  test("Remove", function () {
-
+  test("PutAttachmentNoAttachId", function () {
     var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+      // putAttachment without attachment id => attachment id required
+      o.jio.putAttachment({"_id": "putattmt1"}, function () {
+        ok(0);
+      }, waitFor(function (err) {
+        deepEqual({
+          "attachment": undefined,
+          "error": "bad_request",
+          "id": "putattmt1",
+          "message": "Attachment id must be a non empty string.",
+          "method": "putAttachment",
+          "reason": "wrong attachment id",
+          "result": "error",
+          "status": 400,
+          "statusText": "Bad Request"
+        }, err);
+      }));
 
-    // remove inexistent document
-    o.addFakeServerResponse("xwiki", "GET", "remove1", 404, "HTML RESPONSE");
-    o.spy(o, "status", 404, "Remove non existening document");
-    o.jio.remove({"_id": "remove1"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(
-      2,
-      "remove nonexistent doc -> 1 request for csrf and 1 for doc"
-    );
+      o.respond();
 
-    // remove inexistent document/attachment
-    o.addFakeServerResponse("xwiki", "GET", "remove1/remove2", 404, "HTML" +
-                            "RESPONSE");
-    o.spy(o, "status", 404, "Remove inexistent document/attachment");
-    o.jio.removeAttachment({"_id": "remove1", "_attachment": "remove2"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(
-      2,
-      "remove nonexistant attach -> 1 request for csrf and 1 for doc"
-    );
+    }).nThen(function () {
+      o.assertReqs(0, "put attach w/o attach id -> 0 requests");
+    }));
+  });
 
-    // remove document
-    //o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-    //    '<page xmlns="http://www.xwiki.org"><title>some doc</title></page>';
-    //o.addFakeServerResponse("xwiki", "GET", "remove3", 200, o.answer);
-    o.addFakeServerResponse("xwiki", "POST", "bin/delete/Main/remove3",
-                            200, "HTML RESPONSE");
-    o.spy(o, "value", {"ok": true, "id": "remove3"}, "Remove document");
-    o.jio.remove({"_id": "remove3"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(
-      2,
-      "remove document -> 1 request for csrf and 1 for deleting doc"
-    );
+  test("PutAttachmentUnderlyingDocumentNonexistant", function () {
+    var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+      // putAttachment without underlying document => not found
+      o.jio.putAttachment(
+        {"_id": "putattmtx", "_attachment": "putattmt2", "_data": ""},
+        function () {
+          ok(0);
+        },
+        waitFor(function (err) {
+          deepEqual({
+            "attachment": "putattmt2",
+            "error": "not_found",
+            "id": "putattmtx",
+            "message": "Impossible to add attachment",
+            "method": "putAttachment",
+            "reason": "missing",
+            "result": "error",
+            "status": 404,
+            "statusText": "Not Found"
+          }, err);
+        })
+      );
 
-    o.answer = JSON.stringify({
-      "_id": "remove4",
-      "title": "some doc",
-      "_attachments": {
-        "remove5": {
-          "length": 4,
-          "digest": "md5-d41d8cd98f00b204e9800998ecf8427e"
-        }
-      }
-    });
-    // remove attachment
-    o.addFakeServerResponse(
-      "xwiki",
-      "POST",
-      "delattachment/Main/remove4/remove5",
-      200,
-      "HTML RESPONSE"
-    );
-    o.spy(o, "value", {"ok": true, "id": "remove4/remove5"},
-          "Remove attachment");
-    o.jio.removeAttachment({"_id": "remove4", "_attachment": "remove5"}, o.f);
-    o.clock.tick(5000);
-    o.server.respond();
-    o.assertReqs(2, "remove attach -> 1 request for csrf and 1 for deletion");
+      o.respond();
 
-    util.closeAndcleanUpJio(o.jio);
+    }).nThen(function () {
+      o.assertReqs(
+        1,
+        "put attach w/o existing document -> 1 request to get doc"
+      );
+    }));
+  });
+
+  test("GetNonexistantDoc", function () {
+    var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+      // get inexistent document
+      o.jio.get({_id: "get_nonexistant_doc"}, function () {
+        ok(0);
+      }, waitFor(function (err) {
+        deepEqual({
+          "error": "not_found",
+          "id": "get_nonexistant_doc",
+          "message": "Cannot find document",
+          "method": "get",
+          "reason": "missing",
+          "result": "error",
+          "status": 404,
+          "statusText": "Not Found"
+        }, err);
+      }));
+
+      o.respond();
+
+    }).nThen(function () {
+      o.assertReqs(1, "try to get nonexistent doc -> 1 request");
+    }));
+  });
+
+  test("GetAttachInNonexistantDoc", function () {
+    var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+      o.jio.getAttachment(
+        {"_id": "noSuchDoc", "_attachment": "its_attachment"},
+        function () {
+          ok(0);
+        },
+        waitFor(function (err) {
+          deepEqual({
+            "attachment": "its_attachment",
+            "error": "not_found",
+            "id": "noSuchDoc",
+            "message": "Cannot find document",
+            "method": "getAttachment",
+            "reason": "missing document",
+            "result": "error",
+            "status": 404,
+            "statusText": "Not Found"
+          }, err);
+        })
+      );
+
+      o.respond();
+
+    }).nThen(function () {
+      o.assertReqs(1, "try to get nonexistent attach -> 1 request");
+    }));
+  });
+
+  test("GetDoc", function () {
+    var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+      o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<page xmlns="http://www.xwiki.org"><title>some title</title></page>';
+      o.addFakeServerResponse("xwiki", "GET", "get_doc", 200, o.answer);
+
+      o.jio.get({_id: "get_doc"}).then(waitFor(function (ret) {
+        deepEqual({
+          "data": {
+            "_attachments": {},
+            "_id": "get_doc",
+            "title": "some title"
+          },
+          "id": "get_doc",
+          "method": "get",
+          "result": "success",
+          "status": 200,
+          "statusText": "Ok"
+        }, ret);
+      }));
+
+      o.respond();
+
+    }).nThen(function () {
+      o.assertReqs(2, "get document -> 2 request");
+    }));
+  });
+
+  test("GetNonexistantAttach", function () {
+    var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+
+      // get inexistent attachment (document exists)
+      o.answer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<page xmlns="http://www.xwiki.org"><title>some title</title></page>';
+      o.addFakeServerResponse(
+        "xwiki",
+        "GET",
+        "get_nonexistant_attach",
+        200,
+        o.answer
+      );
+
+      o.jio.getAttachment(
+        {"_id": "get_nonexistant_attach", "_attachment": "nxattach"},
+        function () {
+          ok(0);
+        },
+        waitFor(function (err) {
+          deepEqual({
+            "attachment": "nxattach",
+            "error": "not_found",
+            "id": "get_nonexistant_attach",
+            "message": "Cannot find attachment",
+            "method": "getAttachment",
+            "reason": "missing attachment",
+            "result": "error",
+            "status": 404,
+            "statusText": "Not Found"
+          }, err);
+        })
+      );
+
+      o.respond();
+
+    }).nThen(function () {
+      o.assertReqs(2, "get nonexistant attachment -> 2 request to get doc");
+    }));
+  });
+
+  test("GetAttachHappyPath", function () {
+    var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+
+      // get attachment
+      o.addFakeServerResponse(
+        "xwiki",
+        "GET",
+        "spaces/Main/pages/get_attachment$",
+        200,
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<page xmlns="http://www.xwiki.org"><title>some title</title></page>'
+      );
+      o.addFakeServerResponse(
+        "xwiki",
+        "GET",
+        "spaces/Main/pages/get_attachment/attachments",
+        200,
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<attachments xmlns="http://www.xwiki.org">' +
+          '<attachment><name>attach_name</name></attachment>' +
+          '</attachments>'
+      );
+
+      // We can't fully test this
+      // because sinon doesn't support HTML5 blob responses.
+      //o.addFakeServerResponse(
+      //    "xwiki", "GET", "download/Main/get_attachment/attach_name", 200,
+      //    "content", "application/octet-stream");
+
+      o.jio.getAttachment(
+        {"_id": "get_attachment", "_attachment": "attach_name"},
+        waitFor(function (ret) {
+          deepEqual({
+            "attachment": "attach_name",
+            "error": "err_network_error",
+            "id": "get_attachment",
+            "message": "Failed to get attachment [get_attachment/attach_name]",
+            "method": "getAttachment",
+            "reason": "Error getting data from network",
+            "result": "error",
+            "status": 404,
+            "statusText": "Not Found"
+          }, ret);
+        })
+      );
+
+      o.respond();
+
+    }).nThen(function () {
+      o.assertReqs(3, "get attachment -> 2 requests to get doc, 1 for attach");
+    }));
+  });
+
+
+  test("RemoveNonexistantDocument", function () {
+    var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+
+      // remove inexistent document
+      o.addFakeServerResponse("xwiki", "GET", "remove1", 404, "HTML RESPONSE");
+
+      o.jio.remove({"_id": "remove1"}, waitFor(function (ret) {
+        deepEqual({
+          "error": "error",
+          "id": "remove1",
+          "message": "Failed to delete document [remove1]",
+          "method": "remove",
+          "reason": "Not Found",
+          "result": "error",
+          "status": 404,
+          "statusText": "Not Found"
+        }, ret);
+      }));
+
+      o.respond();
+
+    }).nThen(function () {
+      o.assertReqs(
+        2,
+        "remove nonexistent doc -> 1 request for csrf and 1 for doc"
+      );
+    }));
+  });
+
+
+  test("RemoveNonexistantAttachment", function () {
+    var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+
+      // remove inexistent document/attachment
+      o.addFakeServerResponse("xwiki", "GET", "remove1/remove2", 404, "HTML" +
+                              "RESPONSE");
+
+      o.jio.removeAttachment(
+        {"_id": "remove1", "_attachment": "remove2"},
+        function () {
+          ok(0);
+        },
+        waitFor(function (err) {
+          deepEqual({
+            "attachment": "remove2",
+            "error": "not_found",
+            "id": "remove1",
+            "message": "Document not found",
+            "method": "removeAttachment",
+            "reason": "missing document",
+            "result": "error",
+            "status": 404,
+            "statusText": "Not Found"
+          }, err);
+        })
+      );
+
+      o.respond();
+
+    }).nThen(function () {
+      o.assertReqs(1, "remove nonexistant attach -> 1 request for doc");
+    }));
+  });
+
+
+  test("RemoveDocument", function () {
+    var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+
+      o.addFakeServerResponse("xwiki", "POST", "delete/Main/remove3",
+                              200, "HTML RESPONSE");
+
+      o.jio.remove({"_id": "remove3"}).then(waitFor(function (ret) {
+        deepEqual({
+          "id": "remove3",
+          "method": "remove",
+          "result": "success",
+          "status": 204,
+          "statusText": "No Content"
+        }, ret);
+      }));
+
+      o.respond();
+
+    }).nThen(function () {
+      o.assertReqs(
+        2,
+        "remove document -> 1 request for csrf and 1 for deleting doc"
+      );
+    }));
+  });
+
+  test("RemoveAttachment", function () {
+    var o = setUp(this);
+    nThenTest(o, nThen(function (waitFor) {
+
+      // remove attachment
+      o.addFakeServerResponse(
+        "xwiki",
+        "GET",
+        "spaces/Main/pages/remove4$",
+        200,
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<page xmlns="http://www.xwiki.org"><title>some title</title></page>'
+      );
+      o.addFakeServerResponse(
+        "xwiki",
+        "GET",
+        "spaces/Main/pages/remove4/attachments",
+        200,
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<attachments xmlns="http://www.xwiki.org">' +
+          '<attachment><name>remove5</name></attachment>' +
+          '</attachments>'
+      );
+      o.addFakeServerResponse(
+        "xwiki",
+        "POST",
+        "delattachment/Main/remove4/remove5",
+        200,
+        "HTML RESPONSE"
+      );
+
+      o.jio.removeAttachment(
+        {"_id": "remove4", "_attachment": "remove5"}
+      ).always(waitFor(function (ret) {
+        deepEqual({
+          "attachment": "remove5",
+          "id": "remove4",
+          "method": "removeAttachment",
+          "result": "success",
+          "status": 204,
+          "statusText": "No Content"
+        }, ret);
+      }));
+
+      o.respond();
+
+    }).nThen(function () {
+      o.assertReqs(
+        4,
+        "remove attach -> get doc, get attachments, get csrf, remove attach"
+      );
+    }));
   });
 
 }));
