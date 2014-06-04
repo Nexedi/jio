@@ -144,8 +144,6 @@ This handler indexes documents metadata into a database (which is a simple
 document) to increase the speed of ``.allDocs()`` requests. However, it is not able to
 manage the ``include_docs`` option.
 
-The sub storages have to manage ``query`` and ``include_docs`` options.
-
 Here is the description:
 
 .. code-block:: javascript
