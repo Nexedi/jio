@@ -28,12 +28,14 @@
   }
 
   test("Scenario", 32, function () {
+//    indexedDB.deleteDatabase("jio:test");
     var server, shared = {}, jio = jIO.createJIO(
       {"type"     : "indexeddb",
         "database" : "test"
         },
       {"workspace": {}}
     );
+
     stop();
     server = {restore: function () {
       return;

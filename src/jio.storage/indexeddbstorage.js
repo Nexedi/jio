@@ -28,7 +28,7 @@
  */
 
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, module, require, indexedDB, jIO, RSVP, Blob */
+/*global define, module, require, indexedDB, jIO, RSVP, Blob*/
 
 (function (dependencies, factory) {
   "use strict";
@@ -134,16 +134,25 @@
    *@param {Object} metadata The data to put in
    *@return a new promise
    */
-  function putIndexedDB(store, metadata) {
-    function resolver(resolve, reject) {
-      var request = store.put(metadata);
-      request.onerror = reject;
-      request.onsuccess = function () {
-        resolve(metadata);
+  function putIndexedDB(store, metadata, readData) {
+    var request,
+      resolver;
+    try {
+      request = store.put(metadata);
+      resolver = function (resolve, reject) {
+        request.onerror = reject;
+        request.onsuccess = function () {
+          resolve(metadata);
+        };
       };
+      return new RSVP.Promise(resolver);
+    } catch (e) {
+      return putIndexedDB(store, {"_id": metadata._id,
+                                  "_attachment" : metadata._attachment,
+                                  "blob": readData});
     }
-    return new RSVP.Promise(resolver);
   }
+
 
 
 
@@ -579,18 +588,20 @@
    *
    * @param  {Object} command The JIO command
    * @param  {Object} metadata The data
+   *
    */
-
   IndexedDBStorage.prototype.putAttachment = function (command, metadata) {
     var jio_storage = this,
       transaction,
       global_db,
       BlobInfo,
-      digest;
+      digest,
+      readResult;
     new RSVP.Queue()
-        .push(jIO.util.readBlobAsBinaryString(metadata._blob).
+            .push(jIO.util.readBlobAsText(metadata._blob).
         then(function (e) {
-          digest = jIO.util.makeBinaryStringDigest(e.target.result);
+          digest = jIO.util.makeBinaryStringDigest(e.target.result);     //xxx
+          readResult = e.target.result;
           BlobInfo = {
             "content_type": metadata._blob.type,
             "digest": digest,
@@ -598,40 +609,40 @@
           };
         }, function () {
           command.error("conflict", "broken blob",
-                      "Cannot read data to put");
+            "Cannot read data to put");
         }))
-        .push(function () {
+            .push(function () {
         return openIndexedDB(jio_storage._database_name);
       })
-        .push(function (db) {
+            .push(function (db) {
         global_db = db;
         transaction = db.transaction(["attachment",
-                                      "blob"], "readwrite");
+                "blob"], "readwrite");
         return promiseResearch(transaction, metadata._id, "attachment", "_id");
       })
-        .push(function (researchResult) {
+            .push(function (researchResult) {
         if (researchResult.result === undefined) {
           throw ({"status": 404, "reason": "Not Found",
-                  "message": "indexeddbStorage unable to put attachment"});
+            "message": "indexeddbStorage unable to put attachment"});
         }
         //update attachment
         researchResult.result._attachment = researchResult.result._attachment
-                                      || {};
+                    || {};
         researchResult.result._attachment[metadata._attachment] =
-                BlobInfo;
+                    (BlobInfo === undefined) ? "BlobInfo" : BlobInfo;
         return putIndexedDB(researchResult.store, researchResult.result);
       })
-       .push(function () {
+      .push(function () {
         //put in blob
         var store = transaction.objectStore("blob");
         return putIndexedDB(store, {"_id": metadata._id,
-                                    "_attachment" : metadata._attachment,
-                                    "blob": metadata._blob});
+          "_attachment" : metadata._attachment,
+          "blob": metadata._blob}, readResult);
       })
-       .push(function () {
-        return ({"digest": digest});
+      .push(function () {
+        return ({"digest": digest});   //xxx
       })
-        .push(undefined, function (error) {
+            .push(undefined, function (error) {
         // Check if transaction is ongoing, if so, abort it
         if (transaction !== undefined) {
           transaction.abort();
@@ -641,8 +652,10 @@
         }
         throw error;
       })
-        .push(command.success, command.error, command.notify);
+            .push(command.success, command.error, command.notify);
   };
+
+
 
   /**
    * Retriev a document attachment
@@ -656,28 +669,32 @@
       global_db,
       _id_attachment = [param._id, param._attachment];
     new RSVP.Queue()
-        .push(function () {
+            .push(function () {
         return openIndexedDB(jio_storage._database_name);
       })
-        .push(function (db) {
+            .push(function (db) {
         global_db = db;
         transaction = db.transaction(["blob"], "readwrite");
         //check if the attachment exists
         return promiseResearch(transaction, _id_attachment,
-                               "blob", "_id_attachment");
+               "blob", "_id_attachment");
       })
-        .push(function (researchResult) {
+            .push(function (researchResult) {
         if (researchResult.result === undefined) {
           throw ({"status": 404, "reason": "missing attachment",
-                  "message": "IndexeddbStorage, unable to get attachment."});
+            "message": "IndexeddbStorage, unable to get attachment."});
         }
         return getIndexedDB(researchResult.store, _id_attachment);
       })
-       .push(function (result) {
-       //get data
+        .push(function (result) {
+          //get data
+        if (typeof result.blob === "string") {
+          result.blob = new Blob([result.blob],
+                                {type: "text/plain"});
+        }
         return ({ "data": result.blob});
       })
-       .push(undefined, function (error) {
+      .push(undefined, function (error) {
         // Check if transaction is ongoing, if so, abort it
         if (transaction !== undefined) {
           transaction.abort();
@@ -687,8 +704,9 @@
         }
         throw error;
       })
-        .push(command.success, command.error, command.notify);
+            .push(command.success, command.error, command.notify);
   };
+
 
   /**
    * Remove an attachment
