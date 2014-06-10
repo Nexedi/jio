@@ -291,8 +291,6 @@
     function createAttachmentTest(answer) {
       deepEqual(answer, {
         "attachment": "aa",
-        "digest": "sha256-9834876dcfb05cb167a5c24953eba58c4" +
-          "ac89b1adf57f28f2f9d09af107ee8f0",
         "id": "a",
         "method": "putAttachment",
         "result": "success",
@@ -313,8 +311,6 @@
     function updateAttachmentTest(answer) {
       deepEqual(answer, {
         "attachment": "aa",
-        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
-          "0728e095ff24218119d51bd22475363",
         "id": "a",
         "method": "putAttachment",
         "result": "success",
@@ -335,8 +331,6 @@
     function createAnotherAttachmentTest(answer) {
       deepEqual(answer, {
         "attachment": "ab",
-        "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
-          "ed343e6c739e54131fcb3a56e4bc1bd",
         "id": "a",
         "method": "putAttachment",
         "result": "success",
@@ -370,12 +364,9 @@
       return jIO.util.readBlobAsText(blob).then(function (e) {
         deepEqual(blob.type, "text/plain", "Check blob type");
         deepEqual(e.target.result, "aab", "Check blob text content");
-        answer.digest =  jIO.util.makeBinaryStringDigest(e.target.result);
         deepEqual(answer, {
           "attachment": "aa",
           "data": "<blob>",
-          "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
-            "0728e095ff24218119d51bd22475363",
           "id": "a",
           "method": "getAttachment",
           "result": "success",
@@ -399,12 +390,9 @@
       return jIO.util.readBlobAsText(blob).then(function (e) {
         deepEqual(blob.type, "text/plain", "Check blob type");
         deepEqual(e.target.result, "aba", "Check blob text content");
-        answer.digest =  jIO.util.makeBinaryStringDigest(e.target.result);
         deepEqual(answer, {
           "attachment": "ab",
           "data": "<blob>",
-          "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
-            "ed343e6c739e54131fcb3a56e4bc1bd",
           "id": "a",
           "method": "getAttachment",
           "result": "success",
@@ -428,14 +416,10 @@
           "_attachment": {
             "aa": {
               "content_type": "text/plain",
-              "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
-                "0728e095ff24218119d51bd22475363",
               "length": 3
             },
             "ab": {
               "content_type": "text/plain",
-              "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
-                "ed343e6c739e54131fcb3a56e4bc1bd",
               "length": 3
             }
           }
@@ -491,8 +475,6 @@
           "_attachment": {
             "aa": {
               "content_type": "text/plain",
-              "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
-                "0728e095ff24218119d51bd22475363",
               "length": 3
             }
           },
