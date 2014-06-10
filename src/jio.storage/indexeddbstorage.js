@@ -595,64 +595,58 @@
       transaction,
       global_db,
       BlobInfo,
-      digest,
       readResult;
-    new RSVP.Queue()
-            .push(jIO.util.readBlobAsText(metadata._blob).
-        then(function (e) {
-          digest = jIO.util.makeBinaryStringDigest(e.target.result);     //xxx
-          readResult = e.target.result;
-          BlobInfo = {
-            "content_type": metadata._blob.type,
-            "digest": digest,
-            "length": metadata._blob.size
-          };
-        }, function () {
-          command.error("conflict", "broken blob",
-            "Cannot read data to put");
-        }))
+    jIO.util.readBlobAsArrayBuffer(metadata._blob)
+      .then(function (event) {
+        readResult = event.target.result;
+        BlobInfo = {
+          "content_type": metadata._blob.type,
+          "length": metadata._blob.size
+        };
+        new RSVP.Queue()
             .push(function () {
-        return openIndexedDB(jio_storage._database_name);
-      })
+            return openIndexedDB(jio_storage._database_name);
+          })
             .push(function (db) {
-        global_db = db;
-        transaction = db.transaction(["attachment",
-                "blob"], "readwrite");
-        return promiseResearch(transaction, metadata._id, "attachment", "_id");
-      })
+            global_db = db;
+            transaction = db.transaction(["attachment",
+                    "blob"], "readwrite");
+            return promiseResearch(transaction,
+                                   metadata._id, "attachment", "_id");
+          })
             .push(function (researchResult) {
-        if (researchResult.result === undefined) {
-          throw ({"status": 404, "reason": "Not Found",
-            "message": "indexeddbStorage unable to put attachment"});
-        }
+            if (researchResult.result === undefined) {
+              throw ({"status": 404, "reason": "Not Found",
+                "message": "indexeddbStorage unable to put attachment"});
+            }
         //update attachment
-        researchResult.result._attachment = researchResult.result._attachment
-                    || {};
-        researchResult.result._attachment[metadata._attachment] =
+            researchResult.result._attachment = researchResult.
+                result._attachment || {};
+            researchResult.result._attachment[metadata._attachment] =
                     (BlobInfo === undefined) ? "BlobInfo" : BlobInfo;
-        return putIndexedDB(researchResult.store, researchResult.result);
-      })
-      .push(function () {
+            return putIndexedDB(researchResult.store, researchResult.result);
+          })
+          .push(function () {
         //put in blob
-        var store = transaction.objectStore("blob");
-        return putIndexedDB(store, {"_id": metadata._id,
-          "_attachment" : metadata._attachment,
-          "blob": metadata._blob}, readResult);
-      })
-      .push(function () {
-        return ({"digest": digest});   //xxx
-      })
-            .push(undefined, function (error) {
+            var store = transaction.objectStore("blob");
+            return putIndexedDB(store, {"_id": metadata._id,
+              "_attachment" : metadata._attachment,
+              "blob": metadata._blob}, readResult);
+          }).push(function () {
+            return {"status": 204};
+          })
+          .push(undefined, function (error) {
         // Check if transaction is ongoing, if so, abort it
-        if (transaction !== undefined) {
-          transaction.abort();
-        }
-        if (global_db !== undefined) {
-          global_db.close();
-        }
-        throw error;
-      })
+            if (transaction !== undefined) {
+              transaction.abort();
+            }
+            if (global_db !== undefined) {
+              global_db.close();
+            }
+            throw error;
+          })
             .push(command.success, command.error, command.notify);
+      });
   };
 
 
@@ -688,7 +682,7 @@
       })
         .push(function (result) {
           //get data
-        if (typeof result.blob === "string") {
+        if (result.blob.byteLength !== undefined) {
           result.blob = new Blob([result.blob],
                                 {type: "text/plain"});
         }
