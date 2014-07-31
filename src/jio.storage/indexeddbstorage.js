@@ -140,7 +140,9 @@
     try {
       request = store.put(metadata);
       resolver = function (resolve, reject) {
-        request.onerror = reject;
+        request.onerror = function (e) {
+          reject(e);
+        };
         request.onsuccess = function () {
           resolve(metadata);
         };
@@ -153,9 +155,16 @@
     }
   }
 
-
-
-
+  function transactionEnd(transaction) {
+    var resolver;
+    resolver = function (resolve, reject) {
+      transaction.onabort = reject;
+      transaction.oncomplete = function () {
+        resolve("end");
+      };
+    };
+    return new RSVP.Promise(resolver);
+  }
   /**
    * get a data from a store object
    * @param {ObjectStore} store The objectstore
@@ -183,8 +192,12 @@
   function removeIndexedDB(store, id) {
     function resolver(resolve, reject) {
       var request = store["delete"](id);
-      request.onerror = reject;
-      request.onsuccess = resolve;
+      request.onerror = function (e) {
+        reject(e);
+      };
+      request.onsuccess = function () {
+        resolve(request.result);
+      };
     }
     return new RSVP.Promise(resolver);
   }
@@ -228,7 +241,7 @@
         global_db,
         result;
 
-      new RSVP.Queue()
+      return new RSVP.Queue()
         .push(function () {
           //open a database
           return open(jio_storage._database_name);
@@ -251,19 +264,16 @@
         .push(function (researchResult) {
           //create an id in attachment si necessary
           if (researchResult.result === undefined) {
-            putIndexedDB(researchResult.store, {"_id": metadata._id});
-          } else {
-            return end(result);
+            return putIndexedDB(researchResult.store, {"_id": metadata._id});
           }
+        })
+        .push(function () {
+          return transactionEnd(transaction);
         })
         .push(function () {
           return end(result);
         })
         .push(undefined, function (error) {
-          // Check if transaction is ongoing, if so, abort it
-          if (transaction !== undefined) {
-            transaction.abort();
-          }
           if (global_db !== undefined) {
             global_db.close();
           }
@@ -286,7 +296,7 @@
       transaction,
       global_db,
       meta;
-    new RSVP.Queue()
+    return new RSVP.Queue()
       .push(function () {
         return openIndexedDB(jio_storage._database_name);
       })
@@ -311,13 +321,12 @@
         if (result._attachment) {
           meta._attachment = result._attachment;
         }
+        return transactionEnd(transaction);
+      })
+      .push(function () {
         return ({"data": meta});
       })
       .push(undefined, function (error) {
-        // Check if transaction is ongoing, if so, abort it
-        if (transaction !== undefined) {
-          transaction.abort();
-        }
         if (global_db !== undefined) {
           global_db.close();
         }
@@ -338,7 +347,15 @@
       transaction,
       global_db,
       queue = new RSVP.Queue();
-    queue.push(function () {
+    function tmp(index, array, store) {
+      return removeIndexedDB(store, [param._id, array[index]])
+        .then(function () {
+          if (index < array.length - 1) {
+            return tmp(index + 1, array, store);
+          }
+        });
+    }
+    return queue.push(function () {
       return openIndexedDB(jio_storage._database_name);
     })
         .push(function (db) {
@@ -359,32 +376,26 @@
         var store = transaction.objectStore("attachment");
         return getIndexedDB(store, param._id);
       })
-       .push(function (result) {
+        .push(function (result) {
         if (result._attachment) {
-          var i, l, key, array, func, store;
+          var array, store;
           array = Object.keys(result._attachment);
           store = transaction.objectStore("blob");
-          for (i = 0, l = array.length; i < l; i += 1) {
-            key = array[i];
-            //delete blob
-            func = removeIndexedDB(store, [param._id, key]);
-            queue.push(func);
-          }
+          return tmp(0, array, store);
         }
       })
-        .push(function () {
+      .push(function () {
         var store = transaction.objectStore("attachment");
         //delete attachment
         return removeIndexedDB(store, param._id);
       })
-        .push(function () {
+      .push(function () {
+        return transactionEnd(transaction);
+      })
+      .push(function () {
         return ({"status": 204});
       })
         .push(undefined, function (error) {
-        // Check if transaction is ongoing, if so, abort it
-        if (transaction !== undefined) {
-          transaction.abort();
-        }
         if (global_db !== undefined) {
           global_db.close();
         }
@@ -417,7 +428,7 @@
       return ({"id": metadata._id});
     }
 
-    that._putOrPost(openIndexedDB, promiseResearch,
+    return that._putOrPost(openIndexedDB, promiseResearch,
                             promiseOngoingPost, promiseEndPost,
                             command, metadata);
 
@@ -447,7 +458,7 @@
     function promiseEndPut() {
       return {"status": (found ? 204 : 201) };
     }
-    that._putOrPost(openIndexedDB, promiseResearch,
+    return that._putOrPost(openIndexedDB, promiseResearch,
                   promiseOngoingPut, promiseEndPut,
                   command, metadata);
 
@@ -596,14 +607,14 @@
       global_db,
       BlobInfo,
       readResult;
-    jIO.util.readBlobAsArrayBuffer(metadata._blob)
+    return jIO.util.readBlobAsArrayBuffer(metadata._blob)
       .then(function (event) {
         readResult = event.target.result;
         BlobInfo = {
           "content_type": metadata._blob.type,
           "length": metadata._blob.size
         };
-        new RSVP.Queue()
+        return new RSVP.Queue()
             .push(function () {
             return openIndexedDB(jio_storage._database_name);
           })
@@ -632,14 +643,14 @@
             return putIndexedDB(store, {"_id": metadata._id,
               "_attachment" : metadata._attachment,
               "blob": metadata._blob}, readResult);
-          }).push(function () {
+          })
+          .push(function () {
+            return transactionEnd(transaction);
+          })
+          .push(function () {
             return {"status": 204};
           })
           .push(undefined, function (error) {
-        // Check if transaction is ongoing, if so, abort it
-            if (transaction !== undefined) {
-              transaction.abort();
-            }
             if (global_db !== undefined) {
               global_db.close();
             }
@@ -662,7 +673,7 @@
       transaction,
       global_db,
       _id_attachment = [param._id, param._attachment];
-    new RSVP.Queue()
+    return new RSVP.Queue()
             .push(function () {
         return openIndexedDB(jio_storage._database_name);
       })
@@ -714,7 +725,7 @@
       transaction,
       global_db,
       _id_attachment = [param._id, param._attachment];
-    new RSVP.Queue()
+    return new RSVP.Queue()
         .push(function () {
         return openIndexedDB(jio_storage._database_name);
       })
@@ -743,14 +754,13 @@
         var store = transaction.objectStore("attachment");
         return putIndexedDB(store, result);
       })
+      .push(function () {
+        return transactionEnd(transaction);
+      })
        .push(function () {
         return ({ "status": 204 });
       })
        .push(undefined, function (error) {
-        // Check if transaction is ongoing, if so, abort it
-        if (transaction !== undefined) {
-          transaction.abort();
-        }
         if (global_db !== undefined) {
           global_db.close();
         }
