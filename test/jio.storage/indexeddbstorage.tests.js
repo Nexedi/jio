@@ -1,7 +1,7 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global module, test, stop, start, expect, ok, deepEqual, location, sinon,
   davstorage_spec, RSVP, jIO, test_util, dav_storage, btoa, define,
-  setTimeout, clearTimeout */
+  setTimeout, clearTimeout, indexedDB */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -18,7 +18,7 @@
   'qunit'
 ], function (util, RSVP, jIO) {
   "use strict";
-  module("Indexeddb Storage");
+  module("indexeddbStorage");
   function success(promise) {
     return new RSVP.Promise(function (resolve, notify) {
       promise.then(resolve, resolve, notify);
@@ -27,25 +27,18 @@
     });
   }
 
-  test("Scenario", 32, function () {
-//    indexedDB.deleteDatabase("jio:test");
+  test("Scenario", 46, function () {
+    indexedDB.deleteDatabase("jio:test");
     var server, shared = {}, jio = jIO.createJIO(
       {"type"     : "indexeddb",
         "database" : "test"
         },
       {"workspace": {}}
     );
-
     stop();
     server = {restore: function () {
       return;
     }};
-
-
-
-
-
-
 
     function postNewDocument() {
       return jio.post({"title": "Unique ID"});
@@ -378,6 +371,85 @@
       });
     }
 
+    function getFirstAttachmentRange1() {
+      return jio.getAttachment({"_id": "a",
+                                "_attachment": "aa",
+                                "_start": 0});
+    }
+
+    function getFirstAttachmentRangeTest1(answer) {
+      var blob = answer.data;
+      answer.data = "<blob>";
+      return jIO.util.readBlobAsText(blob).then(function (e) {
+        deepEqual(blob.type, "text/plain", "Check blob type");
+        deepEqual(e.target.result, "aab", "Check blob text content");
+        deepEqual(answer, {
+          "attachment": "aa",
+          "data": "<blob>",
+          "id": "a",
+          "method": "getAttachment",
+          "result": "success",
+          "status": 200,
+          "statusText": "Ok"
+        }, "Get first attachment with range :_start:0, _end:undefined");
+      }, function (err) {
+        deepEqual(err, "no error", "Check blob text content");
+      });
+    }
+
+
+    function getFirstAttachmentRange2() {
+      return jio.getAttachment({"_id": "a",
+                                "_attachment": "aa",
+                                "_start": 0,
+                                "_end": 1});
+    }
+
+    function getFirstAttachmentRangeTest2(answer) {
+      var blob = answer.data;
+      answer.data = "<blob>";
+      return jIO.util.readBlobAsText(blob).then(function (e) {
+        deepEqual(blob.type, "text/plain", "Check blob type");
+        deepEqual(e.target.result, "a", "Check blob text content");
+        deepEqual(answer, {
+          "attachment": "aa",
+          "data": "<blob>",
+          "id": "a",
+          "method": "getAttachment",
+          "result": "success",
+          "status": 200,
+          "statusText": "Ok"
+        }, "Get first attachment with range :_start:0, _end:1");
+      }, function (err) {
+        deepEqual(err, "no error", "Check blob text content");
+      });
+    }
+
+    function getFirstAttachmentRange3() {
+      return jio.getAttachment({"_id": "a",
+                                "_attachment": "aa",
+                                "_start": 1,
+                                "_end": 3});
+    }
+    function getFirstAttachmentRangeTest3(answer) {
+      var blob = answer.data;
+      answer.data = "<blob>";
+      return jIO.util.readBlobAsText(blob).then(function (e) {
+        deepEqual(blob.type, "text/plain", "Check blob type");
+        deepEqual(e.target.result, "ab", "Check blob text content");
+        deepEqual(answer, {
+          "attachment": "aa",
+          "data": "<blob>",
+          "id": "a",
+          "method": "getAttachment",
+          "result": "success",
+          "status": 200,
+          "statusText": "Ok"
+        }, "Get first attachment with range :_start:1, _end:3");
+      }, function (err) {
+        deepEqual(err, "no error", "Check blob text content");
+      });
+    }
 
 
     function getSecondAttachment() {
@@ -398,11 +470,83 @@
           "result": "success",
           "status": 200,
           "statusText": "Ok"
-        }, "Get first attachment");
+        }, "Get second attachment");
       }, function (err) {
         deepEqual(err, "no error", "Check blob text content");
       });
     }
+
+
+
+
+
+    function getSecondAttachmentRange1() {
+      return success(jio.getAttachment({"_id": "a",
+                                        "_attachment": "ab",
+                                        "_start": -1}));
+    }
+    function getSecondAttachmentRangeTest1(answer) {
+      deepEqual(answer, {
+        "attachment": "ab",
+        "error": "not_found",
+        "id": "a",
+        "message": "_start and _end must be positive",
+        "method": "getAttachment",
+        "reason": "invalide _start, _end",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "get attachment with _start or _end negative -> 404 Not Found");
+    }
+
+
+
+    function getSecondAttachmentRange2() {
+      return success(jio.getAttachment({"_id": "a",
+                                        "_attachment": "ab",
+                                        "_start": 1,
+                                        "_end": 0}));
+    }
+    function getSecondAttachmentRangeTest2(answer) {
+      deepEqual(answer, {
+        "attachment": "ab",
+        "error": "not_found",
+        "id": "a",
+        "message": "start is great then end",
+        "method": "getAttachment",
+        "reason": "invalide offset",
+        "result": "error",
+        "status": 404,
+        "statusText": "Not Found"
+      }, "get attachment with _start > _end -> 404 Not Found");
+    }
+    function getSecondAttachmentRange3() {
+      return jio.getAttachment({"_id": "a",
+                                "_attachment": "ab",
+                                "_start": 1,
+                                "_end": 2});
+    }
+    function getSecondAttachmentRangeTest3(answer) {
+      var blob = answer.data;
+      answer.data = "<blob>";
+      return jIO.util.readBlobAsText(blob).then(function (e) {
+        deepEqual(blob.type, "text/plain", "Check blob type");
+        deepEqual(e.target.result, "b", "Check blob text content");
+        deepEqual(answer, {
+          "attachment": "ab",
+          "data": "<blob>",
+          "id": "a",
+          "method": "getAttachment",
+          "result": "success",
+          "status": 200,
+          "statusText": "Ok"
+        }, "Get second attachment with range :_start:1, _end:3");
+      }, function (err) {
+        deepEqual(err, "no error", "Check blob text content");
+      });
+    }
+
+
 
     function getLastDocument() {
       return jio.get({"_id": "a"});
@@ -621,9 +765,15 @@
       then(updateLastDocument).then(updateLastDocumentTest).
      // getA a 200
       then(getFirstAttachment).then(getFirstAttachmentTest).
+      then(getFirstAttachmentRange1).then(getFirstAttachmentRangeTest1).
+      then(getFirstAttachmentRange2).then(getFirstAttachmentRangeTest2).
+      then(getFirstAttachmentRange3).then(getFirstAttachmentRangeTest3).
      // getA b 200
       then(getSecondAttachment).then(getSecondAttachmentTest).
-     // get 200
+      then(getSecondAttachmentRange1).then(getSecondAttachmentRangeTest1).
+      then(getSecondAttachmentRange2).then(getSecondAttachmentRangeTest2).
+      then(getSecondAttachmentRange3).then(getSecondAttachmentRangeTest3).
+      // get 200
       then(getLastDocument).then(getLastDocumentTest).
      // removeA b 204
       then(removeSecondAttachment).then(removeSecondAttachmentTest).
