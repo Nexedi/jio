@@ -184,8 +184,15 @@
    * An ajax object to do the good request according to the auth type
    */
   var ajax = {
-    "none": function (method, type, url, data) {
+    "none": function (method, type, url, data, start, end) {
       var headers = {};
+      if (start !== undefined) {
+        if (end !== undefined) {
+          headers = {"Range" : "bytes=" + start + "-" + end};
+        } else {
+          headers = {"Range" : "bytes=" + start + "-"};
+        }
+      }
       if (method === "PROPFIND") {
         headers.Depth = "1";
       }
@@ -197,8 +204,15 @@
         "headers": headers
       });
     },
-    "basic": function (method, type, url, data, login) {
+    "basic": function (method, type, url, data, start, end, login) {
       var headers = {"Authorization": "Basic " + login};
+      if (start !== undefined) {
+        if (end !== undefined) {
+          headers.Range = "bytes=" + start + "-" + end;
+        } else {
+          headers.Range = "bytes=" + start + "-";
+        }
+      }
       if (method === "PROPFIND") {
         headers.Depth = "1";
       }
@@ -253,6 +267,8 @@
       this._url + '/' + idsToFileName(param._id, param._attachment) +
         "?_=" + Date.now(),
       param._blob,
+      undefined,
+      undefined,
       this._login
     );
   };
@@ -263,6 +279,8 @@
       "text",
       this._url + '/' + idsToFileName(param._id),
       null,
+      undefined,
+      undefined,
       this._login
     ).then(function (e) {
       try {
@@ -286,6 +304,8 @@
       "blob",
       this._url + '/' + idsToFileName(param._id, param._attachment),
       null,
+      param._start,
+      param._end - 1,
       this._login
     );
   };
@@ -296,6 +316,8 @@
       null,
       this._url + '/' + idsToFileName(param._id) + "?_=" + Date.now(),
       null,
+      undefined,
+      undefined,
       this._login
     );
   };
@@ -307,6 +329,8 @@
       this._url + '/' + idsToFileName(param._id, param._attachment) +
         "?_=" + Date.now(),
       null,
+      undefined,
+      undefined,
       this._login
     );
   };
@@ -317,6 +341,8 @@
       "text",
       this._url + '/',
       null,
+      undefined,
+      undefined,
       this._login
     ).then(function (e) {
       var i, rows = [], row, responses = new DOMParser().parseFromString(
@@ -346,7 +372,9 @@
           row.id = row.id[0];
         }
         if (row !== undefined) {
-          rows[rows.length] = row;
+          if (row.id !== "") {
+            rows[rows.length] = row;
+          }
         }
       }
       return {"target": {"response": {
@@ -631,7 +659,18 @@
         );
       }
     };
-
+    if (param._start < 0 || param._end < 0) {
+      command.reject(405,
+                     "invalide _start,_end",
+                     "_start and _end must be positive");
+      return;
+    }
+    if (param._start > param._end) {
+      command.reject(405,
+                     "invalide _start,_end",
+                     "start is great then end");
+      return;
+    }
     this._get(param).
       then(o.getAttachment).
       then(o.success, o.reject, o.notifyProgress);
@@ -833,10 +872,12 @@
         }
 
         e.target.response.rows.forEach(function (row) {
-          requests[requests.length] = that._get({"_id": row.id}).
-            then(function (e) {
-              row.doc = e.target.response;
-            });
+          if (row.id !== "") {
+            requests[requests.length] = that._get({"_id": row.id}).
+              then(function (e) {
+                row.doc = e.target.response;
+              });
+          }
         });
 
         o.count = 0;
