@@ -1,7 +1,7 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global module, test, stop, start, expect, ok, deepEqual, location, sinon,
   davstorage_spec, RSVP, jIO, test_util, dav_storage, btoa, define,
-  setTimeout, clearTimeout */
+  setTimeout, clearTimeout, parseInt */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -62,7 +62,7 @@
    *   X-Requested-With, X-HTTP-Method-Override, Accept, Authorization,
    *   Depth"
    */
-  test("Scenario", 34, function () {
+  test("Scenario", 48, function () {
 
     var server, responses = [], shared = {}, jio = jIO.createJIO(spec, {
       "workspace": {},
@@ -94,7 +94,7 @@
       jIO.util.ajax = function (param) {
         var timeout, xhr = {}, response = responses.shift(), statusTexts = {
           "404": "Not Found"
-        };
+        }, start, end, str;
         if (!Array.isArray(response)) {
           setTimeout(function () {
             throw new ReferenceError("Fake server, no response set for " +
@@ -116,6 +116,17 @@
           timeout = setTimeout(function () {
             /*global Blob*/
             if (xhr.responseType === 'blob') {
+              if (param.headers.Range !== undefined) {
+                str = param.headers.Range;
+                start = parseInt(str.substring(str.indexOf("=") + 1,
+                                               str.indexOf("-")), 10);
+                if (str.indexOf("NaN") !== -1) {
+                  response[2] = response[2].substring(start);
+                } else {
+                  end = parseInt(str.substring(str.indexOf("-") + 1), 10);
+                  response[2] = response[2].substring(start, end + 1);
+                }
+              }
               xhr.response = new Blob([response[2]], {
                 "type": response[1]["Content-Type"] ||
                   response[1]["Content-type"] ||
@@ -969,6 +980,179 @@
       });
     }
 
+
+
+
+
+
+
+
+    function getFirstAttachmentRange1() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hoo",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          },
+          "ab": {
+            "content_type": "text/plain",
+            "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+              "ed343e6c739e54131fcb3a56e4bc1bd",
+            "length": 3
+          }
+        }
+      })]); // GET
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, "aab"]); // GET
+      return jio.getAttachment({"_id": "a",
+                                "_attachment": "aa",
+                                "_start": 0});
+    }
+
+    function getFirstAttachmentRangeTest1(answer) {
+      var blob = answer.data;
+      answer.data = "<blob>";
+      deepEqual(answer, {
+        "attachment": "aa",
+        "data": "<blob>",
+        "id": "a",
+        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+          "0728e095ff24218119d51bd22475363",
+        "method": "getAttachment",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Get first attachment with range:_start: 0, _end: undefined");
+      return jIO.util.readBlobAsText(blob).then(function (e) {
+        deepEqual(blob.type, "text/plain", "Check blob type");
+        deepEqual(e.target.result, "aab", "Check blob text content");
+      }, function (err) {
+        deepEqual(err, "no error", "Check blob text content");
+      });
+    }
+
+
+
+
+
+
+
+
+    function getFirstAttachmentRange2() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hoo",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          },
+          "ab": {
+            "content_type": "text/plain",
+            "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+              "ed343e6c739e54131fcb3a56e4bc1bd",
+            "length": 3
+          }
+        }
+      })]); // GET
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, "aab"]); // GET
+      return jio.getAttachment({"_id": "a",
+                                "_attachment": "aa",
+                                "_start": 0,
+                                "_end": 1});
+    }
+
+    function getFirstAttachmentRangeTest2(answer) {
+      var blob = answer.data;
+      answer.data = "<blob>";
+      deepEqual(answer, {
+        "attachment": "aa",
+        "data": "<blob>",
+        "id": "a",
+        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+          "0728e095ff24218119d51bd22475363",
+        "method": "getAttachment",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Get first attachment with range: _start:0, _end:1");
+      return jIO.util.readBlobAsText(blob).then(function (e) {
+        deepEqual(blob.type, "text/plain", "Check blob type");
+        deepEqual(e.target.result, "a", "Check blob text content");
+      }, function (err) {
+        deepEqual(err, "no error", "Check blob text content");
+      });
+    }
+
+
+    function getFirstAttachmentRange3() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hoo",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          },
+          "ab": {
+            "content_type": "text/plain",
+            "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+              "ed343e6c739e54131fcb3a56e4bc1bd",
+            "length": 3
+          }
+        }
+      })]); // GET
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, "aab"]); // GET
+      return jio.getAttachment({"_id": "a",
+                                "_attachment": "aa",
+                                "_start": 1,
+                                "_end": 3});
+    }
+
+    function getFirstAttachmentRangeTest3(answer) {
+      var blob = answer.data;
+      answer.data = "<blob>";
+      deepEqual(answer, {
+        "attachment": "aa",
+        "data": "<blob>",
+        "id": "a",
+        "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+          "0728e095ff24218119d51bd22475363",
+        "method": "getAttachment",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Get first attachment with range:_start:1, _end:3 ");
+      return jIO.util.readBlobAsText(blob).then(function (e) {
+        deepEqual(blob.type, "text/plain", "Check blob type");
+        deepEqual(e.target.result, "ab", "Check blob text content");
+      }, function (err) {
+        deepEqual(err, "no error", "Check blob text content");
+      });
+    }
+
+
+
+
     function getSecondAttachment() {
       responses.push([200, {
         "Content-Type": "application/octet-stream"
@@ -1009,10 +1193,104 @@
         "result": "success",
         "status": 200,
         "statusText": "Ok"
-      }, "Get first attachment");
+      }, "Get second attachment");
       return jIO.util.readBlobAsText(blob).then(function (e) {
         deepEqual(blob.type, "text/plain", "Check blob type");
         deepEqual(e.target.result, "aba", "Check blob text content");
+      }, function (err) {
+        deepEqual(err, "no error", "Check blob text content");
+      });
+    }
+
+
+    function getSecondAttachmentRange1() {
+      return success(jio.getAttachment({"_id": "a",
+                                        "_attachment": "ab",
+                                        "_start": -1}));
+    }
+    function getSecondAttachmentRangeTest1(answer) {
+      deepEqual(answer, {
+        "attachment": "ab",
+        "error": "method_not_allowed",
+        "id": "a",
+        "message": "_start and _end must be positive",
+        "method": "getAttachment",
+        "reason": "invalide _start,_end",
+        "result": "error",
+        "status": 405,
+        "statusText": "Method Not Allowed"
+      }, "Get second attachment with range: _start: -1");
+    }
+
+    function getSecondAttachmentRange2() {
+      return success(jio.getAttachment({"_id": "a",
+                                        "_attachment": "ab",
+                                        "_start": 1,
+                                        "_end": 0}));
+    }
+    function getSecondAttachmentRangeTest2(answer) {
+      deepEqual(answer, {
+        "attachment": "ab",
+        "error": "method_not_allowed",
+        "id": "a",
+        "message": "start is great then end",
+        "method": "getAttachment",
+        "reason": "invalide _start,_end",
+        "result": "error",
+        "status": 405,
+        "statusText": "Method Not Allowed"
+      }, "Get second attachment with range: _start: -1");
+    }
+
+
+
+    function getSecondAttachmentRange3() {
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, JSON.stringify({
+        "_id": "a",
+        "title": "Hoo",
+        "_attachments": {
+          "aa": {
+            "content_type": "text/plain",
+            "digest": "sha256-38760eabb666e8e61ee628a17c4090cc5" +
+              "0728e095ff24218119d51bd22475363",
+            "length": 3
+          },
+          "ab": {
+            "content_type": "text/plain",
+            "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+              "ed343e6c739e54131fcb3a56e4bc1bd",
+            "length": 3
+          }
+        }
+      })]); // GET
+      responses.push([200, {
+        "Content-Type": "application/octet-stream"
+      }, "aab"]); // GET
+      return jio.getAttachment({"_id": "a",
+                                "_attachment": "ab",
+                                "_start": 1,
+                                "_end": 2});
+    }
+
+    function getSecondAttachmentRangeTest3(answer) {
+      var blob = answer.data;
+      answer.data = "<blob>";
+      deepEqual(answer, {
+        "attachment": "ab",
+        "data": "<blob>",
+        "id": "a",
+        "digest": "sha256-e124adcce1fb2f88e1ea799c3d0820845" +
+          "ed343e6c739e54131fcb3a56e4bc1bd",
+        "method": "getAttachment",
+        "result": "success",
+        "status": 200,
+        "statusText": "Ok"
+      }, "Get second attachment with range:_start:1, _end:2 ");
+      return jIO.util.readBlobAsText(blob).then(function (e) {
+        deepEqual(blob.type, "text/plain", "Check blob type");
+        deepEqual(e.target.result, "a", "Check blob text content");
       }, function (err) {
         deepEqual(err, "no error", "Check blob text content");
       });
@@ -1348,8 +1626,14 @@
       then(updateLastDocument).then(updateLastDocumentTest).
       // getA a 200
       then(getFirstAttachment).then(getFirstAttachmentTest).
+      then(getFirstAttachmentRange1).then(getFirstAttachmentRangeTest1).
+      then(getFirstAttachmentRange2).then(getFirstAttachmentRangeTest2).
+      then(getFirstAttachmentRange3).then(getFirstAttachmentRangeTest3).
       // getA b 200
       then(getSecondAttachment).then(getSecondAttachmentTest).
+      then(getSecondAttachmentRange1).then(getSecondAttachmentRangeTest1).
+      then(getSecondAttachmentRange2).then(getSecondAttachmentRangeTest2).
+      then(getSecondAttachmentRange3).then(getSecondAttachmentRangeTest3).
       // get 200
       then(getLastDocument).then(getLastDocumentTest).
       // removeA b 204
