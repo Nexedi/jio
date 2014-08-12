@@ -412,7 +412,7 @@
         "result": "success",
         "status": 200,
         "statusText": "Ok"
-      }, "Get Attachment, Check Response");
+      }, "Get Attachment with _start:2 _end: 4, Check Response");
       return jIO.util.readBlobAsText(blob).then(function (e) {
         deepEqual(e.target.result, "is", "Check blob text content");
       });
@@ -440,7 +440,7 @@
         "result": "success",
         "status": 200,
         "statusText": "Ok"
-      }, "Get Attachment, Check Response");
+      }, "Get Attachment with _start: 1 _end: 7, Check Response");
       return jIO.util.readBlobAsText(blob).then(function (e) {
         deepEqual(e.target.result, "tisate", "Check blob text content");
       });
