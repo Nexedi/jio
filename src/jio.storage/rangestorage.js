@@ -18,6 +18,16 @@
    * @constructor
    */
   function RangeStorage(spec) {
+    if (spec.sub_storage === undefined) {
+      throw new TypeError("RangeStorage 'sub storage' description" +
+                          "must be a non-empty string");
+    }
+    if (spec.sub_storage.type === "indexeddb" ||
+        spec.sub_storage.type === "dav") {
+      throw new TypeError("RangeStorage 'sub storage' " +
+                          spec.sub_storage.type + "unsupport"
+                         );
+    }
     this._sub_storage = spec.sub_storage;
     this._key_schema = spec.key_schema;
   }
