@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global jIO: true, sjcl: true, $: true, setTimeout: true */
-jIO.addStorageType('crypt', function (spec, my) {
+jIO.addStorage('crypt', function (spec, my) {
   /*jslint todo: true*/
   spec = spec || {};
   var that = my.basicStorage(spec, my),

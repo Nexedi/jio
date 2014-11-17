@@ -28,25 +28,28 @@
  * - https://developer.mozilla.org/en-US/docs/IndexedDB/Using_IndexedDB
  */
 
-/*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, module, require, indexedDB, jIO, RSVP, Blob, Math*/
+/*jslint indent: 2, maxlen: 120, nomen: true */
+/*global define, module, require, indexedDB, jIO, RSVP, Blob, Math, alert*/
 
-(function (dependencies, factory) {
-  "use strict";
-  if (typeof define === "function" && define.amd) {
-    return define(dependencies, factory);
-  }
-  if (typeof module === "object" && module !== null &&
-      typeof module.exports === "object" && module.exports !== null &&
-      typeof require === "function") {
-    module.exports = factory.apply(null, dependencies.map(require));
-    return;
-  }
-  factory(jIO, RSVP);
-}(["jio", "rsvp"], function (jIO, RSVP) {
+// (function (dependencies, factory) {
+//   "use strict";
+//   if (typeof define === "function" && define.amd) {
+//     return define(dependencies, factory);
+//   }
+//   if (typeof module === "object" && module !== null &&
+//       typeof module.exports === "object" && module.exports !== null &&
+//       typeof require === "function") {
+//     module.exports = factory.apply(null, dependencies.map(require));
+//     return;
+//   }
+//   factory(jIO, RSVP);
+// }(["jio", "rsvp"], function (jIO, RSVP) {
+//   "use strict";
+
+(function (jIO) {
   "use strict";
 
-  var Promise = RSVP.Promise, generateUuid = jIO.util.generateUuid;
+  var generateUuid = jIO.util.generateUuid;
 
   function metadataObjectToString(value) {
     var i, l;
@@ -319,7 +322,7 @@
    *@param {Object} command The JIO command
    *@param {Object} param The command parameters
    */
-  IndexedDBStorage.prototype.get = function (command, param) {
+  IndexedDBStorage.prototype.get = function (param) {
     var jio_storage = this,
       transaction,
       global_db,
@@ -341,8 +344,7 @@
           var store = transaction.objectStore("attachment");
           return getIndexedDB(store, param._id);
         }
-        throw ({"status": 404, "reason": "Not Found",
-                "message": "IndexeddbStorage, unable to get document."});
+        throw new jIO.util.jIOError("Cannot find document", 404);
       })
       .push(function (result) {
         //get the reste data from attachment
@@ -359,8 +361,7 @@
           global_db.close();
         }
         throw error;
-      })
-      .push(command.success, command.error, command.notify);
+      });
   };
 
 
@@ -505,390 +506,390 @@
 
 
 
-  /**
-   * Retrieve a list of present document
-   *
-   * @method allDocs
-   * @param  {Object} command The JIO command
-   * @param  {Object} param The command parameters
-   * @param  {Object} options The command options
-   * @param  {Boolean} [options.include_docs=false]
-   *   Also retrieve the actual document content.
-   */
-  IndexedDBStorage.prototype.getListMetadata = function (option) {
-    var rows = [], onCancel, open_req = indexedDB.open(this._database_name);
-    return new Promise(function (resolve, reject, notify) {
-      open_req.onerror = function () {
-        if (open_req.result) { open_req.result.close(); }
-        reject(open_req.error);
-      };
-      open_req.onsuccess = function () {
-        var tx, date, j = 0, index_req, db = open_req.result;
-        try {
-          tx = db.transaction(["metadata", "attachment"], "readonly");
-          onCancel = function () {
-            tx.abort();
-            db.close();
-          };
-          index_req = tx.objectStore("metadata").index("_id").openCursor();
-          date = Date.now();
-          index_req.onsuccess = function (event) {
-            var cursor = event.target.result, now, value, i, key;
-            if (cursor) {
-              // Called for each matching record
-              // notification management
-              now = Date.now();
-              if (date <= now - 1000) {
-                notify({"loaded": rows.length});
-                date = now;
-              }
-              // option.limit management
-              if (Array.isArray(option.limit)) {
-                if (option.limit.length > 1) {
-                  if (option.limit[0] > 0) {
-                    option.limit[0] -= 1;
-                    cursor["continue"]();
-                    return;
-                  }
-                  if (option.limit[1] <= 0) {
-                    // end
-                    index_req.onsuccess({"target": {}});
-                    return;
-                  }
-                  option.limit[1] -= 1;
-                } else {
-                  if (option.limit[0] <= 0) {
-                    // end
-                    index_req.onsuccess({"target": {}});
-                    return;
-                  }
-                  option.limit[0] -= 1;
-                }
-              }
-              value = {};
-              // option.select_list management
-              if (option.select_list) {
-                for (i = 0; i < option.select_list.length; i += 1) {
-                  key = option.select_list[i];
-                  value[key] = cursor.value[key];
-                }
-              }
-              // option.include_docs management
-              if (option.include_docs) {
-                rows.push({
-                  "id": cursor.value._id,
-                  "doc": cursor.value,
-                  "value": value
-                });
-              } else {
-                rows.push({
-                  "id": cursor.value._id,
-                  "value": value
-                });
-              }
-              // continue to next iteration
-              cursor["continue"]();
-            } else {
-              index_req = tx.objectStore("attachment").
-                    index("_id").openCursor();
-              index_req.onsuccess = function (event) {
-                //second table
-                cursor = event.target.result;
-                if (cursor) {
-                  value = {};
-                  if (cursor.value._attachment) {
-                    if (option.select_list) {
-                      for (i = 0; i < option.select_list.length; i += 1) {
-                        key = option.select_list[i];
-                        value[key] = cursor.value._attachment[key];
-                      }
-                    }
-                    //add info of attachment into metadata
-                    rows[j].value._attachment = value;
-                    if (option.include_docs) {
-                      rows[j].doc._attachment = cursor.value._attachment;
-                    }
-                  }
-                  j += 1;
-                  cursor["continue"]();
-                } else {
-                  notify({"loaded": rows.length});
-                  resolve({"data": {"rows": rows, "total_rows": rows.length}});
-                  db.close();
-                }
-              };
-            }
-          };
-        } catch (e) {
-          reject(e);
-          db.close();
-        }
-      };
-    }, function () {
-      if (typeof onCancel === "function") {
-        onCancel();
-      }
-    });
-  };
+//   /**
+//    * Retrieve a list of present document
+//    *
+//    * @method allDocs
+//    * @param  {Object} command The JIO command
+//    * @param  {Object} param The command parameters
+//    * @param  {Object} options The command options
+//    * @param  {Boolean} [options.include_docs=false]
+//    *   Also retrieve the actual document content.
+//    */
+//   IndexedDBStorage.prototype.getListMetadata = function (option) {
+//     var rows = [], onCancel, open_req = indexedDB.open(this._database_name);
+//     return new Promise(function (resolve, reject, notify) {
+//       open_req.onerror = function () {
+//         if (open_req.result) { open_req.result.close(); }
+//         reject(open_req.error);
+//       };
+//       open_req.onsuccess = function () {
+//         var tx, date, j = 0, index_req, db = open_req.result;
+//         try {
+//           tx = db.transaction(["metadata", "attachment"], "readonly");
+//           onCancel = function () {
+//             tx.abort();
+//             db.close();
+//           };
+//           index_req = tx.objectStore("metadata").index("_id").openCursor();
+//           date = Date.now();
+//           index_req.onsuccess = function (event) {
+//             var cursor = event.target.result, now, value, i, key;
+//             if (cursor) {
+//               // Called for each matching record
+//               // notification management
+//               now = Date.now();
+//               if (date <= now - 1000) {
+//                 notify({"loaded": rows.length});
+//                 date = now;
+//               }
+//               // option.limit management
+//               if (Array.isArray(option.limit)) {
+//                 if (option.limit.length > 1) {
+//                   if (option.limit[0] > 0) {
+//                     option.limit[0] -= 1;
+//                     cursor["continue"]();
+//                     return;
+//                   }
+//                   if (option.limit[1] <= 0) {
+//                     // end
+//                     index_req.onsuccess({"target": {}});
+//                     return;
+//                   }
+//                   option.limit[1] -= 1;
+//                 } else {
+//                   if (option.limit[0] <= 0) {
+//                     // end
+//                     index_req.onsuccess({"target": {}});
+//                     return;
+//                   }
+//                   option.limit[0] -= 1;
+//                 }
+//               }
+//               value = {};
+//               // option.select_list management
+//               if (option.select_list) {
+//                 for (i = 0; i < option.select_list.length; i += 1) {
+//                   key = option.select_list[i];
+//                   value[key] = cursor.value[key];
+//                 }
+//               }
+//               // option.include_docs management
+//               if (option.include_docs) {
+//                 rows.push({
+//                   "id": cursor.value._id,
+//                   "doc": cursor.value,
+//                   "value": value
+//                 });
+//               } else {
+//                 rows.push({
+//                   "id": cursor.value._id,
+//                   "value": value
+//                 });
+//               }
+//               // continue to next iteration
+//               cursor["continue"]();
+//             } else {
+//               index_req = tx.objectStore("attachment").
+//                     index("_id").openCursor();
+//               index_req.onsuccess = function (event) {
+//                 //second table
+//                 cursor = event.target.result;
+//                 if (cursor) {
+//                   value = {};
+//                   if (cursor.value._attachment) {
+//                     if (option.select_list) {
+//                       for (i = 0; i < option.select_list.length; i += 1) {
+//                         key = option.select_list[i];
+//                         value[key] = cursor.value._attachment[key];
+//                       }
+//                     }
+//                     //add info of attachment into metadata
+//                     rows[j].value._attachment = value;
+//                     if (option.include_docs) {
+//                       rows[j].doc._attachment = cursor.value._attachment;
+//                     }
+//                   }
+//                   j += 1;
+//                   cursor["continue"]();
+//                 } else {
+//                   notify({"loaded": rows.length});
+//                   resolve({"data": {"rows": rows, "total_rows": rows.length}});
+//                   db.close();
+//                 }
+//               };
+//             }
+//           };
+//         } catch (e) {
+//           reject(e);
+//           db.close();
+//         }
+//       };
+//     }, function () {
+//       if (typeof onCancel === "function") {
+//         onCancel();
+//       }
+//     });
+//   };
 
 
-  /**
-   * Add an attachment to a document
-   *
-   * @param  {Object} command The JIO command
-   * @param  {Object} metadata The data
-   *
-   */
-  IndexedDBStorage.prototype.putAttachment = function (command, metadata) {
-    var jio_storage = this,
-      transaction,
-      global_db,
-      BlobInfo,
-      readResult;
-    function putAllPart(store, metadata, readResult, count, part) {
-      var blob,
-        readPart,
-        end;
-      if (count >= metadata._blob.size) {
-        return;
-      }
-      end = count + jio_storage._unite;
-      blob = metadata._blob.slice(count, end);
-      readPart = readResult.slice(count, end);
-      return putIndexedDB(store, {"_id": metadata._id,
-                                  "_attachment" : metadata._attachment,
-                                  "_part" : part,
-                                  "blob": blob}, readPart)
-        .then(function () {
-          return putAllPart(store, metadata, readResult, end, part + 1);
-        });
-    }
-    return jIO.util.readBlobAsArrayBuffer(metadata._blob)
-      .then(function (event) {
-        readResult = event.target.result;
-        BlobInfo = {
-          "content_type": metadata._blob.type,
-          "length": metadata._blob.size
-        };
-        return new RSVP.Queue()
-            .push(function () {
-            return openIndexedDB(jio_storage._database_name);
-          })
-            .push(function (db) {
-            global_db = db;
-            transaction = db.transaction(["attachment",
-                    "blob"], "readwrite");
-            return promiseResearch(transaction,
-                                   metadata._id, "attachment", "_id");
-          })
-            .push(function (researchResult) {
-            if (researchResult.result === undefined) {
-              throw ({"status": 404, "reason": "Not Found",
-                "message": "indexeddbStorage unable to put attachment"});
-            }
-        //update attachment
-            researchResult.result._attachment = researchResult.
-                result._attachment || {};
-            researchResult.result._attachment[metadata._attachment] =
-                    (BlobInfo === undefined) ? "BlobInfo" : BlobInfo;
-            return putIndexedDB(researchResult.store, researchResult.result);
-          })
-          .push(function () {
-        //put in blob
-            var store = transaction.objectStore("blob");
-            return putAllPart(store, metadata, readResult, 0, 0);
-          })
-          .push(function () {
-            return transactionEnd(transaction);
-          })
-          .push(function () {
-            return {"status": 204};
-          })
-          .push(undefined, function (error) {
-            if (global_db !== undefined) {
-              global_db.close();
-            }
-            throw error;
-          })
-            .push(command.success, command.error, command.notify);
-      });
-  };
+//   /**
+//    * Add an attachment to a document
+//    *
+//    * @param  {Object} command The JIO command
+//    * @param  {Object} metadata The data
+//    *
+//    */
+//   IndexedDBStorage.prototype.putAttachment = function (command, metadata) {
+//     var jio_storage = this,
+//       transaction,
+//       global_db,
+//       BlobInfo,
+//       readResult;
+//     function putAllPart(store, metadata, readResult, count, part) {
+//       var blob,
+//         readPart,
+//         end;
+//       if (count >= metadata._blob.size) {
+//         return;
+//       }
+//       end = count + jio_storage._unite;
+//       blob = metadata._blob.slice(count, end);
+//       readPart = readResult.slice(count, end);
+//       return putIndexedDB(store, {"_id": metadata._id,
+//                                   "_attachment" : metadata._attachment,
+//                                   "_part" : part,
+//                                   "blob": blob}, readPart)
+//         .then(function () {
+//           return putAllPart(store, metadata, readResult, end, part + 1);
+//         });
+//     }
+//     return jIO.util.readBlobAsArrayBuffer(metadata._blob)
+//       .then(function (event) {
+//         readResult = event.target.result;
+//         BlobInfo = {
+//           "content_type": metadata._blob.type,
+//           "length": metadata._blob.size
+//         };
+//         return new RSVP.Queue()
+//             .push(function () {
+//             return openIndexedDB(jio_storage._database_name);
+//           })
+//             .push(function (db) {
+//             global_db = db;
+//             transaction = db.transaction(["attachment",
+//                     "blob"], "readwrite");
+//             return promiseResearch(transaction,
+//                                    metadata._id, "attachment", "_id");
+//           })
+//             .push(function (researchResult) {
+//             if (researchResult.result === undefined) {
+//               throw ({"status": 404, "reason": "Not Found",
+//                 "message": "indexeddbStorage unable to put attachment"});
+//             }
+//         //update attachment
+//             researchResult.result._attachment = researchResult.
+//                 result._attachment || {};
+//             researchResult.result._attachment[metadata._attachment] =
+//                     (BlobInfo === undefined) ? "BlobInfo" : BlobInfo;
+//             return putIndexedDB(researchResult.store, researchResult.result);
+//           })
+//           .push(function () {
+//         //put in blob
+//             var store = transaction.objectStore("blob");
+//             return putAllPart(store, metadata, readResult, 0, 0);
+//           })
+//           .push(function () {
+//             return transactionEnd(transaction);
+//           })
+//           .push(function () {
+//             return {"status": 204};
+//           })
+//           .push(undefined, function (error) {
+//             if (global_db !== undefined) {
+//               global_db.close();
+//             }
+//             throw error;
+//           })
+//             .push(command.success, command.error, command.notify);
+//       });
+//   };
 
 
 
-  /**
-   * Retriev a document attachment
-   *
-   * @param  {Object} command The JIO command
-   * @param  {Object} param The command parameter
-   */
-  IndexedDBStorage.prototype.getAttachment = function (command, param) {
-    var jio_storage = this,
-      transaction,
-      global_db,
-      blob,
-      totalLength;
-    function getDesirePart(store, start, end) {
-      if (start > end) {
-        return;
-      }
-      return getIndexedDB(store, [param._id, param._attachment, start])
-        .then(function (result) {
-          var blobPart = result.blob;
-          if (result.blob.byteLength !== undefined) {
-            blobPart = new Blob([result.blob]);
-          }
-          if (blob) {
-            blob = new Blob([blob, blobPart]);
-          } else {
-            blob = blobPart;
-          }
-          return getDesirePart(store, start + 1, end);
-        });
-    }
-    return new RSVP.Queue()
-      .push(function () {
-        return openIndexedDB(jio_storage._database_name);
-      })
-      .push(function (db) {
-        global_db = db;
-        transaction = db.transaction(["attachment", "blob"], "readwrite");
-        //check if the attachment exists
-        return promiseResearch(transaction,
-                               param._id, "attachment", "_id");
-      })
-      .push(function (researchResult) {
-        var result = researchResult.result,
-          start,
-          end;
-        if (result === undefined ||
-            result._attachment[param._attachment] === undefined) {
-          throw ({"status": 404, "reason": "missing attachment",
-                  "message": "IndexeddbStorage, unable to get attachment."});
-        }
-        totalLength = result._attachment[param._attachment].length;
-        param._start = param._start === undefined ? 0 : param._start;
-        param._end = param._end === undefined ? totalLength
-          : param._end;
-        if (param._end > totalLength) {
-          param._end = totalLength;
-        }
-        if (param._start < 0 || param._end < 0) {
-          throw ({"status": 404, "reason": "invalide _start, _end",
-                  "message": "_start and _end must be positive"});
-        }
-        if (param._start > param._end) {
-          throw ({"status": 404, "reason": "invalide offset",
-                  "message": "start is great then end"});
-        }
-        start = Math.floor(param._start / jio_storage._unite);
-        end =  Math.floor(param._end / jio_storage._unite);
-        if (param._end % jio_storage._unite === 0) {
-          end -= 1;
-        }
-        return getDesirePart(transaction.objectStore("blob"),
-                             start,
-                             end);
-      })
-      .push(function () {
-        var start = param._start % jio_storage._unite,
-          end = start + param._end - param._start;
-        blob = blob.slice(start, end);
-        return ({ "data": new Blob([blob], {type: "text/plain"})});
-      })
-      .push(undefined, function (error) {
-        // Check if transaction is ongoing, if so, abort it
-        if (transaction !== undefined) {
-          transaction.abort();
-        }
-        if (global_db !== undefined) {
-          global_db.close();
-        }
-        throw error;
-      })
-            .push(command.success, command.error, command.notify);
-  };
+//   /**
+//    * Retriev a document attachment
+//    *
+//    * @param  {Object} command The JIO command
+//    * @param  {Object} param The command parameter
+//    */
+//   IndexedDBStorage.prototype.getAttachment = function (command, param) {
+//     var jio_storage = this,
+//       transaction,
+//       global_db,
+//       blob,
+//       totalLength;
+//     function getDesirePart(store, start, end) {
+//       if (start > end) {
+//         return;
+//       }
+//       return getIndexedDB(store, [param._id, param._attachment, start])
+//         .then(function (result) {
+//           var blobPart = result.blob;
+//           if (result.blob.byteLength !== undefined) {
+//             blobPart = new Blob([result.blob]);
+//           }
+//           if (blob) {
+//             blob = new Blob([blob, blobPart]);
+//           } else {
+//             blob = blobPart;
+//           }
+//           return getDesirePart(store, start + 1, end);
+//         });
+//     }
+//     return new RSVP.Queue()
+//       .push(function () {
+//         return openIndexedDB(jio_storage._database_name);
+//       })
+//       .push(function (db) {
+//         global_db = db;
+//         transaction = db.transaction(["attachment", "blob"], "readwrite");
+//         //check if the attachment exists
+//         return promiseResearch(transaction,
+//                                param._id, "attachment", "_id");
+//       })
+//       .push(function (researchResult) {
+//         var result = researchResult.result,
+//           start,
+//           end;
+//         if (result === undefined ||
+//             result._attachment[param._attachment] === undefined) {
+//           throw ({"status": 404, "reason": "missing attachment",
+//                   "message": "IndexeddbStorage, unable to get attachment."});
+//         }
+//         totalLength = result._attachment[param._attachment].length;
+//         param._start = param._start === undefined ? 0 : param._start;
+//         param._end = param._end === undefined ? totalLength
+//           : param._end;
+//         if (param._end > totalLength) {
+//           param._end = totalLength;
+//         }
+//         if (param._start < 0 || param._end < 0) {
+//           throw ({"status": 404, "reason": "invalide _start, _end",
+//                   "message": "_start and _end must be positive"});
+//         }
+//         if (param._start > param._end) {
+//           throw ({"status": 404, "reason": "invalide offset",
+//                   "message": "start is great then end"});
+//         }
+//         start = Math.floor(param._start / jio_storage._unite);
+//         end =  Math.floor(param._end / jio_storage._unite);
+//         if (param._end % jio_storage._unite === 0) {
+//           end -= 1;
+//         }
+//         return getDesirePart(transaction.objectStore("blob"),
+//                              start,
+//                              end);
+//       })
+//       .push(function () {
+//         var start = param._start % jio_storage._unite,
+//           end = start + param._end - param._start;
+//         blob = blob.slice(start, end);
+//         return ({ "data": new Blob([blob], {type: "text/plain"})});
+//       })
+//       .push(undefined, function (error) {
+//         // Check if transaction is ongoing, if so, abort it
+//         if (transaction !== undefined) {
+//           transaction.abort();
+//         }
+//         if (global_db !== undefined) {
+//           global_db.close();
+//         }
+//         throw error;
+//       })
+//             .push(command.success, command.error, command.notify);
+//   };
 
 
-  /**
-   * Remove an attachment
-   *
-   * @method removeAttachment
-   * @param  {Object} command The JIO command
-   * @param  {Object} param The command parameters
-   */
-  IndexedDBStorage.prototype.removeAttachment = function (command, param) {
-    var jio_storage = this,
-      transaction,
-      global_db,
-      totalLength;
-    function removePart(store, part) {
-      if (part * jio_storage._unite >= totalLength) {
-        return;
-      }
-      return removeIndexedDB(store, [param._id, param._attachment, part])
-        .then(function () {
-          return removePart(store, part + 1);
-        });
-    }
-    return new RSVP.Queue()
-      .push(function () {
-        return openIndexedDB(jio_storage._database_name);
-      })
-      .push(function (db) {
-        global_db = db;
-        transaction = db.transaction(["attachment", "blob"], "readwrite");
-        //check if the attachment exists
-        return promiseResearch(transaction, param._id,
-                               "attachment", "_id");
-      })
-      .push(function (researchResult) {
-        var result = researchResult.result;
-        if (result === undefined ||
-            result._attachment[param._attachment] === undefined) {
-          throw ({"status": 404, "reason": "missing attachment",
-                  "message":
-                  "IndexeddbStorage, document attachment not found."});
-        }
-        totalLength = result._attachment[param._attachment].length;
-        //updata attachment
-        delete result._attachment[param._attachment];
-        return putIndexedDB(researchResult.store, result);
-      })
-      .push(function () {
-        var store = transaction.objectStore("blob");
-        return removePart(store, 0);
-      })
-      .push(function () {
-        return transactionEnd(transaction);
-      })
-       .push(function () {
-        return ({ "status": 204 });
-      })
-       .push(undefined, function (error) {
-        if (global_db !== undefined) {
-          global_db.close();
-        }
-        throw error;
-      })
-        .push(command.success, command.error, command.notify);
-  };
+//   /**
+//    * Remove an attachment
+//    *
+//    * @method removeAttachment
+//    * @param  {Object} command The JIO command
+//    * @param  {Object} param The command parameters
+//    */
+//   IndexedDBStorage.prototype.removeAttachment = function (command, param) {
+//     var jio_storage = this,
+//       transaction,
+//       global_db,
+//       totalLength;
+//     function removePart(store, part) {
+//       if (part * jio_storage._unite >= totalLength) {
+//         return;
+//       }
+//       return removeIndexedDB(store, [param._id, param._attachment, part])
+//         .then(function () {
+//           return removePart(store, part + 1);
+//         });
+//     }
+//     return new RSVP.Queue()
+//       .push(function () {
+//         return openIndexedDB(jio_storage._database_name);
+//       })
+//       .push(function (db) {
+//         global_db = db;
+//         transaction = db.transaction(["attachment", "blob"], "readwrite");
+//         //check if the attachment exists
+//         return promiseResearch(transaction, param._id,
+//                                "attachment", "_id");
+//       })
+//       .push(function (researchResult) {
+//         var result = researchResult.result;
+//         if (result === undefined ||
+//             result._attachment[param._attachment] === undefined) {
+//           throw ({"status": 404, "reason": "missing attachment",
+//                   "message":
+//                   "IndexeddbStorage, document attachment not found."});
+//         }
+//         totalLength = result._attachment[param._attachment].length;
+//         //updata attachment
+//         delete result._attachment[param._attachment];
+//         return putIndexedDB(researchResult.store, result);
+//       })
+//       .push(function () {
+//         var store = transaction.objectStore("blob");
+//         return removePart(store, 0);
+//       })
+//       .push(function () {
+//         return transactionEnd(transaction);
+//       })
+//        .push(function () {
+//         return ({ "status": 204 });
+//       })
+//        .push(undefined, function (error) {
+//         if (global_db !== undefined) {
+//           global_db.close();
+//         }
+//         throw error;
+//       })
+//         .push(command.success, command.error, command.notify);
+//   };
 
 
-  IndexedDBStorage.prototype.allDocs = function (command, param, option) {
-    /*jslint unparam: true */
-    this.createDBIfNecessary().
-      then(this.getListMetadata.bind(this, option)).
-      then(command.success, command.error, command.notify);
-  };
-
-  IndexedDBStorage.prototype.check = function (command) {
-    command.success();
-  };
-
-  IndexedDBStorage.prototype.repair = function (command) {
-    command.success();
-  };
+//   IndexedDBStorage.prototype.allDocs = function (command, param, option) {
+//     /*jslint unparam: true */
+//     this.createDBIfNecessary().
+//       then(this.getListMetadata.bind(this, option)).
+//       then(command.success, command.error, command.notify);
+//   };
+// 
+//   IndexedDBStorage.prototype.check = function (command) {
+//     command.success();
+//   };
+// 
+//   IndexedDBStorage.prototype.repair = function (command) {
+//     command.success();
+//   };
 
   jIO.addStorage("indexeddb", IndexedDBStorage);
-}));
+}(jIO));

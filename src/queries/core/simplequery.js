@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global Query, inherits, query_class_dict, exports,
+/*global Query, inherits, query_class_dict, window,
   searchTextToRegExp, RSVP */
 
 var checkKeySchema = function (key_schema) {
@@ -394,4 +394,4 @@ SimpleQuery.prototype[">="] = function (object_value, comparison_value) {
 
 query_class_dict.simple = SimpleQuery;
 
-exports.SimpleQuery = SimpleQuery;
+window.SimpleQuery = SimpleQuery;

@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true, sloppy: true */
 /*global exports, Blob, FileReader, RSVP, hex_sha256, XMLHttpRequest,
-  constants */
+  constants, console */
 
 /**
  * Do not exports these tools unless they are not writable, not configurable.
@@ -44,66 +44,6 @@ function jsonDeepClone(object) {
 }
 exports.util.jsonDeepClone = jsonDeepClone;
 
-/**
- * Clones all native object in deep. Managed types: Object, Array, String,
- * Number, Boolean, Function, null.
- *
- * It can also clone object which are serializable, like Date.
- *
- * To make a class serializable, you need to implement the `toJSON` function
- * which returns a JSON representation of the object. The returned value is used
- * as first parameter of the object constructor.
- *
- * @param  {A} object The object to clone
- * @return {A} The cloned object
- */
-function deepClone(object) {
-  var i, cloned;
-  if (Array.isArray(object)) {
-    cloned = [];
-    for (i = 0; i < object.length; i += 1) {
-      cloned[i] = deepClone(object[i]);
-    }
-    return cloned;
-  }
-  if (object === null) {
-    return null;
-  }
-  if (typeof object === 'object') {
-    if (Object.getPrototypeOf(object) === Object.prototype) {
-      cloned = {};
-      for (i in object) {
-        if (object.hasOwnProperty(i)) {
-          cloned[i] = deepClone(object[i]);
-        }
-      }
-      return cloned;
-    }
-    if (object instanceof Date) {
-      // XXX this block is to enable phantomjs and browsers compatibility with
-      // Date.prototype.toJSON when it is an invalid date. In phantomjs, it
-      // returns `"Invalid Date"` but in browsers it returns `null`. In
-      // browsers, giving `null` as parameter to `new Date()` doesn't return an
-      // invalid date.
-
-      // Cloning a date with `return new Date(object)` has problems on Firefox.
-      // I don't know why...  (Tested on Firefox 23)
-
-      if (isFinite(object.getTime())) {
-        return new Date(object.toJSON());
-      }
-      return new Date("Invalid Date");
-    }
-    // clone serializable objects
-    if (typeof object.toJSON === 'function') {
-      return new (Object.getPrototypeOf(object).constructor)(object.toJSON());
-    }
-    // cannot clone
-    return object;
-  }
-  return object;
-}
-exports.util.deepClone = deepClone;
 
 /**
  * Update a dictionary by adding/replacing key values from another dict.
@@ -178,24 +118,6 @@ function arrayValuesToTypeDict(array) {
   return type_object;
 }
 
-/**
- * An Universal Unique ID generator
- *
- * @return {String} The new UUID.
- */
-function generateUuid() {
-  function S4() {
-    return ('0000' + Math.floor(
-      Math.random() * 0x10000 /* 65536 */
-    ).toString(16)).slice(-4);
-  }
-  return S4() + S4() + "-" +
-    S4() + "-" +
-    S4() + "-" +
-    S4() + "-" +
-    S4() + S4() + S4();
-}
-exports.util.generateUuid = generateUuid;
 
 /**
  * Concatenate a `string` `n` times.
@@ -349,58 +271,6 @@ function readBlobAsText(blob) {
 }
 exports.util.readBlobAsText = readBlobAsText;
 
-/**
- * Send request with XHR and return a promise. xhr.onload: The promise is
- * resolved when the status code is lower than 400 with the xhr object as first
- * parameter. xhr.onerror: reject with xhr object as first
- * parameter. xhr.onprogress: notifies the xhr object.
- *
- * @param  {Object} param The parameters
- * @param  {String} [param.type="GET"] The request method
- * @param  {String} [param.dataType=""] The data type to retrieve
- * @param  {String} param.url The url
- * @param  {Any} [param.data] The data to send
- * @param  {Function} [param.beforeSend] A function called just before the send
- *   request. The first parameter of this function is the XHR object.
- * @return {Promise} The promise
- */
-function ajax(param) {
-  var xhr = new XMLHttpRequest();
-  return new RSVP.Promise(function (resolve, reject, notify) {
-    var k;
-    xhr.open(param.type || "GET", param.url, true);
-    xhr.responseType = param.dataType || "";
-    if (typeof param.headers === 'object' && param.headers !== null) {
-      for (k in param.headers) {
-        if (param.headers.hasOwnProperty(k)) {
-          xhr.setRequestHeader(k, param.headers[k]);
-        }
-      }
-    }
-    xhr.addEventListener("load", function (e) {
-      if (e.target.status >= 400) {
-        return reject(e);
-      }
-      resolve(e);
-    });
-    xhr.addEventListener("error", reject);
-    xhr.addEventListener("progress", notify);
-    if (typeof param.xhrFields === 'object' && param.xhrFields !== null) {
-      for (k in param.xhrFields) {
-        if (param.xhrFields.hasOwnProperty(k)) {
-          xhr[k] = param.xhrFields[k];
-        }
-      }
-    }
-    if (typeof param.beforeSend === 'function') {
-      param.beforeSend(xhr);
-    }
-    xhr.send(param.data);
-  }, function () {
-    xhr.abort();
-  });
-}
-exports.util.ajax = ajax;
 
 /**
  * Acts like `Array.prototype.concat` but does not create a copy of the original

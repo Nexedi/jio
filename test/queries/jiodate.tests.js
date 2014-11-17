@@ -1,23 +1,17 @@
-/*jslint indent: 2, newcap: true */
-/*global define, exports, require, test, ok, strictEqual, equal, throws, jiodate, moment, module */
-
-
-// define([module_name], [dependencies], module);
-(function (dependencies, module) {
+/*jslint nomen: true, newcap: true */
+/*global jiodate, moment, console*/
+(function (QUnit, jiodate, moment) {
   "use strict";
-  if (typeof define === 'function' && define.amd) {
-    return define(dependencies, module);
-  }
-  if (typeof exports === 'object') {
-    return module(require('jiodate'), require('moment'));
-  }
-  module(jiodate, moment);
-}(['jiodate', 'moment', 'qunit'], function (jiodate, moment) {
-  "use strict";
+  var test = QUnit.test,
+    ok = QUnit.ok,
+    strictEqual = QUnit.strictEqual,
+    equal = QUnit.equal,
+    module = QUnit.module,
+    JIODate = jiodate.JIODate,
+    throws = QUnit.throws;
 
   module('JIODate');
 
-  var JIODate = jiodate.JIODate;
 
   test("A JIODate can be instantiated without parameters (=now)", function () {
     ok((new JIODate()) instanceof JIODate);
@@ -47,17 +41,18 @@
   });
 
 
-  test("By default, maximum precision is kept, but it can be changed later", function () {
-    var d = new JIODate();
+  test("By default, maximum precision is kept, " +
+       "but it can be changed later", function () {
+      var d = new JIODate();
 
-    equal(d.getPrecision(), jiodate.MSEC);
-    d.setPrecision(jiodate.SEC);
-    equal(d.getPrecision(), jiodate.SEC);
-    d.setPrecision(jiodate.DAY);
-    equal(d.getPrecision(), jiodate.DAY);
-    d.setPrecision(jiodate.MONTH);
-    equal(d.getPrecision(), jiodate.MONTH);
-  });
+      equal(d.getPrecision(), jiodate.MSEC);
+      d.setPrecision(jiodate.SEC);
+      equal(d.getPrecision(), jiodate.SEC);
+      d.setPrecision(jiodate.DAY);
+      equal(d.getPrecision(), jiodate.DAY);
+      d.setPrecision(jiodate.MONTH);
+      equal(d.getPrecision(), jiodate.MONTH);
+    });
 
 
   test("Passing a JIODate object to the constructor clones it", function () {
@@ -222,69 +217,68 @@
   });
 
 
-  test("Comparison between heterogeneous values is done with the lesser precision", function () {
-    var dmsec = JIODate('2012-05-02 06:07:08.989'),
-      dsec = JIODate('2012-05-02 06:07:08'),
-      dmin = JIODate('2012-05-02 06:07'),
-      dhour = JIODate('2012-05-02 06'),
-      dday = JIODate('2012-05-02'),
-      dmonth = JIODate('2012-05'),
-      dyear = JIODate('2012');
+  test("Comparison between heterogeneous values is done with " +
+       "the lesser precision", function () {
+      var dmsec = JIODate('2012-05-02 06:07:08.989'),
+        dsec = JIODate('2012-05-02 06:07:08'),
+        dmin = JIODate('2012-05-02 06:07'),
+        dhour = JIODate('2012-05-02 06'),
+        dday = JIODate('2012-05-02'),
+        dmonth = JIODate('2012-05'),
+        dyear = JIODate('2012');
 
-    strictEqual(dmsec.cmp(dsec), 0);
-    strictEqual(dmsec.cmp(dmin), 0);
-    strictEqual(dmsec.cmp(dhour), 0);
-    strictEqual(dmsec.cmp(dday), 0);
-    strictEqual(dmsec.cmp(dmonth), 0);
-    strictEqual(dmsec.cmp(dyear), 0);
+      strictEqual(dmsec.cmp(dsec), 0);
+      strictEqual(dmsec.cmp(dmin), 0);
+      strictEqual(dmsec.cmp(dhour), 0);
+      strictEqual(dmsec.cmp(dday), 0);
+      strictEqual(dmsec.cmp(dmonth), 0);
+      strictEqual(dmsec.cmp(dyear), 0);
 
-    strictEqual(dsec.cmp(dmsec), 0);
-    strictEqual(dsec.cmp(dmin), 0);
-    strictEqual(dsec.cmp(dhour), 0);
-    strictEqual(dsec.cmp(dday), 0);
-    strictEqual(dsec.cmp(dmonth), 0);
-    strictEqual(dsec.cmp(dyear), 0);
+      strictEqual(dsec.cmp(dmsec), 0);
+      strictEqual(dsec.cmp(dmin), 0);
+      strictEqual(dsec.cmp(dhour), 0);
+      strictEqual(dsec.cmp(dday), 0);
+      strictEqual(dsec.cmp(dmonth), 0);
+      strictEqual(dsec.cmp(dyear), 0);
 
-    strictEqual(dmin.cmp(dmsec), 0);
-    strictEqual(dmin.cmp(dsec), 0);
-    strictEqual(dmin.cmp(dhour), 0);
-    strictEqual(dmin.cmp(dday), 0);
-    strictEqual(dmin.cmp(dmonth), 0);
-    strictEqual(dmin.cmp(dyear), 0);
+      strictEqual(dmin.cmp(dmsec), 0);
+      strictEqual(dmin.cmp(dsec), 0);
+      strictEqual(dmin.cmp(dhour), 0);
+      strictEqual(dmin.cmp(dday), 0);
+      strictEqual(dmin.cmp(dmonth), 0);
+      strictEqual(dmin.cmp(dyear), 0);
 
-    strictEqual(dhour.cmp(dmsec), 0);
-    strictEqual(dhour.cmp(dsec), 0);
-    strictEqual(dhour.cmp(dmin), 0);
-    strictEqual(dhour.cmp(dday), 0);
-    strictEqual(dhour.cmp(dmonth), 0);
-    strictEqual(dhour.cmp(dyear), 0);
+      strictEqual(dhour.cmp(dmsec), 0);
+      strictEqual(dhour.cmp(dsec), 0);
+      strictEqual(dhour.cmp(dmin), 0);
+      strictEqual(dhour.cmp(dday), 0);
+      strictEqual(dhour.cmp(dmonth), 0);
+      strictEqual(dhour.cmp(dyear), 0);
 
-    strictEqual(dday.cmp(dmsec), 0);
-    strictEqual(dday.cmp(dsec), 0);
-    strictEqual(dday.cmp(dmin), 0);
-    strictEqual(dday.cmp(dhour), 0);
-    strictEqual(dday.cmp(dmonth), 0);
-    strictEqual(dday.cmp(dyear), 0);
+      strictEqual(dday.cmp(dmsec), 0);
+      strictEqual(dday.cmp(dsec), 0);
+      strictEqual(dday.cmp(dmin), 0);
+      strictEqual(dday.cmp(dhour), 0);
+      strictEqual(dday.cmp(dmonth), 0);
+      strictEqual(dday.cmp(dyear), 0);
 
-    strictEqual(dmonth.cmp(dmsec), 0);
-    strictEqual(dmonth.cmp(dsec), 0);
-    strictEqual(dmonth.cmp(dmin), 0);
-    strictEqual(dmonth.cmp(dhour), 0);
-    strictEqual(dmonth.cmp(dday), 0);
-    strictEqual(dmonth.cmp(dyear), 0);
+      strictEqual(dmonth.cmp(dmsec), 0);
+      strictEqual(dmonth.cmp(dsec), 0);
+      strictEqual(dmonth.cmp(dmin), 0);
+      strictEqual(dmonth.cmp(dhour), 0);
+      strictEqual(dmonth.cmp(dday), 0);
+      strictEqual(dmonth.cmp(dyear), 0);
 
-    strictEqual(dyear.cmp(dmsec), 0);
-    strictEqual(dyear.cmp(dsec), 0);
-    strictEqual(dyear.cmp(dmin), 0);
-    strictEqual(dyear.cmp(dhour), 0);
-    strictEqual(dyear.cmp(dday), 0);
-    strictEqual(dyear.cmp(dmonth), 0);
+      strictEqual(dyear.cmp(dmsec), 0);
+      strictEqual(dyear.cmp(dsec), 0);
+      strictEqual(dyear.cmp(dmin), 0);
+      strictEqual(dyear.cmp(dhour), 0);
+      strictEqual(dyear.cmp(dday), 0);
+      strictEqual(dyear.cmp(dmonth), 0);
 
-    strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:07')), +1);
-    strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:08')), 0);
-    strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:09')), -1);
-  });
+      strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:07')), +1);
+      strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:08')), 0);
+      strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:09')), -1);
+    });
 
-
-}));
-
+}(QUnit, jiodate, moment));

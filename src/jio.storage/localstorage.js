@@ -6,7 +6,7 @@
 
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, regexp: true */
 /*global jIO, localStorage, setTimeout, window, define, Blob, Uint8Array,
-  exports, require */
+  exports, require, console, RSVP */
 
 /**
  * JIO Local Storage. Type = 'local'.
@@ -47,21 +47,7 @@
  * @class LocalStorage
  */
 
-// define([module_name], [dependencies], module);
-(function (dependencies, module) {
-  "use strict";
-  if (typeof define === 'function' && define.amd) {
-    return define(dependencies, module);
-  }
-  if (typeof exports === 'object') {
-    return module(exports, require('jio'));
-  }
-  window.local_storage = {};
-  module(window.local_storage, jIO);
-}([
-  'exports',
-  'jio'
-], function (exports, jIO) {
+(function (exports, jIO) {
   "use strict";
 
   /**
@@ -123,13 +109,6 @@
    * @constructor
    */
   function LocalStorage(spec) {
-    if (typeof spec.username !== 'string' || spec.username === '') {
-      throw new TypeError("LocalStorage 'username' must be a non-empty string");
-    }
-    this._localpath = 'jio/localstorage/' + spec.username + '/' + (
-      spec.application_name === null || spec.application_name ===
-        undefined ? 'untitled' : spec.application_name.toString()
-    );
     switch (spec.mode) {
     case "memory":
       this._database = ram;
@@ -150,31 +129,25 @@
    * Create a document in local storage.
    *
    * @method post
-   * @param  {Object} command The JIO command
    * @param  {Object} metadata The metadata to store
    * @param  {Object} options The command options
    */
-  LocalStorage.prototype.post = function (command, metadata) {
+  LocalStorage.prototype.post = function (metadata) {
     var doc, doc_id = metadata._id;
-    if (!doc_id) {
+    if (doc_id === undefined) {
       doc_id = jIO.util.generateUuid();
     }
-    doc = this._storage.getItem(this._localpath + "/" + doc_id);
-    if (doc === null) {
+    if (this._storage.getItem(doc_id) === null) {
       // the document does not exist
       doc = jIO.util.deepClone(metadata);
       doc._id = doc_id;
+      // XXX
       delete doc._attachments;
-      this._storage.setItem(this._localpath + "/" + doc_id, doc);
-      command.success({"id": doc_id});
-    } else {
-      // the document already exists
-      command.error(
-        "conflict",
-        "document exists",
-        "Cannot create a new document"
-      );
+      this._storage.setItem(doc_id, doc);
+      return doc_id;
     }
+    // the document already exists
+    throw new jIO.util.jIOError("Cannot create a new document", 409);
   };
 
   /**
@@ -185,130 +158,94 @@
    * @param  {Object} metadata The metadata to store
    * @param  {Object} options The command options
    */
-  LocalStorage.prototype.put = function (command, metadata) {
-    var doc, tmp, status;
-    doc = this._storage.getItem(this._localpath + "/" + metadata._id);
+  LocalStorage.prototype.put = function (metadata) {
+    var doc, tmp;
+    doc = this._storage.getItem(metadata._id);
     if (doc === null) {
       //  the document does not exist
       doc = jIO.util.deepClone(metadata);
       delete doc._attachments;
-      status = "created";
     } else {
       // the document already exists
       tmp = jIO.util.deepClone(metadata);
       tmp._attachments = doc._attachments;
       doc = tmp;
-      status = "no_content";
     }
     // write
-    this._storage.setItem(this._localpath + "/" + metadata._id, doc);
-    command.success(status);
+    this._storage.setItem(metadata._id, doc);
+    return metadata._id;
   };
 
   /**
    * Add an attachment to a document
    *
    * @method putAttachment
-   * @param  {Object} command The JIO command
    * @param  {Object} param The given parameters
    * @param  {Object} options The command options
    */
-  LocalStorage.prototype.putAttachment = function (command, param) {
-    var that = this, doc, status = "created";
-    doc = this._storage.getItem(this._localpath + "/" + param._id);
-    if (doc === null) {
-      //  the document does not exist
-      return command.error(
-        "not_found",
-        "missing",
-        "Impossible to add attachment"
-      );
-    }
+  LocalStorage.prototype.putAttachment = function (param) {
+    var that = this, doc;
+    doc = this.get({"_id": param._id});
 
     // the document already exists
     // download data
-    jIO.util.readBlobAsBinaryString(param._blob).then(function (e) {
-      doc._attachments = doc._attachments || {};
-      if (doc._attachments[param._attachment]) {
-        status = "no_content";
-      }
-      doc._attachments[param._attachment] = {
-        "content_type": param._blob.type,
-        "digest": jIO.util.makeBinaryStringDigest(e.target.result),
-        "length": param._blob.size
-      };
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.readBlobAsBinaryString(param._blob);
+      })
+      .push(function (e) {
+        doc._attachments = doc._attachments || {};
+//         if (doc._attachments[param._attachment]) {
+//           status = "no_content";
+//         }
+        doc._attachments[param._attachment] = {
+          "content_type": param._blob.type,
+          "digest": jIO.util.makeBinaryStringDigest(e.target.result),
+          "length": param._blob.size
+        };
 
-      that._storage.setItem(that._localpath + "/" + param._id + "/" +
-                            param._attachment, e.target.result);
-      that._storage.setItem(that._localpath + "/" + param._id, doc);
-      command.success(status,
-                      {"digest": doc._attachments[param._attachment].digest});
-    }, function (e) {
-      command.error(
-        "request_timeout",
-        "blob error",
-        "Error " + e.status + ", unable to get blob content"
-      );
-    }, function (e) {
-      command.notify((e.loaded / e.total) * 100);
-    });
+        that._storage.setItem(param._id + "/" +
+                              param._attachment, e.target.result);
+        that._storage.setItem(param._id, doc);
+        return {"digest": doc._attachments[param._attachment].digest};
+      });
   };
 
   /**
    * Get a document
    *
    * @method get
-   * @param  {Object} command The JIO command
    * @param  {Object} param The given parameters
    * @param  {Object} options The command options
    */
-  LocalStorage.prototype.get = function (command, param) {
-    var doc = this._storage.getItem(
-      this._localpath + "/" + param._id
-    );
-    if (doc !== null) {
-      command.success({"data": doc});
-    } else {
-      command.error(
-        "not_found",
-        "missing",
-        "Cannot find document"
-      );
+  LocalStorage.prototype.get = function (param) {
+    var doc = this._storage.getItem(param._id);
+    if (doc === null) {
+      throw new jIO.util.jIOError("Cannot find document", 404);
     }
+    return doc;
   };
 
   /**
    * Get an attachment
    *
    * @method getAttachment
-   * @param  {Object} command The JIO command
    * @param  {Object} param The given parameters
    * @param  {Object} options The command options
    */
-  LocalStorage.prototype.getAttachment = function (command, param) {
+  LocalStorage.prototype.getAttachment = function (param) {
     var doc, i, uint8array, binarystring;
-    doc = this._storage.getItem(this._localpath + "/" + param._id);
-    if (doc === null) {
-      return command.error(
-        "not_found",
-        "missing document",
-        "Cannot find document"
-      );
-    }
+    doc = this.get({"_id": param._id});
 
     if (typeof doc._attachments !== 'object' ||
         typeof doc._attachments[param._attachment] !== 'object') {
-      return command.error(
-        "not_found",
-        "missing attachment",
-        "Cannot find attachment"
-      );
+      throw new jIO.util.jIOError("Cannot find attachment", 404);
     }
 
     // Storing data twice in binarystring and in uint8array (in memory)
     // is not a problem here because localStorage <= 5MB
     binarystring = this._storage.getItem(
-      this._localpath + "/" + param._id + "/" + param._attachment
+      param._id + "/" + param._attachment
     ) || "";
     uint8array = new Uint8Array(binarystring.length);
     for (i = 0; i < binarystring.length; i += 1) {
@@ -318,10 +255,10 @@
       "type": doc._attachments[param._attachment].content_type || ""
     });
 
-    command.success({
+    return {
       "data": uint8array,
       "digest": doc._attachments[param._attachment].digest
-    });
+    };
   };
 
   /**
@@ -334,7 +271,7 @@
    */
   LocalStorage.prototype.remove = function (command, param) {
     var doc, i, attachment_list;
-    doc = this._storage.getItem(this._localpath + "/" + param._id);
+    doc = this._storage.getItem(param._id);
     attachment_list = [];
     if (doc !== null && typeof doc === "object") {
       if (typeof doc._attachments === "object") {
@@ -397,87 +334,88 @@
     command.success();
   };
 
-  /**
-   * Get all filenames belonging to a user from the document index
-   *
-   * @method allDocs
-   * @param  {Object} command The JIO command
-   * @param  {Object} param The given parameters
-   * @param  {Object} options The command options
-   */
-  LocalStorage.prototype.allDocs = function (command, param, options) {
-    var i, row, path_re, rows, document_list, document_object, delete_id;
-    param.unused = true;
-    rows = [];
-    document_list = [];
-    path_re = new RegExp(
-      "^" + jIO.Query.stringEscapeRegexpCharacters(this._localpath) +
-        "/[^/]+$"
-    );
-    if (options.query === undefined && options.sort_on === undefined &&
-        options.select_list === undefined &&
-        options.include_docs === undefined) {
-      rows = [];
-      for (i in this._database) {
-        if (this._database.hasOwnProperty(i)) {
-          // filter non-documents
-          if (path_re.test(i)) {
-            row = { value: {} };
-            row.id = i.split('/').slice(-1)[0];
-            row.key = row.id;
-            if (options.include_docs) {
-              row.doc = JSON.parse(this._storage.getItem(i));
-            }
-            rows.push(row);
-          }
-        }
-      }
-      command.success({"data": {"rows": rows, "total_rows": rows.length}});
-    } else {
-      // create jio query object from returned results
-      for (i in this._database) {
-        if (this._database.hasOwnProperty(i)) {
-          if (path_re.test(i)) {
-            document_list.push(this._storage.getItem(i));
-          }
-        }
-      }
-      options.select_list = options.select_list || [];
-      if (options.select_list.indexOf("_id") === -1) {
-        options.select_list.push("_id");
-        delete_id = true;
-      }
-      if (options.include_docs === true) {
-        document_object = {};
-        document_list.forEach(function (meta) {
-          document_object[meta._id] = meta;
-        });
-      }
-      jIO.QueryFactory.create(options.query || "",
-                              this._key_schema).
-        exec(document_list, options).then(function () {
-          document_list = document_list.map(function (value) {
-            var o = {
-              "id": value._id,
-              "key": value._id
-            };
-            if (options.include_docs === true) {
-              o.doc = document_object[value._id];
-              delete document_object[value._id];
-            }
-            if (delete_id) {
-              delete value._id;
-            }
-            o.value = value;
-            return o;
-          });
-          command.success({"data": {
-            "total_rows": document_list.length,
-            "rows": document_list
-          }});
-        });
-    }
-  };
+//   /**
+//    * Get all filenames belonging to a user from the document index
+//    *
+//    * @method allDocs
+//    * @param  {Object} command The JIO command
+//    * @param  {Object} param The given parameters
+//    * @param  {Object} options The command options
+//    */
+//   LocalStorage.prototype.allDocs = function (command, param, options) {
+//     console.log("allDocs begin");
+//     var i, row, path_re, rows, document_list, document_object, delete_id;
+//     param.unused = true;
+//     rows = [];
+//     document_list = [];
+//     path_re = new RegExp(
+//       "^" + jIO.Query.stringEscapeRegexpCharacters(this._localpath) +
+//         "/[^/]+$"
+//     );
+//     if (options.query === undefined && options.sort_on === undefined &&
+//         options.select_list === undefined &&
+//         options.include_docs === undefined) {
+//       rows = [];
+//       for (i in this._database) {
+//         if (this._database.hasOwnProperty(i)) {
+//           // filter non-documents
+//           if (path_re.test(i)) {
+//             row = { value: {} };
+//             row.id = i.split('/').slice(-1)[0];
+//             row.key = row.id;
+//             if (options.include_docs) {
+//               row.doc = JSON.parse(this._storage.getItem(i));
+//             }
+//             rows.push(row);
+//           }
+//         }
+//       }
+//       command.success({"data": {"rows": rows, "total_rows": rows.length}});
+//     } else {
+//       // create jio query object from returned results
+//       for (i in this._database) {
+//         if (this._database.hasOwnProperty(i)) {
+//           if (path_re.test(i)) {
+//             document_list.push(this._storage.getItem(i));
+//           }
+//         }
+//       }
+//       options.select_list = options.select_list || [];
+//       if (options.select_list.indexOf("_id") === -1) {
+//         options.select_list.push("_id");
+//         delete_id = true;
+//       }
+//       if (options.include_docs === true) {
+//         document_object = {};
+//         document_list.forEach(function (meta) {
+//           document_object[meta._id] = meta;
+//         });
+//       }
+//       jIO.QueryFactory.create(options.query || "",
+//                               this._key_schema).
+//         exec(document_list, options).then(function () {
+//           document_list = document_list.map(function (value) {
+//             var o = {
+//               "id": value._id,
+//               "key": value._id
+//             };
+//             if (options.include_docs === true) {
+//               o.doc = document_object[value._id];
+//               delete document_object[value._id];
+//             }
+//             if (delete_id) {
+//               delete value._id;
+//             }
+//             o.value = value;
+//             return o;
+//           });
+//           command.success({"data": {
+//             "total_rows": document_list.length,
+//             "rows": document_list
+//           }});
+//         });
+//     }
+//   };
 
   /**
    * Check the storage or a specific document
@@ -679,51 +617,6 @@
 
   jIO.addStorage('local', LocalStorage);
 
-  //////////////////////////////////////////////////////////////////////
-  // Tools
-
-  function createLocalDescription(username, application_name) {
-    if (typeof username !== 'string') {
-      throw new TypeError("LocalStorage username must be a string");
-    }
-    var description = {
-      "type": "local",
-      "username": username
-    };
-    if (typeof application_name === 'string') {
-      description.application_name = application_name;
-    }
-    return description;
-  }
-
-  function createMemoryDescription(username, application_name) {
-    var description = createLocalDescription(username, application_name);
-    description.mode = "memory";
-    return description;
-  }
-
-  /**
-   * Tool to help users to create local storage description for JIO
-   *
-   * @param  {String} username The username
-   * @param  {String} [application_name] The application_name
-   * @param  {String} [mode="localStorage"] Use localStorage or memory
-   * @return {Object} The storage description
-   */
-  function createDescription(username, application_name, mode) {
-    if (mode === undefined || mode.toString() === 'localStorage') {
-      return createLocalDescription(username, application_name);
-    }
-    if (mode.toString() === 'memory') {
-      return createMemoryDescription(username, application_name);
-    }
-    throw new TypeError("Unknown LocalStorage '" + mode.toString() + "' mode");
-  }
-
-  exports.createDescription = createDescription;
-  exports.createLocalDescription = createLocalDescription;
-  exports.createMemoryDescription = createMemoryDescription;
-
   function clearLocalStorage() {
     var k;
     for (k in localStorage) {
@@ -743,4 +636,4 @@
   exports.clearLocalStorage = clearLocalStorage;
   exports.clearMemoryStorage = clearMemoryStorage;
 
-}));
+}(window, jIO));

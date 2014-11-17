@@ -2,44 +2,40 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <link rel="stylesheet" href="../lib/qunit/qunit.css" />
   <title>JIO Qunit/Sinon Unit Tests</title>
-</head>
-<body>
-  <div id="qunit"></div>
+  <link rel="stylesheet" href="../node_modules/grunt-contrib-qunit/test/libs/qunit.css" type="text/css" media="screen"/>
+  <script src="../node_modules/grunt-contrib-qunit/test/libs/qunit.js" type="text/javascript"></script>
+  <script src="../node_modules/rsvp/dist/rsvp-2.0.4.js"></script>
+  <script src="../node_modules/sinon/pkg/sinon.js" type="text/javascript"></script>
+  <script src="../dist/jio-latest.js"></script>
+
   <script src="html5.js"></script>
-  <script src="../lib/qunit/qunit.js"></script>
-  <script src="../lib/sinon/sinon.js"></script>
-  <script src="../lib/sinon/sinon-qunit.js"></script>
-  <script src="../lib/rsvp/rsvp-custom.js"></script>
-  <script src="../src/sha256.amd.js"></script>
-  <script src="../jio.js"></script>
-  <script src="jio/util.js"></script>
-  <script src="jio/fakestorage.js"></script>
-  <script src="jio/tests.js"></script>
+  <!--script src="jio/util.js"></script-->
+  <!--script src="jio/fakestorage.js"></script>
+  <script src="jio/tests.js"></script-->
 
   <script src="queries/key.tests.js"></script>
   <script src="queries/key-schema.tests.js"></script>
   <script src="queries/tests.js"></script>
   <script src="queries/key-typechecks.tests.js"></script>
 
-  <script src="../lib/moment/moment-2.5.0.js"></script>
-  <script src="../src/jio.date/jiodate.js"></script>
   <script src="queries/jiodate.tests.js"></script>
   <script src="queries/key-jiodate.tests.js"></script>
 
-  <script src="../src/jio.storage/localstorage.js"></script>
   <script src="queries/key-localstorage.tests.js"></script>
+
   <script src="jio.storage/localstorage.tests.js"></script>
-
-  <script src="../lib/jquery/jquery.min.js"></script>
-  <script src="../src/jio.storage/xwikistorage.js"></script>
-  <script src="jio.storage/xwikistorage.tests.js"></script>
-
-  <script src="../src/jio.storage/davstorage.js"></script>
   <script src="jio.storage/davstorage.tests.js"></script>
+  <script src="jio.storage/indexeddbstorage.tests.js"></script>
+  <script src="jio.storage/unionstorage.tests.js"></script>
+  <script src="jio.storage/querystorage.tests.js"></script>
 
-  <script src="../src/jio.storage/indexstorage.js"></script>
+  <!--script src="../lib/jquery/jquery.min.js"></script>
+  <script src="../src/jio.storage/xwikistorage.js"></script>
+  <script src="jio.storage/xwikistorage.tests.js"></script-->
+
+
+  <!--script src="../src/jio.storage/indexstorage.js"></script>
   <script src="jio.storage/indexstorage.tests.js"></script>
 
   <script src="../src/jio.storage/gidstorage.js"></script>
@@ -54,18 +50,16 @@
   <script src="../src/jio.storage/splitstorage.js"></script>
   <script src="../test/jio.storage/splitstorage.tests.js"></script>
 
-  <script src="../src/jio.storage/querystorage.js"></script>
-  <script src="../test/jio.storage/querystorage.tests.js"></script>
-
 
   <script src="../src/jio.storage/replicatestorage.js"></script>
-  <script src="../test/jio.storage/replicatestorage.tests.js"></script>
-
-<!--
-  <script src="../src/jio.storage/indexeddbstorage.js"></script>
-  <script src="../test/jio.storage/indexeddbstorage.tests.js"></script>
--->
-
-
+  <script src="../test/jio.storage/replicatestorage.tests.js"></script-->
+</head>
+<body>
+  <h1 id="qunit-header">jIO Tests</h1>
+  <h2 id="qunit-banner"></h2>
+  <div id="qunit-testrunner-toolbar"></div>
+  <h2 id="qunit-userAgent"></h2>
+  <ol id="qunit-tests"></ol>
+  <div id="qunit-fixture">test markup, will be hidden</div>
 </body>
 </html>

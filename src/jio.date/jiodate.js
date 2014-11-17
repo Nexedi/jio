@@ -1,35 +1,23 @@
-/*jslint indent: 2, nomen: true */
-/*global module, define, exports, window, moment */
-
-// define([module_name], [dependencies], module);
-(function (dependencies, module) {
-  "use strict";
-  if (typeof define === 'function' && define.amd) {
-    return define(dependencies, module);
-  }
-  if (typeof exports === 'object') {
-    return module(exports, moment);
-  }
-  window.jiodate = {};
-  module(window.jiodate, moment);
-}(['exports', 'moment'], function (to_export, moment) {
+/*global window, moment */
+/*jslint nomen: true, maxlen: 200*/
+(function (window, moment) {
   "use strict";
 
-  /**
-   * Add a secured (write permission denied) property to an object.
-   *
-   * @param  {Object} object The object to fill
-   * @param  {String} key The object key where to store the property
-   * @param  {Any} value The value to store
-   */
-  function _export(key, value) {
-    Object.defineProperty(to_export, key, {
-      "configurable": false,
-      "enumerable": true,
-      "writable": false,
-      "value": value
-    });
-  }
+//   /**
+//    * Add a secured (write permission denied) property to an object.
+//    *
+//    * @param  {Object} object The object to fill
+//    * @param  {String} key The object key where to store the property
+//    * @param  {Any} value The value to store
+//    */
+//   function _export(key, value) {
+//     Object.defineProperty(to_export, key, {
+//       "configurable": false,
+//       "enumerable": true,
+//       "writable": false,
+//       "value": value
+//     });
+//   }
 
   var YEAR = 'year',
     MONTH = 'month',
@@ -50,7 +38,7 @@
     lesserPrecision = function (p1, p2) {
       return (precision_grade[p1] < precision_grade[p2]) ? p1 : p2;
     },
-    JIODate = null;
+    JIODate;
 
 
   JIODate = function (str) {
@@ -161,17 +149,24 @@
   };
 
 
-  _export('JIODate', JIODate);
+//   _export('JIODate', JIODate);
+// 
+//   _export('YEAR', YEAR);
+//   _export('MONTH', MONTH);
+//   _export('DAY', DAY);
+//   _export('HOUR', HOUR);
+//   _export('MIN', MIN);
+//   _export('SEC', SEC);
+//   _export('MSEC', MSEC);
 
-  _export('YEAR', YEAR);
-  _export('MONTH', MONTH);
-  _export('DAY', DAY);
-  _export('HOUR', HOUR);
-  _export('MIN', MIN);
-  _export('SEC', SEC);
-  _export('MSEC', MSEC);
-
-  return to_export;
-
-}));
-
+  window.jiodate = {
+    JIODate: JIODate,
+    YEAR: YEAR,
+    MONTH: MONTH,
+    DAY: DAY,
+    HOUR: HOUR,
+    MIN: MIN,
+    SEC: SEC,
+    MSEC: MSEC
+  };
+}(window, moment));

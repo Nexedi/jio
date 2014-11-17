@@ -4,8 +4,8 @@
  * http://www.gnu.org/licenses/lgpl.html
  */
 
-/*jslint indent: 2, maxlen: 80, nomen: true, regexp: true, unparam: true */
-/*global define, window, jIO, RSVP, btoa, DOMParser, Blob */
+/*jslint indent: 2, maxlen: 200, nomen: true, regexp: true, unparam: true */
+/*global define, window, jIO, RSVP, btoa, DOMParser, Blob, console */
 
 // JIO Dav Storage Description :
 // {
@@ -172,14 +172,6 @@
     return [restoreName(file_name[1].replace(/_\./g, '.'))];
   }
 
-  function promiseSucceed(promise) {
-    return new RSVP.Promise(function (resolve, reject, notify) {
-      promise.then(resolve, reject, notify);
-    }, function () {
-      promise.cancel();
-    });
-  }
-
   /**
    * An ajax object to do the good request according to the auth type
    */
@@ -204,7 +196,7 @@
         "headers": headers
       });
     },
-    "basic": function (method, type, url, data, start, end, login) {
+    "basic": function (method, type, url, data, login, start, end) {
       var headers = {"Authorization": "Basic " + login};
       if (start !== undefined) {
         if (end !== undefined) {
@@ -250,22 +242,12 @@
     }
   }
 
-  DavStorage.prototype._put = function (metadata) {
-    return ajax[this._auth_type](
-      "PUT",
-      "text",
-      this._url + '/' + idsToFileName(metadata._id) + "?_=" + Date.now(),
-      JSON.stringify(metadata),
-      this._login
-    );
-  };
 
   DavStorage.prototype._putAttachment = function (param) {
     return ajax[this._auth_type](
       "PUT",
       null,
-      this._url + '/' + idsToFileName(param._id, param._attachment) +
-        "?_=" + Date.now(),
+      this._url + '/' + idsToFileName(param._id, param._attachment),
       param._blob,
       undefined,
       undefined,
@@ -273,29 +255,36 @@
     );
   };
 
-  DavStorage.prototype._get = function (param) {
-    return ajax[this._auth_type](
-      "GET",
-      "text",
-      this._url + '/' + idsToFileName(param._id),
-      null,
-      undefined,
-      undefined,
-      this._login
-    ).then(function (e) {
-      try {
-        return {"target": {
-          "status": e.target.status,
-          "statusText": e.target.statusText,
-          "response": JSON.parse(e.target.responseText)
-        }};
-      } catch (err) {
-        throw {"target": {
-          "status": 0,
-          "statusText": "Parse error"
-        }};
-      }
-    });
+  /**
+   * Retrieve metadata
+   *
+   * @method get
+   * @param  {Object} param The command parameters
+   * @param  {Object} options The command options
+   */
+  DavStorage.prototype.get = function (param) {
+    var context = this;
+    return new RSVP.Queue()
+      .push(function () {
+        return ajax[context._auth_type](
+          "GET",
+          "text",
+          context._url + '/' + idsToFileName(param._id),
+          null,
+          context._login
+        );
+      })
+      .push(undefined, function (error) {
+        if (error.target !== undefined) {
+          if (error.target.status === 404) {
+            throw new jIO.util.jIOError("Cannot find document", 404);
+          }
+        }
+        throw error;
+      })
+      .push(function (xhr) {
+        return JSON.parse(xhr.target.responseText);
+      });
   };
 
   DavStorage.prototype._getAttachment = function (param) {
@@ -314,7 +303,7 @@
     return ajax[this._auth_type](
       "DELETE",
       null,
-      this._url + '/' + idsToFileName(param._id) + "?_=" + Date.now(),
+      this._url + '/' + idsToFileName(param._id),
       null,
       undefined,
       undefined,
@@ -326,8 +315,7 @@
     return ajax[this._auth_type](
       "DELETE",
       null,
-      this._url + '/' + idsToFileName(param._id, param._attachment) +
-        "?_=" + Date.now(),
+      this._url + '/' + idsToFileName(param._id, param._attachment),
       null,
       undefined,
       undefined,
@@ -411,79 +399,34 @@
   // adding custom headers triggers preflight OPTIONS request!
   // http://remysharp.com/2011/04/21/getting-cors-working/
 
-  DavStorage.prototype.postOrPut = function (method, command, metadata) {
-    metadata._id = metadata._id || jIO.util.generateUuid();
-    var that = this, o = {
-      error_message: "DavStorage, unable to get metadata.",
-      notify_message: "Getting metadata",
-      percentage: [0, 30],
-      notifyProgress: function (e) {
-        command.notify({
-          "method": method,
-          "message": o.notify_message,
-          "loaded": e.loaded,
-          "total": e.total,
-          "percentage": (e.loaded / e.total) *
-            (o.percentage[1] - o.percentage[0]) +
-            o.percentage[0]
-        });
-      },
-      putMetadata: function (e) {
-        metadata._attachments = e.target.response._attachments;
-        o.notify_message = "Updating metadata";
-        o.error_message = "DavStorage, unable to update document.";
-        o.percentage = [30, 100];
-        that._put(metadata).then(o.success, o.reject, o.notifyProgress);
-      },
-      errorDocumentExists: function (e) {
-        command.error(
-          "conflict",
-          "Document exists",
-          "DavStorage, cannot overwrite document metadata."
-        );
-      },
-      putMetadataIfPossible: function (e) {
-        if (e.target.status !== 404) {
-          return command.reject(
-            e.target.status,
-            e.target.statusText,
-            o.error_message
-          );
-        }
-        o.percentage = [30, 100];
-        o.notify_message = "Updating metadata";
-        o.error_message = "DavStorage, unable to create document.";
-        that._put(metadata).then(o.success, o.reject, o.notifyProgress);
-      },
-      success: function (e) {
-        command.success(e.target.status, {"id": metadata._id});
-      },
-      reject: function (e) {
-        command.reject(
-          e.target.status,
-          e.target.statusText,
-          o.error_message
-        );
-      }
-    };
-
-    this._get(metadata).then(
-      method === 'post' ? o.errorDocumentExists : o.putMetadata,
-      o.putMetadataIfPossible,
-      o.notifyProgress
-    );
-  };
 
   /**
    * Creates a new document if not already exists
    *
    * @method post
-   * @param  {Object} command The JIO command
    * @param  {Object} metadata The metadata to put
    * @param  {Object} options The command options
    */
-  DavStorage.prototype.post = function (command, metadata) {
-    this.postOrPut('post', command, metadata);
+  DavStorage.prototype.post = function (metadata) {
+    var doc, doc_id = metadata._id, context = this;
+    if (doc_id === undefined) {
+      doc_id = jIO.util.generateUuid();
+    }
+    doc = jIO.util.deepClone(metadata);
+    doc._id = doc_id;
+    return this.get(doc)
+      .push(function () {
+        // the document already exists
+        throw new jIO.util.jIOError("Cannot create a new document", 409);
+      }, function (error) {
+        if (error.status_code === 404) {
+          // the document does not exist
+          // XXX
+          delete doc._attachments;
+          return context.put(doc);
+        }
+        throw error;
+      });
   };
 
 
@@ -491,711 +434,682 @@
    * Creates or updates a document
    *
    * @method put
-   * @param  {Object} command The JIO command
    * @param  {Object} metadata The metadata to post
    * @param  {Object} options The command options
    */
-  DavStorage.prototype.put = function (command, metadata) {
-    this.postOrPut('put', command, metadata);
+  DavStorage.prototype.put = function (metadata) {
+    var context = this;
+    return new RSVP.Queue()
+      .push(function () {
+        return ajax[context._auth_type](
+          "PUT",
+          "text",
+          context._url + '/' + idsToFileName(metadata._id),
+          JSON.stringify(metadata),
+          context._login
+        );
+      })
+      .push(function () {
+        return metadata._id;
+      });
   };
 
   /**
    * Add an attachment to a document
    *
    * @method putAttachment
-   * @param  {Object} command The JIO command
    * @param  {Object} param The command parameters
    * @param  {Object} options The command options
    */
-  DavStorage.prototype.putAttachment = function (command, param) {
-    var that = this, o = {
-      error_message: "DavStorage unable to put attachment",
-      percentage: [0, 30],
-      notify_message: "Getting metadata",
-      notifyProgress: function (e) {
-        command.notify({
-          "method": "putAttachment",
-          "message": o.notify_message,
-          "loaded": e.loaded,
-          "total": e.total,
-          "percentage": (e.loaded / e.total) *
-            (o.percentage[1] - o.percentage[0]) +
-            o.percentage[0]
-        });
-      },
-      putAttachmentAndReadBlob: function (e) {
-        o.percentage = [30, 70];
-        o.notify_message = "Putting attachment";
-        o.remote_metadata = e.target.response;
-        return RSVP.all([
-          that._putAttachment(param),
-          jIO.util.readBlobAsBinaryString(param._blob)
-        ]).then(null, null, function (e) {
-          // propagate only putAttachment progress
-          if (e.index === 0) {
-            return e.value;
-          }
-          throw null;
-        });
-      },
-      putMetadata: function (answers) {
-        o.percentage = [70, 100];
-        o.notify_message = "Updating metadata";
-        o.remote_metadata._id = param._id;
-        o.remote_metadata._attachments = o.remote_metadata._attachments || {};
-        o.remote_metadata._attachments[param._attachment] = {
-          "length": param._blob.size,
-          "digest": jIO.util.makeBinaryStringDigest(answers[1].target.result),
-          "content_type": param._blob.type
-        };
-        return that._put(o.remote_metadata);
-      },
-      success: function (e) {
-        command.success(e.target.status, {
-          "digest": o.remote_metadata._attachments[param._attachment].digest
-        });
-      },
-      reject: function (e) {
-        command.reject(
-          e.target.status,
-          e.target.statusText,
-          o.error_message
-        );
-      }
-    };
+//   DavStorage.prototype.putAttachment = function (param) {
+//     var that = this, o = {
+//       error_message: "DavStorage unable to put attachment",
+//       percentage: [0, 30],
+//       notify_message: "Getting metadata",
+//       notifyProgress: function (e) {
+//         command.notify({
+//           "method": "putAttachment",
+//           "message": o.notify_message,
+//           "loaded": e.loaded,
+//           "total": e.total,
+//           "percentage": (e.loaded / e.total) *
+//             (o.percentage[1] - o.percentage[0]) +
+//             o.percentage[0]
+//         });
+//       },
+//       putAttachmentAndReadBlob: function (e) {
+//         o.percentage = [30, 70];
+//         o.notify_message = "Putting attachment";
+//         o.remote_metadata = e.target.response;
+//         return RSVP.all([
+//           that._putAttachment(param),
+//           jIO.util.readBlobAsBinaryString(param._blob)
+//         ]).then(null, null, function (e) {
+//           // propagate only putAttachment progress
+//           if (e.index === 0) {
+//             return e.value;
+//           }
+//           throw null;
+//         });
+//       },
+//       putMetadata: function (answers) {
+//         o.percentage = [70, 100];
+//         o.notify_message = "Updating metadata";
+//         o.remote_metadata._id = param._id;
+//         o.remote_metadata._attachments = o.remote_metadata._attachments || {};
+//         o.remote_metadata._attachments[param._attachment] = {
+//           "length": param._blob.size,
+//           "digest": jIO.util.makeBinaryStringDigest(answers[1].target.result),
+//           "content_type": param._blob.type
+//         };
+//         return that._put(o.remote_metadata);
+//       },
+//       success: function (e) {
+//         command.success(e.target.status, {
+//           "digest": o.remote_metadata._attachments[param._attachment].digest
+//         });
+//       },
+//       reject: function (e) {
+//         command.reject(
+//           e.target.status,
+//           e.target.statusText,
+//           o.error_message
+//         );
+//       }
+//     };
+// 
+//     this._get(param).
+//       then(o.putAttachmentAndReadBlob).
+//       then(o.putMetadata).
+//       then(o.success, o.reject, o.notifyProgress);
+//   };
 
-    this._get(param).
-      then(o.putAttachmentAndReadBlob).
-      then(o.putMetadata).
-      then(o.success, o.reject, o.notifyProgress);
-  };
-
-  /**
-   * Retrieve metadata
-   *
-   * @method get
-   * @param  {Object} command The JIO command
-   * @param  {Object} param The command parameters
-   * @param  {Object} options The command options
-   */
-  DavStorage.prototype.get = function (command, param) {
-    var o = {
-      notifyGetProgress: function (e) {
-        command.notify({
-          "method": "get",
-          "message": "Getting metadata",
-          "loaded": e.loaded,
-          "total": e.total,
-          "percentage": (e.loaded / e.total) * 100 // 0% to 100%
-        });
-      },
-      success: function (e) {
-        command.success(e.target.status, {"data": e.target.response});
-      },
-      reject: function (e) {
-        command.reject(
-          e.target.status,
-          e.target.statusText,
-          "DavStorage, unable to get document."
-        );
-      }
-    };
-
-    this._get(param).then(o.success, o.reject, o.notifyGetProgress);
-  };
 
   /**
    * Retriev a document attachment
    *
    * @method getAttachment
-   * @param  {Object} command The JIO command
    * @param  {Object} param The command parameters
    * @param  {Object} options The command options
    */
-  DavStorage.prototype.getAttachment = function (command, param) {
-    var that = this, o = {
-      error_message: "DavStorage, unable to get attachment.",
-      percentage: [0, 30],
-      notify_message: "Getting metedata",
-      "404": "missing document", // Not Found
-      notifyProgress: function (e) {
-        command.notify({
-          "method": "getAttachment",
-          "message": o.notify_message,
-          "loaded": e.loaded,
-          "total": e.total,
-          "percentage": (e.loaded / e.total) *
-            (o.percentage[1] - o.percentage[0]) +
-            o.percentage[0]
-        });
-      },
-      getAttachment: function (e) {
-        var attachment = e.target.response._attachments &&
-          e.target.response._attachments[param._attachment];
-        delete o["404"];
-        if (typeof attachment !== 'object' || attachment === null) {
-          throw {"target": {
-            "status": 404,
-            "statusText": "missing attachment"
-          }};
-        }
-        o.type = attachment.content_type || "application/octet-stream";
-        o.notify_message = "Retrieving attachment";
-        o.percentage = [30, 100];
-        o.digest = attachment.digest;
-        return that._getAttachment(param);
-      },
-      success: function (e) {
-        command.success(e.target.status, {
-          "data": new Blob([e.target.response], {"type": o.type}),
-          "digest": o.digest
-        });
-      },
-      reject: function (e) {
-        command.reject(
-          e.target.status,
-          o[e.target.status] || e.target.statusText,
-          o.error_message
-        );
-      }
-    };
-    if (param._start < 0 || param._end < 0) {
-      command.reject(405,
-                     "invalide _start,_end",
-                     "_start and _end must be positive");
-      return;
-    }
-    if (param._start > param._end) {
-      command.reject(405,
-                     "invalide _start,_end",
-                     "start is great then end");
-      return;
-    }
-    this._get(param).
-      then(o.getAttachment).
-      then(o.success, o.reject, o.notifyProgress);
-  };
+//   DavStorage.prototype.getAttachment = function (param) {
+//     var that = this, o = {
+//       error_message: "DavStorage, unable to get attachment.",
+//       percentage: [0, 30],
+//       notify_message: "Getting metedata",
+//       "404": "missing document", // Not Found
+//       notifyProgress: function (e) {
+//         command.notify({
+//           "method": "getAttachment",
+//           "message": o.notify_message,
+//           "loaded": e.loaded,
+//           "total": e.total,
+//           "percentage": (e.loaded / e.total) *
+//             (o.percentage[1] - o.percentage[0]) +
+//             o.percentage[0]
+//         });
+//       },
+//       getAttachment: function (e) {
+//         var attachment = e.target.response._attachments &&
+//           e.target.response._attachments[param._attachment];
+//         delete o["404"];
+//         if (typeof attachment !== 'object' || attachment === null) {
+//           throw {"target": {
+//             "status": 404,
+//             "statusText": "missing attachment"
+//           }};
+//         }
+//         o.type = attachment.content_type || "application/octet-stream";
+//         o.notify_message = "Retrieving attachment";
+//         o.percentage = [30, 100];
+//         o.digest = attachment.digest;
+//         return that._getAttachment(param);
+//       },
+//       success: function (e) {
+//         command.success(e.target.status, {
+//           "data": new Blob([e.target.response], {"type": o.type}),
+//           "digest": o.digest
+//         });
+//       },
+//       reject: function (e) {
+//         command.reject(
+//           e.target.status,
+//           o[e.target.status] || e.target.statusText,
+//           o.error_message
+//         );
+//       }
+//     };
+//     if (param._start < 0 || param._end < 0) {
+//       command.reject(405,
+//                      "invalide _start,_end",
+//                      "_start and _end must be positive");
+//       return;
+//     }
+//     if (param._start > param._end) {
+//       command.reject(405,
+//                      "invalide _start,_end",
+//                      "start is great then end");
+//       return;
+//     }
+//     this._get(param).
+//       then(o.getAttachment).
+//       then(o.success, o.reject, o.notifyProgress);
+//   };
 
   /**
    * Remove a document
    *
    * @method remove
-   * @param  {Object} command The JIO command
    * @param  {Object} param The command parameters
    * @param  {Object} options The command options
    */
-  DavStorage.prototype.remove = function (command, param) {
-    var that = this, o = {
-      error_message: "DavStorage, unable to get metadata.",
-      notify_message: "Getting metadata",
-      percentage: [0, 70],
-      notifyProgress: function (e) {
-        if (e === null) {
-          return;
-        }
-        command.notify({
-          "method": "remove",
-          "message": o.notify_message,
-          "loaded": e.loaded,
-          "total": e.total,
-          "percentage": (e.loaded / e.total) *
-            (o.percentage[1] - o.percentage[0]) + o.percentage[0]
-        });
-      },
-      removeDocument: function (e) {
-        o.get_result = e;
-        o.percentage = [70, 80];
-        o.notify_message = "Removing document";
-        o.error_message = "DavStorage, unable to remove document";
-        return that._remove(param);
-      },
-      removeAllAttachments: function (e) {
-        var k, requests = [], attachments;
-        attachments = o.get_result.target.response._attachments;
-        o.remove_result = e;
-        if (typeof attachments === 'object' && attachments !== null) {
-          for (k in attachments) {
-            if (attachments.hasOwnProperty(k)) {
-              requests[requests.length] = promiseSucceed(
-                that._removeAttachment({
-                  "_id": param._id,
-                  "_attachment": k
-                })
-              );
-            }
-          }
-        }
-        if (requests.length === 0) {
-          return;
-        }
-        o.count = 0;
-        o.nb_requests = requests.length;
-        return RSVP.all(requests).then(null, null, function (e) {
-          if (e.value.loaded === e.value.total) {
-            o.count += 1;
-            command.notify({
-              "method": "remove",
-              "message": "Removing all associated attachments",
-              "loaded": o.count,
-              "total": o.nb_requests,
-              "percentage": Math.min(
-                o.count / o.nb_requests * 20 + 80,
-                100
-              )
-            });
-          }
-          return null;
-        });
-      },
-      success: function () {
-        command.success(o.remove_result.target.status);
-      },
-      reject: function (e) {
-        return command.reject(
-          e.target.status,
-          e.target.statusText,
-          o.error_message
-        );
-      }
-    };
-
-    this._get(param).
-      then(o.removeDocument).
-      then(o.removeAllAttachments).
-      then(o.success, o.reject, o.notifyProgress);
-  };
+//   DavStorage.prototype.remove = function (param) {
+//     var that = this, o = {
+//       error_message: "DavStorage, unable to get metadata.",
+//       notify_message: "Getting metadata",
+//       percentage: [0, 70],
+//       notifyProgress: function (e) {
+//         if (e === null) {
+//           return;
+//         }
+//         command.notify({
+//           "method": "remove",
+//           "message": o.notify_message,
+//           "loaded": e.loaded,
+//           "total": e.total,
+//           "percentage": (e.loaded / e.total) *
+//             (o.percentage[1] - o.percentage[0]) + o.percentage[0]
+//         });
+//       },
+//       removeDocument: function (e) {
+//         o.get_result = e;
+//         o.percentage = [70, 80];
+//         o.notify_message = "Removing document";
+//         o.error_message = "DavStorage, unable to remove document";
+//         return that._remove(param);
+//       },
+//       removeAllAttachments: function (e) {
+//         var k, requests = [], attachments;
+//         attachments = o.get_result.target.response._attachments;
+//         o.remove_result = e;
+//         if (typeof attachments === 'object' && attachments !== null) {
+//           for (k in attachments) {
+//             if (attachments.hasOwnProperty(k)) {
+//               requests[requests.length] = promiseSucceed(
+//                 that._removeAttachment({
+//                   "_id": param._id,
+//                   "_attachment": k
+//                 })
+//               );
+//             }
+//           }
+//         }
+//         if (requests.length === 0) {
+//           return;
+//         }
+//         o.count = 0;
+//         o.nb_requests = requests.length;
+//         return RSVP.all(requests).then(null, null, function (e) {
+//           if (e.value.loaded === e.value.total) {
+//             o.count += 1;
+//             command.notify({
+//               "method": "remove",
+//               "message": "Removing all associated attachments",
+//               "loaded": o.count,
+//               "total": o.nb_requests,
+//               "percentage": Math.min(
+//                 o.count / o.nb_requests * 20 + 80,
+//                 100
+//               )
+//             });
+//           }
+//           return null;
+//         });
+//       },
+//       success: function () {
+//         command.success(o.remove_result.target.status);
+//       },
+//       reject: function (e) {
+//         return command.reject(
+//           e.target.status,
+//           e.target.statusText,
+//           o.error_message
+//         );
+//       }
+//     };
+// 
+//     this._get(param).
+//       then(o.removeDocument).
+//       then(o.removeAllAttachments).
+//       then(o.success, o.reject, o.notifyProgress);
+//   };
 
   /**
    * Remove an attachment
    *
    * @method removeAttachment
-   * @param  {Object} command The JIO command
    * @param  {Object} param The command parameters
    * @param  {Object} options The command options
    */
-  DavStorage.prototype.removeAttachment = function (command, param) {
-    var that = this, o = {
-      error_message: "DavStorage, an error occured while getting metadata.",
-      percentage: [0, 40],
-      notify_message: "Getting metadata",
-      notifyProgress: function (e) {
-        command.notify({
-          "method": "remove",
-          "message": o.notify_message,
-          "loaded": e.loaded,
-          "total": e.total,
-          "percentage": (e.loaded / e.total) *
-            (o.percentage[1] - o.percentage[0]) +
-            o.percentage[0]
-        });
-      },
-      updateMetadata: function (e) {
-        var k, doc = e.target.response, attachment;
-        attachment = doc._attachments && doc._attachments[param._attachment];
-        o.error_message = "DavStorage, document attachment not found.";
-        if (typeof attachment !== 'object' || attachment === null) {
-          throw {"target": {
-            "status": 404,
-            "statusText": "missing attachment"
-          }};
-        }
-        delete doc._attachments[param._attachment];
-        for (k in doc._attachments) {
-          if (doc._attachments.hasOwnProperty(k)) {
-            break;
-          }
-        }
-        if (k === undefined) {
-          delete doc._attachments;
-        }
-        o.percentage = [40, 80];
-        o.notify_message = "Updating metadata";
-        o.error_message = "DavStorage, an error occured " +
-          "while updating metadata.";
-        return that._put(doc);
-      },
-      removeAttachment: function () {
-        o.percentage = [80, 100];
-        o.notify_message = "Removing attachment";
-        o.error_message = "DavStorage, an error occured " +
-          "while removing attachment.";
-        return that._removeAttachment(param);
-      },
-      success: function (e) {
-        command.success(e.status);
-      },
-      reject: function (e) {
-        return command.reject(
-          e.target.status,
-          e.target.statusText,
-          o.error_message
-        );
-      }
-    };
-
-    this._get(param).
-      then(o.updateMetadata).
-      then(o.removeAttachment).
-      then(o.success, o.reject, o.notifyProgress);
-  };
+//   DavStorage.prototype.removeAttachment = function (param) {
+//     var that = this, o = {
+//       error_message: "DavStorage, an error occured while getting metadata.",
+//       percentage: [0, 40],
+//       notify_message: "Getting metadata",
+//       notifyProgress: function (e) {
+//         command.notify({
+//           "method": "remove",
+//           "message": o.notify_message,
+//           "loaded": e.loaded,
+//           "total": e.total,
+//           "percentage": (e.loaded / e.total) *
+//             (o.percentage[1] - o.percentage[0]) +
+//             o.percentage[0]
+//         });
+//       },
+//       updateMetadata: function (e) {
+//         var k, doc = e.target.response, attachment;
+//         attachment = doc._attachments && doc._attachments[param._attachment];
+//         o.error_message = "DavStorage, document attachment not found.";
+//         if (typeof attachment !== 'object' || attachment === null) {
+//           throw {"target": {
+//             "status": 404,
+//             "statusText": "missing attachment"
+//           }};
+//         }
+//         delete doc._attachments[param._attachment];
+//         for (k in doc._attachments) {
+//           if (doc._attachments.hasOwnProperty(k)) {
+//             break;
+//           }
+//         }
+//         if (k === undefined) {
+//           delete doc._attachments;
+//         }
+//         o.percentage = [40, 80];
+//         o.notify_message = "Updating metadata";
+//         o.error_message = "DavStorage, an error occured " +
+//           "while updating metadata.";
+//         return that._put(doc);
+//       },
+//       removeAttachment: function () {
+//         o.percentage = [80, 100];
+//         o.notify_message = "Removing attachment";
+//         o.error_message = "DavStorage, an error occured " +
+//           "while removing attachment.";
+//         return that._removeAttachment(param);
+//       },
+//       success: function (e) {
+//         command.success(e.status);
+//       },
+//       reject: function (e) {
+//         return command.reject(
+//           e.target.status,
+//           e.target.statusText,
+//           o.error_message
+//         );
+//       }
+//     };
+// 
+//     this._get(param).
+//       then(o.updateMetadata).
+//       then(o.removeAttachment).
+//       then(o.success, o.reject, o.notifyProgress);
+//   };
 
   /**
    * Retrieve a list of present document
    *
    * @method allDocs
-   * @param  {Object} command The JIO command
    * @param  {Object} param The command parameters
    * @param  {Object} options The command options
    * @param  {Boolean} [options.include_docs=false]
    *   Also retrieve the actual document content.
    */
-  DavStorage.prototype.allDocs = function (command, param, options) {
-    var that = this, o = {
-      error_message: "DavStorage, an error occured while " +
-        "retrieving document list",
-      max_percentage: options.include_docs === true ? 20 : 100,
-      notifyAllDocsProgress: function (e) {
-        command.notify({
-          "method": "remove",
-          "message": "Retrieving document list",
-          "loaded": e.loaded,
-          "total": e.total,
-          "percentage": (e.loaded / e.total) * o.max_percentage
-        });
-      },
-      getAllMetadataIfNecessary: function (e) {
-        var requests = [];
-        o.alldocs_result = e;
-        if (options.include_docs !== true ||
-            e.target.response.rows.length === 0) {
-          return;
-        }
-
-        e.target.response.rows.forEach(function (row) {
-          if (row.id !== "") {
-            requests[requests.length] = that._get({"_id": row.id}).
-              then(function (e) {
-                row.doc = e.target.response;
-              });
-          }
-        });
-
-        o.count = 0;
-        o.nb_requests = requests.length;
-        o.error_message = "DavStorage, an error occured while " +
-          "getting document metadata";
-        return RSVP.all(requests).then(null, null, function (e) {
-          if (e.value.loaded === e.value.total) {
-            o.count += 1;
-            command.notify({
-              "method": "allDocs",
-              "message": "Getting all documents metadata",
-              "loaded": o.count,
-              "total": o.nb_requests,
-              "percentage": Math.min(
-                o.count / o.nb_requests * 80 + 20,
-                100
-              )
-            });
-          }
-          throw null;
-        });
-      },
-      success: function () {
-        command.success(o.alldocs_result.target.status, {
-          "data": o.alldocs_result.target.response
-        });
-      },
-      reject: function (e) {
-        return command.reject(
-          e.target.status,
-          e.target.statusText,
-          o.error_message
-        );
-      }
-    };
-
-    this._allDocs(param, options).
-      then(o.getAllMetadataIfNecessary).
-      then(o.success, o.reject, o.notifyProgress);
-  };
+//   DavStorage.prototype.allDocs = function (param, options) {
+//     var that = this, o = {
+//       error_message: "DavStorage, an error occured while " +
+//         "retrieving document list",
+//       max_percentage: options.include_docs === true ? 20 : 100,
+//       notifyAllDocsProgress: function (e) {
+//         command.notify({
+//           "method": "remove",
+//           "message": "Retrieving document list",
+//           "loaded": e.loaded,
+//           "total": e.total,
+//           "percentage": (e.loaded / e.total) * o.max_percentage
+//         });
+//       },
+//       getAllMetadataIfNecessary: function (e) {
+//         var requests = [];
+//         o.alldocs_result = e;
+//         if (options.include_docs !== true ||
+//             e.target.response.rows.length === 0) {
+//           return;
+//         }
+// 
+//         e.target.response.rows.forEach(function (row) {
+//           if (row.id !== "") {
+//             requests[requests.length] = that._get({"_id": row.id}).
+//               then(function (e) {
+//                 row.doc = e.target.response;
+//               });
+//           }
+//         });
+// 
+//         o.count = 0;
+//         o.nb_requests = requests.length;
+//         o.error_message = "DavStorage, an error occured while " +
+//           "getting document metadata";
+//         return RSVP.all(requests).then(null, null, function (e) {
+//           if (e.value.loaded === e.value.total) {
+//             o.count += 1;
+//             command.notify({
+//               "method": "allDocs",
+//               "message": "Getting all documents metadata",
+//               "loaded": o.count,
+//               "total": o.nb_requests,
+//               "percentage": Math.min(
+//                 o.count / o.nb_requests * 80 + 20,
+//                 100
+//               )
+//             });
+//           }
+//           throw null;
+//         });
+//       },
+//       success: function () {
+//         command.success(o.alldocs_result.target.status, {
+//           "data": o.alldocs_result.target.response
+//         });
+//       },
+//       reject: function (e) {
+//         return command.reject(
+//           e.target.status,
+//           e.target.statusText,
+//           o.error_message
+//         );
+//       }
+//     };
+// 
+//     this._allDocs(param, options).
+//       then(o.getAllMetadataIfNecessary).
+//       then(o.success, o.reject, o.notifyProgress);
+//   };
 
   /**
    * Check the storage or a specific document
    *
    * @method check
-   * @param  {Object} command The JIO command
    * @param  {Object} param The command parameters
    * @param  {Object} options The command options
    */
-  DavStorage.prototype.check = function (command, param) {
-    this.genericRepair(command, param, false);
-  };
+//   DavStorage.prototype.check = function (param) {
+//     this.genericRepair(param, false);
+//   };
 
   /**
    * Repair the storage or a specific document
    *
    * @method repair
-   * @param  {Object} command The JIO command
    * @param  {Object} param The command parameters
    * @param  {Object} options The command options
    */
-  DavStorage.prototype.repair = function (command, param) {
-    this.genericRepair(command, param, true);
-  };
+//   DavStorage.prototype.repair = function (param) {
+//     this.genericRepair(param, true);
+//   };
 
   /**
    * A generic method that manage check or repair command
    *
    * @method genericRepair
-   * @param  {Object} command The JIO command
    * @param  {Object} param The command parameters
    * @param  {Boolean} repair If true then repair else just check
    */
-  DavStorage.prototype.genericRepair = function (command, param, repair) {
-
-    var that = this, repair_promise;
-
-    // returns a jio object
-    function getAllFile() {
-      return ajax[that._auth_type](
-        "PROPFIND",
-        "text",
-        that._url + '/',
-        null,
-        that._login
-      ).then(function (e) { // on success
-        var i, length, rows = new DOMParser().parseFromString(
-          e.target.responseText,
-          "text/xml"
-        ).querySelectorAll(
-          "D\\:response, response"
-        );
-        if (rows.length === 1) {
-          return {"status": 200, "data": []};
-        }
-        // exclude parent folder and browse
-        rows = [].slice.call(rows);
-        rows.shift();
-        length = rows.length;
-        for (i = 0; i < length; i += 1) {
-          rows[i] = rows[i].querySelector("D\\:href, href").
-            textContent.split('/').slice(-1)[0];
-        }
-        return {"data": rows, "status": 200};
-        // rows -> [
-        //   'file_path_1',
-        //   ...
-        // ]
-      }, function (e) { // on error
-        // convert into jio error object
-        // then propagate
-        throw {"status": e.target.status,
-               "reason": e.target.statusText};
-      });
-    }
-
-    // returns jio object
-    function repairOne(shared, repair) {
-      var modified = false, document_id = shared._id;
-      return that._get({"_id": document_id}).then(function (event) {
-        var attachment_id, metadata = event.target.response;
-
-        // metadata should be an object
-        if (typeof metadata !== 'object' || metadata === null ||
-            Array.isArray(metadata)) {
-          if (!repair) {
-            throw {
-              "status": "conflict",
-              "reason": "corrupted",
-              "message": "Bad metadata found in document \"" +
-                document_id + "\""
-            };
-          }
-          return {};
-        }
-
-        // check metadata content
-        if (!repair) {
-          if (!(new jIO.Metadata(metadata).check())) {
-            return {
-              "status": "conflict",
-              "reason": "corrupted",
-              "message": "Some metadata might be lost"
-            };
-          }
-        } else {
-          modified = (
-            jIO.util.uniqueJSONStringify(metadata) !==
-              jIO.util.uniqueJSONStringify(
-                new jIO.Metadata(metadata).format()._dict
-              )
-          );
-        }
-
-        // check metadata id
-        if (metadata._id !== document_id) {
-          // metadata id is different than file
-          // this is not a critical thing
-          modified = true;
-          metadata._id = document_id;
-        }
-
-        // check attachment metadata container
-        if (metadata._attachments &&
-            (typeof metadata._attachments !== 'object' ||
-             Array.isArray(metadata._attachments))) {
-          // is not undefined nor object
-          if (!repair) {
-            throw {
-              "status": "conflict",
-              "reason": "corrupted",
-              "message": "Bad attachment metadata found in document \"" +
-                document_id + "\""
-            };
-          }
-          delete metadata._attachments;
-          modified = true;
-        }
-
-        // check every attachment metadata
-        if (metadata._attachments) {
-          for (attachment_id in metadata._attachments) {
-            if (metadata._attachments.hasOwnProperty(attachment_id)) {
-              // check attachment metadata type
-              if (typeof metadata._attachments[attachment_id] !== 'object' ||
-                  metadata._attachments[attachment_id] === null ||
-                  Array.isArray(metadata._attachments[attachment_id])) {
-                // is not object
-                if (!repair) {
-                  throw {
-                    "status": "conflict",
-                    "reason": "corrupted",
-                    "message": "Bad attachment metadata found in document \"" +
-                      document_id + "\", attachment \"" +
-                      attachment_id + "\""
-                  };
-                }
-                metadata._attachments[attachment_id] = {};
-                modified = true;
-              }
-              // check attachment existency if all attachment are listed
-              if (shared.referenced_dict) {
-                if (shared.unreferenced_dict[metadata._id] &&
-                    shared.unreferenced_dict[metadata._id][attachment_id]) {
-                  // attachment seams to exist but is not referenced
-                  shared.referenced_dict[metadata._id] =
-                    shared.referenced_dict[metadata._id] || {};
-                  shared.referenced_dict[metadata._id][attachment_id] = true;
-                  delete shared.unreferenced_dict[metadata._id][attachment_id];
-                } else if (
-                  !(shared.referenced_dict[metadata._id] &&
-                    shared.referenced_dict[metadata._id][attachment_id])
-                ) {
-                  // attachment doesn't exist, remove attachment id
-                  if (!repair) {
-                    throw {
-                      "status": "conflict",
-                      "reason": "attachment missing",
-                      "message": "Attachment \"" +
-                        attachment_id + "\" from document \"" +
-                        document_id + "\" is missing"
-                    };
-                  }
-                  delete metadata._attachments[attachment_id];
-                  modified = true;
-                }
-              }
-            }
-          }
-        }
-        return {
-          "modified": modified,
-          "metadata": metadata
-        };
-      }, function (event) { // on error
-        // convert into jio error object
-        // then propagate
-        throw {"status": event.target.status,
-               "reason": event.target.statustext};
-      }).then(function (dict) {
-        if (dict.modified) {
-          return this._put(dict.metadata);
-        }
-        return null;
-      }).then(function () {
-        return "no_content";
-      });
-    }
-
-    // returns jio object
-    function repairAll(shared, repair) {
-      return getAllFile().then(function (answer) {
-        var index, data = answer.data, length = data.length, id_list,
-          document_list = [];
-        for (index = 0; index < length; index += 1) {
-          // parsing all files
-          id_list = fileNameToIds(data[index]);
-          if (id_list.length === 1) {
-            // this is a document
-            document_list[document_list.length] = id_list[0];
-          } else if (id_list.length === 2) {
-            // this is an attachment
-            // reference it
-            shared.unreferenced_dict[id_list[0]] =
-              shared.unreferenced_dict[id_list[0]] || {};
-            shared.unreferenced_dict[id_list[0]][id_list[1]] = true;
-          } else {
-            shared.unknown_file_list.push(data[index]);
-          }
-        }
-        length = document_list.length;
-        for (index = 0; index < length; index += 1) {
-          shared._id = document_list[index];
-          document_list[index] = repairOne(shared, repair);
-        }
-
-        function removeFile(name) {
-          return ajax[that._auth_type](
-            "DELETE",
-            null,
-            that._url + '/' + name + "?_=" + Date.now(),
-            null,
-            that._login
-          );
-        }
-
-        function errorEventConverter(event) {
-          throw {"status": event.target.status,
-                 "reason": event.target.statusText};
-        }
-
-        length = shared.unknown_file_list.length;
-        for (index = 0; index < length; index += 1) {
-          document_list.push(
-            removeFile(shared.unknown_file_list[index]).
-              then(null, errorEventConverter)
-          );
-        }
-
-        return RSVP.all(document_list);
-      }).then(function () {
-        return "no_content";
-      });
-    }
-
-    if (typeof param._id === 'string') {
-      repair_promise = repairOne(param, repair);
-    } else {
-      param.referenced_attachment_path_dict = {};
-      param.unreferenced_attachment_path_dict = {};
-      param.unknown_file_list = [];
-      repair_promise = repairAll(param, repair);
-    }
-
-    repair_promise.then(command.success, command.error, command.notify);
-
-  };
+//   DavStorage.prototype.genericRepair = function (param, repair) {
+// 
+//     var that = this, repair_promise;
+// 
+//     // returns a jio object
+//     function getAllFile() {
+//       return ajax[that._auth_type](
+//         "PROPFIND",
+//         "text",
+//         that._url + '/',
+//         null,
+//         that._login
+//       ).then(function (e) { // on success
+//         var i, length, rows = new DOMParser().parseFromString(
+//           e.target.responseText,
+//           "text/xml"
+//         ).querySelectorAll(
+//           "D\\:response, response"
+//         );
+//         if (rows.length === 1) {
+//           return {"status": 200, "data": []};
+//         }
+//         // exclude parent folder and browse
+//         rows = [].slice.call(rows);
+//         rows.shift();
+//         length = rows.length;
+//         for (i = 0; i < length; i += 1) {
+//           rows[i] = rows[i].querySelector("D\\:href, href").
+//             textContent.split('/').slice(-1)[0];
+//         }
+//         return {"data": rows, "status": 200};
+//         // rows -> [
+//         //   'file_path_1',
+//         //   ...
+//         // ]
+//       }, function (e) { // on error
+//         // convert into jio error object
+//         // then propagate
+//         throw {"status": e.target.status,
+//                "reason": e.target.statusText};
+//       });
+//     }
+// 
+//     // returns jio object
+//     function repairOne(shared, repair) {
+//       var modified = false, document_id = shared._id;
+//       return that._get({"_id": document_id}).then(function (event) {
+//         var attachment_id, metadata = event.target.response;
+// 
+//         // metadata should be an object
+//         if (typeof metadata !== 'object' || metadata === null ||
+//             Array.isArray(metadata)) {
+//           if (!repair) {
+//             throw {
+//               "status": "conflict",
+//               "reason": "corrupted",
+//               "message": "Bad metadata found in document \"" +
+//                 document_id + "\""
+//             };
+//           }
+//           return {};
+//         }
+// 
+//         // check metadata content
+//         if (!repair) {
+//           if (!(new jIO.Metadata(metadata).check())) {
+//             return {
+//               "status": "conflict",
+//               "reason": "corrupted",
+//               "message": "Some metadata might be lost"
+//             };
+//           }
+//         } else {
+//           modified = (
+//             jIO.util.uniqueJSONStringify(metadata) !==
+//               jIO.util.uniqueJSONStringify(
+//                 new jIO.Metadata(metadata).format()._dict
+//               )
+//           );
+//         }
+// 
+//         // check metadata id
+//         if (metadata._id !== document_id) {
+//           // metadata id is different than file
+//           // this is not a critical thing
+//           modified = true;
+//           metadata._id = document_id;
+//         }
+// 
+//         // check attachment metadata container
+//         if (metadata._attachments &&
+//             (typeof metadata._attachments !== 'object' ||
+//              Array.isArray(metadata._attachments))) {
+//           // is not undefined nor object
+//           if (!repair) {
+//             throw {
+//               "status": "conflict",
+//               "reason": "corrupted",
+//               "message": "Bad attachment metadata found in document \"" +
+//                 document_id + "\""
+//             };
+//           }
+//           delete metadata._attachments;
+//           modified = true;
+//         }
+// 
+//         // check every attachment metadata
+//         if (metadata._attachments) {
+//           for (attachment_id in metadata._attachments) {
+//             if (metadata._attachments.hasOwnProperty(attachment_id)) {
+//               // check attachment metadata type
+//               if (typeof metadata._attachments[attachment_id] !== 'object' ||
+//                   metadata._attachments[attachment_id] === null ||
+//                   Array.isArray(metadata._attachments[attachment_id])) {
+//                 // is not object
+//                 if (!repair) {
+//                   throw {
+//                     "status": "conflict",
+//                     "reason": "corrupted",
+//                     "message": "Bad attachment metadata found in document \"" +
+//                       document_id + "\", attachment \"" +
+//                       attachment_id + "\""
+//                   };
+//                 }
+//                 metadata._attachments[attachment_id] = {};
+//                 modified = true;
+//               }
+//               // check attachment existency if all attachment are listed
+//               if (shared.referenced_dict) {
+//                 if (shared.unreferenced_dict[metadata._id] &&
+//                     shared.unreferenced_dict[metadata._id][attachment_id]) {
+//                   // attachment seams to exist but is not referenced
+//                   shared.referenced_dict[metadata._id] =
+//                     shared.referenced_dict[metadata._id] || {};
+//                   shared.referenced_dict[metadata._id][attachment_id] = true;
+//                   delete shared.unreferenced_dict[metadata._id][attachment_id];
+//                 } else if (
+//                   !(shared.referenced_dict[metadata._id] &&
+//                     shared.referenced_dict[metadata._id][attachment_id])
+//                 ) {
+//                   // attachment doesn't exist, remove attachment id
+//                   if (!repair) {
+//                     throw {
+//                       "status": "conflict",
+//                       "reason": "attachment missing",
+//                       "message": "Attachment \"" +
+//                         attachment_id + "\" from document \"" +
+//                         document_id + "\" is missing"
+//                     };
+//                   }
+//                   delete metadata._attachments[attachment_id];
+//                   modified = true;
+//                 }
+//               }
+//             }
+//           }
+//         }
+//         return {
+//           "modified": modified,
+//           "metadata": metadata
+//         };
+//       }, function (event) { // on error
+//         // convert into jio error object
+//         // then propagate
+//         throw {"status": event.target.status,
+//                "reason": event.target.statustext};
+//       }).then(function (dict) {
+//         if (dict.modified) {
+//           return this._put(dict.metadata);
+//         }
+//         return null;
+//       }).then(function () {
+//         return "no_content";
+//       });
+//     }
+// 
+//     // returns jio object
+//     function repairAll(shared, repair) {
+//       return getAllFile().then(function (answer) {
+//         var index, data = answer.data, length = data.length, id_list,
+//           document_list = [];
+//         for (index = 0; index < length; index += 1) {
+//           // parsing all files
+//           id_list = fileNameToIds(data[index]);
+//           if (id_list.length === 1) {
+//             // this is a document
+//             document_list[document_list.length] = id_list[0];
+//           } else if (id_list.length === 2) {
+//             // this is an attachment
+//             // reference it
+//             shared.unreferenced_dict[id_list[0]] =
+//               shared.unreferenced_dict[id_list[0]] || {};
+//             shared.unreferenced_dict[id_list[0]][id_list[1]] = true;
+//           } else {
+//             shared.unknown_file_list.push(data[index]);
+//           }
+//         }
+//         length = document_list.length;
+//         for (index = 0; index < length; index += 1) {
+//           shared._id = document_list[index];
+//           document_list[index] = repairOne(shared, repair);
+//         }
+// 
+//         function removeFile(name) {
+//           return ajax[that._auth_type](
+//             "DELETE",
+//             null,
+//             that._url + '/' + name,
+//             null,
+//             that._login
+//           );
+//         }
+// 
+//         function errorEventConverter(event) {
+//           throw {"status": event.target.status,
+//                  "reason": event.target.statusText};
+//         }
+// 
+//         length = shared.unknown_file_list.length;
+//         for (index = 0; index < length; index += 1) {
+//           document_list.push(
+//             removeFile(shared.unknown_file_list[index]).
+//               then(null, errorEventConverter)
+//           );
+//         }
+// 
+//         return RSVP.all(document_list);
+//       }).then(function () {
+//         return "no_content";
+//       });
+//     }
+// 
+//     if (typeof param._id === 'string') {
+//       repair_promise = repairOne(param, repair);
+//     } else {
+//       param.referenced_attachment_path_dict = {};
+//       param.unreferenced_attachment_path_dict = {};
+//       param.unknown_file_list = [];
+//       repair_promise = repairAll(param, repair);
+//     }
+// 
+//     repair_promise.then(command.success, command.error, command.notify);
+// 
+//   };
 
   jIO.addStorage('dav', DavStorage);
 

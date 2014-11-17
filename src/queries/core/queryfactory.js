@@ -1,5 +1,5 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global exports, ComplexQuery, SimpleQuery, Query, parseStringToObject,
+/*global window, ComplexQuery, SimpleQuery, Query, parseStringToObject,
   query_class_dict */
 
 /**
@@ -36,4 +36,4 @@ QueryFactory.create = function (object, key_schema) {
                       "Argument 1 is not a search text or a parsable object");
 };
 
-exports.QueryFactory = QueryFactory;
+window.QueryFactory = QueryFactory;

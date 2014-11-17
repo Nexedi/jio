@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global Query: true, query_class_dict: true, inherits: true,
-         exports, QueryFactory, RSVP, sequence */
+         window, QueryFactory, RSVP, sequence */
 
 /**
  * The ComplexQuery inherits from Query, and compares one or several metadata
@@ -208,4 +208,4 @@ ComplexQuery.prototype.NOT = function (item) {
 
 query_class_dict.complex = ComplexQuery;
 
-exports.ComplexQuery = ComplexQuery;
+window.ComplexQuery = ComplexQuery;
