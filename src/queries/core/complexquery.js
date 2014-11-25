@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global Query: true, query_class_dict: true, inherits: true,
-         window, QueryFactory, RSVP, sequence */
+         window, QueryFactory, RSVP */
 
 /**
  * The ComplexQuery inherits from Query, and compares one or several metadata
@@ -107,41 +107,30 @@ ComplexQuery.prototype.toJSON = ComplexQuery.prototype.serialized;
  * @return {Boolean} true if all match, false otherwise
  */
 ComplexQuery.prototype.AND = function (item) {
-  var j, promises = [];
-  for (j = 0; j < this.query_list.length; j += 1) {
-    promises.push(this.query_list[j].match(item));
+  var queue = new RSVP.Queue(),
+    context = this,
+    i = 0;
+
+  function executeNextIfNotFalse(result) {
+    if (result === false) {
+      // No need to evaluate the other elements, as one is false
+      return result;
+    }
+    if (context.query_list.length === i) {
+      // No new element to loop on
+      return true;
+    }
+    queue
+      .push(function () {
+        var sub_result = context.query_list[i].match(item);
+        i += 1;
+        return sub_result;
+      })
+      .push(executeNextIfNotFalse);
   }
 
-  function cancel() {
-    var i;
-    for (i = 0; i < promises.length; i += 1) {
-      if (typeof promises.cancel === 'function') {
-        promises.cancel();
-      }
-    }
-  }
-
-  return new RSVP.Promise(function (resolve, reject) {
-    var i, count = 0;
-    function resolver(value) {
-      if (!value) {
-        resolve(false);
-      }
-      count += 1;
-      if (count === promises.length) {
-        resolve(true);
-      }
-    }
-
-    function rejecter(err) {
-      reject(err);
-      cancel();
-    }
-
-    for (i = 0; i < promises.length; i += 1) {
-      promises[i].then(resolver, rejecter);
-    }
-  }, cancel);
+  executeNextIfNotFalse(true);
+  return queue;
 };
 
 /**
@@ -153,41 +142,30 @@ ComplexQuery.prototype.AND = function (item) {
  * @return {Boolean} true if one match, false otherwise
  */
 ComplexQuery.prototype.OR =  function (item) {
-  var j, promises = [];
-  for (j = 0; j < this.query_list.length; j += 1) {
-    promises.push(this.query_list[j].match(item));
+  var queue = new RSVP.Queue(),
+    context = this,
+    i = 0;
+
+  function executeNextIfNotTrue(result) {
+    if (result === true) {
+      // No need to evaluate the other elements, as one is true
+      return result;
+    }
+    if (context.query_list.length === i) {
+      // No new element to loop on
+      return false;
+    }
+    queue
+      .push(function () {
+        var sub_result = context.query_list[i].match(item);
+        i += 1;
+        return sub_result;
+      })
+      .push(executeNextIfNotTrue);
   }
 
-  function cancel() {
-    var i;
-    for (i = 0; i < promises.length; i += 1) {
-      if (typeof promises.cancel === 'function') {
-        promises.cancel();
-      }
-    }
-  }
-
-  return new RSVP.Promise(function (resolve, reject) {
-    var i, count = 0;
-    function resolver(value) {
-      if (value) {
-        resolve(true);
-      }
-      count += 1;
-      if (count === promises.length) {
-        resolve(false);
-      }
-    }
-
-    function rejecter(err) {
-      reject(err);
-      cancel();
-    }
-
-    for (i = 0; i < promises.length; i += 1) {
-      promises[i].then(resolver, rejecter);
-    }
-  }, cancel);
+  executeNextIfNotTrue(false);
+  return queue;
 };
 
 /**
@@ -199,11 +177,13 @@ ComplexQuery.prototype.OR =  function (item) {
  * @return {Boolean} true if one match, false otherwise
  */
 ComplexQuery.prototype.NOT = function (item) {
-  return sequence([function () {
-    return this.query_list[0].match(item);
-  }, function (answer) {
-    return !answer;
-  }]);
+  return new RSVP.Queue()
+    .push(function () {
+      return this.query_list[0].match(item);
+    })
+    .push(function (answer) {
+      return !answer;
+    });
 };
 
 query_class_dict.complex = ComplexQuery;

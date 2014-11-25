@@ -1,7 +1,7 @@
 /*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
 /*global parseStringToObject: true, emptyFunction: true, sortOn: true, limit:
   true, select: true, window, stringEscapeRegexpCharacters: true,
-  deepClone, RSVP, sequence */
+  deepClone, RSVP*/
 
 /**
  * The query to use to filter a list of objects.
@@ -81,27 +81,32 @@ Query.prototype.exec = function (item_list, option) {
       promises.push(this.match(item_list[i]));
     }
   }
-  return sequence([function () {
-    return RSVP.all(promises);
-  }, function (answers) {
-    var j;
-    for (j = answers.length - 1; j >= 0; j -= 1) {
-      if (!answers[j]) {
-        item_list.splice(j, 1);
+  return new RSVP.Queue()
+    .push(function () {
+      return RSVP.all(promises);
+    })
+    .push(function (answers) {
+      var j;
+      for (j = answers.length - 1; j >= 0; j -= 1) {
+        if (!answers[j]) {
+          item_list.splice(j, 1);
+        }
       }
-    }
-    if (option.sort_on) {
-      return sortOn(option.sort_on, item_list);
-    }
-  }, function () {
-    if (option.limit) {
-      return limit(option.limit, item_list);
-    }
-  }, function () {
-    return select(option.select_list || [], item_list);
-  }, function () {
-    return item_list;
-  }]);
+      if (option.sort_on) {
+        return sortOn(option.sort_on, item_list);
+      }
+    })
+    .push(function () {
+      if (option.limit) {
+        return limit(option.limit, item_list);
+      }
+    })
+    .push(function () {
+      return select(option.select_list || [], item_list);
+    })
+    .push(function () {
+      return item_list;
+    });
 };
 
 /**
@@ -129,7 +134,8 @@ Query.prototype.match = function () {
  * @return {Any} The parse result
  */
 Query.prototype.parse = function (option) {
-  var that = this, object;
+  var that = this,
+    object;
   /**
    * The recursive parser.
    *
@@ -138,39 +144,56 @@ Query.prototype.parse = function (option) {
    * @return {Any} The parser result
    */
   function recParse(object, option) {
-    var query = object.parsed;
+    var query = object.parsed,
+      queue = new RSVP.Queue(),
+      i;
+
+    function enqueue(j) {
+      queue
+        .push(function () {
+          object.parsed = query.query_list[j];
+          return recParse(object, option);
+        })
+        .push(function () {
+          query.query_list[j] = object.parsed;
+        });
+    }
+
     if (query.type === "complex") {
-      return sequence([function () {
-        return sequence(query.query_list.map(function (v, i) {
-          /*jslint unparam: true */
-          return function () {
-            return sequence([function () {
-              object.parsed = query.query_list[i];
-              return recParse(object, option);
-            }, function () {
-              query.query_list[i] = object.parsed;
-            }]);
-          };
-        }));
-      }, function () {
-        object.parsed = query;
-        return that.onParseComplexQuery(object, option);
-      }]);
+
+
+      for (i = 0; i < query.query_list.length; i += 1) {
+        enqueue(i);
+      }
+
+      return queue
+        .push(function () {
+          object.parsed = query;
+          return that.onParseComplexQuery(object, option);
+        });
+
     }
     if (query.type === "simple") {
       return that.onParseSimpleQuery(object, option);
     }
   }
-  object = {"parsed": JSON.parse(JSON.stringify(that.serialized()))};
-  return sequence([function () {
-    return that.onParseStart(object, option);
-  }, function () {
-    return recParse(object, option);
-  }, function () {
-    return that.onParseEnd(object, option);
-  }, function () {
-    return object.parsed;
-  }]);
+  object = {
+    parsed: JSON.parse(JSON.stringify(that.serialized()))
+  };
+  return new RSVP.Queue()
+    .push(function () {
+      return that.onParseStart(object, option);
+    })
+    .push(function () {
+      return recParse(object, option);
+    })
+    .push(function () {
+      return that.onParseEnd(object, option);
+    })
+    .push(function () {
+      return object.parsed;
+    });
+
 };
 
 /**
