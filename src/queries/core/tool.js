@@ -52,56 +52,37 @@ function metadataValueToStringArray(value) {
  * @return {Function} The sort function
  */
 function sortFunction(key, way) {
+  var result;
   if (way === 'descending') {
-    return function (a, b) {
-      // this comparison is 5 times faster than json comparison
-      var i, l;
-      a = metadataValueToStringArray(a[key]) || [];
-      b = metadataValueToStringArray(b[key]) || [];
-      l = a.length > b.length ? a.length : b.length;
-      for (i = 0; i < l; i += 1) {
-        if (a[i] === undefined) {
-          return 1;
-        }
-        if (b[i] === undefined) {
-          return -1;
-        }
-        if (a[i] > b[i]) {
-          return -1;
-        }
-        if (a[i] < b[i]) {
-          return 1;
-        }
-      }
-      return 0;
-    };
+    result = 1;
+  } else if (way === 'ascending') {
+    result = -1;
+  } else {
+    throw new TypeError("Query.sortFunction(): " +
+                        "Argument 2 must be 'ascending' or 'descending'");
   }
-  if (way === 'ascending') {
-    return function (a, b) {
-      // this comparison is 5 times faster than json comparison
-      var i, l;
-      a = metadataValueToStringArray(a[key]) || [];
-      b = metadataValueToStringArray(b[key]) || [];
-      l = a.length > b.length ? a.length : b.length;
-      for (i = 0; i < l; i += 1) {
-        if (a[i] === undefined) {
-          return -1;
-        }
-        if (b[i] === undefined) {
-          return 1;
-        }
-        if (a[i] > b[i]) {
-          return 1;
-        }
-        if (a[i] < b[i]) {
-          return -1;
-        }
+  return function (a, b) {
+    // this comparison is 5 times faster than json comparison
+    var i, l;
+    a = metadataValueToStringArray(a[key]) || [];
+    b = metadataValueToStringArray(b[key]) || [];
+    l = a.length > b.length ? a.length : b.length;
+    for (i = 0; i < l; i += 1) {
+      if (a[i] === undefined) {
+        return result;
       }
-      return 0;
-    };
-  }
-  throw new TypeError("Query.sortFunction(): " +
-                      "Argument 2 must be 'ascending' or 'descending'");
+      if (b[i] === undefined) {
+        return -result;
+      }
+      if (a[i] > b[i]) {
+        return -result;
+      }
+      if (a[i] < b[i]) {
+        return result;
+      }
+    }
+    return 0;
+  };
 }
 
 /**
