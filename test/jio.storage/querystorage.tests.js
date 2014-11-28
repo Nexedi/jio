@@ -33,9 +33,12 @@
     deepEqual(param, {"_id": "bar", "title": "foo"}, "post 200 called");
     return param._id;
   };
-  Storage200.prototype.allDocs = function (options) {
-    deepEqual(options, {"_id": "bar", "title": "foo"}, "post 200 called");
-    return options._id;
+  Storage200.prototype.buildQuery = function (options) {
+    console.log("Storage200: buildQuery");
+    deepEqual(options, {include_docs: true, query: 'title: "two"'},
+              "buildQuery 200 called");
+    console.log("Storage200: return");
+    return "taboulet";
   };
   jIO.addStorage('querystorage200', Storage200);
 

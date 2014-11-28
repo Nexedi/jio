@@ -1,4 +1,4 @@
-/*global window, RSVP, Blob, XMLHttpRequest, QueryFactory, Query */
+/*global window, RSVP, Blob, XMLHttpRequest, QueryFactory, Query, console */
 /*jslint maxlen: 200*/
 (function (window, RSVP, Blob, QueryFactory, Query) {
   "use strict";
@@ -237,7 +237,7 @@
           if (storage_method === undefined) {
             throw new jIO.util.jIOError(
               "Capacity '" + name + "' is not implemented",
-              500
+              501
             );
           }
           return storage_method.apply(
@@ -322,7 +322,61 @@
     checkAttachmentId(param);
   });
 
-  declareMethod(JioProxyStorage, "allDocs");
+  JioProxyStorage.prototype.buildQuery = function () {
+    var storage_method = this.__storage.buildQuery,
+      context = this,
+      argument_list = arguments;
+    if (storage_method === undefined) {
+      throw new jIO.util.jIOError(
+        "Capacity 'buildQuery' is not implemented",
+        501
+      );
+    }
+    return new RSVP.Queue()
+      .push(function () {
+        return storage_method.apply(
+          context.__storage,
+          argument_list
+        );
+      });
+  };
+
+  JioProxyStorage.prototype.hasCapacity = function (name) {
+    var storage_method = this.__storage.hasCapacity;
+    if ((storage_method === undefined) || !storage_method.apply(this.__storage, arguments)) {
+      throw new jIO.util.jIOError(
+        "Capacity '" + name + "' is not implemented",
+        501
+      );
+    }
+    return true;
+  };
+
+  JioProxyStorage.prototype.allDocs = function (options) {
+    var context = this;
+    if (options === undefined) {
+      options = {};
+    }
+    return new RSVP.Queue()
+      .push(function () {
+        if (context.hasCapacity("list") &&
+            ((options.query === undefined) || context.hasCapacity("query")) &&
+            ((options.sort_on === undefined) || context.hasCapacity("sort")) &&
+            ((options.select_list === undefined) || context.hasCapacity("select")) &&
+            ((options.include_docs === undefined) || context.hasCapacity("include")) &&
+            ((options.limit === undefined) || context.hasCapacity("limit"))) {
+          return context.buildQuery(options);
+        }
+      })
+      .push(function (result) {
+        return {
+          data: {
+            rows: result,
+            total_rows: result.length
+          }
+        };
+      });
+  };
 
   /////////////////////////////////////////////////////////////////
   // Storage builder

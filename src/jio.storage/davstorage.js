@@ -305,8 +305,6 @@
       null,
       this._url + '/' + idsToFileName(param._id),
       null,
-      undefined,
-      undefined,
       this._login
     );
   };
@@ -323,54 +321,6 @@
     );
   };
 
-  DavStorage.prototype._allDocs = function (param) {
-    return ajax[this._auth_type](
-      "PROPFIND",
-      "text",
-      this._url + '/',
-      null,
-      undefined,
-      undefined,
-      this._login
-    ).then(function (e) {
-      var i, rows = [], row, responses = new DOMParser().parseFromString(
-        e.target.responseText,
-        "text/xml"
-      ).querySelectorAll(
-        "D\\:response, response"
-      );
-      if (responses.length === 1) {
-        return {"target": {"response": {
-          "total_rows": 0,
-          "rows": []
-        }, "status": 200}};
-      }
-      // exclude parent folder and browse
-      for (i = 1; i < responses.length; i += 1) {
-        row = {
-          "id": "",
-          "value": {}
-        };
-        row.id = responses[i].querySelector("D\\:href, href").
-          textContent.split('/').slice(-1)[0];
-        row.id = fileNameToIds(row.id);
-        if (row.id.length !== 1) {
-          row = undefined;
-        } else {
-          row.id = row.id[0];
-        }
-        if (row !== undefined) {
-          if (row.id !== "") {
-            rows[rows.length] = row;
-          }
-        }
-      }
-      return {"target": {"response": {
-        "total_rows": rows.length,
-        "rows": rows
-      }, "status": 200}};
-    });
-  };
 
   // JIO COMMANDS //
 
@@ -603,6 +553,10 @@
    * @param  {Object} param The command parameters
    * @param  {Object} options The command options
    */
+  DavStorage.prototype.remove = function (param) {
+    return this._remove(param);
+  };
+
 //   DavStorage.prototype.remove = function (param) {
 //     var that = this, o = {
 //       error_message: "DavStorage, unable to get metadata.",
@@ -766,76 +720,49 @@
    * @param  {Boolean} [options.include_docs=false]
    *   Also retrieve the actual document content.
    */
-//   DavStorage.prototype.allDocs = function (param, options) {
-//     var that = this, o = {
-//       error_message: "DavStorage, an error occured while " +
-//         "retrieving document list",
-//       max_percentage: options.include_docs === true ? 20 : 100,
-//       notifyAllDocsProgress: function (e) {
-//         command.notify({
-//           "method": "remove",
-//           "message": "Retrieving document list",
-//           "loaded": e.loaded,
-//           "total": e.total,
-//           "percentage": (e.loaded / e.total) * o.max_percentage
-//         });
-//       },
-//       getAllMetadataIfNecessary: function (e) {
-//         var requests = [];
-//         o.alldocs_result = e;
-//         if (options.include_docs !== true ||
-//             e.target.response.rows.length === 0) {
-//           return;
-//         }
-// 
-//         e.target.response.rows.forEach(function (row) {
-//           if (row.id !== "") {
-//             requests[requests.length] = that._get({"_id": row.id}).
-//               then(function (e) {
-//                 row.doc = e.target.response;
-//               });
-//           }
-//         });
-// 
-//         o.count = 0;
-//         o.nb_requests = requests.length;
-//         o.error_message = "DavStorage, an error occured while " +
-//           "getting document metadata";
-//         return RSVP.all(requests).then(null, null, function (e) {
-//           if (e.value.loaded === e.value.total) {
-//             o.count += 1;
-//             command.notify({
-//               "method": "allDocs",
-//               "message": "Getting all documents metadata",
-//               "loaded": o.count,
-//               "total": o.nb_requests,
-//               "percentage": Math.min(
-//                 o.count / o.nb_requests * 80 + 20,
-//                 100
-//               )
-//             });
-//           }
-//           throw null;
-//         });
-//       },
-//       success: function () {
-//         command.success(o.alldocs_result.target.status, {
-//           "data": o.alldocs_result.target.response
-//         });
-//       },
-//       reject: function (e) {
-//         return command.reject(
-//           e.target.status,
-//           e.target.statusText,
-//           o.error_message
-//         );
-//       }
-//     };
-// 
-//     this._allDocs(param, options).
-//       then(o.getAllMetadataIfNecessary).
-//       then(o.success, o.reject, o.notifyProgress);
-//   };
+  DavStorage.prototype.hasCapacity = function (name) {
+    return (name === "list");
+  };
+  DavStorage.prototype.buildQuery = function (param) {
+    return ajax[this._auth_type](
+      "PROPFIND",
+      "text",
+      this._url + '/',
+      null,
+      this._login
+    ).then(function (e) {
+      var i, rows = [], row, responses = new DOMParser().parseFromString(
+        e.target.responseText,
+        "text/xml"
+      ).querySelectorAll(
+        "D\\:response, response"
+      );
+      if (responses.length === 1) {
+        return [];
+      }
+      // exclude parent folder and browse
+      for (i = 1; i < responses.length; i += 1) {
+        row = {
+          "id": "",
+          "value": {}
+        };
+        row.id = responses[i].querySelector("D\\:href, href").
+          textContent.split('/').slice(-1)[0];
+        row.id = fileNameToIds(row.id);
+        if (row.id.length !== 1) {
+          row = undefined;
+        } else {
+          row.id = row.id[0];
+        }
+        if (row !== undefined) {
+          if (row.id !== "") {
+            rows[rows.length] = row;
+          }
+        }
+      }
+      return rows;
+    });
+  };
 
   /**
    * Check the storage or a specific document

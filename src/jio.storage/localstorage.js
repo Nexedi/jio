@@ -269,33 +269,34 @@
    * @param  {Object} param The given parameters
    * @param  {Object} options The command options
    */
-  LocalStorage.prototype.remove = function (command, param) {
-    var doc, i, attachment_list;
-    doc = this._storage.getItem(param._id);
-    attachment_list = [];
-    if (doc !== null && typeof doc === "object") {
-      if (typeof doc._attachments === "object") {
-        // prepare list of attachments
-        for (i in doc._attachments) {
-          if (doc._attachments.hasOwnProperty(i)) {
-            attachment_list.push(i);
-          }
-        }
-      }
-    } else {
-      return command.error(
-        "not_found",
-        "missing",
-        "Document not found"
-      );
-    }
-    this._storage.removeItem(this._localpath + "/" + param._id);
-    // delete all attachments
-    for (i = 0; i < attachment_list.length; i += 1) {
-      this._storage.removeItem(this._localpath + "/" + param._id +
-                               "/" + attachment_list[i]);
-    }
-    command.success();
+  LocalStorage.prototype.remove = function (param) {
+//     var doc, i, attachment_list;
+//     doc = this._storage.getItem(param._id);
+//     attachment_list = [];
+//     if (doc !== null && typeof doc === "object") {
+//       if (typeof doc._attachments === "object") {
+//         // prepare list of attachments
+//         for (i in doc._attachments) {
+//           if (doc._attachments.hasOwnProperty(i)) {
+//             attachment_list.push(i);
+//           }
+//         }
+//       }
+//     } else {
+//       return command.error(
+//         "not_found",
+//         "missing",
+//         "Document not found"
+//       );
+//     }
+    this._storage.removeItem(param._id);
+//     // delete all attachments
+//     for (i = 0; i < attachment_list.length; i += 1) {
+//       this._storage.removeItem(this._localpath + "/" + param._id +
+//                                "/" + attachment_list[i]);
+//     }
+//     command.success();
+    return param._id;
   };
 
   /**
@@ -332,6 +333,25 @@
     this._storage.removeItem(this._localpath + "/" + param._id +
                              "/" + param._attachment);
     command.success();
+  };
+
+  LocalStorage.prototype.hasCapacity = function (name) {
+    return (name === "list");
+  };
+
+  LocalStorage.prototype.buildQuery = function () {
+    var rows = [],
+      i;
+    for (i in this._database) {
+      if (this._database.hasOwnProperty(i)) {
+        rows.push({
+          id: i,
+          value: {}
+        });
+
+      }
+    }
+    return rows;
   };
 
 //   /**
