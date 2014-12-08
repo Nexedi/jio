@@ -1,4 +1,5 @@
 /*jslint nomen: true */
+/*global RSVP*/
 
 /**
  * JIO Union Storage. Type = 'union'.
@@ -121,6 +122,59 @@
         var sub_storage = context._storage_list[result[0]];
         return sub_storage.remove.apply(sub_storage, arg);
       });
+  };
+
+  UnionStorage.prototype.buildQuery = function () {
+    var promise_list = [],
+      i,
+      id_dict = {},
+      len = this._storage_list.length,
+      sub_storage;
+    for (i = 0; i < len; i += 1) {
+      sub_storage = this._storage_list[i];
+      promise_list.push(sub_storage.buildQuery.apply(sub_storage, arguments));
+    }
+    return new RSVP.Queue()
+      .push(function () {
+        return RSVP.all(promise_list);
+      })
+      .push(function (result_list) {
+        var result = [],
+          sub_result,
+          sub_result_len,
+          j;
+        len = result_list.length;
+        for (i = 0; i < len; i += 1) {
+          sub_result = result_list[i];
+          sub_result_len = sub_result.length;
+          for (j = 0; j < sub_result_len; j += 1) {
+            if (!id_dict.hasOwnProperty(sub_result[j].id)) {
+              id_dict[sub_result[j].id] = null;
+              result.push(sub_result[j]);
+            }
+          }
+        }
+        return result;
+      });
+  };
+
+  UnionStorage.prototype.hasCapacity = function (name) {
+    var i,
+      len,
+      result,
+      sub_storage;
+    if ((name === "list") ||
+            (name === "query") ||
+            (name === "select")) {
+      result = true;
+      len = this._storage_list.length;
+      for (i = 0; i < len; i += 1) {
+        sub_storage = this._storage_list[i];
+        result = result && sub_storage.hasCapacity(name);
+      }
+      return result;
+    }
+    return false;
   };
 
   jIO.addStorage('union', UnionStorage);

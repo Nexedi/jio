@@ -8,7 +8,8 @@
     expect = QUnit.expect,
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
-    module = QUnit.module;
+    module = QUnit.module,
+    throws = QUnit.throws;
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -21,7 +22,7 @@
     throw new jIO.util.jIOError("Cannot find document", 404);
   }
   Storage404.prototype.get = generate404Error;
-  jIO.addStorage('storage404', Storage404);
+  jIO.addStorage('unionstorage404', Storage404);
 
   function Storage200() {
     return this;
@@ -42,7 +43,38 @@
     deepEqual(param, {"_id": "bar", "title": "foo"}, "post 200 called");
     return param._id;
   };
-  jIO.addStorage('storage200', Storage200);
+  Storage200.prototype.hasCapacity = function () {
+    return true;
+  };
+  Storage200.prototype.buildQuery = function (options) {
+    deepEqual(options, {query: 'title: "two"'},
+              "buildQuery 200 called");
+    return [{
+      id: 200,
+      value: {
+        foo: "bar"
+      }
+    }];
+  };
+  jIO.addStorage('unionstorage200', Storage200);
+
+  function Storage200v2() {
+    return this;
+  }
+  Storage200v2.prototype.hasCapacity = function () {
+    return true;
+  };
+  Storage200v2.prototype.buildQuery = function (options) {
+    deepEqual(options, {query: 'title: "two"'},
+              "buildQuery 200v2 called");
+    return [{
+      id: "200v2",
+      value: {
+        bar: "foo"
+      }
+    }];
+  };
+  jIO.addStorage('unionstorage200v2', Storage200v2);
 
   function Storage500() {
     return this;
@@ -53,7 +85,7 @@
   }
   Storage500.prototype.get = generateError;
   Storage500.prototype.post = generateError;
-  jIO.addStorage('storage500', Storage500);
+  jIO.addStorage('unionstorage500', Storage500);
 
 
   /////////////////////////////////////////////////////////////////
@@ -67,9 +99,9 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage404"
+        type: "unionstorage404"
       }, {
-        type: "storage404"
+        type: "unionstorage404"
       }]
     });
 
@@ -94,9 +126,9 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage200"
+        type: "unionstorage200"
       }, {
-        type: "storage404"
+        type: "unionstorage404"
       }]
     });
 
@@ -121,9 +153,9 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage404"
+        type: "unionstorage404"
       }, {
-        type: "storage200"
+        type: "unionstorage200"
       }]
     });
 
@@ -148,9 +180,9 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage500"
+        type: "unionstorage500"
       }, {
-        type: "storage200"
+        type: "unionstorage200"
       }]
     });
 
@@ -175,9 +207,9 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage404"
+        type: "unionstorage404"
       }, {
-        type: "storage500"
+        type: "unionstorage500"
       }]
     });
 
@@ -206,9 +238,9 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage500"
+        type: "unionstorage500"
       }, {
-        type: "storage200"
+        type: "unionstorage200"
       }]
     });
 
@@ -233,9 +265,9 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage200"
+        type: "unionstorage200"
       }, {
-        type: "storage500"
+        type: "unionstorage500"
       }]
     });
 
@@ -262,9 +294,9 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage500"
+        type: "unionstorage500"
       }, {
-        type: "storage200"
+        type: "unionstorage200"
       }]
     });
 
@@ -289,9 +321,9 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage200"
+        type: "unionstorage200"
       }, {
-        type: "storage500"
+        type: "unionstorage500"
       }]
     });
 
@@ -314,9 +346,9 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage404"
+        type: "unionstorage404"
       }, {
-        type: "storage200"
+        type: "unionstorage200"
       }]
     });
 
@@ -343,9 +375,9 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage500"
+        type: "unionstorage500"
       }, {
-        type: "storage200"
+        type: "unionstorage200"
       }]
     });
 
@@ -370,9 +402,9 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage200"
+        type: "unionstorage200"
       }, {
-        type: "storage500"
+        type: "unionstorage500"
       }]
     });
 
@@ -395,15 +427,203 @@
     var jio = jIO.createJIO({
       type: "union",
       storage_list: [{
-        type: "storage404"
+        type: "unionstorage404"
       }, {
-        type: "storage200"
+        type: "unionstorage200"
       }]
     });
 
     jio.remove({"_id": "bar"})
       .then(function (result) {
         equal(result, "bar");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // unionStorage.hasCapacity
+  /////////////////////////////////////////////////////////////////
+  module("unionStorage.hasCapacity");
+  test("hasCapacity list without storage", function () {
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: []
+    });
+
+    ok(jio.hasCapacity("list"));
+  });
+
+  test("hasCapacity list not implemented in substorage", function () {
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage200"
+      }, {
+        type: "unionstorage404"
+      }]
+    });
+
+    throws(
+      function () {
+        jio.hasCapacity("list");
+      },
+      function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 501);
+        equal(error.message, "Capacity 'list' is not implemented");
+        return true;
+      }
+    );
+  });
+
+  test("hasCapacity list implemented in substorage", function () {
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage200"
+      }, {
+        type: "unionstorage200"
+      }]
+    });
+
+    ok(jio.hasCapacity("list"));
+  });
+
+  test("hasCapacity sort not manually done in union", function () {
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage200"
+      }, {
+        type: "unionstorage200"
+      }]
+    });
+
+    throws(
+      function () {
+        jio.hasCapacity("sort");
+      },
+      function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 501);
+        equal(error.message, "Capacity 'sort' is not implemented");
+        return true;
+      }
+    );
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // unionStorage.allDocs
+  /////////////////////////////////////////////////////////////////
+  module("unionStorage.allDocs");
+  test("allDocs remove duplicated keys", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage200"
+      }, {
+        type: "unionstorage200"
+      }]
+    });
+
+    jio.allDocs({
+      query: 'title: "two"'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [{
+              id: 200,
+              value: {
+                foo: "bar"
+              }
+            }],
+            total_rows: 1
+          }
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("allDocs concatenates results", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage200v2"
+      }, {
+        type: "unionstorage200"
+      }]
+    });
+
+    jio.allDocs({
+      query: 'title: "two"'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [{
+              id: "200v2",
+              value: {
+                bar: "foo"
+              }
+            }, {
+              id: 200,
+              value: {
+                foo: "bar"
+              }
+            }],
+            total_rows: 2
+          }
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("allDocs fails in one substorage fails", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage200"
+      }, {
+        type: "unionstorage500"
+      }]
+    });
+
+    jio.allDocs({
+      query: 'title: "two"'
+    })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Capacity 'list' is not implemented");
+        equal(error.status_code, 501);
       })
       .fail(function (error) {
         ok(false, error);
