@@ -101,12 +101,22 @@
           var include_query_list = [result],
             len,
             i;
+
+          function safeGet(j) {
+            return substorage.get({"_id": result[j].id})
+              .push(undefined, function (error) {
+                // Document may have been dropped after listing
+                if ((error instanceof jIO.util.jIOError) && (error.status_code === 404)) {
+                  return;
+                }
+                throw error;
+              });
+          }
+
           if (is_manual_include_needed) {
             len = result.length;
             for (i = 0; i < len; i += 1) {
-              include_query_list.push(
-                substorage.get({"_id": result[i].id})
-              );
+              include_query_list.push(safeGet(i));
             }
             result = RSVP.all(include_query_list);
           }
