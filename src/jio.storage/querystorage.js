@@ -54,10 +54,10 @@
 
       // Can substorage handle the queries if needed?
       try {
-        if (((options.query !== undefined) && (!substorage.hasCapacity("query"))) ||
-            ((options.sort_on !== undefined) && (!substorage.hasCapacity("sort"))) ||
-            ((options.select_list !== undefined) && (!substorage.hasCapacity("select"))) ||
-            ((options.limit !== undefined) && (!substorage.hasCapacity("limit")))) {
+        if (((options.query === undefined) || (substorage.hasCapacity("query"))) &&
+            ((options.sort_on === undefined) || (substorage.hasCapacity("sort"))) &&
+            ((options.select_list === undefined) || (substorage.hasCapacity("select"))) &&
+            ((options.limit === undefined) || (substorage.hasCapacity("limit")))) {
           sub_options.query = options.query;
           sub_options.sort_on = options.sort_on;
           sub_options.select_list = options.select_list;
