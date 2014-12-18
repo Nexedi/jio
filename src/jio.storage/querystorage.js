@@ -1,5 +1,5 @@
 /*jslint nomen: true, maxlen: 200*/
-/*global console, RSVP*/
+/*global RSVP*/
 (function (jIO) {
   "use strict";
 
@@ -25,6 +25,15 @@
   };
   QueryStorage.prototype.remove = function () {
     return this._sub_storage.remove.apply(this._sub_storage, arguments);
+  };
+  QueryStorage.prototype.getAttachment = function () {
+    return this._sub_storage.getAttachment.apply(this._sub_storage, arguments);
+  };
+  QueryStorage.prototype.putAttachment = function () {
+    return this._sub_storage.putAttachment.apply(this._sub_storage, arguments);
+  };
+  QueryStorage.prototype.removeAttachment = function () {
+    return this._sub_storage.removeAttachment.apply(this._sub_storage, arguments);
   };
 
   /**
