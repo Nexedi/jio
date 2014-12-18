@@ -245,33 +245,6 @@ function readBlobAsBinaryString(blob) {
 }
 exports.util.readBlobAsBinaryString = readBlobAsBinaryString;
 
-function readBlobAsArrayBuffer(blob) {
-  var fr = new FileReader();
-  return new RSVP.Promise(function (resolve, reject, notify) {
-    fr.addEventListener("load", resolve);
-    fr.addEventListener("error", reject);
-    fr.addEventListener("progress", notify);
-    fr.readAsArrayBuffer(blob);
-  }, function () {
-    fr.abort();
-  });
-}
-exports.util.readBlobAsArrayBuffer = readBlobAsArrayBuffer;
-
-function readBlobAsText(blob) {
-  var fr = new FileReader();
-  return new RSVP.Promise(function (resolve, reject, notify) {
-    fr.addEventListener("load", resolve);
-    fr.addEventListener("error", reject);
-    fr.addEventListener("progress", notify);
-    fr.readAsText(blob);
-  }, function () {
-    fr.abort();
-  });
-}
-exports.util.readBlobAsText = readBlobAsText;
-
-
 /**
  * Acts like `Array.prototype.concat` but does not create a copy of the original
  * array. It extends the original array and return it.

@@ -1,6 +1,6 @@
-/*global window, RSVP, Blob, XMLHttpRequest, QueryFactory, Query, console */
 /*jslint maxlen: 200*/
-(function (window, RSVP, Blob, QueryFactory, Query) {
+/*global window, RSVP, Blob, XMLHttpRequest, QueryFactory, Query, console, FileReader */
+(function (window, RSVP, Blob, QueryFactory, Query, FileReader) {
   "use strict";
 
   var util = {},
@@ -151,6 +151,32 @@
   util.generateUuid = generateUuid;
 
 
+
+  function readBlobAsText(blob) {
+    var fr = new FileReader();
+    return new RSVP.Promise(function (resolve, reject, notify) {
+      fr.addEventListener("load", resolve);
+      fr.addEventListener("error", reject);
+      fr.addEventListener("progress", notify);
+      fr.readAsText(blob);
+    }, function () {
+      fr.abort();
+    });
+  }
+  util.readBlobAsText = readBlobAsText;
+
+  function readBlobAsArrayBuffer(blob) {
+    var fr = new FileReader();
+    return new RSVP.Promise(function (resolve, reject, notify) {
+      fr.addEventListener("load", resolve);
+      fr.addEventListener("error", reject);
+      fr.addEventListener("progress", notify);
+      fr.readAsArrayBuffer(blob);
+    }, function () {
+      fr.abort();
+    });
+  }
+  util.readBlobAsArrayBuffer = readBlobAsArrayBuffer;
 
 
 
@@ -429,4 +455,4 @@
   jIO = new JioBuilder();
   window.jIO = jIO;
 
-}(window, RSVP, Blob, QueryFactory, Query));
+}(window, RSVP, Blob, QueryFactory, Query, FileReader));
