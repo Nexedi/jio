@@ -228,23 +228,23 @@
 
 
   // tools
-  function checkId(param) {
+  function checkId(param, storage, method_name) {
     if (typeof param._id !== 'string' || param._id === '') {
-      throw new jIO.util.jIOError("Document id must be a non empty string.",
+      throw new jIO.util.jIOError("Document id must be a non empty string on '" + storage.__type + "." + method_name + "'.",
                                   400);
     }
   }
 
-  function checkAttachmentId(param) {
+  function checkAttachmentId(param, storage, method_name) {
     if (typeof param._attachment !== 'string' || param._attachment === '') {
       throw new jIO.util.jIOError(
-        "Attachment id must be a non empty string.",
+        "Attachment id must be a non empty string on '" + storage.__type + "." + method_name + "'.",
         400
       );
     }
   }
 
-  function declareMethod(klass, name, precondition_function) {
+  function declareMethod(klass, name, precondition_function, post_function) {
     klass.prototype[name] = function () {
       var argument_list = arguments,
         context = this;
@@ -254,7 +254,7 @@
           if (precondition_function !== undefined) {
             return precondition_function.apply(
               context.__storage,
-              argument_list
+              [argument_list[0], context, name]
             );
           }
         })
@@ -262,7 +262,7 @@
           var storage_method = context.__storage[name];
           if (storage_method === undefined) {
             throw new jIO.util.jIOError(
-              "Capacity '" + name + "' is not implemented",
+              "Capacity '" + name + "' is not implemented on '" + context.__type + "'",
               501
             );
           }
@@ -270,6 +270,16 @@
             context.__storage,
             argument_list
           );
+        })
+        .push(function (result) {
+          if (post_function !== undefined) {
+            return post_function.call(
+              context.__storage,
+              argument_list,
+              result
+            );
+          }
+          return result;
         });
     };
     // Allow chain
@@ -282,27 +292,32 @@
   /////////////////////////////////////////////////////////////////
   // jIO Storage Proxy
   /////////////////////////////////////////////////////////////////
-  function JioProxyStorage(storage) {
+  function JioProxyStorage(type, storage) {
     if (!(this instanceof JioProxyStorage)) {
       return new JioProxyStorage();
     }
+    this.__type = type;
     this.__storage = storage;
   }
 
   declareMethod(JioProxyStorage, "put", checkId);
-  declareMethod(JioProxyStorage, "get", checkId);
+  declareMethod(JioProxyStorage, "get", checkId, function (argument_list, result) {
+    // Put _id properties to the result
+    result._id = argument_list[0]._id;
+    return result;
+  });
   declareMethod(JioProxyStorage, "remove", checkId);
 
   // listeners
-  declareMethod(JioProxyStorage, "post", function (param) {
+  declareMethod(JioProxyStorage, "post", function (param, storage, method_name) {
     if (param._id !== undefined) {
-      return checkId(param);
+      return checkId(param, storage, method_name);
     }
   });
 
-  declareMethod(JioProxyStorage, 'putAttachment', function (param) {
-    checkId(param);
-    checkAttachmentId(param);
+  declareMethod(JioProxyStorage, 'putAttachment', function (param, storage, method_name) {
+    checkId(param, storage, method_name);
+    checkAttachmentId(param, storage, method_name);
 
     if (!(param._blob instanceof Blob) &&
         typeof param._data === 'string') {
@@ -332,6 +347,11 @@
     }
   });
 
+  declareMethod(JioProxyStorage, 'removeAttachment', function (param) {
+    checkId(param);
+    checkAttachmentId(param);
+  });
+
   declareMethod(JioProxyStorage, 'getAttachment', function (param) {
 //     if (param.storage_spec.type !== "indexeddb" &&
 //         param.storage_spec.type !== "dav" &&
@@ -354,7 +374,7 @@
       argument_list = arguments;
     if (storage_method === undefined) {
       throw new jIO.util.jIOError(
-        "Capacity 'buildQuery' is not implemented",
+        "Capacity 'buildQuery' is not implemented on '" + this.__type + "'",
         501
       );
     }
@@ -371,7 +391,7 @@
     var storage_method = this.__storage.hasCapacity;
     if ((storage_method === undefined) || !storage_method.apply(this.__storage, arguments)) {
       throw new jIO.util.jIOError(
-        "Capacity '" + name + "' is not implemented",
+        "Capacity '" + name + "' is not implemented on '" + this.__type + "'",
         501
       );
     }
@@ -424,6 +444,7 @@
     }
 
     return new JioProxyStorage(
+      storage_spec.type,
       new this.__storage_types[storage_spec.type](storage_spec, util)
     );
 
