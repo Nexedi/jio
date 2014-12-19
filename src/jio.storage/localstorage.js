@@ -4,9 +4,8 @@
  * http://www.gnu.org/licenses/lgpl.html
  */
 
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, regexp: true */
-/*global jIO, localStorage, setTimeout, window, define, Blob, Uint8Array,
-  exports, require, console, RSVP */
+/*jslint nomen: true */
+/*global jIO, localStorage, window, Blob, Uint8Array, RSVP */
 
 /**
  * JIO Local Storage. Type = 'local'.
@@ -15,201 +14,25 @@
  * Storage Description:
  *
  *     {
- *       "type": "local",
- *       "mode": <string>,
- *         // - "localStorage" // default
- *         // - "memory"
- *       "username": <non empty string>, // to define user space
- *       "application_name": <string> // default 'untitled'
+ *       "type": "local"
  *     }
- *
- * Document are stored in path
- * 'jio/localstorage/username/application_name/document_id' like this:
- *
- *     {
- *       "_id": "document_id",
- *       "_attachments": {
- *         "attachment_name": {
- *           "length": data_length,
- *           "digest": "md5-XXX",
- *           "content_type": "mime/type"
- *         },
- *         "attachment_name2": {..}, ...
- *       },
- *       "metadata_name": "metadata_value"
- *       "metadata_name2": ...
- *       ...
- *     }
- *
- * Only "_id" and "_attachments" are specific metadata keys, other one can be
- * added without loss.
  *
  * @class LocalStorage
  */
 
-(function (exports, jIO) {
+(function (jIO) {
   "use strict";
 
-  /**
-   * Checks if an object has no enumerable keys
-   *
-   * @param  {Object} obj The object
-   * @return {Boolean} true if empty, else false
-   */
-  function objectIsEmpty(obj) {
-    var k;
-    for (k in obj) {
-      if (obj.hasOwnProperty(k)) {
-        return false;
-      }
-    }
-    return true;
+  function LocalStorage() {
+    return;
   }
 
-  var ram = {}, memorystorage, localstorage;
-
-  /*
-   * Wrapper for the localStorage used to simplify instion of any kind of
-   * values
-   */
-  localstorage = {
-    getItem: function (item) {
-      var value = localStorage.getItem(item);
-      return value === null ? null : JSON.parse(value);
-    },
-    setItem: function (item, value) {
-      return localStorage.setItem(item, JSON.stringify(value));
-    },
-    removeItem: function (item) {
-      return localStorage.removeItem(item);
-    }
-  };
-
-  /*
-   * Wrapper for the localStorage used to simplify instion of any kind of
-   * values
-   */
-  memorystorage = {
-    getItem: function (item) {
-      var value = ram[item];
-      return value === undefined ? null : JSON.parse(value);
-    },
-    setItem: function (item, value) {
-      ram[item] = JSON.stringify(value);
-    },
-    removeItem: function (item) {
-      delete ram[item];
-    }
-  };
-
-  /**
-   * The JIO LocalStorage extension
-   *
-   * @class LocalStorage
-   * @constructor
-   */
-  function LocalStorage(spec) {
-    switch (spec.mode) {
-    case "memory":
-      this._database = ram;
-      this._storage = memorystorage;
-      this._mode = "memory";
-      break;
-    default:
-      this._database = localStorage;
-      this._storage = localstorage;
-      this._mode = "localStorage";
-      this._key_schema = spec.key_schema;
-      break;
+  function restrictDocumentId(id) {
+    if (id !== "/") {
+      throw new jIO.util.jIOError("id " + id + " is forbidden (!== /)",
+                                  400);
     }
   }
-
-
-  /**
-   * Create a document in local storage.
-   *
-   * @method post
-   * @param  {Object} metadata The metadata to store
-   * @param  {Object} options The command options
-   */
-  LocalStorage.prototype.post = function (metadata) {
-    var doc, doc_id = metadata._id;
-    if (doc_id === undefined) {
-      doc_id = jIO.util.generateUuid();
-    }
-    if (this._storage.getItem(doc_id) === null) {
-      // the document does not exist
-      doc = jIO.util.deepClone(metadata);
-      doc._id = doc_id;
-      // XXX
-      delete doc._attachments;
-      this._storage.setItem(doc_id, doc);
-      return doc_id;
-    }
-    // the document already exists
-    throw new jIO.util.jIOError("Cannot create a new document", 409);
-  };
-
-  /**
-   * Create or update a document in local storage.
-   *
-   * @method put
-   * @param  {Object} command The JIO command
-   * @param  {Object} metadata The metadata to store
-   * @param  {Object} options The command options
-   */
-  LocalStorage.prototype.put = function (metadata) {
-    var doc, tmp;
-    doc = this._storage.getItem(metadata._id);
-    if (doc === null) {
-      //  the document does not exist
-      doc = jIO.util.deepClone(metadata);
-      delete doc._attachments;
-    } else {
-      // the document already exists
-      tmp = jIO.util.deepClone(metadata);
-      tmp._attachments = doc._attachments;
-      doc = tmp;
-    }
-    // write
-    this._storage.setItem(metadata._id, doc);
-    return metadata._id;
-  };
-
-  /**
-   * Add an attachment to a document
-   *
-   * @method putAttachment
-   * @param  {Object} param The given parameters
-   * @param  {Object} options The command options
-   */
-  LocalStorage.prototype.putAttachment = function (param) {
-    var that = this, doc;
-    doc = this.get({"_id": param._id});
-
-    // the document already exists
-    // download data
-    return new RSVP.Queue()
-      .push(function () {
-        return jIO.util.readBlobAsBinaryString(param._blob);
-      })
-      .push(function (e) {
-        doc._attachments = doc._attachments || {};
-//         if (doc._attachments[param._attachment]) {
-//           status = "no_content";
-//         }
-        doc._attachments[param._attachment] = {
-          "content_type": param._blob.type,
-          "digest": jIO.util.makeBinaryStringDigest(e.target.result),
-          "length": param._blob.size
-        };
-
-        that._storage.setItem(param._id + "/" +
-                              param._attachment, e.target.result);
-        that._storage.setItem(param._id, doc);
-        return {"digest": doc._attachments[param._attachment].digest};
-      });
-  };
 
   /**
    * Get a document
@@ -219,9 +42,19 @@
    * @param  {Object} options The command options
    */
   LocalStorage.prototype.get = function (param) {
-    var doc = this._storage.getItem(param._id);
-    if (doc === null) {
-      throw new jIO.util.jIOError("Cannot find document", 404);
+    restrictDocumentId(param._id);
+
+    var doc = {},
+      attachments = {},
+      key;
+
+    for (key in localStorage) {
+      if (localStorage.hasOwnProperty(key)) {
+        attachments[key] = {};
+      }
+    }
+    if (attachments.length !== 0) {
+      doc._attachments = attachments;
     }
     return doc;
   };
@@ -234,426 +67,55 @@
    * @param  {Object} options The command options
    */
   LocalStorage.prototype.getAttachment = function (param) {
-    var doc, i, uint8array, binarystring;
-    doc = this.get({"_id": param._id});
+    restrictDocumentId(param._id);
 
-    if (typeof doc._attachments !== 'object' ||
-        typeof doc._attachments[param._attachment] !== 'object') {
+    var binarystring = localStorage.getItem(param._attachment),
+      i,
+      uint8array;
+
+    if (binarystring === null) {
       throw new jIO.util.jIOError("Cannot find attachment", 404);
     }
 
-    // Storing data twice in binarystring and in uint8array (in memory)
-    // is not a problem here because localStorage <= 5MB
-    binarystring = this._storage.getItem(
-      param._id + "/" + param._attachment
-    ) || "";
     uint8array = new Uint8Array(binarystring.length);
     for (i = 0; i < binarystring.length; i += 1) {
       uint8array[i] = binarystring.charCodeAt(i); // mask `& 0xFF` not necessary
     }
-    uint8array = new Blob([uint8array.buffer], {
-      "type": doc._attachments[param._attachment].content_type || ""
-    });
 
-    return {
-      "data": uint8array,
-      "digest": doc._attachments[param._attachment].digest
-    };
+    return new Blob([uint8array.buffer]);
   };
 
-  /**
-   * Remove a document
-   *
-   * @method remove
-   * @param  {Object} command The JIO command
-   * @param  {Object} param The given parameters
-   * @param  {Object} options The command options
-   */
-  LocalStorage.prototype.remove = function (param) {
-//     var doc, i, attachment_list;
-//     doc = this._storage.getItem(param._id);
-//     attachment_list = [];
-//     if (doc !== null && typeof doc === "object") {
-//       if (typeof doc._attachments === "object") {
-//         // prepare list of attachments
-//         for (i in doc._attachments) {
-//           if (doc._attachments.hasOwnProperty(i)) {
-//             attachment_list.push(i);
-//           }
-//         }
-//       }
-//     } else {
-//       return command.error(
-//         "not_found",
-//         "missing",
-//         "Document not found"
-//       );
-//     }
-    this._storage.removeItem(param._id);
-//     // delete all attachments
-//     for (i = 0; i < attachment_list.length; i += 1) {
-//       this._storage.removeItem(this._localpath + "/" + param._id +
-//                                "/" + attachment_list[i]);
-//     }
-//     command.success();
-    return param._id;
+  LocalStorage.prototype.putAttachment = function (param) {
+    restrictDocumentId(param._id);
+
+    // the document already exists
+    // download data
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.readBlobAsBinaryString(param._blob);
+      })
+      .push(function (e) {
+        localStorage.setItem(param._attachment, e.target.result);
+      });
   };
 
-  /**
-   * Remove an attachment
-   *
-   * @method removeAttachment
-   * @param  {Object} command The JIO command
-   * @param  {Object} param The given parameters
-   * @param  {Object} options The command options
-   */
-  LocalStorage.prototype.removeAttachment = function (command, param) {
-    var doc = this._storage.getItem(this._localpath + "/" + param._id);
-    if (typeof doc !== 'object' || doc === null) {
-      return command.error(
-        "not_found",
-        "missing document",
-        "Document not found"
-      );
-    }
-    if (typeof doc._attachments !== "object" ||
-        typeof doc._attachments[param._attachment] !== "object") {
-      return command.error(
-        "not_found",
-        "missing attachment",
-        "Attachment not found"
-      );
-    }
-
-    delete doc._attachments[param._attachment];
-    if (objectIsEmpty(doc._attachments)) {
-      delete doc._attachments;
-    }
-    this._storage.setItem(this._localpath + "/" + param._id, doc);
-    this._storage.removeItem(this._localpath + "/" + param._id +
-                             "/" + param._attachment);
-    command.success();
+  LocalStorage.prototype.removeAttachment = function (param) {
+    restrictDocumentId(param._id);
+    return localStorage.removeItem(param._attachment);
   };
+
 
   LocalStorage.prototype.hasCapacity = function (name) {
     return (name === "list");
   };
 
   LocalStorage.prototype.buildQuery = function () {
-    var rows = [],
-      i;
-    for (i in this._database) {
-      if (this._database.hasOwnProperty(i)) {
-        rows.push({
-          id: i,
-          value: {}
-        });
-
-      }
-    }
-    return rows;
-  };
-
-//   /**
-//    * Get all filenames belonging to a user from the document index
-//    *
-//    * @method allDocs
-//    * @param  {Object} command The JIO command
-//    * @param  {Object} param The given parameters
-//    * @param  {Object} options The command options
-//    */
-//   LocalStorage.prototype.allDocs = function (command, param, options) {
-//     console.log("allDocs begin");
-//     var i, row, path_re, rows, document_list, document_object, delete_id;
-//     param.unused = true;
-//     rows = [];
-//     document_list = [];
-//     path_re = new RegExp(
-//       "^" + jIO.Query.stringEscapeRegexpCharacters(this._localpath) +
-//         "/[^/]+$"
-//     );
-//     if (options.query === undefined && options.sort_on === undefined &&
-//         options.select_list === undefined &&
-//         options.include_docs === undefined) {
-//       rows = [];
-//       for (i in this._database) {
-//         if (this._database.hasOwnProperty(i)) {
-//           // filter non-documents
-//           if (path_re.test(i)) {
-//             row = { value: {} };
-//             row.id = i.split('/').slice(-1)[0];
-//             row.key = row.id;
-//             if (options.include_docs) {
-//               row.doc = JSON.parse(this._storage.getItem(i));
-//             }
-//             rows.push(row);
-//           }
-//         }
-//       }
-//       command.success({"data": {"rows": rows, "total_rows": rows.length}});
-//     } else {
-//       // create jio query object from returned results
-//       for (i in this._database) {
-//         if (this._database.hasOwnProperty(i)) {
-//           if (path_re.test(i)) {
-//             document_list.push(this._storage.getItem(i));
-//           }
-//         }
-//       }
-//       options.select_list = options.select_list || [];
-//       if (options.select_list.indexOf("_id") === -1) {
-//         options.select_list.push("_id");
-//         delete_id = true;
-//       }
-//       if (options.include_docs === true) {
-//         document_object = {};
-//         document_list.forEach(function (meta) {
-//           document_object[meta._id] = meta;
-//         });
-//       }
-//       jIO.QueryFactory.create(options.query || "",
-//                               this._key_schema).
-//         exec(document_list, options).then(function () {
-//           document_list = document_list.map(function (value) {
-//             var o = {
-//               "id": value._id,
-//               "key": value._id
-//             };
-//             if (options.include_docs === true) {
-//               o.doc = document_object[value._id];
-//               delete document_object[value._id];
-//             }
-//             if (delete_id) {
-//               delete value._id;
-//             }
-//             o.value = value;
-//             return o;
-//           });
-//           command.success({"data": {
-//             "total_rows": document_list.length,
-//             "rows": document_list
-//           }});
-//         });
-//     }
-//   };
-
-  /**
-   * Check the storage or a specific document
-   *
-   * @method check
-   * @param  {Object} command The JIO command
-   * @param  {Object} param The command parameters
-   * @param  {Object} options The command options
-   */
-  LocalStorage.prototype.check = function (command, param) {
-    this.genericRepair(command, param, false);
-  };
-
-  /**
-   * Repair the storage or a specific document
-   *
-   * @method repair
-   * @param  {Object} command The JIO command
-   * @param  {Object} param The command parameters
-   * @param  {Object} options The command options
-   */
-  LocalStorage.prototype.repair = function (command, param) {
-    this.genericRepair(command, param, true);
-  };
-
-  /**
-   * A generic method that manage check or repair command
-   *
-   * @method genericRepair
-   * @param  {Object} command The JIO command
-   * @param  {Object} param The command parameters
-   * @param  {Boolean} repair If true then repair else just check
-   */
-  LocalStorage.prototype.genericRepair = function (command, param, repair) {
-
-    var that = this, final_result;
-
-    function referenceAttachment(param, attachment) {
-      if (param.referenced_attachments.indexOf(attachment) !== -1) {
-        return;
-      }
-      var i = param.unreferenced_attachments.indexOf(attachment);
-      if (i !== -1) {
-        param.unreferenced_attachments.splice(i, 1);
-      }
-      param.referenced_attachments[param.referenced_attachments.length] =
-        attachment;
-    }
-
-    function attachmentFound(param, attachment) {
-      if (param.referenced_attachments.indexOf(attachment) !== -1) {
-        return;
-      }
-      if (param.unreferenced_attachments.indexOf(attachment) !== -1) {
-        return;
-      }
-      param.unreferenced_attachments[param.unreferenced_attachments.length] =
-        attachment;
-    }
-
-    function repairOne(param, repair) {
-      var i, doc, modified;
-      doc = that._storage.getItem(that._localpath + "/" + param._id);
-      if (doc === null) {
-        return; // OK
-      }
-
-      // check document type
-      if (typeof doc !== 'object' || doc === null) {
-        // wrong document
-        if (!repair) {
-          return {"error": true, "answers": [
-            "conflict",
-            "corrupted",
-            "Document is unrecoverable"
-          ]};
-        }
-        // delete the document
-        that._storage.removeItem(that._localpath + "/" + param._id);
-        return; // OK
-      }
-      // good document type
-      // repair json document
-      if (!repair) {
-        if (!(new jIO.Metadata(doc).check())) {
-          return {"error": true, "answers": [
-            "conflict",
-            "corrupted",
-            "Some metadata might be lost"
-          ]};
-        }
-      } else {
-        modified = jIO.util.uniqueJSONStringify(doc) !==
-          jIO.util.uniqueJSONStringify(new jIO.Metadata(doc).format()._dict);
-      }
-      if (doc._attachments !== undefined) {
-        if (typeof doc._attachments !== 'object') {
-          if (!repair) {
-            return {"error": true, "answers": [
-              "conflict",
-              "corrupted",
-              "Attachments are unrecoverable"
-            ]};
-          }
-          delete doc._attachments;
-          that._storage.setItem(that._localpath + "/" + param._id, doc);
-          return; // OK
-        }
-        for (i in doc._attachments) {
-          if (doc._attachments.hasOwnProperty(i)) {
-            // check attachment existence
-            if (that._storage.getItem(that._localpath + "/" + param._id + "/" +
-                                      i) !== 'string') {
-              if (!repair) {
-                return {"error": true, "answers": [
-                  "conflict",
-                  "missing attachment",
-                  "Attachment \"" + i + "\" of \"" + param._id + "\" is missing"
-                ]};
-              }
-              delete doc._attachments[i];
-              if (objectIsEmpty(doc._attachments)) {
-                delete doc._attachments;
-              }
-              modified = true;
-            } else {
-              // attachment exists
-              // check attachment metadata
-              // check length
-              referenceAttachment(param, param._id + "/" + doc._attachments[i]);
-              if (doc._attachments[i].length !== undefined &&
-                  typeof doc._attachments[i].length !== 'number') {
-                if (!repair) {
-                  return {"error": true, "answers": [
-                    "conflict",
-                    "corrupted",
-                    "Attachment metadata length corrupted"
-                  ]};
-                }
-                // It could take a long time to get the length, no repair.
-                // length can be omited
-                delete doc._attachments[i].length;
-              }
-              // It could take a long time to regenerate the hash, no check.
-              // Impossible to discover the attachment content type.
-            }
-          }
-        }
-      }
-      if (modified) {
-        that._storage.setItem(that._localpath + "/" + param._id, doc);
-      }
-      // OK
-    }
-
-    function repairAll(param, repair) {
-      var i, result;
-      for (i in that._database) {
-        if (that._database.hasOwnProperty(i)) {
-          // browsing every entry
-          if (i.slice(0, that._localpath.length) === that._localpath) {
-            // is part of the user space
-            if (/^[^\/]+\/[^\/]+$/.test(i.slice(that._localpath.length + 1))) {
-              // this is an attachment
-              attachmentFound(param, i.slice(that._localpath.length + 1));
-            } else if (/^[^\/]+$/.test(i.slice(that._localpath.length + 1))) {
-              // this is a document
-              param._id = i.slice(that._localpath.length + 1);
-              result = repairOne(param, repair);
-              if (result) {
-                return result;
-              }
-            } else {
-              // this is pollution
-              that._storage.removeItem(i);
-            }
-          }
-        }
-      }
-      // remove unreferenced attachments
-      for (i = 0; i < param.unreferenced_attachments.length; i += 1) {
-        that._storage.removeItem(that._localpath + "/" +
-                                 param.unreferenced_attachments[i]);
-      }
-    }
-
-    param.referenced_attachments = [];
-    param.unreferenced_attachments = [];
-    if (typeof param._id === 'string') {
-      final_result = repairOne(param, repair) || {};
-    } else {
-      final_result = repairAll(param, repair) || {};
-    }
-    if (final_result.error) {
-      return command.error.apply(command, final_result.answers || []);
-    }
-    command.success.apply(command, final_result.answers || []);
+    return [{
+      id: "/",
+      value: {}
+    }];
   };
 
   jIO.addStorage('local', LocalStorage);
 
-  function clearLocalStorage() {
-    var k;
-    for (k in localStorage) {
-      if (localStorage.hasOwnProperty(k)) {
-        if (/^jio\/localstorage\//.test(k)) {
-          localStorage.removeItem(k);
-        }
-      }
-    }
-  }
-
-  function clearMemoryStorage() {
-    jIO.util.dictClear(ram);
-  }
-
-  exports.clear = clearLocalStorage;
-  exports.clearLocalStorage = clearLocalStorage;
-  exports.clearMemoryStorage = clearMemoryStorage;
-
-}(window, jIO));
+}(jIO));
