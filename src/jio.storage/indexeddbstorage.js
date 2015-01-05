@@ -29,7 +29,7 @@
  */
 
 /*jslint indent: 2, maxlen: 120, nomen: true */
-/*global indexedDB, jIO, RSVP, Blob, Math, alert, console*/
+/*global indexedDB, jIO, RSVP, Blob, Math*/
 
 (function (jIO) {
   "use strict";
@@ -119,13 +119,6 @@
     }
     return new RSVP.Promise(resolver);
   }
-
-
-
-
-  IndexedDBStorage.prototype.createDBIfNecessary = function () {
-    return openIndexedDB(this._database_name);
-  };
 
   /**
    *put a data into a store object
@@ -331,7 +324,7 @@
       .push(function (result) {
         //get the reste data from attachment
         if (result._attachment) {
-          meta._attachment = result._attachment;
+          meta._attachments = result._attachment;
         }
         return transactionEnd(transaction);
       })
@@ -477,131 +470,6 @@
 
 
 
-
-//   /**
-//    * Retrieve a list of present document
-//    *
-//    * @method allDocs
-//    * @param  {Object} param The command parameters
-//    * @param  {Object} options The command options
-//    * @param  {Boolean} [options.include_docs=false]
-//    *   Also retrieve the actual document content.
-//    */
-//   IndexedDBStorage.prototype.getListMetadata = function (option) {
-//     var rows = [], onCancel, open_req = indexedDB.open(this._database_name);
-//     return new Promise(function (resolve, reject, notify) {
-//       open_req.onerror = function () {
-//         if (open_req.result) { open_req.result.close(); }
-//         reject(open_req.error);
-//       };
-//       open_req.onsuccess = function () {
-//         var tx, date, j = 0, index_req, db = open_req.result;
-//         try {
-//           tx = db.transaction(["metadata", "attachment"], "readonly");
-//           onCancel = function () {
-//             tx.abort();
-//             db.close();
-//           };
-//           index_req = tx.objectStore("metadata").index("_id").openCursor();
-//           date = Date.now();
-//           index_req.onsuccess = function (event) {
-//             var cursor = event.target.result, now, value, i, key;
-//             if (cursor) {
-//               // Called for each matching record
-//               // notification management
-//               now = Date.now();
-//               if (date <= now - 1000) {
-//                 notify({"loaded": rows.length});
-//                 date = now;
-//               }
-//               // option.limit management
-//               if (Array.isArray(option.limit)) {
-//                 if (option.limit.length > 1) {
-//                   if (option.limit[0] > 0) {
-//                     option.limit[0] -= 1;
-//                     cursor["continue"]();
-//                     return;
-//                   }
-//                   if (option.limit[1] <= 0) {
-//                     // end
-//                     index_req.onsuccess({"target": {}});
-//                     return;
-//                   }
-//                   option.limit[1] -= 1;
-//                 } else {
-//                   if (option.limit[0] <= 0) {
-//                     // end
-//                     index_req.onsuccess({"target": {}});
-//                     return;
-//                   }
-//                   option.limit[0] -= 1;
-//                 }
-//               }
-//               value = {};
-//               // option.select_list management
-//               if (option.select_list) {
-//                 for (i = 0; i < option.select_list.length; i += 1) {
-//                   key = option.select_list[i];
-//                   value[key] = cursor.value[key];
-//                 }
-//               }
-//               // option.include_docs management
-//               if (option.include_docs) {
-//                 rows.push({
-//                   "id": cursor.value._id,
-//                   "doc": cursor.value,
-//                   "value": value
-//                 });
-//               } else {
-//                 rows.push({
-//                   "id": cursor.value._id,
-//                   "value": value
-//                 });
-//               }
-//               // continue to next iteration
-//               cursor["continue"]();
-//             } else {
-//               index_req = tx.objectStore("attachment").
-//                     index("_id").openCursor();
-//               index_req.onsuccess = function (event) {
-//                 //second table
-//                 cursor = event.target.result;
-//                 if (cursor) {
-//                   value = {};
-//                   if (cursor.value._attachment) {
-//                     if (option.select_list) {
-//                       for (i = 0; i < option.select_list.length; i += 1) {
-//                         key = option.select_list[i];
-//                         value[key] = cursor.value._attachment[key];
-//                       }
-//                     }
-//                     //add info of attachment into metadata
-//                     rows[j].value._attachment = value;
-//                     if (option.include_docs) {
-//                       rows[j].doc._attachment = cursor.value._attachment;
-//                     }
-//                   }
-//                   j += 1;
-//                   cursor["continue"]();
-//                 } else {
-//                   notify({"loaded": rows.length});
-//                   resolve({"data": {"rows": rows, "total_rows": rows.length}});
-//                   db.close();
-//                 }
-//               };
-//             }
-//           };
-//         } catch (e) {
-//           reject(e);
-//           db.close();
-//         }
-//       };
-//     }, function () {
-//       if (typeof onCancel === "function") {
-//         onCancel();
-//       }
-//     });
-//   };
 
 
   /**
@@ -836,11 +704,72 @@
   };
 
 
-//   IndexedDBStorage.prototype.allDocs = function (param, option) {
-//     /*jslint unparam: true */
-//     this.createDBIfNecessary().
-//       then(this.getListMetadata.bind(this, option));
-//   };
+  IndexedDBStorage.prototype.hasCapacity = function (name) {
+    return (name === "list");
+  };
+
+  IndexedDBStorage.prototype.buildQuery = function () {
+    var jio_storage = this,
+      global_db;
+
+    return new RSVP.Queue()
+      .push(function () {
+        return openIndexedDB(jio_storage._database_name);
+      })
+      .push(function (db) {
+        global_db = db;
+
+        var onCancel;
+        return new RSVP.Promise(function (resolve, reject) {
+          var rows = [], open_req = indexedDB.open(jio_storage._database_name);
+          open_req.onerror = function () {
+            if (open_req.result) { open_req.result.close(); }
+            reject(open_req.error);
+          };
+          open_req.onsuccess = function () {
+            var tx, index_req, db = open_req.result;
+            try {
+              tx = db.transaction(["metadata"], "readonly");
+              onCancel = function () {
+                tx.abort();
+                db.close();
+              };
+              index_req = tx.objectStore("metadata").index("_id").openCursor();
+              index_req.onsuccess = function (event) {
+                var cursor = event.target.result;
+                if (cursor) {
+                  rows.push({
+                    "id": cursor.value._id,
+                    "value": {}
+                  });
+
+                  // continue to next iteration
+                  cursor["continue"]();
+                } else {
+                  db.close();
+                  resolve(rows);
+                }
+              };
+            } catch (e) {
+              reject(e);
+              db.close();
+            }
+          };
+        }, function () {
+          if (typeof onCancel === "function") {
+            onCancel();
+          }
+        });
+
+
+      })
+      .push(undefined, function (error) {
+        if (global_db !== undefined) {
+          global_db.close();
+        }
+        throw error;
+      });
+  };
 
   jIO.addStorage("indexeddb", IndexedDBStorage);
 }(jIO));
