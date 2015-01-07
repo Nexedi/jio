@@ -144,6 +144,8 @@ module.exports = function (grunt) {
       jio: {
         // duplicate files are ignored
         src: [
+          'lib/uri/URI.js',
+          'node_modules/uritemplate/bin/uritemplate.js',
 //           'node_modules/moment/moment.js',
           'lib/moment/moment-2.5.0.js',
 //           'src/*.js',
@@ -173,6 +175,7 @@ module.exports = function (grunt) {
           'src/jio.storage/davstorage.js',
           'src/jio.storage/indexeddbstorage.js',
           'src/jio.storage/unionstorage.js',
+          'src/jio.storage/erp5storage.js',
           'src/jio.storage/querystorage.js',
           'src/jio.storage/drivetojiomapping.js',
           'src/jio.storage/cachestorage.js'

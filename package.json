@@ -30,6 +30,7 @@
   ],
   "dependencies": {
     "rsvp": "git+http://git.erp5.org/repos/rsvp.js.git",
+    "uritemplate": "git+http://git.erp5.org/repos/uritemplate-js.git",
     "moment": "2.8.3"
   },
   "devDependencies": {
