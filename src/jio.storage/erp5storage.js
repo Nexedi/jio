@@ -125,10 +125,7 @@
         for (key in metadata) {
           if (metadata.hasOwnProperty(key)) {
             if (key !== "_id") {
-              // Hardcoded my_ ERP5 behaviour
-              if (renderer_form.hasOwnProperty("my_" + key)) {
-                data.append(renderer_form["my_" + key].key, metadata[key]);
-              }
+              data.append(key, metadata[key]);
             }
           }
         }
