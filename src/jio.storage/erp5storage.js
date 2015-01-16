@@ -77,41 +77,6 @@
       });
   };
 
-  ERP5Storage.prototype.post = function (metadata, options) {
-    var final_response,
-      context = this;
-    return getSiteDocument(this)
-      .push(function (site_hal) {
-        var post_action = site_hal._actions.add,
-          data = new FormData();
-
-        data.append("portal_type", metadata.portal_type);
-
-        return jIO.util.ajax({
-          "type": post_action.method,
-          "url": post_action.href,
-          "data": data,
-          "xhrFields": {
-            withCredentials: true
-          }
-        });
-      })
-      .push(function (event) {
-        if (!metadata._id) {
-          // XXX Really depend on server response...
-          var uri = new URI(event.target.getResponseHeader("X-Location"));
-          final_response = uri.segment(2);
-          metadata._id = final_response;
-        }
-      })
-      .push(function () {
-        return context.put(metadata, options);
-      })
-      .push(function () {
-        return final_response;
-      });
-  };
-
   ERP5Storage.prototype.put = function (metadata, options) {
     return getDocumentAndHateoas(this, metadata, options)
       .push(function (result) {
