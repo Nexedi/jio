@@ -69,20 +69,12 @@
   LocalStorage.prototype.getAttachment = function (param) {
     restrictDocumentId(param._id);
 
-    var binarystring = localStorage.getItem(param._attachment),
-      i,
-      uint8array;
+    var textstring = localStorage.getItem(param._attachment);
 
-    if (binarystring === null) {
+    if (textstring === null) {
       throw new jIO.util.jIOError("Cannot find attachment", 404);
     }
-
-    uint8array = new Uint8Array(binarystring.length);
-    for (i = 0; i < binarystring.length; i += 1) {
-      uint8array[i] = binarystring.charCodeAt(i); // mask `& 0xFF` not necessary
-    }
-
-    return new Blob([uint8array.buffer]);
+    return new Blob([textstring]);
   };
 
   LocalStorage.prototype.putAttachment = function (param) {
@@ -92,7 +84,7 @@
     // download data
     return new RSVP.Queue()
       .push(function () {
-        return jIO.util.readBlobAsBinaryString(param._blob);
+        return jIO.util.readBlobAsText(param._blob);
       })
       .push(function (e) {
         localStorage.setItem(param._attachment, e.target.result);
