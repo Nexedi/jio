@@ -347,12 +347,12 @@
     }
   });
 
-  declareMethod(JioProxyStorage, 'removeAttachment', function (param) {
-    checkId(param);
+  declareMethod(JioProxyStorage, 'removeAttachment', function (param, storage, method_name) {
+    checkId(param, storage, method_name);
     checkAttachmentId(param);
   });
 
-  declareMethod(JioProxyStorage, 'getAttachment', function (param) {
+  declareMethod(JioProxyStorage, 'getAttachment', function (param, storage, method_name) {
 //     if (param.storage_spec.type !== "indexeddb" &&
 //         param.storage_spec.type !== "dav" &&
 //         (param.kwargs._start !== undefined
@@ -364,7 +364,7 @@
 //       ]);
 //       return false;
 //     }
-    checkId(param);
+    checkId(param, storage, method_name);
     checkAttachmentId(param);
   });
 
