@@ -232,19 +232,6 @@ function makeBinaryStringDigest(string) {
 }
 exports.util.makeBinaryStringDigest = makeBinaryStringDigest;
 
-function readBlobAsBinaryString(blob) {
-  var fr = new FileReader();
-  return new RSVP.Promise(function (resolve, reject, notify) {
-    fr.addEventListener("load", resolve);
-    fr.addEventListener("error", reject);
-    fr.addEventListener("progress", notify);
-    fr.readAsBinaryString(blob);
-  }, function () {
-    fr.abort();
-  });
-}
-exports.util.readBlobAsBinaryString = readBlobAsBinaryString;
-
 /**
  * Acts like `Array.prototype.concat` but does not create a copy of the original
  * array. It extends the original array and return it.
