@@ -7,14 +7,13 @@
 // {
 //   type: "erp5"
 //   url: {string}
-//   default_view: {string} (optional)
 // }
 
 /*jslint nomen: true */
 /*global jIO, UriTemplate, FormData, RSVP, URI,
-  module */
+  Blob, btoa */
 
-(function (jIO, UriTemplate, FormData, RSVP, URI) {
+(function (jIO, UriTemplate, RSVP, URI, Blob) {
   "use strict";
 
   function getSiteDocument(storage) {
@@ -45,7 +44,7 @@
           "url": UriTemplate.parse(site_hal._links.traverse.href)
                             .expand({
               relative_url: param._id,
-              view: options._view || storage._default_view
+              view: options._view
             }),
           "xhrFields": {
             withCredentials: true
@@ -61,42 +60,112 @@
                           "which contains more than one character.");
     }
     this._url = spec.url;
-    this._default_view = spec.default_view || "view";
   }
 
-  ERP5Storage.prototype.get = function (param, options) {
-    return getDocumentAndHateoas(this, param, options)
+  ERP5Storage.prototype.get = function (param) {
+    return getDocumentAndHateoas(this, param)
       .push(function (response) {
-        var result = JSON.parse(response.target.responseText);
+        var result = JSON.parse(response.target.responseText),
+          attachments = {
+            view: {},
+            links: {}
+          },
+          key;
+          // action_type;
         result._id = param._id;
         result.portal_type = result._links.type.name;
-//         delete result._embedded;
-//         delete result._links;
-//         delete result._debug;
+
+        result._attachments = attachments;
+
+        // Remove all ERP5 hateoas links / convert them into jIO ID
+        for (key in result) {
+          if (result.hasOwnProperty(key)) {
+            if (key.indexOf("_") === 0) {
+              delete result[key];
+            }
+          }
+        }
+
         return result;
       });
   };
 
-  ERP5Storage.prototype.put = function (metadata, options) {
-    return getDocumentAndHateoas(this, metadata, options)
-      .push(function (result) {
-        result = JSON.parse(result.target.responseText);
-        var put_action = result._embedded._view._actions.put,
-          renderer_form = result._embedded._view,
+  ERP5Storage.prototype.getAttachment = function (param) {
+    var action = param._attachment;
+
+    if (action === "view") {
+      return getDocumentAndHateoas(this, param, {"_view": param._attachment})
+        .push(function (response) {
+          var result = JSON.parse(response.target.responseText);
+          result._id = param._id;
+          result.portal_type = result._links.type.name;
+          // Remove all ERP5 hateoas links / convert them into jIO ID
+
+          // XXX Change default action to an jio urn with attachment name inside
+          // if Base_edit, do put URN
+          // if others, do post URN (ie, unique new attachment name)
+          // XXX Except this attachment name should be generated when
+          return new Blob(
+            [JSON.stringify(result)],
+            {"type": 'application/hal+json'}
+          );
+        });
+    }
+    if (action === "links") {
+      return getDocumentAndHateoas(this, param)
+        .push(function (response) {
+          return new Blob(
+            [JSON.stringify(JSON.parse(response.target.responseText))],
+            {"type": 'application/hal+json'}
+          );
+        });
+    }
+    if (action.indexOf(this._url) === 0) {
+      return new RSVP.Queue()
+        .push(function () {
+          return jIO.util.ajax({
+            "type": "GET",
+            "url": action,
+            "xhrFields": {
+              withCredentials: true
+            }
+          });
+        })
+        .push(function (evt) {
+          var result = JSON.parse(evt.target.responseText);
+          result._id = param._id;
+          return new Blob(
+            [JSON.stringify(result)],
+            {"type": evt.target.getResponseHeader("Content-Type")}
+          );
+        });
+    }
+    throw new Error("ERP5: not support get attachment: " + action);
+  };
+
+  ERP5Storage.prototype.putAttachment = function (metadata) {
+    // Assert we use a callable on a document from the ERP5 site
+    if (metadata._attachment.indexOf(this._url) !== 0) {
+      throw new Error("Can not store outside ERP5: " +
+                      metadata._attachment);
+    }
+
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.readBlobAsText(metadata._blob);
+      })
+      .push(function (evt) {
+        var form_data = JSON.parse(evt.target.result),
           data = new FormData(),
           key;
-        data.append(renderer_form.form_id.key,
-                    renderer_form.form_id['default']);
-        for (key in metadata) {
-          if (metadata.hasOwnProperty(key)) {
-            if (key !== "_id") {
-              data.append(key, metadata[key]);
-            }
+        for (key in form_data) {
+          if (form_data.hasOwnProperty(key)) {
+            data.append(key, form_data[key]);
           }
         }
         return jIO.util.ajax({
-          "type": put_action.method,
-          "url": put_action.href,
+          "type": "POST",
+          "url": metadata._attachment,
           "data": data,
           "xhrFields": {
             withCredentials: true
@@ -158,4 +227,4 @@
 
   jIO.addStorage("erp5", ERP5Storage);
 
-}(jIO, UriTemplate, FormData, RSVP, URI));
+}(jIO, UriTemplate, RSVP, URI, Blob));
