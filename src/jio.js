@@ -349,7 +349,7 @@
 
   declareMethod(JioProxyStorage, 'removeAttachment', function (param, storage, method_name) {
     checkId(param, storage, method_name);
-    checkAttachmentId(param);
+    checkAttachmentId(param, storage, method_name);
   });
 
   declareMethod(JioProxyStorage, 'getAttachment', function (param, storage, method_name) {
@@ -365,7 +365,7 @@
 //       return false;
 //     }
     checkId(param, storage, method_name);
-    checkAttachmentId(param);
+    checkAttachmentId(param, storage, method_name);
   });
 
   JioProxyStorage.prototype.buildQuery = function () {
