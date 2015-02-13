@@ -4,8 +4,8 @@
  * http://www.gnu.org/licenses/lgpl.html
  */
 
-/*jslint nomen: true, maxlen: 200*/
-/*global jIO, window, Blob, Uint8Array, RSVP, console */
+/*jslint nomen: true*/
+/*global jIO*/
 
 /**
  * JIO Memory Storage. Type = 'memory'.
@@ -34,19 +34,6 @@
   }
 
 
-  MemoryStorage.prototype.post = function (metadata) {
-    var doc_id = metadata._id;
-    if (doc_id === undefined) {
-      doc_id = jIO.util.generateUuid();
-    }
-    if (this._database.hasOwnProperty(doc_id)) {
-      // the document already exists
-      throw new jIO.util.jIOError("Cannot create a new document", 409);
-    }
-    metadata._id = doc_id;
-    return this.put(metadata);
-  };
-
   MemoryStorage.prototype.put = function (metadata) {
     if (!this._database.hasOwnProperty(metadata._id)) {
       this._database[metadata._id] = {
@@ -58,24 +45,35 @@
   };
 
   MemoryStorage.prototype.get = function (param) {
-    if (!this._database.hasOwnProperty(param._id)) {
-      throw new jIO.util.jIOError("Cannot find document", 404);
-    }
-    var doc = JSON.parse(this._database[param._id].doc),
-      key,
-      found = false,
-      attachments = {};
-
-    for (key in this._database[param._id].attachments) {
-      if (this._database[param._id].attachments.hasOwnProperty(key)) {
-        found = true;
-        attachments[key] = {};
+    try {
+      return JSON.parse(this._database[param._id].doc);
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new jIO.util.jIOError(
+          "Cannot find document: " + param._id,
+          404
+        );
       }
+      throw error;
     }
-    if (found) {
-      doc._attachments = attachments;
-    }
-    return doc;
+
+    // XXX NotImplemented: list all attachments
+
+//     var doc = JSON.parse(this._database[param._id].doc),
+//       key,
+//       found = false,
+//       attachments = {};
+// 
+//     for (key in this._database[param._id].attachments) {
+//       if (this._database[param._id].attachments.hasOwnProperty(key)) {
+//         found = true;
+//         attachments[key] = {};
+//       }
+//     }
+//     if (found) {
+//       doc._attachments = attachments;
+//     }
+//     return doc;
   };
 
   MemoryStorage.prototype.remove = function (param) {
@@ -84,22 +82,45 @@
   };
 
   MemoryStorage.prototype.getAttachment = function (param) {
-    if (!((this._database.hasOwnProperty(param._id)) &&
-          (this._database[param._id].attachments.hasOwnProperty(param._attachments)))) {
-      throw new jIO.util.jIOError("Cannot find attachment", 404);
+    try {
+      return this._database[param._id].attachments[param._attachment];
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new jIO.util.jIOError(
+          "Cannot find attachment: " + param._id + " , " + param._attachment,
+          404
+        );
+      }
+      throw error;
     }
-    return this._database[param._id].attachments[param._attachment];
   };
 
   MemoryStorage.prototype.putAttachment = function (param) {
-    this._database[param._id].attachments[param._attachment] =
-      param._blob;
+    var attachment_dict;
+    try {
+      attachment_dict = this._database[param._id].attachments;
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new jIO.util.jIOError("Cannot find document: " + param._id, 404);
+      }
+      throw error;
+    }
+    attachment_dict[param._attachment] = param._blob;
   };
 
   MemoryStorage.prototype.removeAttachment = function (param) {
-    delete this._database[param._id].attachments[param._attachment];
+    try {
+      delete this._database[param._id].attachments[param._attachment];
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new jIO.util.jIOError(
+          "Cannot find document: " + param._id,
+          404
+        );
+      }
+      throw error;
+    }
   };
-
 
 
   MemoryStorage.prototype.hasCapacity = function (name) {
