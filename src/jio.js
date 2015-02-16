@@ -274,7 +274,7 @@
         .push(function (result) {
           if (post_function !== undefined) {
             return post_function.call(
-              context.__storage,
+              context,
               argument_list,
               result
             );
@@ -302,6 +302,7 @@
 
   declareMethod(JioProxyStorage, "put", checkId);
   declareMethod(JioProxyStorage, "get", checkId, function (argument_list, result) {
+    // XXX Drop all _ properties
     // Put _id properties to the result
     result._id = argument_list[0]._id;
     return result;
@@ -366,6 +367,14 @@
 //     }
     checkId(param, storage, method_name);
     checkAttachmentId(param, storage, method_name);
+  }, function (argument_list, result) {
+    if (!(result.data instanceof Blob)) {
+      throw new jIO.util.jIOError(
+        "'getAttachment' (" + argument_list[0]._id + " , " + argument_list[0]._attachment + ") on '" + this.__type + "' does not return a Blob.",
+        501
+      );
+    }
+    return result;
   });
 
   JioProxyStorage.prototype.buildQuery = function () {
