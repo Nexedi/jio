@@ -83,7 +83,7 @@
 
   MemoryStorage.prototype.getAttachment = function (param) {
     try {
-      return this._database[param._id].attachments[param._attachment];
+      return {data: this._database[param._id].attachments[param._attachment]};
     } catch (error) {
       if (error instanceof TypeError) {
         throw new jIO.util.jIOError(
