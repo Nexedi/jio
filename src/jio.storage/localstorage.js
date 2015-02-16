@@ -5,7 +5,7 @@
  */
 
 /*jslint nomen: true */
-/*global jIO, localStorage, window, Blob, Uint8Array, RSVP */
+/*global jIO, localStorage, Blob, RSVP */
 
 /**
  * JIO Local Storage. Type = 'local'.
@@ -20,7 +20,7 @@
  * @class LocalStorage
  */
 
-(function (jIO) {
+(function (jIO, localStorage, Blob, RSVP) {
   "use strict";
 
   function LocalStorage() {
@@ -34,47 +34,38 @@
     }
   }
 
-  /**
-   * Get a document
-   *
-   * @method get
-   * @param  {Object} param The given parameters
-   * @param  {Object} options The command options
-   */
   LocalStorage.prototype.get = function (param) {
     restrictDocumentId(param._id);
 
     var doc = {},
       attachments = {},
+      found = false,
       key;
 
     for (key in localStorage) {
       if (localStorage.hasOwnProperty(key)) {
         attachments[key] = {};
+        found = true;
       }
     }
-    if (attachments.length !== 0) {
+    if (found) {
       doc._attachments = attachments;
     }
     return doc;
   };
 
-  /**
-   * Get an attachment
-   *
-   * @method getAttachment
-   * @param  {Object} param The given parameters
-   * @param  {Object} options The command options
-   */
   LocalStorage.prototype.getAttachment = function (param) {
     restrictDocumentId(param._id);
 
     var textstring = localStorage.getItem(param._attachment);
 
     if (textstring === null) {
-      throw new jIO.util.jIOError("Cannot find attachment", 404);
+      throw new jIO.util.jIOError(
+        "Cannot find attachment " + param._attachment,
+        404
+      );
     }
-    return new Blob([textstring]);
+    return {data: new Blob([textstring])};
   };
 
   LocalStorage.prototype.putAttachment = function (param) {
@@ -110,4 +101,4 @@
 
   jIO.addStorage('local', LocalStorage);
 
-}(jIO));
+}(jIO, localStorage, Blob, RSVP));
