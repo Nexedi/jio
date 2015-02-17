@@ -1,5 +1,5 @@
 /*jslint nomen: true*/
-/*global console, Blob, atob, btoa*/
+/*global Blob, atob, btoa*/
 (function (jIO, Blob, atob, btoa) {
   "use strict";
 
@@ -35,7 +35,7 @@
       "_attachment": getSubAttachmentIdFromParam(param)
     })
       .push(function (blob) {
-        return jIO.util.readBlobAsText(blob);
+        return jIO.util.readBlobAsText(blob.data);
       })
       .push(function (text) {
         return JSON.parse(text.target.result);
@@ -54,8 +54,15 @@
           if (document._attachments.hasOwnProperty(key)) {
             if (ATTACHMENT_REGEXP.test(key)) {
               exec = ATTACHMENT_REGEXP.exec(key);
-              if (atob(exec[1]) === param._id) {
-                attachments[atob(exec[2])] = {};
+              try {
+                if (atob(exec[1]) === param._id) {
+                  attachments[atob(exec[2])] = {};
+                }
+              } catch (error) {
+                // Check if unable to decode base64 data
+                if (!error instanceof ReferenceError) {
+                  throw error;
+                }
               }
             }
           }
@@ -65,17 +72,6 @@
         }
         return result;
       });
-  };
-
-  DocumentStorage.prototype.post = function (param) {
-    var doc_id = param._id;
-
-    if (doc_id === undefined) {
-      doc_id = jIO.util.generateUuid();
-    }
-
-    param._id = doc_id;
-    return this.put(param);
   };
 
   DocumentStorage.prototype.put = function (param) {
@@ -116,10 +112,17 @@
         for (key in document._attachments) {
           if (document._attachments.hasOwnProperty(key)) {
             if (DOCUMENT_REGEXP.test(key)) {
-              result.push({
-                id: atob(DOCUMENT_REGEXP.exec(key)[1]),
-                value: {}
-              });
+              try {
+                result.push({
+                  id: atob(DOCUMENT_REGEXP.exec(key)[1]),
+                  value: {}
+                });
+              } catch (error) {
+                // Check if unable to decode base64 data
+                if (!error instanceof ReferenceError) {
+                  throw error;
+                }
+              }
             }
           }
         }
