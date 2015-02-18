@@ -5,15 +5,9 @@
  */
 
 /*jslint nomen: true*/
-/*global window, jIO, RSVP, btoa, DOMParser, Blob, console*/
+/*global jIO, RSVP, DOMParser, Blob */
 
 // JIO Dav Storage Description :
-// {
-//   type: "dav",
-//   url: {string}
-//   // No Authentication Here
-// }
-
 // {
 //   type: "dav",
 //   url: {string},
@@ -24,7 +18,7 @@
 // curl --verbose  -X OPTION http://domain/
 // In the headers: "WWW-Authenticate: Basic realm="DAV-upload"
 
-(function (jIO) {
+(function (jIO, RSVP, DOMParser, Blob) {
   "use strict";
 
   function ajax(storage, options) {
@@ -79,23 +73,33 @@
     if (typeof spec.url !== 'string') {
       throw new TypeError("DavStorage 'url' is not of type string");
     }
-    // Remove last slash
-    this._url = spec.url.replace(/\/$/, '');
+    this._url = spec.url;
     // XXX digest login
     if (typeof spec.basic_login === 'string') {
-//       this._auth_type = 'basic';
       this._authorization = "Basic " + spec.basic_login;
-//     } else {
-//       this._auth_type = 'none';
     }
 
   }
 
   DavStorage.prototype.put = function (param) {
-    // XXX Reject if param has other properties than _id
+    var id = restrictDocumentId(param._id);
+    delete param._id;
+    if (Object.getOwnPropertyNames(param).length > 0) {
+      // Reject if param has other properties than _id
+      throw new jIO.util.jIOError("Can not store properties: " +
+                                  Object.getOwnPropertyNames(param), 400);
+    }
     return ajax(this, {
       type: "MKCOL",
-      url: this._url + param._id
+      url: this._url + id
+    });
+  };
+
+  DavStorage.prototype.remove = function (param) {
+    var id = restrictDocumentId(param._id);
+    return ajax(this, {
+      type: "DELETE",
+      url: this._url + id
     });
   };
 
@@ -111,6 +115,7 @@
           url: context._url + id,
           dataType: "text",
           headers: {
+            // Increasing this value is a performance killer
             Depth: "1"
           }
         });
@@ -121,9 +126,7 @@
         // Extract all meta informations and return them to JSON
 
         var i,
-          result = {
-            "title": param._id
-          },
+          result = {},
           attachment = {},
           id,
           attachment_list = new DOMParser().parseFromString(
@@ -143,7 +146,7 @@
             attachment[id] = {};
           }
         }
-        if (attachment.length !== 0) {
+        if (Object.getOwnPropertyNames(attachment).length > 0) {
           result._attachments = attachment;
         }
         return result;
@@ -162,20 +165,11 @@
   DavStorage.prototype.putAttachment = function (param) {
     var id = restrictDocumentId(param._id);
     restrictAttachmentId(param._attachment);
-
     return ajax(this, {
       type: "PUT",
       url: this._url + id + param._attachment,
       data: param._blob
-    })
-      .push(undefined, function (error) {
-        if ((error.target !== undefined) &&
-            (error.target.status === 403)) {
-          throw new jIO.util.jIOError("Cannot find document", 404);
-        }
-        throw error;
-      });
-
+    });
   };
 
   DavStorage.prototype.getAttachment = function (param) {
@@ -192,15 +186,17 @@
         });
       })
       .push(function (response) {
-        return new Blob(
-          [response.target.response],
+        return {data: new Blob(
+          [response.target.response || response.target.responseText],
           {"type": response.target.getResponseHeader('Content-Type') ||
                    "application/octet-stream"}
-        );
+        )};
       }, function (error) {
         if ((error.target !== undefined) &&
             (error.target.status === 404)) {
-          throw new jIO.util.jIOError("Cannot find document", 404);
+          throw new jIO.util.jIOError("Cannot find attachment: "
+                                      + param._id + " , " + param._attachment,
+                                      404);
         }
         throw error;
       });
@@ -222,7 +218,9 @@
       .push(undefined, function (error) {
         if ((error.target !== undefined) &&
             (error.target.status === 404)) {
-          throw new jIO.util.jIOError("Cannot find document", 404);
+          throw new jIO.util.jIOError("Cannot find attachment: "
+                                      + param._id + " , " + param._attachment,
+                                      404);
         }
         throw error;
       });
@@ -257,4 +255,4 @@
 
   jIO.addStorage('dav', DavStorage);
 
-}(jIO));
+}(jIO, RSVP, DOMParser, Blob));
