@@ -23,7 +23,7 @@
  * @class UnionStorage
  */
 
-(function (jIO) {
+(function (jIO, RSVP) {
   "use strict";
 
   /**
@@ -179,4 +179,4 @@
 
   jIO.addStorage('union', UnionStorage);
 
-}(jIO));
+}(jIO, RSVP));

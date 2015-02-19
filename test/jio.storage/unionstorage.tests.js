@@ -87,6 +87,35 @@
   Storage500.prototype.post = generateError;
   jIO.addStorage('unionstorage500', Storage500);
 
+  /////////////////////////////////////////////////////////////////
+  // unionStorage.constructor
+  /////////////////////////////////////////////////////////////////
+  module("unionStorage.constructor");
+  test("no storage list", function () {
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: []
+    });
+
+    deepEqual(jio.__storage._storage_list, []);
+  });
+
+  test("initialize storage list", function () {
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage404"
+      }, {
+        type: "unionstorage200"
+      }]
+    });
+
+    equal(jio.__storage._storage_list.length, 2);
+    ok(jio.__storage._storage_list[0] instanceof jio.constructor);
+    equal(jio.__storage._storage_list[0].__type, "unionstorage404");
+    ok(jio.__storage._storage_list[1] instanceof jio.constructor);
+    equal(jio.__storage._storage_list[1].__type, "unionstorage200");
+  });
 
   /////////////////////////////////////////////////////////////////
   // unionStorage.get
@@ -135,6 +164,7 @@
     jio.get({"_id": "bar"})
       .then(function (result) {
         deepEqual(result, {
+          "_id": "bar",
           "title": "foo"
         }, "Check document");
       })
@@ -162,6 +192,7 @@
     jio.get({"_id": "bar"})
       .then(function (result) {
         deepEqual(result, {
+          "_id": "bar",
           "title": "foo"
         }, "Check document");
       })
@@ -449,7 +480,7 @@
   // unionStorage.hasCapacity
   /////////////////////////////////////////////////////////////////
   module("unionStorage.hasCapacity");
-  test("hasCapacity list without storage", function () {
+  test("Supported capacity without storage", function () {
 
     var jio = jIO.createJIO({
       type: "union",
@@ -457,6 +488,8 @@
     });
 
     ok(jio.hasCapacity("list"));
+    ok(jio.hasCapacity("query"));
+    ok(jio.hasCapacity("select"));
   });
 
   test("hasCapacity list not implemented in substorage", function () {
@@ -477,7 +510,8 @@
       function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 501);
-        equal(error.message, "Capacity 'list' is not implemented");
+        equal(error.message,
+              "Capacity 'list' is not implemented on 'unionstorage404'");
         return true;
       }
     );
@@ -515,7 +549,7 @@
       function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 501);
-        equal(error.message, "Capacity 'sort' is not implemented");
+        equal(error.message, "Capacity 'sort' is not implemented on 'union'");
         return true;
       }
     );
@@ -622,7 +656,8 @@
     })
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Capacity 'list' is not implemented");
+        equal(error.message,
+              "Capacity 'list' is not implemented on 'unionstorage500'");
         equal(error.status_code, 501);
       })
       .fail(function (error) {
