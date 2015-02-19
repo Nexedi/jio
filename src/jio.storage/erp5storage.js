@@ -10,10 +10,9 @@
 // }
 
 /*jslint nomen: true */
-/*global jIO, UriTemplate, FormData, RSVP, URI,
-  Blob, btoa */
+/*global jIO, UriTemplate, FormData, RSVP, URI, Blob*/
 
-(function (jIO, UriTemplate, RSVP, URI, Blob) {
+(function (jIO, UriTemplate, FormData, RSVP, URI, Blob) {
   "use strict";
 
   function getSiteDocument(storage) {
@@ -75,8 +74,6 @@
         result._id = param._id;
         result.portal_type = result._links.type.name;
 
-        result._attachments = attachments;
-
         // Remove all ERP5 hateoas links / convert them into jIO ID
         for (key in result) {
           if (result.hasOwnProperty(key)) {
@@ -85,6 +82,8 @@
             }
           }
         }
+
+        result._attachments = attachments;
 
         return result;
       });
@@ -105,19 +104,19 @@
           // if Base_edit, do put URN
           // if others, do post URN (ie, unique new attachment name)
           // XXX Except this attachment name should be generated when
-          return new Blob(
+          return {data: new Blob(
             [JSON.stringify(result)],
             {"type": 'application/hal+json'}
-          );
+          )};
         });
     }
     if (action === "links") {
       return getDocumentAndHateoas(this, param)
         .push(function (response) {
-          return new Blob(
+          return {data: new Blob(
             [JSON.stringify(JSON.parse(response.target.responseText))],
             {"type": 'application/hal+json'}
-          );
+          )};
         });
     }
     if (action.indexOf(this._url) === 0) {
@@ -134,20 +133,21 @@
         .push(function (evt) {
           var result = JSON.parse(evt.target.responseText);
           result._id = param._id;
-          return new Blob(
+          return {data: new Blob(
             [JSON.stringify(result)],
             {"type": evt.target.getResponseHeader("Content-Type")}
-          );
+          )};
         });
     }
-    throw new Error("ERP5: not support get attachment: " + action);
+    throw new jIO.util.jIOError("ERP5: not support get attachment: " + action,
+                                400);
   };
 
   ERP5Storage.prototype.putAttachment = function (metadata) {
     // Assert we use a callable on a document from the ERP5 site
     if (metadata._attachment.indexOf(this._url) !== 0) {
-      throw new Error("Can not store outside ERP5: " +
-                      metadata._attachment);
+      throw new jIO.util.jIOError("Can not store outside ERP5: " +
+                                  metadata._attachment, 400);
     }
 
     return new RSVP.Queue()
@@ -217,7 +217,6 @@
           delete item._links;
           result.push({
             id: uri.segment(2),
-            doc: {},
             value: item
           });
         }
@@ -227,4 +226,4 @@
 
   jIO.addStorage("erp5", ERP5Storage);
 
-}(jIO, UriTemplate, RSVP, URI, Blob));
+}(jIO, UriTemplate, FormData, RSVP, URI, Blob));
