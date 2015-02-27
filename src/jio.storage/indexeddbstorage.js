@@ -13,8 +13,7 @@
  *
  *    {
  *      "type": "indexeddb",
- *      "database": <string>,
- *      "unite": <integer> //byte
+ *      "database": <string>
  *    }
  *
  * The database name will be prefixed by "jio:", so if the database property is
@@ -28,748 +27,389 @@
  * - https://developer.mozilla.org/en-US/docs/IndexedDB/Using_IndexedDB
  */
 
-/*jslint indent: 2, maxlen: 120, nomen: true */
+/*jslint nomen: true */
 /*global indexedDB, jIO, RSVP, Blob, Math*/
 
-(function (jIO) {
+(function (indexedDB, jIO, RSVP, Blob, Math) {
   "use strict";
 
-  var generateUuid = jIO.util.generateUuid;
+  // Read only as changing it can lead to data corruption
+  var UNITE = 2000000;
 
-  function metadataObjectToString(value) {
-    var i, l;
-    if (Array.isArray(value)) {
-      for (i = 0, l = value.length; i < l; i += 1) {
-        value[i] = metadataObjectToString(value[i]);
-      }
-      return value;
-    }
-    if (typeof value === "object" && value !== null) {
-      return value.content;
-    }
-    return value;
-  }
-
-  /**
-   * new IndexedDBStorage(description)
-   *
-   * Creates a storage object designed for jIO to store documents into
-   * indexedDB.
-   *
-   * @class IndexedDBStorage
-   * @constructor
-   */
   function IndexedDBStorage(description) {
     if (typeof description.database !== "string" ||
         description.database === "") {
       throw new TypeError("IndexedDBStorage 'database' description property " +
                           "must be a non-empty string");
     }
-    if (description.unite !== undefined) {
-      if (description.unite !== parseInt(description.unite, 10)) {
-        throw new TypeError("IndexedDBStorage 'unite' description property " +
-                            "must be a integer");
-      }
-    } else {
-      description.unite = 2000000;
-    }
     this._database_name = "jio:" + description.database;
-    this._unite = description.unite;
   }
-
-
-  /**
-   * creat 3 objectStores
-   * @param {string} the name of the database
-   */
-  function openIndexedDB(db_name) {
-    var request;
-    function resolver(resolve, reject) {
-      // Open DB //
-      request = indexedDB.open(db_name);
-      request.onerror = reject;
-
-      // Create DB if necessary //
-      request.onupgradeneeded = function (evt) {
-        var db = evt.target.result,
-          store;
-        store = db.createObjectStore("metadata", {
-          "keyPath": "_id"
-           //"autoIncrement": true
-        });
-        store.createIndex("_id", "_id");
-
-
-        store = db.createObjectStore("attachment", {
-          "keyPath": "_id"
-           //"autoIncrement": true
-        });
-        store.createIndex("_id", "_id");
-
-        store = db.createObjectStore("blob", {
-          "keyPath": ["_id", "_attachment", "_part"]
-          //"autoIncrement": true
-        });
-        store.createIndex("_id_attachment_part",
-                          ["_id", "_attachment", "_part"]);
-      };
-      request.onsuccess = function () {
-        resolve(request.result);
-      };
-    }
-    return new RSVP.Promise(resolver);
-  }
-
-  /**
-   *put a data into a store object
-   *@param {ObjectStore} store The objectstore
-   *@param {Object} metadata The data to put in
-   *@return a new promise
-   */
-  function putIndexedDBArrayBuffer(store, metadata) {
-    var request,
-      resolver;
-    request = store.put(metadata);
-    resolver = function (resolve, reject) {
-      request.onerror = function (e) {
-        reject(e);
-      };
-      request.onsuccess = function () {
-        resolve(metadata);
-      };
-    };
-    return new RSVP.Promise(resolver);
-  }
-
-  function putIndexedDB(store, metadata, readData) {
-    var request,
-      resolver;
-    try {
-      request = store.put(metadata);
-      resolver = function (resolve, reject) {
-        request.onerror = function (e) {
-          reject(e);
-        };
-        request.onsuccess = function () {
-          resolve(metadata);
-        };
-      };
-      return new RSVP.Promise(resolver);
-    } catch (e) {
-      return putIndexedDBArrayBuffer(store,
-                                     {"_id" : metadata._id,
-                                      "_attachment" : metadata._attachment,
-                                      "_part" : metadata._part,
-                                      "blob": readData});
-    }
-  }
-
-  function transactionEnd(transaction) {
-    var resolver;
-    resolver = function (resolve, reject) {
-      transaction.onabort = reject;
-      transaction.oncomplete = function () {
-        resolve("end");
-      };
-    };
-    return new RSVP.Promise(resolver);
-  }
-  /**
-   * get a data from a store object
-   * @param {ObjectStore} store The objectstore
-   * @param {String} id The data id
-   * return a new promise
-   */
-  function getIndexedDB(store, id) {
-    function resolver(resolve, reject) {
-      var request = store.get(id);
-      request.onerror = reject;
-      request.onsuccess = function () {
-        resolve(request.result);
-      };
-    }
-    return new RSVP.Promise(resolver);
-  }
-
-  /**
-   * delete a data of a store object
-   * @param {ObjectStore} store The objectstore
-   * @param {String} id The data id
-   * @return a new promise
-   *
-   */
-  function removeIndexedDB(store, id) {
-    function resolver(resolve, reject) {
-      var request = store["delete"](id);
-      request.onerror = function (e) {
-        reject(e);
-      };
-      request.onsuccess = function () {
-        resolve(request.result);
-      };
-    }
-    return new RSVP.Promise(resolver);
-  }
-
-  /**
-   * research an id in a store
-   * @param {ObjectStore} store The objectstore
-   * @param {String} id The index id
-   * @param {var} researchID The data id
-   * return a new promise
-   */
-  function researchIndexedDB(store, id, researchID) {
-    function resolver(resolve) {
-      var index = store.index(researchID);
-      index.get(id).onsuccess = function (evt) {
-        resolve({"result" : evt.target.result, "store": store});
-      };
-    }
-    return new RSVP.Promise(resolver);
-  }
-
-
-  function promiseResearch(transaction, id, table, researchID) {
-    var store = transaction.objectStore(table);
-    return researchIndexedDB(store, id, researchID);
-  }
-
-  /**
-   * put or post a metadata into objectstore:metadata,attachment
-   * @param {function} open The function to open a basedata
-   * @param {function} research The function to reserach
-   * @param {function} ongoing  The function to process
-   * @param {function} end      The completed function
-   * @param {Object}  metadata  The data to put
-   */
-  IndexedDBStorage.prototype._putOrPost =
-        function (open, research, ongoing, end, metadata) {
-      var jio_storage = this,
-        transaction,
-        global_db,
-        result;
-
-      return new RSVP.Queue()
-        .push(function () {
-          //open a database
-          return open(jio_storage._database_name);
-        })
-        .push(function (db) {
-          global_db = db;
-          transaction =  db.transaction(["metadata",
-                                         "attachment"], "readwrite");
-          //research in metadata
-          return research(transaction, metadata._id, "metadata", "_id");
-        })
-        .push(function (researchResult) {
-          return ongoing(researchResult);
-        })
-        .push(function (ongoingResult) {
-          //research in attachment
-          result = ongoingResult;
-          return research(transaction, metadata._id, "attachment", "_id");
-        })
-        .push(function (researchResult) {
-          //create an id in attachment si necessary
-          if (researchResult.result === undefined) {
-            return putIndexedDB(researchResult.store, {"_id": metadata._id});
-          }
-        })
-        .push(function () {
-          return transactionEnd(transaction);
-        })
-        .push(function () {
-          return end(result);
-        })
-        .push(undefined, function (error) {
-          if (global_db !== undefined) {
-            global_db.close();
-          }
-          throw error;
-        });
-    };
-
-
-
-
-  /**
-   * Retrieve data
-   *
-   *@param {Object} param The command parameters
-   */
-  IndexedDBStorage.prototype.get = function (param) {
-    var jio_storage = this,
-      transaction,
-      global_db,
-      meta;
-    return new RSVP.Queue()
-      .push(function () {
-        return openIndexedDB(jio_storage._database_name);
-      })
-      .push(function (db) {
-        global_db = db;
-        transaction =  db.transaction(["metadata", "attachment"], "readonly");
-        var store = transaction.objectStore("metadata");
-        return getIndexedDB(store, param._id);
-      })
-      .push(function (result) {
-        if (result) {
-         //get a part data from metadata
-          meta = result;
-          var store = transaction.objectStore("attachment");
-          return getIndexedDB(store, param._id);
-        }
-        throw new jIO.util.jIOError("Cannot find document", 404);
-      })
-      .push(function (result) {
-        //get the reste data from attachment
-        if (result._attachment) {
-          meta._attachments = result._attachment;
-        }
-        return transactionEnd(transaction);
-      })
-      .push(function () {
-        return meta;
-      })
-      .push(undefined, function (error) {
-        if (global_db !== undefined) {
-          global_db.close();
-        }
-        throw error;
-      });
-  };
-
-
-  /**
-   * Remove a document
-   *
-   * @param  {Object} param The command parameters
-   */
-  IndexedDBStorage.prototype.remove = function (param) {
-    var jio_storage = this,
-      transaction,
-      global_db,
-      queue = new RSVP.Queue();
-    function removeAllPart(store, attachment, part, totalLength) {
-      if (part * jio_storage._unite >= totalLength) {
-        return;
-      }
-      return removeIndexedDB(store, [param._id, attachment, part])
-        .then(function () {
-          return removeAllPart(store, attachment, part + 1, totalLength);
-        });
-    }
-    function removeAll(store, array, index, allAttachment) {
-      var totalLength = allAttachment[array[index]].length;
-      return removeAllPart(store, array[index], 0, totalLength)
-        .then(function () {
-          if (index < array.length - 1) {
-            return removeAll(store, array, index + 1, allAttachment);
-          }
-        });
-    }
-    return queue.push(function () {
-      return openIndexedDB(jio_storage._database_name);
-    })
-        .push(function (db) {
-        global_db = db;
-        transaction =  db.transaction(["metadata",
-                                       "attachment", "blob"], "readwrite");
-        return promiseResearch(transaction, param._id, "metadata", "_id");
-      })
-       .push(function (resultResearch) {
-        if (resultResearch.result === undefined) {
-          throw new jIO.util.jIOError("IndexeddbStorage, unable to get metadata.", 500);
-        }
-        //delete metadata
-        return removeIndexedDB(resultResearch.store, param._id);
-      })
-       .push(function () {
-        var store = transaction.objectStore("attachment");
-        return getIndexedDB(store, param._id);
-      })
-        .push(function (result) {
-        if (result._attachment) {
-          var array, store;
-          array = Object.keys(result._attachment);
-          store = transaction.objectStore("blob");
-          return removeAll(store, array, 0, result._attachment);
-        }
-      })
-      .push(function () {
-        var store = transaction.objectStore("attachment");
-        //delete attachment
-        return removeIndexedDB(store, param._id);
-      })
-      .push(function () {
-        return transactionEnd(transaction);
-      })
-      .push(function () {
-        return ({"status": 204});
-      })
-        .push(undefined, function (error) {
-        if (global_db !== undefined) {
-          global_db.close();
-        }
-        throw error;
-      });
-  };
-
-
-
-  /**
-   * Creates a new document if not already existes
-   * @param {Object} metadata The metadata to put
-   */
-  IndexedDBStorage.prototype.post = function (metadata) {
-    var that = this;
-    if (!metadata._id) {
-      metadata._id = generateUuid();
-    }
-    function promiseOngoingPost(researchResult) {
-      if (researchResult.result === undefined) {
-        delete metadata._attachment;
-        return putIndexedDB(researchResult.store, metadata);
-      }
-      throw ({"status": 409, "reason": "Document exists"});
-    }
-
-    function promiseEndPost(metadata) {
-      return metadata._id;
-    }
-
-    return that._putOrPost(openIndexedDB, promiseResearch,
-                            promiseOngoingPost, promiseEndPost,
-                            metadata);
-
-  };
-  /**
-   * Creates or updates a document
-   * @param  {Object} metadata The metadata to post
-   */
-  IndexedDBStorage.prototype.put = function (metadata) {
-    var that = this;
-    function promiseOngoingPut(researchResult) {
-      var key;
-      for (key in metadata) {
-        if (metadata.hasOwnProperty(key)) {
-          metadata[key] = metadataObjectToString(metadata[key]);
-        }
-      }
-      delete metadata._attachment;
-      return putIndexedDB(researchResult.store, metadata);
-    }
-
-    function promiseEndPut() {
-      return metadata._id;
-    }
-    return that._putOrPost(openIndexedDB, promiseResearch,
-                  promiseOngoingPut, promiseEndPut,
-                  metadata);
-  };
-
-
-
-
-
-  /**
-   * Add an attachment to a document
-   *
-   * @param  {Object} metadata The data
-   *
-   */
-  IndexedDBStorage.prototype.putAttachment = function (metadata) {
-    var jio_storage = this,
-      transaction,
-      global_db,
-      BlobInfo,
-      readResult;
-    function putAllPart(store, metadata, readResult, count, part) {
-      var blob,
-        readPart,
-        end;
-      if (count >= metadata._blob.size) {
-        return;
-      }
-      end = count + jio_storage._unite;
-      blob = metadata._blob.slice(count, end);
-      readPart = readResult.slice(count, end);
-      return putIndexedDB(store, {"_id": metadata._id,
-                                  "_attachment" : metadata._attachment,
-                                  "_part" : part,
-                                  "blob": blob}, readPart)
-        .then(function () {
-          return putAllPart(store, metadata, readResult, end, part + 1);
-        });
-    }
-    return jIO.util.readBlobAsArrayBuffer(metadata._blob)
-      .then(function (event) {
-        readResult = event.target.result;
-        BlobInfo = {
-          "content_type": metadata._blob.type,
-          "length": metadata._blob.size
-        };
-        return new RSVP.Queue()
-            .push(function () {
-            return openIndexedDB(jio_storage._database_name);
-          })
-            .push(function (db) {
-            global_db = db;
-            transaction = db.transaction(["attachment",
-                    "blob"], "readwrite");
-            return promiseResearch(transaction,
-                                   metadata._id, "attachment", "_id");
-          })
-            .push(function (researchResult) {
-            if (researchResult.result === undefined) {
-              throw new jIO.util.jIOError("IndexeddbStorage unable to put attachment.", 500);
-            }
-        //update attachment
-            researchResult.result._attachment = researchResult.
-                result._attachment || {};
-            researchResult.result._attachment[metadata._attachment] =
-                    (BlobInfo === undefined) ? "BlobInfo" : BlobInfo;
-            return putIndexedDB(researchResult.store, researchResult.result);
-          })
-          .push(function () {
-        //put in blob
-            var store = transaction.objectStore("blob");
-            return putAllPart(store, metadata, readResult, 0, 0);
-          })
-          .push(function () {
-            return transactionEnd(transaction);
-          })
-//           .push(function () {
-//             return {"status": 204};
-//           })
-          .push(undefined, function (error) {
-            if (global_db !== undefined) {
-              global_db.close();
-            }
-            throw error;
-          });
-      });
-  };
-
-
-
-  /**
-   * Retriev a document attachment
-   *
-   * @param  {Object} param The command parameter
-   */
-  IndexedDBStorage.prototype.getAttachment = function (param) {
-    var jio_storage = this,
-      transaction,
-      global_db,
-      blob,
-      totalLength;
-    function getDesirePart(store, start, end) {
-      if (start > end) {
-        return;
-      }
-      return getIndexedDB(store, [param._id, param._attachment, start])
-        .then(function (result) {
-          var blobPart = result.blob;
-          if (result.blob.byteLength !== undefined) {
-            blobPart = new Blob([result.blob]);
-          }
-          if (blob) {
-            blob = new Blob([blob, blobPart]);
-          } else {
-            blob = blobPart;
-          }
-          return getDesirePart(store, start + 1, end);
-        });
-    }
-    return new RSVP.Queue()
-      .push(function () {
-        return openIndexedDB(jio_storage._database_name);
-      })
-      .push(function (db) {
-        global_db = db;
-        transaction = db.transaction(["attachment", "blob"], "readwrite");
-        //check if the attachment exists
-        return promiseResearch(transaction,
-                               param._id, "attachment", "_id");
-      })
-      .push(function (researchResult) {
-        var result = researchResult.result,
-          start,
-          end;
-        if (result === undefined ||
-            result._attachment[param._attachment] === undefined) {
-          throw new jIO.util.jIOError("IndexeddbStorage unable to get attachment.", 404);
-        }
-        totalLength = result._attachment[param._attachment].length;
-        param._start = param._start === undefined ? 0 : param._start;
-        param._end = param._end === undefined ? totalLength
-          : param._end;
-        if (param._end > totalLength) {
-          param._end = totalLength;
-        }
-        if (param._start < 0 || param._end < 0) {
-          throw ({"status": 404, "reason": "invalide _start, _end",
-                  "message": "_start and _end must be positive"});
-        }
-        if (param._start > param._end) {
-          throw ({"status": 404, "reason": "invalide offset",
-                  "message": "start is great then end"});
-        }
-        start = Math.floor(param._start / jio_storage._unite);
-        end =  Math.floor(param._end / jio_storage._unite);
-        if (param._end % jio_storage._unite === 0) {
-          end -= 1;
-        }
-        return getDesirePart(transaction.objectStore("blob"),
-                             start,
-                             end);
-      })
-      .push(function () {
-        var start = param._start % jio_storage._unite,
-          end = start + param._end - param._start;
-        blob = blob.slice(start, end);
-        return new Blob([blob], {type: "text/plain"});
-      })
-      .push(undefined, function (error) {
-        // Check if transaction is ongoing, if so, abort it
-        if (transaction !== undefined) {
-          transaction.abort();
-        }
-        if (global_db !== undefined) {
-          global_db.close();
-        }
-        throw error;
-      });
-  };
-
-
-  /**
-   * Remove an attachment
-   *
-   * @method removeAttachment
-   * @param  {Object} param The command parameters
-   */
-  IndexedDBStorage.prototype.removeAttachment = function (param) {
-    var jio_storage = this,
-      transaction,
-      global_db,
-      totalLength;
-    function removePart(store, part) {
-      if (part * jio_storage._unite >= totalLength) {
-        return;
-      }
-      return removeIndexedDB(store, [param._id, param._attachment, part])
-        .then(function () {
-          return removePart(store, part + 1);
-        });
-    }
-    return new RSVP.Queue()
-      .push(function () {
-        return openIndexedDB(jio_storage._database_name);
-      })
-      .push(function (db) {
-        global_db = db;
-        transaction = db.transaction(["attachment", "blob"], "readwrite");
-        //check if the attachment exists
-        return promiseResearch(transaction, param._id,
-                               "attachment", "_id");
-      })
-      .push(function (researchResult) {
-        var result = researchResult.result;
-        if (result === undefined ||
-            result._attachment[param._attachment] === undefined) {
-          throw ({"status": 404, "reason": "missing attachment",
-                  "message":
-                  "IndexeddbStorage, document attachment not found."});
-        }
-        totalLength = result._attachment[param._attachment].length;
-        //updata attachment
-        delete result._attachment[param._attachment];
-        return putIndexedDB(researchResult.store, result);
-      })
-      .push(function () {
-        var store = transaction.objectStore("blob");
-        return removePart(store, 0);
-      })
-      .push(function () {
-        return transactionEnd(transaction);
-      })
-      .push(undefined, function (error) {
-        if (global_db !== undefined) {
-          global_db.close();
-        }
-        throw error;
-      });
-  };
-
 
   IndexedDBStorage.prototype.hasCapacity = function (name) {
     return (name === "list");
   };
 
-  IndexedDBStorage.prototype.buildQuery = function () {
-    var jio_storage = this,
-      global_db;
+  function buildKeyPath(key_list) {
+    return key_list.join("_");
+  }
 
+  function handleUpgradeNeeded(evt) {
+    var db = evt.target.result,
+      store;
+
+    store = db.createObjectStore("metadata", {
+      keyPath: "_id",
+      autoIncrement: false
+    });
+    // It is not possible to use openKeyCursor on keypath directly
+    // https://www.w3.org/Bugs/Public/show_bug.cgi?id=19955
+    store.createIndex("_id", "_id", {unique: true});
+
+    store = db.createObjectStore("attachment", {
+      keyPath: "_key_path",
+      autoIncrement: false
+    });
+    store.createIndex("_id", "_id", {unique: false});
+
+    store = db.createObjectStore("blob", {
+      keyPath: "_key_path",
+      autoIncrement: false
+    });
+    store.createIndex("_id_attachment",
+                      ["_id", "_attachment"], {unique: false});
+    store.createIndex("_id", "_id", {unique: false});
+  }
+
+  function openIndexedDB(jio_storage) {
+    var db_name = jio_storage._database_name;
+    function resolver(resolve, reject) {
+      // Open DB //
+      var request = indexedDB.open(db_name);
+      request.onerror = function (error) {
+        if (request.result) {
+          request.result.close();
+        }
+        reject(error);
+      };
+
+      request.onabort = function () {
+        request.result.close();
+        reject("Aborting connection to: " + db_name);
+      };
+
+      request.ontimeout = function () {
+        request.result.close();
+        reject("Connection to: " + db_name + " timeout");
+      };
+
+      request.onblocked = function () {
+        request.result.close();
+        reject("Connection to: " + db_name + " was blocked");
+      };
+
+      // Create DB if necessary //
+      request.onupgradeneeded = handleUpgradeNeeded;
+
+      request.onversionchange = function () {
+        request.result.close();
+        reject(db_name + " was upgraded");
+      };
+
+      request.onsuccess = function () {
+        resolve(request.result);
+      };
+    }
+    // XXX Canceller???
     return new RSVP.Queue()
       .push(function () {
-        return openIndexedDB(jio_storage._database_name);
-      })
-      .push(function (db) {
-        global_db = db;
+        return new RSVP.Promise(resolver);
+      });
+  }
 
-        var onCancel;
-        return new RSVP.Promise(function (resolve, reject) {
-          var rows = [], open_req = indexedDB.open(jio_storage._database_name);
-          open_req.onerror = function () {
-            if (open_req.result) { open_req.result.close(); }
-            reject(open_req.error);
-          };
-          open_req.onsuccess = function () {
-            var tx, index_req, db = open_req.result;
-            try {
-              tx = db.transaction(["metadata"], "readonly");
-              onCancel = function () {
-                tx.abort();
-                db.close();
-              };
-              index_req = tx.objectStore("metadata").index("_id").openCursor();
-              index_req.onsuccess = function (event) {
-                var cursor = event.target.result;
-                if (cursor) {
-                  rows.push({
-                    "id": cursor.value._id,
-                    "value": {}
-                  });
+  function openTransaction(db, stores, flag, autoclosedb) {
+    var tx = db.transaction(stores, flag);
+    if (autoclosedb !== false) {
+      tx.oncomplete = function () {
+        db.close();
+      };
+    }
+    tx.onabort = function () {
+      db.close();
+    };
+    return tx;
+  }
 
-                  // continue to next iteration
-                  cursor["continue"]();
-                } else {
-                  db.close();
-                  resolve(rows);
-                }
-              };
-            } catch (e) {
-              reject(e);
-              db.close();
-            }
-          };
-        }, function () {
-          if (typeof onCancel === "function") {
-            onCancel();
-          }
-        });
-
-
-      })
-      .push(undefined, function (error) {
-        if (global_db !== undefined) {
-          global_db.close();
+  function handleCursor(request, callback) {
+    function resolver(resolve, reject) {
+      // Open DB //
+      request.onerror = function (error) {
+        if (request.transaction) {
+          request.transaction.abort();
         }
-        throw error;
+        reject(error);
+      };
+
+      request.onsuccess = function (evt) {
+        var cursor = evt.target.result;
+        if (cursor) {
+          // XXX Wait for result
+          try {
+            callback(cursor);
+          } catch (error) {
+            reject(error);
+          }
+
+          // continue to next iteration
+          cursor["continue"]();
+        } else {
+          resolve();
+        }
+      };
+    }
+    // XXX Canceller???
+    return new RSVP.Promise(resolver);
+  }
+
+  IndexedDBStorage.prototype.buildQuery = function () {
+    var result_list = [];
+
+    function pushMetadata(cursor) {
+      result_list.push({
+        "id": cursor.key,
+        "value": {}
+      });
+    }
+    return openIndexedDB(this)
+      .push(function (db) {
+        var tx = openTransaction(db, ["metadata"], "readonly");
+        return handleCursor(tx.objectStore("metadata").index("_id")
+                            .openKeyCursor(), pushMetadata);
+      })
+      .push(function () {
+        return result_list;
+      });
+
+  };
+
+  function handleGet(request) {
+    function resolver(resolve, reject) {
+      request.onerror = reject;
+      request.onsuccess = function () {
+        if (request.result) {
+          resolve(request.result);
+        }
+        // XXX How to get ID
+        reject(new jIO.util.jIOError("Cannot find document", 404));
+      };
+    }
+    return new RSVP.Promise(resolver);
+  }
+
+  IndexedDBStorage.prototype.get = function (param) {
+    var attachment_dict = {};
+
+    function addEntry(cursor) {
+      attachment_dict[cursor.value._attachment] = {};
+    }
+
+    return openIndexedDB(this)
+      .push(function (db) {
+        var transaction = openTransaction(db, ["metadata", "attachment"],
+                                          "readonly");
+        return RSVP.all([
+          handleGet(transaction.objectStore("metadata").get(param._id)),
+          handleCursor(transaction.objectStore("attachment").index("_id")
+                       .openCursor(), addEntry)
+        ]);
+      })
+      .push(function (result_list) {
+        var result = result_list[0];
+        if (Object.getOwnPropertyNames(attachment_dict).length > 0) {
+          result._attachments = attachment_dict;
+        }
+        return result;
+      });
+  };
+
+  function handleRequest(request) {
+    function resolver(resolve, reject) {
+      request.onerror = reject;
+      request.onsuccess = function () {
+        resolve(request.result);
+      };
+    }
+    return new RSVP.Promise(resolver);
+  }
+
+  IndexedDBStorage.prototype.put = function (metadata) {
+    return openIndexedDB(this)
+      .push(function (db) {
+        var transaction = openTransaction(db, ["metadata"], "readwrite");
+        return handleRequest(transaction.objectStore("metadata").put(metadata));
+      });
+  };
+
+  function deleteEntry(cursor) {
+    cursor["delete"]();
+  }
+
+  IndexedDBStorage.prototype.remove = function (param) {
+    return openIndexedDB(this)
+      .push(function (db) {
+        var transaction = openTransaction(db, ["metadata", "attachment",
+                                          "blob"], "readwrite");
+        return RSVP.all([
+          handleRequest(transaction
+                        .objectStore("metadata")["delete"](param._id)),
+          // XXX Why not possible to delete with KeyCursor?
+          handleCursor(transaction.objectStore("attachment").index("_id")
+                       .openCursor(), deleteEntry),
+          handleCursor(transaction.objectStore("blob").index("_id")
+                       .openCursor(), deleteEntry)
+        ]);
+      });
+  };
+
+  IndexedDBStorage.prototype.getAttachment = function (param) {
+    var transaction,
+      start,
+      end;
+    return openIndexedDB(this)
+      .push(function (db) {
+        transaction = openTransaction(db, ["attachment", "blob"], "readonly");
+        // XXX Should raise if key is not good
+        return handleGet(transaction.objectStore("attachment")
+                         .get(buildKeyPath([param._id, param._attachment])));
+      })
+      .push(function (attachment) {
+        var total_length = attachment.info.length,
+          i,
+          promise_list = [],
+          store = transaction.objectStore("blob"),
+          start_index,
+          end_index;
+
+        start = param._start || 0;
+        end = param._end || total_length;
+        if (end > total_length) {
+          end = total_length;
+        }
+
+        if (start < 0 || end < 0) {
+          throw new jIO.util.jIOError("_start and _end must be positive",
+                                      400);
+        }
+        if (start > end) {
+          throw new jIO.util.jIOError("_start is greater than _end",
+                                      400);
+        }
+
+        start_index = Math.floor(start / UNITE);
+        end_index =  Math.floor(end / UNITE);
+        if (end % UNITE === 0) {
+          end_index -= 1;
+        }
+
+        for (i = start_index; i <= end_index; i += 1) {
+          promise_list.push(
+            handleGet(store.get(buildKeyPath([param._id,
+                                param._attachment, i])))
+          );
+        }
+        return RSVP.all(promise_list);
+      })
+      .push(function (result_list) {
+        var array_buffer_list = [],
+          blob,
+          i,
+          len = result_list.length;
+        for (i = 0; i < len; i += 1) {
+          array_buffer_list.push(result_list[i].blob);
+        }
+        blob = new Blob(array_buffer_list, {type: "application/octet-stream"});
+        return {data: blob.slice(start, end)};
+      });
+  };
+
+  function removeAttachment(transaction, param) {
+    return RSVP.all([
+      // XXX How to get the right attachment
+      handleRequest(transaction.objectStore("attachment")["delete"](
+        buildKeyPath([param._id, param._attachment])
+      )),
+      handleCursor(transaction.objectStore("blob").index("_id_attachment")
+                   .openCursor(), deleteEntry)
+    ]);
+  }
+
+  IndexedDBStorage.prototype.putAttachment = function (metadata) {
+    var blob_part = [],
+      transaction,
+      db;
+
+    return openIndexedDB(this)
+      .push(function (database) {
+        db = database;
+
+        // Split the blob first
+        return jIO.util.readBlobAsArrayBuffer(metadata._blob);
+      })
+      .push(function (event) {
+        var array_buffer = event.target.result,
+          total_size = metadata._blob.size,
+          handled_size = 0;
+
+        while (handled_size < total_size) {
+          blob_part.push(array_buffer.slice(handled_size,
+                                            handled_size + UNITE));
+          handled_size += UNITE;
+        }
+
+        // Remove previous attachment
+        transaction = openTransaction(db, ["attachment", "blob"], "readwrite");
+        return removeAttachment(transaction, metadata);
+      })
+      .push(function () {
+
+        var promise_list = [
+            handleRequest(transaction.objectStore("attachment").put({
+              "_key_path": buildKeyPath([metadata._id, metadata._attachment]),
+              "_id": metadata._id,
+              "_attachment": metadata._attachment,
+              "info": {
+                "content_type": metadata._blob.type,
+                "length": metadata._blob.size
+              }
+            }))
+          ],
+          len = blob_part.length,
+          blob_store = transaction.objectStore("blob"),
+          i;
+        for (i = 0; i < len; i += 1) {
+          promise_list.push(
+            handleRequest(blob_store.put({
+              "_key_path": buildKeyPath([metadata._id, metadata._attachment,
+                                         i]),
+              "_id" : metadata._id,
+              "_attachment" : metadata._attachment,
+              "_part" : i,
+              "blob": blob_part[i]
+            }))
+          );
+        }
+        // Store all new data
+        return RSVP.all(promise_list);
+      });
+  };
+
+  IndexedDBStorage.prototype.removeAttachment = function (param) {
+    return openIndexedDB(this)
+      .push(function (db) {
+        var transaction = openTransaction(db, ["attachment", "blob"],
+                                          "readwrite");
+        return removeAttachment(transaction, param);
       });
   };
 
   jIO.addStorage("indexeddb", IndexedDBStorage);
-}(jIO));
+}(indexedDB, jIO, RSVP, Blob, Math));

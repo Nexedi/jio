@@ -1,6 +1,8 @@
-/*jslint maxlen: 120, nomen: true */
-/*global indexedDB, test_util, console, Blob, sinon*/
-(function (jIO, QUnit) {
+/*jslint nomen: true */
+/*global indexedDB, Blob, sinon, IDBDatabase,
+         IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor*/
+(function (jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
+           IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -9,26 +11,364 @@
     expect = QUnit.expect,
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
-    module = QUnit.module;
+    module = QUnit.module,
+    big_string = "",
+    j;
 
-  module("indexeddbStorage", {
-    setup: function () {
-//       localStorage.clear();
-      this.jio = jIO.createJIO({
-        "type": "indexeddb",
-        "database": "qunit"
+  for (j = 0; j < 3000000; j += 1) {
+    big_string += "a";
+  }
+
+  function deleteIndexedDB(storage) {
+    return new RSVP.Queue()
+      .push(function () {
+        function resolver(resolve, reject) {
+          var request = indexedDB.deleteDatabase(
+            storage.__storage._database_name
+          );
+          request.onerror = reject;
+          request.onblocked = reject;
+          request.onsuccess = resolve;
+        }
+        return new RSVP.Promise(resolver);
       });
+  }
+
+  /////////////////////////////////////////////////////////////////
+  // indexeddbStorage.constructor
+  /////////////////////////////////////////////////////////////////
+  module("indexeddbStorage.constructor");
+  test("default unite value", function () {
+    var jio = jIO.createJIO({
+      type: "indexeddb",
+      database: "qunit"
+    });
+
+    equal(jio.__type, "indexeddb");
+    deepEqual(jio.__storage._database_name, "jio:qunit");
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // documentStorage.hasCapacity
+  /////////////////////////////////////////////////////////////////
+  module("indexeddbStorage.hasCapacity");
+  test("can list documents", function () {
+    var jio = jIO.createJIO({
+      type: "indexeddb",
+      database: "qunit"
+    });
+
+    ok(jio.hasCapacity("list"));
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // indexeddbStorage.buildQuery
+  /////////////////////////////////////////////////////////////////
+  module("indexeddbStorage.buildQuery", {
+    setup: function () {
+      this.jio = jIO.createJIO({
+        type: "indexeddb",
+        database: "qunit"
+      });
+      this.spy_open = sinon.spy(indexedDB, "open");
+      this.spy_create_store = sinon.spy(IDBDatabase.prototype,
+                                        "createObjectStore");
+      this.spy_transaction = sinon.spy(IDBDatabase.prototype, "transaction");
+      this.spy_store = sinon.spy(IDBTransaction.prototype, "objectStore");
+      this.spy_index = sinon.spy(IDBObjectStore.prototype, "index");
+      this.spy_create_index = sinon.spy(IDBObjectStore.prototype,
+                                        "createIndex");
+      this.spy_key_cursor = sinon.spy(IDBIndex.prototype, "openKeyCursor");
+    },
+    teardown: function () {
+      this.spy_open.restore();
+      delete this.spy_open;
+      this.spy_create_store.restore();
+      delete this.spy_create_store;
+      this.spy_transaction.restore();
+      delete this.spy_transaction;
+      this.spy_store.restore();
+      delete this.spy_store;
+      this.spy_index.restore();
+      delete this.spy_index;
+      this.spy_create_index.restore();
+      delete this.spy_create_index;
+      this.spy_key_cursor.restore();
+      delete this.spy_key_cursor;
     }
+  });
+
+  test("spy indexedDB usage", function () {
+    var context = this;
+    stop();
+    expect(30);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.allDocs();
+      })
+      .then(function () {
+
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 3,
+              "createObjectStore count");
+
+        equal(context.spy_create_store.firstCall.args[0], "metadata",
+              "first createObjectStore first argument");
+        deepEqual(context.spy_create_store.firstCall.args[1],
+                  {keyPath: "_id", autoIncrement: false},
+                  "first createObjectStore second argument");
+
+        equal(context.spy_create_store.secondCall.args[0], "attachment",
+              "second createObjectStore first argument");
+        deepEqual(context.spy_create_store.secondCall.args[1],
+                  {keyPath: "_key_path", autoIncrement: false},
+                  "second createObjectStore second argument");
+
+        equal(context.spy_create_store.thirdCall.args[0], "blob",
+              "third createObjectStore first argument");
+        deepEqual(context.spy_create_store.thirdCall.args[1],
+                  {keyPath: "_key_path", autoIncrement: false},
+                  "third createObjectStore second argument");
+
+        equal(context.spy_create_index.callCount, 4, "createIndex count");
+
+        equal(context.spy_create_index.firstCall.args[0], "_id",
+              "first createIndex first argument");
+        equal(context.spy_create_index.firstCall.args[1], "_id",
+              "first createIndex second argument");
+        deepEqual(context.spy_create_index.firstCall.args[2], {unique: true},
+                  "first createIndex third argument");
+
+        equal(context.spy_create_index.secondCall.args[0], "_id",
+              "second createIndex first argument");
+        equal(context.spy_create_index.secondCall.args[1], "_id",
+              "second createIndex second argument");
+        deepEqual(context.spy_create_index.secondCall.args[2], {unique: false},
+                  "second createIndex third argument");
+
+        equal(context.spy_create_index.thirdCall.args[0], "_id_attachment",
+              "third createIndex first argument");
+        deepEqual(context.spy_create_index.thirdCall.args[1],
+                  ["_id", "_attachment"],
+                  "third createIndex second argument");
+        deepEqual(context.spy_create_index.thirdCall.args[2],
+                  {unique: false},
+                  "third createIndex third argument");
+
+        equal(context.spy_create_index.getCall(3).args[0], "_id",
+              "fourth createIndex first argument");
+        equal(context.spy_create_index.getCall(3).args[1], "_id",
+                  "fourth createIndex second argument");
+        deepEqual(context.spy_create_index.getCall(3).args[2], {unique: false},
+                  "fourth createIndex third argument");
+
+        ok(context.spy_transaction.calledOnce, "transaction count " +
+           context.spy_transaction.callCount);
+        deepEqual(context.spy_transaction.firstCall.args[0], ["metadata"],
+                  "transaction first argument");
+        equal(context.spy_transaction.firstCall.args[1], "readonly",
+              "transaction second argument");
+
+        ok(context.spy_store.calledOnce, "store count " +
+           context.spy_store.callCount);
+        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+                  "store first argument");
+
+        ok(context.spy_index.calledOnce, "index count " +
+           context.spy_index.callCount);
+        deepEqual(context.spy_index.firstCall.args[0], "_id",
+                  "index first argument");
+
+        ok(context.spy_key_cursor.calledOnce, "key_cursor count " +
+           context.spy_key_cursor.callCount);
+
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("empty result", function () {
+    var context = this;
+    stop();
+    expect(1);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.allDocs();
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          "data": {
+            "rows": [
+            ],
+            "total_rows": 0
+          }
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("list all documents", function () {
+    var context = this;
+    stop();
+    expect(1);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return RSVP.all([
+          context.jio.put({"_id": "2", "title": "title2"}),
+          context.jio.put({"_id": "1", "title": "title1"})
+        ]);
+      })
+      .then(function () {
+        return context.jio.allDocs();
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          "data": {
+            "rows": [{
+              "id": "1",
+              "value": {}
+            }, {
+              "id": "2",
+              "value": {}
+            }],
+            "total_rows": 2
+          }
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
   });
 
   /////////////////////////////////////////////////////////////////
   // indexeddbStorage.get
   /////////////////////////////////////////////////////////////////
+  module("indexeddbStorage.get", {
+    setup: function () {
+      this.jio = jIO.createJIO({
+        type: "indexeddb",
+        database: "qunit"
+      });
+    }
+  });
+
+  test("spy indexedDB usage", function () {
+    var context = this;
+    stop();
+    expect(15);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put({"_id": "foo", "title": "bar"});
+      })
+      .then(function () {
+        context.spy_open = sinon.spy(indexedDB, "open");
+        context.spy_create_store = sinon.spy(IDBDatabase.prototype,
+                                             "createObjectStore");
+        context.spy_transaction = sinon.spy(IDBDatabase.prototype,
+                                            "transaction");
+        context.spy_store = sinon.spy(IDBTransaction.prototype, "objectStore");
+        context.spy_get = sinon.spy(IDBObjectStore.prototype, "get");
+        context.spy_index = sinon.spy(IDBObjectStore.prototype, "index");
+        context.spy_create_index = sinon.spy(IDBObjectStore.prototype,
+                                             "createIndex");
+        context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
+
+        return context.jio.get({"_id": "foo"});
+      })
+      .then(function () {
+
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 0,
+              "createObjectStore count");
+        equal(context.spy_create_index.callCount, 0, "createIndex count");
+
+        ok(context.spy_transaction.calledOnce, "transaction count " +
+           context.spy_transaction.callCount);
+        deepEqual(context.spy_transaction.firstCall.args[0],
+                  ["metadata", "attachment"], "transaction first argument");
+        equal(context.spy_transaction.firstCall.args[1], "readonly",
+              "transaction second argument");
+
+        ok(context.spy_store.calledTwice, "store count " +
+           context.spy_store.callCount);
+        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+                  "store first argument");
+        deepEqual(context.spy_store.secondCall.args[0], "attachment",
+                  "store first argument");
+
+        ok(context.spy_get.calledOnce, "index count " +
+           context.spy_get.callCount);
+        deepEqual(context.spy_get.firstCall.args[0], "foo",
+                  "get first argument");
+
+        ok(context.spy_index.calledOnce, "index count " +
+           context.spy_index.callCount);
+        deepEqual(context.spy_index.firstCall.args[0], "_id",
+                  "index first argument");
+
+        ok(context.spy_cursor.calledOnce, "cursor count " +
+           context.spy_cursor.callCount);
+
+      })
+      .always(function () {
+        context.spy_open.restore();
+        delete context.spy_open;
+        context.spy_create_store.restore();
+        delete context.spy_create_store;
+        context.spy_transaction.restore();
+        delete context.spy_transaction;
+        context.spy_store.restore();
+        delete context.spy_store;
+        context.spy_get.restore();
+        delete context.spy_get;
+        context.spy_index.restore();
+        delete context.spy_index;
+        context.spy_create_index.restore();
+        delete context.spy_create_index;
+        context.spy_cursor.restore();
+        delete context.spy_cursor;
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("get inexistent document", function () {
+    var context = this;
     stop();
     expect(3);
 
-    this.jio.get({"_id": "inexistent"})
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.get({"_id": "inexistent"});
+      })
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find document");
@@ -42,861 +382,881 @@
       });
   });
 
-  test("get document", function () {
-    var id = "post1",
-//       myAPI,
-      indexedDB,
-      mock;
-//     localStorage[id] = JSON.stringify({
-//       title: "myPost1"
-//     });
-
-    indexedDB = {
-      open: function () {
-        var result = {
-          result: "taboulet"
-        };
-        RSVP.delay().then(function () {
-          result.onsuccess();
-        });
-        return result;
-      }
-//       return RSVP.success("taboulet");
-    };
-
-    mock = sinon.mock(indexedDB);
-//     mock = sinon.mock(indexedDB.open, "open", function () {
-//       var result = {
-//         result: "taboulet"
-//       };
-//       RSVP.delay().then(function () {
-//         result.onsuccess();
-//       });
-//       return result;
-// //       return RSVP.success("taboulet");
-//     });
-    mock.expects("open").once().withArgs("couscous");
-
+  test("get document without attachment", function () {
+    var id = "/",
+      context = this;
     stop();
     expect(1);
 
-    this.jio.get({"_id": id})
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put({"_id": id, "title": "bar"});
+      })
+      .then(function () {
+        return context.jio.get({"_id": id});
+      })
       .then(function (result) {
         deepEqual(result, {
-          "title": "myPost1"
+          "_id": "/",
+          "title": "bar"
         }, "Check document");
-        mock.verify();
       })
       .fail(function (error) {
         ok(false, error);
       })
       .always(function () {
         start();
-        mock.restore();
       });
   });
 
-}(jIO, QUnit));
+  test("get document with attachment", function () {
+    var id = "/",
+      attachment = "foo",
+      context = this;
+    stop();
+    expect(1);
 
-// /*jslint indent: 2, maxlen: 80, nomen: true */
-// /*global module, test, stop, start, expect, ok, deepEqual, location, sinon,
-//   davstorage_spec, RSVP, jIO, test_util, dav_storage, btoa, define,
-//   setTimeout, clearTimeout, indexedDB */
-// 
-// // define([module_name], [dependencies], module);
-// (function (dependencies, module) {
-//   "use strict";
-//   if (typeof define === 'function' && define.amd) {
-//     return define(dependencies, module);
-//   }
-//   module(test_util, RSVP, jIO);
-// }([
-//   'test_util',
-//   'rsvp',
-//   'jio',
-//   'indexeddbstorage',
-//   'qunit'
-// ], function (util, RSVP, jIO) {
-//   "use strict";
-//   module("indexeddbStorage");
-//   function success(promise) {
-//     return new RSVP.Promise(function (resolve, notify) {
-//       promise.then(resolve, resolve, notify);
-//     }, function () {
-//       promise.cancel();
-//     });
-//   }
-// 
-//   test("Scenario", 46, function () {
-//     indexedDB.deleteDatabase("jio:test");
-//     var server, shared = {}, jio = jIO.createJIO(
-//       {"type"     : "indexeddb",
-//         "database" : "test"
-//         },
-//       {"workspace": {}}
-//     );
-//     stop();
-//     server = {restore: function () {
-//       return;
-//     }};
-// 
-//     function postNewDocument() {
-//       return jio.post({"title": "Unique ID"});
-//     }
-// 
-//     function postNewDocumentTest(answer) {
-//       var uuid = answer.id;
-//       answer.id = "<uuid>";
-//       deepEqual(answer, {
-//         "id": "<uuid>",
-//         "method": "post",
-//         "result": "success",
-//         "status": 201,
-//         "statusText": "Created"
-//       }, "Post a new document");
-//       ok(util.isUuid(uuid), "New document id should look like " +
-//                "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + uuid);
-//       shared.created_document_id = uuid;
-//     }
-// 
-//     function getCreatedDocument() {
-//       return jio.get({"_id": shared.created_document_id});
-//     }
-// 
-//     function getCreatedDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "data": {
-//           "_id": shared.created_document_id,
-//           "title": "Unique ID"
-//         },
-//         "id": shared.created_document_id,
-//         "method": "get",
-//         "result": "success",
-//         "status": 200,
-//         "statusText": "Ok"
-//       }, "Get new document");
-//     }
-// 
-//     function postSpecificDocument() {
-//       return jio.post({"_id": "b", "title": "Bee"});
-//     }
-// 
-//     function postSpecificDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "id": "b",
-//         "method": "post",
-//         "result": "success",
-//         "status": 201,
-//         "statusText": "Created"
-//       }, "Post specific document");
-//     }
-// 
-//     function listDocument() {
-//       return jio.allDocs();
-//     }
-// 
-//     function list2DocumentsTest(answer) {
-//       if (answer && answer.data && Array.isArray(answer.data.rows)) {
-//         answer.data.rows.sort(function (a) {
-//           return a.id === "b" ? 1 : 0;
-//         });
-//       }
-//       deepEqual(answer, {
-//         "data": {
-//           "total_rows": 2,
-//           "rows": [{
-//             "id": shared.created_document_id,
-//             "value": {}
-//           }, {
-//             "id": "b",
-//             "value": {}
-//           }]
-//         },
-//         "method": "allDocs",
-//         "result": "success",
-//         "status": 200,
-//         "statusText": "Ok"
-//       }, "List 2 documents");
-//     }
-// 
-//     function listDocumentsWithMetadata() {
-//       return jio.allDocs({"include_docs": true});
-//     }
-// 
-//     function list2DocumentsWithMetadataTest(answer) {
-//       if (answer && answer.data && Array.isArray(answer.data.rows)) {
-//         answer.data.rows.sort(function (a) {
-//           return a.id === "b" ? 1 : 0;
-//         });
-//       }
-//       deepEqual(answer, {
-//         "data": {
-//           "total_rows": 2,
-//           "rows": [{
-//             "id": shared.created_document_id,
-//             "value": {},
-//             "doc": {
-//               "_id": shared.created_document_id,
-//               "title": "Unique ID"
-//             }
-//           }, {
-//             "id": "b",
-//             "value": {},
-//             "doc": {
-//               "_id": "b",
-//               "title": "Bee"
-//             }
-//           }]
-//         },
-//         "method": "allDocs",
-//         "result": "success",
-//         "status": 200,
-//         "statusText": "Ok"
-//       }, "List 2 documents with their metadata");
-//     }
-// 
-//     function removeCreatedDocument() {
-//       return jio.remove({"_id": shared.created_document_id});
-//     }
-// 
-//     function removeCreatedDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "id": shared.created_document_id,
-//         "method": "remove",
-//         "result": "success",
-//         "status": 204,
-//         "statusText": "No Content"
-//       }, "Remove first document.");
-//     }
-// 
-//     function removeSpecificDocument() {
-//       return jio.remove({"_id": "b"});
-//     }
-// 
-//     function removeSpecificDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "id": "b",
-//         "method": "remove",
-//         "result": "success",
-//         "status": 204,
-//         "statusText": "No Content"
-//       }, "Remove second document.");
-//     }
-// 
-//     function listEmptyStorage() {
-//       return jio.allDocs();
-//     }
-// 
-//     function listEmptyStorageTest(answer) {
-//       deepEqual(answer, {
-//         "data": {
-//           "total_rows": 0,
-//           "rows": []
-//         },
-//         "method": "allDocs",
-//         "result": "success",
-//         "status": 200,
-//         "statusText": "Ok"
-//       }, "List empty storage");
-//     }
-// 
-//     function putNewDocument() {
-//       return jio.put({"_id": "a", "title": "Hey"});
-//     }
-// 
-//     function putNewDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "id": "a",
-//         "method": "put",
-//         "result": "success",
-//         "status": 201,
-//         "statusText": "Created"
-//       }, "Put new document");
-//     }
-// 
-//     function getCreatedDocument2() {
-//       return jio.get({"_id": "a"});
-//     }
-// 
-//     function getCreatedDocument2Test(answer) {
-//       deepEqual(answer, {
-//         "data": {
-//           "_id": "a",
-//           "title": "Hey"
-//         },
-//         "id": "a",
-//         "method": "get",
-//         "result": "success",
-//         "status": 200,
-//         "statusText": "Ok"
-//       }, "Get new document");
-//     }
-// 
-//     function postSameDocument() {
-//       return success(jio.post({"_id": "a", "title": "Hoo"}));
-//     }
-// 
-//     function postSameDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "error": "conflict",
-//         "id": "a",
-//         "message": "Command failed",
-//         "method": "post",
-//         "reason": "Document exists",
-//         "result": "error",
-//         "status": 409,
-//         "statusText": "Conflict"
-//       }, "Unable to post the same document (conflict)");
-//     }
-// 
-//     function putAttachmentToNonExistentDocument() {
-//       return success(jio.putAttachment({
-//         "_id": "ahaha",
-//         "_attachment": "aa",
-//         "_data": "aaa",
-//         "_content_type": "text/plain"
-//       }));
-//     }
-// 
-//     function putAttachmentToNonExistentDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "attachment": "aa",
-//         "error": "not_found",
-//         "id": "ahaha",
-//         "message": "indexeddbStorage unable to put attachment",
-//         "method": "putAttachment",
-//         "reason": "Not Found",
-//         "result": "error",
-//         "status": 404,
-//         "statusText": "Not Found"
-//       }, "Put attachment to a non existent document -> 404 Not Found");
-//     }
-// 
-//     function createAttachment() {
-//       return jio.putAttachment({
-//         "_id": "a",
-//         "_attachment": "aa",
-//         "_data": "aaa",
-//         "_content_type": "text/plain"
-//       });
-//     }
-// 
-//     function createAttachmentTest(answer) {
-//       deepEqual(answer, {
-//         "attachment": "aa",
-//         "id": "a",
-//         "method": "putAttachment",
-//         "result": "success",
-//         "status": 204,
-//         "statusText": "No Content"
-//       }, "Create new attachment");
-//     }
-// 
-//     function updateAttachment() {
-//       return jio.putAttachment({
-//         "_id": "a",
-//         "_attachment": "aa",
-//         "_data": "aab",
-//         "_content_type": "text/plain"
-//       });
-//     }
-// 
-//     function updateAttachmentTest(answer) {
-//       deepEqual(answer, {
-//         "attachment": "aa",
-//         "id": "a",
-//         "method": "putAttachment",
-//         "result": "success",
-//         "status": 204,
-//         "statusText": "No Content"
-//       }, "Update last attachment");
-//     }
-// 
-//     function createAnotherAttachment() {
-//       return jio.putAttachment({
-//         "_id": "a",
-//         "_attachment": "ab",
-//         "_data": "aba",
-//         "_content_type": "text/plain"
-//       });
-//     }
-// 
-//     function createAnotherAttachmentTest(answer) {
-//       deepEqual(answer, {
-//         "attachment": "ab",
-//         "id": "a",
-//         "method": "putAttachment",
-//         "result": "success",
-//         "status": 204,
-//         "statusText": "No Content"
-//       }, "Create another attachment");
-//     }
-// 
-// 
-//     function updateLastDocument() {
-//       return jio.put({"_id": "a", "title": "Hoo"});
-//     }
-// 
-//     function updateLastDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "id": "a",
-//         "method": "put",
-//         "result": "success",
-//         "status": 204,
-//         "statusText": "No Content"
-//       }, "Update document metadata");
-//     }
-// 
-//     function getFirstAttachment() {
-//       return jio.getAttachment({"_id": "a", "_attachment": "aa"});
-//     }
-// 
-//     function getFirstAttachmentTest(answer) {
-//       var blob = answer.data;
-//       answer.data = "<blob>";
-//       return jIO.util.readBlobAsText(blob).then(function (e) {
-//         deepEqual(blob.type, "text/plain", "Check blob type");
-//         deepEqual(e.target.result, "aab", "Check blob text content");
-//         deepEqual(answer, {
-//           "attachment": "aa",
-//           "data": "<blob>",
-//           "id": "a",
-//           "method": "getAttachment",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//         }, "Get first attachment");
-//       }, function (err) {
-//         deepEqual(err, "no error", "Check blob text content");
-//       });
-//     }
-// 
-//     function getFirstAttachmentRange1() {
-//       return jio.getAttachment({"_id": "a",
-//                                 "_attachment": "aa",
-//                                 "_start": 0});
-//     }
-// 
-//     function getFirstAttachmentRangeTest1(answer) {
-//       var blob = answer.data;
-//       answer.data = "<blob>";
-//       return jIO.util.readBlobAsText(blob).then(function (e) {
-//         deepEqual(blob.type, "text/plain", "Check blob type");
-//         deepEqual(e.target.result, "aab", "Check blob text content");
-//         deepEqual(answer, {
-//           "attachment": "aa",
-//           "data": "<blob>",
-//           "id": "a",
-//           "method": "getAttachment",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//         }, "Get first attachment with range :_start:0, _end:undefined");
-//       }, function (err) {
-//         deepEqual(err, "no error", "Check blob text content");
-//       });
-//     }
-// 
-// 
-//     function getFirstAttachmentRange2() {
-//       return jio.getAttachment({"_id": "a",
-//                                 "_attachment": "aa",
-//                                 "_start": 0,
-//                                 "_end": 1});
-//     }
-// 
-//     function getFirstAttachmentRangeTest2(answer) {
-//       var blob = answer.data;
-//       answer.data = "<blob>";
-//       return jIO.util.readBlobAsText(blob).then(function (e) {
-//         deepEqual(blob.type, "text/plain", "Check blob type");
-//         deepEqual(e.target.result, "a", "Check blob text content");
-//         deepEqual(answer, {
-//           "attachment": "aa",
-//           "data": "<blob>",
-//           "id": "a",
-//           "method": "getAttachment",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//         }, "Get first attachment with range :_start:0, _end:1");
-//       }, function (err) {
-//         deepEqual(err, "no error", "Check blob text content");
-//       });
-//     }
-// 
-//     function getFirstAttachmentRange3() {
-//       return jio.getAttachment({"_id": "a",
-//                                 "_attachment": "aa",
-//                                 "_start": 1,
-//                                 "_end": 3});
-//     }
-//     function getFirstAttachmentRangeTest3(answer) {
-//       var blob = answer.data;
-//       answer.data = "<blob>";
-//       return jIO.util.readBlobAsText(blob).then(function (e) {
-//         deepEqual(blob.type, "text/plain", "Check blob type");
-//         deepEqual(e.target.result, "ab", "Check blob text content");
-//         deepEqual(answer, {
-//           "attachment": "aa",
-//           "data": "<blob>",
-//           "id": "a",
-//           "method": "getAttachment",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//         }, "Get first attachment with range :_start:1, _end:3");
-//       }, function (err) {
-//         deepEqual(err, "no error", "Check blob text content");
-//       });
-//     }
-// 
-// 
-//     function getSecondAttachment() {
-//       return jio.getAttachment({"_id": "a", "_attachment": "ab"});
-//     }
-// 
-//     function getSecondAttachmentTest(answer) {
-//       var blob = answer.data;
-//       answer.data = "<blob>";
-//       return jIO.util.readBlobAsText(blob).then(function (e) {
-//         deepEqual(blob.type, "text/plain", "Check blob type");
-//         deepEqual(e.target.result, "aba", "Check blob text content");
-//         deepEqual(answer, {
-//           "attachment": "ab",
-//           "data": "<blob>",
-//           "id": "a",
-//           "method": "getAttachment",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//         }, "Get second attachment");
-//       }, function (err) {
-//         deepEqual(err, "no error", "Check blob text content");
-//       });
-//     }
-// 
-// 
-// 
-// 
-// 
-//     function getSecondAttachmentRange1() {
-//       return success(jio.getAttachment({"_id": "a",
-//                                         "_attachment": "ab",
-//                                         "_start": -1}));
-//     }
-//     function getSecondAttachmentRangeTest1(answer) {
-//       deepEqual(answer, {
-//         "attachment": "ab",
-//         "error": "not_found",
-//         "id": "a",
-//         "message": "_start and _end must be positive",
-//         "method": "getAttachment",
-//         "reason": "invalide _start, _end",
-//         "result": "error",
-//         "status": 404,
-//         "statusText": "Not Found"
-//       }, "get attachment with _start or _end negative -> 404 Not Found");
-//     }
-// 
-// 
-// 
-//     function getSecondAttachmentRange2() {
-//       return success(jio.getAttachment({"_id": "a",
-//                                         "_attachment": "ab",
-//                                         "_start": 1,
-//                                         "_end": 0}));
-//     }
-//     function getSecondAttachmentRangeTest2(answer) {
-//       deepEqual(answer, {
-//         "attachment": "ab",
-//         "error": "not_found",
-//         "id": "a",
-//         "message": "start is great then end",
-//         "method": "getAttachment",
-//         "reason": "invalide offset",
-//         "result": "error",
-//         "status": 404,
-//         "statusText": "Not Found"
-//       }, "get attachment with _start > _end -> 404 Not Found");
-//     }
-//     function getSecondAttachmentRange3() {
-//       return jio.getAttachment({"_id": "a",
-//                                 "_attachment": "ab",
-//                                 "_start": 1,
-//                                 "_end": 2});
-//     }
-//     function getSecondAttachmentRangeTest3(answer) {
-//       var blob = answer.data;
-//       answer.data = "<blob>";
-//       return jIO.util.readBlobAsText(blob).then(function (e) {
-//         deepEqual(blob.type, "text/plain", "Check blob type");
-//         deepEqual(e.target.result, "b", "Check blob text content");
-//         deepEqual(answer, {
-//           "attachment": "ab",
-//           "data": "<blob>",
-//           "id": "a",
-//           "method": "getAttachment",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//         }, "Get second attachment with range :_start:1, _end:3");
-//       }, function (err) {
-//         deepEqual(err, "no error", "Check blob text content");
-//       });
-//     }
-// 
-// 
-// 
-//     function getLastDocument() {
-//       return jio.get({"_id": "a"});
-//     }
-// 
-//     function getLastDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "data": {
-//           "_id": "a",
-//           "title": "Hoo",
-//           "_attachment": {
-//             "aa": {
-//               "content_type": "text/plain",
-//               "length": 3
-//             },
-//             "ab": {
-//               "content_type": "text/plain",
-//               "length": 3
-//             }
-//           }
-//         },
-//         "id": "a",
-//         "method": "get",
-//         "result": "success",
-//         "status": 200,
-//         "statusText": "Ok"
-//       }, "Get last document metadata");
-//     }
-// 
-//     function removeSecondAttachment() {
-//       return jio.removeAttachment({"_id": "a", "_attachment": "ab"});
-//     }
-// 
-//     function removeSecondAttachmentTest(answer) {
-//       deepEqual(answer, {
-//         "attachment": "ab",
-//         "id": "a",
-//         "method": "removeAttachment",
-//         "result": "success",
-//         "status": 204,
-//         "statusText": "No Content"
-//       }, "Remove second document");
-//     }
-// 
-//     function getInexistentSecondAttachment() {
-//       return success(jio.getAttachment({"_id": "a", "_attachment": "ab"}));
-//     }
-// 
-//     function getInexistentSecondAttachmentTest(answer) {
-//       deepEqual(answer, {
-//         "attachment": "ab",
-//         "error": "not_found",
-//         "id": "a",
-//         "message": "IndexeddbStorage, unable to get attachment.",
-//         "method": "getAttachment",
-//         "reason": "missing attachment",
-//         "result": "error",
-//         "status": 404,
-//         "statusText": "Not Found"
-//       }, "Get inexistent second attachment");
-//     }
-// 
-//     function getOneAttachmentDocument() {
-//       return jio.get({"_id": "a"});
-//     }
-// 
-//     function getOneAttachmentDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "data": {
-//           "_attachment": {
-//             "aa": {
-//               "content_type": "text/plain",
-//               "length": 3
-//             }
-//           },
-//           "_id": "a",
-//           "title": "Hoo"
-//         },
-//         "id": "a",
-//         "method": "get",
-//         "result": "success",
-//         "status": 200,
-//         "statusText": "Ok"
-//       }, "Get document metadata");
-//     }
-// 
-//     function removeSecondAttachmentAgain() {
-//       return success(jio.removeAttachment({"_id": "a", "_attachment": "ab"}));
-//     }
-// 
-//     function removeSecondAttachmentAgainTest(answer) {
-//       deepEqual(answer, {
-//         "attachment": "ab",
-//         "error": "not_found",
-//         "id": "a",
-//         "message": "IndexeddbStorage, document attachment not found.",
-//         "method": "removeAttachment",
-//         "reason": "missing attachment",
-//         "result": "error",
-//         "status": 404,
-//         "statusText": "Not Found"
-//       }, "Remove inexistent attachment");
-//     }
-// 
-//     function removeDocument() {
-//       return jio.remove({"_id": "a"});
-//     }
-// 
-//     function removeDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "id": "a",
-//         "method": "remove",
-//         "result": "success",
-//         "status": 204,
-//         "statusText": "No Content"
-//       }, "Remove document and its attachments");
-//     }
-// 
-//     function getInexistentFirstAttachment() {
-//       return success(jio.getAttachment({"_id": "a", "_attachment": "aa"}));
-//     }
-// 
-//     function getInexistentFirstAttachmentTest(answer) {
-//       deepEqual(answer, {
-//         "attachment": "aa",
-//         "error": "not_found",
-//         "id": "a",
-//         "message": "IndexeddbStorage, unable to get attachment.",
-//         "method": "getAttachment",
-//         "reason": "missing attachment",
-//         "result": "error",
-//         "status": 404,
-//         "statusText": "Not Found"
-//       }, "Get inexistent first attachment");
-//     }
-// 
-//     function getInexistentDocument() {
-//       return success(jio.get({"_id": "a"}));
-//     }
-// 
-//     function getInexistentDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "error": "not_found",
-//         "id": "a",
-//         "message": "IndexeddbStorage, unable to get document.",
-//         "method": "get",
-//         "reason": "Not Found",
-//         "result": "error",
-//         "status": 404,
-//         "statusText": "Not Found"
-//       }, "Get inexistent document");
-//     }
-// 
-//     function removeInexistentDocument() {
-//       return success(jio.remove({"_id": "a"}));
-//     }
-// 
-//     function removeInexistentDocumentTest(answer) {
-//       deepEqual(answer, {
-//         "error": "not_found",
-//         "id": "a",
-//         "message": "IndexeddbStorage, unable to get metadata.",
-//         "method": "remove",
-//         "reason": "Not Found",
-//         "result": "error",
-//         "status": 404,
-//         "statusText": "Not Found"
-//       }, "Remove already removed document");
-//     }
-// 
-//     function unexpectedError(error) {
-//       if (error instanceof Error) {
-//         deepEqual([
-//           error.name + ": " + error.message,
-//           error
-//         ], "UNEXPECTED ERROR", "Unexpected error");
-//       } else {
-//         deepEqual(error, "UNEXPECTED ERROR", "Unexpected error");
-//       }
-//     }
-// 
-//  // # Post new documents, list them and remove them
-//  // post a 201
-//     postNewDocument().then(postNewDocumentTest).
-//      // get 200 
-//       then(getCreatedDocument).then(getCreatedDocumentTest).
-//      // post b 201
-//       then(postSpecificDocument).then(postSpecificDocumentTest).
-//      // allD 200 2 documents
-//       then(listDocument).then(list2DocumentsTest).
-//      // allD+include_docs 200 2 documents
-//       then(listDocumentsWithMetadata).then(list2DocumentsWithMetadataTest).
-//      // remove a 204
-//       then(removeCreatedDocument).then(removeCreatedDocumentTest).
-//      // remove b 204
-//       then(removeSpecificDocument).then(removeSpecificDocumentTest).
-//      // allD 200 empty storage
-//       then(listEmptyStorage).then(listEmptyStorageTest).
-//      // # Create and update documents, and some attachment and remove them
-//      // put 201
-//       then(putNewDocument).then(putNewDocumentTest).
-//      // get 200
-//       then(getCreatedDocument2).then(getCreatedDocument2Test).
-//      // post 409
-//       then(postSameDocument).then(postSameDocumentTest).
-//      // putA 404
-//       then(putAttachmentToNonExistentDocument).
-//       then(putAttachmentToNonExistentDocumentTest).
-//      // putA a 204
-//       then(createAttachment).then(createAttachmentTest).
-//      // putA a 204
-//       then(updateAttachment).then(updateAttachmentTest).
-//      // putA b 204
-//       then(createAnotherAttachment).then(createAnotherAttachmentTest).
-//      // put 204
-//       then(updateLastDocument).then(updateLastDocumentTest).
-//      // getA a 200
-//       then(getFirstAttachment).then(getFirstAttachmentTest).
-//       then(getFirstAttachmentRange1).then(getFirstAttachmentRangeTest1).
-//       then(getFirstAttachmentRange2).then(getFirstAttachmentRangeTest2).
-//       then(getFirstAttachmentRange3).then(getFirstAttachmentRangeTest3).
-//      // getA b 200
-//       then(getSecondAttachment).then(getSecondAttachmentTest).
-//       then(getSecondAttachmentRange1).then(getSecondAttachmentRangeTest1).
-//       then(getSecondAttachmentRange2).then(getSecondAttachmentRangeTest2).
-//       then(getSecondAttachmentRange3).then(getSecondAttachmentRangeTest3).
-//       // get 200
-//       then(getLastDocument).then(getLastDocumentTest).
-//      // removeA b 204
-//       then(removeSecondAttachment).then(removeSecondAttachmentTest).
-//      // getA b 404
-//       then(getInexistentSecondAttachment).
-//       then(getInexistentSecondAttachmentTest).
-//      // get 200
-//       then(getOneAttachmentDocument).then(getOneAttachmentDocumentTest).
-//      // removeA b 404
-//       then(removeSecondAttachmentAgain).then(removeSecondAttachmentAgainTest).
-//      // remove 204
-//       then(removeDocument).then(removeDocumentTest).
-//      // getA a 404
-//       then(getInexistentFirstAttachment).then(getInexistentFirstAttachmentTest).
-//      // get 404
-//       then(getInexistentDocument).then(getInexistentDocumentTest).
-//      // remove 404
-//       then(removeInexistentDocument).then(removeInexistentDocumentTest).
-//      // end 
-//       fail(unexpectedError).
-//       always(start).
-//       always(function () {
-//         server.restore();
-//       });
-//   });
-// }));
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put({"_id": id, "title": "bar"});
+      })
+      .then(function () {
+        return context.jio.putAttachment({"_id": id, "_attachment": attachment,
+                                          "_data": "bar"});
+      })
+      .then(function () {
+        return context.jio.get({"_id": id});
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          "_id": id,
+          "title": "bar",
+          "_attachments": {
+            "foo": {}
+          }
+        }, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // indexeddbStorage.put
+  /////////////////////////////////////////////////////////////////
+  module("indexeddbStorage.put", {
+    setup: function () {
+      this.jio = jIO.createJIO({
+        type: "indexeddb",
+        database: "qunit"
+      });
+    }
+  });
+
+  test("spy indexedDB usage", function () {
+    var context = this;
+    stop();
+    expect(31);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        context.spy_open = sinon.spy(indexedDB, "open");
+        context.spy_create_store = sinon.spy(IDBDatabase.prototype,
+                                             "createObjectStore");
+        context.spy_transaction = sinon.spy(IDBDatabase.prototype,
+                                            "transaction");
+        context.spy_store = sinon.spy(IDBTransaction.prototype, "objectStore");
+        context.spy_put = sinon.spy(IDBObjectStore.prototype, "put");
+        context.spy_index = sinon.spy(IDBObjectStore.prototype, "index");
+        context.spy_create_index = sinon.spy(IDBObjectStore.prototype,
+                                             "createIndex");
+        context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
+
+        return context.jio.put({"_id": "foo", "title": "bar"});
+      })
+      .then(function () {
+
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 3,
+              "createObjectStore count");
+
+        equal(context.spy_create_store.firstCall.args[0], "metadata",
+              "first createObjectStore first argument");
+        deepEqual(context.spy_create_store.firstCall.args[1],
+                  {keyPath: "_id", autoIncrement: false},
+                  "first createObjectStore second argument");
+
+        equal(context.spy_create_store.secondCall.args[0], "attachment",
+              "second createObjectStore first argument");
+        deepEqual(context.spy_create_store.secondCall.args[1],
+                  {keyPath: "_key_path", autoIncrement: false},
+                  "second createObjectStore second argument");
+
+        equal(context.spy_create_store.thirdCall.args[0], "blob",
+              "third createObjectStore first argument");
+        deepEqual(context.spy_create_store.thirdCall.args[1],
+                  {keyPath: "_key_path", autoIncrement: false},
+                  "third createObjectStore second argument");
+
+        equal(context.spy_create_index.callCount, 4, "createIndex count");
+
+        equal(context.spy_create_index.firstCall.args[0], "_id",
+              "first createIndex first argument");
+        equal(context.spy_create_index.firstCall.args[1], "_id",
+              "first createIndex second argument");
+        deepEqual(context.spy_create_index.firstCall.args[2], {unique: true},
+                  "first createIndex third argument");
+
+        equal(context.spy_create_index.secondCall.args[0], "_id",
+              "second createIndex first argument");
+        equal(context.spy_create_index.secondCall.args[1], "_id",
+              "second createIndex second argument");
+        deepEqual(context.spy_create_index.secondCall.args[2],
+                  {unique: false},
+                  "second createIndex third argument");
+
+        equal(context.spy_create_index.thirdCall.args[0], "_id_attachment",
+              "third createIndex first argument");
+        deepEqual(context.spy_create_index.thirdCall.args[1],
+                  ["_id", "_attachment"],
+                  "third createIndex second argument");
+        deepEqual(context.spy_create_index.thirdCall.args[2], {unique: false},
+                  "third createIndex third argument");
+
+        equal(context.spy_create_index.getCall(3).args[0], "_id",
+              "fourth createIndex first argument");
+        equal(context.spy_create_index.getCall(3).args[1], "_id",
+                  "fourth createIndex second argument");
+        deepEqual(context.spy_create_index.getCall(3).args[2], {unique: false},
+                  "fourth createIndex third argument");
+
+        ok(context.spy_transaction.calledOnce, "transaction count " +
+           context.spy_transaction.callCount);
+        deepEqual(context.spy_transaction.firstCall.args[0], ["metadata"],
+                  "transaction first argument");
+        equal(context.spy_transaction.firstCall.args[1], "readwrite",
+              "transaction second argument");
+
+        ok(context.spy_store.calledOnce, "store count " +
+           context.spy_store.callCount);
+        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+                  "store first argument");
+
+        ok(context.spy_put.calledOnce, "put count " +
+           context.spy_put.callCount);
+        deepEqual(context.spy_put.firstCall.args[0],
+                  {"_id": "foo", title: "bar"},
+                  "put first argument");
+
+        ok(!context.spy_index.called, "index count " +
+           context.spy_index.callCount);
+
+        ok(!context.spy_cursor.called, "cursor count " +
+           context.spy_cursor.callCount);
+
+      })
+      .always(function () {
+        context.spy_open.restore();
+        delete context.spy_open;
+        context.spy_create_store.restore();
+        delete context.spy_create_store;
+        context.spy_transaction.restore();
+        delete context.spy_transaction;
+        context.spy_store.restore();
+        delete context.spy_store;
+        context.spy_put.restore();
+        delete context.spy_put;
+        context.spy_index.restore();
+        delete context.spy_index;
+        context.spy_create_index.restore();
+        delete context.spy_create_index;
+        context.spy_cursor.restore();
+        delete context.spy_cursor;
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("put document", function () {
+    var context = this;
+    stop();
+    expect(1);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put({"_id": "inexistent"});
+      })
+      .then(function (result) {
+        equal(result, "inexistent");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // indexeddbStorage.remove
+  /////////////////////////////////////////////////////////////////
+  module("indexeddbStorage.remove", {
+    setup: function () {
+      this.jio = jIO.createJIO({
+        type: "indexeddb",
+        database: "qunit"
+      });
+    }
+  });
+
+  test("spy indexedDB usage with one document", function () {
+    var context = this;
+    stop();
+    expect(18);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put({"_id": "foo", "title": "bar"});
+      })
+      .then(function () {
+        context.spy_open = sinon.spy(indexedDB, "open");
+        context.spy_create_store = sinon.spy(IDBDatabase.prototype,
+                                             "createObjectStore");
+        context.spy_transaction = sinon.spy(IDBDatabase.prototype,
+                                            "transaction");
+        context.spy_store = sinon.spy(IDBTransaction.prototype, "objectStore");
+        context.spy_delete = sinon.spy(IDBObjectStore.prototype, "delete");
+        context.spy_index = sinon.spy(IDBObjectStore.prototype, "index");
+        context.spy_create_index = sinon.spy(IDBObjectStore.prototype,
+                                             "createIndex");
+        context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
+        context.spy_cursor_delete = sinon.spy(IDBCursor.prototype, "delete");
+
+        return context.jio.remove({"_id": "foo"});
+      })
+      .then(function () {
+
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 0,
+              "createObjectStore count");
+        equal(context.spy_create_index.callCount, 0, "createIndex count");
+
+        ok(context.spy_transaction.calledOnce, "transaction count " +
+           context.spy_transaction.callCount);
+        deepEqual(context.spy_transaction.firstCall.args[0],
+                  ["metadata", "attachment", "blob"],
+                  "transaction first argument");
+        equal(context.spy_transaction.firstCall.args[1], "readwrite",
+              "transaction second argument");
+
+        equal(context.spy_store.callCount, 3, "store count " +
+           context.spy_store.callCount);
+        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+                  "store first argument");
+        deepEqual(context.spy_store.secondCall.args[0], "attachment",
+                  "store first argument");
+        deepEqual(context.spy_store.thirdCall.args[0], "blob",
+                  "store first argument");
+
+        ok(context.spy_delete.calledOnce, "delete count " +
+           context.spy_delete.callCount);
+        deepEqual(context.spy_delete.firstCall.args[0], "foo",
+                  "delete first argument");
+
+        ok(context.spy_index.calledTwice, "index count " +
+           context.spy_index.callCount);
+        deepEqual(context.spy_index.firstCall.args[0], "_id",
+                  "index first argument");
+        deepEqual(context.spy_index.secondCall.args[0], "_id",
+                  "index first argument");
+
+        ok(context.spy_cursor.calledTwice, "cursor count " +
+           context.spy_cursor.callCount);
+        equal(context.spy_cursor_delete.callCount, 0, "cursor count " +
+           context.spy_cursor_delete.callCount);
+
+      })
+      .always(function () {
+        context.spy_open.restore();
+        delete context.spy_open;
+        context.spy_create_store.restore();
+        delete context.spy_create_store;
+        context.spy_transaction.restore();
+        delete context.spy_transaction;
+        context.spy_store.restore();
+        delete context.spy_store;
+        context.spy_delete.restore();
+        delete context.spy_delete;
+        context.spy_index.restore();
+        delete context.spy_index;
+        context.spy_create_index.restore();
+        delete context.spy_create_index;
+        context.spy_cursor.restore();
+        delete context.spy_cursor;
+        context.spy_cursor_delete.restore();
+        delete context.spy_cursor_delete;
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("spy indexedDB usage with 2 attachments", function () {
+    var context = this;
+    stop();
+    expect(18);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put({"_id": "foo", "title": "bar"});
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.putAttachment({"_id": "foo",
+                                     "_attachment": "attachment1",
+                                     "_data": "bar"}),
+          context.jio.putAttachment({"_id": "foo",
+                                     "_attachment": "attachment2",
+                                     "_data": "bar2"})
+        ]);
+      })
+      .then(function () {
+        context.spy_open = sinon.spy(indexedDB, "open");
+        context.spy_create_store = sinon.spy(IDBDatabase.prototype,
+                                             "createObjectStore");
+        context.spy_transaction = sinon.spy(IDBDatabase.prototype,
+                                            "transaction");
+        context.spy_store = sinon.spy(IDBTransaction.prototype, "objectStore");
+        context.spy_delete = sinon.spy(IDBObjectStore.prototype, "delete");
+        context.spy_index = sinon.spy(IDBObjectStore.prototype, "index");
+        context.spy_create_index = sinon.spy(IDBObjectStore.prototype,
+                                             "createIndex");
+        context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
+        context.spy_cursor_delete = sinon.spy(IDBCursor.prototype, "delete");
+
+        return context.jio.remove({"_id": "foo"});
+      })
+      .then(function () {
+
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 0, "createObjectStore count");
+        equal(context.spy_create_index.callCount, 0, "createIndex count");
+
+        ok(context.spy_transaction.calledOnce, "transaction count " +
+           context.spy_transaction.callCount);
+        deepEqual(context.spy_transaction.firstCall.args[0],
+                  ["metadata", "attachment", "blob"],
+                  "transaction first argument");
+        equal(context.spy_transaction.firstCall.args[1], "readwrite",
+              "transaction second argument");
+
+        equal(context.spy_store.callCount, 3, "store count " +
+           context.spy_store.callCount);
+        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+                  "store first argument");
+        deepEqual(context.spy_store.secondCall.args[0], "attachment",
+                  "store first argument");
+        deepEqual(context.spy_store.thirdCall.args[0], "blob",
+                  "store first argument");
+
+        equal(context.spy_delete.callCount, 1, "delete count " +
+           context.spy_delete.callCount);
+        deepEqual(context.spy_delete.firstCall.args[0], "foo",
+                  "delete first argument");
+
+        ok(context.spy_index.calledTwice, "index count " +
+           context.spy_index.callCount);
+        deepEqual(context.spy_index.firstCall.args[0], "_id",
+                  "index first argument");
+        deepEqual(context.spy_index.secondCall.args[0], "_id",
+                  "index first argument");
+
+        ok(context.spy_cursor.calledTwice, "cursor count " +
+           context.spy_cursor.callCount);
+
+        equal(context.spy_cursor_delete.callCount, 3, "cursor count " +
+           context.spy_cursor_delete.callCount);
+
+      })
+      .always(function () {
+        context.spy_open.restore();
+        delete context.spy_open;
+        context.spy_create_store.restore();
+        delete context.spy_create_store;
+        context.spy_transaction.restore();
+        delete context.spy_transaction;
+        context.spy_store.restore();
+        delete context.spy_store;
+        context.spy_delete.restore();
+        delete context.spy_delete;
+        context.spy_index.restore();
+        delete context.spy_index;
+        context.spy_create_index.restore();
+        delete context.spy_create_index;
+        context.spy_cursor.restore();
+        delete context.spy_cursor;
+        context.spy_cursor_delete.restore();
+        delete context.spy_cursor_delete;
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // indexeddbStorage.getAttachment
+  /////////////////////////////////////////////////////////////////
+  module("indexeddbStorage.getAttachment", {
+    setup: function () {
+      this.jio = jIO.createJIO({
+        type: "indexeddb",
+        database: "qunit"
+      });
+    }
+  });
+
+  test("spy indexedDB usage", function () {
+    var context = this,
+      attachment = "attachment";
+    stop();
+    expect(15);
+
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put({"_id": "foo", "title": "bar"});
+      })
+      .then(function () {
+        return context.jio.putAttachment({"_id": "foo",
+                                          "_attachment": attachment,
+                                          "_data": big_string});
+      })
+      .then(function () {
+        context.spy_open = sinon.spy(indexedDB, "open");
+        context.spy_create_store = sinon.spy(IDBDatabase.prototype,
+                                             "createObjectStore");
+        context.spy_transaction = sinon.spy(IDBDatabase.prototype,
+                                            "transaction");
+        context.spy_store = sinon.spy(IDBTransaction.prototype, "objectStore");
+        context.spy_get = sinon.spy(IDBObjectStore.prototype, "get");
+        context.spy_index = sinon.spy(IDBObjectStore.prototype, "index");
+        context.spy_create_index = sinon.spy(IDBObjectStore.prototype,
+                                             "createIndex");
+
+        return context.jio.getAttachment({"_id": "foo",
+                                          "_attachment": attachment});
+      })
+      .then(function () {
+
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 0,
+              "createObjectStore count");
+        equal(context.spy_create_index.callCount, 0, "createIndex count");
+
+        ok(context.spy_transaction.calledOnce, "transaction count " +
+           context.spy_transaction.callCount);
+        deepEqual(context.spy_transaction.firstCall.args[0],
+                  ["attachment", "blob"],
+                  "transaction first argument");
+        equal(context.spy_transaction.firstCall.args[1], "readonly",
+              "transaction second argument");
+
+        equal(context.spy_store.callCount, 2, "store count " +
+           context.spy_store.callCount);
+        deepEqual(context.spy_store.firstCall.args[0], "attachment",
+                  "store first argument");
+        deepEqual(context.spy_store.secondCall.args[0], "blob",
+                  "store first argument");
+
+        equal(context.spy_get.callCount, 3, "get count " +
+           context.spy_get.callCount);
+        deepEqual(context.spy_get.firstCall.args[0], "foo_attachment",
+                  "get first argument");
+        deepEqual(context.spy_get.secondCall.args[0], "foo_attachment_0",
+                  "get first argument");
+        deepEqual(context.spy_get.thirdCall.args[0], "foo_attachment_1",
+                  "get first argument");
+
+        ok(!context.spy_index.called, "index count " +
+           context.spy_index.callCount);
+      })
+      .always(function () {
+        context.spy_open.restore();
+        delete context.spy_open;
+        context.spy_create_store.restore();
+        delete context.spy_create_store;
+        context.spy_transaction.restore();
+        delete context.spy_transaction;
+        context.spy_store.restore();
+        delete context.spy_store;
+        context.spy_get.restore();
+        delete context.spy_get;
+        context.spy_index.restore();
+        delete context.spy_index;
+        context.spy_create_index.restore();
+        delete context.spy_create_index;
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("check result", function () {
+    var context = this,
+      attachment = "attachment";
+    stop();
+    expect(2);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put({"_id": "foo", "title": "bar"});
+      })
+      .then(function () {
+        return context.jio.putAttachment({"_id": "foo",
+                                          "_attachment": attachment,
+                                          "_data": big_string});
+      })
+      .then(function () {
+        return context.jio.getAttachment({"_id": "foo",
+                                          "_attachment": attachment});
+      })
+      .then(function (result) {
+        ok(result.data instanceof Blob, "Data is Blob");
+        return jIO.util.readBlobAsText(result.data);
+      })
+      .then(function (result) {
+        equal(result.target.result, big_string,
+              "Attachment correctly fetched");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("streaming", function () {
+    var context = this,
+      attachment = "attachment";
+    stop();
+    expect(2);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put({"_id": "foo", "title": "bar"});
+      })
+      .then(function () {
+        return context.jio.putAttachment({"_id": "foo",
+                                          "_attachment": attachment,
+                                          "_data": big_string});
+      })
+      .then(function () {
+        return context.jio.getAttachment({"_id": "foo",
+                                          "_attachment": attachment,
+                                          "_start": 1999995, "_end": 2000005});
+      })
+      .then(function (result) {
+        ok(result.data instanceof Blob, "Data is Blob");
+        return jIO.util.readBlobAsText(result.data);
+      })
+      .then(function (result) {
+        var expected = "aaaaaaaaaa";
+        equal(result.target.result, expected, "Attachment correctly fetched");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // indexeddbStorage.removeAttachment
+  /////////////////////////////////////////////////////////////////
+  module("indexeddbStorage.removeAttachment", {
+    setup: function () {
+      this.jio = jIO.createJIO({
+        type: "indexeddb",
+        database: "qunit"
+      });
+    }
+  });
+
+  test("spy indexedDB usage", function () {
+    var context = this,
+      attachment = "attachment";
+    stop();
+    expect(15);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put({"_id": "foo", "title": "bar"});
+      })
+      .then(function () {
+        return context.jio.putAttachment({"_id": "foo",
+                                          "_attachment": attachment,
+                                          "_data": big_string});
+      })
+      .then(function () {
+        context.spy_open = sinon.spy(indexedDB, "open");
+        context.spy_create_store = sinon.spy(IDBDatabase.prototype,
+                                             "createObjectStore");
+        context.spy_transaction = sinon.spy(IDBDatabase.prototype,
+                                            "transaction");
+        context.spy_store = sinon.spy(IDBTransaction.prototype,
+                                      "objectStore");
+        context.spy_delete = sinon.spy(IDBObjectStore.prototype, "delete");
+        context.spy_index = sinon.spy(IDBObjectStore.prototype, "index");
+        context.spy_create_index = sinon.spy(IDBObjectStore.prototype,
+                                             "createIndex");
+        context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
+        context.spy_cursor_delete = sinon.spy(IDBCursor.prototype, "delete");
+
+        return context.jio.removeAttachment({"_id": "foo",
+                                             "_attachment": attachment});
+      })
+      .then(function () {
+
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 0,
+              "createObjectStore count");
+        equal(context.spy_create_index.callCount, 0,
+              "createIndex count");
+
+        ok(context.spy_transaction.calledOnce, "transaction count " +
+           context.spy_transaction.callCount);
+        deepEqual(context.spy_transaction.firstCall.args[0],
+                  ["attachment", "blob"],
+                  "transaction first argument");
+        equal(context.spy_transaction.firstCall.args[1], "readwrite",
+              "transaction second argument");
+
+        equal(context.spy_store.callCount, 2, "store count " +
+           context.spy_store.callCount);
+        deepEqual(context.spy_store.firstCall.args[0], "attachment",
+                  "store first argument");
+        deepEqual(context.spy_store.secondCall.args[0], "blob",
+                  "store first argument");
+
+        equal(context.spy_delete.callCount, 1, "delete count " +
+           context.spy_delete.callCount);
+        deepEqual(context.spy_delete.firstCall.args[0], "foo_attachment",
+                  "delete first argument");
+
+        ok(context.spy_index.calledOnce, "index count " +
+           context.spy_index.callCount);
+
+        ok(context.spy_cursor.calledOnce, "cursor count " +
+           context.spy_cursor.callCount);
+        equal(context.spy_cursor_delete.callCount, 2, "cursor count " +
+           context.spy_cursor_delete.callCount);
+      })
+      .always(function () {
+        context.spy_open.restore();
+        delete context.spy_open;
+        context.spy_create_store.restore();
+        delete context.spy_create_store;
+        context.spy_transaction.restore();
+        delete context.spy_transaction;
+        context.spy_store.restore();
+        delete context.spy_store;
+        context.spy_delete.restore();
+        delete context.spy_delete;
+        context.spy_index.restore();
+        delete context.spy_index;
+        context.spy_create_index.restore();
+        delete context.spy_create_index;
+        context.spy_cursor.restore();
+        delete context.spy_cursor;
+        context.spy_cursor_delete.restore();
+        delete context.spy_cursor_delete;
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // indexeddbStorage.putAttachment
+  /////////////////////////////////////////////////////////////////
+  module("indexeddbStorage.putAttachment", {
+    setup: function () {
+      this.jio = jIO.createJIO({
+        type: "indexeddb",
+        database: "qunit"
+      });
+    }
+  });
+
+  test("spy indexedDB usage", function () {
+    var context = this,
+      attachment = "attachment";
+    stop();
+    expect(21);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put({"_id": "foo", "title": "bar"});
+      })
+      .then(function () {
+        context.spy_open = sinon.spy(indexedDB, "open");
+        context.spy_create_store = sinon.spy(IDBDatabase.prototype,
+                                             "createObjectStore");
+        context.spy_transaction = sinon.spy(IDBDatabase.prototype,
+                                            "transaction");
+        context.spy_store = sinon.spy(IDBTransaction.prototype, "objectStore");
+        context.spy_delete = sinon.spy(IDBObjectStore.prototype, "delete");
+        context.spy_put = sinon.spy(IDBObjectStore.prototype, "put");
+        context.spy_index = sinon.spy(IDBObjectStore.prototype, "index");
+        context.spy_create_index = sinon.spy(IDBObjectStore.prototype,
+                                             "createIndex");
+        context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
+        context.spy_cursor_delete = sinon.spy(IDBCursor.prototype, "delete");
+
+        return context.jio.putAttachment({"_id": "foo",
+                                          "_attachment": attachment,
+                                          "_data": big_string});
+      })
+      .then(function () {
+
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 0,
+              "createObjectStore count");
+        equal(context.spy_create_index.callCount, 0,
+              "createIndex count");
+
+        ok(context.spy_transaction.calledOnce, "transaction count " +
+           context.spy_transaction.callCount);
+        deepEqual(context.spy_transaction.firstCall.args[0],
+                  ["attachment", "blob"],
+                  "transaction first argument");
+        equal(context.spy_transaction.firstCall.args[1], "readwrite",
+              "transaction second argument");
+
+        equal(context.spy_store.callCount, 4, "store count " +
+           context.spy_store.callCount);
+        deepEqual(context.spy_store.firstCall.args[0], "attachment",
+                  "store first argument");
+        deepEqual(context.spy_store.secondCall.args[0], "blob",
+                  "store first argument");
+        deepEqual(context.spy_store.thirdCall.args[0], "attachment",
+                  "store first argument");
+        deepEqual(context.spy_store.getCall(3).args[0], "blob",
+                  "store first argument");
+
+        equal(context.spy_delete.callCount, 1, "delete count " +
+           context.spy_delete.callCount);
+        deepEqual(context.spy_delete.firstCall.args[0], "foo_attachment",
+                  "delete first argument");
+
+        ok(context.spy_index.calledOnce, "index count " +
+           context.spy_index.callCount);
+
+        ok(context.spy_cursor.calledOnce, "cursor count " +
+           context.spy_cursor.callCount);
+        equal(context.spy_cursor_delete.callCount, 0, "delete count " +
+           context.spy_cursor_delete.callCount);
+
+        equal(context.spy_put.callCount, 3, "put count " +
+           context.spy_put.callCount);
+        deepEqual(context.spy_put.firstCall.args[0], {
+          "_attachment": "attachment",
+          "_id": "foo",
+          "_key_path": "foo_attachment",
+          "info": {
+            "content_type": "",
+            "length": 3000000
+          }
+        }, "put first argument");
+        delete context.spy_put.secondCall.args[0].blob;
+        // XXX Check blob content
+        deepEqual(context.spy_put.secondCall.args[0], {
+          "_attachment": "attachment",
+          "_id": "foo",
+          "_part": 0,
+          "_key_path": "foo_attachment_0"
+        }, "put first argument");
+        delete context.spy_put.thirdCall.args[0].blob;
+        // XXX Check blob content
+        deepEqual(context.spy_put.thirdCall.args[0], {
+          "_attachment": "attachment",
+          "_id": "foo",
+          "_part": 1,
+          "_key_path": "foo_attachment_1"
+        }, "put first argument");
+      })
+      .always(function () {
+        context.spy_open.restore();
+        delete context.spy_open;
+        context.spy_create_store.restore();
+        delete context.spy_create_store;
+        context.spy_transaction.restore();
+        delete context.spy_transaction;
+        context.spy_store.restore();
+        delete context.spy_store;
+        context.spy_delete.restore();
+        delete context.spy_delete;
+        context.spy_index.restore();
+        delete context.spy_index;
+        context.spy_create_index.restore();
+        delete context.spy_create_index;
+        context.spy_cursor.restore();
+        delete context.spy_cursor;
+        context.spy_cursor_delete.restore();
+        delete context.spy_cursor_delete;
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+}(jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
+  IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor));
