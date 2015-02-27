@@ -5,7 +5,7 @@
  */
 
 /*jslint nomen: true */
-/*global jIO, localStorage, Blob, RSVP */
+/*global jIO, sessionStorage, localStorage, Blob, RSVP */
 
 /**
  * JIO Local Storage. Type = 'local'.
@@ -14,17 +14,22 @@
  * Storage Description:
  *
  *     {
- *       "type": "local"
+ *       "type": "local",
+ *       "sessiononly": false
  *     }
  *
  * @class LocalStorage
  */
 
-(function (jIO, localStorage, Blob, RSVP) {
+(function (jIO, sessionStorage, localStorage, Blob, RSVP) {
   "use strict";
 
-  function LocalStorage() {
-    return;
+  function LocalStorage(spec) {
+    if (spec.sessiononly === true) {
+      this._storage = sessionStorage;
+    } else {
+      this._storage = localStorage;
+    }
   }
 
   function restrictDocumentId(id) {
@@ -42,8 +47,8 @@
       found = false,
       key;
 
-    for (key in localStorage) {
-      if (localStorage.hasOwnProperty(key)) {
+    for (key in this._storage) {
+      if (this._storage.hasOwnProperty(key)) {
         attachments[key] = {};
         found = true;
       }
@@ -57,7 +62,7 @@
   LocalStorage.prototype.getAttachment = function (param) {
     restrictDocumentId(param._id);
 
-    var textstring = localStorage.getItem(param._attachment);
+    var textstring = this._storage.getItem(param._attachment);
 
     if (textstring === null) {
       throw new jIO.util.jIOError(
@@ -69,6 +74,7 @@
   };
 
   LocalStorage.prototype.putAttachment = function (param) {
+    var context = this;
     restrictDocumentId(param._id);
 
     // the document already exists
@@ -78,13 +84,13 @@
         return jIO.util.readBlobAsText(param._blob);
       })
       .push(function (e) {
-        localStorage.setItem(param._attachment, e.target.result);
+        context._storage.setItem(param._attachment, e.target.result);
       });
   };
 
   LocalStorage.prototype.removeAttachment = function (param) {
     restrictDocumentId(param._id);
-    return localStorage.removeItem(param._attachment);
+    return this._storage.removeItem(param._attachment);
   };
 
 
@@ -101,4 +107,4 @@
 
   jIO.addStorage('local', LocalStorage);
 
-}(jIO, localStorage, Blob, RSVP));
+}(jIO, sessionStorage, localStorage, Blob, RSVP));

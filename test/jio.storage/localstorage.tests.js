@@ -1,6 +1,6 @@
 /*jslint nomen: true */
-/*global localStorage, Blob, document*/
-(function (jIO, localStorage, QUnit, Blob, document) {
+/*global sessionStorage, localStorage, Blob, document*/
+(function (jIO, sessionStorage, localStorage, QUnit, Blob, document) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -10,6 +10,29 @@
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
     module = QUnit.module;
+
+  /////////////////////////////////////////////////////////////////
+  // localStorage.constructor
+  /////////////////////////////////////////////////////////////////
+  module("localStorage.constructor");
+  test("local storage by default", function () {
+    var jio = jIO.createJIO({
+      type: "local"
+    });
+
+    equal(jio.__type, "local");
+    equal(jio.__storage._storage, localStorage);
+  });
+
+  test("sessiononly", function () {
+    var jio = jIO.createJIO({
+      type: "local",
+      sessiononly: true
+    });
+
+    equal(jio.__type, "local");
+    equal(jio.__storage._storage, sessionStorage);
+  });
 
   /////////////////////////////////////////////////////////////////
   // localStorage.get
@@ -429,4 +452,4 @@
       });
   });
 
-}(jIO, localStorage, QUnit, Blob, document));
+}(jIO, sessionStorage, localStorage, QUnit, Blob, document));
