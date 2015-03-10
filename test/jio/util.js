@@ -21,28 +21,6 @@
   // Tools
 
   /**
-   * Creates a QUnit.start wrapper that allows to trigger start several times.
-   *
-   * @param  {Number} num Timeout in ms
-   * @return {Function} The wrapper
-   */
-  function starter(num) {
-    var started = false, ident;
-    function startFn() {
-      if (!started) {
-        started = true;
-        clearTimeout(ident);
-        start();
-      }
-    }
-    if (num) {
-      ident = setTimeout(startFn, num);
-    }
-    return startFn;
-  }
-  exports.starter = starter;
-
-  /**
    * Test if the string is an Uuid
    *
    * @param  {String} uuid The string to test
@@ -59,93 +37,5 @@
     ) === null ? false : true);
   }
   exports.isUuid = isUuid;
-
-  /**
-   * A useful tool to set/get json object into the localStorage
-   */
-  exports.json_local_storage = {
-    clear: function () {
-      return localStorage.clear();
-    },
-    getItem: function (item) {
-      var value = localStorage.getItem(item);
-      return value === null ? null : JSON.parse(value);
-    },
-    setItem: function (item, value) {
-      return localStorage.setItem(item, JSON.stringify(value));
-    },
-    removeItem: function (item) {
-      return localStorage.removeItem(item);
-    }
-  };
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Deprecated
-
-  function spyJioCallback(result_type, value, message) {
-    return function (err, response) {
-      var val;
-      switch (result_type) {
-      case 'value':
-        val = err || response;
-        break;
-      case 'status':
-        val = (err || {}).status;
-        break;
-      case 'jobstatus':
-        val = (err ? 'fail' : 'done');
-        break;
-      default:
-        ok(false, "Unknown case " + result_type);
-        break;
-      }
-      deepEqual(val, value, message);
-    };
-  }
-  exports.spyJioCallback = spyJioCallback;
-
-  function ospy(o, result_type, value, message, function_name) {
-    function_name = function_name || 'f';
-    o[function_name] = function (err, response) {
-      var val;
-      switch (result_type) {
-      case 'value':
-        val = err || response;
-        break;
-      case 'status':
-        val = (err || {}).status;
-        break;
-      case 'jobstatus':
-        val = (err ? 'fail' : 'done');
-        break;
-      default:
-        ok(false, "Unknown case " + result_type);
-        break;
-      }
-      deepEqual(val, value, message);
-    };
-    sinon.spy(o, function_name);
-  }
-  exports.ospy = ospy;
-
-  function otick(o, a, b) {
-    var tick = 1, function_name = 'f';
-    if (typeof a === 'number' && !isNaN(a)) {
-      tick = a;
-      a = b;
-    }
-    if (typeof a === 'string') {
-      function_name = a;
-    }
-    o.clock.tick(tick);
-    if (!o[function_name].calledOnce) {
-      if (o[function_name].called) {
-        ok(false, 'too much results');
-      } else {
-        ok(false, 'no response');
-      }
-    }
-  }
-  exports.otick = otick;
 
 }));
