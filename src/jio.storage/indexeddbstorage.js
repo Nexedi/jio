@@ -28,9 +28,9 @@
  */
 
 /*jslint nomen: true */
-/*global indexedDB, jIO, RSVP, Blob, Math*/
+/*global indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange*/
 
-(function (indexedDB, jIO, RSVP, Blob, Math) {
+(function (indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange) {
   "use strict";
 
   // Read only as changing it can lead to data corruption
@@ -219,7 +219,7 @@
         return RSVP.all([
           handleGet(transaction.objectStore("metadata").get(param._id)),
           handleCursor(transaction.objectStore("attachment").index("_id")
-                       .openCursor(), addEntry)
+                       .openCursor(IDBKeyRange.only(param._id)), addEntry)
         ]);
       })
       .push(function (result_list) {
@@ -263,9 +263,9 @@
                         .objectStore("metadata")["delete"](param._id)),
           // XXX Why not possible to delete with KeyCursor?
           handleCursor(transaction.objectStore("attachment").index("_id")
-                       .openCursor(), deleteEntry),
+                       .openCursor(IDBKeyRange.only(param._id)), deleteEntry),
           handleCursor(transaction.objectStore("blob").index("_id")
-                       .openCursor(), deleteEntry)
+                       .openCursor(IDBKeyRange.only(param._id)), deleteEntry)
         ]);
       });
   };
@@ -338,7 +338,11 @@
         buildKeyPath([param._id, param._attachment])
       )),
       handleCursor(transaction.objectStore("blob").index("_id_attachment")
-                   .openCursor(), deleteEntry)
+                   .openCursor(IDBKeyRange.only(
+          [param._id, param._attachment]
+        )),
+          deleteEntry
+        )
     ]);
   }
 
@@ -412,4 +416,4 @@
   };
 
   jIO.addStorage("indexeddb", IndexedDBStorage);
-}(indexedDB, jIO, RSVP, Blob, Math));
+}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange));

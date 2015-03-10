@@ -1,8 +1,8 @@
 /*jslint nomen: true */
 /*global indexedDB, Blob, sinon, IDBDatabase,
-         IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor*/
+         IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange*/
 (function (jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
-           IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor) {
+           IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -274,7 +274,7 @@
   test("spy indexedDB usage", function () {
     var context = this;
     stop();
-    expect(15);
+    expect(17);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -292,6 +292,7 @@
         context.spy_create_index = sinon.spy(IDBObjectStore.prototype,
                                              "createIndex");
         context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
+        context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
         return context.jio.get({"_id": "foo"});
       })
@@ -333,6 +334,10 @@
         ok(context.spy_cursor.calledOnce, "cursor count " +
            context.spy_cursor.callCount);
 
+        ok(context.spy_key_range.calledOnce, "key range count " +
+           context.spy_key_range.callCount);
+        deepEqual(context.spy_key_range.firstCall.args[0], "foo",
+                  "key range first argument");
       })
       .always(function () {
         context.spy_open.restore();
@@ -351,6 +356,8 @@
         delete context.spy_create_index;
         context.spy_cursor.restore();
         delete context.spy_cursor;
+        context.spy_key_range.restore();
+        delete context.spy_key_range;
       })
       .fail(function (error) {
         ok(false, error);
@@ -459,7 +466,7 @@
   test("spy indexedDB usage", function () {
     var context = this;
     stop();
-    expect(31);
+    expect(32);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -474,6 +481,7 @@
         context.spy_create_index = sinon.spy(IDBObjectStore.prototype,
                                              "createIndex");
         context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
+        context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
         return context.jio.put({"_id": "foo", "title": "bar"});
       })
@@ -561,6 +569,9 @@
         ok(!context.spy_cursor.called, "cursor count " +
            context.spy_cursor.callCount);
 
+        ok(!context.spy_key_range.called, "key range count " +
+           context.spy_key_range.callCount);
+
       })
       .always(function () {
         context.spy_open.restore();
@@ -579,6 +590,8 @@
         delete context.spy_create_index;
         context.spy_cursor.restore();
         delete context.spy_cursor;
+        context.spy_key_range.restore();
+        delete context.spy_key_range;
       })
       .fail(function (error) {
         ok(false, error);
@@ -623,7 +636,7 @@
   test("spy indexedDB usage with one document", function () {
     var context = this;
     stop();
-    expect(18);
+    expect(21);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -642,6 +655,7 @@
                                              "createIndex");
         context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
         context.spy_cursor_delete = sinon.spy(IDBCursor.prototype, "delete");
+        context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
         return context.jio.remove({"_id": "foo"});
       })
@@ -690,6 +704,13 @@
         equal(context.spy_cursor_delete.callCount, 0, "cursor count " +
            context.spy_cursor_delete.callCount);
 
+        ok(context.spy_key_range.calledTwice, "key range count " +
+           context.spy_key_range.callCount);
+        deepEqual(context.spy_key_range.firstCall.args[0], "foo",
+                  "key range first argument");
+        deepEqual(context.spy_key_range.secondCall.args[0], "foo",
+                  "key range first argument");
+
       })
       .always(function () {
         context.spy_open.restore();
@@ -710,6 +731,8 @@
         delete context.spy_cursor;
         context.spy_cursor_delete.restore();
         delete context.spy_cursor_delete;
+        context.spy_key_range.restore();
+        delete context.spy_key_range;
       })
       .fail(function (error) {
         ok(false, error);
@@ -722,7 +745,7 @@
   test("spy indexedDB usage with 2 attachments", function () {
     var context = this;
     stop();
-    expect(18);
+    expect(21);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -751,6 +774,7 @@
                                              "createIndex");
         context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
         context.spy_cursor_delete = sinon.spy(IDBCursor.prototype, "delete");
+        context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
         return context.jio.remove({"_id": "foo"});
       })
@@ -796,8 +820,15 @@
         ok(context.spy_cursor.calledTwice, "cursor count " +
            context.spy_cursor.callCount);
 
-        equal(context.spy_cursor_delete.callCount, 3, "cursor count " +
+        equal(context.spy_cursor_delete.callCount, 4, "cursor count " +
            context.spy_cursor_delete.callCount);
+
+        ok(context.spy_key_range.calledTwice, "key range count " +
+           context.spy_key_range.callCount);
+        deepEqual(context.spy_key_range.firstCall.args[0], "foo",
+                  "key range first argument");
+        deepEqual(context.spy_key_range.secondCall.args[0], "foo",
+                  "key range first argument");
 
       })
       .always(function () {
@@ -819,6 +850,8 @@
         delete context.spy_cursor;
         context.spy_cursor_delete.restore();
         delete context.spy_cursor_delete;
+        context.spy_key_range.restore();
+        delete context.spy_key_range;
       })
       .fail(function (error) {
         ok(false, error);
@@ -1020,7 +1053,7 @@
     var context = this,
       attachment = "attachment";
     stop();
-    expect(15);
+    expect(17);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1045,6 +1078,7 @@
                                              "createIndex");
         context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
         context.spy_cursor_delete = sinon.spy(IDBCursor.prototype, "delete");
+        context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
         return context.jio.removeAttachment({"_id": "foo",
                                              "_attachment": attachment});
@@ -1088,6 +1122,12 @@
            context.spy_cursor.callCount);
         equal(context.spy_cursor_delete.callCount, 2, "cursor count " +
            context.spy_cursor_delete.callCount);
+
+        ok(context.spy_key_range.calledOnce, "key range count " +
+           context.spy_key_range.callCount);
+        deepEqual(context.spy_key_range.firstCall.args[0],
+                  ["foo", "attachment"],
+                  "key range first argument");
       })
       .always(function () {
         context.spy_open.restore();
@@ -1108,6 +1148,8 @@
         delete context.spy_cursor;
         context.spy_cursor_delete.restore();
         delete context.spy_cursor_delete;
+        context.spy_key_range.restore();
+        delete context.spy_key_range;
       })
       .fail(function (error) {
         ok(false, error);
@@ -1133,7 +1175,7 @@
     var context = this,
       attachment = "attachment";
     stop();
-    expect(21);
+    expect(23);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1153,6 +1195,7 @@
                                              "createIndex");
         context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
         context.spy_cursor_delete = sinon.spy(IDBCursor.prototype, "delete");
+        context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
         return context.jio.putAttachment({"_id": "foo",
                                           "_attachment": attachment,
@@ -1201,6 +1244,11 @@
            context.spy_cursor.callCount);
         equal(context.spy_cursor_delete.callCount, 0, "delete count " +
            context.spy_cursor_delete.callCount);
+        ok(context.spy_key_range.calledOnce, "key range count " +
+           context.spy_key_range.callCount);
+        deepEqual(context.spy_key_range.firstCall.args[0],
+                  ["foo", "attachment"],
+                  "key range first argument");
 
         equal(context.spy_put.callCount, 3, "put count " +
            context.spy_put.callCount);
@@ -1249,6 +1297,8 @@
         delete context.spy_cursor;
         context.spy_cursor_delete.restore();
         delete context.spy_cursor_delete;
+        context.spy_key_range.restore();
+        delete context.spy_key_range;
       })
       .fail(function (error) {
         ok(false, error);
@@ -1259,4 +1309,4 @@
   });
 
 }(jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
-  IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor));
+  IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange));
