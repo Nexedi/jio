@@ -300,14 +300,18 @@
     this.__storage = storage;
   }
 
-  declareMethod(JioProxyStorage, "put", checkId);
+  declareMethod(JioProxyStorage, "put", checkId, function (argument_list) {
+    return argument_list[0]._id;
+  });
   declareMethod(JioProxyStorage, "get", checkId, function (argument_list, result) {
     // XXX Drop all _ properties
     // Put _id properties to the result
     result._id = argument_list[0]._id;
     return result;
   });
-  declareMethod(JioProxyStorage, "remove", checkId);
+  declareMethod(JioProxyStorage, "remove", checkId, function (argument_list) {
+    return argument_list[0]._id;
+  });
 
   // listeners
   declareMethod(JioProxyStorage, "post", function (param, storage, method_name) {

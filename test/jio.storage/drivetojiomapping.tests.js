@@ -471,7 +471,7 @@
 
     jio.remove({"_id": "bar"})
       .then(function (result) {
-        equal(result, "Removed");
+        equal(result, "bar");
         equal(call_count, 2);
       })
       .fail(function (error) {
@@ -516,7 +516,7 @@
 
     jio.remove({"_id": "bar"})
       .then(function (result) {
-        equal(result, "Removed document");
+        equal(result, "bar");
         equal(call_count, 2);
       })
       .fail(function (error) {
