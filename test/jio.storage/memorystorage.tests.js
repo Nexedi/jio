@@ -155,34 +155,33 @@
       });
   });
 
-//   test("get document with attachment", function () {
-//     var id = "putattmt1";
-// 
-//     this.jio.__storage._database[id] = {
-//       "doc": JSON.stringify({}),
-//       "attachments": {
-//         putattmt2: undefined
-//       }
-//     };
-// 
-//     stop();
-//     expect(1);
-// 
-//     this.jio.get({"_id": id})
-//       .then(function (result) {
-//         deepEqual(result, {
-//           "_id": id,
-//           "_attachment": {},
-//           "title": "myPost1"
-//         }, "Check document");
-//       })
-//       .fail(function (error) {
-//         ok(false, error);
-//       })
-//       .always(function () {
-//         start();
-//       });
-//   });
+  test("get document with attachment", function () {
+    var id = "putattmt1";
+
+    this.jio.__storage._database[id] = {
+      "doc": JSON.stringify({}),
+      "attachments": {
+        putattmt2: undefined
+      }
+    };
+
+    stop();
+    expect(1);
+
+    this.jio.get({"_id": id})
+      .then(function (result) {
+        deepEqual(result, {
+          "_id": id,
+          "_attachments": {putattmt2: {}}
+        }, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
 
   /////////////////////////////////////////////////////////////////
   // memoryStorage.remove

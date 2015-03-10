@@ -33,7 +33,6 @@
     this._database = {};
   }
 
-
   MemoryStorage.prototype.put = function (metadata) {
     if (!this._database.hasOwnProperty(metadata._id)) {
       this._database[metadata._id] = {
@@ -45,8 +44,13 @@
   };
 
   MemoryStorage.prototype.get = function (param) {
+    var doc,
+      key,
+      found = false,
+      attachments = {};
+
     try {
-      return JSON.parse(this._database[param._id].doc);
+      doc = JSON.parse(this._database[param._id].doc);
     } catch (error) {
       if (error instanceof TypeError) {
         throw new jIO.util.jIOError(
@@ -58,22 +62,16 @@
     }
 
     // XXX NotImplemented: list all attachments
-
-//     var doc = JSON.parse(this._database[param._id].doc),
-//       key,
-//       found = false,
-//       attachments = {};
-// 
-//     for (key in this._database[param._id].attachments) {
-//       if (this._database[param._id].attachments.hasOwnProperty(key)) {
-//         found = true;
-//         attachments[key] = {};
-//       }
-//     }
-//     if (found) {
-//       doc._attachments = attachments;
-//     }
-//     return doc;
+    for (key in this._database[param._id].attachments) {
+      if (this._database[param._id].attachments.hasOwnProperty(key)) {
+        found = true;
+        attachments[key] = {};
+      }
+    }
+    if (found) {
+      doc._attachments = attachments;
+    }
+    return doc;
   };
 
   MemoryStorage.prototype.remove = function (param) {
