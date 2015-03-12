@@ -59,6 +59,7 @@
                           "which contains more than one character.");
     }
     this._url = spec.url;
+    this._default_view_reference = spec.default_view_reference;
   }
 
   ERP5Storage.prototype.get = function (param) {
@@ -93,7 +94,8 @@
     var action = param._attachment;
 
     if (action === "view") {
-      return getDocumentAndHateoas(this, param, {"_view": param._attachment})
+      return getDocumentAndHateoas(this, param,
+                                   {"_view": this._default_view_reference})
         .push(function (response) {
           var result = JSON.parse(response.target.responseText);
           result._id = param._id;

@@ -34,11 +34,13 @@
   test("Storage store URL", function () {
     var jio = jIO.createJIO({
       type: "erp5",
-      url: domain
+      url: domain,
+      default_view_reference: "bar_view"
     });
 
     equal(jio.__type, "erp5");
     deepEqual(jio.__storage._url, domain);
+    deepEqual(jio.__storage._default_view_reference, "bar_view");
   });
 
   /////////////////////////////////////////////////////////////////
@@ -225,7 +227,8 @@
 
       this.jio = jIO.createJIO({
         type: "erp5",
-        url: domain
+        url: domain,
+        default_view_reference: "foo_view"
       });
     },
     teardown: function () {
@@ -258,7 +261,7 @@
   test("getAttachment: view uses default form", function () {
     var id = "person_module/1",
       traverse_url = domain + "?mode=traverse&relative_url=" +
-                     encodeURIComponent(id) + "&view=view",
+                     encodeURIComponent(id) + "&view=foo_view",
       document_hateoas = JSON.stringify({
         "title": "foo",
         "_bar": "john doo",
