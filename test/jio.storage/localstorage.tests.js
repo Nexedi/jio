@@ -1,6 +1,8 @@
 /*jslint nomen: true */
-/*global sessionStorage, localStorage, Blob, document*/
-(function (jIO, sessionStorage, localStorage, QUnit, Blob, document) {
+/*global sessionStorage, localStorage, Blob, document, btoa,
+         unescape, HTMLCanvasElement, XMLHttpRequest*/
+(function (jIO, sessionStorage, localStorage, QUnit, Blob, document,
+           btoa, unescape, HTMLCanvasElement, XMLHttpRequest) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -89,7 +91,7 @@
     stop();
     expect(1);
 
-    localStorage[attachment] = "bar";
+    localStorage.setItem(attachment, "bar");
 
     this.jio.get({"_id": id})
       .then(function (result) {
@@ -165,12 +167,13 @@
 
   test("get string attachment from document", function () {
     var id = "/",
-      value = "azertyuio\npàç_è-('é&",
+      value = "azertyuio\npàç_è-('é&こんいちは",
       attachment = "stringattachment";
     stop();
-    expect(4);
+    expect(3);
 
-    localStorage[attachment] = value;
+    localStorage.setItem(attachment, "data:text/plain;charset=utf-8;base64," +
+      btoa(unescape(encodeURIComponent(value))));
 
     this.jio.getAttachment({
       "_id": id,
@@ -178,8 +181,9 @@
     })
       .then(function (result) {
         ok(result.data instanceof Blob, "Data is Blob");
-        deepEqual(result.data.type, "", "Check mimetype");
-        deepEqual(result.data.size, 24, "Check size");
+        deepEqual(result.data.type, "text/plain;charset=utf-8",
+                  "Check mimetype");
+
         return jIO.util.readBlobAsText(result.data);
       })
       .then(function (result) {
@@ -199,7 +203,6 @@
       imgCanvas = document.createElement("canvas"),
       imgContext = imgCanvas.getContext("2d"),
       data_url,
-      value,
       attachment = "stringattachment";
     stop();
     expect(2);
@@ -212,25 +215,18 @@
     imgContext.fillText("Zibri", 100, 100);
 
     data_url = imgCanvas.toDataURL("image/png");
+    localStorage.setItem(attachment, data_url);
 
-    return jIO.util.ajax({
-      url: data_url
+    return context.jio.getAttachment({
+      "_id": id,
+      "_attachment": attachment
     })
       .then(function (result) {
-        value = result.target.response;
-        localStorage[attachment] = value;
-
-        return context.jio.getAttachment({
-          "_id": id,
-          "_attachment": attachment
-        });
-      })
-      .then(function (result) {
         ok(result.data instanceof Blob, "Data is Blob");
-        return jIO.util.readBlobAsText(result.data);
+        return jIO.util.readBlobAsDataURL(result.data);
       })
       .then(function (result) {
-        equal(result.target.result, value, "Attachment correctly fetched");
+        equal(result.target.result, data_url, "Attachment correctly fetched");
       })
       .fail(function (error) {
         ok(false, error);
@@ -288,7 +284,11 @@
       "_data": value
     })
       .then(function () {
-        equal(localStorage[attachment], value);
+        equal(
+          localStorage.getItem(attachment),
+          "data:text/plain;charset=utf-8;base64," +
+            "YXplcnR5dWlvCnDDoMOnX8OoLSgnw6km"
+        );
       })
       .fail(function (error) {
         ok(false, error);
@@ -304,8 +304,6 @@
       imgCanvas = document.createElement("canvas"),
       imgContext = imgCanvas.getContext("2d"),
       data_url,
-      original_blob,
-      value,
       attachment = "stringattachment";
     stop();
     expect(1);
@@ -318,28 +316,41 @@
     imgContext.fillText("Zibri", 100, 100);
 
     data_url = imgCanvas.toDataURL("image/png");
-    return jIO.util.ajax({
-      url: data_url
-    })
-      .then(function (result) {
-        value = result.target.response;
-        original_blob =  new Blob([result.target.response],
-                                  {type: "image/png"});
-        return context.jio.putAttachment({
-          "_id": id,
-          "_attachment": attachment,
-          "_blob": original_blob
+
+    if (HTMLCanvasElement.prototype.toBlob === undefined) {
+      Object.defineProperty(
+        HTMLCanvasElement.prototype,
+        'toBlob',
+        {
+          value: function (callback, type, quality) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', this.toDataURL(type, quality));
+            xhr.responseType = 'arraybuffer';
+            xhr.onload = function () {
+              callback(new Blob([this.response], {type: type || 'image/png'}));
+            };
+            xhr.send();
+          }
+        }
+      );
+    }
+
+    imgCanvas.toBlob(function (blob) {
+      return context.jio.putAttachment({
+        "_id": id,
+        "_attachment": attachment,
+        "_blob": blob
+      })
+        .then(function () {
+          equal(localStorage.getItem(attachment), data_url);
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
         });
-      })
-      .then(function () {
-        equal(localStorage[attachment], value);
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
+    });
   });
 
   /////////////////////////////////////////////////////////////////
@@ -378,7 +389,7 @@
     var id = "/",
       attachment = "foo";
 
-    localStorage[attachment] = "bar";
+    localStorage.setItem(attachment, "bar");
 
     stop();
     expect(1);
@@ -452,4 +463,5 @@
       });
   });
 
-}(jIO, sessionStorage, localStorage, QUnit, Blob, document));
+}(jIO, sessionStorage, localStorage, QUnit, Blob, document,
+  btoa, unescape, HTMLCanvasElement, XMLHttpRequest));

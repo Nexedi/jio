@@ -1257,7 +1257,7 @@
           "_id": "foo",
           "_key_path": "foo_attachment",
           "info": {
-            "content_type": "",
+            "content_type": "text/plain;charset=utf-8",
             "length": 3000000
           }
         }, "put first argument");

@@ -152,13 +152,13 @@
 
 
 
-  function readBlobAsText(blob) {
+  function readBlobAsText(blob, encoding) {
     var fr = new FileReader();
     return new RSVP.Promise(function (resolve, reject, notify) {
       fr.addEventListener("load", resolve);
       fr.addEventListener("error", reject);
       fr.addEventListener("progress", notify);
-      fr.readAsText(blob);
+      fr.readAsText(blob, encoding);
     }, function () {
       fr.abort();
     });
@@ -177,6 +177,19 @@
     });
   }
   util.readBlobAsArrayBuffer = readBlobAsArrayBuffer;
+
+  function readBlobAsDataURL(blob) {
+    var fr = new FileReader();
+    return new RSVP.Promise(function (resolve, reject, notify) {
+      fr.addEventListener("load", resolve);
+      fr.addEventListener("error", reject);
+      fr.addEventListener("progress", notify);
+      fr.readAsDataURL(blob);
+    }, function () {
+      fr.abort();
+    });
+  }
+  util.readBlobAsDataURL = readBlobAsDataURL;
 
 
 
@@ -327,7 +340,7 @@
     if (!(param._blob instanceof Blob) &&
         typeof param._data === 'string') {
       param._blob = new Blob([param._data], {
-        "type": param._content_type || param._mimetype || ""
+        "type": param._content_type || param._mimetype || "text/plain;charset=utf-8"
       });
       delete param._data;
       delete param._mimetype;

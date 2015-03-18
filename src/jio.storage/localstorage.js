@@ -4,8 +4,9 @@
  * http://www.gnu.org/licenses/lgpl.html
  */
 
-/*jslint nomen: true */
-/*global jIO, sessionStorage, localStorage, Blob, RSVP */
+/*jslint nomen: true*/
+/*global jIO, sessionStorage, localStorage, Blob, RSVP, atob,
+         ArrayBuffer, Uint8Array*/
 
 /**
  * JIO Local Storage. Type = 'local'.
@@ -21,7 +22,8 @@
  * @class LocalStorage
  */
 
-(function (jIO, sessionStorage, localStorage, Blob, RSVP) {
+(function (jIO, sessionStorage, localStorage, Blob, RSVP,
+           atob, ArrayBuffer, Uint8Array) {
   "use strict";
 
   function LocalStorage(spec) {
@@ -59,6 +61,23 @@
     return doc;
   };
 
+  // https://gist.github.com/davoclavo/4424731
+  function dataURItoBlob(dataURI) {
+    // convert base64 to raw binary data held in a string
+    var byteString = atob(dataURI.split(',')[1]),
+      // separate out the mime component
+      mimeString = dataURI.split(',')[0].split(':')[1],
+      // write the bytes of the string to an ArrayBuffer
+      arrayBuffer = new ArrayBuffer(byteString.length),
+      _ia = new Uint8Array(arrayBuffer),
+      i;
+    mimeString = mimeString.slice(0, mimeString.length - ";base64".length);
+    for (i = 0; i < byteString.length; i += 1) {
+      _ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([arrayBuffer], {type: mimeString});
+  }
+
   LocalStorage.prototype.getAttachment = function (param) {
     restrictDocumentId(param._id);
 
@@ -70,7 +89,7 @@
         404
       );
     }
-    return {data: new Blob([textstring])};
+    return {data: dataURItoBlob(textstring)};
   };
 
   LocalStorage.prototype.putAttachment = function (param) {
@@ -81,7 +100,7 @@
     // download data
     return new RSVP.Queue()
       .push(function () {
-        return jIO.util.readBlobAsText(param._blob);
+        return jIO.util.readBlobAsDataURL(param._blob);
       })
       .push(function (e) {
         context._storage.setItem(param._attachment, e.target.result);
@@ -107,4 +126,5 @@
 
   jIO.addStorage('local', LocalStorage);
 
-}(jIO, sessionStorage, localStorage, Blob, RSVP));
+}(jIO, sessionStorage, localStorage, Blob, RSVP,
+  atob, ArrayBuffer, Uint8Array));
