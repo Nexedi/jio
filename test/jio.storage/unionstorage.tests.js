@@ -40,8 +40,8 @@
     return param._id;
   };
   Storage200.prototype.post = function (param) {
-    deepEqual(param, {"_id": "bar", "title": "foo"}, "post 200 called");
-    return param._id;
+    deepEqual(param, {"title": "foo"}, "post 200 called");
+    return "bar";
   };
   Storage200.prototype.hasCapacity = function () {
     return true;
@@ -302,7 +302,7 @@
       }]
     });
 
-    jio.post({"_id": "bar", "title": "foo"})
+    jio.post({"title": "foo"})
       .then(function (result) {
         equal(result, "bar");
       })

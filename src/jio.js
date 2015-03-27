@@ -131,25 +131,6 @@
   }
   util.deepClone = deepClone;
 
-  /**
-   * An Universal Unique ID generator
-   *
-   * @return {String} The new UUID.
-   */
-  function generateUuid() {
-    function S4() {
-      return ('0000' + Math.floor(
-        Math.random() * 0x10000 /* 65536 */
-      ).toString(16)).slice(-4);
-    }
-    return S4() + S4() + "-" +
-      S4() + "-" +
-      S4() + "-" +
-      S4() + "-" +
-      S4() + S4() + S4();
-  }
-  util.generateUuid = generateUuid;
-
 
 
   function readBlobAsText(blob, encoding) {
@@ -326,12 +307,23 @@
     return argument_list[0]._id;
   });
 
-  // listeners
-  declareMethod(JioProxyStorage, "post", function (param, storage, method_name) {
-    if (param._id !== undefined) {
-      return checkId(param, storage, method_name);
-    }
-  });
+  JioProxyStorage.prototype.post = function (param) {
+    var context = this;
+    return new RSVP.Queue()
+      .push(function () {
+        if (param._id === undefined) {
+          var storage_method = context.__storage.post;
+          if (storage_method === undefined) {
+            throw new jIO.util.jIOError(
+              "Capacity 'post' is not implemented on '" + context.__type + "'",
+              501
+            );
+          }
+          return context.__storage.post(param);
+        }
+        return context.put(param);
+      });
+  };
 
   declareMethod(JioProxyStorage, 'putAttachment', function (param, storage, method_name) {
     checkId(param, storage, method_name);
