@@ -102,6 +102,14 @@
     var arg = arguments,
       context = this;
     return this._getWithStorageIndex({"_id": arg[0]._id})
+      .push(undefined, function (error) {
+        if ((error instanceof jIO.util.jIOError) &&
+            (error.status_code === 404)) {
+          // Document does not exist, create in first substorage
+          return [0];
+        }
+        throw error;
+      })
       .push(function (result) {
         // Storage found, modify in it directly
         var sub_storage = context._storage_list[result[0]];

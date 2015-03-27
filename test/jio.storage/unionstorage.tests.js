@@ -395,6 +395,45 @@
       });
   });
 
+  test("put create on first storage", function () {
+    stop();
+    expect(4);
+
+    function StoragePut404() {
+      return this;
+    }
+    function generatePut404Error(param) {
+      equal(param._id, "bar", "get Put404 called");
+      throw new jIO.util.jIOError("Cannot find document", 404);
+    }
+    StoragePut404.prototype.get = generatePut404Error;
+    StoragePut404.prototype.put = function (param) {
+      deepEqual(param, {"_id": "bar", "title": "foo"}, "put 404 called");
+      return param._id;
+    };
+    jIO.addStorage('unionstorageput404', StoragePut404);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorageput404"
+      }, {
+        type: "unionstorage404"
+      }]
+    });
+
+    jio.put({"_id": "bar", "title": "foo"})
+      .then(function (result) {
+        equal(result, "bar");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // unionStorage.remove
   /////////////////////////////////////////////////////////////////
