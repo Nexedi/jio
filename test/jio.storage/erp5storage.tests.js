@@ -299,9 +299,9 @@
         equal(server.requests[1].requestBody, undefined);
         equal(server.requests[1].withCredentials, true);
 
-        ok(result.data instanceof Blob, "Data is Blob");
-        deepEqual(result.data.type, "application/hal+json", "Check mimetype");
-        return jIO.util.readBlobAsText(result.data);
+        ok(result instanceof Blob, "Data is Blob");
+        deepEqual(result.type, "application/hal+json", "Check mimetype");
+        return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
         var expected = JSON.parse(document_hateoas);
@@ -359,9 +359,9 @@
         equal(server.requests[1].requestBody, undefined);
         equal(server.requests[1].withCredentials, true);
 
-        ok(result.data instanceof Blob, "Data is Blob");
-        deepEqual(result.data.type, "application/hal+json", "Check mimetype");
-        return jIO.util.readBlobAsText(result.data);
+        ok(result instanceof Blob, "Data is Blob");
+        deepEqual(result.type, "application/hal+json", "Check mimetype");
+        return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
         var expected = JSON.parse(document_hateoas);
@@ -409,9 +409,9 @@
         equal(server.requests[0].requestBody, undefined);
         equal(server.requests[0].withCredentials, true);
 
-        ok(result.data instanceof Blob, "Data is Blob");
-        deepEqual(result.data.type, "application/json", "Check mimetype");
-        return jIO.util.readBlobAsText(result.data);
+        ok(result instanceof Blob, "Data is Blob");
+        deepEqual(result.type, "application/json", "Check mimetype");
+        return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
         var expected = JSON.parse(document_hateoas);

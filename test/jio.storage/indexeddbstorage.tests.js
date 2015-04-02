@@ -986,8 +986,8 @@
                                           "_attachment": attachment});
       })
       .then(function (result) {
-        ok(result.data instanceof Blob, "Data is Blob");
-        return jIO.util.readBlobAsText(result.data);
+        ok(result instanceof Blob, "Data is Blob");
+        return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
         equal(result.target.result, big_string,
@@ -1022,8 +1022,8 @@
                                           "_start": 1999995, "_end": 2000005});
       })
       .then(function (result) {
-        ok(result.data instanceof Blob, "Data is Blob");
-        return jIO.util.readBlobAsText(result.data);
+        ok(result instanceof Blob, "Data is Blob");
+        return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
         var expected = "aaaaaaaaaa";

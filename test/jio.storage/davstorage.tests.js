@@ -858,9 +858,9 @@
           Authorization: "Basic login:passwd"
         });
 
-        ok(result.data instanceof Blob, "Data is Blob");
-        deepEqual(result.data.type, "text/plain", "Check mimetype");
-        return jIO.util.readBlobAsText(result.data);
+        ok(result instanceof Blob, "Data is Blob");
+        deepEqual(result.type, "text/plain", "Check mimetype");
+        return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
         equal(result.target.result, "foo\nbaré",

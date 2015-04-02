@@ -53,11 +53,11 @@
       deepEqual(options, {"_id": "foo",
                           "_attachment": "jio_document/YmFy.json"},
                 "getAttachment bar");
-      return {data: new Blob([JSON.stringify({
+      return new Blob([JSON.stringify({
         title: options._attachment,
         id: "ID " + options._attachment,
         "another": "property"
-      })])};
+      })]);
     };
     StorageGetNoAttachment.prototype.get = function (options) {
       deepEqual(options, {"_id": "foo"}, "Get foo");
@@ -106,11 +106,11 @@
       deepEqual(options, {"_id": "foo",
                           "_attachment": "jio_document/YmFy.json"},
                 "getAttachment bar");
-      return {data: new Blob([JSON.stringify({
+      return new Blob([JSON.stringify({
         title: options._attachment,
         id: "ID " + options._attachment,
         "another": "property"
-      })])};
+      })]);
     };
     StorageGetWithAttachment.prototype.get = function (options) {
       deepEqual(options, {"_id": "foo"}, "Get foo");
@@ -269,12 +269,12 @@
       deepEqual(param, {"_id": "foo",
                         "_attachment": "jio_attachment/YmFy/YmFyMg=="},
                 "getAttachment 200 called");
-      return {data: blob};
+      return blob;
     };
 
     jio.getAttachment({"_id": "bar", "_attachment": "bar2"})
       .then(function (result) {
-        equal(result.data, blob);
+        equal(result, blob);
       })
       .fail(function (error) {
         ok(false, error);

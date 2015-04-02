@@ -88,7 +88,7 @@
           404
         );
       }
-      return {data: result};
+      return result;
     } catch (error) {
       if (error instanceof TypeError) {
         throw new jIO.util.jIOError(

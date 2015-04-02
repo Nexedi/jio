@@ -186,11 +186,11 @@
         });
       })
       .push(function (response) {
-        return {data: new Blob(
+        return new Blob(
           [response.target.response || response.target.responseText],
           {"type": response.target.getResponseHeader('Content-Type') ||
                    "application/octet-stream"}
-        )};
+        );
       }, function (error) {
         if ((error.target !== undefined) &&
             (error.target.status === 404)) {

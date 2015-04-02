@@ -35,7 +35,7 @@
       "_attachment": getSubAttachmentIdFromParam(param)
     })
       .push(function (blob) {
-        return jIO.util.readBlobAsText(blob.data);
+        return jIO.util.readBlobAsText(blob);
       })
       .push(function (text) {
         return JSON.parse(text.target.result);

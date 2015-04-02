@@ -320,8 +320,8 @@
       "_attachment": attachment
     })
       .then(function (result) {
-        ok(result.data instanceof Blob, "Data is Blob");
-        equal(result.data, blob);
+        ok(result instanceof Blob, "Data is Blob");
+        equal(result, blob);
       })
       .fail(function (error) {
         ok(false, error);

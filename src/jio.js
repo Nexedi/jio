@@ -339,7 +339,7 @@
     checkId(param, storage, method_name);
     checkAttachmentId(param, storage, method_name);
   }, function (argument_list, result) {
-    if (!(result.data instanceof Blob)) {
+    if (!(result instanceof Blob)) {
       throw new jIO.util.jIOError(
         "'getAttachment' (" + argument_list[0]._id + " , " +
           argument_list[0]._attachment + ") on '" + this.__type +

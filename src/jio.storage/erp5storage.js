@@ -106,19 +106,19 @@
           // if Base_edit, do put URN
           // if others, do post URN (ie, unique new attachment name)
           // XXX Except this attachment name should be generated when
-          return {data: new Blob(
+          return new Blob(
             [JSON.stringify(result)],
             {"type": 'application/hal+json'}
-          )};
+          );
         });
     }
     if (action === "links") {
       return getDocumentAndHateoas(this, param)
         .push(function (response) {
-          return {data: new Blob(
+          return new Blob(
             [JSON.stringify(JSON.parse(response.target.responseText))],
             {"type": 'application/hal+json'}
-          )};
+          );
         });
     }
     if (action.indexOf(this._url) === 0) {
@@ -135,10 +135,10 @@
         .push(function (evt) {
           var result = JSON.parse(evt.target.responseText);
           result._id = param._id;
-          return {data: new Blob(
+          return new Blob(
             [JSON.stringify(result)],
             {"type": evt.target.getResponseHeader("Content-Type")}
-          )};
+          );
         });
     }
     throw new jIO.util.jIOError("ERP5: not support get attachment: " + action,

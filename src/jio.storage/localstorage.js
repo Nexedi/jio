@@ -89,7 +89,7 @@
         404
       );
     }
-    return {data: dataURItoBlob(textstring)};
+    return dataURItoBlob(textstring);
   };
 
   LocalStorage.prototype.putAttachment = function (param) {

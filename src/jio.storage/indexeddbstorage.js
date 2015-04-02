@@ -327,7 +327,7 @@
           array_buffer_list.push(result_list[i].blob);
         }
         blob = new Blob(array_buffer_list, {type: "application/octet-stream"});
-        return {data: blob.slice(start, end)};
+        return blob.slice(start, end);
       });
   };
 

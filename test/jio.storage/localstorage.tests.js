@@ -180,11 +180,11 @@
       "_attachment": attachment
     })
       .then(function (result) {
-        ok(result.data instanceof Blob, "Data is Blob");
-        deepEqual(result.data.type, "text/plain;charset=utf-8",
+        ok(result instanceof Blob, "Data is Blob");
+        deepEqual(result.type, "text/plain;charset=utf-8",
                   "Check mimetype");
 
-        return jIO.util.readBlobAsText(result.data);
+        return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
         equal(result.target.result, value, "Attachment correctly fetched");
@@ -222,8 +222,8 @@
       "_attachment": attachment
     })
       .then(function (result) {
-        ok(result.data instanceof Blob, "Data is Blob");
-        return jIO.util.readBlobAsDataURL(result.data);
+        ok(result instanceof Blob, "Data is Blob");
+        return jIO.util.readBlobAsDataURL(result);
       })
       .then(function (result) {
         equal(result.target.result, data_url, "Attachment correctly fetched");

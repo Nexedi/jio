@@ -199,12 +199,12 @@
     Storage200.prototype.getAttachment = function (param) {
       deepEqual(param, {"_id": "bar", "_attachment": "foo"},
                 "getAttachment 200 called");
-      return {data: blob};
+      return blob;
     };
 
     jio.getAttachment({"_id": "bar", "_attachment": "foo"})
       .then(function (result) {
-        equal(result.data, blob);
+        equal(result, blob);
       })
       .fail(function (error) {
         ok(false, error);

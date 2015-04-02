@@ -36,7 +36,7 @@
       .push(function (blob) {
         return new RSVP.Queue()
           .push(function () {
-            return jIO.util.readBlobAsText(blob.data);
+            return jIO.util.readBlobAsText(blob);
           })
           .push(function (text) {
             explicit_document = true;
