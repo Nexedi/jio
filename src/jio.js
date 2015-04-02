@@ -1,5 +1,5 @@
 /*jslint maxlen: 200*/
-/*global window, RSVP, Blob, XMLHttpRequest, QueryFactory, Query, console, FileReader */
+/*global window, RSVP, Blob, XMLHttpRequest, QueryFactory, Query, FileReader */
 (function (window, RSVP, Blob, QueryFactory, Query, FileReader) {
   "use strict";
 
