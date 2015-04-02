@@ -273,6 +273,34 @@
       });
   });
 
+  test("get inexistent attachment from document with other attachments",
+       function () {
+      var id = "b";
+      stop();
+      expect(3);
+
+      this.jio.__storage._database[id] = {
+        "doc": JSON.stringify({}),
+        attachments: {"foo": "bar"}
+      };
+
+      this.jio.getAttachment({
+        "_id": id,
+        "_attachment": "inexistent"
+      })
+        .fail(function (error) {
+          ok(error instanceof jIO.util.jIOError);
+          equal(error.message, "Cannot find attachment: b , inexistent");
+          equal(error.status_code, 404);
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    });
+
   test("get attachment from document", function () {
     var id = "putattmt1",
       attachment = "putattmt2",

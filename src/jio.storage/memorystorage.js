@@ -81,7 +81,14 @@
 
   MemoryStorage.prototype.getAttachment = function (param) {
     try {
-      return {data: this._database[param._id].attachments[param._attachment]};
+      var result = this._database[param._id].attachments[param._attachment];
+      if (result === undefined) {
+        throw new jIO.util.jIOError(
+          "Cannot find attachment: " + param._id + " , " + param._attachment,
+          404
+        );
+      }
+      return {data: result};
     } catch (error) {
       if (error instanceof TypeError) {
         throw new jIO.util.jIOError(
