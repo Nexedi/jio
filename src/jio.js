@@ -1,6 +1,6 @@
-/*jslint maxlen: 200*/
 /*global window, RSVP, Blob, XMLHttpRequest, QueryFactory, Query, FileReader */
-(function (window, RSVP, Blob, QueryFactory, Query, FileReader) {
+(function (window, RSVP, Blob, QueryFactory, Query,
+           FileReader) {
   "use strict";
 
   var util = {},
@@ -19,8 +19,8 @@
 
   /**
    * Send request with XHR and return a promise. xhr.onload: The promise is
-   * resolved when the status code is lower than 400 with the xhr object as first
-   * parameter. xhr.onerror: reject with xhr object as first
+   * resolved when the status code is lower than 400 with the xhr object as
+   * first parameter. xhr.onerror: reject with xhr object as first
    * parameter. xhr.onprogress: notifies the xhr object.
    *
    * @param  {Object} param The parameters
@@ -28,8 +28,8 @@
    * @param  {String} [param.dataType=""] The data type to retrieve
    * @param  {String} param.url The url
    * @param  {Any} [param.data] The data to send
-   * @param  {Function} [param.beforeSend] A function called just before the send
-   *   request. The first parameter of this function is the XHR object.
+   * @param  {Function} [param.beforeSend] A function called just before the
+   *    send request. The first parameter of this function is the XHR object.
    * @return {Promise} The promise
    */
   function ajax(param) {
@@ -77,8 +77,8 @@
    * It can also clone object which are serializable, like Date.
    *
    * To make a class serializable, you need to implement the `toJSON` function
-   * which returns a JSON representation of the object. The returned value is used
-   * as first parameter of the object constructor.
+   * which returns a JSON representation of the object. The returned value is
+   * used as first parameter of the object constructor.
    *
    * @param  {A} object The object to clone
    * @return {A} The cloned object
@@ -109,10 +109,11 @@
         // XXX this block is to enable phantomjs and browsers compatibility with
         // Date.prototype.toJSON when it is an invalid date. In phantomjs, it
         // returns `"Invalid Date"` but in browsers it returns `null`. In
-        // browsers, giving `null` as parameter to `new Date()` doesn't return an
-        // invalid date.
+        // browsers, giving `null` as parameter to `new Date()` doesn't return
+        // an invalid date.
 
-        // Cloning a date with `return new Date(object)` has problems on Firefox.
+        // Cloning a date with `return new Date(object)` has problems on
+        // Firefox.
         // I don't know why...  (Tested on Firefox 23)
 
         if (isFinite(object.getTime())) {
@@ -172,67 +173,22 @@
   }
   util.readBlobAsDataURL = readBlobAsDataURL;
 
-
-
-
-
-
-
-
-
-//
-// //   // XXX What is "jio"?
-// //   var rest_method_names = [
-// //     "remove",
-// //     "allDocs",
-// //     "removeAttachment",
-// //     "check",
-// //     "repair"
-// //   ],
-// //     i,
-// //     len = rest_method_names.length;
-// //
-// //   for (i = 0; i < len; i += 1) {
-// //     declareMethod(rest_method_names[i]);
-// //   }
-
-// //   ["removeAttachment"].forEach(function (method) {
-// //     shared.on(method, function (param) {
-// //       if (!checkId(param)) {
-// //         checkAttachmentId(param);
-// //       }
-// //     });
-// //   });
-// //
-// //
-// //   ["check", "repair"].forEach(function (method) {
-// //     shared.on(method, function (param) {
-// //       if (param.kwargs._id !== undefined) {
-// //         if (!checkId(param)) {
-// //           return;
-// //         }
-// //       }
-// //     });
-// //   });
-
-
-
-
-
-
-
   // tools
   function checkId(param, storage, method_name) {
     if (typeof param._id !== 'string' || param._id === '') {
-      throw new jIO.util.jIOError("Document id must be a non empty string on '" + storage.__type + "." + method_name + "'.",
-                                  400);
+      throw new jIO.util.jIOError(
+        "Document id must be a non empty string on '" + storage.__type +
+          "." + method_name + "'.",
+        400
+      );
     }
   }
 
   function checkAttachmentId(param, storage, method_name) {
     if (typeof param._attachment !== 'string' || param._attachment === '') {
       throw new jIO.util.jIOError(
-        "Attachment id must be a non empty string on '" + storage.__type + "." + method_name + "'.",
+        "Attachment id must be a non empty string on '" + storage.__type +
+          "." + method_name + "'.",
         400
       );
     }
@@ -256,7 +212,8 @@
           var storage_method = context.__storage[name];
           if (storage_method === undefined) {
             throw new jIO.util.jIOError(
-              "Capacity '" + name + "' is not implemented on '" + context.__type + "'",
+              "Capacity '" + name + "' is not implemented on '" +
+                context.__type + "'",
               501
             );
           }
@@ -297,12 +254,13 @@
   declareMethod(JioProxyStorage, "put", checkId, function (argument_list) {
     return argument_list[0]._id;
   });
-  declareMethod(JioProxyStorage, "get", checkId, function (argument_list, result) {
-    // XXX Drop all _ properties
-    // Put _id properties to the result
-    result._id = argument_list[0]._id;
-    return result;
-  });
+  declareMethod(JioProxyStorage, "get", checkId,
+                function (argument_list, result) {
+      // XXX Drop all _ properties
+      // Put _id properties to the result
+      result._id = argument_list[0]._id;
+      return result;
+    });
   declareMethod(JioProxyStorage, "remove", checkId, function (argument_list) {
     return argument_list[0]._id;
   });
@@ -325,14 +283,16 @@
       });
   };
 
-  declareMethod(JioProxyStorage, 'putAttachment', function (param, storage, method_name) {
+  declareMethod(JioProxyStorage, 'putAttachment', function (param, storage,
+                                                            method_name) {
     checkId(param, storage, method_name);
     checkAttachmentId(param, storage, method_name);
 
     if (!(param._blob instanceof Blob) &&
         typeof param._data === 'string') {
       param._blob = new Blob([param._data], {
-        "type": param._content_type || param._mimetype || "text/plain;charset=utf-8"
+        "type": param._content_type || param._mimetype ||
+                "text/plain;charset=utf-8"
       });
       delete param._data;
       delete param._mimetype;
@@ -357,12 +317,14 @@
     }
   });
 
-  declareMethod(JioProxyStorage, 'removeAttachment', function (param, storage, method_name) {
+  declareMethod(JioProxyStorage, 'removeAttachment', function (param, storage,
+                                                               method_name) {
     checkId(param, storage, method_name);
     checkAttachmentId(param, storage, method_name);
   });
 
-  declareMethod(JioProxyStorage, 'getAttachment', function (param, storage, method_name) {
+  declareMethod(JioProxyStorage, 'getAttachment', function (param, storage,
+                                                            method_name) {
 //     if (param.storage_spec.type !== "indexeddb" &&
 //         param.storage_spec.type !== "dav" &&
 //         (param.kwargs._start !== undefined
@@ -379,7 +341,9 @@
   }, function (argument_list, result) {
     if (!(result.data instanceof Blob)) {
       throw new jIO.util.jIOError(
-        "'getAttachment' (" + argument_list[0]._id + " , " + argument_list[0]._attachment + ") on '" + this.__type + "' does not return a Blob.",
+        "'getAttachment' (" + argument_list[0]._id + " , " +
+          argument_list[0]._attachment + ") on '" + this.__type +
+          "' does not return a Blob.",
         501
       );
     }
@@ -407,7 +371,8 @@
 
   JioProxyStorage.prototype.hasCapacity = function (name) {
     var storage_method = this.__storage.hasCapacity;
-    if ((storage_method === undefined) || !storage_method.apply(this.__storage, arguments)) {
+    if ((storage_method === undefined) ||
+        !storage_method.apply(this.__storage, arguments)) {
       throw new jIO.util.jIOError(
         "Capacity '" + name + "' is not implemented on '" + this.__type + "'",
         501
@@ -426,8 +391,10 @@
         if (context.hasCapacity("list") &&
             ((options.query === undefined) || context.hasCapacity("query")) &&
             ((options.sort_on === undefined) || context.hasCapacity("sort")) &&
-            ((options.select_list === undefined) || context.hasCapacity("select")) &&
-            ((options.include_docs === undefined) || context.hasCapacity("include")) &&
+            ((options.select_list === undefined) ||
+             context.hasCapacity("select")) &&
+            ((options.include_docs === undefined) ||
+             context.hasCapacity("include")) &&
             ((options.limit === undefined) || context.hasCapacity("limit"))) {
           return context.buildQuery(options);
         }
