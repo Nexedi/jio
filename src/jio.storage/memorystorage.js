@@ -33,28 +33,28 @@
     this._database = {};
   }
 
-  MemoryStorage.prototype.put = function (metadata) {
-    if (!this._database.hasOwnProperty(metadata._id)) {
-      this._database[metadata._id] = {
+  MemoryStorage.prototype.put = function (id, metadata) {
+    if (!this._database.hasOwnProperty(id)) {
+      this._database[id] = {
         attachments: {}
       };
     }
-    this._database[metadata._id].doc = JSON.stringify(metadata);
-    return metadata._id;
+    this._database[id].doc = JSON.stringify(metadata);
+    return id;
   };
 
-  MemoryStorage.prototype.get = function (param) {
+  MemoryStorage.prototype.get = function (id) {
     var doc,
       key,
       found = false,
       attachments = {};
 
     try {
-      doc = JSON.parse(this._database[param._id].doc);
+      doc = JSON.parse(this._database[id].doc);
     } catch (error) {
       if (error instanceof TypeError) {
         throw new jIO.util.jIOError(
-          "Cannot find document: " + param._id,
+          "Cannot find document: " + id,
           404
         );
       }
@@ -62,8 +62,8 @@
     }
 
     // XXX NotImplemented: list all attachments
-    for (key in this._database[param._id].attachments) {
-      if (this._database[param._id].attachments.hasOwnProperty(key)) {
+    for (key in this._database[id].attachments) {
+      if (this._database[id].attachments.hasOwnProperty(key)) {
         found = true;
         attachments[key] = {};
       }
@@ -74,17 +74,17 @@
     return doc;
   };
 
-  MemoryStorage.prototype.remove = function (param) {
-    delete this._database[param._id];
-    return param._id;
+  MemoryStorage.prototype.remove = function (id) {
+    delete this._database[id];
+    return id;
   };
 
-  MemoryStorage.prototype.getAttachment = function (param) {
+  MemoryStorage.prototype.getAttachment = function (id, name) {
     try {
-      var result = this._database[param._id].attachments[param._attachment];
+      var result = this._database[id].attachments[name];
       if (result === undefined) {
         throw new jIO.util.jIOError(
-          "Cannot find attachment: " + param._id + " , " + param._attachment,
+          "Cannot find attachment: " + id + " , " + name,
           404
         );
       }
@@ -92,7 +92,7 @@
     } catch (error) {
       if (error instanceof TypeError) {
         throw new jIO.util.jIOError(
-          "Cannot find attachment: " + param._id + " , " + param._attachment,
+          "Cannot find attachment: " + id + " , " + name,
           404
         );
       }
@@ -100,26 +100,26 @@
     }
   };
 
-  MemoryStorage.prototype.putAttachment = function (param) {
+  MemoryStorage.prototype.putAttachment = function (id, name, blob) {
     var attachment_dict;
     try {
-      attachment_dict = this._database[param._id].attachments;
+      attachment_dict = this._database[id].attachments;
     } catch (error) {
       if (error instanceof TypeError) {
-        throw new jIO.util.jIOError("Cannot find document: " + param._id, 404);
+        throw new jIO.util.jIOError("Cannot find document: " + id, 404);
       }
       throw error;
     }
-    attachment_dict[param._attachment] = param._blob;
+    attachment_dict[name] = blob;
   };
 
-  MemoryStorage.prototype.removeAttachment = function (param) {
+  MemoryStorage.prototype.removeAttachment = function (id, name) {
     try {
-      delete this._database[param._id].attachments[param._attachment];
+      delete this._database[id].attachments[name];
     } catch (error) {
       if (error instanceof TypeError) {
         throw new jIO.util.jIOError(
-          "Cannot find document: " + param._id,
+          "Cannot find document: " + id,
           404
         );
       }

@@ -174,8 +174,8 @@
   util.readBlobAsDataURL = readBlobAsDataURL;
 
   // tools
-  function checkId(param, storage, method_name) {
-    if (typeof param._id !== 'string' || param._id === '') {
+  function checkId(argument_list, storage, method_name) {
+    if (typeof argument_list[0] !== 'string' || argument_list[0] === '') {
       throw new jIO.util.jIOError(
         "Document id must be a non empty string on '" + storage.__type +
           "." + method_name + "'.",
@@ -184,8 +184,8 @@
     }
   }
 
-  function checkAttachmentId(param, storage, method_name) {
-    if (typeof param._attachment !== 'string' || param._attachment === '') {
+  function checkAttachmentId(argument_list, storage, method_name) {
+    if (typeof argument_list[1] !== 'string' || argument_list[1] === '') {
       throw new jIO.util.jIOError(
         "Attachment id must be a non empty string on '" + storage.__type +
           "." + method_name + "'.",
@@ -204,7 +204,7 @@
           if (precondition_function !== undefined) {
             return precondition_function.apply(
               context.__storage,
-              [argument_list[0], context, name]
+              [argument_list, context, name]
             );
           }
         })
@@ -252,78 +252,59 @@
   }
 
   declareMethod(JioProxyStorage, "put", checkId, function (argument_list) {
-    return argument_list[0]._id;
+    return argument_list[0];
   });
-  declareMethod(JioProxyStorage, "get", checkId,
-                function (argument_list, result) {
-      // XXX Drop all _ properties
-      // Put _id properties to the result
-      result._id = argument_list[0]._id;
-      return result;
-    });
+  declareMethod(JioProxyStorage, "get", checkId);
   declareMethod(JioProxyStorage, "remove", checkId, function (argument_list) {
-    return argument_list[0]._id;
+    return argument_list[0];
   });
 
-  JioProxyStorage.prototype.post = function (param) {
-    var context = this;
+  JioProxyStorage.prototype.post = function () {
+    var context = this,
+      argument_list = arguments;
     return new RSVP.Queue()
       .push(function () {
-        if (param._id === undefined) {
-          var storage_method = context.__storage.post;
-          if (storage_method === undefined) {
-            throw new jIO.util.jIOError(
-              "Capacity 'post' is not implemented on '" + context.__type + "'",
-              501
-            );
-          }
-          return context.__storage.post(param);
+        var storage_method = context.__storage.post;
+        if (storage_method === undefined) {
+          throw new jIO.util.jIOError(
+            "Capacity 'post' is not implemented on '" + context.__type + "'",
+            501
+          );
         }
-        return context.put(param);
+        return context.__storage.post.apply(context.__storage, argument_list);
       });
   };
 
-  declareMethod(JioProxyStorage, 'putAttachment', function (param, storage,
+  declareMethod(JioProxyStorage, 'putAttachment', function (argument_list,
+                                                            storage,
                                                             method_name) {
-    checkId(param, storage, method_name);
-    checkAttachmentId(param, storage, method_name);
+    checkId(argument_list, storage, method_name);
+    checkAttachmentId(argument_list, storage, method_name);
 
-    if (!(param._blob instanceof Blob) &&
-        typeof param._data === 'string') {
-      param._blob = new Blob([param._data], {
-        "type": param._content_type || param._mimetype ||
+    var options = argument_list[3] || {};
+
+    if (typeof argument_list[2] === 'string') {
+      argument_list[2] = new Blob([argument_list[2]], {
+        "type": options._content_type || options._mimetype ||
                 "text/plain;charset=utf-8"
       });
-      delete param._data;
-      delete param._mimetype;
-      delete param._content_type;
-    } else if (param._blob instanceof Blob) {
-      delete param._data;
-      delete param._mimetype;
-      delete param._content_type;
-    } else if (param._data instanceof Blob) {
-      param._blob = param._data;
-      delete param._data;
-      delete param._mimetype;
-      delete param._content_type;
-    } else {
+    } else if (!(argument_list[2] instanceof Blob)) {
       throw new jIO.util.jIOError(
-        'Attachment information must be like {"_id": document id, ' +
-          '"_attachment": attachment name, "_data": string, ["_mimetype": ' +
-          'content type]} or {"_id": document id, "_attachment": ' +
-          'attachment name, "_blob": Blob}',
+        'Attachment content is not a blob',
         400
       );
     }
   });
 
-  declareMethod(JioProxyStorage, 'removeAttachment', function (param, storage,
+  declareMethod(JioProxyStorage, 'removeAttachment', function (argument_list,
+                                                               storage,
                                                                method_name) {
-    checkId(param, storage, method_name);
-    checkAttachmentId(param, storage, method_name);
+    checkId(argument_list, storage, method_name);
+    checkAttachmentId(argument_list, storage, method_name);
   });
 
-  declareMethod(JioProxyStorage, 'getAttachment', function (param, storage,
+  declareMethod(JioProxyStorage, 'getAttachment', function (argument_list,
+                                                            storage,
                                                             method_name) {
 //     if (param.storage_spec.type !== "indexeddb" &&
 //         param.storage_spec.type !== "dav" &&
@@ -336,8 +317,8 @@
 //       ]);
 //       return false;
 //     }
-    checkId(param, storage, method_name);
-    checkAttachmentId(param, storage, method_name);
+    checkId(argument_list, storage, method_name);
+    checkAttachmentId(argument_list, storage, method_name);
   }, function (argument_list, result) {
     if (!(result instanceof Blob)) {
       throw new jIO.util.jIOError(

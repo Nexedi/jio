@@ -73,7 +73,7 @@
     stop();
     expect(7);
 
-    this.jio.put({"_id": "/put1/"})
+    this.jio.put("/put1/", {})
       .then(function () {
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "MKCOL");
@@ -98,7 +98,7 @@
     stop();
     expect(3);
 
-    this.jio.put({"_id": "put1/"})
+    this.jio.put("put1/", {})
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id put1/ is forbidden (no begin /)");
@@ -116,7 +116,7 @@
     stop();
     expect(3);
 
-    this.jio.put({"_id": "/put1"})
+    this.jio.put("/put1", {})
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id /put1 is forbidden (no end /)");
@@ -134,7 +134,7 @@
     stop();
     expect(3);
 
-    this.jio.put({"_id": "/put1/", title: "foo"})
+    this.jio.put("/put1/", {title: "foo"})
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Can not store properties: title");
@@ -180,7 +180,7 @@
     stop();
     expect(7);
 
-    this.jio.remove({"_id": "/remove1/"})
+    this.jio.remove("/remove1/")
       .then(function () {
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "DELETE");
@@ -205,7 +205,7 @@
     stop();
     expect(3);
 
-    this.jio.remove({"_id": "remove1/"})
+    this.jio.remove("remove1/")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id remove1/ is forbidden (no begin /)");
@@ -223,7 +223,7 @@
     stop();
     expect(3);
 
-    this.jio.remove({"_id": "/remove1"})
+    this.jio.remove("/remove1")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id /remove1 is forbidden (no end /)");
@@ -263,7 +263,7 @@
     stop();
     expect(3);
 
-    this.jio.get({"_id": "get1/"})
+    this.jio.get("get1/")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id get1/ is forbidden (no begin /)");
@@ -281,7 +281,7 @@
     stop();
     expect(3);
 
-    this.jio.get({"_id": "/get1"})
+    this.jio.get("/get1")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id /get1 is forbidden (no end /)");
@@ -304,7 +304,7 @@
     stop();
     expect(3);
 
-    this.jio.get({"_id": "/inexistent/"})
+    this.jio.get("/inexistent/")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find document");
@@ -355,10 +355,9 @@
     stop();
     expect(1);
 
-    this.jio.get({"_id": id})
+    this.jio.get(id)
       .then(function (result) {
         deepEqual(result, {
-          "_id": id
         }, "Check document");
       })
       .fail(function (error) {
@@ -460,10 +459,9 @@
     stop();
     expect(1);
 
-    this.jio.get({"_id": id})
+    this.jio.get(id)
       .then(function (result) {
         deepEqual(result, {
-          "_id": id,
           "_attachments": {
             attachment1: {},
             attachment2: {}
@@ -504,11 +502,11 @@
     stop();
     expect(3);
 
-    this.jio.putAttachment({
-      "_id": "putAttachment1/",
-      "_attachment": "attachment1",
-      "_blob": new Blob([""])
-    })
+    this.jio.putAttachment(
+      "putAttachment1/",
+      "attachment1",
+      new Blob([""])
+    )
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id putAttachment1/ is forbidden (no begin /)");
@@ -526,11 +524,11 @@
     stop();
     expect(3);
 
-    this.jio.putAttachment({
-      "_id": "/putAttachment1",
-      "_attachment": "attachment1",
-      "_blob": new Blob([""])
-    })
+    this.jio.putAttachment(
+      "/putAttachment1",
+      "attachment1",
+      new Blob([""])
+    )
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id /putAttachment1 is forbidden (no end /)");
@@ -548,11 +546,11 @@
     stop();
     expect(3);
 
-    this.jio.putAttachment({
-      "_id": "/putAttachment1/",
-      "_attachment": "attach/ment1",
-      "_blob": new Blob([""])
-    })
+    this.jio.putAttachment(
+      "/putAttachment1/",
+      "attach/ment1",
+      new Blob([""])
+    )
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "attachment attach/ment1 is forbidden");
@@ -577,11 +575,11 @@
     stop();
     expect(7);
 
-    this.jio.putAttachment({
-      "_id": "/putAttachment1/",
-      "_attachment": "attachment1",
-      "_blob": blob
-    })
+    this.jio.putAttachment(
+      "/putAttachment1/",
+      "attachment1",
+      blob
+    )
       .then(function () {
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "PUT");
@@ -628,10 +626,10 @@
     stop();
     expect(3);
 
-    this.jio.removeAttachment({
-      "_id": "removeAttachment1/",
-      "_attachment": "attachment1"
-    })
+    this.jio.removeAttachment(
+      "removeAttachment1/",
+      "attachment1"
+    )
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id removeAttachment1/ is forbidden (no begin /)");
@@ -649,10 +647,10 @@
     stop();
     expect(3);
 
-    this.jio.removeAttachment({
-      "_id": "/removeAttachment1",
-      "_attachment": "attachment1"
-    })
+    this.jio.removeAttachment(
+      "/removeAttachment1",
+      "attachment1"
+    )
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id /removeAttachment1 is forbidden (no end /)");
@@ -670,10 +668,10 @@
     stop();
     expect(3);
 
-    this.jio.removeAttachment({
-      "_id": "/removeAttachment1/",
-      "_attachment": "attach/ment1"
-    })
+    this.jio.removeAttachment(
+      "/removeAttachment1/",
+      "attach/ment1"
+    )
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "attachment attach/ment1 is forbidden");
@@ -697,10 +695,10 @@
     stop();
     expect(7);
 
-    this.jio.removeAttachment({
-      "_id": "/removeAttachment1/",
-      "_attachment": "attachment1"
-    })
+    this.jio.removeAttachment(
+      "/removeAttachment1/",
+      "attachment1"
+    )
       .then(function () {
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "DELETE");
@@ -730,10 +728,10 @@
     stop();
     expect(3);
 
-    this.jio.removeAttachment({
-      "_id": "/removeAttachment1/",
-      "_attachment": "attachment1"
-    })
+    this.jio.removeAttachment(
+      "/removeAttachment1/",
+      "attachment1"
+    )
       .then(function () {
         ok(false);
       })
@@ -774,10 +772,10 @@
     stop();
     expect(3);
 
-    this.jio.getAttachment({
-      "_id": "getAttachment1/",
-      "_attachment": "attachment1"
-    })
+    this.jio.getAttachment(
+      "getAttachment1/",
+      "attachment1"
+    )
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id getAttachment1/ is forbidden (no begin /)");
@@ -795,10 +793,10 @@
     stop();
     expect(3);
 
-    this.jio.getAttachment({
-      "_id": "/getAttachment1",
-      "_attachment": "attachment1"
-    })
+    this.jio.getAttachment(
+      "/getAttachment1",
+      "attachment1"
+    )
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id /getAttachment1 is forbidden (no end /)");
@@ -816,10 +814,10 @@
     stop();
     expect(3);
 
-    this.jio.getAttachment({
-      "_id": "/getAttachment1/",
-      "_attachment": "attach/ment1"
-    })
+    this.jio.getAttachment(
+      "/getAttachment1/",
+      "attach/ment1"
+    )
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "attachment attach/ment1 is forbidden");
@@ -843,10 +841,10 @@
     stop();
     expect(10);
 
-    this.jio.getAttachment({
-      "_id": "/getAttachment1/",
-      "_attachment": "attachment1"
-    })
+    this.jio.getAttachment(
+      "/getAttachment1/",
+      "attachment1"
+    )
       .then(function (result) {
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "GET");
@@ -883,10 +881,10 @@
     stop();
     expect(3);
 
-    this.jio.getAttachment({
-      "_id": "/getAttachment1/",
-      "_attachment": "attachment1"
-    })
+    this.jio.getAttachment(
+      "/getAttachment1/",
+      "attachment1"
+    )
       .then(function () {
         ok(false);
       })

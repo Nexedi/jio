@@ -17,8 +17,8 @@
   function Storage404() {
     return this;
   }
-  function generate404Error(param) {
-    equal(param._id, "bar", "get 404 called");
+  function generate404Error(id) {
+    equal(id, "bar", "get 404 called");
     throw new jIO.util.jIOError("Cannot find document", 404);
   }
   Storage404.prototype.get = generate404Error;
@@ -27,17 +27,18 @@
   function Storage200() {
     return this;
   }
-  Storage200.prototype.get = function (param) {
-    equal(param._id, "bar", "get 200 called");
+  Storage200.prototype.get = function (id) {
+    equal(id, "bar", "get 200 called");
     return {title: "foo"};
   };
-  Storage200.prototype.put = function (param) {
-    deepEqual(param, {"_id": "bar", "title": "foo"}, "put 200 called");
-    return param._id;
+  Storage200.prototype.put = function (id, param) {
+    equal(id, "bar", "put 200 called");
+    deepEqual(param, {"title": "foo"}, "put 200 called");
+    return id;
   };
-  Storage200.prototype.remove = function (param) {
-    deepEqual(param, {"_id": "bar"}, "remove 200 called");
-    return param._id;
+  Storage200.prototype.remove = function (id) {
+    equal(id, "bar", "remove 200 called");
+    return id;
   };
   Storage200.prototype.post = function (param) {
     deepEqual(param, {"title": "foo"}, "post 200 called");
@@ -134,7 +135,7 @@
       }]
     });
 
-    jio.get({"_id": "bar"})
+    jio.get("bar")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find document");
@@ -161,10 +162,9 @@
       }]
     });
 
-    jio.get({"_id": "bar"})
+    jio.get("bar")
       .then(function (result) {
         deepEqual(result, {
-          "_id": "bar",
           "title": "foo"
         }, "Check document");
       })
@@ -189,10 +189,9 @@
       }]
     });
 
-    jio.get({"_id": "bar"})
+    jio.get("bar")
       .then(function (result) {
         deepEqual(result, {
-          "_id": "bar",
           "title": "foo"
         }, "Check document");
       })
@@ -217,7 +216,7 @@
       }]
     });
 
-    jio.get({"_id": "bar"})
+    jio.get("bar")
       .fail(function (error) {
         ok(error instanceof Error);
         equal(error.message, "manually triggered error");
@@ -244,7 +243,7 @@
       }]
     });
 
-    jio.get({"_id": "bar"})
+    jio.get("bar")
       .fail(function (error) {
         ok(error instanceof Error);
         equal(error.message, "manually triggered error");
@@ -275,7 +274,7 @@
       }]
     });
 
-    jio.post({"_id": "bar", "title": "foo"})
+    jio.post({"title": "foo"})
       .fail(function (error) {
         ok(error instanceof Error);
         equal(error.message, "manually triggered error");
@@ -331,7 +330,7 @@
       }]
     });
 
-    jio.put({"_id": "bar", "title": "foo"})
+    jio.put("bar", {"title": "foo"})
       .fail(function (error) {
         ok(error instanceof Error);
         equal(error.message, "manually triggered error");
@@ -347,7 +346,7 @@
 
   test("put on first storage", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var jio = jIO.createJIO({
       type: "union",
@@ -358,7 +357,7 @@
       }]
     });
 
-    jio.put({"_id": "bar", "title": "foo"})
+    jio.put("bar", {"title": "foo"})
       .then(function (result) {
         equal(result, "bar");
       })
@@ -372,7 +371,7 @@
 
   test("put on second storage", function () {
     stop();
-    expect(4);
+    expect(5);
 
     var jio = jIO.createJIO({
       type: "union",
@@ -383,7 +382,7 @@
       }]
     });
 
-    jio.put({"_id": "bar", "title": "foo"})
+    jio.put("bar", {"title": "foo"})
       .then(function (result) {
         equal(result, "bar");
       })
@@ -397,19 +396,20 @@
 
   test("put create on first storage", function () {
     stop();
-    expect(4);
+    expect(5);
 
     function StoragePut404() {
       return this;
     }
-    function generatePut404Error(param) {
-      equal(param._id, "bar", "get Put404 called");
+    function generatePut404Error(id) {
+      equal(id, "bar", "get Put404 called");
       throw new jIO.util.jIOError("Cannot find document", 404);
     }
     StoragePut404.prototype.get = generatePut404Error;
-    StoragePut404.prototype.put = function (param) {
-      deepEqual(param, {"_id": "bar", "title": "foo"}, "put 404 called");
-      return param._id;
+    StoragePut404.prototype.put = function (id, param) {
+      equal(id, "bar", "put 404 called");
+      deepEqual(param, {"title": "foo"}, "put 404 called");
+      return id;
     };
     jIO.addStorage('unionstorageput404', StoragePut404);
 
@@ -422,7 +422,7 @@
       }]
     });
 
-    jio.put({"_id": "bar", "title": "foo"})
+    jio.put("bar", {"title": "foo"})
       .then(function (result) {
         equal(result, "bar");
       })
@@ -451,7 +451,7 @@
       }]
     });
 
-    jio.remove({"_id": "bar"})
+    jio.remove("bar")
       .fail(function (error) {
         ok(error instanceof Error);
         equal(error.message, "manually triggered error");
@@ -478,7 +478,7 @@
       }]
     });
 
-    jio.remove({"_id": "bar"})
+    jio.remove("bar")
       .then(function (result) {
         equal(result, "bar");
       })
@@ -503,7 +503,7 @@
       }]
     });
 
-    jio.remove({"_id": "bar"})
+    jio.remove("bar")
       .then(function (result) {
         equal(result, "bar");
       })

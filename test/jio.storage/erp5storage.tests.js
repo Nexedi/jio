@@ -91,12 +91,11 @@
     stop();
     expect(10);
 
-    this.jio.get({"_id": id})
+    this.jio.get(id)
       .then(function (result) {
         deepEqual(result, {
           portal_type: "Person",
           title: "foo",
-          "_id": id,
           "_attachments": {
             links: {},
             view: {}
@@ -149,11 +148,11 @@
     stop();
     expect(3);
 
-    this.jio.putAttachment({
-      "_id": "putAttachment1/",
-      "_attachment": "attachment1",
-      "_blob": new Blob(["foo"])
-    })
+    this.jio.putAttachment(
+      "putAttachment1/",
+      "attachment1",
+      new Blob(["foo"])
+    )
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Can not store outside ERP5: attachment1");
@@ -185,11 +184,11 @@
     stop();
     expect(11);
 
-    this.jio.putAttachment({
-      "_id": id,
-      "_attachment": submit_url,
-      "_blob": new Blob([JSON.stringify(form_json)])
-    })
+    this.jio.putAttachment(
+      id,
+      submit_url,
+      new Blob([JSON.stringify(form_json)])
+    )
       .then(function () {
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "POST");
@@ -241,10 +240,7 @@
     stop();
     expect(3);
 
-    this.jio.getAttachment({
-      "_id": "getAttachment1/",
-      "_attachment": "attachment1"
-    })
+    this.jio.getAttachment("getAttachment1/", "attachment1")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "ERP5: not support get attachment: attachment1");
@@ -284,10 +280,7 @@
     stop();
     expect(12);
 
-    this.jio.getAttachment({
-      "_id": id,
-      "_attachment": "view"
-    })
+    this.jio.getAttachment(id, "view")
       .then(function (result) {
         equal(server.requests.length, 2);
         equal(server.requests[0].method, "GET");
@@ -344,10 +337,7 @@
     stop();
     expect(12);
 
-    this.jio.getAttachment({
-      "_id": id,
-      "_attachment": "links"
-    })
+    this.jio.getAttachment(id, "links")
       .then(function (result) {
         equal(server.requests.length, 2);
         equal(server.requests[0].method, "GET");
@@ -398,10 +388,7 @@
     stop();
     expect(8);
 
-    this.jio.getAttachment({
-      "_id": id,
-      "_attachment": callable_url
-    })
+    this.jio.getAttachment(id, callable_url)
       .then(function (result) {
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "GET");

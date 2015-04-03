@@ -101,8 +101,13 @@
             i;
 
           function safeGet(j) {
-            return substorage.get({"_id": result[j].id})
-              .push(undefined, function (error) {
+            var id = result[j].id;
+            return substorage.get(id)
+              .push(function (doc) {
+                // XXX Can delete user data!
+                doc._id = id;
+                return doc;
+              }, function (error) {
                 // Document may have been dropped after listing
                 if ((error instanceof jIO.util.jIOError) &&
                     (error.status_code === 404)) {

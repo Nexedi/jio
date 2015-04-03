@@ -101,7 +101,7 @@
   UnionStorage.prototype.put = function () {
     var arg = arguments,
       context = this;
-    return this._getWithStorageIndex({"_id": arg[0]._id})
+    return this._getWithStorageIndex(arg[0])
       .push(undefined, function (error) {
         if ((error instanceof jIO.util.jIOError) &&
             (error.status_code === 404)) {
@@ -124,7 +124,7 @@
   UnionStorage.prototype.remove = function () {
     var arg = arguments,
       context = this;
-    return this._getWithStorageIndex({"_id": arg[0]._id})
+    return this._getWithStorageIndex(arg[0])
       .push(function (result) {
         // Storage found, remove from it directly
         var sub_storage = context._storage_list[result[0]];

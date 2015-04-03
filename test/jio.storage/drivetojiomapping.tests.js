@@ -43,22 +43,19 @@
 
   test("get non existent document", function () {
     stop();
-    expect(5);
+    expect(6);
 
     function StorageGetNoDocument() {
       return this;
     }
-    StorageGetNoDocument.prototype.getAttachment = function (options) {
-      deepEqual(options, {"_id": "/.jio_documents/",
-                          "_attachment": "bar.json"},
-                "getAttachment");
+    StorageGetNoDocument.prototype.getAttachment = function (id, name) {
+      equal(id, "/.jio_documents/", "getAttachment");
+      equal(name, "bar.json", "getAttachment");
       throw new jIO.util.jIOError("Cannot find subattachment", 404);
     };
-    StorageGetNoDocument.prototype.get = function (options) {
-      deepEqual(options, {"_id": "/"}, "Get document");
-      return {
-        "_id": "/"
-      };
+    StorageGetNoDocument.prototype.get = function (id) {
+      equal(id, "/", "Get document");
+      return {};
     };
 
     jIO.addStorage('drivetojiomappinggetnodocument', StorageGetNoDocument);
@@ -70,7 +67,7 @@
       }
     });
 
-    jio.get({"_id": "bar"})
+    jio.get("bar")
       .then(function () {
         ok(false);
       })
@@ -86,21 +83,19 @@
 
   test("get document with only one attachment", function () {
     stop();
-    expect(3);
+    expect(4);
 
     function StorageGetOnlyAttachment() {
       return this;
     }
-    StorageGetOnlyAttachment.prototype.getAttachment = function (options) {
-      deepEqual(options, {"_id": "/.jio_documents/",
-                          "_attachment": "bar.json"},
-                "getAttachment");
+    StorageGetOnlyAttachment.prototype.getAttachment = function (id, name) {
+      equal(id, "/.jio_documents/", "getAttachment");
+      equal(name, "bar.json", "getAttachment");
       throw new jIO.util.jIOError("Cannot find subattachment", 404);
     };
-    StorageGetOnlyAttachment.prototype.get = function (options) {
-      deepEqual(options, {"_id": "/"}, "Get document");
+    StorageGetOnlyAttachment.prototype.get = function (id) {
+      equal(id, "/", "Get document");
       return {
-        "_id": "/",
         "_attachments": {
           "bar": {}
         }
@@ -117,10 +112,9 @@
       }
     });
 
-    jio.get({"_id": "bar"})
+    jio.get("bar")
       .then(function (result) {
         deepEqual(result, {
-          "_id": "bar",
           "_attachments": {
             enclosure: {}
           }
@@ -136,22 +130,19 @@
 
   test("get document with only one document", function () {
     stop();
-    expect(3);
+    expect(4);
 
     function StorageGetOnlyDocument() {
       return this;
     }
-    StorageGetOnlyDocument.prototype.getAttachment = function (options) {
-      deepEqual(options, {"_id": "/.jio_documents/",
-                          "_attachment": "bar.json"},
-                "getAttachment");
+    StorageGetOnlyDocument.prototype.getAttachment = function (id, name) {
+      equal(id, "/.jio_documents/", "getAttachment");
+      equal(name, "bar.json", "getAttachment");
       return new Blob([JSON.stringify({title: "foo"})]);
     };
-    StorageGetOnlyDocument.prototype.get = function (options) {
-      deepEqual(options, {"_id": "/"}, "Get document");
-      return {
-        "_id": "/"
-      };
+    StorageGetOnlyDocument.prototype.get = function (id) {
+      deepEqual(id, "/", "Get document");
+      return {};
     };
 
     jIO.addStorage('drivetojiomappinggetonlydocument', StorageGetOnlyDocument);
@@ -163,10 +154,9 @@
       }
     });
 
-    jio.get({"_id": "bar"})
+    jio.get("bar")
       .then(function (result) {
         deepEqual(result, {
-          "_id": "bar",
           "title": "foo"
         });
       })
@@ -180,21 +170,19 @@
 
   test("get document with one document and one attachment", function () {
     stop();
-    expect(3);
+    expect(4);
 
     function StorageGetBoth() {
       return this;
     }
-    StorageGetBoth.prototype.getAttachment = function (options) {
-      deepEqual(options, {"_id": "/.jio_documents/",
-                          "_attachment": "bar.json"},
-                "getAttachment");
+    StorageGetBoth.prototype.getAttachment = function (id, name) {
+      equal(id, "/.jio_documents/", "getAttachment");
+      equal(name, "bar.json", "getAttachment");
       return new Blob([JSON.stringify({title: "foo"})]);
     };
-    StorageGetBoth.prototype.get = function (options) {
-      deepEqual(options, {"_id": "/"}, "Get document");
+    StorageGetBoth.prototype.get = function (id) {
+      equal(id, "/", "Get document");
       return {
-        "_id": "/",
         "_attachments": {
           "bar": {}
         }
@@ -210,10 +198,9 @@
       }
     });
 
-    jio.get({"_id": "bar"})
+    jio.get("bar")
       .then(function (result) {
         deepEqual(result, {
-          "_id": "bar",
           "title": "foo",
           "_attachments": {
             enclosure: {}
@@ -234,7 +221,7 @@
   module("driveToJioMapping.put");
   test("put called substorage put", function () {
     stop();
-    expect(4);
+    expect(5);
 
     var jio = jIO.createJIO({
       type: "drivetojiomapping",
@@ -242,26 +229,22 @@
         type: "drivetojiomapping200"
       }
     });
-    Storage200.prototype.putAttachment = function (param) {
-      var blob = param._blob;
-      delete param._blob;
+    Storage200.prototype.putAttachment = function (id, name, blob) {
       equal(blob.type, "application/json", "Blob type is OK");
-      deepEqual(param, {
-        "_id": "/.jio_documents/",
-        "_attachment": "bar.json"
-      }, "putAttachment 200 called");
+      equal(id, "/.jio_documents/", "putAttachment 200 called");
+      equal(name, "bar.json", "putAttachment 200 called");
 
       return jIO.util.readBlobAsText(blob)
         .then(function (result) {
           deepEqual(JSON.parse(result.target.result),
-                    {"_id": "bar", "title": "bartitle"},
+                    {"title": "bartitle"},
                     "JSON is in blob");
-          return param._id;
+          return id;
         });
 
     };
 
-    jio.put({"_id": "bar", "title": "bartitle"})
+    jio.put("bar", {"title": "bartitle"})
       .then(function (result) {
         equal(result, "bar");
       })
@@ -275,7 +258,7 @@
 
   test("automatically create subdocuments", function () {
     stop();
-    expect(8);
+    expect(11);
 
     var call_count = 0,
       jio;
@@ -283,20 +266,17 @@
     function StorageCreateSubDocument() {
       return this;
     }
-    StorageCreateSubDocument.prototype.putAttachment = function (param) {
+    StorageCreateSubDocument.prototype.putAttachment = function (id, name,
+                                                                 blob) {
       call_count += 1;
-      var blob = param._blob;
-      delete param._blob;
       equal(blob.type, "application/json", "Blob type is OK");
-      deepEqual(param, {
-        "_id": "/.jio_documents/",
-        "_attachment": "bar.json"
-      }, "putAttachment 200 called");
+      equal(id, "/.jio_documents/", "putAttachment 200 called");
+      equal(name, "bar.json", "putAttachment 200 called");
 
       return jIO.util.readBlobAsText(blob)
         .then(function (result) {
           deepEqual(JSON.parse(result.target.result),
-                    {"_id": "bar", "title": "bartitle"},
+                    {"title": "bartitle"},
                     "JSON is in blob");
           if (call_count === 1) {
             throw new jIO.util.jIOError("Cannot access subdocument", 404);
@@ -305,10 +285,9 @@
         });
     };
 
-    StorageCreateSubDocument.prototype.put = function (param) {
-      deepEqual(param, {
-        "_id": "/.jio_documents/"
-      }, "put 200 called");
+    StorageCreateSubDocument.prototype.put = function (id, param) {
+      equal(id, "/.jio_documents/", "PutSubDocument OK");
+      deepEqual(param, {}, "put 200 called");
       return "PutSubDocument OK";
     };
 
@@ -322,7 +301,7 @@
       }
     });
 
-    jio.put({"_id": "bar", "title": "bartitle"})
+    jio.put("bar", {"title": "bartitle"})
       .then(function (result) {
         equal(result, "bar");
       })
@@ -343,22 +322,20 @@
     var call_count = 0,
       jio;
     stop();
-    expect(6);
+    expect(8);
 
     function StorageRemoveNoDocument() {
       return this;
     }
-    StorageRemoveNoDocument.prototype.removeAttachment = function (options) {
+    StorageRemoveNoDocument.prototype.removeAttachment = function (id, name) {
       call_count += 1;
       if (call_count === 1) {
-        deepEqual(options, {"_id": "/",
-                            "_attachment": "bar"},
-                  "removeAttachment");
+        equal(id, "/", "removeAttachment");
+        equal(name, "bar", "removeAttachment");
         throw new jIO.util.jIOError("Cannot find subattachment", 404);
       }
-      deepEqual(options, {"_id": "/.jio_documents/",
-                          "_attachment": "bar.json"},
-                "removeAttachment");
+      equal(id, "/.jio_documents/", "removeAttachment");
+      equal(name, "bar.json", "removeAttachment");
       throw new jIO.util.jIOError("Cannot find subdocument", 404);
     };
 
@@ -372,7 +349,7 @@
       }
     });
 
-    jio.remove({"_id": "bar"})
+    jio.remove("bar")
       .then(function () {
         ok(false);
       })
@@ -393,23 +370,21 @@
     var call_count = 0,
       jio;
     stop();
-    expect(4);
+    expect(6);
 
     function StorageRemoveOnlyAttachment() {
       return this;
     }
     StorageRemoveOnlyAttachment.prototype.removeAttachment =
-      function (options) {
+      function (id, name) {
         call_count += 1;
         if (call_count === 1) {
-          deepEqual(options, {"_id": "/",
-                              "_attachment": "bar"},
-                    "removeAttachment");
+          equal(id, "/", "removeAttachment");
+          equal(name, "bar", "removeAttachment");
           return "Removed";
         }
-        deepEqual(options, {"_id": "/.jio_documents/",
-                            "_attachment": "bar.json"},
-                  "removeAttachment");
+        equal(id, "/.jio_documents/", "removeAttachment");
+        equal(name, "bar.json", "removeAttachment");
         throw new jIO.util.jIOError("Cannot find subdocument", 404);
       };
 
@@ -423,7 +398,7 @@
       }
     });
 
-    jio.remove({"_id": "bar"})
+    jio.remove("bar")
       .then(function (result) {
         equal(result, "bar");
         equal(call_count, 2);
@@ -440,22 +415,21 @@
     var call_count = 0,
       jio;
     stop();
-    expect(4);
+    expect(6);
 
     function StorageRemoveOnlyDocument() {
       return this;
     }
-    StorageRemoveOnlyDocument.prototype.removeAttachment = function (options) {
+    StorageRemoveOnlyDocument.prototype.removeAttachment = function (id,
+                                                                     name) {
       call_count += 1;
       if (call_count === 1) {
-        deepEqual(options, {"_id": "/",
-                            "_attachment": "bar"},
-                  "removeAttachment");
+        equal(id, "/", "removeAttachment");
+        equal(name, "bar", "removeAttachment");
         throw new jIO.util.jIOError("Cannot find subattachment", 404);
       }
-      deepEqual(options, {"_id": "/.jio_documents/",
-                          "_attachment": "bar.json"},
-                "removeAttachment");
+      equal(id, "/.jio_documents/", "removeAttachment");
+      equal(name, "bar.json", "removeAttachment");
       return "Removed";
     };
 
@@ -469,7 +443,7 @@
       }
     });
 
-    jio.remove({"_id": "bar"})
+    jio.remove("bar")
       .then(function (result) {
         equal(result, "bar");
         equal(call_count, 2);
@@ -486,22 +460,20 @@
     var call_count = 0,
       jio;
     stop();
-    expect(4);
+    expect(6);
 
     function StorageRemoveBoth() {
       return this;
     }
-    StorageRemoveBoth.prototype.removeAttachment = function (options) {
+    StorageRemoveBoth.prototype.removeAttachment = function (id, name) {
       call_count += 1;
       if (call_count === 1) {
-        deepEqual(options, {"_id": "/",
-                            "_attachment": "bar"},
-                  "removeAttachment");
+        deepEqual(id, "/", "removeAttachment");
+        deepEqual(name, "bar", "removeAttachment");
         return "Removed attachment";
       }
-      deepEqual(options, {"_id": "/.jio_documents/",
-                          "_attachment": "bar.json"},
-                "removeAttachment");
+      deepEqual(id, "/.jio_documents/", "removeAttachment");
+      deepEqual(name, "bar.json", "removeAttachment");
       return "Removed document";
     };
 
@@ -514,7 +486,7 @@
       }
     });
 
-    jio.remove({"_id": "bar"})
+    jio.remove("bar")
       .then(function (result) {
         equal(result, "bar");
         equal(call_count, 2);
@@ -542,7 +514,7 @@
       }
     });
 
-    jio.getAttachment({"_id": "bar", "_attachment": "foo"})
+    jio.getAttachment("bar", "foo")
       .then(function () {
         ok(false);
       })
@@ -561,7 +533,7 @@
 
   test("getAttachment called substorage getAttachment", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var jio = jIO.createJIO({
       type: "drivetojiomapping",
@@ -571,14 +543,13 @@
     }),
       blob = new Blob(["foo"]);
 
-    Storage200.prototype.getAttachment = function (param) {
-      deepEqual(param, {"_id": "/",
-                        "_attachment": "bar"},
-                "getAttachment 200 called");
+    Storage200.prototype.getAttachment = function (id, name) {
+      equal(id, "/", "getAttachment 200 called");
+      equal(name, "bar", "getAttachment 200 called");
       return blob;
     };
 
-    jio.getAttachment({"_id": "bar", "_attachment": "enclosure"})
+    jio.getAttachment("bar", "enclosure")
       .then(function (result) {
         equal(result, blob);
       })
@@ -605,8 +576,7 @@
       }
     });
 
-    jio.putAttachment({"_id": "bar", "_attachment": "foo",
-                       "_blob": new Blob(["foo"])})
+    jio.putAttachment("bar", "foo", new Blob(["foo"]))
       .then(function () {
         ok(false);
       })
@@ -625,7 +595,7 @@
 
   test("putAttachment called substorage putAttachment", function () {
     stop();
-    expect(2);
+    expect(4);
 
     var jio = jIO.createJIO({
       type: "drivetojiomapping",
@@ -635,15 +605,14 @@
     }),
       blob = new Blob(["foo"]);
 
-    Storage200.prototype.putAttachment = function (param) {
-      deepEqual(param, {"_id": "/",
-                        "_blob": blob,
-                        "_attachment": "bar"},
-                "putAttachment 200 called");
+    Storage200.prototype.putAttachment = function (id, name, blob2) {
+      equal(id, "/", "putAttachment 200 called");
+      equal(name, "bar", "putAttachment 200 called");
+      deepEqual(blob2, blob, "putAttachment 200 called");
       return "Put";
     };
 
-    jio.putAttachment({"_id": "bar", "_attachment": "enclosure", "_blob": blob})
+    jio.putAttachment("bar", "enclosure", blob)
       .then(function (result) {
         equal(result, "Put");
       })
@@ -670,7 +639,7 @@
       }
     });
 
-    jio.removeAttachment({"_id": "bar", "_attachment": "foo"})
+    jio.removeAttachment("bar", "foo")
       .then(function () {
         ok(false);
       })
@@ -689,7 +658,7 @@
 
   test("removeAttachment called substorage removeAttachment", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var jio = jIO.createJIO({
       type: "drivetojiomapping",
@@ -698,14 +667,13 @@
       }
     });
 
-    Storage200.prototype.removeAttachment = function (param) {
-      deepEqual(param, {"_id": "/",
-                        "_attachment": "bar"},
-                "removeAttachment 200 called");
+    Storage200.prototype.removeAttachment = function (id, name) {
+      equal(id, "/", "removeAttachment 200 called");
+      equal(name, "bar", "removeAttachment 200 called");
       return "Removed";
     };
 
-    jio.removeAttachment({"_id": "bar", "_attachment": "enclosure"})
+    jio.removeAttachment("bar", "enclosure")
       .then(function (result) {
         equal(result, "Removed");
       })
@@ -748,21 +716,15 @@
       return this;
     }
 
-    StorageAllDocsNoDirectory.prototype.get = function (param) {
+    StorageAllDocsNoDirectory.prototype.get = function (id) {
       call_count += 1;
       if (call_count === 1) {
-        deepEqual(param, {
-          "_id": "/.jio_documents/"
-        }, "get documents called");
+        equal(id, "/.jio_documents/", "get documents called");
         throw new jIO.util.jIOError("Cannot access subdocument", 404);
       }
 
-      deepEqual(param, {
-        "_id": "/"
-      }, "get attachments called");
-      return {
-        "_id": "/"
-      };
+      equal(id, "/", "get attachments called");
+      return {};
     };
 
     jIO.addStorage('drivetojiomappingalldocsnodirectory',
@@ -803,23 +765,15 @@
       return this;
     }
 
-    StorageAllDocsEmpty.prototype.get = function (param) {
+    StorageAllDocsEmpty.prototype.get = function (id) {
       call_count += 1;
       if (call_count === 1) {
-        deepEqual(param, {
-          "_id": "/.jio_documents/"
-        }, "get documents called");
-        return {
-          "_id": "/.jio_documents/"
-        };
+        equal(id, "/.jio_documents/", "get documents called");
+        return {};
       }
 
-      deepEqual(param, {
-        "_id": "/"
-      }, "get attachments called");
-      return {
-        "_id": "/"
-      };
+      equal(id, "/", "get attachments called");
+      return {};
     };
 
     jIO.addStorage('drivetojiomappingalldocsempty',
@@ -861,20 +815,15 @@
         return this;
       }
 
-      StorageAllDocsAttachmentsOnly.prototype.get = function (param) {
+      StorageAllDocsAttachmentsOnly.prototype.get = function (id) {
         call_count += 1;
         if (call_count === 1) {
-          deepEqual(param, {
-            "_id": "/.jio_documents/"
-          }, "get documents called");
+          equal(id, "/.jio_documents/", "get documents called");
           throw new jIO.util.jIOError("Cannot access subdocument", 404);
         }
 
-        deepEqual(param, {
-          "_id": "/"
-        }, "get attachments called");
+        equal(id, "/", "get attachments called");
         return {
-          "_id": "/",
           "_attachments": {
             foo: {},
             bar: {}
@@ -927,14 +876,11 @@
         return this;
       }
 
-      StorageAllDocsFilterDocument.prototype.get = function (param) {
+      StorageAllDocsFilterDocument.prototype.get = function (id) {
         call_count += 1;
         if (call_count === 1) {
-          deepEqual(param, {
-            "_id": "/.jio_documents/"
-          }, "get documents called");
+          equal(id, "/.jio_documents/", "get documents called");
           return {
-            "_id": "/",
             "_attachments": {
               "foo.json": {},
               "bar.json": {},
@@ -943,12 +889,8 @@
           };
         }
 
-        deepEqual(param, {
-          "_id": "/"
-        }, "get attachments called");
-        return {
-          "_id": "/"
-        };
+        equal(id, "/", "get attachments called");
+        return {};
       };
 
       jIO.addStorage('drivetojiomappingalldocsfilterdocument',
@@ -995,14 +937,11 @@
       return this;
     }
 
-    StorageAllDocsBoth.prototype.get = function (param) {
+    StorageAllDocsBoth.prototype.get = function (id) {
       call_count += 1;
       if (call_count === 1) {
-        deepEqual(param, {
-          "_id": "/.jio_documents/"
-        }, "get documents called");
+        equal(id, "/.jio_documents/", "get documents called");
         return {
-          "_id": "/",
           "_attachments": {
             "foo.json": {},
             "bar.json": {}
@@ -1010,11 +949,8 @@
         };
       }
 
-      deepEqual(param, {
-        "_id": "/"
-      }, "get attachments called");
+      equal(id, "/", "get attachments called");
       return {
-        "_id": "/",
         "_attachments": {
           "bar": {},
           "foobar": {}

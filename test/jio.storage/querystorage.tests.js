@@ -52,15 +52,14 @@
       }
     });
 
-    Storage200.prototype.get = function (param) {
-      equal(param._id, "bar", "get 200 called");
+    Storage200.prototype.get = function (id) {
+      equal(id, "bar", "get 200 called");
       return {title: "foo"};
     };
 
-    jio.get({"_id": "bar"})
+    jio.get("bar")
       .then(function (result) {
         deepEqual(result, {
-          "_id": "bar",
           "title": "foo"
         }, "Check document");
       })
@@ -110,7 +109,7 @@
   module("queryStorage.put");
   test("put called substorage put", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var jio = jIO.createJIO({
       type: "query",
@@ -118,12 +117,13 @@
         type: "querystorage200"
       }
     });
-    Storage200.prototype.put = function (param) {
-      deepEqual(param, {"_id": "bar", "title": "foo"}, "put 200 called");
-      return param._id;
+    Storage200.prototype.put = function (id, param) {
+      equal(id, "bar", "put 200 called");
+      deepEqual(param, {"title": "foo"}, "put 200 called");
+      return id;
     };
 
-    jio.put({"_id": "bar", "title": "foo"})
+    jio.put("bar", {"title": "foo"})
       .then(function (result) {
         equal(result, "bar");
       })
@@ -149,12 +149,12 @@
         type: "querystorage200"
       }
     });
-    Storage200.prototype.remove = function (param) {
-      deepEqual(param, {"_id": "bar"}, "remove 200 called");
-      return param._id;
+    Storage200.prototype.remove = function (id) {
+      deepEqual(id, "bar", "remove 200 called");
+      return id;
     };
 
-    jio.remove({"_id": "bar"})
+    jio.remove("bar")
       .then(function (result) {
         equal(result, "bar");
       })
@@ -172,7 +172,7 @@
   module("queryStorage.getAttachment");
   test("getAttachment called substorage getAttachment", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var jio = jIO.createJIO({
       type: "query",
@@ -182,13 +182,13 @@
     }),
       blob = new Blob([""]);
 
-    Storage200.prototype.getAttachment = function (param) {
-      deepEqual(param, {"_id": "bar", "_attachment": "foo"},
-                "getAttachment 200 called");
+    Storage200.prototype.getAttachment = function (id, name) {
+      equal(id, "bar", "getAttachment 200 called");
+      equal(name, "foo", "getAttachment 200 called");
       return blob;
     };
 
-    jio.getAttachment({"_id": "bar", "_attachment": "foo"})
+    jio.getAttachment("bar", "foo")
       .then(function (result) {
         equal(result, blob);
       })
@@ -206,7 +206,7 @@
   module("queryStorage.putAttachment");
   test("putAttachment called substorage putAttachment", function () {
     stop();
-    expect(2);
+    expect(4);
 
     var jio = jIO.createJIO({
       type: "query",
@@ -216,13 +216,15 @@
     }),
       blob = new Blob([""]);
 
-    Storage200.prototype.putAttachment = function (param) {
-      deepEqual(param, {"_id": "bar", "_attachment": "foo", "_blob": blob},
+    Storage200.prototype.putAttachment = function (id, name, blob2) {
+      equal(id, "bar", "putAttachment 200 called");
+      equal(name, "foo", "putAttachment 200 called");
+      deepEqual(blob2, blob,
                 "putAttachment 200 called");
       return "OK";
     };
 
-    jio.putAttachment({"_id": "bar", "_attachment": "foo", "_blob": blob})
+    jio.putAttachment("bar", "foo", blob)
       .then(function (result) {
         equal(result, "OK");
       })
@@ -240,7 +242,7 @@
   module("queryStorage.removeAttachment");
   test("removeAttachment called substorage removeAttachment", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var jio = jIO.createJIO({
       type: "query",
@@ -249,13 +251,13 @@
       }
     });
 
-    Storage200.prototype.removeAttachment = function (param) {
-      deepEqual(param, {"_id": "bar", "_attachment": "foo"},
-                "removeAttachment 200 called");
+    Storage200.prototype.removeAttachment = function (id, name) {
+      equal(id, "bar", "removeAttachment 200 called");
+      equal(name, "foo", "removeAttachment 200 called");
       return "Removed";
     };
 
-    jio.removeAttachment({"_id": "bar", "_attachment": "foo"})
+    jio.removeAttachment("bar", "foo")
       .then(function (result) {
         equal(result, "Removed");
       })
@@ -408,13 +410,13 @@
     function StorageNoSortCapacity() {
       return this;
     }
-    StorageNoSortCapacity.prototype.get = function (options) {
-      if (options._id === "foo") {
-        equal(options._id, "foo", "Get foo");
+    StorageNoSortCapacity.prototype.get = function (id) {
+      if (id === "foo") {
+        equal(id, "foo", "Get foo");
       } else {
-        equal(options._id, "bar", "Get bar");
+        equal(id, "bar", "Get bar");
       }
-      return {title: options._id, id: "ID " + options._id,
+      return {title: id, id: "ID " + id,
               "another": "property"};
     };
     StorageNoSortCapacity.prototype.hasCapacity = function (capacity) {
@@ -484,13 +486,13 @@
     function StorageNoSelectCapacity() {
       return this;
     }
-    StorageNoSelectCapacity.prototype.get = function (options) {
-      if (options._id === "foo") {
-        equal(options._id, "foo", "Get foo");
+    StorageNoSelectCapacity.prototype.get = function (id) {
+      if (id === "foo") {
+        equal(id, "foo", "Get foo");
       } else {
-        equal(options._id, "bar", "Get bar");
+        equal(id, "bar", "Get bar");
       }
-      return {title: options._id, id: "ID " + options._id,
+      return {title: id, id: "ID " + id,
               "another": "property"};
     };
     StorageNoSelectCapacity.prototype.hasCapacity = function (capacity) {
@@ -560,13 +562,13 @@
     function StorageNoLimitCapacity() {
       return this;
     }
-    StorageNoLimitCapacity.prototype.get = function (options) {
-      if (options._id === "foo") {
-        equal(options._id, "foo", "Get foo");
+    StorageNoLimitCapacity.prototype.get = function (id) {
+      if (id === "foo") {
+        equal(id, "foo", "Get foo");
       } else {
-        equal(options._id, "bar", "Get bar");
+        equal(id, "bar", "Get bar");
       }
-      return {title: options._id, id: "ID " + options._id,
+      return {title: id, id: "ID " + id,
               "another": "property"};
     };
     StorageNoLimitCapacity.prototype.hasCapacity = function (capacity) {
@@ -636,13 +638,13 @@
     function StorageNoQueryCapacity() {
       return this;
     }
-    StorageNoQueryCapacity.prototype.get = function (options) {
-      if (options._id === "foo") {
-        equal(options._id, "foo", "Get foo");
+    StorageNoQueryCapacity.prototype.get = function (id) {
+      if (id === "foo") {
+        equal(id, "foo", "Get foo");
       } else {
-        equal(options._id, "bar", "Get bar");
+        equal(id, "bar", "Get bar");
       }
-      return {title: options._id, id: "ID " + options._id,
+      return {title: id, id: "ID " + id,
               "another": "property"};
     };
     StorageNoQueryCapacity.prototype.hasCapacity = function (capacity) {

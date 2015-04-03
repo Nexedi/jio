@@ -81,8 +81,8 @@
 
   }
 
-  DavStorage.prototype.put = function (param) {
-    var id = restrictDocumentId(param._id);
+  DavStorage.prototype.put = function (id, param) {
+    id = restrictDocumentId(id);
     delete param._id;
     if (Object.getOwnPropertyNames(param).length > 0) {
       // Reject if param has other properties than _id
@@ -95,18 +95,18 @@
     });
   };
 
-  DavStorage.prototype.remove = function (param) {
-    var id = restrictDocumentId(param._id);
+  DavStorage.prototype.remove = function (id) {
+    id = restrictDocumentId(id);
     return ajax(this, {
       type: "DELETE",
       url: this._url + id
     });
   };
 
-  DavStorage.prototype.get = function (param) {
+  DavStorage.prototype.get = function (id) {
 
-    var id = restrictDocumentId(param._id),
-      context = this;
+    var context = this;
+    id = restrictDocumentId(id);
 
     return new RSVP.Queue()
       .push(function () {
@@ -162,26 +162,26 @@
   };
 
 
-  DavStorage.prototype.putAttachment = function (param) {
-    var id = restrictDocumentId(param._id);
-    restrictAttachmentId(param._attachment);
+  DavStorage.prototype.putAttachment = function (id, name, blob) {
+    id = restrictDocumentId(id);
+    restrictAttachmentId(name);
     return ajax(this, {
       type: "PUT",
-      url: this._url + id + param._attachment,
-      data: param._blob
+      url: this._url + id + name,
+      data: blob
     });
   };
 
-  DavStorage.prototype.getAttachment = function (param) {
-    var id = restrictDocumentId(param._id),
-      context = this;
-    restrictAttachmentId(param._attachment);
+  DavStorage.prototype.getAttachment = function (id, name) {
+    var context = this;
+    id = restrictDocumentId(id);
+    restrictAttachmentId(name);
 
     return new RSVP.Queue()
       .push(function () {
         return ajax(context, {
           type: "GET",
-          url: context._url + id + param._attachment,
+          url: context._url + id + name,
           dataType: "blob"
         });
       })
@@ -195,7 +195,7 @@
         if ((error.target !== undefined) &&
             (error.target.status === 404)) {
           throw new jIO.util.jIOError("Cannot find attachment: "
-                                      + param._id + " , " + param._attachment,
+                                      + id + " , " + name,
                                       404);
         }
         throw error;
@@ -203,23 +203,23 @@
 
   };
 
-  DavStorage.prototype.removeAttachment = function (param) {
-    var id = restrictDocumentId(param._id),
-      context = this;
-    restrictAttachmentId(param._attachment);
+  DavStorage.prototype.removeAttachment = function (id, name) {
+    var context = this;
+    id = restrictDocumentId(id);
+    restrictAttachmentId(name);
 
     return new RSVP.Queue()
       .push(function () {
         return ajax(context, {
           type: "DELETE",
-          url: context._url + id + param._attachment
+          url: context._url + id + name
         });
       })
       .push(undefined, function (error) {
         if ((error.target !== undefined) &&
             (error.target.status === 404)) {
           throw new jIO.util.jIOError("Cannot find attachment: "
-                                      + param._id + " , " + param._attachment,
+                                      + id + " , " + name,
                                       404);
         }
         throw error;

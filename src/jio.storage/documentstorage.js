@@ -19,21 +19,21 @@
                                  DOCUMENT_EXTENSION + "$"),
     ATTACHMENT_REGEXP = new RegExp("^jio_attachment/([\\w=]+)/([\\w=]+)$");
 
-  function getSubAttachmentIdFromParam(param) {
-    if (param._attachment === undefined) {
-      return 'jio_document/' + btoa(param._id) + DOCUMENT_EXTENSION;
+  function getSubAttachmentIdFromParam(id, name) {
+    if (name === undefined) {
+      return 'jio_document/' + btoa(id) + DOCUMENT_EXTENSION;
     }
-    return 'jio_attachment/' + btoa(param._id) + "/" + btoa(param._attachment);
+    return 'jio_attachment/' + btoa(id) + "/" + btoa(name);
   }
 
-  DocumentStorage.prototype.get = function (param) {
+  DocumentStorage.prototype.get = function (id) {
 
     var result,
       context = this;
-    return this._sub_storage.getAttachment({
-      "_id": this._document_id,
-      "_attachment": getSubAttachmentIdFromParam(param)
-    })
+    return this._sub_storage.getAttachment(
+      this._document_id,
+      getSubAttachmentIdFromParam(id)
+    )
       .push(function (blob) {
         return jIO.util.readBlobAsText(blob);
       })
@@ -42,9 +42,7 @@
       })
       .push(function (json) {
         result = json;
-        return context._sub_storage.get({
-          "_id": context._document_id
-        });
+        return context._sub_storage.get(context._document_id);
       })
       .push(function (document) {
         var attachments = {},
@@ -55,7 +53,7 @@
             if (ATTACHMENT_REGEXP.test(key)) {
               exec = ATTACHMENT_REGEXP.exec(key);
               try {
-                if (atob(exec[1]) === param._id) {
+                if (atob(exec[1]) === id) {
                   attachments[atob(exec[2])] = {};
                 }
               } catch (error) {
@@ -74,27 +72,25 @@
       });
   };
 
-  DocumentStorage.prototype.put = function (param) {
-    var doc_id = param._id;
-
-    return this._sub_storage.putAttachment({
-      "_id": this._document_id,
-      "_attachment": getSubAttachmentIdFromParam(param),
-      "_blob": new Blob([JSON.stringify(param)], {type: "application/json"})
-    })
+  DocumentStorage.prototype.put = function (doc_id, param) {
+    return this._sub_storage.putAttachment(
+      this._document_id,
+      getSubAttachmentIdFromParam(doc_id),
+      new Blob([JSON.stringify(param)], {type: "application/json"})
+    )
       .push(function () {
         return doc_id;
       });
 
   };
 
-  DocumentStorage.prototype.remove = function (param) {
-    return this._sub_storage.removeAttachment({
-      "_id": this._document_id,
-      "_attachment": getSubAttachmentIdFromParam(param)
-    })
+  DocumentStorage.prototype.remove = function (id) {
+    return this._sub_storage.removeAttachment(
+      this._document_id,
+      getSubAttachmentIdFromParam(id)
+    )
       .push(function () {
-        return param._id;
+        return id;
       });
   };
 
@@ -103,9 +99,7 @@
   };
 
   DocumentStorage.prototype.buildQuery = function () {
-    return this._sub_storage.get({
-      "_id": this._document_id
-    })
+    return this._sub_storage.get(this._document_id)
       .push(function (document) {
         var result = [],
           key;
@@ -130,26 +124,26 @@
       });
   };
 
-  DocumentStorage.prototype.getAttachment = function (param) {
-    return this._sub_storage.getAttachment({
-      "_id": this._document_id,
-      "_attachment": getSubAttachmentIdFromParam(param)
-    });
+  DocumentStorage.prototype.getAttachment = function (id, name) {
+    return this._sub_storage.getAttachment(
+      this._document_id,
+      getSubAttachmentIdFromParam(id, name)
+    );
   };
 
-  DocumentStorage.prototype.putAttachment = function (param) {
-    return this._sub_storage.putAttachment({
-      "_id": this._document_id,
-      "_attachment": getSubAttachmentIdFromParam(param),
-      "_blob": param._blob
-    });
+  DocumentStorage.prototype.putAttachment = function (id, name, blob) {
+    return this._sub_storage.putAttachment(
+      this._document_id,
+      getSubAttachmentIdFromParam(id, name),
+      blob
+    );
   };
 
-  DocumentStorage.prototype.removeAttachment = function (param) {
-    return this._sub_storage.removeAttachment({
-      "_id": this._document_id,
-      "_attachment": getSubAttachmentIdFromParam(param)
-    });
+  DocumentStorage.prototype.removeAttachment = function (id, name) {
+    return this._sub_storage.removeAttachment(
+      this._document_id,
+      getSubAttachmentIdFromParam(id, name)
+    );
   };
 
   jIO.addStorage('document', DocumentStorage);

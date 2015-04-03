@@ -53,13 +53,12 @@
 
     var test = this;
 
-    this.jio.put({"_id": "put1", "title": "myPut1"})
+    this.jio.put("put1", {"title": "myPut1"})
       .then(function (uuid) {
         equal(uuid, "put1");
         deepEqual(test.jio.__storage._database.put1, {
           attachments: {},
           doc: JSON.stringify({
-            "_id": "put1",
             "title": "myPut1"
           })
         });
@@ -83,14 +82,13 @@
     expect(2);
     stop();
 
-    this.jio.put({"_id": id, "title": "myPut2"})
+    this.jio.put(id, {"title": "myPut2"})
       .then(function (uuid) {
         equal(uuid, "put1");
         deepEqual(test.jio.__storage._database.put1, {
           "foo": "bar",
           "attachments": {"foo": "bar"},
           doc: JSON.stringify({
-            "_id": "put1",
             "title": "myPut2"
           })
         });
@@ -118,7 +116,7 @@
     stop();
     expect(3);
 
-    this.jio.get({"_id": "inexistent"})
+    this.jio.get("inexistent")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError, error);
         equal(error.message, "Cannot find document: inexistent");
@@ -140,10 +138,9 @@
     stop();
     expect(1);
 
-    this.jio.get({"_id": id})
+    this.jio.get(id)
       .then(function (result) {
         deepEqual(result, {
-          "_id": id,
           "title": "myPost1"
         }, "Check document");
       })
@@ -168,10 +165,9 @@
     stop();
     expect(1);
 
-    this.jio.get({"_id": id})
+    this.jio.get(id)
       .then(function (result) {
         deepEqual(result, {
-          "_id": id,
           "_attachments": {putattmt2: {}}
         }, "Check document");
       })
@@ -204,7 +200,7 @@
     stop();
     expect(1);
 
-    this.jio.remove({"_id": "foo"})
+    this.jio.remove("foo")
       .then(function (result) {
         equal(result, "foo");
       })
@@ -230,10 +226,7 @@
     stop();
     expect(3);
 
-    this.jio.getAttachment({
-      "_id": "inexistent",
-      "_attachment": "a"
-    })
+    this.jio.getAttachment("inexistent", "a")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find attachment: inexistent , a");
@@ -256,10 +249,7 @@
       "doc": JSON.stringify({})
     };
 
-    this.jio.getAttachment({
-      "_id": id,
-      "_attachment": "inexistent"
-    })
+    this.jio.getAttachment(id, "inexistent")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find attachment: b , inexistent");
@@ -284,10 +274,7 @@
         attachments: {"foo": "bar"}
       };
 
-      this.jio.getAttachment({
-        "_id": id,
-        "_attachment": "inexistent"
-      })
+      this.jio.getAttachment(id, "inexistent")
         .fail(function (error) {
           ok(error instanceof jIO.util.jIOError);
           equal(error.message, "Cannot find attachment: b , inexistent");
@@ -315,10 +302,7 @@
       }
     };
 
-    this.jio.getAttachment({
-      "_id": id,
-      "_attachment": attachment
-    })
+    this.jio.getAttachment(id, attachment)
       .then(function (result) {
         ok(result instanceof Blob, "Data is Blob");
         equal(result, blob);
@@ -346,11 +330,7 @@
     stop();
     expect(3);
 
-    this.jio.putAttachment({
-      "_id": "inexistent",
-      "_attachment": "putattmt2",
-      "_data": ""
-    })
+    this.jio.putAttachment("inexistent", "putattmt2", "")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError, error);
         equal(error.message, "Cannot find document: inexistent");
@@ -377,11 +357,7 @@
     stop();
     expect(1);
 
-    jio.putAttachment({
-      "_id": id,
-      "_attachment": "putattmt2",
-      "_blob": blob
-    })
+    jio.putAttachment(id, "putattmt2", blob)
       .then(function () {
         equal(jio.__storage._database[id].attachments.putattmt2, blob);
       })
@@ -408,10 +384,7 @@
     stop();
     expect(3);
 
-    this.jio.removeAttachment({
-      "_id": "inexistent",
-      "_attachment": "removeattmt2"
-    })
+    this.jio.removeAttachment("inexistent", "removeattmt2")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError, error);
         equal(error.message, "Cannot find document: inexistent");
@@ -437,10 +410,7 @@
     stop();
     expect(1);
 
-    jio.removeAttachment({
-      "_id": id,
-      "_attachment": "removeattmt2"
-    })
+    jio.removeAttachment(id, "removeattmt2")
       .then(function () {
         deepEqual(jio.__storage._database[id].attachments, {});
       })

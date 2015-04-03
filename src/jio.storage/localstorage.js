@@ -41,8 +41,8 @@
     }
   }
 
-  LocalStorage.prototype.get = function (param) {
-    restrictDocumentId(param._id);
+  LocalStorage.prototype.get = function (id) {
+    restrictDocumentId(id);
 
     var doc = {},
       attachments = {},
@@ -78,38 +78,38 @@
     return new Blob([arrayBuffer], {type: mimeString});
   }
 
-  LocalStorage.prototype.getAttachment = function (param) {
-    restrictDocumentId(param._id);
+  LocalStorage.prototype.getAttachment = function (id, name) {
+    restrictDocumentId(id);
 
-    var textstring = this._storage.getItem(param._attachment);
+    var textstring = this._storage.getItem(name);
 
     if (textstring === null) {
       throw new jIO.util.jIOError(
-        "Cannot find attachment " + param._attachment,
+        "Cannot find attachment " + name,
         404
       );
     }
     return dataURItoBlob(textstring);
   };
 
-  LocalStorage.prototype.putAttachment = function (param) {
+  LocalStorage.prototype.putAttachment = function (id, name, blob) {
     var context = this;
-    restrictDocumentId(param._id);
+    restrictDocumentId(id);
 
     // the document already exists
     // download data
     return new RSVP.Queue()
       .push(function () {
-        return jIO.util.readBlobAsDataURL(param._blob);
+        return jIO.util.readBlobAsDataURL(blob);
       })
       .push(function (e) {
-        context._storage.setItem(param._attachment, e.target.result);
+        context._storage.setItem(name, e.target.result);
       });
   };
 
-  LocalStorage.prototype.removeAttachment = function (param) {
-    restrictDocumentId(param._id);
-    return this._storage.removeItem(param._attachment);
+  LocalStorage.prototype.removeAttachment = function (id, name) {
+    restrictDocumentId(id);
+    return this._storage.removeItem(name);
   };
 
 

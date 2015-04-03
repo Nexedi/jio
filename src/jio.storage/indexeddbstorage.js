@@ -205,7 +205,7 @@
     return new RSVP.Promise(resolver);
   }
 
-  IndexedDBStorage.prototype.get = function (param) {
+  IndexedDBStorage.prototype.get = function (id) {
     var attachment_dict = {};
 
     function addEntry(cursor) {
@@ -217,13 +217,13 @@
         var transaction = openTransaction(db, ["metadata", "attachment"],
                                           "readonly");
         return RSVP.all([
-          handleGet(transaction.objectStore("metadata").get(param._id)),
+          handleGet(transaction.objectStore("metadata").get(id)),
           handleCursor(transaction.objectStore("attachment").index("_id")
-                       .openCursor(IDBKeyRange.only(param._id)), addEntry)
+                       .openCursor(IDBKeyRange.only(id)), addEntry)
         ]);
       })
       .push(function (result_list) {
-        var result = result_list[0];
+        var result = result_list[0].doc;
         if (Object.getOwnPropertyNames(attachment_dict).length > 0) {
           result._attachments = attachment_dict;
         }
@@ -241,11 +241,14 @@
     return new RSVP.Promise(resolver);
   }
 
-  IndexedDBStorage.prototype.put = function (metadata) {
+  IndexedDBStorage.prototype.put = function (id, metadata) {
     return openIndexedDB(this)
       .push(function (db) {
         var transaction = openTransaction(db, ["metadata"], "readwrite");
-        return handleRequest(transaction.objectStore("metadata").put(metadata));
+        return handleRequest(transaction.objectStore("metadata").put({
+          "_id": id,
+          "doc": metadata
+        }));
       });
   };
 
@@ -253,33 +256,36 @@
     cursor["delete"]();
   }
 
-  IndexedDBStorage.prototype.remove = function (param) {
+  IndexedDBStorage.prototype.remove = function (id) {
     return openIndexedDB(this)
       .push(function (db) {
         var transaction = openTransaction(db, ["metadata", "attachment",
                                           "blob"], "readwrite");
         return RSVP.all([
           handleRequest(transaction
-                        .objectStore("metadata")["delete"](param._id)),
+                        .objectStore("metadata")["delete"](id)),
           // XXX Why not possible to delete with KeyCursor?
           handleCursor(transaction.objectStore("attachment").index("_id")
-                       .openCursor(IDBKeyRange.only(param._id)), deleteEntry),
+                       .openCursor(IDBKeyRange.only(id)), deleteEntry),
           handleCursor(transaction.objectStore("blob").index("_id")
-                       .openCursor(IDBKeyRange.only(param._id)), deleteEntry)
+                       .openCursor(IDBKeyRange.only(id)), deleteEntry)
         ]);
       });
   };
 
-  IndexedDBStorage.prototype.getAttachment = function (param) {
+  IndexedDBStorage.prototype.getAttachment = function (id, name, options) {
     var transaction,
       start,
       end;
+    if (options === undefined) {
+      options = {};
+    }
     return openIndexedDB(this)
       .push(function (db) {
         transaction = openTransaction(db, ["attachment", "blob"], "readonly");
         // XXX Should raise if key is not good
         return handleGet(transaction.objectStore("attachment")
-                         .get(buildKeyPath([param._id, param._attachment])));
+                         .get(buildKeyPath([id, name])));
       })
       .push(function (attachment) {
         var total_length = attachment.info.length,
@@ -289,8 +295,8 @@
           start_index,
           end_index;
 
-        start = param._start || 0;
-        end = param._end || total_length;
+        start = options.start || 0;
+        end = options.end || total_length;
         if (end > total_length) {
           end = total_length;
         }
@@ -312,8 +318,8 @@
 
         for (i = start_index; i <= end_index; i += 1) {
           promise_list.push(
-            handleGet(store.get(buildKeyPath([param._id,
-                                param._attachment, i])))
+            handleGet(store.get(buildKeyPath([id,
+                                name, i])))
           );
         }
         return RSVP.all(promise_list);
@@ -331,22 +337,22 @@
       });
   };
 
-  function removeAttachment(transaction, param) {
+  function removeAttachment(transaction, id, name) {
     return RSVP.all([
       // XXX How to get the right attachment
       handleRequest(transaction.objectStore("attachment")["delete"](
-        buildKeyPath([param._id, param._attachment])
+        buildKeyPath([id, name])
       )),
       handleCursor(transaction.objectStore("blob").index("_id_attachment")
                    .openCursor(IDBKeyRange.only(
-          [param._id, param._attachment]
+          [id, name]
         )),
           deleteEntry
         )
     ]);
   }
 
-  IndexedDBStorage.prototype.putAttachment = function (metadata) {
+  IndexedDBStorage.prototype.putAttachment = function (id, name, blob) {
     var blob_part = [],
       transaction,
       db;
@@ -356,11 +362,11 @@
         db = database;
 
         // Split the blob first
-        return jIO.util.readBlobAsArrayBuffer(metadata._blob);
+        return jIO.util.readBlobAsArrayBuffer(blob);
       })
       .push(function (event) {
         var array_buffer = event.target.result,
-          total_size = metadata._blob.size,
+          total_size = blob.size,
           handled_size = 0;
 
         while (handled_size < total_size) {
@@ -371,18 +377,18 @@
 
         // Remove previous attachment
         transaction = openTransaction(db, ["attachment", "blob"], "readwrite");
-        return removeAttachment(transaction, metadata);
+        return removeAttachment(transaction, id, name);
       })
       .push(function () {
 
         var promise_list = [
             handleRequest(transaction.objectStore("attachment").put({
-              "_key_path": buildKeyPath([metadata._id, metadata._attachment]),
-              "_id": metadata._id,
-              "_attachment": metadata._attachment,
+              "_key_path": buildKeyPath([id, name]),
+              "_id": id,
+              "_attachment": name,
               "info": {
-                "content_type": metadata._blob.type,
-                "length": metadata._blob.size
+                "content_type": blob.type,
+                "length": blob.size
               }
             }))
           ],
@@ -392,10 +398,10 @@
         for (i = 0; i < len; i += 1) {
           promise_list.push(
             handleRequest(blob_store.put({
-              "_key_path": buildKeyPath([metadata._id, metadata._attachment,
+              "_key_path": buildKeyPath([id, name,
                                          i]),
-              "_id" : metadata._id,
-              "_attachment" : metadata._attachment,
+              "_id" : id,
+              "_attachment" : name,
               "_part" : i,
               "blob": blob_part[i]
             }))
@@ -406,12 +412,12 @@
       });
   };
 
-  IndexedDBStorage.prototype.removeAttachment = function (param) {
+  IndexedDBStorage.prototype.removeAttachment = function (id, name) {
     return openIndexedDB(this)
       .push(function (db) {
         var transaction = openTransaction(db, ["attachment", "blob"],
                                           "readwrite");
-        return removeAttachment(transaction, param);
+        return removeAttachment(transaction, id, name);
       });
   };
 

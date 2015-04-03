@@ -52,7 +52,7 @@
     stop();
     expect(3);
 
-    this.jio.get({"_id": "inexistent"})
+    this.jio.get("inexistent")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id inexistent is forbidden (!== /)");
@@ -71,11 +71,9 @@
     stop();
     expect(1);
 
-    this.jio.get({"_id": id})
+    this.jio.get(id)
       .then(function (result) {
-        deepEqual(result, {
-          "_id": "/"
-        }, "Check document");
+        deepEqual(result, {}, "Check document");
       })
       .fail(function (error) {
         ok(false, error);
@@ -93,10 +91,9 @@
 
     localStorage.setItem(attachment, "bar");
 
-    this.jio.get({"_id": id})
+    this.jio.get(id)
       .then(function (result) {
         deepEqual(result, {
-          "_id": id,
           "_attachments": {
             "foo": {}
           }
@@ -126,10 +123,7 @@
     stop();
     expect(3);
 
-    this.jio.getAttachment({
-      "_id": "inexistent",
-      "_attachment": "a"
-    })
+    this.jio.getAttachment("inexistent", "a")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id inexistent is forbidden (!== /)");
@@ -148,10 +142,7 @@
     stop();
     expect(3);
 
-    this.jio.getAttachment({
-      "_id": id,
-      "_attachment": "inexistent"
-    })
+    this.jio.getAttachment(id, "inexistent")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find attachment inexistent");
@@ -175,10 +166,7 @@
     localStorage.setItem(attachment, "data:text/plain;charset=utf-8;base64," +
       btoa(unescape(encodeURIComponent(value))));
 
-    this.jio.getAttachment({
-      "_id": id,
-      "_attachment": attachment
-    })
+    this.jio.getAttachment(id, attachment)
       .then(function (result) {
         ok(result instanceof Blob, "Data is Blob");
         deepEqual(result.type, "text/plain;charset=utf-8",
@@ -217,10 +205,7 @@
     data_url = imgCanvas.toDataURL("image/png");
     localStorage.setItem(attachment, data_url);
 
-    return context.jio.getAttachment({
-      "_id": id,
-      "_attachment": attachment
-    })
+    return context.jio.getAttachment(id, attachment)
       .then(function (result) {
         ok(result instanceof Blob, "Data is Blob");
         return jIO.util.readBlobAsDataURL(result);
@@ -252,11 +237,7 @@
     stop();
     expect(3);
 
-    this.jio.putAttachment({
-      "_id": "inexistent",
-      "_attachment": "putattmt2",
-      "_data": ""
-    })
+    this.jio.putAttachment("inexistent", "putattmt2", "")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "id inexistent is forbidden (!== /)");
@@ -278,11 +259,7 @@
     expect(1);
 
 
-    this.jio.putAttachment({
-      "_id": id,
-      "_attachment": attachment,
-      "_data": value
-    })
+    this.jio.putAttachment(id, attachment, value)
       .then(function () {
         equal(
           localStorage.getItem(attachment),
@@ -336,11 +313,7 @@
     }
 
     imgCanvas.toBlob(function (blob) {
-      return context.jio.putAttachment({
-        "_id": id,
-        "_attachment": attachment,
-        "_blob": blob
-      })
+      return context.jio.putAttachment(id, attachment, blob)
         .then(function () {
           equal(localStorage.getItem(attachment), data_url);
         })
@@ -368,10 +341,7 @@
     stop();
     expect(3);
 
-    this.jio.removeAttachment({
-      "_id": "inexistent",
-      "_attachment": "removeattmt2"
-    })
+    this.jio.removeAttachment("inexistent", "removeattmt2")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError, error);
         equal(error.message, "id inexistent is forbidden (!== /)");
@@ -394,10 +364,7 @@
     stop();
     expect(1);
 
-    this.jio.removeAttachment({
-      "_id": id,
-      "_attachment": attachment
-    })
+    this.jio.removeAttachment(id, attachment)
       .then(function () {
         ok(!localStorage.hasOwnProperty(attachment));
       })

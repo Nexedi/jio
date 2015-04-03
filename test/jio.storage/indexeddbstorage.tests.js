@@ -230,8 +230,8 @@
     deleteIndexedDB(context.jio)
       .then(function () {
         return RSVP.all([
-          context.jio.put({"_id": "2", "title": "title2"}),
-          context.jio.put({"_id": "1", "title": "title1"})
+          context.jio.put("2", {"title": "title2"}),
+          context.jio.put("1", {"title": "title1"})
         ]);
       })
       .then(function () {
@@ -278,7 +278,7 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.put({"_id": "foo", "title": "bar"});
+        return context.jio.put("foo", {"title": "bar"});
       })
       .then(function () {
         context.spy_open = sinon.spy(indexedDB, "open");
@@ -294,7 +294,7 @@
         context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
         context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
-        return context.jio.get({"_id": "foo"});
+        return context.jio.get("foo");
       })
       .then(function () {
 
@@ -374,7 +374,7 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.get({"_id": "inexistent"});
+        return context.jio.get("inexistent");
       })
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
@@ -397,14 +397,13 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.put({"_id": id, "title": "bar"});
+        return context.jio.put(id, {"title": "bar"});
       })
       .then(function () {
-        return context.jio.get({"_id": id});
+        return context.jio.get(id);
       })
       .then(function (result) {
         deepEqual(result, {
-          "_id": "/",
           "title": "bar"
         }, "Check document");
       })
@@ -425,18 +424,16 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.put({"_id": id, "title": "bar"});
+        return context.jio.put(id, {"title": "bar"});
       })
       .then(function () {
-        return context.jio.putAttachment({"_id": id, "_attachment": attachment,
-                                          "_data": "bar"});
+        return context.jio.putAttachment(id, attachment, "bar");
       })
       .then(function () {
-        return context.jio.get({"_id": id});
+        return context.jio.get(id);
       })
       .then(function (result) {
         deepEqual(result, {
-          "_id": id,
           "title": "bar",
           "_attachments": {
             "foo": {}
@@ -483,7 +480,7 @@
         context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
         context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
-        return context.jio.put({"_id": "foo", "title": "bar"});
+        return context.jio.put("foo", {"title": "bar"});
       })
       .then(function () {
 
@@ -560,7 +557,7 @@
         ok(context.spy_put.calledOnce, "put count " +
            context.spy_put.callCount);
         deepEqual(context.spy_put.firstCall.args[0],
-                  {"_id": "foo", title: "bar"},
+                  {"_id": "foo", doc: {title: "bar"}},
                   "put first argument");
 
         ok(!context.spy_index.called, "index count " +
@@ -608,7 +605,7 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.put({"_id": "inexistent"});
+        return context.jio.put("inexistent", {});
       })
       .then(function (result) {
         equal(result, "inexistent");
@@ -640,7 +637,7 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.put({"_id": "foo", "title": "bar"});
+        return context.jio.put("foo", {"title": "bar"});
       })
       .then(function () {
         context.spy_open = sinon.spy(indexedDB, "open");
@@ -657,7 +654,7 @@
         context.spy_cursor_delete = sinon.spy(IDBCursor.prototype, "delete");
         context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
-        return context.jio.remove({"_id": "foo"});
+        return context.jio.remove("foo");
       })
       .then(function () {
 
@@ -749,16 +746,12 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.put({"_id": "foo", "title": "bar"});
+        return context.jio.put("foo", {"title": "bar"});
       })
       .then(function () {
         return RSVP.all([
-          context.jio.putAttachment({"_id": "foo",
-                                     "_attachment": "attachment1",
-                                     "_data": "bar"}),
-          context.jio.putAttachment({"_id": "foo",
-                                     "_attachment": "attachment2",
-                                     "_data": "bar2"})
+          context.jio.putAttachment("foo", "attachment1", "bar"),
+          context.jio.putAttachment("foo", "attachment2", "bar2")
         ]);
       })
       .then(function () {
@@ -776,7 +769,7 @@
         context.spy_cursor_delete = sinon.spy(IDBCursor.prototype, "delete");
         context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
-        return context.jio.remove({"_id": "foo"});
+        return context.jio.remove("foo");
       })
       .then(function () {
 
@@ -882,12 +875,10 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.put({"_id": "foo", "title": "bar"});
+        return context.jio.put("foo", {"title": "bar"});
       })
       .then(function () {
-        return context.jio.putAttachment({"_id": "foo",
-                                          "_attachment": attachment,
-                                          "_data": big_string});
+        return context.jio.putAttachment("foo", attachment, big_string);
       })
       .then(function () {
         context.spy_open = sinon.spy(indexedDB, "open");
@@ -901,8 +892,7 @@
         context.spy_create_index = sinon.spy(IDBObjectStore.prototype,
                                              "createIndex");
 
-        return context.jio.getAttachment({"_id": "foo",
-                                          "_attachment": attachment});
+        return context.jio.getAttachment("foo", attachment);
       })
       .then(function () {
 
@@ -974,16 +964,13 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.put({"_id": "foo", "title": "bar"});
+        return context.jio.put("foo", {"title": "bar"});
       })
       .then(function () {
-        return context.jio.putAttachment({"_id": "foo",
-                                          "_attachment": attachment,
-                                          "_data": big_string});
+        return context.jio.putAttachment("foo", attachment, big_string);
       })
       .then(function () {
-        return context.jio.getAttachment({"_id": "foo",
-                                          "_attachment": attachment});
+        return context.jio.getAttachment("foo", attachment);
       })
       .then(function (result) {
         ok(result instanceof Blob, "Data is Blob");
@@ -1009,17 +996,14 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.put({"_id": "foo", "title": "bar"});
+        return context.jio.put("foo", {"title": "bar"});
       })
       .then(function () {
-        return context.jio.putAttachment({"_id": "foo",
-                                          "_attachment": attachment,
-                                          "_data": big_string});
+        return context.jio.putAttachment("foo", attachment, big_string);
       })
       .then(function () {
-        return context.jio.getAttachment({"_id": "foo",
-                                          "_attachment": attachment,
-                                          "_start": 1999995, "_end": 2000005});
+        return context.jio.getAttachment("foo", attachment,
+                                         {"start": 1999995, "end": 2000005});
       })
       .then(function (result) {
         ok(result instanceof Blob, "Data is Blob");
@@ -1057,12 +1041,10 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.put({"_id": "foo", "title": "bar"});
+        return context.jio.put("foo", {"title": "bar"});
       })
       .then(function () {
-        return context.jio.putAttachment({"_id": "foo",
-                                          "_attachment": attachment,
-                                          "_data": big_string});
+        return context.jio.putAttachment("foo", attachment, big_string);
       })
       .then(function () {
         context.spy_open = sinon.spy(indexedDB, "open");
@@ -1080,8 +1062,7 @@
         context.spy_cursor_delete = sinon.spy(IDBCursor.prototype, "delete");
         context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
-        return context.jio.removeAttachment({"_id": "foo",
-                                             "_attachment": attachment});
+        return context.jio.removeAttachment("foo", attachment);
       })
       .then(function () {
 
@@ -1179,7 +1160,7 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.put({"_id": "foo", "title": "bar"});
+        return context.jio.put("foo", {"title": "bar"});
       })
       .then(function () {
         context.spy_open = sinon.spy(indexedDB, "open");
@@ -1197,9 +1178,7 @@
         context.spy_cursor_delete = sinon.spy(IDBCursor.prototype, "delete");
         context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
-        return context.jio.putAttachment({"_id": "foo",
-                                          "_attachment": attachment,
-                                          "_data": big_string});
+        return context.jio.putAttachment("foo", attachment, big_string);
       })
       .then(function () {
 

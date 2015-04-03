@@ -53,14 +53,13 @@
     });
 
     Storage200.prototype.get = function (param) {
-      equal(param._id, "bar", "get 200 called");
+      equal(param, "bar", "get 200 called");
       return {title: "foo"};
     };
 
-    jio.get({"_id": "bar"})
+    jio.get("bar")
       .then(function (result) {
         deepEqual(result, {
-          "_id": "bar",
           "title": "foo"
         }, "Check document");
       })
@@ -99,9 +98,9 @@
       ) === null ? false : true);
     }
 
-    Storage200.prototype.put = function (param) {
-      uuid = param._id;
-      deepEqual(param, {"_id": uuid, "title": "foo"}, "post 200 called");
+    Storage200.prototype.put = function (id, param) {
+      uuid = id;
+      deepEqual(param, {"title": "foo"}, "post 200 called");
       return "bar";
     };
 
@@ -124,7 +123,7 @@
   module("uuidStorage.put");
   test("put called substorage put", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var jio = jIO.createJIO({
       type: "uuid",
@@ -132,12 +131,13 @@
         type: "uuidstorage200"
       }
     });
-    Storage200.prototype.put = function (param) {
-      deepEqual(param, {"_id": "bar", "title": "foo"}, "put 200 called");
-      return param._id;
+    Storage200.prototype.put = function (id, param) {
+      equal(id, "bar", "put 200 called");
+      deepEqual(param, {"title": "foo"}, "put 200 called");
+      return id;
     };
 
-    jio.put({"_id": "bar", "title": "foo"})
+    jio.put("bar", {"title": "foo"})
       .then(function (result) {
         equal(result, "bar");
       })
@@ -164,11 +164,11 @@
       }
     });
     Storage200.prototype.remove = function (param) {
-      deepEqual(param, {"_id": "bar"}, "remove 200 called");
+      equal(param, "bar", "remove 200 called");
       return param._id;
     };
 
-    jio.remove({"_id": "bar"})
+    jio.remove("bar")
       .then(function (result) {
         equal(result, "bar");
       })
@@ -186,7 +186,7 @@
   module("uuidStorage.getAttachment");
   test("getAttachment called substorage getAttachment", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var jio = jIO.createJIO({
       type: "uuid",
@@ -196,13 +196,13 @@
     }),
       blob = new Blob([""]);
 
-    Storage200.prototype.getAttachment = function (param) {
-      deepEqual(param, {"_id": "bar", "_attachment": "foo"},
-                "getAttachment 200 called");
+    Storage200.prototype.getAttachment = function (id, name) {
+      equal(id, "bar", "getAttachment 200 called");
+      equal(name, "foo", "getAttachment 200 called");
       return blob;
     };
 
-    jio.getAttachment({"_id": "bar", "_attachment": "foo"})
+    jio.getAttachment("bar", "foo")
       .then(function (result) {
         equal(result, blob);
       })
@@ -220,7 +220,7 @@
   module("uuidStorage.putAttachment");
   test("putAttachment called substorage putAttachment", function () {
     stop();
-    expect(2);
+    expect(4);
 
     var jio = jIO.createJIO({
       type: "uuid",
@@ -230,13 +230,14 @@
     }),
       blob = new Blob([""]);
 
-    Storage200.prototype.putAttachment = function (param) {
-      deepEqual(param, {"_id": "bar", "_attachment": "foo", "_blob": blob},
-                "putAttachment 200 called");
+    Storage200.prototype.putAttachment = function (id, name, blob2) {
+      equal(id, "bar", "putAttachment 200 called");
+      equal(name, "foo", "putAttachment 200 called");
+      deepEqual(blob2, blob, "putAttachment 200 called");
       return "OK";
     };
 
-    jio.putAttachment({"_id": "bar", "_attachment": "foo", "_blob": blob})
+    jio.putAttachment("bar", "foo", blob)
       .then(function (result) {
         equal(result, "OK");
       })
@@ -254,7 +255,7 @@
   module("uuidStorage.removeAttachment");
   test("removeAttachment called substorage removeAttachment", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var jio = jIO.createJIO({
       type: "uuid",
@@ -263,13 +264,13 @@
       }
     });
 
-    Storage200.prototype.removeAttachment = function (param) {
-      deepEqual(param, {"_id": "bar", "_attachment": "foo"},
-                "removeAttachment 200 called");
+    Storage200.prototype.removeAttachment = function (id, name) {
+      equal(id, "bar", "removeAttachment 200 called");
+      equal(name, "foo", "removeAttachment 200 called");
       return "Removed";
     };
 
-    jio.removeAttachment({"_id": "bar", "_attachment": "foo"})
+    jio.removeAttachment("bar", "foo")
       .then(function (result) {
         equal(result, "Removed");
       })

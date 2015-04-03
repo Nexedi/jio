@@ -9,7 +9,7 @@
 //   url: {string}
 // }
 
-/*jslint nomen: true */
+/*jslint nomen: true, unparam: true */
 /*global jIO, UriTemplate, FormData, RSVP, URI, Blob*/
 
 (function (jIO, UriTemplate, FormData, RSVP, URI, Blob) {
@@ -31,7 +31,7 @@
       });
   }
 
-  function getDocumentAndHateoas(storage, param, options) {
+  function getDocumentAndHateoas(storage, id, options) {
     if (options === undefined) {
       options = {};
     }
@@ -42,7 +42,7 @@
           "type": "GET",
           "url": UriTemplate.parse(site_hal._links.traverse.href)
                             .expand({
-              relative_url: param._id,
+              relative_url: id,
               view: options._view
             }),
           "xhrFields": {
@@ -62,8 +62,8 @@
     this._default_view_reference = spec.default_view_reference;
   }
 
-  ERP5Storage.prototype.get = function (param) {
-    return getDocumentAndHateoas(this, param)
+  ERP5Storage.prototype.get = function (id) {
+    return getDocumentAndHateoas(this, id)
       .push(function (response) {
         var result = JSON.parse(response.target.responseText),
           attachments = {
@@ -72,7 +72,6 @@
           },
           key;
           // action_type;
-        result._id = param._id;
         result.portal_type = result._links.type.name;
 
         // Remove all ERP5 hateoas links / convert them into jIO ID
@@ -90,15 +89,14 @@
       });
   };
 
-  ERP5Storage.prototype.getAttachment = function (param) {
-    var action = param._attachment;
+  ERP5Storage.prototype.getAttachment = function (id, action) {
 
     if (action === "view") {
-      return getDocumentAndHateoas(this, param,
+      return getDocumentAndHateoas(this, id,
                                    {"_view": this._default_view_reference})
         .push(function (response) {
           var result = JSON.parse(response.target.responseText);
-          result._id = param._id;
+          result._id = id;
           result.portal_type = result._links.type.name;
           // Remove all ERP5 hateoas links / convert them into jIO ID
 
@@ -113,7 +111,7 @@
         });
     }
     if (action === "links") {
-      return getDocumentAndHateoas(this, param)
+      return getDocumentAndHateoas(this, id)
         .push(function (response) {
           return new Blob(
             [JSON.stringify(JSON.parse(response.target.responseText))],
@@ -134,7 +132,7 @@
         })
         .push(function (evt) {
           var result = JSON.parse(evt.target.responseText);
-          result._id = param._id;
+          result._id = id;
           return new Blob(
             [JSON.stringify(result)],
             {"type": evt.target.getResponseHeader("Content-Type")}
@@ -145,16 +143,16 @@
                                 400);
   };
 
-  ERP5Storage.prototype.putAttachment = function (metadata) {
+  ERP5Storage.prototype.putAttachment = function (id, name, blob) {
     // Assert we use a callable on a document from the ERP5 site
-    if (metadata._attachment.indexOf(this._url) !== 0) {
+    if (name.indexOf(this._url) !== 0) {
       throw new jIO.util.jIOError("Can not store outside ERP5: " +
-                                  metadata._attachment, 400);
+                                  name, 400);
     }
 
     return new RSVP.Queue()
       .push(function () {
-        return jIO.util.readBlobAsText(metadata._blob);
+        return jIO.util.readBlobAsText(blob);
       })
       .push(function (evt) {
         var form_data = JSON.parse(evt.target.result),
@@ -167,7 +165,7 @@
         }
         return jIO.util.ajax({
           "type": "POST",
-          "url": metadata._attachment,
+          "url": name,
           "data": data,
           "xhrFields": {
             withCredentials: true

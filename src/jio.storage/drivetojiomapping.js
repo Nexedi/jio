@@ -18,7 +18,7 @@
     DOCUMENT_KEY = "/.jio_documents/",
     ROOT = "/";
 
-  FileSystemBridgeStorage.prototype.get = function (param) {
+  FileSystemBridgeStorage.prototype.get = function (id) {
     var context = this,
       json_document,
       explicit_document = false;
@@ -28,10 +28,10 @@
 
       .push(function () {
         // First get the document itself if it exists
-        return context._sub_storage.getAttachment({
-          "_id": DOCUMENT_KEY,
-          "_attachment": param._id + DOCUMENT_EXTENSION
-        });
+        return context._sub_storage.getAttachment(
+          DOCUMENT_KEY,
+          id + DOCUMENT_EXTENSION
+        );
       })
       .push(function (blob) {
         return new RSVP.Queue()
@@ -55,20 +55,18 @@
       .push(function (result) {
         json_document = result;
 
-        return context._sub_storage.get({
-          "_id": ROOT
-        });
+        return context._sub_storage.get(ROOT);
       })
 
       .push(function (directory_document) {
         if ((directory_document.hasOwnProperty("_attachments")) &&
-            (directory_document._attachments.hasOwnProperty(param._id))) {
+            (directory_document._attachments.hasOwnProperty(id))) {
           json_document._attachments = {
             enclosure: {}
           };
         } else {
           if (!explicit_document) {
-            throw new jIO.util.jIOError("Cannot find document " + param._id,
+            throw new jIO.util.jIOError("Cannot find document " + id,
                                         404);
           }
         }
@@ -77,29 +75,26 @@
 
   };
 
-  FileSystemBridgeStorage.prototype.put = function (param) {
-    var context = this,
-      doc_id = param._id;
+  FileSystemBridgeStorage.prototype.put = function (doc_id, param) {
+    var context = this;
     // XXX Handle conflict!
 
-    return context._sub_storage.putAttachment({
-      "_id": DOCUMENT_KEY,
-      "_attachment": doc_id + DOCUMENT_EXTENSION,
-      "_blob": new Blob([JSON.stringify(param)], {type: "application/json"})
-    })
+    return context._sub_storage.putAttachment(
+      DOCUMENT_KEY,
+      doc_id + DOCUMENT_EXTENSION,
+      new Blob([JSON.stringify(param)], {type: "application/json"})
+    )
       .push(undefined, function (error) {
         if ((error instanceof jIO.util.jIOError) &&
             (error.status_code === 404)) {
-          return context._sub_storage.put({
-            "_id": DOCUMENT_KEY
-          })
+          return context._sub_storage.put(DOCUMENT_KEY, {})
             .push(function () {
-              return context._sub_storage.putAttachment({
-                "_id": DOCUMENT_KEY,
-                "_attachment": doc_id + DOCUMENT_EXTENSION,
-                "_blob": new Blob([JSON.stringify(param)],
-                                  {type: "application/json"})
-              });
+              return context._sub_storage.putAttachment(
+                DOCUMENT_KEY,
+                doc_id + DOCUMENT_EXTENSION,
+                new Blob([JSON.stringify(param)],
+                         {type: "application/json"})
+              );
             });
         }
         throw error;
@@ -110,18 +105,17 @@
 
   };
 
-  FileSystemBridgeStorage.prototype.remove = function (param) {
+  FileSystemBridgeStorage.prototype.remove = function (doc_id) {
     var context = this,
-      got_error = false,
-      doc_id = param._id;
+      got_error = false;
     return new RSVP.Queue()
 
       // First, try to remove enclosure
       .push(function () {
-        return context._sub_storage.removeAttachment({
-          "_id": ROOT,
-          "_attachment": doc_id
-        });
+        return context._sub_storage.removeAttachment(
+          ROOT,
+          doc_id
+        );
       })
 
       .push(undefined, function (error) {
@@ -135,10 +129,10 @@
 
       // Second, try to remove explicit doc
       .push(function () {
-        return context._sub_storage.removeAttachment({
-          "_id": DOCUMENT_KEY,
-          "_attachment": doc_id + DOCUMENT_EXTENSION
-        });
+        return context._sub_storage.removeAttachment(
+          DOCUMENT_KEY,
+          doc_id + DOCUMENT_EXTENSION
+        );
       })
 
       .push(undefined, function (error) {
@@ -163,9 +157,7 @@
       // First, get list of explicit documents
 
       .push(function () {
-        return context._sub_storage.get({
-          "_id": DOCUMENT_KEY
-        });
+        return context._sub_storage.get(DOCUMENT_KEY);
       })
       .push(function (result) {
         var key;
@@ -187,9 +179,7 @@
       // Second, get list of enclosure
 
       .push(function () {
-        return context._sub_storage.get({
-          "_id": ROOT
-        });
+        return context._sub_storage.get(ROOT);
       })
       .push(function (result) {
         var key;
@@ -218,41 +208,35 @@
 
   };
 
-  FileSystemBridgeStorage.prototype.getAttachment = function (param) {
-    if (param._attachment !== "enclosure") {
+  FileSystemBridgeStorage.prototype.getAttachment = function (id, name) {
+    if (name !== "enclosure") {
       throw new jIO.util.jIOError("Only support 'enclosure' attachment",
                                   400);
     }
 
-    return this._sub_storage.getAttachment({
-      "_id": ROOT,
-      "_attachment": param._id
-    });
+    return this._sub_storage.getAttachment(ROOT, id);
   };
 
-  FileSystemBridgeStorage.prototype.putAttachment = function (param) {
-    if (param._attachment !== "enclosure") {
+  FileSystemBridgeStorage.prototype.putAttachment = function (id, name, blob) {
+    if (name !== "enclosure") {
       throw new jIO.util.jIOError("Only support 'enclosure' attachment",
                                   400);
     }
 
-    return this._sub_storage.putAttachment({
-      "_id": ROOT,
-      "_attachment": param._id,
-      "_blob": param._blob
-    });
+    return this._sub_storage.putAttachment(
+      ROOT,
+      id,
+      blob
+    );
   };
 
-  FileSystemBridgeStorage.prototype.removeAttachment = function (param) {
-    if (param._attachment !== "enclosure") {
+  FileSystemBridgeStorage.prototype.removeAttachment = function (id, name) {
+    if (name !== "enclosure") {
       throw new jIO.util.jIOError("Only support 'enclosure' attachment",
                                   400);
     }
 
-    return this._sub_storage.removeAttachment({
-      "_id": ROOT,
-      "_attachment": param._id
-    });
+    return this._sub_storage.removeAttachment(ROOT, id);
   };
 
   jIO.addStorage('drivetojiomapping', FileSystemBridgeStorage);

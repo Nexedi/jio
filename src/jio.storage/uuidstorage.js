@@ -23,13 +23,13 @@
       ).toString(16)).slice(-4);
     }
 
-    param._id = S4() + S4() + "-" +
+    var id = S4() + S4() + "-" +
       S4() + "-" +
       S4() + "-" +
       S4() + "-" +
       S4() + S4() + S4();
 
-    return this.put(param);
+    return this.put(id, param);
   };
   UUIDStorage.prototype.put = function () {
     return this._sub_storage.put.apply(this._sub_storage, arguments);
