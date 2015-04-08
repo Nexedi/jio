@@ -95,11 +95,79 @@
       .then(function (result) {
         deepEqual(result, {
           portal_type: "Person",
-          title: "foo",
-          "_attachments": {
-            links: {},
-            view: {}
+          title: "foo"
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, traverse_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // erp5Storage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("erp5Storage.allAttachments", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "erp5",
+        url: domain
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("allAttachments ERP5 document", function () {
+    var id = "person_module/20150119_azerty",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id),
+      document_hateoas = JSON.stringify({
+        // Kept property
+        "title": "foo",
+        // Remove all _ properties
+        "_bar": "john doo",
+        "_links": {
+          type: {
+            name: "Person"
           }
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, document_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.allAttachments(id)
+      .then(function (result) {
+        deepEqual(result, {
+          links: {},
+          view: {}
         }, "Check document");
         equal(server.requests.length, 2);
         equal(server.requests[0].method, "GET");

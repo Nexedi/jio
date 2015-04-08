@@ -27,9 +27,6 @@
   }
 
   DocumentStorage.prototype.get = function (id) {
-
-    var result,
-      context = this;
     return this._sub_storage.getAttachment(
       this._document_id,
       getSubAttachmentIdFromParam(id)
@@ -39,17 +36,17 @@
       })
       .push(function (text) {
         return JSON.parse(text.target.result);
-      })
-      .push(function (json) {
-        result = json;
-        return context._sub_storage.get(context._document_id);
-      })
-      .push(function (document) {
+      });
+  };
+
+  DocumentStorage.prototype.allAttachments = function (id) {
+    return this._sub_storage.allAttachments(this._document_id)
+      .push(function (result) {
         var attachments = {},
           exec,
           key;
-        for (key in document._attachments) {
-          if (document._attachments.hasOwnProperty(key)) {
+        for (key in result) {
+          if (result.hasOwnProperty(key)) {
             if (ATTACHMENT_REGEXP.test(key)) {
               exec = ATTACHMENT_REGEXP.exec(key);
               try {
@@ -65,10 +62,7 @@
             }
           }
         }
-        if (Object.getOwnPropertyNames(attachments).length > 0) {
-          result._attachments = attachments;
-        }
-        return result;
+        return attachments;
       });
   };
 
@@ -99,12 +93,12 @@
   };
 
   DocumentStorage.prototype.buildQuery = function () {
-    return this._sub_storage.get(this._document_id)
-      .push(function (document) {
+    return this._sub_storage.allAttachments(this._document_id)
+      .push(function (attachment_dict) {
         var result = [],
           key;
-        for (key in document._attachments) {
-          if (document._attachments.hasOwnProperty(key)) {
+        for (key in attachment_dict) {
+          if (attachment_dict.hasOwnProperty(key)) {
             if (DOCUMENT_REGEXP.test(key)) {
               try {
                 result.push({

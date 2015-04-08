@@ -167,9 +167,81 @@
 
     this.jio.get(id)
       .then(function (result) {
-        deepEqual(result, {
-          "_attachments": {putattmt2: {}}
-        }, "Check document");
+        deepEqual(result, {}, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // memoryStorage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("memoryStorage.allAttachments", {
+    setup: function () {
+      this.jio = jIO.createJIO({
+        "type": "memory"
+      });
+    }
+  });
+
+  test("get inexistent document", function () {
+    stop();
+    expect(3);
+
+    this.jio.allAttachments("inexistent")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError, error);
+        equal(error.message, "Cannot find document: inexistent");
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("document without attachment", function () {
+    var id = "post1";
+    this.jio.__storage._database[id] = {
+      "doc": JSON.stringify({title: "myPost1"})
+    };
+    stop();
+    expect(1);
+
+    this.jio.allAttachments(id)
+      .then(function (result) {
+        deepEqual(result, {}, "Attachments");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("document with attachment", function () {
+    var id = "putattmt1";
+
+    this.jio.__storage._database[id] = {
+      "doc": JSON.stringify({}),
+      "attachments": {
+        putattmt2: undefined
+      }
+    };
+
+    stop();
+    expect(1);
+
+    this.jio.allAttachments(id)
+      .then(function (result) {
+        deepEqual(result, {putattmt2: {}}, "Check document");
       })
       .fail(function (error) {
         ok(false, error);

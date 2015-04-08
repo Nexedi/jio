@@ -17,6 +17,9 @@
   QueryStorage.prototype.get = function () {
     return this._sub_storage.get.apply(this._sub_storage, arguments);
   };
+  QueryStorage.prototype.allAttachments = function () {
+    return this._sub_storage.allAttachments.apply(this._sub_storage, arguments);
+  };
   QueryStorage.prototype.post = function () {
     return this._sub_storage.post.apply(this._sub_storage, arguments);
   };

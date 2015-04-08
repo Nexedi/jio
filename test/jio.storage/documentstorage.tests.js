@@ -44,7 +44,7 @@
 
   test("document without attachment", function () {
     stop();
-    expect(4);
+    expect(3);
 
     function StorageGetNoAttachment() {
       return this;
@@ -57,14 +57,6 @@
         id: "ID " + name,
         "another": "property"
       })]);
-    };
-    StorageGetNoAttachment.prototype.get = function (id) {
-      equal(id, "foo", "Get foo");
-      return {
-        title: id,
-        id: "ID " + id,
-        "another": "property"
-      };
     };
 
     jIO.addStorage('documentstoragegetnoattachment', StorageGetNoAttachment);
@@ -93,28 +85,58 @@
       });
   });
 
+  /////////////////////////////////////////////////////////////////
+  // documentStorage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("documentStorage.allAttachments");
+
+  test("document without attachment", function () {
+    stop();
+    expect(2);
+
+    function StorageGetNoAttachment() {
+      return this;
+    }
+    StorageGetNoAttachment.prototype.allAttachments = function (id) {
+      equal(id, "foo", "Get foo");
+      return {};
+    };
+
+    jIO.addStorage(
+      'documentstorageallattsnoattachment',
+      StorageGetNoAttachment
+    );
+
+    var jio = jIO.createJIO({
+      type: "document",
+      document_id: "foo",
+      sub_storage: {
+        type: "documentstorageallattsnoattachment"
+      }
+    });
+
+    jio.allAttachments("bar")
+      .then(function (result) {
+        deepEqual(result, {});
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("document with attachment", function () {
     stop();
-    expect(4);
+    expect(2);
 
     function StorageGetWithAttachment() {
       return this;
     }
-    StorageGetWithAttachment.prototype.getAttachment = function (id, name) {
-      equal(id, "foo", "getAttachment bar");
-      equal(name, "jio_document/YmFy.json", "getAttachment bar");
-      return new Blob([JSON.stringify({
-        title: name,
-        id: "ID " + name,
-        "another": "property"
-      })]);
-    };
-    StorageGetWithAttachment.prototype.get = function (id) {
+    StorageGetWithAttachment.prototype.allAttachments = function (id) {
       equal(id, "foo", "Get foo");
       var result = {
-        title: id,
-        id: "ID " + id,
-        "another": "property",
         "_attachments": {
           "foo1": {}
         }
@@ -130,29 +152,24 @@
       result._attachments['jio_attachment/ERROR/' + btoa("bar4")] = {};
       result._attachments['jio_attachment/' + btoa("bar") + "/ERROR"] = {};
       result._attachments['jio_document/' + btoa("bar") + '.json'] = {};
-      return result;
+      return result._attachments;
     };
 
-    jIO.addStorage('documentstoragegetwithattachment',
+    jIO.addStorage('documentstorageallattswithattachment',
                    StorageGetWithAttachment);
 
     var jio = jIO.createJIO({
       type: "document",
       document_id: "foo",
       sub_storage: {
-        type: "documentstoragegetwithattachment"
+        type: "documentstorageallattswithattachment"
       }
     });
 
-    jio.get("bar")
+    jio.allAttachments("bar")
       .then(function (result) {
         deepEqual(result, {
-          title: "jio_document/YmFy.json",
-          id: "ID jio_document/YmFy.json",
-          "another": "property",
-          "_attachments": {
-            bar1: {}
-          }
+          bar1: {}
         });
       })
       .fail(function (error) {
@@ -372,10 +389,9 @@
     function StorageAllDocsNoAttachment() {
       return this;
     }
-    StorageAllDocsNoAttachment.prototype.get = function (id) {
+    StorageAllDocsNoAttachment.prototype.allAttachments = function (id) {
       equal(id, "foo", "Get foo");
-      return {title: id, id: "ID " + id,
-              "another": "property"};
+      return {};
     };
 
     jIO.addStorage('documentstoragealldocsnoattachment',
@@ -413,12 +429,9 @@
     function StorageAllDocsWithAttachment() {
       return this;
     }
-    StorageAllDocsWithAttachment.prototype.get = function (id) {
+    StorageAllDocsWithAttachment.prototype.allAttachments = function (id) {
       equal(id, "foo", "Get foo");
       var result = {
-        title: id,
-        id: "ID " + id,
-        "another": "property",
         "_attachments": {
           "foo1": {}
         }
@@ -431,7 +444,7 @@
       result._attachments['jio_document/ERROR.json'] = {};
       result._attachments['jio_attachment/' + btoa("foo5") + "/" +
                           btoa("bar5")] = {};
-      return result;
+      return result._attachments;
     };
 
     jIO.addStorage('documentstoragealldocswithattachment',

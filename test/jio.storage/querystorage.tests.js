@@ -72,6 +72,40 @@
   });
 
   /////////////////////////////////////////////////////////////////
+  // queryStorage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("queryStorage.allAttachments");
+  test("allAttachments called substorage allAttachments", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "query",
+      sub_storage: {
+        type: "querystorage200"
+      }
+    });
+
+    Storage200.prototype.allAttachments = function (id) {
+      equal(id, "bar", "allAttachments, 200 called");
+      return {attachmentname: {}};
+    };
+
+    jio.allAttachments("bar")
+      .then(function (result) {
+        deepEqual(result, {
+          attachmentname: {}
+        }, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
   // queryStorage.post
   /////////////////////////////////////////////////////////////////
   module("queryStorage.post");

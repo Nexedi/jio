@@ -274,6 +274,163 @@
   test("spy indexedDB usage", function () {
     var context = this;
     stop();
+    expect(10);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put("foo", {"title": "bar"});
+      })
+      .then(function () {
+        context.spy_open = sinon.spy(indexedDB, "open");
+        context.spy_create_store = sinon.spy(IDBDatabase.prototype,
+                                             "createObjectStore");
+        context.spy_transaction = sinon.spy(IDBDatabase.prototype,
+                                            "transaction");
+        context.spy_store = sinon.spy(IDBTransaction.prototype, "objectStore");
+        context.spy_get = sinon.spy(IDBObjectStore.prototype, "get");
+
+        return context.jio.get("foo");
+      })
+      .then(function () {
+
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 0,
+              "createObjectStore count");
+
+        ok(context.spy_transaction.calledOnce, "transaction count " +
+           context.spy_transaction.callCount);
+        deepEqual(context.spy_transaction.firstCall.args[0],
+                  ["metadata"], "transaction first argument");
+        equal(context.spy_transaction.firstCall.args[1], "readonly",
+              "transaction second argument");
+
+        ok(context.spy_store.calledOnce, "store count " +
+           context.spy_store.callCount);
+        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+                  "store first argument");
+
+        ok(context.spy_get.calledOnce, "index count " +
+           context.spy_get.callCount);
+        deepEqual(context.spy_get.firstCall.args[0], "foo",
+                  "get first argument");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        context.spy_open.restore();
+        delete context.spy_open;
+        context.spy_create_store.restore();
+        delete context.spy_create_store;
+        context.spy_transaction.restore();
+        delete context.spy_transaction;
+        context.spy_store.restore();
+        delete context.spy_store;
+        context.spy_get.restore();
+        delete context.spy_get;
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get inexistent document", function () {
+    var context = this;
+    stop();
+    expect(3);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.get("inexistent");
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document");
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get document without attachment", function () {
+    var id = "/",
+      context = this;
+    stop();
+    expect(1);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put(id, {"title": "bar"});
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          "title": "bar"
+        }, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get document with attachment", function () {
+    var id = "/",
+      attachment = "foo",
+      context = this;
+    stop();
+    expect(1);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put(id, {"title": "bar"});
+      })
+      .then(function () {
+        return context.jio.putAttachment(id, attachment, "bar");
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          "title": "bar"
+        }, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // indexeddbStorage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("indexeddbStorage.allAttachments", {
+    setup: function () {
+      this.jio = jIO.createJIO({
+        type: "indexeddb",
+        database: "qunit"
+      });
+    }
+  });
+
+  test("spy indexedDB usage", function () {
+    var context = this;
+    stop();
     expect(17);
 
     deleteIndexedDB(context.jio)
@@ -294,7 +451,7 @@
         context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
         context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
-        return context.jio.get("foo");
+        return context.jio.allAttachments("foo");
       })
       .then(function () {
 
@@ -374,7 +531,7 @@
 
     deleteIndexedDB(context.jio)
       .then(function () {
-        return context.jio.get("inexistent");
+        return context.jio.allAttachments("inexistent");
       })
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
@@ -400,12 +557,10 @@
         return context.jio.put(id, {"title": "bar"});
       })
       .then(function () {
-        return context.jio.get(id);
+        return context.jio.allAttachments(id);
       })
       .then(function (result) {
-        deepEqual(result, {
-          "title": "bar"
-        }, "Check document");
+        deepEqual(result, {}, "Check document");
       })
       .fail(function (error) {
         ok(false, error);
@@ -430,14 +585,11 @@
         return context.jio.putAttachment(id, attachment, "bar");
       })
       .then(function () {
-        return context.jio.get(id);
+        return context.jio.allAttachments(id);
       })
       .then(function (result) {
         deepEqual(result, {
-          "title": "bar",
-          "_attachments": {
-            "foo": {}
-          }
+          "foo": {}
         }, "Check document");
       })
       .fail(function (error) {

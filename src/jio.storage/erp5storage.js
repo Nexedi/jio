@@ -66,10 +66,6 @@
     return getDocumentAndHateoas(this, id)
       .push(function (response) {
         var result = JSON.parse(response.target.responseText),
-          attachments = {
-            view: {},
-            links: {}
-          },
           key;
           // action_type;
         result.portal_type = result._links.type.name;
@@ -83,9 +79,17 @@
           }
         }
 
-        result._attachments = attachments;
-
         return result;
+      });
+  };
+
+  ERP5Storage.prototype.allAttachments = function (id) {
+    return getDocumentAndHateoas(this, id)
+      .push(function () {
+        return {
+          view: {},
+          links: {}
+        };
       });
   };
 

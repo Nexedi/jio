@@ -87,6 +87,20 @@
   };
 
   /*
+   * Get attachments list
+   * Try on each substorage on after the other
+   */
+  UnionStorage.prototype.allAttachments = function () {
+    var argument_list = arguments,
+      context = this;
+    return this._getWithStorageIndex.apply(this, arguments)
+      .push(function (result) {
+        var sub_storage = context._storage_list[result[0]];
+        return sub_storage.allAttachments.apply(sub_storage, argument_list);
+      });
+  };
+
+  /*
    * Post a document
    * Simply store on the first substorage
    */

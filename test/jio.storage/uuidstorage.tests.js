@@ -72,6 +72,40 @@
   });
 
   /////////////////////////////////////////////////////////////////
+  // uuidStorage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("uuidStorage.allAttachments");
+  test("get called substorage allAttachments", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "uuid",
+      sub_storage: {
+        type: "uuidstorage200"
+      }
+    });
+
+    Storage200.prototype.allAttachments = function (param) {
+      equal(param, "bar", "allAttachments 200 called");
+      return {attachmentname: {}};
+    };
+
+    jio.allAttachments("bar")
+      .then(function (result) {
+        deepEqual(result, {
+          attachmentname: {}
+        }, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
   // uuidStorage.post
   /////////////////////////////////////////////////////////////////
   module("uuidStorage.post");

@@ -83,9 +83,8 @@
 
   DavStorage.prototype.put = function (id, param) {
     id = restrictDocumentId(id);
-    delete param._id;
     if (Object.getOwnPropertyNames(param).length > 0) {
-      // Reject if param has other properties than _id
+      // Reject if param has some properties
       throw new jIO.util.jIOError("Can not store properties: " +
                                   Object.getOwnPropertyNames(param), 400);
     }
@@ -104,6 +103,33 @@
   };
 
   DavStorage.prototype.get = function (id) {
+    var context = this;
+    id = restrictDocumentId(id);
+
+    return new RSVP.Queue()
+      .push(function () {
+        return ajax(context, {
+          type: "PROPFIND",
+          url: context._url + id,
+          dataType: "text",
+          headers: {
+            // Increasing this value is a performance killer
+            Depth: "1"
+          }
+        });
+      })
+      .push(function () {
+        return {};
+      }, function (error) {
+        if ((error.target !== undefined) &&
+            (error.target.status === 404)) {
+          throw new jIO.util.jIOError("Cannot find document", 404);
+        }
+        throw error;
+      });
+  };
+
+  DavStorage.prototype.allAttachments = function (id) {
 
     var context = this;
     id = restrictDocumentId(id);
@@ -126,7 +152,6 @@
         // Extract all meta informations and return them to JSON
 
         var i,
-          result = {},
           attachment = {},
           id,
           attachment_list = new DOMParser().parseFromString(
@@ -146,10 +171,7 @@
             attachment[id] = {};
           }
         }
-        if (Object.getOwnPropertyNames(attachment).length > 0) {
-          result._attachments = attachment;
-        }
-        return result;
+        return attachment;
 
       }, function (error) {
         if ((error.target !== undefined) &&

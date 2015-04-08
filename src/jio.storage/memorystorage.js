@@ -44,13 +44,8 @@
   };
 
   MemoryStorage.prototype.get = function (id) {
-    var doc,
-      key,
-      found = false,
-      attachments = {};
-
     try {
-      doc = JSON.parse(this._database[id].doc);
+      return JSON.parse(this._database[id].doc);
     } catch (error) {
       if (error instanceof TypeError) {
         throw new jIO.util.jIOError(
@@ -60,18 +55,27 @@
       }
       throw error;
     }
+  };
 
-    // XXX NotImplemented: list all attachments
-    for (key in this._database[id].attachments) {
-      if (this._database[id].attachments.hasOwnProperty(key)) {
-        found = true;
-        attachments[key] = {};
+  MemoryStorage.prototype.allAttachments = function (id) {
+    var key,
+      attachments = {};
+    try {
+      for (key in this._database[id].attachments) {
+        if (this._database[id].attachments.hasOwnProperty(key)) {
+          attachments[key] = {};
+        }
       }
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new jIO.util.jIOError(
+          "Cannot find document: " + id,
+          404
+        );
+      }
+      throw error;
     }
-    if (found) {
-      doc._attachments = attachments;
-    }
-    return doc;
+    return attachments;
   };
 
   MemoryStorage.prototype.remove = function (id) {

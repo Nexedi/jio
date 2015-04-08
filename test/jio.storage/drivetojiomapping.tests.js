@@ -53,7 +53,7 @@
       equal(name, "bar.json", "getAttachment");
       throw new jIO.util.jIOError("Cannot find subattachment", 404);
     };
-    StorageGetNoDocument.prototype.get = function (id) {
+    StorageGetNoDocument.prototype.allAttachments = function (id) {
       equal(id, "/", "Get document");
       return {};
     };
@@ -93,12 +93,10 @@
       equal(name, "bar.json", "getAttachment");
       throw new jIO.util.jIOError("Cannot find subattachment", 404);
     };
-    StorageGetOnlyAttachment.prototype.get = function (id) {
+    StorageGetOnlyAttachment.prototype.allAttachments = function (id) {
       equal(id, "/", "Get document");
       return {
-        "_attachments": {
-          "bar": {}
-        }
+        "bar": {}
       };
     };
 
@@ -114,11 +112,7 @@
 
     jio.get("bar")
       .then(function (result) {
-        deepEqual(result, {
-          "_attachments": {
-            enclosure: {}
-          }
-        });
+        deepEqual(result, {});
       })
       .fail(function (error) {
         ok(false, error);
@@ -130,7 +124,7 @@
 
   test("get document with only one document", function () {
     stop();
-    expect(4);
+    expect(3);
 
     function StorageGetOnlyDocument() {
       return this;
@@ -139,10 +133,6 @@
       equal(id, "/.jio_documents/", "getAttachment");
       equal(name, "bar.json", "getAttachment");
       return new Blob([JSON.stringify({title: "foo"})]);
-    };
-    StorageGetOnlyDocument.prototype.get = function (id) {
-      deepEqual(id, "/", "Get document");
-      return {};
     };
 
     jIO.addStorage('drivetojiomappinggetonlydocument', StorageGetOnlyDocument);
@@ -168,44 +158,121 @@
       });
   });
 
-  test("get document with one document and one attachment", function () {
-    stop();
-    expect(4);
+  /////////////////////////////////////////////////////////////////
+  // driveToJioMapping.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("driveToJioMapping.allAttachments");
 
-    function StorageGetBoth() {
+  test("get non existent document", function () {
+    stop();
+    expect(6);
+
+    function StorageGetNoDocument() {
       return this;
     }
-    StorageGetBoth.prototype.getAttachment = function (id, name) {
-      equal(id, "/.jio_documents/", "getAttachment");
-      equal(name, "bar.json", "getAttachment");
-      return new Blob([JSON.stringify({title: "foo"})]);
-    };
-    StorageGetBoth.prototype.get = function (id) {
-      equal(id, "/", "Get document");
-      return {
-        "_attachments": {
-          "bar": {}
-        }
+    StorageGetNoDocument.prototype.getAttachment =
+      function (id, name) {
+        equal(id, "/.jio_documents/", "getAttachment");
+        equal(name, "bar.json", "getAttachment");
+        throw new jIO.util.jIOError("Cannot find subattachment", 404);
       };
+    StorageGetNoDocument.prototype.allAttachments = function (id) {
+      equal(id, "/", "Get document");
+      return {};
     };
 
-    jIO.addStorage('drivetojiomappinggetboth', StorageGetBoth);
+    jIO.addStorage('drivetojiomappingallattsnodocument', StorageGetNoDocument);
 
     var jio = jIO.createJIO({
       type: "drivetojiomapping",
       sub_storage: {
-        type: "drivetojiomappinggetboth"
+        type: "drivetojiomappingallattsnodocument"
       }
     });
 
-    jio.get("bar")
+    jio.allAttachments("bar")
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document bar");
+        equal(error.status_code, 404);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get document with only one attachment", function () {
+    stop();
+    expect(2);
+
+    function StorageGetOnlyAttachment() {
+      return this;
+    }
+    StorageGetOnlyAttachment.prototype.allAttachments = function (id) {
+      equal(id, "/", "Get document");
+      return {
+        "bar": {}
+      };
+    };
+
+    jIO.addStorage('drivetojiomappingallattsonlyattachment',
+                   StorageGetOnlyAttachment);
+
+    var jio = jIO.createJIO({
+      type: "drivetojiomapping",
+      sub_storage: {
+        type: "drivetojiomappingallattsonlyattachment"
+      }
+    });
+
+    jio.allAttachments("bar")
       .then(function (result) {
         deepEqual(result, {
-          "title": "foo",
-          "_attachments": {
-            enclosure: {}
-          }
+          enclosure: {}
         });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get document with only one document", function () {
+    stop();
+    expect(4);
+
+    function StorageGetOnlyDocument() {
+      return this;
+    }
+    StorageGetOnlyDocument.prototype.getAttachment =
+      function (id, name) {
+        equal(id, "/.jio_documents/", "getAttachment");
+        equal(name, "bar.json", "getAttachment");
+        return new Blob([JSON.stringify({title: "foo"})]);
+      };
+    StorageGetOnlyDocument.prototype.allAttachments = function (id) {
+      deepEqual(id, "/", "Get document");
+      return {};
+    };
+
+    jIO.addStorage('drivetojiomappingallattsonlydocument',
+                   StorageGetOnlyDocument);
+
+    var jio = jIO.createJIO({
+      type: "drivetojiomapping",
+      sub_storage: {
+        type: "drivetojiomappingallattsonlydocument"
+      }
+    });
+
+    jio.allAttachments("bar")
+      .then(function (result) {
+        deepEqual(result, {});
       })
       .fail(function (error) {
         ok(false, error);
@@ -716,7 +783,7 @@
       return this;
     }
 
-    StorageAllDocsNoDirectory.prototype.get = function (id) {
+    StorageAllDocsNoDirectory.prototype.allAttachments = function (id) {
       call_count += 1;
       if (call_count === 1) {
         equal(id, "/.jio_documents/", "get documents called");
@@ -765,7 +832,7 @@
       return this;
     }
 
-    StorageAllDocsEmpty.prototype.get = function (id) {
+    StorageAllDocsEmpty.prototype.allAttachments = function (id) {
       call_count += 1;
       if (call_count === 1) {
         equal(id, "/.jio_documents/", "get documents called");
@@ -815,7 +882,7 @@
         return this;
       }
 
-      StorageAllDocsAttachmentsOnly.prototype.get = function (id) {
+      StorageAllDocsAttachmentsOnly.prototype.allAttachments = function (id) {
         call_count += 1;
         if (call_count === 1) {
           equal(id, "/.jio_documents/", "get documents called");
@@ -824,10 +891,8 @@
 
         equal(id, "/", "get attachments called");
         return {
-          "_attachments": {
-            foo: {},
-            bar: {}
-          }
+          foo: {},
+          bar: {}
         };
       };
 
@@ -876,16 +941,14 @@
         return this;
       }
 
-      StorageAllDocsFilterDocument.prototype.get = function (id) {
+      StorageAllDocsFilterDocument.prototype.allAttachments = function (id) {
         call_count += 1;
         if (call_count === 1) {
           equal(id, "/.jio_documents/", "get documents called");
           return {
-            "_attachments": {
-              "foo.json": {},
-              "bar.json": {},
-              "foobar.pasjson": {}
-            }
+            "foo.json": {},
+            "bar.json": {},
+            "foobar.pasjson": {}
           };
         }
 
@@ -937,24 +1000,20 @@
       return this;
     }
 
-    StorageAllDocsBoth.prototype.get = function (id) {
+    StorageAllDocsBoth.prototype.allAttachments = function (id) {
       call_count += 1;
       if (call_count === 1) {
         equal(id, "/.jio_documents/", "get documents called");
         return {
-          "_attachments": {
-            "foo.json": {},
-            "bar.json": {}
-          }
+          "foo.json": {},
+          "bar.json": {}
         };
       }
 
       equal(id, "/", "get attachments called");
       return {
-        "_attachments": {
-          "bar": {},
-          "foobar": {}
-        }
+        "bar": {},
+        "foobar": {}
       };
     };
 

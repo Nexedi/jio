@@ -43,22 +43,21 @@
 
   LocalStorage.prototype.get = function (id) {
     restrictDocumentId(id);
+    return {};
+  };
 
-    var doc = {},
-      attachments = {},
-      found = false,
+  LocalStorage.prototype.allAttachments = function (id) {
+    restrictDocumentId(id);
+
+    var attachments = {},
       key;
 
     for (key in this._storage) {
       if (this._storage.hasOwnProperty(key)) {
         attachments[key] = {};
-        found = true;
       }
     }
-    if (found) {
-      doc._attachments = attachments;
-    }
-    return doc;
+    return attachments;
   };
 
   // https://gist.github.com/davoclavo/4424731

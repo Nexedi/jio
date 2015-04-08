@@ -93,10 +93,75 @@
 
     this.jio.get(id)
       .then(function (result) {
+        deepEqual(result, {}, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // localStorage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("localStorage.allAttachments", {
+    setup: function () {
+      localStorage.clear();
+      this.jio = jIO.createJIO({
+        "type": "local"
+      });
+    }
+  });
+
+  test("get non valid document ID", function () {
+    stop();
+    expect(3);
+
+    this.jio.allAttachments("inexistent")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id inexistent is forbidden (!== /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get document without attachment", function () {
+    var id = "/";
+    stop();
+    expect(1);
+
+    this.jio.allAttachments(id)
+      .then(function (result) {
+        deepEqual(result, {}, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get document with attachment", function () {
+    var id = "/",
+      attachment = "foo";
+    stop();
+    expect(1);
+
+    localStorage.setItem(attachment, "bar");
+
+    this.jio.allAttachments(id)
+      .then(function (result) {
         deepEqual(result, {
-          "_attachments": {
-            "foo": {}
-          }
+          "foo": {}
         }, "Check document");
       })
       .fail(function (error) {

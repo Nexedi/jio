@@ -318,6 +318,190 @@
       });
   });
 
+  test("get document", function () {
+    var id = "/id1/";
+    this.server.respondWith("PROPFIND", domain + id, [200, {
+      "Content-Type": "text/xml"
+    }, '<?xml version="1.0" encoding="utf-8"?>' +
+        '<D:multistatus xmlns:D="DAV:">' +
+        '<D:response xmlns:lp1="DAV:" ' +
+        'xmlns:lp2="http://apache.org/dav/props/">' +
+        '<D:href>/uploads/</D:href>' +
+        '<D:propstat>' +
+        '<D:prop>' +
+        '<lp1:resourcetype><D:collection/></lp1:resourcetype>' +
+        '<lp1:creationdate>2013-10-30T17:19:46Z</lp1:creationdate>' +
+        '<lp1:getlastmodified>Wed, 30 Oct 2013 17:19:46 GMT' +
+        '</lp1:getlastmodified>' +
+        '<lp1:getetag>"240be-1000-4e9f88a305c4e"</lp1:getetag>' +
+        '<D:supportedlock>' +
+        '<D:lockentry>' +
+        '<D:lockscope><D:exclusive/></D:lockscope>' +
+        '<D:locktype><D:write/></D:locktype>' +
+        '</D:lockentry>' +
+        '<D:lockentry>' +
+        '<D:lockscope><D:shared/></D:lockscope>' +
+        '<D:locktype><D:write/></D:locktype>' +
+        '</D:lockentry>' +
+        '</D:supportedlock>' +
+        '<D:lockdiscovery/>' +
+        '<D:getcontenttype>httpd/unix-directory</D:getcontenttype>' +
+        '</D:prop>' +
+        '<D:status>HTTP/1.1 200 OK</D:status>' +
+        '</D:propstat>' +
+        '</D:response>' +
+        '<D:response xmlns:lp1="DAV:" ' +
+        'xmlns:lp2="http://apache.org/dav/props/">' +
+        '<D:href>/uploads/attachment1</D:href>' +
+        '<D:propstat>' +
+        '<D:prop>' +
+        '<lp1:resourcetype/>' +
+        '<lp1:creationdate>2013-10-30T17:19:46Z</lp1:creationdate>' +
+        '<lp1:getcontentlength>66</lp1:getcontentlength>' +
+        '<lp1:getlastmodified>Wed, 30 Oct 2013 17:19:46 GMT' +
+        '</lp1:getlastmodified>' +
+        '<lp1:getetag>"20568-42-4e9f88a2ea198"</lp1:getetag>' +
+        '<lp2:executable>F</lp2:executable>' +
+        '<D:supportedlock>' +
+        '<D:lockentry>' +
+        '<D:lockscope><D:exclusive/></D:lockscope>' +
+        '<D:locktype><D:write/></D:locktype>' +
+        '</D:lockentry>' +
+        '<D:lockentry>' +
+        '<D:lockscope><D:shared/></D:lockscope>' +
+        '<D:locktype><D:write/></D:locktype>' +
+        '</D:lockentry>' +
+        '</D:supportedlock>' +
+        '<D:lockdiscovery/>' +
+        '</D:prop>' +
+        '<D:status>HTTP/1.1 200 OK</D:status>' +
+        '</D:propstat>' +
+        '</D:response>' +
+        '<D:response xmlns:lp1="DAV:" ' +
+        'xmlns:lp2="http://apache.org/dav/props/">' +
+        '<D:href>/uploads/attachment2</D:href>' +
+        '<D:propstat>' +
+        '<D:prop>' +
+        '<lp1:resourcetype/>' +
+        '<lp1:creationdate>2013-10-30T17:19:46Z</lp1:creationdate>' +
+        '<lp1:getcontentlength>25</lp1:getcontentlength>' +
+        '<lp1:getlastmodified>Wed, 30 Oct 2013 17:19:46 GMT' +
+        '</lp1:getlastmodified>' +
+        '<lp1:getetag>"21226-19-4e9f88a305c4e"</lp1:getetag>' +
+        '<lp2:executable>F</lp2:executable>' +
+        '<D:supportedlock>' +
+        '<D:lockentry>' +
+        '<D:lockscope><D:exclusive/></D:lockscope>' +
+        '<D:locktype><D:write/></D:locktype>' +
+        '</D:lockentry>' +
+        '<D:lockentry>' +
+        '<D:lockscope><D:shared/></D:lockscope>' +
+        '<D:locktype><D:write/></D:locktype>' +
+        '</D:lockentry>' +
+        '</D:supportedlock>' +
+        '<D:lockdiscovery/>' +
+        '</D:prop>' +
+        '<D:status>HTTP/1.1 200 OK</D:status>' +
+        '</D:propstat>' +
+        '</D:response>' +
+        '</D:multistatus>'
+      ]);
+    stop();
+    expect(1);
+
+    this.jio.get(id)
+      .then(function (result) {
+        deepEqual(result, {}, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // davStorage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("davStorage.allAttachments", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "dav",
+        url: domain,
+        basic_login: basic_login
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("reject ID not starting with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.allAttachments("get1/")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id get1/ is forbidden (no begin /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject ID not ending with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.allAttachments("/get1")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id /get1 is forbidden (no end /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get inexistent document", function () {
+    var url = domain + "/inexistent/";
+    this.server.respondWith("PROPFIND", url, [404, {
+      "Content-Type": "text/html"
+    }, "foo"]);
+
+    stop();
+    expect(3);
+
+    this.jio.allAttachments("/inexistent/")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document");
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("get document without attachment", function () {
     var id = "/id1/";
     this.server.respondWith("PROPFIND", domain + id, [200, {
@@ -355,10 +539,9 @@
     stop();
     expect(1);
 
-    this.jio.get(id)
+    this.jio.allAttachments(id)
       .then(function (result) {
-        deepEqual(result, {
-        }, "Check document");
+        deepEqual(result, {}, "Check document");
       })
       .fail(function (error) {
         ok(false, error);
@@ -459,13 +642,11 @@
     stop();
     expect(1);
 
-    this.jio.get(id)
+    this.jio.allAttachments(id)
       .then(function (result) {
         deepEqual(result, {
-          "_attachments": {
-            attachment1: {},
-            attachment2: {}
-          }
+          attachment1: {},
+          attachment2: {}
         }, "Check document");
       })
       .fail(function (error) {

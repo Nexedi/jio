@@ -19,9 +19,7 @@
     ROOT = "/";
 
   FileSystemBridgeStorage.prototype.get = function (id) {
-    var context = this,
-      json_document,
-      explicit_document = false;
+    var context = this;
     return new RSVP.Queue()
 
       // First, try to get explicit reference to the document
@@ -39,38 +37,50 @@
             return jIO.util.readBlobAsText(blob);
           })
           .push(function (text) {
-            explicit_document = true;
             return JSON.parse(text.target.result);
           });
       }, function (error) {
         if ((error instanceof jIO.util.jIOError) &&
             (error.status_code === 404)) {
-          return {};
+
+          // Second, try to get default attachment
+          return context._sub_storage.allAttachments(ROOT)
+            .push(function (attachment_dict) {
+              if (attachment_dict.hasOwnProperty(id)) {
+                return {};
+              }
+              throw new jIO.util.jIOError("Cannot find document " + id,
+                                          404);
+            });
         }
         throw error;
-      })
+      });
+  };
 
-      // Second, try to get default attachment
-
-      .push(function (result) {
-        json_document = result;
-
-        return context._sub_storage.get(ROOT);
-      })
-
-      .push(function (directory_document) {
-        if ((directory_document.hasOwnProperty("_attachments")) &&
-            (directory_document._attachments.hasOwnProperty(id))) {
-          json_document._attachments = {
+  FileSystemBridgeStorage.prototype.allAttachments = function (id) {
+    var context = this;
+    return context._sub_storage.allAttachments(ROOT)
+      .push(function (attachment_dict) {
+        if (attachment_dict.hasOwnProperty(id)) {
+          return {
             enclosure: {}
           };
-        } else {
-          if (!explicit_document) {
-            throw new jIO.util.jIOError("Cannot find document " + id,
-                                        404);
-          }
         }
-        return json_document;
+        // Second get the document itself if it exists
+        return context._sub_storage.getAttachment(
+          DOCUMENT_KEY,
+          id + DOCUMENT_EXTENSION
+        )
+          .push(function () {
+            return {};
+          }, function (error) {
+            if ((error instanceof jIO.util.jIOError) &&
+                (error.status_code === 404)) {
+              throw new jIO.util.jIOError("Cannot find document " + id,
+                                          404);
+            }
+            throw error;
+          });
       });
 
   };
@@ -157,12 +167,12 @@
       // First, get list of explicit documents
 
       .push(function () {
-        return context._sub_storage.get(DOCUMENT_KEY);
+        return context._sub_storage.allAttachments(DOCUMENT_KEY);
       })
       .push(function (result) {
         var key;
-        for (key in result._attachments) {
-          if (result._attachments.hasOwnProperty(key)) {
+        for (key in result) {
+          if (result.hasOwnProperty(key)) {
             if (DOCUMENT_REGEXP.test(key)) {
               result_dict[DOCUMENT_REGEXP.exec(key)[1]] = null;
             }
@@ -179,12 +189,12 @@
       // Second, get list of enclosure
 
       .push(function () {
-        return context._sub_storage.get(ROOT);
+        return context._sub_storage.allAttachments(ROOT);
       })
       .push(function (result) {
         var key;
-        for (key in result._attachments) {
-          if (result._attachments.hasOwnProperty(key)) {
+        for (key in result) {
+          if (result.hasOwnProperty(key)) {
             result_dict[key] = null;
           }
         }

@@ -15,6 +15,9 @@
   UUIDStorage.prototype.get = function () {
     return this._sub_storage.get.apply(this._sub_storage, arguments);
   };
+  UUIDStorage.prototype.allAttachments = function () {
+    return this._sub_storage.allAttachments.apply(this._sub_storage, arguments);
+  };
   UUIDStorage.prototype.post = function (param) {
 
     function S4() {

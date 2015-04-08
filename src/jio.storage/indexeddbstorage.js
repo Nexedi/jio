@@ -206,6 +206,18 @@
   }
 
   IndexedDBStorage.prototype.get = function (id) {
+    return openIndexedDB(this)
+      .push(function (db) {
+        var transaction = openTransaction(db, ["metadata"],
+                                          "readonly");
+        return handleGet(transaction.objectStore("metadata").get(id));
+      })
+      .push(function (result) {
+        return result.doc;
+      });
+  };
+
+  IndexedDBStorage.prototype.allAttachments = function (id) {
     var attachment_dict = {};
 
     function addEntry(cursor) {
@@ -222,12 +234,8 @@
                        .openCursor(IDBKeyRange.only(id)), addEntry)
         ]);
       })
-      .push(function (result_list) {
-        var result = result_list[0].doc;
-        if (Object.getOwnPropertyNames(attachment_dict).length > 0) {
-          result._attachments = attachment_dict;
-        }
-        return result;
+      .push(function () {
+        return attachment_dict;
       });
   };
 
