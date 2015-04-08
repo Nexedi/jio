@@ -322,8 +322,8 @@
   }, function (argument_list, result) {
     if (!(result instanceof Blob)) {
       throw new jIO.util.jIOError(
-        "'getAttachment' (" + argument_list[0]._id + " , " +
-          argument_list[0]._attachment + ") on '" + this.__type +
+        "'getAttachment' (" + argument_list[0] + " , " +
+          argument_list[1] + ") on '" + this.__type +
           "' does not return a Blob.",
         501
       );
