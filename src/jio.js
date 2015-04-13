@@ -197,7 +197,8 @@
   function declareMethod(klass, name, precondition_function, post_function) {
     klass.prototype[name] = function () {
       var argument_list = arguments,
-        context = this;
+        context = this,
+        precondition_result;
 
       return new RSVP.Queue()
         .push(function () {
@@ -208,8 +209,9 @@
             );
           }
         })
-        .push(function () {
+        .push(function (result) {
           var storage_method = context.__storage[name];
+          precondition_result = result;
           if (storage_method === undefined) {
             throw new jIO.util.jIOError(
               "Capacity '" + name + "' is not implemented on '" +
@@ -227,7 +229,8 @@
             return post_function.call(
               context,
               argument_list,
-              result
+              result,
+              precondition_result
             );
           }
           return result;
@@ -306,6 +309,7 @@
   declareMethod(JioProxyStorage, 'getAttachment', function (argument_list,
                                                             storage,
                                                             method_name) {
+    var result = "blob";
 //     if (param.storage_spec.type !== "indexeddb" &&
 //         param.storage_spec.type !== "dav" &&
 //         (param.kwargs._start !== undefined
@@ -319,13 +323,61 @@
 //     }
     checkId(argument_list, storage, method_name);
     checkAttachmentId(argument_list, storage, method_name);
-  }, function (argument_list, result) {
-    if (!(result instanceof Blob)) {
+    // Drop optional parameters, which are only used in postfunction
+    if (argument_list[2] !== undefined) {
+      result = argument_list[2].format || result;
+      delete argument_list[2].format;
+    }
+    return result;
+  }, function (argument_list, blob, convert) {
+    var result;
+    if (!(blob instanceof Blob)) {
       throw new jIO.util.jIOError(
         "'getAttachment' (" + argument_list[0] + " , " +
           argument_list[1] + ") on '" + this.__type +
           "' does not return a Blob.",
         501
+      );
+    }
+    if (convert === "blob") {
+      result = blob;
+    } else if (convert === "data_url") {
+      result = new RSVP.Queue()
+        .push(function () {
+          return jIO.util.readBlobAsDataURL(blob);
+        })
+        .push(function (evt) {
+          return evt.target.result;
+        });
+    } else if (convert === "array_buffer") {
+      result = new RSVP.Queue()
+        .push(function () {
+          return jIO.util.readBlobAsArrayBuffer(blob);
+        })
+        .push(function (evt) {
+          return evt.target.result;
+        });
+    } else if (convert === "text") {
+      result = new RSVP.Queue()
+        .push(function () {
+          return jIO.util.readBlobAsText(blob);
+        })
+        .push(function (evt) {
+          return evt.target.result;
+        });
+    } else if (convert === "json") {
+      result = new RSVP.Queue()
+        .push(function () {
+          return jIO.util.readBlobAsText(blob);
+        })
+        .push(function (evt) {
+          return JSON.parse(evt.target.result);
+        });
+    } else {
+      throw new jIO.util.jIOError(
+        this.__type + ".getAttachment format: '" + convert +
+          "' is not supported",
+        400
       );
     }
     return result;

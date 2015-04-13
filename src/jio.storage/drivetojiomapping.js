@@ -28,18 +28,11 @@
         // First get the document itself if it exists
         return context._sub_storage.getAttachment(
           DOCUMENT_KEY,
-          id + DOCUMENT_EXTENSION
+          id + DOCUMENT_EXTENSION,
+          {format: "json"}
         );
       })
-      .push(function (blob) {
-        return new RSVP.Queue()
-          .push(function () {
-            return jIO.util.readBlobAsText(blob);
-          })
-          .push(function (text) {
-            return JSON.parse(text.target.result);
-          });
-      }, function (error) {
+      .push(undefined, function (error) {
         if ((error instanceof jIO.util.jIOError) &&
             (error.status_code === 404)) {
 

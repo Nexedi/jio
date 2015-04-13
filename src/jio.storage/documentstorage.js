@@ -29,14 +29,9 @@
   DocumentStorage.prototype.get = function (id) {
     return this._sub_storage.getAttachment(
       this._document_id,
-      getSubAttachmentIdFromParam(id)
-    )
-      .push(function (blob) {
-        return jIO.util.readBlobAsText(blob);
-      })
-      .push(function (text) {
-        return JSON.parse(text.target.result);
-      });
+      getSubAttachmentIdFromParam(id),
+      {format: "json"}
+    );
   };
 
   DocumentStorage.prototype.allAttachments = function (id) {
