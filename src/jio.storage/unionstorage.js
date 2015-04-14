@@ -199,6 +199,18 @@
     return false;
   };
 
+  UnionStorage.prototype.repair = function () {
+    var i,
+      promise_list = [];
+    for (i = 0; i < this._storage_list.length; i += 1) {
+      promise_list.push(this._storage_list[i].repair.apply(
+        this._storage_list[i],
+        arguments
+      ));
+    }
+    return RSVP.all(promise_list);
+  };
+
   jIO.addStorage('union', UnionStorage);
 
 }(jIO, RSVP));

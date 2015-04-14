@@ -478,4 +478,38 @@
       });
   });
 
+  /////////////////////////////////////////////////////////////////
+  // documentStorage.repair
+  /////////////////////////////////////////////////////////////////
+  module("documentStorage.repair");
+  test("repair called substorage repair", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "document",
+      document_id: "foo",
+      sub_storage: {
+        type: "documentstorage200"
+      }
+    }),
+      expected_options = {foo: "bar"};
+
+    Storage200.prototype.repair = function (options) {
+      deepEqual(options, expected_options, "repair 200 called");
+      return "OK";
+    };
+
+    jio.repair(expected_options)
+      .then(function (result) {
+        equal(result, "OK");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 }(jIO, QUnit, Blob, btoa));

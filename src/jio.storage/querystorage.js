@@ -39,6 +39,9 @@
     return this._sub_storage.removeAttachment.apply(this._sub_storage,
                                                     arguments);
   };
+  QueryStorage.prototype.repair = function () {
+    return this._sub_storage.repair.apply(this._sub_storage, arguments);
+  };
 
   QueryStorage.prototype.hasCapacity = function (name) {
     if (name === "list") {

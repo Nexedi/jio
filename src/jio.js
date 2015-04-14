@@ -443,6 +443,20 @@
   };
 
   declareMethod(JioProxyStorage, "allAttachments", checkId);
+  declareMethod(JioProxyStorage, "repair");
+
+  JioProxyStorage.prototype.repair = function () {
+    var context = this,
+      argument_list = arguments;
+    return new RSVP.Queue()
+      .push(function () {
+        var storage_method = context.__storage.repair;
+        if (storage_method !== undefined) {
+          return context.__storage.repair.apply(context.__storage,
+                                                argument_list);
+        }
+      });
+  };
 
   /////////////////////////////////////////////////////////////////
   // Storage builder

@@ -50,6 +50,9 @@
     return this._sub_storage.removeAttachment.apply(this._sub_storage,
                                                     arguments);
   };
+  UUIDStorage.prototype.repair = function () {
+    return this._sub_storage.repair.apply(this._sub_storage, arguments);
+  };
   UUIDStorage.prototype.hasCapacity = function (name) {
     return this._sub_storage.hasCapacity(name);
   };

@@ -61,6 +61,10 @@
       }
     }];
   };
+  Storage200.prototype.repair = function (options) {
+    deepEqual(options, {foo: "bar"}, "repair 200 called");
+    return "OK";
+  };
   jIO.addStorage('unionstorage200', Storage200);
 
   function Storage200v2() {
@@ -90,6 +94,7 @@
   }
   Storage500.prototype.get = generateError;
   Storage500.prototype.post = generateError;
+  Storage500.prototype.repair = generateError;
   jIO.addStorage('unionstorage500', Storage500);
 
   /////////////////////////////////////////////////////////////////
@@ -850,5 +855,60 @@
       });
   });
 
+  /////////////////////////////////////////////////////////////////
+  // unionStorage.repair
+  /////////////////////////////////////////////////////////////////
+  module("unionStorage.repair");
+  test("repair called substorage repair", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage200"
+      }, {
+        type: "unionstorage200"
+      }]
+    });
+
+    jio.repair({foo: "bar"})
+      .then(function (result) {
+        deepEqual(result, ["OK", "OK"]);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("repair fails in one substorage fails", function () {
+    stop();
+    expect(5);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage200"
+      }, {
+        type: "unionstorage500"
+      }]
+    });
+
+    jio.repair({foo: "bar"})
+      .fail(function (error) {
+        ok(error instanceof Error);
+        equal(error.message, "manually triggered error");
+        equal(error.status_code, undefined);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
 
 }(jIO, QUnit));

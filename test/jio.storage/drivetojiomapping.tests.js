@@ -1053,4 +1053,37 @@
       });
   });
 
+  /////////////////////////////////////////////////////////////////
+  // driveToJioMapping.repair
+  /////////////////////////////////////////////////////////////////
+  module("driveToJioMapping.repair");
+  test("repair called substorage repair", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "drivetojiomapping",
+      sub_storage: {
+        type: "drivetojiomapping200"
+      }
+    }),
+      expected_options = {foo: "bar"};
+
+    Storage200.prototype.repair = function (options) {
+      deepEqual(options, expected_options, "repair 200 called");
+      return "OK";
+    };
+
+    jio.repair(expected_options)
+      .then(function (result) {
+        equal(result, "OK");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 }(jIO, QUnit, Blob));

@@ -242,6 +242,10 @@
     return this._sub_storage.removeAttachment(ROOT, id);
   };
 
+  FileSystemBridgeStorage.prototype.repair = function () {
+    return this._sub_storage.repair.apply(this._sub_storage, arguments);
+  };
+
   jIO.addStorage('drivetojiomapping', FileSystemBridgeStorage);
 
 }(jIO, RSVP, Blob));

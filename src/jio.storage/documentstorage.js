@@ -83,6 +83,10 @@
       });
   };
 
+  DocumentStorage.prototype.repair = function () {
+    return this._sub_storage.repair.apply(this._sub_storage, arguments);
+  };
+
   DocumentStorage.prototype.hasCapacity = function (capacity) {
     return (capacity === "list");
   };
