@@ -1,1344 +1,1091 @@
-/*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, RSVP, jIO, fake_storage, module, test, stop, start, deepEqual,
-  setTimeout, clearTimeout, XMLHttpRequest, window, ok */
-
-(function (dependencies, factory) {
+/*jslint nomen: true*/
+(function (jIO, QUnit) {
   "use strict";
-  if (typeof define === 'function' && define.amd) {
-    return define(dependencies, factory);
+  var test = QUnit.test,
+    stop = QUnit.stop,
+    start = QUnit.start,
+    ok = QUnit.ok,
+    expect = QUnit.expect,
+    deepEqual = QUnit.deepEqual,
+    equal = QUnit.equal,
+    module = QUnit.module,
+    throws = QUnit.throws;
+
+  /////////////////////////////////////////////////////////////////
+  // Custom test substorage definition
+  /////////////////////////////////////////////////////////////////
+  function Storage200() {
+    return this;
   }
-  factory(RSVP, jIO, fake_storage);
-}([
-  "rsvp",
-  "jio",
-  "fakestorage",
-  "replicatestorage"
-], function (RSVP, jIO, fake_storage) {
-  "use strict";
+  jIO.addStorage('replicatestorage200', Storage200);
 
-  var all = RSVP.all, chain = RSVP.resolve, Promise = RSVP.Promise;
-
-  /**
-   *     sleep(delay, [value]): promise< value >
-   *
-   * Produces a new promise which will resolve with `value` after `delay`
-   * milliseconds.
-   *
-   * @param  {Number} delay The time to sleep.
-   * @param  {Any} [value] The value to resolve.
-   * @return {Promise} A new promise.
-   */
-  function sleep(delay, value) {
-    var ident;
-    return new Promise(function (resolve) {
-      ident = setTimeout(resolve, delay, value);
-    }, function () {
-      clearTimeout(ident);
-    });
+  function Storage500() {
+    return this;
   }
+  jIO.addStorage('replicatestorage500', Storage500);
 
-  function jsonClone(object, replacer) {
-    if (object === undefined) {
-      return undefined;
-    }
-    return JSON.parse(JSON.stringify(object, replacer));
-  }
-
-  function reverse(promise) {
-    return promise.then(function (a) { throw a; }, function (e) { return e; });
-  }
-
-  function orderRowsById(a, b) {
-    return a.id > b.id ? 1 : b.id > a.id ? -1 : 0;
-  }
-
-  module("Replicate + GID + Local");
-
-  test("Get", function () {
-    var shared = {}, i, jio_list, replicate_jio;
-
-    // this test can work with at least 2 sub storages
-    shared.gid_description = {
-      "type": "gid",
-      "constraints": {
-        "default": {
-          "identifier": "list"
-        }
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.constructor
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.constructor");
+  test("create substorage", function () {
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
       },
-      "sub_storage": null
-    };
-
-    shared.storage_description_list = [];
-    for (i = 0; i < 4; i += 1) {
-      shared.storage_description_list[i] = jsonClone(shared.gid_description);
-      shared.storage_description_list[i].sub_storage = {
-        "type": "local",
-        "username": "replicate scenario test for get method - " + (i + 1),
-        "mode": "memory"
-      };
-    }
-
-    shared.replicate_storage_description = {
-      "type": "replicate",
-      "storage_list": shared.storage_description_list
-    };
-
-    shared.workspace = {};
-    shared.jio_option = {
-      "workspace": shared.workspace,
-      "max_retry": 0
-    };
-
-    jio_list = shared.storage_description_list.map(function (description) {
-      return jIO.createJIO(description, shared.jio_option);
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
     });
-    replicate_jio = jIO.createJIO(
-      shared.replicate_storage_description,
-      shared.jio_option
-    );
 
+    ok(jio.__storage._local_sub_storage instanceof jio.constructor);
+    equal(jio.__storage._local_sub_storage.__type, "replicatestorage200");
+    ok(jio.__storage._remote_sub_storage instanceof jio.constructor);
+    equal(jio.__storage._remote_sub_storage.__type, "replicatestorage500");
+
+    equal(jio.__storage._signature_hash,
+          "_replicate_7b54b9b5183574854e5870beb19b15152a36ef4e");
+
+    ok(jio.__storage._signature_sub_storage instanceof jio.constructor);
+    equal(jio.__storage._signature_sub_storage.__type, "document");
+
+    equal(jio.__storage._signature_sub_storage.__storage._document_id,
+          jio.__storage._signature_hash);
+
+    ok(jio.__storage._signature_sub_storage.__storage._sub_storage
+       instanceof jio.constructor);
+    equal(jio.__storage._signature_sub_storage.__storage._sub_storage.__type,
+          "replicatestorage200");
+
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.get
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.get");
+  test("get called substorage get", function () {
     stop();
+    expect(2);
 
-    shared.modified_date_list = [
-      new Date("1995"),
-      new Date("2000"),
-      null,
-      new Date("Invalid Date")
-    ];
-    shared.winner_modified_date = shared.modified_date_list[1];
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
 
-    function setFakeStorage() {
-      setFakeStorage.original = shared.storage_description_list[0].sub_storage;
-      shared.storage_description_list[0].sub_storage = {
-        "type": "fake",
-        "id": "replicate scenario test for get method - 1"
-      };
-      jio_list[0] = jIO.createJIO(
-        shared.storage_description_list[0],
-        shared.jio_option
-      );
-      replicate_jio = jIO.createJIO(
-        shared.replicate_storage_description,
-        shared.jio_option
-      );
-    }
+    Storage200.prototype.get = function (id) {
+      equal(id, "bar", "get 200 called");
+      return {title: "foo"};
+    };
 
-    function unsetFakeStorage() {
-      shared.storage_description_list[0].sub_storage = setFakeStorage.original;
-      jio_list[0] = jIO.createJIO(
-        shared.storage_description_list[0],
-        shared.jio_option
-      );
-      replicate_jio = jIO.createJIO(
-        shared.replicate_storage_description,
-        shared.jio_option
-      );
-    }
+    jio.get("bar")
+      .then(function (result) {
+        deepEqual(result, {
+          "title": "foo"
+        }, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
 
-    function putSimilarDocuments() {
-      return all(jio_list.map(function (jio) {
-        return jio.post({
-          "identifier": "a",
-          "modified": shared.modified_date_list[0]
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.post
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.post");
+  test("post called substorage post", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+
+    Storage200.prototype.post = function (param) {
+      deepEqual(param, {title: "bar"}, "post 200 called");
+      return "foo";
+    };
+
+    jio.post({title: "bar"})
+      .then(function (result) {
+        equal(result, "foo", "Check id");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.hasCapacity
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.hasCapacity");
+  test("hasCapacity return substorage value", function () {
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+
+    delete Storage200.prototype.hasCapacity;
+
+    throws(
+      function () {
+        jio.hasCapacity("foo");
+      },
+      function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 501);
+        equal(error.message,
+              "Capacity 'foo' is not implemented on 'replicatestorage200'");
+        return true;
+      }
+    );
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.buildQuery
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.buildQuery");
+
+  test("buildQuery return substorage buildQuery", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+
+    Storage200.prototype.hasCapacity = function () {
+      return true;
+    };
+
+    Storage200.prototype.buildQuery = function (options) {
+      deepEqual(options, {
+        include_docs: false,
+        sort_on: [["title", "ascending"]],
+        limit: [5],
+        select_list: ["title", "id"],
+        replicate: 'title: "two"'
+      }, "allDocs parameter");
+      return "bar";
+    };
+
+    jio.allDocs({
+      include_docs: false,
+      sort_on: [["title", "ascending"]],
+      limit: [5],
+      select_list: ["title", "id"],
+      replicate: 'title: "two"'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: "bar",
+            total_rows: 3
+          }
         });
-      }));
-    }
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
 
-    function getDocumentNothingToSynchronize() {
-      return replicate_jio.get({"_id": "{\"identifier\":[\"a\"]}"});
-    }
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.put
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.put");
+  test("put called substorage put", function () {
+    stop();
+    expect(3);
 
-    function getDocumentNothingToSynchronizeTest(answer) {
-      deepEqual(answer, {
-        "data": {
-          "_id": "{\"identifier\":[\"a\"]}",
-          "identifier": "a",
-          "modified": shared.modified_date_list[0].toJSON()
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+    Storage200.prototype.put = function (id, param) {
+      equal(id, "bar", "put 200 called");
+      deepEqual(param, {"title": "foo"}, "put 200 called");
+      return id;
+    };
+
+    jio.put("bar", {"title": "foo"})
+      .then(function (result) {
+        equal(result, "bar");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("put can not modify the signature", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+    delete Storage200.prototype.put;
+
+    jio.put(jio.__storage._signature_hash, {"title": "foo"})
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, jio.__storage._signature_hash + " is frozen");
+        equal(error.status_code, 403);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.remove
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.remove");
+  test("remove called substorage remove", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+    Storage200.prototype.remove = function (id) {
+      equal(id, "bar", "remove 200 called");
+      return id;
+    };
+
+    jio.remove("bar", {"title": "foo"})
+      .then(function (result) {
+        equal(result, "bar");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remove can not modify the signature", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+    delete Storage200.prototype.remove;
+
+    jio.remove(jio.__storage._signature_hash)
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, jio.__storage._signature_hash + " is frozen");
+        equal(error.status_code, 403);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.repair use cases
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.repair", {
+    setup: function () {
+      // Uses memory substorage, so that it is flushed after each run
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
         },
-        "id": "{\"identifier\":[\"a\"]}",
-        "method": "get",
-        "result": "success",
-        "status": 200,
-        "statusText": "Ok"
-      }, "Get document, nothing to synchronize.");
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      });
 
-      // check storage state
-      return sleep(1000).
-        // possible synchronization in background (should not occur)
-        then(function () {
-          return all(jio_list.map(function (jio) {
-            return jio.get({"_id": "{\"identifier\":[\"a\"]}"});
-          }));
-        }).then(function (answers) {
-          answers.forEach(function (answer) {
-            deepEqual(answer, {
-              "data": {
-                "_id": "{\"identifier\":[\"a\"]}",
-                "identifier": "a",
-                "modified": shared.modified_date_list[0].toJSON()
-              },
-              "id": "{\"identifier\":[\"a\"]}",
-              "method": "get",
-              "result": "success",
-              "status": 200,
-              "statusText": "Ok"
-            }, "Check storage content");
+    }
+  });
+
+  test("local document creation", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this;
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote document creation", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this;
+
+    context.jio.__storage._remote_sub_storage.post({"title": "bar"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "bar"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote document creations", function () {
+    stop();
+    expect(5);
+
+    var context = this;
+
+    RSVP.all([
+      context.jio.put("conflict", {"title": "foo"}),
+      context.jio.__storage._remote_sub_storage.put("conflict",
+                                                    {"title": "bar"})
+    ])
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Conflict on 'conflict'");
+        equal(error.status_code, 409);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get("conflict");
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+//        equal(error.message, "Cannot find document: conflict");
+        equal(error.status_code, 404);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote same document creations", function () {
+    stop();
+    expect(1);
+
+    var context = this;
+
+    RSVP.all([
+      context.jio.put("conflict", {"title": "foo"}),
+      context.jio.__storage._remote_sub_storage.put("conflict",
+                                                    {"title": "foo"})
+    ])
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("no modification", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this;
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local document modification", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this;
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.put(id, {"title": "foo2"});
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo2"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "9819187e39531fdc9bcfd40dbc6a7d3c78fe8dab"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote document modification", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this;
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.put(
+          id,
+          {"title": "foo3"}
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo3"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "4b1dde0f80ac38514771a9d25b5278e38f560e0f"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote document modifications", function () {
+    stop();
+    expect(4);
+
+    var id,
+      context = this;
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.put(id, {"title": "foo4"}),
+          context.jio.__storage._remote_sub_storage.put(id, {"title": "foo5"})
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Conflict on '" + id + "'");
+        equal(error.status_code, 409);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote document same modifications", function () {
+    stop();
+    expect(1);
+
+    var id,
+      context = this;
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.put(id, {"title": "foo99"}),
+          context.jio.__storage._remote_sub_storage.put(id, {"title": "foo99"})
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local document deletion", function () {
+    stop();
+    expect(6);
+
+    var id,
+      context = this;
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.remove(id);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id)
+          .then(function () {
+            ok(false, "Signature should be deleted");
+          })
+          .fail(function (error) {
+            ok(error instanceof jIO.util.jIOError);
+//            equal(error.message, "Cannot find document: " + id);
+            equal(error.status_code, 404);
           });
-        });
-    }
+      })
+      .always(function () {
+        start();
+      });
+  });
 
-    function putDifferentDocuments() {
-      return all(jio_list.map(function (jio, i) {
-        return jio.post({
-          "identifier": "b",
-          "modified": shared.modified_date_list[i]
-        });
-      }));
-    }
+  test("remote document deletion", function () {
+    stop();
+    expect(6);
 
-    function getDocumentWithSynchronization() {
-      return replicate_jio.get({"_id": "{\"identifier\":[\"b\"]}"});
-    }
+    var id,
+      context = this;
 
-    function getDocumentWithSynchronizationTest(answer) {
-      if (answer && answer.data) {
-        ok(shared.modified_date_list.map(function (v) {
-          return (v && v.toJSON()) || undefined;
-        }).indexOf(answer.data.modified) !== -1, "Should be a known date");
-        delete answer.data.modified;
-      }
-      deepEqual(answer, {
-        "data": {
-          "_id": "{\"identifier\":[\"b\"]}",
-          "identifier": "b"
-        },
-        "id": "{\"identifier\":[\"b\"]}",
-        "method": "get",
-        "result": "success",
-        "status": 200,
-        "statusText": "Ok"
-      }, "Get document, pending synchronization.");
-
-      // check storage state
-      return sleep(1000).
-        // synchronizing in background
-        then(function () {
-          return all(jio_list.map(function (jio) {
-            return jio.get({"_id": "{\"identifier\":[\"b\"]}"});
-          }));
-        }).then(function (answers) {
-          answers.forEach(function (answer) {
-            deepEqual(answer, {
-              "data": {
-                "_id": "{\"identifier\":[\"b\"]}",
-                "identifier": "b",
-                "modified": shared.winner_modified_date.toJSON()
-              },
-              "id": "{\"identifier\":[\"b\"]}",
-              "method": "get",
-              "result": "success",
-              "status": 200,
-              "statusText": "Ok"
-            }, "Check storage content");
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.remove(id);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id)
+          .then(function () {
+            ok(false, "Signature should be deleted");
+          })
+          .fail(function (error) {
+            ok(error instanceof jIO.util.jIOError);
+//            equal(error.message, "Cannot find document: " + id);
+            equal(error.status_code, 404);
           });
-        });
-    }
-
-    function putOneDocument() {
-      return jio_list[1].post({
-        "identifier": "c",
-        "modified": shared.modified_date_list[1]
+      })
+      .always(function () {
+        start();
       });
-    }
+  });
 
-    function getDocumentWith404Synchronization() {
-      return replicate_jio.get({"_id": "{\"identifier\":[\"c\"]}"});
-    }
+  test("local and remote document deletions", function () {
+    stop();
+    expect(8);
 
-    function getDocumentWith404SynchronizationTest(answer) {
-      if (answer && answer.data) {
-        ok(shared.modified_date_list.map(function (v) {
-          return (v && v.toJSON()) || undefined;
-        }).indexOf(answer.data.modified) !== -1, "Should be a known date");
-        delete answer.data.modified;
-      }
-      deepEqual(answer, {
-        "data": {
-          "_id": "{\"identifier\":[\"c\"]}",
-          "identifier": "c"
-        },
-        "id": "{\"identifier\":[\"c\"]}",
-        "method": "get",
-        "result": "success",
-        "status": 200,
-        "statusText": "Ok"
-      }, "Get document, synchronizing with not found document.");
+    var id,
+      context = this;
 
-      // check storage state
-      return sleep(1000).
-        // synchronizing in background
-        then(function () {
-          return all(jio_list.map(function (jio) {
-            return jio.get({"_id": "{\"identifier\":[\"c\"]}"});
-          }));
-        }).then(function (answers) {
-          answers.forEach(function (answer) {
-            deepEqual(answer, {
-              "data": {
-                "_id": "{\"identifier\":[\"c\"]}",
-                "identifier": "c",
-                "modified": shared.winner_modified_date.toJSON()
-              },
-              "id": "{\"identifier\":[\"c\"]}",
-              "method": "get",
-              "result": "success",
-              "status": 200,
-              "statusText": "Ok"
-            }, "Check storage content");
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.remove(id),
+          context.jio.__storage._remote_sub_storage.remove(id)
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.get(id)
+          .then(function () {
+            ok(false, "Document should be locally deleted");
+          })
+          .fail(function (error) {
+            ok(error instanceof jIO.util.jIOError);
+            equal(error.message, "Cannot find document: " + id);
+            equal(error.status_code, 404);
           });
-        });
-    }
-
-    function putDifferentDocuments2() {
-      return all(jio_list.map(function (jio, i) {
-        return jio.post({
-          "identifier": "d",
-          "modified": shared.modified_date_list[i]
-        });
-      }));
-    }
-
-    function getDocumentWithUnavailableStorage() {
-      setFakeStorage();
-      setTimeout(function () {
-        fake_storage.commands[
-          "replicate scenario test for get method - 1/allDocs"
-        ].error({"status": 0});
-      }, 100);
-      return replicate_jio.get({"_id": "{\"identifier\":[\"d\"]}"});
-    }
-
-    function getDocumentWithUnavailableStorageTest(answer) {
-      if (answer && answer.data) {
-        ok(shared.modified_date_list.map(function (v) {
-          return (v && v.toJSON()) || undefined;
-        }).indexOf(answer.data.modified) !== -1, "Should be a known date");
-        delete answer.data.modified;
-      }
-      deepEqual(answer, {
-        "data": {
-          "_id": "{\"identifier\":[\"d\"]}",
-          "identifier": "d"
-        },
-        "id": "{\"identifier\":[\"d\"]}",
-        "method": "get",
-        "result": "success",
-        "status": 200,
-        "statusText": "Ok"
-      }, "Get document, synchronizing with unavailable storage.");
-
-      unsetFakeStorage();
-      // check storage state
-      return sleep(1000).
-        // synchronizing in background
-        then(function () {
-          return all(jio_list.map(function (jio) {
-            return jio.get({"_id": "{\"identifier\":[\"d\"]}"});
-          }));
-        }).then(function (answers) {
-          deepEqual(answers[0], {
-            "data": {
-              "_id": "{\"identifier\":[\"d\"]}",
-              "identifier": "d",
-              "modified": shared.modified_date_list[0].toJSON()
-            },
-            "id": "{\"identifier\":[\"d\"]}",
-            "method": "get",
-            "result": "success",
-            "status": 200,
-            "statusText": "Ok"
-          }, "Check storage content");
-          answers.slice(1).forEach(function (answer) {
-            deepEqual(answer, {
-              "data": {
-                "_id": "{\"identifier\":[\"d\"]}",
-                "identifier": "d",
-                "modified": shared.winner_modified_date.toJSON()
-              },
-              "id": "{\"identifier\":[\"d\"]}",
-              "method": "get",
-              "result": "success",
-              "status": 200,
-              "statusText": "Ok"
-            }, "Check storage content");
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id)
+          .then(function () {
+            ok(false, "Document should be remotely deleted");
+          })
+          .fail(function (error) {
+            ok(error instanceof jIO.util.jIOError);
+            equal(error.message, "Cannot find document: " + id);
+            equal(error.status_code, 404);
           });
-        });
-    }
-
-    function unexpectedError(error) {
-      if (error instanceof Error) {
-        deepEqual([
-          error.name + ": " + error.message,
-          error
-        ], "NO ERROR", "Unexpected error");
-      } else {
-        deepEqual(error, "NO ERROR", "Unexpected error");
-      }
-    }
-
-    chain().
-      // get without synchronizing anything
-      then(putSimilarDocuments).
-      then(getDocumentNothingToSynchronize).
-      then(getDocumentNothingToSynchronizeTest).
-      // get with synchronization
-      then(putDifferentDocuments).
-      then(getDocumentWithSynchronization).
-      then(getDocumentWithSynchronizationTest).
-      // get with 404 synchronization
-      then(putOneDocument).
-      then(getDocumentWith404Synchronization).
-      then(getDocumentWith404SynchronizationTest).
-      // XXX get with attachment synchronization
-      // get with unavailable storage
-      then(putDifferentDocuments2).
-      then(getDocumentWithUnavailableStorage).
-      then(getDocumentWithUnavailableStorageTest).
-      // End of scenario
-      then(null, unexpectedError).
-      then(start, start);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id)
+          .then(function () {
+            ok(false, "Signature should be deleted");
+          })
+          .fail(function (error) {
+            ok(error instanceof jIO.util.jIOError);
+//            equal(error.message, "Cannot find document: " + id);
+            equal(error.status_code, 404);
+          });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
   });
 
-  test("Post + Put", function () {
-    var shared = {}, i, jio_list, replicate_jio;
+  test("local deletion and remote modifications", function () {
+    stop();
+    expect(2);
 
-    // this test can work with at least 2 sub storages
-    shared.gid_description = {
-      "type": "gid",
-      "constraints": {
-        "default": {
-          "identifier": "list"
+    var id,
+      context = this;
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.remove(id),
+          context.jio.__storage._remote_sub_storage.put(id, {"title": "foo99"})
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo99"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local modifications and remote deletion", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this;
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.put(id, {"title": "foo99"}),
+          context.jio.__storage._remote_sub_storage.remove(id)
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo99"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("signature document is not synced", function () {
+    stop();
+    expect(6);
+
+    var context = this;
+
+    // Uses sessionstorage substorage, so that signature are stored
+    // in the same local sub storage
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "document",
+          document_id: "/",
+          sub_storage: {
+            type: "local",
+            sessiononly: true
+          }
         }
       },
-      "sub_storage": null
-    };
-
-    shared.storage_description_list = [];
-    for (i = 0; i < 4; i += 1) {
-      shared.storage_description_list[i] = jsonClone(shared.gid_description);
-      shared.storage_description_list[i].sub_storage = {
-        "type": "local",
-        "username": "replicate scenario test for post method - " + (i + 1),
-        "mode": "memory"
-      };
-    }
-
-    shared.replicate_storage_description = {
-      "type": "replicate",
-      "storage_list": shared.storage_description_list
-    };
-
-    shared.workspace = {};
-    shared.jio_option = {
-      "workspace": shared.workspace,
-      "max_retry": 0
-    };
-
-    jio_list = shared.storage_description_list.map(function (description) {
-      return jIO.createJIO(description, shared.jio_option);
-    });
-    replicate_jio = jIO.createJIO(
-      shared.replicate_storage_description,
-      shared.jio_option
-    );
-
-    stop();
-
-    function setFakeStorage() {
-      setFakeStorage.original = shared.storage_description_list[0].sub_storage;
-      shared.storage_description_list[0].sub_storage = {
-        "type": "fake",
-        "id": "replicate scenario test for post method - 1"
-      };
-      jio_list[0] = jIO.createJIO(
-        shared.storage_description_list[0],
-        shared.jio_option
-      );
-      replicate_jio = jIO.createJIO(
-        shared.replicate_storage_description,
-        shared.jio_option
-      );
-    }
-
-    function unsetFakeStorage() {
-      shared.storage_description_list[0].sub_storage = setFakeStorage.original;
-      jio_list[0] = jIO.createJIO(
-        shared.storage_description_list[0],
-        shared.jio_option
-      );
-      replicate_jio = jIO.createJIO(
-        shared.replicate_storage_description,
-        shared.jio_option
-      );
-    }
-
-    function createDocument() {
-      return replicate_jio.post({"identifier": "a"});
-    }
-
-    function createDocumentTest(answer) {
-      deepEqual(answer, {
-        "id": "{\"identifier\":[\"a\"]}",
-        "method": "post",
-        "result": "success",
-        "status": 201,
-        "statusText": "Created"
-      }, "Post document");
-
-      return sleep(100);
-    }
-
-    function checkStorageContent() {
-      // check storage state
-      return all(jio_list.map(function (jio) {
-        return jio.get({"_id": "{\"identifier\":[\"a\"]}"});
-      })).then(function (answers) {
-        answers.forEach(function (answer) {
-          deepEqual(answer, {
-            "data": {
-              "_id": "{\"identifier\":[\"a\"]}",
-              "identifier": "a"
-            },
-            "id": "{\"identifier\":[\"a\"]}",
-            "method": "get",
-            "result": "success",
-            "status": 200,
-            "statusText": "Ok"
-          }, "Check storage content");
-        });
-      });
-    }
-
-    function updateDocument() {
-      return replicate_jio.put({
-        "_id": "{\"identifier\":[\"a\"]}",
-        "identifier": "a",
-        "title": "b"
-      });
-    }
-
-    function updateDocumentTest(answer) {
-      deepEqual(answer, {
-        "id": "{\"identifier\":[\"a\"]}",
-        "method": "put",
-        "result": "success",
-        "status": 204,
-        "statusText": "No Content"
-      }, "Update document");
-
-      return sleep(100);
-    }
-
-    function checkStorageContent3() {
-      // check storage state
-      return all(jio_list.map(function (jio) {
-        return jio.get({"_id": "{\"identifier\":[\"a\"]}"});
-      })).then(function (answers) {
-        answers.forEach(function (answer) {
-          deepEqual(answer, {
-            "data": {
-              "_id": "{\"identifier\":[\"a\"]}",
-              "identifier": "a",
-              "title": "b"
-            },
-            "id": "{\"identifier\":[\"a\"]}",
-            "method": "get",
-            "result": "success",
-            "status": 200,
-            "statusText": "Ok"
-          }, "Check storage content");
-        });
-      });
-    }
-
-    function createDocumentWithUnavailableStorage() {
-      setFakeStorage();
-      setTimeout(function () {
-        fake_storage.commands[
-          "replicate scenario test for post method - 1/allDocs"
-        ].error({"status": 0});
-      }, 100);
-      return replicate_jio.post({"identifier": "b"});
-    }
-
-    function createDocumentWithUnavailableStorageTest(answer) {
-      deepEqual(answer, {
-        "id": "{\"identifier\":[\"b\"]}",
-        "method": "post",
-        "result": "success",
-        "status": 201,
-        "statusText": "Created"
-      }, "Post document with unavailable storage");
-
-      return sleep(100);
-    }
-
-    function checkStorageContent2() {
-      unsetFakeStorage();
-      // check storage state
-      return all(jio_list.map(function (jio, i) {
-        if (i === 0) {
-          return reverse(jio.get({"_id": "{\"identifier\":[\"b\"]}"}));
-        }
-        return jio.get({"_id": "{\"identifier\":[\"b\"]}"});
-      })).then(function (answers) {
-        deepEqual(answers[0], {
-          "error": "not_found",
-          "id": "{\"identifier\":[\"b\"]}",
-          "message": "Cannot get document",
-          "method": "get",
-          "reason": "missing",
-          "result": "error",
-          "status": 404,
-          "statusText": "Not Found"
-        }, "Check storage content");
-        answers.slice(1).forEach(function (answer) {
-          deepEqual(answer, {
-            "data": {
-              "_id": "{\"identifier\":[\"b\"]}",
-              "identifier": "b"
-            },
-            "id": "{\"identifier\":[\"b\"]}",
-            "method": "get",
-            "result": "success",
-            "status": 200,
-            "statusText": "Ok"
-          }, "Check storage content");
-        });
-      });
-    }
-
-    function unexpectedError(error) {
-      if (error instanceof Error) {
-        deepEqual([
-          error.name + ": " + error.message,
-          error
-        ], "NO ERROR", "Unexpected error");
-      } else {
-        deepEqual(error, "NO ERROR", "Unexpected error");
+      remote_sub_storage: {
+        type: "memory"
       }
-    }
+    });
 
-    chain().
-      // create a document
-      then(createDocument).
-      then(createDocumentTest).
-      then(checkStorageContent).
-      // update document
-      then(updateDocument).
-      then(updateDocumentTest).
-      then(checkStorageContent3).
-      // create a document with unavailable storage
-      then(createDocumentWithUnavailableStorage).
-      then(createDocumentWithUnavailableStorageTest).
-      then(checkStorageContent2).
-      // End of scenario
-      then(null, unexpectedError).
-      then(start, start);
+    context.jio.post({"title": "foo"})
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(
+          context.jio.__storage._signature_hash
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " +
+                "_replicate_2be6c0851d60bcd9afe829e7133a136d266c779c");
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(
+          context.jio.__storage._signature_hash
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " +
+                "_replicate_2be6c0851d60bcd9afe829e7133a136d266c779c");
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
   });
 
-  test("Remove", function () {
-    var shared = {}, i, jio_list, replicate_jio;
+  test("substorages are repaired too", function () {
+    stop();
+    expect(9);
 
-    // this test can work with at least 2 sub storages
-    shared.gid_description = {
-      "type": "gid",
-      "constraints": {
-        "default": {
-          "identifier": "list"
-        }
+    var context = this,
+      first_call = true,
+      options = {foo: "bar"};
+
+    function Storage200CheckRepair() {
+      return this;
+    }
+    Storage200CheckRepair.prototype.get = function () {
+      ok(true, "get 200 check repair called");
+      return {};
+    };
+    Storage200CheckRepair.prototype.hasCapacity = function () {
+      return true;
+    };
+    Storage200CheckRepair.prototype.buildQuery = function () {
+      ok(true, "buildQuery 200 check repair called");
+      return [];
+    };
+    Storage200CheckRepair.prototype.allAttachments = function () {
+      ok(true, "allAttachments 200 check repair called");
+      return {};
+    };
+    Storage200CheckRepair.prototype.repair = function (kw) {
+      if (first_call) {
+        deepEqual(
+          this,
+          context.jio.__storage._local_sub_storage.__storage,
+          "local substorage repair"
+        );
+        first_call = false;
+      } else {
+        deepEqual(
+          this,
+          context.jio.__storage._remote_sub_storage.__storage,
+          "remote substorage repair"
+        );
+      }
+      deepEqual(kw, options, "substorage repair parameters provided");
+    };
+
+    jIO.addStorage(
+      'replicatestorage200chechrepair',
+      Storage200CheckRepair
+    );
+
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200chechrepair"
       },
-      "sub_storage": null
-    };
-
-    shared.storage_description_list = [];
-    for (i = 0; i < 4; i += 1) {
-      shared.storage_description_list[i] = jsonClone(shared.gid_description);
-      shared.storage_description_list[i].sub_storage = {
-        "type": "local",
-        "username": "replicate scenario test for remove method - " + (i + 1),
-        "mode": "memory"
-      };
-    }
-
-    shared.replicate_storage_description = {
-      "type": "replicate",
-      "storage_list": shared.storage_description_list
-    };
-
-    shared.workspace = {};
-    shared.jio_option = {
-      "workspace": shared.workspace,
-      "max_retry": 0
-    };
-
-    jio_list = shared.storage_description_list.map(function (description) {
-      return jIO.createJIO(description, shared.jio_option);
-    });
-    replicate_jio = jIO.createJIO(
-      shared.replicate_storage_description,
-      shared.jio_option
-    );
-
-    stop();
-
-    function setFakeStorage() {
-      setFakeStorage.original = shared.storage_description_list[0].sub_storage;
-      shared.storage_description_list[0].sub_storage = {
-        "type": "fake",
-        "id": "replicate scenario test for remove method - 1"
-      };
-      jio_list[0] = jIO.createJIO(
-        shared.storage_description_list[0],
-        shared.jio_option
-      );
-      replicate_jio = jIO.createJIO(
-        shared.replicate_storage_description,
-        shared.jio_option
-      );
-    }
-
-    function unsetFakeStorage() {
-      shared.storage_description_list[0].sub_storage = setFakeStorage.original;
-      jio_list[0] = jIO.createJIO(
-        shared.storage_description_list[0],
-        shared.jio_option
-      );
-      replicate_jio = jIO.createJIO(
-        shared.replicate_storage_description,
-        shared.jio_option
-      );
-    }
-
-    function putSomeDocuments() {
-      return all(jio_list.map(function (jio) {
-        return jio.post({"identifier": "a"});
-      }));
-    }
-
-    function removeDocument() {
-      return replicate_jio.remove({"_id": "{\"identifier\":[\"a\"]}"});
-    }
-
-    function removeDocumentTest(answer) {
-      deepEqual(answer, {
-        "id": "{\"identifier\":[\"a\"]}",
-        "method": "remove",
-        "result": "success",
-        "status": 204,
-        "statusText": "No Content"
-      }, "Remove document");
-
-      return sleep(100);
-    }
-
-    function checkStorageContent() {
-      // check storage state
-      return all(jio_list.map(function (jio) {
-        return reverse(jio.get({"_id": "{\"identifier\":[\"a\"]}"}));
-      })).then(function (answers) {
-        answers.forEach(function (answer) {
-          deepEqual(answer, {
-            "error": "not_found",
-            "id": "{\"identifier\":[\"a\"]}",
-            "message": "Cannot get document",
-            "method": "get",
-            "reason": "missing",
-            "result": "error",
-            "status": 404,
-            "statusText": "Not Found"
-          }, "Check storage content");
-        });
-      });
-    }
-
-    function putSomeDocuments2() {
-      return all(jio_list.map(function (jio) {
-        return jio.post({"identifier": "b"});
-      }));
-    }
-
-    function removeDocumentWithUnavailableStorage() {
-      setFakeStorage();
-      setTimeout(function () {
-        fake_storage.commands[
-          "replicate scenario test for remove method - 1/allDocs"
-        ].error({"status": 0});
-      }, 100);
-      return replicate_jio.remove({"_id": "{\"identifier\":[\"b\"]}"});
-    }
-
-    function removeDocumentWithUnavailableStorageTest(answer) {
-      deepEqual(answer, {
-        "id": "{\"identifier\":[\"b\"]}",
-        "method": "remove",
-        "result": "success",
-        "status": 204,
-        "statusText": "No Content"
-      }, "Remove document with unavailable storage");
-
-      return sleep(100);
-    }
-
-    function checkStorageContent2() {
-      unsetFakeStorage();
-      // check storage state
-      return all(jio_list.map(function (jio, i) {
-        if (i === 0) {
-          return jio.get({"_id": "{\"identifier\":[\"b\"]}"});
-        }
-        return reverse(jio.get({"_id": "{\"identifier\":[\"b\"]}"}));
-      })).then(function (answers) {
-        deepEqual(answers[0], {
-          "data": {
-            "_id": "{\"identifier\":[\"b\"]}",
-            "identifier": "b"
-          },
-          "id": "{\"identifier\":[\"b\"]}",
-          "method": "get",
-          "result": "success",
-          "status": 200,
-          "statusText": "Ok"
-        }, "Check storage content");
-        answers.slice(1).forEach(function (answer) {
-          deepEqual(answer, {
-            "error": "not_found",
-            "id": "{\"identifier\":[\"b\"]}",
-            "message": "Cannot get document",
-            "method": "get",
-            "reason": "missing",
-            "result": "error",
-            "status": 404,
-            "statusText": "Not Found"
-          }, "Check storage content");
-        });
-      });
-    }
-
-    function unexpectedError(error) {
-      if (error instanceof Error) {
-        deepEqual([
-          error.name + ": " + error.message,
-          error
-        ], "NO ERROR", "Unexpected error");
-      } else {
-        deepEqual(error, "NO ERROR", "Unexpected error");
+      remote_sub_storage: {
+        type: "replicatestorage200chechrepair"
       }
-    }
+    });
 
-    chain().
-      // remove document
-      then(putSomeDocuments).
-      then(removeDocument).
-      then(removeDocumentTest).
-      then(checkStorageContent).
-      // remove document with unavailable storage
-      then(putSomeDocuments2).
-      then(removeDocumentWithUnavailableStorage).
-      then(removeDocumentWithUnavailableStorageTest).
-      then(checkStorageContent2).
-      // End of scenario
-      then(null, unexpectedError).
-      then(start, start);
+    context.jio.repair(options)
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
   });
 
-  test("AllDocs", function () {
-    var shared = {}, i, jio_list, replicate_jio;
-
-    // this test can work with at least 2 sub storages
-    shared.gid_description = {
-      "type": "gid",
-      "constraints": {
-        "default": {
-          "identifier": "list"
-        }
-      },
-      "sub_storage": null
-    };
-
-    shared.storage_description_list = [];
-    for (i = 0; i < 2; i += 1) {
-      shared.storage_description_list[i] = jsonClone(shared.gid_description);
-      shared.storage_description_list[i].sub_storage = {
-        "type": "local",
-        "username": "replicate scenario test for allDocs method - " + (i + 1),
-        "mode": "memory"
-      };
-    }
-
-    shared.replicate_storage_description = {
-      "type": "replicate",
-      "storage_list": shared.storage_description_list
-    };
-
-    shared.workspace = {};
-    shared.jio_option = {
-      "workspace": shared.workspace,
-      "max_retry": 0
-    };
-
-    jio_list = shared.storage_description_list.map(function (description) {
-      return jIO.createJIO(description, shared.jio_option);
-    });
-    replicate_jio = jIO.createJIO(
-      shared.replicate_storage_description,
-      shared.jio_option
-    );
-
-    stop();
-
-    shared.modified_date_list = [
-      new Date("2000"),
-      new Date("1995"),
-      null,
-      new Date("Invalid Date")
-    ];
-
-    function postSomeDocuments() {
-      return all([
-        jio_list[0].post({
-          "identifier": "a",
-          "modified": shared.modified_date_list[0]
-        }),
-        jio_list[0].post({
-          "identifier": "b",
-          "modified": shared.modified_date_list[1]
-        }),
-        jio_list[1].post({
-          "identifier": "b",
-          "modified": shared.modified_date_list[0]
-        })
-      ]);
-    }
-
-    function listDocuments() {
-      return replicate_jio.allDocs({"include_docs": true});
-    }
-
-    function listDocumentsTest(answer) {
-      answer.data.rows.sort(orderRowsById);
-      deepEqual(answer, {
-        "data": {
-          "total_rows": 2,
-          "rows": [
-            {
-              "id": "{\"identifier\":[\"a\"]}",
-              "doc": {
-                "_id": "{\"identifier\":[\"a\"]}",
-                "identifier": "a",
-                "modified": shared.modified_date_list[0].toJSON()
-              },
-              "value": {}
-            },
-            {
-              "id": "{\"identifier\":[\"b\"]}",
-              "doc": {
-                "_id": "{\"identifier\":[\"b\"]}",
-                "identifier": "b",
-                "modified": shared.modified_date_list[1].toJSON()
-                // there's no winner detection here
-              },
-              "value": {}
-            }
-          ]
-        },
-        "method": "allDocs",
-        "result": "success",
-        "status": 200,
-        "statusText": "Ok"
-      }, "Document list should be merged correctly");
-    }
-
-    function setFakeStorage() {
-      shared.storage_description_list[0].sub_storage = {
-        "type": "fake",
-        "id": "replicate scenario test for allDocs method - 1"
-      };
-      jio_list[0] = jIO.createJIO(
-        shared.storage_description_list[0],
-        shared.jio_option
-      );
-      replicate_jio = jIO.createJIO(
-        shared.replicate_storage_description,
-        shared.jio_option
-      );
-    }
-
-    function listDocumentsWithUnavailableStorage() {
-      setTimeout(function () {
-        fake_storage.commands[
-          "replicate scenario test for allDocs method - 1/allDocs"
-        ].error({"status": 0});
-      }, 100);
-      return replicate_jio.allDocs({"include_docs": true});
-    }
-
-    function listDocumentsWithUnavailableStorageTest(answer) {
-      deepEqual(answer, {
-        "data": {
-          "total_rows": 1,
-          "rows": [
-            {
-              "id": "{\"identifier\":[\"b\"]}",
-              "doc": {
-                "_id": "{\"identifier\":[\"b\"]}",
-                "identifier": "b",
-                "modified": shared.modified_date_list[0].toJSON()
-              },
-              "value": {}
-            }
-          ]
-        },
-        "method": "allDocs",
-        "result": "success",
-        "status": 200,
-        "statusText": "Ok"
-      }, "Document list with only one available storage");
-    }
-
-    function unexpectedError(error) {
-      if (error instanceof Error) {
-        deepEqual([
-          error.name + ": " + error.message,
-          error
-        ], "NO ERROR", "Unexpected error");
-      } else {
-        deepEqual(error, "NO ERROR", "Unexpected error");
-      }
-    }
-
-    chain().
-      // list documents
-      then(postSomeDocuments).
-      then(listDocuments).
-      then(listDocumentsTest).
-      // set fake storage
-      then(setFakeStorage).
-      // list documents with unavailable storage
-      then(listDocumentsWithUnavailableStorage).
-      then(listDocumentsWithUnavailableStorageTest).
-      // End of scenario
-      then(null, unexpectedError).
-      then(start);
-  });
-
-  test("Repair", function () {
-    var shared = {}, i, jio_list, replicate_jio;
-
-    // this test can work with at least 2 sub storages
-    shared.gid_description = {
-      "type": "gid",
-      "constraints": {
-        "default": {
-          "identifier": "list"
-        }
-      },
-      "sub_storage": null
-    };
-
-    shared.storage_description_list = [];
-    for (i = 0; i < 4; i += 1) {
-      shared.storage_description_list[i] = jsonClone(shared.gid_description);
-      shared.storage_description_list[i].sub_storage = {
-        "type": "local",
-        "username": "replicate scenario test for repair method - " + (i + 1),
-        "mode": "memory"
-      };
-    }
-
-    shared.replicate_storage_description = {
-      "type": "replicate",
-      "storage_list": shared.storage_description_list
-    };
-
-    shared.workspace = {};
-    shared.jio_option = {
-      "workspace": shared.workspace,
-      "max_retry": 0
-    };
-
-    jio_list = shared.storage_description_list.map(function (description) {
-      return jIO.createJIO(description, shared.jio_option);
-    });
-    replicate_jio = jIO.createJIO(
-      shared.replicate_storage_description,
-      shared.jio_option
-    );
-
-    stop();
-
-    shared.modified_date_list = [
-      new Date("1995"),
-      new Date("2000"),
-      null,
-      new Date("Invalid Date")
-    ];
-    shared.winner_modified_date = shared.modified_date_list[1];
-
-    function setFakeStorage() {
-      setFakeStorage.original = shared.storage_description_list[0].sub_storage;
-      shared.storage_description_list[0].sub_storage = {
-        "type": "fake",
-        "id": "replicate scenario test for repair method - 1"
-      };
-      jio_list[0] = jIO.createJIO(
-        shared.storage_description_list[0],
-        shared.jio_option
-      );
-      replicate_jio = jIO.createJIO(
-        shared.replicate_storage_description,
-        shared.jio_option
-      );
-    }
-
-    function unsetFakeStorage() {
-      shared.storage_description_list[0].sub_storage = setFakeStorage.original;
-      jio_list[0] = jIO.createJIO(
-        shared.storage_description_list[0],
-        shared.jio_option
-      );
-      replicate_jio = jIO.createJIO(
-        shared.replicate_storage_description,
-        shared.jio_option
-      );
-    }
-
-    function putSimilarDocuments() {
-      return all(jio_list.map(function (jio) {
-        return jio.post({
-          "identifier": "a",
-          "modified": shared.modified_date_list[0]
-        });
-      }));
-    }
-
-    function repairDocumentNothingToSynchronize() {
-      return replicate_jio.repair({"_id": "{\"identifier\":[\"a\"]}"});
-    }
-
-    function repairDocumentNothingToSynchronizeTest(answer) {
-      deepEqual(answer, {
-        "id": "{\"identifier\":[\"a\"]}",
-        "method": "repair",
-        "result": "success",
-        "status": 204,
-        "statusText": "No Content"
-      }, "Repair document, nothing to synchronize.");
-
-      // check storage state
-      return all(jio_list.map(function (jio) {
-        return jio.get({"_id": "{\"identifier\":[\"a\"]}"});
-      })).then(function (answers) {
-        answers.forEach(function (answer) {
-          deepEqual(answer, {
-            "data": {
-              "_id": "{\"identifier\":[\"a\"]}",
-              "identifier": "a",
-              "modified": shared.modified_date_list[0].toJSON()
-            },
-            "id": "{\"identifier\":[\"a\"]}",
-            "method": "get",
-            "result": "success",
-            "status": 200,
-            "statusText": "Ok"
-          }, "Check storage content");
-        });
-      });
-    }
-
-    function putDifferentDocuments() {
-      return all(jio_list.map(function (jio, i) {
-        return jio.post({
-          "identifier": "b",
-          "modified": shared.modified_date_list[i]
-        });
-      }));
-    }
-
-    function repairDocumentWithSynchronization() {
-      return replicate_jio.repair({"_id": "{\"identifier\":[\"b\"]}"});
-    }
-
-    function repairDocumentWithSynchronizationTest(answer) {
-      deepEqual(answer, {
-        "id": "{\"identifier\":[\"b\"]}",
-        "method": "repair",
-        "result": "success",
-        "status": 204,
-        "statusText": "No Content"
-      }, "Repair document, synchronization should be done.");
-
-      // check storage state
-      return all(jio_list.map(function (jio) {
-        return jio.get({"_id": "{\"identifier\":[\"b\"]}"});
-      })).then(function (answers) {
-        answers.forEach(function (answer) {
-          deepEqual(answer, {
-            "data": {
-              "_id": "{\"identifier\":[\"b\"]}",
-              "identifier": "b",
-              "modified": shared.winner_modified_date.toJSON()
-            },
-            "id": "{\"identifier\":[\"b\"]}",
-            "method": "get",
-            "result": "success",
-            "status": 200,
-            "statusText": "Ok"
-          }, "Check storage content");
-        });
-      });
-    }
-
-    function putOneDocument() {
-      return jio_list[1].post({
-        "identifier": "c",
-        "modified": shared.modified_date_list[1]
-      });
-    }
-
-    function repairDocumentWith404Synchronization() {
-      return replicate_jio.repair({"_id": "{\"identifier\":[\"c\"]}"});
-    }
-
-    function repairDocumentWith404SynchronizationTest(answer) {
-      deepEqual(answer, {
-        "id": "{\"identifier\":[\"c\"]}",
-        "method": "repair",
-        "result": "success",
-        "status": 204,
-        "statusText": "No Content"
-      }, "Repair document, synchronizing with not found document.");
-
-      // check storage state
-      return all(jio_list.map(function (jio) {
-        return jio.get({"_id": "{\"identifier\":[\"c\"]}"});
-      })).then(function (answers) {
-        answers.forEach(function (answer) {
-          deepEqual(answer, {
-            "data": {
-              "_id": "{\"identifier\":[\"c\"]}",
-              "identifier": "c",
-              "modified": shared.winner_modified_date.toJSON()
-            },
-            "id": "{\"identifier\":[\"c\"]}",
-            "method": "get",
-            "result": "success",
-            "status": 200,
-            "statusText": "Ok"
-          }, "Check storage content");
-        });
-      });
-    }
-
-    function putDifferentDocuments2() {
-      return all(jio_list.map(function (jio, i) {
-        return jio.post({
-          "identifier": "d",
-          "modified": shared.modified_date_list[i]
-        });
-      }));
-    }
-
-    function repairDocumentWithUnavailableStorage() {
-      setFakeStorage();
-      setTimeout(function () {
-        fake_storage.commands[
-          "replicate scenario test for repair method - 1/allDocs"
-        ].error({"status": 0});
-      }, 250);
-      setTimeout(function () {
-        fake_storage.commands[
-          "replicate scenario test for repair method - 1/allDocs"
-        ].error({"status": 0});
-      }, 500);
-      return replicate_jio.repair({"_id": "{\"identifier\":[\"d\"]}"});
-    }
-
-    function repairDocumentWithUnavailableStorageTest(answer) {
-      deepEqual(answer, {
-        "id": "{\"identifier\":[\"d\"]}",
-        "method": "repair",
-        "result": "success",
-        "status": 204,
-        "statusText": "No Content"
-      }, "Repair document, synchronizing with unavailable storage.");
-
-      unsetFakeStorage();
-      // check storage state
-      return all(jio_list.map(function (jio) {
-        return jio.get({"_id": "{\"identifier\":[\"d\"]}"});
-      })).then(function (answers) {
-        deepEqual(answers[0], {
-          "data": {
-            "_id": "{\"identifier\":[\"d\"]}",
-            "identifier": "d",
-            "modified": shared.modified_date_list[0].toJSON()
-          },
-          "id": "{\"identifier\":[\"d\"]}",
-          "method": "get",
-          "result": "success",
-          "status": 200,
-          "statusText": "Ok"
-        }, "Check storage content");
-        answers.slice(1).forEach(function (answer) {
-          deepEqual(answer, {
-            "data": {
-              "_id": "{\"identifier\":[\"d\"]}",
-              "identifier": "d",
-              "modified": shared.winner_modified_date.toJSON()
-            },
-            "id": "{\"identifier\":[\"d\"]}",
-            "method": "get",
-            "result": "success",
-            "status": 200,
-            "statusText": "Ok"
-          }, "Check storage content");
-        });
-      });
-    }
-
-    function unexpectedError(error) {
-      if (error instanceof Error) {
-        deepEqual([
-          error.name + ": " + error.message,
-          error
-        ], "NO ERROR", "Unexpected error");
-      } else {
-        deepEqual(error, "NO ERROR", "Unexpected error");
-      }
-    }
-
-    chain().
-      // get without synchronizing anything
-      then(putSimilarDocuments).
-      then(repairDocumentNothingToSynchronize).
-      then(repairDocumentNothingToSynchronizeTest).
-      // repair with synchronization
-      then(putDifferentDocuments).
-      then(repairDocumentWithSynchronization).
-      then(repairDocumentWithSynchronizationTest).
-      // repair with 404 synchronization
-      then(putOneDocument).
-      then(repairDocumentWith404Synchronization).
-      then(repairDocumentWith404SynchronizationTest).
-      // XXX repair with attachment synchronization
-      // repair with unavailable storage
-      then(putDifferentDocuments2).
-      then(repairDocumentWithUnavailableStorage).
-      then(repairDocumentWithUnavailableStorageTest).
-      // End of scenario
-      then(null, unexpectedError).
-      then(start, start);
-  });
-
-}));
+}(jIO, QUnit));

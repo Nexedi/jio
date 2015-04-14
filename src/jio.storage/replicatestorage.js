@@ -1,6 +1,6 @@
 /*
  * JIO extension for resource replication.
- * Copyright (C) 2013  Nexedi SA
+ * Copyright (C) 2013, 2015  Nexedi SA
  *
  *   This library is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU Lesser General Public License as published by
@@ -16,405 +16,314 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, module, require, jIO, RSVP */
+/*jslint nomen: true*/
+/*global jIO, RSVP, Rusha*/
 
-(function (factory) {
-  "use strict";
-  if (typeof define === 'function' && define.amd) {
-    return define(["jio", "rsvp"], function () {
-      return factory(require);
-    });
-  }
-  if (typeof require === 'function') {
-    module.exports = factory(require);
-    return;
-  }
-  factory(function (name) {
-    return {
-      "jio": jIO,
-      "rsvp": RSVP
-    }[name];
-  });
-}(function (require) {
+(function (jIO, RSVP, Rusha) {
   "use strict";
 
-  var Promise = require('rsvp').Promise,
-    all = require('rsvp').all,
-    addStorageFunction = require('jio').addStorage,
-    uniqueJSONStringify = require('jio').util.uniqueJSONStringify;
+  var rusha = new Rusha();
 
-  function success(promise) {
-    return promise.then(null, function (reason) { return reason; });
+  /****************************************************
+   Use a local jIO to read/write/search documents
+   Synchronize in background those document with a remote jIO.
+   Synchronization status is stored for each document as an local attachment.
+  ****************************************************/
+
+  function generateHash(content) {
+    // XXX Improve performance by moving calculation to WebWorker
+    return rusha.digestFromString(content);
   }
-
-  /**
-   *     firstFulfilled(promises): promises< last_fulfilment_value >
-   *
-   * Responds with the first resolved promise answer recieved. If all promises
-   * are rejected, it returns the latest rejected promise answer
-   * received. Promises are cancelled only by calling
-   * `firstFulfilled(promises).cancel()`.
-   *
-   * @param  {Array} promises An array of promises
-   * @return {Promise} A new promise
-   */
-  function firstFulfilled(promises) {
-    var length = promises.length;
-
-    function onCancel() {
-      var i, l, promise;
-      for (i = 0, l = promises.length; i < l; i += 1) {
-        promise = promises[i];
-        if (typeof promise.cancel === "function") {
-          promise.cancel();
-        }
-      }
-    }
-
-    return new Promise(function (resolve, reject, notify) {
-      var i, count = 0;
-      function resolver(answer) {
-        resolve(answer);
-        onCancel();
-      }
-
-      function rejecter(answer) {
-        count += 1;
-        if (count === length) {
-          return reject(answer);
-        }
-      }
-
-      for (i = 0; i < length; i += 1) {
-        promises[i].then(resolver, rejecter, notify);
-      }
-    }, onCancel);
-  }
-
-  // //////////////////////////////////////////////////////////////////////
-
-  // /**
-  //  * An Universal Unique ID generator
-  //  *
-  //  * @return {String} The new UUID.
-  //  */
-  // function generateUuid() {
-  //   function S4() {
-  //     return ('0000' + Math.floor(
-  //       Math.random() * 0x10000 /* 65536 */
-  //     ).toString(16)).slice(-4);
-  //   }
-  //   return S4() + S4() + "-" +
-  //     S4() + "-" +
-  //     S4() + "-" +
-  //     S4() + "-" +
-  //     S4() + S4() + S4();
-  // }
 
   function ReplicateStorage(spec) {
-    if (!Array.isArray(spec.storage_list)) {
-      throw new TypeError("ReplicateStorage(): " +
-                          "storage_list is not of type array");
-    }
-    this._storage_list = spec.storage_list;
+    this._local_sub_storage = jIO.createJIO(spec.local_sub_storage);
+    this._remote_sub_storage = jIO.createJIO(spec.remote_sub_storage);
+
+    this._signature_hash = "_replicate_" + generateHash(
+      JSON.stringify(spec.local_sub_storage) +
+        JSON.stringify(spec.remote_sub_storage)
+    );
+    this._signature_sub_storage = jIO.createJIO({
+      type: "document",
+      document_id: this._signature_hash,
+      sub_storage: spec.local_sub_storage
+    });
   }
 
-  ReplicateStorage.prototype.syncGetAnswerList = function (command,
-                                                           answer_list) {
-    var i, l, answer, answer_modified_date, winner, winner_modified_date,
-      winner_str, promise_list = [], winner_index, winner_id;
-    /*jslint continue: true */
-    for (i = 0, l = answer_list.length; i < l; i += 1) {
-      answer = answer_list[i];
-      if (!answer || answer === 404) { continue; }
-      if (!winner) {
-        winner = answer;
-        winner_index = i;
-        winner_modified_date = new Date(answer.data.modified).getTime();
-      } else {
-        answer_modified_date = new Date(answer.data.modified).getTime();
-        if (isFinite(answer_modified_date) &&
-            answer_modified_date > winner_modified_date) {
-          winner = answer;
-          winner_index = i;
-          winner_modified_date = answer_modified_date;
-        }
-      }
+  ReplicateStorage.prototype.remove = function (id) {
+    if (id === this._signature_hash) {
+      throw new jIO.util.jIOError(this._signature_hash + " is frozen",
+                                  403);
     }
-    winner = winner.data;
-    if (!winner) { return; }
-    // winner_attachments = winner._attachments;
-    delete winner._attachments;
-    winner_id = winner._id;
-    winner_str = uniqueJSONStringify(winner);
-
-    // document synchronisation
-    for (i = 0, l = answer_list.length; i < l; i += 1) {
-      answer = answer_list[i];
-      if (!answer) { continue; }
-      if (i === winner_index) { continue; }
-      if (answer === 404) {
-        delete winner._id;
-        promise_list.push(success(
-          command.storage(this._storage_list[i]).post(winner)
-        ));
-        winner._id = winner_id;
-        // delete _id AND reassign _id -> avoid modifying document before
-        // resolving the get method.
-        continue;
-      }
-      delete answer._attachments;
-      if (uniqueJSONStringify(answer.data) !== winner_str) {
-        promise_list.push(success(
-          command.storage(this._storage_list[i]).put(winner)
-        ));
-      }
+    return this._local_sub_storage.remove.apply(this._local_sub_storage,
+                                                arguments);
+  };
+  ReplicateStorage.prototype.post = function () {
+    return this._local_sub_storage.post.apply(this._local_sub_storage,
+                                              arguments);
+  };
+  ReplicateStorage.prototype.put = function (id) {
+    if (id === this._signature_hash) {
+      throw new jIO.util.jIOError(this._signature_hash + " is frozen",
+                                  403);
     }
-    return all(promise_list);
-    // XXX .then synchronize attachments
+    return this._local_sub_storage.put.apply(this._local_sub_storage,
+                                             arguments);
+  };
+  ReplicateStorage.prototype.get = function () {
+    return this._local_sub_storage.get.apply(this._local_sub_storage,
+                                             arguments);
+  };
+  ReplicateStorage.prototype.hasCapacity = function () {
+    return this._local_sub_storage.hasCapacity.apply(this._local_sub_storage,
+                                                     arguments);
+  };
+  ReplicateStorage.prototype.buildQuery = function () {
+    // XXX Remove signature document?
+    return this._local_sub_storage.buildQuery.apply(this._local_sub_storage,
+                                                    arguments);
   };
 
-  ReplicateStorage.prototype.post = function (command, metadata, option) {
-    var promise_list = [], index, length = this._storage_list.length;
-    // if (!isDate(metadata.modified)) {
-    //   command.error(
-    //     409,
-    //     "invalid 'modified' metadata",
-   //     "The metadata 'modified' should be a valid date string or date object"
-    //   );
-    //   return;
-    // }
-    for (index = 0; index < length; index += 1) {
-      promise_list[index] =
-        command.storage(this._storage_list[index]).post(metadata, option);
-    }
-    firstFulfilled(promise_list).
-      then(command.success, command.error, command.notify);
-  };
+  ReplicateStorage.prototype.repair = function () {
+    var context = this,
+      argument_list = arguments,
+      skip_document_dict = {};
 
-  ReplicateStorage.prototype.put = function (command, metadata, option) {
-    var promise_list = [], index, length = this._storage_list.length;
-    // if (!isDate(metadata.modified)) {
-    //   command.error(
-    //     409,
-    //     "invalid 'modified' metadata",
-   //     "The metadata 'modified' should be a valid date string or date object"
-    //   );
-    //   return;
-    // }
-    for (index = 0; index < length; index += 1) {
-      promise_list[index] =
-        command.storage(this._storage_list[index]).put(metadata, option);
-    }
-    firstFulfilled(promise_list).
-      then(command.success, command.error, command.notify);
-  };
+    // Do not sync the signature document
+    skip_document_dict[context._signature_hash] = null;
 
-  ReplicateStorage.prototype.putAttachment = function (command, param, option) {
-    var promise_list = [], index, length = this._storage_list.length;
-    for (index = 0; index < length; index += 1) {
-      promise_list[index] =
-        command.storage(this._storage_list[index]).putAttachment(param, option);
-    }
-    firstFulfilled(promise_list).
-      then(command.success, command.error, command.notify);
-  };
-
-  ReplicateStorage.prototype.remove = function (command, param, option) {
-    var promise_list = [], index, length = this._storage_list.length;
-    for (index = 0; index < length; index += 1) {
-      promise_list[index] =
-        command.storage(this._storage_list[index]).remove(param, option);
-    }
-    firstFulfilled(promise_list).
-      then(command.success, command.error, command.notify);
-  };
-
-  ReplicateStorage.prototype.removeAttachment = function (
-    command,
-    param,
-    option
-  ) {
-    var promise_list = [], index, length = this._storage_list.length;
-    for (index = 0; index < length; index += 1) {
-      promise_list[index] =
-        command.storage(this._storage_list[index]).
-        removeAttachment(param, option);
-    }
-    firstFulfilled(promise_list).
-      then(command.success, command.error, command.notify);
-  };
-
-  /**
-   * Respond with the first get answer received and synchronize the document to
-   * the other storages in the background.
-   */
-  ReplicateStorage.prototype.get = function (command, param, option) {
-    var promise_list = [], index, length = this._storage_list.length,
-      answer_list = [], this_ = this;
-    for (index = 0; index < length; index += 1) {
-      promise_list[index] =
-        command.storage(this._storage_list[index]).get(param, option);
+    function propagateModification(destination, doc, hash, id) {
+      return destination.put(id, doc)
+        .push(function () {
+          return context._signature_sub_storage.put(id, {
+            "hash": hash
+          });
+        })
+        .push(function () {
+          skip_document_dict[id] = null;
+        });
     }
 
-    new Promise(function (resolve, reject, notify) {
-      var count = 0, error_count = 0;
-      function resolver(index) {
-        return function (answer) {
-          count += 1;
-          if (count === 1) {
-            resolve(answer);
+    function checkLocalCreation(queue, source, destination, id) {
+      var remote_doc;
+      queue
+        .push(function () {
+          return destination.get(id);
+        })
+        .push(function (doc) {
+          remote_doc = doc;
+        }, function (error) {
+          if ((error instanceof jIO.util.jIOError) &&
+              (error.status_code === 404)) {
+            // This document was never synced.
+            // Push it to the remote storage and store sync information
+            return;
           }
-          answer_list[index] = answer;
-          if (count + error_count === length && count > 0) {
-            this_.syncGetAnswerList(command, answer_list);
+          throw error;
+        })
+        .push(function () {
+          // This document was never synced.
+          // Push it to the remote storage and store sync information
+          return source.get(id);
+        })
+        .push(function (doc) {
+          var local_hash = generateHash(JSON.stringify(doc)),
+            remote_hash;
+          if (remote_doc === undefined) {
+            return propagateModification(destination, doc, local_hash, id);
           }
-        };
-      }
 
-      function rejecter(index) {
-        return function (reason) {
-          error_count += 1;
-          if (reason.status === 404) {
-            answer_list[index] = 404;
+          remote_hash = generateHash(JSON.stringify(remote_doc));
+          if (local_hash === remote_hash) {
+            // Same document
+            return context._signature_sub_storage.put(id, {
+              "hash": local_hash
+            })
+              .push(function () {
+                skip_document_dict[id] = null;
+              });
           }
-          if (error_count === length) {
-            reject(reason);
-          }
-          if (count + error_count === length && count > 0) {
-            this_.syncGetAnswerList(command, answer_list);
-          }
-        };
-      }
-
-      for (index = 0; index < length; index += 1) {
-        promise_list[index].then(resolver(index), rejecter(index), notify);
-      }
-    }, function () {
-      for (index = 0; index < length; index += 1) {
-        promise_list[index].cancel();
-      }
-    }).then(command.success, command.error, command.notify);
-  };
-
-  ReplicateStorage.prototype.getAttachment = function (command, param, option) {
-    var promise_list = [], index, length = this._storage_list.length;
-    for (index = 0; index < length; index += 1) {
-      promise_list[index] =
-        command.storage(this._storage_list[index]).getAttachment(param, option);
+          // Already exists on destination
+          throw new jIO.util.jIOError("Conflict on '" + id + "'",
+                                      409);
+        });
     }
-    firstFulfilled(promise_list).
-      then(command.success, command.error, command.notify);
-  };
 
-  ReplicateStorage.prototype.allDocs = function (command, param, option) {
-    var promise_list = [], index, length = this._storage_list.length;
-    for (index = 0; index < length; index += 1) {
-      promise_list[index] =
-        success(command.storage(this._storage_list[index]).allDocs(option));
+    function checkLocalDeletion(queue, destination, id, source) {
+      var status_hash;
+      queue
+        .push(function () {
+          return context._signature_sub_storage.get(id);
+        })
+        .push(function (result) {
+          status_hash = result.hash;
+          return destination.get(id)
+            .push(function (doc) {
+              var remote_hash = generateHash(JSON.stringify(doc));
+              if (remote_hash === status_hash) {
+                return destination.remove(id)
+                  .push(function () {
+                    return context._signature_sub_storage.remove(id);
+                  })
+                  .push(function () {
+                    skip_document_dict[id] = null;
+                  });
+              }
+              // Modifications on remote side
+              // Push them locally
+              return propagateModification(source, doc, remote_hash, id);
+            }, function (error) {
+              if ((error instanceof jIO.util.jIOError) &&
+                  (error.status_code === 404)) {
+                return context._signature_sub_storage.remove(id)
+                  .push(function () {
+                    skip_document_dict[id] = null;
+                  });
+              }
+              throw error;
+            });
+        });
     }
-    all(promise_list).then(function (answers) {
-      // merge responses
-      var i, j, k, found, rows;
-      // browsing answers
-      for (i = 0; i < answers.length; i += 1) {
-        if (answers[i].result === "success") {
-          rows = answers[i].data.rows;
-          break;
-        }
-      }
-      for (i += 1; i < answers.length; i += 1) {
-        if (answers[i].result === "success") {
-          // browsing answer rows
-          for (j = 0; j < answers[i].data.rows.length; j += 1) {
-            found = false;
-            // browsing result rows
-            for (k = 0; k < rows.length; k += 1) {
-              if (rows[k].id === answers[i].data.rows[j].id) {
-                found = true;
-                break;
+
+    function checkSignatureDifference(queue, source, destination, id) {
+      queue
+        .push(function () {
+          return RSVP.all([
+            source.get(id),
+            context._signature_sub_storage.get(id)
+          ]);
+        })
+        .push(function (result_list) {
+          var doc = result_list[0],
+            local_hash = generateHash(JSON.stringify(doc)),
+            status_hash = result_list[1].hash;
+
+          if (local_hash !== status_hash) {
+            // Local modifications
+            return destination.get(id)
+              .push(function (remote_doc) {
+                var remote_hash = generateHash(JSON.stringify(remote_doc));
+                if (remote_hash !== status_hash) {
+                  // Modifications on both sides
+                  if (local_hash === remote_hash) {
+                    // Same modifications on both side \o/
+                    return context._signature_sub_storage.put(id, {
+                      "hash": local_hash
+                    })
+                      .push(function () {
+                        skip_document_dict[id] = null;
+                      });
+                  }
+                  throw new jIO.util.jIOError("Conflict on '" + id + "'",
+                                              409);
+                }
+                return propagateModification(destination, doc, local_hash, id);
+              }, function (error) {
+                if ((error instanceof jIO.util.jIOError) &&
+                    (error.status_code === 404)) {
+                  // Document has been deleted remotely
+                  return propagateModification(destination, doc, local_hash,
+                                               id);
+                }
+                throw error;
+              });
+          }
+        });
+    }
+
+    function pushStorage(source, destination) {
+      var queue = new RSVP.Queue();
+      return queue
+        .push(function () {
+          return RSVP.all([
+            source.allDocs(),
+            context._signature_sub_storage.allDocs()
+          ]);
+        })
+        .push(function (result_list) {
+          var i,
+            local_dict = {},
+            signature_dict = {},
+            key;
+          for (i = 0; i < result_list[0].data.total_rows; i += 1) {
+            if (!skip_document_dict.hasOwnProperty(
+                result_list[0].data.rows[i].id
+              )) {
+              local_dict[result_list[0].data.rows[i].id] = i;
+            }
+          }
+          for (i = 0; i < result_list[1].data.total_rows; i += 1) {
+            if (!skip_document_dict.hasOwnProperty(
+                result_list[1].data.rows[i].id
+              )) {
+              signature_dict[result_list[1].data.rows[i].id] = i;
+            }
+          }
+          for (key in local_dict) {
+            if (local_dict.hasOwnProperty(key)) {
+              if (!signature_dict.hasOwnProperty(key)) {
+                checkLocalCreation(queue, source, destination, key);
               }
             }
-            if (!found) {
-              rows.push(answers[i].data.rows[j]);
+          }
+          for (key in signature_dict) {
+            if (signature_dict.hasOwnProperty(key)) {
+              if (local_dict.hasOwnProperty(key)) {
+                checkSignatureDifference(queue, source, destination, key);
+              } else {
+                checkLocalDeletion(queue, destination, key, source);
+              }
             }
           }
+        });
+    }
+
+    return new RSVP.Queue()
+      .push(function () {
+        // Ensure that the document storage is usable
+        return context._signature_sub_storage.__storage._sub_storage.get(
+          context._signature_hash
+        );
+      })
+      .push(undefined, function (error) {
+        if ((error instanceof jIO.util.jIOError) &&
+            (error.status_code === 404)) {
+          return context._signature_sub_storage.__storage._sub_storage.put(
+            context._signature_hash,
+            {}
+          );
         }
-      }
-      return {"data": {"total_rows": (rows || []).length, "rows": rows || []}};
-    }).then(command.success, command.error, command.notify);
-    /*jslint unparam: true */
+        throw error;
+      })
+
+      .push(function () {
+        return RSVP.all([
+// Don't repair local_sub_storage twice
+//           context._signature_sub_storage.repair.apply(
+//             context._signature_sub_storage,
+//             argument_list
+//           ),
+          context._local_sub_storage.repair.apply(
+            context._local_sub_storage,
+            argument_list
+          ),
+          context._remote_sub_storage.repair.apply(
+            context._remote_sub_storage,
+            argument_list
+          )
+        ]);
+      })
+
+      .push(function () {
+        return pushStorage(context._local_sub_storage,
+                           context._remote_sub_storage);
+      })
+      .push(function () {
+        return pushStorage(context._remote_sub_storage,
+                           context._local_sub_storage);
+      });
   };
 
-  ReplicateStorage.prototype.check = function (command, param, option) {
-    var promise_list = [], index, length = this._storage_list.length;
-    for (index = 0; index < length; index += 1) {
-      promise_list[index] =
-        command.storage(this._storage_list[index]).check(param, option);
-    }
-    return all(promise_list).
-      then(function () { return; }).
-      then(command.success, command.error, command.notify);
-  };
+  jIO.addStorage('replicate', ReplicateStorage);
 
-  ReplicateStorage.prototype.repair = function (command, param, option) {
-    var storage_list = this._storage_list, length = storage_list.length,
-      this_ = this;
-
-    if (typeof param._id !== 'string' || !param._id) {
-      command.error("bad_request");
-      return;
-    }
-
-    storage_list = storage_list.map(function (description) {
-      return command.storage(description);
-    });
-
-    function repairSubStorages() {
-      var promise_list = [], i;
-      for (i = 0; i < length; i += 1) {
-        promise_list[i] = success(storage_list[i].repair(param, option));
-      }
-      return all(promise_list);
-    }
-
-    function returnThe404ReasonsElseNull(reason) {
-      if (reason.status === 404) {
-        return 404;
-      }
-      return null;
-    }
-
-    function getSubStoragesDocument() {
-      var promise_list = [], i;
-      for (i = 0; i < length; i += 1) {
-        promise_list[i] =
-          storage_list[i].get(param).then(null, returnThe404ReasonsElseNull);
-      }
-      return all(promise_list);
-    }
-
-    function synchronizeDocument(answers) {
-      return this_.syncGetAnswerList(command, answers);
-    }
-
-    function checkAnswers(answers) {
-      var i;
-      for (i = 0; i < answers.length; i += 1) {
-        if (answers[i].result !== "success") {
-          throw answers[i];
-        }
-      }
-    }
-
-    return repairSubStorages().
-      then(getSubStoragesDocument).
-      then(synchronizeDocument).
-      then(checkAnswers).
-      then(command.success, command.error, command.notify);
-  };
-
-  addStorageFunction('replicate', ReplicateStorage);
-
-}));
+}(jIO, RSVP, Rusha));
