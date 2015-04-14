@@ -1,5 +1,6 @@
+/*global Blob*/
 /*jslint nomen: true */
-(function (jIO, QUnit) {
+(function (jIO, QUnit, Blob) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -9,7 +10,8 @@
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
     module = QUnit.module,
-    throws = QUnit.throws;
+    throws = QUnit.throws,
+    frozen_blob = new Blob(["foobar"]);
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -34,6 +36,22 @@
   Storage200.prototype.allAttachments = function (id) {
     equal(id, "bar", "allAttachments 200 called");
     return {attachmentname: {}};
+  };
+  Storage200.prototype.getAttachment = function (id, name) {
+    equal(id, "bar", "getAttachment 200 called");
+    equal(name, "foo", "getAttachment 200 called");
+    return frozen_blob;
+  };
+  Storage200.prototype.removeAttachment = function (id, name) {
+    equal(id, "bar", "removeAttachment 200 called");
+    equal(name, "foo", "removeAttachment 200 called");
+    return "deleted";
+  };
+  Storage200.prototype.putAttachment = function (id, name, blob) {
+    equal(id, "bar", "putAttachment 200 called");
+    equal(name, "foo", "putAttachment 200 called");
+    deepEqual(blob, frozen_blob, "putAttachment 200 called");
+    return "stored";
   };
   Storage200.prototype.put = function (id, param) {
     equal(id, "bar", "put 200 called");
@@ -364,7 +382,7 @@
       }]
     });
 
-    jio.get("bar")
+    jio.allAttachments("bar")
       .fail(function (error) {
         ok(error instanceof Error);
         equal(error.message, "manually triggered error");
@@ -391,7 +409,7 @@
       }]
     });
 
-    jio.get("bar")
+    jio.allAttachments("bar")
       .fail(function (error) {
         ok(error instanceof Error);
         equal(error.message, "manually triggered error");
@@ -911,4 +929,409 @@
       });
   });
 
-}(jIO, QUnit));
+  /////////////////////////////////////////////////////////////////
+  // unionStorage.getAttachment
+  /////////////////////////////////////////////////////////////////
+  module("unionStorage.getAttachment");
+  test("getAttachment inexistent document", function () {
+    stop();
+    expect(5);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage404"
+      }, {
+        type: "unionstorage404"
+      }]
+    });
+
+    jio.getAttachment("bar", "foo")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document");
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("getAttachment document on first storage", function () {
+    stop();
+    expect(4);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage200"
+      }, {
+        type: "unionstorage404"
+      }]
+    });
+
+    jio.getAttachment("bar", "foo")
+      .then(function (result) {
+        deepEqual(result, frozen_blob, "Check Blob");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("getAttachment document on second storage", function () {
+    stop();
+    expect(5);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage404"
+      }, {
+        type: "unionstorage200"
+      }]
+    });
+
+    jio.getAttachment("bar", "foo")
+      .then(function (result) {
+        deepEqual(result, frozen_blob, "Check Blob");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("getAttachment error on first storage", function () {
+    stop();
+    expect(4);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage500"
+      }, {
+        type: "unionstorage200"
+      }]
+    });
+
+    jio.getAttachment("bar", "foo")
+      .fail(function (error) {
+        ok(error instanceof Error);
+        equal(error.message, "manually triggered error");
+        equal(error.status_code, undefined);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("getAttachment error on second storage", function () {
+    stop();
+    expect(5);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage404"
+      }, {
+        type: "unionstorage500"
+      }]
+    });
+
+    jio.getAttachment("bar", "foo")
+      .fail(function (error) {
+        ok(error instanceof Error);
+        equal(error.message, "manually triggered error");
+        equal(error.status_code, undefined);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // unionStorage.removeAttachment
+  /////////////////////////////////////////////////////////////////
+  module("unionStorage.removeAttachment");
+  test("removeAttachment inexistent document", function () {
+    stop();
+    expect(5);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage404"
+      }, {
+        type: "unionstorage404"
+      }]
+    });
+
+    jio.removeAttachment("bar", "foo")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document");
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("removeAttachment document on first storage", function () {
+    stop();
+    expect(4);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage200"
+      }, {
+        type: "unionstorage404"
+      }]
+    });
+
+    jio.removeAttachment("bar", "foo")
+      .then(function (result) {
+        equal(result, "deleted", "Check result");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("removeAttachment document on second storage", function () {
+    stop();
+    expect(5);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage404"
+      }, {
+        type: "unionstorage200"
+      }]
+    });
+
+    jio.removeAttachment("bar", "foo")
+      .then(function (result) {
+        equal(result, "deleted", "Check result");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("removeAttachment error on first storage", function () {
+    stop();
+    expect(4);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage500"
+      }, {
+        type: "unionstorage200"
+      }]
+    });
+
+    jio.removeAttachment("bar", "foo")
+      .fail(function (error) {
+        ok(error instanceof Error);
+        equal(error.message, "manually triggered error");
+        equal(error.status_code, undefined);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("removeAttachment error on second storage", function () {
+    stop();
+    expect(5);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage404"
+      }, {
+        type: "unionstorage500"
+      }]
+    });
+
+    jio.removeAttachment("bar", "foo")
+      .fail(function (error) {
+        ok(error instanceof Error);
+        equal(error.message, "manually triggered error");
+        equal(error.status_code, undefined);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // unionStorage.putAttachment
+  /////////////////////////////////////////////////////////////////
+  module("unionStorage.putAttachment");
+  test("putAttachment inexistent document", function () {
+    stop();
+    expect(5);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage404"
+      }, {
+        type: "unionstorage404"
+      }]
+    });
+
+    jio.putAttachment("bar", "foo", frozen_blob)
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document");
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("putAttachment document on first storage", function () {
+    stop();
+    expect(5);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage200"
+      }, {
+        type: "unionstorage404"
+      }]
+    });
+
+    jio.putAttachment("bar", "foo", frozen_blob)
+      .then(function (result) {
+        equal(result, "stored", "Check result");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("putAttachment document on second storage", function () {
+    stop();
+    expect(6);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage404"
+      }, {
+        type: "unionstorage200"
+      }]
+    });
+
+    jio.putAttachment("bar", "foo", frozen_blob)
+      .then(function (result) {
+        equal(result, "stored", "Check result");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("putAttachment error on first storage", function () {
+    stop();
+    expect(4);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage500"
+      }, {
+        type: "unionstorage200"
+      }]
+    });
+
+    jio.putAttachment("bar", "foo", frozen_blob)
+      .fail(function (error) {
+        ok(error instanceof Error);
+        equal(error.message, "manually triggered error");
+        equal(error.status_code, undefined);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("putAttachment error on second storage", function () {
+    stop();
+    expect(5);
+
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unionstorage404"
+      }, {
+        type: "unionstorage500"
+      }]
+    });
+
+    jio.putAttachment("bar", "foo", frozen_blob)
+      .fail(function (error) {
+        ok(error instanceof Error);
+        equal(error.message, "manually triggered error");
+        equal(error.status_code, undefined);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+}(jIO, QUnit, Blob));

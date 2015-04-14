@@ -211,6 +211,36 @@
     return RSVP.all(promise_list);
   };
 
+  UnionStorage.prototype.getAttachment = function () {
+    var argument_list = arguments,
+      context = this;
+    return this._getWithStorageIndex.apply(this, arguments)
+      .push(function (result) {
+        var sub_storage = context._storage_list[result[0]];
+        return sub_storage.getAttachment.apply(sub_storage, argument_list);
+      });
+  };
+
+  UnionStorage.prototype.putAttachment = function () {
+    var argument_list = arguments,
+      context = this;
+    return this._getWithStorageIndex.apply(this, arguments)
+      .push(function (result) {
+        var sub_storage = context._storage_list[result[0]];
+        return sub_storage.putAttachment.apply(sub_storage, argument_list);
+      });
+  };
+
+  UnionStorage.prototype.removeAttachment = function () {
+    var argument_list = arguments,
+      context = this;
+    return this._getWithStorageIndex.apply(this, arguments)
+      .push(function (result) {
+        var sub_storage = context._storage_list[result[0]];
+        return sub_storage.removeAttachment.apply(sub_storage, argument_list);
+      });
+  };
+
   jIO.addStorage('union', UnionStorage);
 
 }(jIO, RSVP));
