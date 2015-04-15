@@ -948,6 +948,7 @@
           return {
             "foo.json": {},
             "bar.json": {},
+            "bar.html.json": {},
             "foobar.pasjson": {}
           };
         }
@@ -976,8 +977,11 @@
               }, {
                 id: "bar",
                 value: {}
+              }, {
+                id: "bar.html",
+                value: {}
               }],
-              total_rows: 2
+              total_rows: 3
             }
           });
         })

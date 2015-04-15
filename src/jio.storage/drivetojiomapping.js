@@ -13,10 +13,12 @@
     this._sub_storage = jIO.createJIO(spec.sub_storage);
   }
   var DOCUMENT_EXTENSION = ".json",
-    DOCUMENT_REGEXP = new RegExp("^([\\w=]+)" +
-                                 DOCUMENT_EXTENSION + "$"),
     DOCUMENT_KEY = "/.jio_documents/",
     ROOT = "/";
+
+  function endsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+  }
 
   FileSystemBridgeStorage.prototype.get = function (id) {
     var context = this;
@@ -166,8 +168,11 @@
         var key;
         for (key in result) {
           if (result.hasOwnProperty(key)) {
-            if (DOCUMENT_REGEXP.test(key)) {
-              result_dict[DOCUMENT_REGEXP.exec(key)[1]] = null;
+            if (endsWith(key, DOCUMENT_EXTENSION)) {
+              result_dict[key.substring(
+                0,
+                key.length - DOCUMENT_EXTENSION.length
+              )] = null;
             }
           }
         }
