@@ -64,6 +64,35 @@
     }
   });
 
+  test("get inexistent document", function () {
+    var id = "person_module/20150119_azerty",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id);
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [404, {
+      "Content-Type": "text/html"
+    }, ""]);
+
+    stop();
+    expect(3);
+
+    this.jio.get(id)
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("get ERP5 document", function () {
     var id = "person_module/20150119_azerty",
       traverse_url = domain + "?mode=traverse&relative_url=" +
@@ -134,6 +163,35 @@
       this.server.restore();
       delete this.server;
     }
+  });
+
+  test("allAttachments on inexistent document", function () {
+    var id = "person_module/20150119_azerty",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id);
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [404, {
+      "Content-Type": "text/html"
+    }, ""]);
+
+    stop();
+    expect(3);
+
+    this.jio.allAttachments(id)
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
   });
 
   test("allAttachments ERP5 document", function () {
@@ -322,6 +380,35 @@
       });
   });
 
+  test("getAttachment: view on inexistent document", function () {
+    var id = "person_module/1",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id) + "&view=foo_view";
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [404, {
+      "Content-Type": "text/html"
+    }, ""]);
+
+    stop();
+    expect(3);
+
+    this.jio.getAttachment(id, "view")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("getAttachment: view uses default form", function () {
     var id = "person_module/1",
       traverse_url = domain + "?mode=traverse&relative_url=" +
@@ -370,6 +457,35 @@
         expected.portal_type = "Person";
         deepEqual(JSON.parse(result.target.result), expected,
               "Attachment correctly fetched");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("getAttachment: links on inexistent document", function () {
+    var id = "person_module/1",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id);
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [404, {
+      "Content-Type": "text/html"
+    }, ""]);
+
+    stop();
+    expect(3);
+
+    this.jio.getAttachment(id, "links")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
       })
       .fail(function (error) {
         ok(false, error);

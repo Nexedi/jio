@@ -38,17 +38,27 @@
     return getSiteDocument(storage)
       .push(function (site_hal) {
         // XXX need to get modified metadata
-        return jIO.util.ajax({
-          "type": "GET",
-          "url": UriTemplate.parse(site_hal._links.traverse.href)
-                            .expand({
-              relative_url: id,
-              view: options._view
-            }),
-          "xhrFields": {
-            withCredentials: true
-          }
-        });
+        return new RSVP.Queue()
+          .push(function () {
+            return jIO.util.ajax({
+              "type": "GET",
+              "url": UriTemplate.parse(site_hal._links.traverse.href)
+                                .expand({
+                  relative_url: id,
+                  view: options._view
+                }),
+              "xhrFields": {
+                withCredentials: true
+              }
+            });
+          })
+          .push(undefined, function (error) {
+            if ((error.target !== undefined) &&
+                (error.target.status === 404)) {
+              throw new jIO.util.jIOError("Cannot find document: " + id, 404);
+            }
+            throw error;
+          });
       });
   }
 
