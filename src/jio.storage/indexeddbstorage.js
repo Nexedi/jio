@@ -283,6 +283,7 @@
 
   IndexedDBStorage.prototype.getAttachment = function (id, name, options) {
     var transaction,
+      type,
       start,
       end;
     if (options === undefined) {
@@ -303,6 +304,7 @@
           start_index,
           end_index;
 
+        type = attachment.info.content_type;
         start = options.start || 0;
         end = options.end || total_length;
         if (end > total_length) {
@@ -340,8 +342,11 @@
         for (i = 0; i < len; i += 1) {
           array_buffer_list.push(result_list[i].blob);
         }
+        if ((options.start === undefined) && (options.end === undefined)) {
+          return new Blob(array_buffer_list, {type: type});
+        }
         blob = new Blob(array_buffer_list, {type: "application/octet-stream"});
-        return blob.slice(start, end);
+        return blob.slice(start, end, "application/octet-stream");
       });
   };
 

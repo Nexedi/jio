@@ -1112,7 +1112,7 @@
     var context = this,
       attachment = "attachment";
     stop();
-    expect(2);
+    expect(3);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1126,6 +1126,7 @@
       })
       .then(function (result) {
         ok(result instanceof Blob, "Data is Blob");
+        equal(result.type, "text/plain;charset=utf-8");
         return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
@@ -1144,7 +1145,7 @@
     var context = this,
       attachment = "attachment";
     stop();
-    expect(2);
+    expect(3);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1159,6 +1160,7 @@
       })
       .then(function (result) {
         ok(result instanceof Blob, "Data is Blob");
+        equal(result.type, "application/octet-stream");
         return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
