@@ -991,4 +991,272 @@
       });
   });
 
+  /////////////////////////////////////////////////////////////////
+  // erp5Storage.put
+  /////////////////////////////////////////////////////////////////
+  module("erp5Storage.put", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.spy = sinon.spy(FormData.prototype, "append");
+
+      this.jio = jIO.createJIO({
+        type: "erp5",
+        url: domain,
+        default_view_reference: "bar_view"
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+      this.spy.restore();
+      delete this.spy;
+    }
+  });
+
+  test("put inexistent document", function () {
+    var id = "person_module/20150119_azerty",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id);
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [404, {
+      "Content-Type": "text/html"
+    }, ""]);
+
+    stop();
+    expect(3);
+
+    this.jio.put(id)
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("put ERP5 document", function () {
+    var id = "person_module/20150119_azerty",
+      context = this,
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id) + "&view=bar_view",
+      put_url = domain + "azertytrea?f=g",
+      document_hateoas = JSON.stringify({
+        // Kept property
+        "title": "foo",
+        // Remove all _ properties
+        "_bar": "john doo",
+        "_links": {
+          type: {
+            name: "Person"
+          }
+        },
+        "_embedded": {
+          "_view": {
+            form_id: {
+              key: "form_id",
+              "default": "Base_view"
+            },
+            my_title: {
+              key: "field_my_title",
+              "default": "foo",
+              editable: true,
+              type: "StringField"
+            },
+            my_id: {
+              key: "field_my_id",
+              "default": "",
+              editable: true,
+              type: "StringField"
+            },
+            my_title_non_editable: {
+              key: "field_my_title_non_editable",
+              "default": "foo",
+              editable: false,
+              type: "StringField"
+            },
+            my_start_date: {
+              key: "field_my_start_date",
+              "default": "foo",
+              editable: true,
+              type: "DateTimeField"
+            },
+            your_reference: {
+              key: "field_your_title",
+              "default": "bar",
+              editable: true,
+              type: "StringField"
+            },
+            sort_index: {
+              key: "field_sort_index",
+              "default": "foobar",
+              editable: true,
+              type: "StringField"
+            },
+            "_actions": {
+              put: {
+                href: put_url
+              }
+            }
+          }
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, document_hateoas]);
+    this.server.respondWith("POST", put_url, [204, {
+      "Content-Type": "text/html"
+    }, ""]);
+
+    stop();
+    expect(21);
+
+    this.jio.put(id, {title: "barè", id: "foo"})
+      .then(function (result) {
+        equal(result, id);
+        equal(server.requests.length, 3);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, traverse_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+        equal(server.requests[2].method, "POST");
+        equal(server.requests[2].url, put_url);
+        ok(server.requests[2].requestBody instanceof FormData);
+        equal(server.requests[2].withCredentials, true);
+
+        equal(context.spy.callCount, 3, "FormData.append count");
+        equal(context.spy.firstCall.args[0], "form_id", "First append call");
+        equal(context.spy.firstCall.args[1], "Base_view", "First append call");
+        equal(context.spy.secondCall.args[0], "field_my_title",
+              "Second append call");
+        equal(context.spy.secondCall.args[1], "barè", "Second append call");
+        equal(context.spy.thirdCall.args[0], "field_my_id",
+              "Third append call");
+        equal(context.spy.thirdCall.args[1], "foo", "Third append call");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("put ERP5 document with non accepted property", function () {
+    var id = "person_module/20150119_azerty",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id) + "&view=bar_view",
+      put_url = domain + "azertytrea?f=g",
+      document_hateoas = JSON.stringify({
+        // Kept property
+        "title": "foo",
+        // Remove all _ properties
+        "_bar": "john doo",
+        "_links": {
+          type: {
+            name: "Person"
+          }
+        },
+        "_embedded": {
+          "_view": {
+            form_id: {
+              key: "form_id",
+              "default": "Base_view"
+            },
+            my_title: {
+              key: "field_my_title",
+              "default": "foo",
+              editable: true,
+              type: "StringField"
+            },
+            my_id: {
+              key: "field_my_id",
+              "default": "",
+              editable: true,
+              type: "StringField"
+            },
+            my_title_non_editable: {
+              key: "field_my_title_non_editable",
+              "default": "foo",
+              editable: false,
+              type: "StringField"
+            },
+            my_start_date: {
+              key: "field_my_start_date",
+              "default": "foo",
+              editable: true,
+              type: "DateTimeField"
+            },
+            your_reference: {
+              key: "field_your_title",
+              "default": "bar",
+              editable: true,
+              type: "StringField"
+            },
+            sort_index: {
+              key: "field_sort_index",
+              "default": "foobar",
+              editable: true,
+              type: "StringField"
+            },
+            "_actions": {
+              put: {
+                href: put_url
+              }
+            }
+          }
+        }
+      });
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, document_hateoas]);
+    this.server.respondWith("POST", put_url, [204, {
+      "Content-Type": "text/html"
+    }, ""]);
+
+    stop();
+    expect(3);
+
+    this.jio.put(id, {title: "barè", title_non_editable: "foo"})
+      .then(function (result) {
+        ok(false, result);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message,
+              "ERP5: can not store property: title_non_editable");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 }(jIO, QUnit, Blob, sinon, encodeURIComponent, FormData));

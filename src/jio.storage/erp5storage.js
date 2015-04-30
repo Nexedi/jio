@@ -142,6 +142,44 @@
       });
   };
 
+  ERP5Storage.prototype.put = function (id, data) {
+    var context = this;
+
+    return extractPropertyFromForm(context, id)
+      .push(function (result) {
+        var key,
+          json = result.form_data,
+          form_data = {};
+        form_data[json.form_id.key] = json.form_id["default"];
+
+        // XXX How to store datetime:!!!!!
+        for (key in data) {
+          if (data.hasOwnProperty(key)) {
+            if (key === "form_id") {
+              throw new jIO.util.jIOError(
+                "ERP5: forbidden property: " + key,
+                400
+              );
+            }
+            if ((key !== "portal_type") && (key !== "parent_relative_url")) {
+              if (!json.hasOwnProperty(key)) {
+                throw new jIO.util.jIOError(
+                  "ERP5: can not store property: " + key,
+                  400
+                );
+              }
+              form_data[json[key].key] = data[key];
+            }
+          }
+        }
+        return context.putAttachment(
+          id,
+          result.action_href,
+          new Blob([JSON.stringify(form_data)], {type: "application/json"})
+        );
+      });
+  };
+
   ERP5Storage.prototype.allAttachments = function (id) {
     var context = this;
     return getDocumentAndHateoas(this, id)
