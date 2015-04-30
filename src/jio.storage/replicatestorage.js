@@ -51,6 +51,8 @@
       document_id: this._signature_hash,
       sub_storage: spec.local_sub_storage
     });
+
+    this._use_remote_post = spec.use_remote_post || false;
   }
 
   ReplicateStorage.prototype.remove = function (id) {
@@ -95,19 +97,34 @@
     // Do not sync the signature document
     skip_document_dict[context._signature_hash] = null;
 
-    function propagateModification(destination, doc, hash, id) {
-      return destination.put(id, doc)
+    function propagateModification(destination, doc, hash, id, options) {
+      var result,
+        to_skip = true;
+      if (options === undefined) {
+        options = {};
+      }
+      if (options.use_post) {
+        result = destination.post(doc)
+          .push(function () {
+            to_skip = false;
+          });
+      } else {
+        result = destination.put(id, doc);
+      }
+      return result
         .push(function () {
           return context._signature_sub_storage.put(id, {
             "hash": hash
           });
         })
         .push(function () {
-          skip_document_dict[id] = null;
+          if (to_skip) {
+            skip_document_dict[id] = null;
+          }
         });
     }
 
-    function checkLocalCreation(queue, source, destination, id) {
+    function checkLocalCreation(queue, source, destination, id, options) {
       var remote_doc;
       queue
         .push(function () {
@@ -133,7 +150,8 @@
           var local_hash = generateHash(JSON.stringify(doc)),
             remote_hash;
           if (remote_doc === undefined) {
-            return propagateModification(destination, doc, local_hash, id);
+            return propagateModification(destination, doc, local_hash, id,
+                                         options);
           }
 
           remote_hash = generateHash(JSON.stringify(remote_doc));
@@ -234,8 +252,11 @@
         });
     }
 
-    function pushStorage(source, destination) {
+    function pushStorage(source, destination, options) {
       var queue = new RSVP.Queue();
+      if (!options.hasOwnProperty("use_post")) {
+        options.use_post = false;
+      }
       return queue
         .push(function () {
           return RSVP.all([
@@ -265,7 +286,7 @@
           for (key in local_dict) {
             if (local_dict.hasOwnProperty(key)) {
               if (!signature_dict.hasOwnProperty(key)) {
-                checkLocalCreation(queue, source, destination, key);
+                checkLocalCreation(queue, source, destination, key, options);
               }
             }
           }
@@ -319,11 +340,12 @@
 
       .push(function () {
         return pushStorage(context._local_sub_storage,
-                           context._remote_sub_storage);
+                           context._remote_sub_storage,
+                           {use_post: context._use_remote_post});
       })
       .push(function () {
         return pushStorage(context._remote_sub_storage,
-                           context._local_sub_storage);
+                           context._local_sub_storage, {});
       });
   };
 

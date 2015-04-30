@@ -45,6 +45,7 @@
     equal(jio.__storage._remote_sub_storage.__type, "replicatestorage500");
 
     deepEqual(jio.__storage._query_options, {});
+    equal(jio.__storage._use_remote_post, false);
 
     equal(jio.__storage._signature_hash,
           "_replicate_7209dfbcaff00f6637f939fdd71fa896793ed385");
@@ -62,7 +63,7 @@
 
   });
 
-  test("accept query", function () {
+  test("accept parameters", function () {
     var jio = jIO.createJIO({
       type: "replicate",
       local_sub_storage: {
@@ -71,13 +72,15 @@
       remote_sub_storage: {
         type: "replicatestorage500"
       },
-      query: {query: 'portal_type: "Foo"', limit: [0, 1234567890]}
+      query: {query: 'portal_type: "Foo"', limit: [0, 1234567890]},
+      use_remote_post: true
     });
 
     deepEqual(
       jio.__storage._query_options,
       {query: 'portal_type: "Foo"', limit: [0, 1234567890]}
     );
+    equal(jio.__storage._use_remote_post, true);
 
     equal(jio.__storage._signature_hash,
           "_replicate_623653d45a4e770a2c9f6b71e3144d18ee1b5bec");
@@ -417,6 +420,92 @@
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local document creation and use remote post", function () {
+    stop();
+    expect(10);
+
+    var id,
+      post_id,
+      context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      use_remote_post: true,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      // Document 'id' has been deleted in both storages
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._local_sub_storage.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+
+      // But another document should have been created
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.allDocs();
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 1);
+        post_id = result.data.rows[0].id;
+        return context.jio.__storage._remote_sub_storage.get(post_id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._local_sub_storage.get(post_id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(post_id);
       })
       .then(function (result) {
         deepEqual(result, {
