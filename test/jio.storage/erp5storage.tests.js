@@ -224,6 +224,62 @@
     this.jio.allAttachments(id)
       .then(function (result) {
         deepEqual(result, {
+          links: {}
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, traverse_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("allAttachments ERP5 document with default view", function () {
+    var id = "person_module/20150119_azerty",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id),
+      document_hateoas = JSON.stringify({
+        // Kept property
+        "title": "foo",
+        // Remove all _ properties
+        "_bar": "john doo",
+        "_links": {
+          type: {
+            name: "Person"
+          }
+        }
+      }),
+      server = this.server;
+
+    this.jio = jIO.createJIO({
+      type: "erp5",
+      url: domain,
+      default_view_reference: "bar_view"
+    });
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, document_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.allAttachments(id)
+      .then(function (result) {
+        deepEqual(result, {
           links: {},
           view: {}
         }, "Check document");
@@ -457,6 +513,34 @@
         expected.portal_type = "Person";
         deepEqual(JSON.parse(result.target.result), expected,
               "Attachment correctly fetched");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("getAttachment: view without being specified", function () {
+    var id = "person_module/1";
+
+    this.jio = jIO.createJIO({
+      type: "erp5",
+      url: domain
+    });
+
+    stop();
+    expect(3);
+
+    this.jio.getAttachment(id, "view")
+      .then(function (result) {
+        ok(false, result);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment view for: " + id);
+        equal(error.status_code, 404);
       })
       .fail(function (error) {
         ok(false, error);

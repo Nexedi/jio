@@ -94,8 +94,14 @@
   };
 
   ERP5Storage.prototype.allAttachments = function (id) {
+    var context = this;
     return getDocumentAndHateoas(this, id)
       .push(function () {
+        if (context._default_view_reference === undefined) {
+          return {
+            links: {}
+          };
+        }
         return {
           view: {},
           links: {}
@@ -106,6 +112,12 @@
   ERP5Storage.prototype.getAttachment = function (id, action) {
 
     if (action === "view") {
+      if (this._default_view_reference === undefined) {
+        throw new jIO.util.jIOError(
+          "Cannot find attachment view for: " + id,
+          404
+        );
+      }
       return getDocumentAndHateoas(this, id,
                                    {"_view": this._default_view_reference})
         .push(function (response) {
