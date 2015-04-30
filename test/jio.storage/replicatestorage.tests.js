@@ -44,8 +44,10 @@
     ok(jio.__storage._remote_sub_storage instanceof jio.constructor);
     equal(jio.__storage._remote_sub_storage.__type, "replicatestorage500");
 
+    deepEqual(jio.__storage._query_options, {});
+
     equal(jio.__storage._signature_hash,
-          "_replicate_7b54b9b5183574854e5870beb19b15152a36ef4e");
+          "_replicate_7209dfbcaff00f6637f939fdd71fa896793ed385");
 
     ok(jio.__storage._signature_sub_storage instanceof jio.constructor);
     equal(jio.__storage._signature_sub_storage.__type, "document");
@@ -58,6 +60,27 @@
     equal(jio.__storage._signature_sub_storage.__storage._sub_storage.__type,
           "replicatestorage200");
 
+  });
+
+  test("accept query", function () {
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      },
+      query: {query: 'portal_type: "Foo"', limit: [0, 1234567890]}
+    });
+
+    deepEqual(
+      jio.__storage._query_options,
+      {query: 'portal_type: "Foo"', limit: [0, 1234567890]}
+    );
+
+    equal(jio.__storage._signature_hash,
+          "_replicate_623653d45a4e770a2c9f6b71e3144d18ee1b5bec");
   });
 
   /////////////////////////////////////////////////////////////////
@@ -994,7 +1017,7 @@
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find document: " +
-                "_replicate_2be6c0851d60bcd9afe829e7133a136d266c779c");
+                "_replicate_e0cd4a29dc7c74a9de1d7a9cdbfcbaa776863d67");
         equal(error.status_code, 404);
       })
       .then(function () {
@@ -1008,7 +1031,7 @@
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find document: " +
-                "_replicate_2be6c0851d60bcd9afe829e7133a136d266c779c");
+                "_replicate_e0cd4a29dc7c74a9de1d7a9cdbfcbaa776863d67");
         equal(error.status_code, 404);
       })
       .fail(function (error) {
@@ -1080,6 +1103,104 @@
     });
 
     context.jio.repair(options)
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("sync all documents by default", function () {
+    stop();
+    expect(5);
+
+    var context = this;
+
+    function Storage200DefaultQuery() {
+      return this;
+    }
+    Storage200DefaultQuery.prototype.get = function () {
+      ok(true, "get 200 check repair called");
+      return {};
+    };
+    Storage200DefaultQuery.prototype.hasCapacity = function () {
+      return true;
+    };
+    Storage200DefaultQuery.prototype.buildQuery = function (query) {
+      deepEqual(query, {});
+      return [];
+    };
+    Storage200DefaultQuery.prototype.allAttachments = function () {
+      ok(true, "allAttachments 200 check repair called");
+      return {};
+    };
+    jIO.addStorage(
+      'replicatestorage200defaultquery',
+      Storage200DefaultQuery
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200defaultquery"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage200defaultquery"
+      }
+    });
+
+    return context.jio.repair()
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("sync can be restricted to some documents", function () {
+    stop();
+    expect(5);
+
+    var context = this,
+      query = {query: 'portal_type: "Foo"', limit: [0, 1234567890]};
+
+    function Storage200CustomQuery() {
+      return this;
+    }
+    Storage200CustomQuery.prototype.get = function () {
+      ok(true, "get 200 check repair called");
+      return {};
+    };
+    Storage200CustomQuery.prototype.hasCapacity = function () {
+      return true;
+    };
+    Storage200CustomQuery.prototype.buildQuery = function (options) {
+      deepEqual(options, query);
+      return [];
+    };
+    Storage200CustomQuery.prototype.allAttachments = function () {
+      ok(true, "allAttachments 200 check repair called");
+      return {};
+    };
+    jIO.addStorage(
+      'replicatestorage200customquery',
+      Storage200CustomQuery
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200customquery"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage200customquery"
+      },
+      query: {query: 'portal_type: "Foo"', limit: [0, 1234567890]}
+    });
+
+    return context.jio.repair()
       .fail(function (error) {
         ok(false, error);
       })

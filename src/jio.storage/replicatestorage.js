@@ -36,12 +36,15 @@
   }
 
   function ReplicateStorage(spec) {
+    this._query_options = spec.query || {};
+
     this._local_sub_storage = jIO.createJIO(spec.local_sub_storage);
     this._remote_sub_storage = jIO.createJIO(spec.remote_sub_storage);
 
     this._signature_hash = "_replicate_" + generateHash(
       JSON.stringify(spec.local_sub_storage) +
-        JSON.stringify(spec.remote_sub_storage)
+        JSON.stringify(spec.remote_sub_storage) +
+        JSON.stringify(this._query_options)
     );
     this._signature_sub_storage = jIO.createJIO({
       type: "document",
@@ -236,7 +239,7 @@
       return queue
         .push(function () {
           return RSVP.all([
-            source.allDocs(),
+            source.allDocs(context._query_options),
             context._signature_sub_storage.allDocs()
           ]);
         })
