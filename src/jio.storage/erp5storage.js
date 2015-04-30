@@ -142,6 +142,35 @@
       });
   };
 
+  ERP5Storage.prototype.post = function (data) {
+    var context = this,
+      new_id;
+
+    return getSiteDocument(this)
+      .push(function (site_hal) {
+        var form_data = new FormData();
+        form_data.append("portal_type", data.portal_type);
+        form_data.append("parent_relative_url", data.parent_relative_url);
+        return jIO.util.ajax({
+          type: "POST",
+          url: site_hal._actions.add.href,
+          data: form_data,
+          xhrFields: {
+            withCredentials: true
+          }
+        });
+      })
+      .push(function (evt) {
+        var location = evt.target.getResponseHeader("X-Location"),
+          uri = new URI(location);
+        new_id = uri.segment(2);
+        return context.put(new_id, data);
+      })
+      .push(function () {
+        return new_id;
+      });
+  };
+
   ERP5Storage.prototype.put = function (id, data) {
     var context = this;
 

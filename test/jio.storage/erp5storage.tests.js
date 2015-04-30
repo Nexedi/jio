@@ -13,6 +13,7 @@
     domain = "https://example.org",
     traverse_template = domain + "?mode=traverse{&relative_url,view}",
     search_template = domain + "?mode=search{&query,select_list*,limit*}",
+    add_url = domain + "lets?add=somedocument",
     root_hateoas = JSON.stringify({
       "_links": {
         traverse: {
@@ -22,6 +23,11 @@
         raw_search: {
           href: search_template,
           templated: true
+        }
+      },
+      "_actions": {
+        add: {
+          href: add_url
         }
       }
     });
@@ -1250,6 +1256,179 @@
         equal(error.message,
               "ERP5: can not store property: title_non_editable");
         equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // erp5Storage.post
+  /////////////////////////////////////////////////////////////////
+  module("erp5Storage.post", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.spy = sinon.spy(FormData.prototype, "append");
+
+      this.jio = jIO.createJIO({
+        type: "erp5",
+        url: domain,
+        default_view_reference: "bar_view"
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+      this.spy.restore();
+      delete this.spy;
+    }
+  });
+
+  test("post ERP5 document", function () {
+    var id = "person_module/20150119_azerty",
+      context = this,
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id) + "&view=bar_view",
+      put_url = domain + "azertytrea?f=g",
+      document_hateoas = JSON.stringify({
+        // Kept property
+        "title": "foo",
+        // Remove all _ properties
+        "_bar": "john doo",
+        "_links": {
+          type: {
+            name: "Person"
+          }
+        },
+        "_embedded": {
+          "_view": {
+            form_id: {
+              key: "form_id",
+              "default": "Base_view"
+            },
+            my_title: {
+              key: "field_my_title",
+              "default": "foo",
+              editable: true,
+              type: "StringField"
+            },
+            my_id: {
+              key: "field_my_id",
+              "default": "",
+              editable: true,
+              type: "StringField"
+            },
+            my_title_non_editable: {
+              key: "field_my_title_non_editable",
+              "default": "foo",
+              editable: false,
+              type: "StringField"
+            },
+            my_start_date: {
+              key: "field_my_start_date",
+              "default": "foo",
+              editable: true,
+              type: "DateTimeField"
+            },
+            your_reference: {
+              key: "field_your_title",
+              "default": "bar",
+              editable: true,
+              type: "StringField"
+            },
+            sort_index: {
+              key: "field_sort_index",
+              "default": "foobar",
+              editable: true,
+              type: "StringField"
+            },
+            "_actions": {
+              put: {
+                href: put_url
+              }
+            }
+          }
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, document_hateoas]);
+    this.server.respondWith("POST", put_url, [204, {
+      "Content-Type": "text/html"
+    }, ""]);
+    this.server.respondWith("POST", add_url, [201, {
+      "Content-Type": "text/html",
+      "X-Location": "urn:jio:get:" + id
+    }, ""]);
+
+    stop();
+    expect(33);
+
+    this.jio.post({
+      title: "barè",
+      id: "foo",
+      portal_type: "Foo",
+      parent_relative_url: "foo_module"
+    })
+      .then(function (result) {
+        equal(result, id);
+        equal(server.requests.length, 5);
+
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+
+        equal(server.requests[1].method, "POST");
+        equal(server.requests[1].url, add_url);
+        ok(server.requests[1].requestBody instanceof FormData);
+        equal(server.requests[1].withCredentials, true);
+
+        equal(server.requests[2].method, "GET");
+        equal(server.requests[2].url, domain);
+        equal(server.requests[2].requestBody, undefined);
+        equal(server.requests[2].withCredentials, true);
+
+        equal(server.requests[3].method, "GET");
+        equal(server.requests[3].url, traverse_url);
+        equal(server.requests[3].requestBody, undefined);
+        equal(server.requests[3].withCredentials, true);
+
+        equal(server.requests[4].method, "POST");
+        equal(server.requests[4].url, put_url);
+        ok(server.requests[4].requestBody instanceof FormData);
+        equal(server.requests[4].withCredentials, true);
+
+        equal(context.spy.callCount, 5, "FormData.append count");
+
+        equal(context.spy.firstCall.args[0], "portal_type",
+              "First append call");
+        equal(context.spy.firstCall.args[1], "Foo", "First append call");
+        equal(context.spy.secondCall.args[0], "parent_relative_url",
+              "Second append call");
+        equal(context.spy.secondCall.args[1], "foo_module",
+              "Second append call");
+
+        equal(context.spy.thirdCall.args[0], "form_id", "Third append call");
+        equal(context.spy.thirdCall.args[1], "Base_view", "Third append call");
+        equal(context.spy.getCall(3).args[0], "field_my_title",
+              "Fourthappend call");
+        equal(context.spy.getCall(3).args[1], "barè", "Fourth append call");
+        equal(context.spy.getCall(4).args[0], "field_my_id",
+              "Fifth append call");
+        equal(context.spy.getCall(4).args[1], "foo", "Fifth append call");
       })
       .fail(function (error) {
         ok(false, error);
