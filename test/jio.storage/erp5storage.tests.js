@@ -55,7 +55,8 @@
 
       this.jio = jIO.createJIO({
         type: "erp5",
-        url: domain
+        url: domain,
+        default_view_reference: "bar_view"
       });
     },
     teardown: function () {
@@ -93,10 +94,10 @@
       });
   });
 
-  test("get ERP5 document", function () {
+  test("get ERP5 document with empty form", function () {
     var id = "person_module/20150119_azerty",
       traverse_url = domain + "?mode=traverse&relative_url=" +
-                     encodeURIComponent(id),
+                     encodeURIComponent(id) + "&view=bar_view",
       document_hateoas = JSON.stringify({
         // Kept property
         "title": "foo",
@@ -105,6 +106,118 @@
         "_links": {
           type: {
             name: "Person"
+          }
+        },
+        "_embedded": {
+          "_view": {
+            form_id: {
+              key: "form_id",
+              "default": "Base_view"
+            },
+            "_actions": {
+              put: {
+                href: "one erp5 url"
+              }
+            }
+          }
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, document_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.get(id)
+      .then(function (result) {
+        deepEqual(result, {
+          portal_type: "Person"
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, traverse_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get ERP5 document", function () {
+    var id = "person_module/20150119_azerty",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id) + "&view=bar_view",
+      document_hateoas = JSON.stringify({
+        // Kept property
+        "title": "foo",
+        // Remove all _ properties
+        "_bar": "john doo",
+        "_links": {
+          type: {
+            name: "Person"
+          }
+        },
+        "_embedded": {
+          "_view": {
+            form_id: {
+              key: "form_id",
+              "default": "Base_view"
+            },
+            my_title: {
+              key: "field_my_title",
+              "default": "foo",
+              editable: true,
+              type: "StringField"
+            },
+            my_id: {
+              key: "field_my_id",
+              "default": "",
+              editable: true,
+              type: "StringField"
+            },
+            my_title_non_editable: {
+              key: "field_my_title_non_editable",
+              "default": "foo",
+              editable: false,
+              type: "StringField"
+            },
+            my_start_date: {
+              key: "field_my_start_date",
+              "default": "foo",
+              editable: true,
+              type: "DateTimeField"
+            },
+            your_reference: {
+              key: "field_your_title",
+              "default": "bar",
+              editable: true,
+              type: "StringField"
+            },
+            sort_index: {
+              key: "field_sort_index",
+              "default": "foobar",
+              editable: true,
+              type: "StringField"
+            },
+            "_actions": {
+              put: {
+                href: "one erp5 url"
+              }
+            }
           }
         }
       }),

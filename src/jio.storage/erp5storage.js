@@ -62,6 +62,59 @@
       });
   }
 
+  var allowed_field_dict = {
+    "StringField": null,
+    "IntegerField": null,
+    "FloatField": null,
+    "TextAreaField": null
+  };
+
+  function extractPropertyFromForm(context, id) {
+    return context.getAttachment(id, "view")
+      .push(function (blob) {
+        return jIO.util.readBlobAsText(blob);
+      })
+      .push(function (evt) {
+        return JSON.parse(evt.target.result);
+      })
+      .push(function (json) {
+        var form = json._embedded._view,
+          converted_json = {
+            portal_type: json.portal_type
+          },
+          form_data_json = {},
+          field,
+          key;
+
+        form_data_json.form_id = {
+          "key": [form.form_id.key],
+          "default": form.form_id["default"]
+        };
+        // XXX How to store datetime
+        for (key in form) {
+          if (form.hasOwnProperty(key)) {
+            field = form[key];
+            if ((key.indexOf('my_') === 0) &&
+                (field.editable) &&
+                (allowed_field_dict.hasOwnProperty(field.type))) {
+
+              form_data_json[key.substring(3)] = {
+                "default": field["default"],
+                "key": field.key
+              };
+              converted_json[key.substring(3)] = field["default"];
+            }
+          }
+        }
+
+        return {
+          action_href: form._actions.put.href,
+          data: converted_json,
+          form_data: form_data_json
+        };
+      });
+  }
+
   // XXX docstring
   function ERP5Storage(spec) {
     if (typeof spec.url !== "string" || !spec.url) {
@@ -73,22 +126,18 @@
   }
 
   ERP5Storage.prototype.get = function (id) {
-    return getDocumentAndHateoas(this, id)
-      .push(function (response) {
-        var result = JSON.parse(response.target.responseText),
-          key;
-          // action_type;
-        result.portal_type = result._links.type.name;
-
+    return extractPropertyFromForm(this, id)
+      .push(function (result) {
+        var key;
+        result = result.data;
         // Remove all ERP5 hateoas links / convert them into jIO ID
         for (key in result) {
           if (result.hasOwnProperty(key)) {
-            if (key.indexOf("_") === 0) {
+            if (!result[key]) {
               delete result[key];
             }
           }
         }
-
         return result;
       });
   };
