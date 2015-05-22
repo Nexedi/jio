@@ -515,6 +515,53 @@
       });
   });
 
+  test("putAttachment convert array property", function () {
+    var submit_url = domain + "/Form_view/Base_edit",
+      id = "fake",
+      form_json = {
+        "multiple_value": ["fooé", "barè"]
+      },
+      context = this,
+      server = this.server;
+
+    this.server.respondWith("POST", submit_url, [204, {
+      "Content-Type": "text/xml"
+    }, ""]);
+
+    stop();
+    expect(11);
+
+    this.jio.putAttachment(
+      id,
+      submit_url,
+      new Blob([JSON.stringify(form_json)])
+    )
+      .then(function () {
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, submit_url);
+        equal(server.requests[0].status, 204);
+        ok(server.requests[0].requestBody instanceof FormData);
+
+        ok(context.spy.calledTwice, "FormData.append count " +
+           context.spy.callCount);
+        equal(context.spy.firstCall.args[0], "multiple_value",
+              "First append call");
+        equal(context.spy.firstCall.args[1], "fooé", "First append call");
+        equal(context.spy.secondCall.args[0], "multiple_value",
+              "Second append call");
+        equal(context.spy.secondCall.args[1], "barè", "Second append call");
+
+        equal(server.requests[0].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // erp5Storage.getAttachment
   /////////////////////////////////////////////////////////////////

@@ -299,10 +299,17 @@
       .push(function (evt) {
         var form_data = JSON.parse(evt.target.result),
           data = new FormData(),
+          i,
           key;
         for (key in form_data) {
           if (form_data.hasOwnProperty(key)) {
-            data.append(key, form_data[key]);
+            if (Array.isArray(form_data[key])) {
+              for (i = 0; i < form_data[key].length; i += 1) {
+                data.append(key, form_data[key][i]);
+              }
+            } else {
+              data.append(key, form_data[key]);
+            }
           }
         }
         return jIO.util.ajax({
