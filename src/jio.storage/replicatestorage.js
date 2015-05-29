@@ -53,6 +53,30 @@
     });
 
     this._use_remote_post = spec.use_remote_post || false;
+    this._check_local_modification = spec.check_local_modification;
+    if (this._check_local_modification === undefined) {
+      this._check_local_modification = true;
+    }
+    this._check_local_creation = spec.check_local_creation;
+    if (this._check_local_creation === undefined) {
+      this._check_local_creation = true;
+    }
+    this._check_local_deletion = spec.check_local_deletion;
+    if (this._check_local_deletion === undefined) {
+      this._check_local_deletion = true;
+    }
+    this._check_remote_modification = spec.check_remote_modification;
+    if (this._check_remote_modification === undefined) {
+      this._check_remote_modification = true;
+    }
+    this._check_remote_creation = spec.check_remote_creation;
+    if (this._check_remote_creation === undefined) {
+      this._check_remote_creation = true;
+    }
+    this._check_remote_deletion = spec.check_remote_deletion;
+    if (this._check_remote_deletion === undefined) {
+      this._check_remote_deletion = true;
+    }
   }
 
   ReplicateStorage.prototype.remove = function (id) {
@@ -304,19 +328,25 @@
               signature_dict[result_list[1].data.rows[i].id] = i;
             }
           }
-          for (key in local_dict) {
-            if (local_dict.hasOwnProperty(key)) {
-              if (!signature_dict.hasOwnProperty(key)) {
-                checkLocalCreation(queue, source, destination, key, options);
+          if (options.check_creation === true) {
+            for (key in local_dict) {
+              if (local_dict.hasOwnProperty(key)) {
+                if (!signature_dict.hasOwnProperty(key)) {
+                  checkLocalCreation(queue, source, destination, key, options);
+                }
               }
             }
           }
           for (key in signature_dict) {
             if (signature_dict.hasOwnProperty(key)) {
               if (local_dict.hasOwnProperty(key)) {
-                checkSignatureDifference(queue, source, destination, key);
+                if (options.check_modification === true) {
+                  checkSignatureDifference(queue, source, destination, key);
+                }
               } else {
-                checkLocalDeletion(queue, destination, key, source);
+                if (options.check_deletion === true) {
+                  checkLocalDeletion(queue, destination, key, source);
+                }
               }
             }
           }
@@ -360,13 +390,30 @@
       })
 
       .push(function () {
-        return pushStorage(context._local_sub_storage,
-                           context._remote_sub_storage,
-                           {use_post: context._use_remote_post});
+        if (context._check_local_modification ||
+            context._check_local_creation ||
+            context._check_local_deletion) {
+          return pushStorage(context._local_sub_storage,
+                             context._remote_sub_storage,
+                             {
+              use_post: context._use_remote_post,
+              check_modification: context._check_local_modification,
+              check_creation: context._check_local_creation,
+              check_deletion: context._check_local_deletion
+            });
+        }
       })
       .push(function () {
-        return pushStorage(context._remote_sub_storage,
-                           context._local_sub_storage, {});
+        if (context._check_remote_modification ||
+            context._check_remote_creation ||
+            context._check_remote_deletion) {
+          return pushStorage(context._remote_sub_storage,
+                             context._local_sub_storage, {
+              check_modification: context._check_remote_modification,
+              check_creation: context._check_remote_creation,
+              check_deletion: context._check_remote_deletion
+            });
+        }
       });
   };
 

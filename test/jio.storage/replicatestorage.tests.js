@@ -46,6 +46,12 @@
 
     deepEqual(jio.__storage._query_options, {});
     equal(jio.__storage._use_remote_post, false);
+    equal(jio.__storage._check_local_creation, true);
+    equal(jio.__storage._check_local_deletion, true);
+    equal(jio.__storage._check_local_modification, true);
+    equal(jio.__storage._check_remote_creation, true);
+    equal(jio.__storage._check_remote_deletion, true);
+    equal(jio.__storage._check_remote_modification, true);
 
     equal(jio.__storage._signature_hash,
           "_replicate_7209dfbcaff00f6637f939fdd71fa896793ed385");
@@ -73,7 +79,13 @@
         type: "replicatestorage500"
       },
       query: {query: 'portal_type: "Foo"', limit: [0, 1234567890]},
-      use_remote_post: true
+      use_remote_post: true,
+      check_local_creation: false,
+      check_local_deletion: false,
+      check_local_modification: false,
+      check_remote_creation: false,
+      check_remote_deletion: false,
+      check_remote_modification: false
     });
 
     deepEqual(
@@ -81,6 +93,12 @@
       {query: 'portal_type: "Foo"', limit: [0, 1234567890]}
     );
     equal(jio.__storage._use_remote_post, true);
+    equal(jio.__storage._check_local_creation, false);
+    equal(jio.__storage._check_local_deletion, false);
+    equal(jio.__storage._check_local_modification, false);
+    equal(jio.__storage._check_remote_creation, false);
+    equal(jio.__storage._check_remote_deletion, false);
+    equal(jio.__storage._check_remote_modification, false);
 
     equal(jio.__storage._signature_hash,
           "_replicate_623653d45a4e770a2c9f6b71e3144d18ee1b5bec");
@@ -434,6 +452,63 @@
       });
   });
 
+  test("local document creation not checked", function () {
+    stop();
+    expect(6);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_local_creation: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    var id,
+      context = this;
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 404);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("local document creation and use remote post", function () {
     stop();
     expect(12);
@@ -677,6 +752,66 @@
       });
   });
 
+  test("remote document creation not checked", function () {
+    stop();
+    expect(6);
+
+    var id,
+      context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_remote_creation: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.__storage._remote_sub_storage.post({"title": "bar"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "bar"
+        });
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("local and remote document creations", function () {
     stop();
     expect(5);
@@ -823,6 +958,73 @@
       });
   });
 
+  test("local document modification not checked", function () {
+    stop();
+    expect(3);
+
+    var id,
+      context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_local_modification: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.put(id, {"title": "foo2"});
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo2"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("remote document modification", function () {
     stop();
     expect(2);
@@ -858,6 +1060,76 @@
       .then(function (result) {
         deepEqual(result, {
           hash: "4b1dde0f80ac38514771a9d25b5278e38f560e0f"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote document modification not checked", function () {
+    stop();
+    expect(3);
+
+    var id,
+      context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_remote_modification: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.put(
+          id,
+          {"title": "foo3"}
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo3"
+        });
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
       .fail(function (error) {
@@ -992,6 +1264,73 @@
       });
   });
 
+  test("local document deletion not checked", function () {
+    stop();
+    expect(6);
+
+    var id,
+      context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_local_deletion: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.remove(id);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("remote document deletion", function () {
     stop();
     expect(6);
@@ -1031,6 +1370,73 @@
 //            equal(error.message, "Cannot find document: " + id);
             equal(error.status_code, 404);
           });
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote document deletion not checked", function () {
+    stop();
+    expect(6);
+
+    var id,
+      context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_remote_deletion: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.remove(id);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
       })
       .always(function () {
         start();
