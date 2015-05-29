@@ -436,7 +436,7 @@
 
   test("local document creation and use remote post", function () {
     stop();
-    expect(10);
+    expect(12);
 
     var id,
       post_id,
@@ -481,6 +481,16 @@
         equal(error.message, "Cannot find document: " + id);
         equal(error.status_code, 404);
       })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function () {
+        ok(false, "Signature should have been deleted");
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 404);
+      })
 
       // But another document should have been created
       .then(function () {
@@ -489,6 +499,117 @@
       .then(function (result) {
         equal(result.data.total_rows, 1);
         post_id = result.data.rows[0].id;
+        return context.jio.__storage._remote_sub_storage.get(post_id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._local_sub_storage.get(post_id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(post_id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local document creation, remote post and delayed allDocs", function () {
+    stop();
+    expect(11);
+
+    var id,
+      post_id = "_foobar",
+      context = this;
+
+    function Storage200DelayedAllDocs(spec) {
+      this._sub_storage = jIO.createJIO(spec.sub_storage);
+    }
+    Storage200DelayedAllDocs.prototype.get = function () {
+      return this._sub_storage.get.apply(this._sub_storage, arguments);
+    };
+    Storage200DelayedAllDocs.prototype.post = function (param) {
+      return this.put(post_id, param);
+    };
+    Storage200DelayedAllDocs.prototype.put = function () {
+      return this._sub_storage.put.apply(this._sub_storage, arguments);
+    };
+    Storage200DelayedAllDocs.prototype.hasCapacity = function () {
+      return true;
+    };
+    Storage200DelayedAllDocs.prototype.buildQuery = function () {
+      return [];
+    };
+    jIO.addStorage(
+      'replicatestorage200delayedalldocs',
+      Storage200DelayedAllDocs
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      use_remote_post: true,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "replicatestorage200delayedalldocs",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      // Document 'id' has been deleted in both storages
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._local_sub_storage.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 404);
+      })
+
+      // But another document should have been created
+      .then(function () {
         return context.jio.__storage._remote_sub_storage.get(post_id);
       })
       .then(function (result) {

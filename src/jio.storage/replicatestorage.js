@@ -97,26 +97,45 @@
     // Do not sync the signature document
     skip_document_dict[context._signature_hash] = null;
 
-    function propagateModification(destination, doc, hash, id, options) {
+    function propagateModification(source, destination, doc, hash, id,
+                                   options) {
       var result,
+        post_id,
         to_skip = true;
       if (options === undefined) {
         options = {};
       }
       if (options.use_post) {
         result = destination.post(doc)
-          .push(function () {
+          .push(function (new_id) {
             to_skip = false;
+            post_id = new_id;
+            return source.put(post_id, doc);
+          })
+          .push(function () {
+            return source.remove(id);
+          })
+          .push(function () {
+            return context._signature_sub_storage.remove(id);
+          })
+          .push(function () {
+            to_skip = true;
+            return context._signature_sub_storage.put(post_id, {
+              "hash": hash
+            });
+          })
+          .push(function () {
+            skip_document_dict[post_id] = null;
           });
       } else {
-        result = destination.put(id, doc);
+        result = destination.put(id, doc)
+          .push(function () {
+            return context._signature_sub_storage.put(id, {
+              "hash": hash
+            });
+          });
       }
       return result
-        .push(function () {
-          return context._signature_sub_storage.put(id, {
-            "hash": hash
-          });
-        })
         .push(function () {
           if (to_skip) {
             skip_document_dict[id] = null;
@@ -150,8 +169,8 @@
           var local_hash = generateHash(JSON.stringify(doc)),
             remote_hash;
           if (remote_doc === undefined) {
-            return propagateModification(destination, doc, local_hash, id,
-                                         options);
+            return propagateModification(source, destination, doc, local_hash,
+                                         id, options);
           }
 
           remote_hash = generateHash(JSON.stringify(remote_doc));
@@ -192,7 +211,8 @@
               }
               // Modifications on remote side
               // Push them locally
-              return propagateModification(source, doc, remote_hash, id);
+              return propagateModification(destination, source, doc,
+                                           remote_hash, id);
             }, function (error) {
               if ((error instanceof jIO.util.jIOError) &&
                   (error.status_code === 404)) {
@@ -238,13 +258,14 @@
                   throw new jIO.util.jIOError("Conflict on '" + id + "'",
                                               409);
                 }
-                return propagateModification(destination, doc, local_hash, id);
+                return propagateModification(source, destination, doc,
+                                             local_hash, id);
               }, function (error) {
                 if ((error instanceof jIO.util.jIOError) &&
                     (error.status_code === 404)) {
                   // Document has been deleted remotely
-                  return propagateModification(destination, doc, local_hash,
-                                               id);
+                  return propagateModification(source, destination, doc,
+                                               local_hash, id);
                 }
                 throw error;
               });
