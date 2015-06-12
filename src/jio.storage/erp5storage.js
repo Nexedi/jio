@@ -64,6 +64,7 @@
 
   var allowed_field_dict = {
     "StringField": null,
+    "EmailField": null,
     "IntegerField": null,
     "FloatField": null,
     "TextAreaField": null
