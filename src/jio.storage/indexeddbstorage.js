@@ -46,7 +46,7 @@
   }
 
   IndexedDBStorage.prototype.hasCapacity = function (name) {
-    return (name === "list");
+    return ((name === "list") || (name === "include"));
   };
 
   function buildKeyPath(key_list) {
@@ -170,8 +170,15 @@
     return new RSVP.Promise(resolver);
   }
 
-  IndexedDBStorage.prototype.buildQuery = function () {
+  IndexedDBStorage.prototype.buildQuery = function (options) {
     var result_list = [];
+
+    function pushIncludedMetadata(cursor) {
+      result_list.push({
+        "id": cursor.key,
+        "value": cursor.value.doc
+      });
+    }
 
     function pushMetadata(cursor) {
       result_list.push({
@@ -182,6 +189,10 @@
     return openIndexedDB(this)
       .push(function (db) {
         var tx = openTransaction(db, ["metadata"], "readonly");
+        if (options.include_docs === true) {
+          return handleCursor(tx.objectStore("metadata").index("_id")
+                              .openCursor(), pushIncludedMetadata);
+        }
         return handleCursor(tx.objectStore("metadata").index("_id")
                             .openKeyCursor(), pushMetadata);
       })

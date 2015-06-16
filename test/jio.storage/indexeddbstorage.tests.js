@@ -79,6 +79,7 @@
       this.spy_create_index = sinon.spy(IDBObjectStore.prototype,
                                         "createIndex");
       this.spy_key_cursor = sinon.spy(IDBIndex.prototype, "openKeyCursor");
+      this.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
     },
     teardown: function () {
       this.spy_open.restore();
@@ -95,13 +96,15 @@
       delete this.spy_create_index;
       this.spy_key_cursor.restore();
       delete this.spy_key_cursor;
+      this.spy_cursor.restore();
+      delete this.spy_cursor;
     }
   });
 
   test("spy indexedDB usage", function () {
     var context = this;
     stop();
-    expect(30);
+    expect(31);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -186,6 +189,108 @@
 
         ok(context.spy_key_cursor.calledOnce, "key_cursor count " +
            context.spy_key_cursor.callCount);
+        equal(context.spy_cursor.callCount, 0, "cursor count " +
+           context.spy_cursor.callCount);
+
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("spy indexedDB usage with include_docs", function () {
+    var context = this;
+    stop();
+    expect(31);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.allDocs({include_docs: true});
+      })
+      .then(function () {
+
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 3,
+              "createObjectStore count");
+
+        equal(context.spy_create_store.firstCall.args[0], "metadata",
+              "first createObjectStore first argument");
+        deepEqual(context.spy_create_store.firstCall.args[1],
+                  {keyPath: "_id", autoIncrement: false},
+                  "first createObjectStore second argument");
+
+        equal(context.spy_create_store.secondCall.args[0], "attachment",
+              "second createObjectStore first argument");
+        deepEqual(context.spy_create_store.secondCall.args[1],
+                  {keyPath: "_key_path", autoIncrement: false},
+                  "second createObjectStore second argument");
+
+        equal(context.spy_create_store.thirdCall.args[0], "blob",
+              "third createObjectStore first argument");
+        deepEqual(context.spy_create_store.thirdCall.args[1],
+                  {keyPath: "_key_path", autoIncrement: false},
+                  "third createObjectStore second argument");
+
+        equal(context.spy_create_index.callCount, 4, "createIndex count");
+
+        equal(context.spy_create_index.firstCall.args[0], "_id",
+              "first createIndex first argument");
+        equal(context.spy_create_index.firstCall.args[1], "_id",
+              "first createIndex second argument");
+        deepEqual(context.spy_create_index.firstCall.args[2], {unique: true},
+                  "first createIndex third argument");
+
+        equal(context.spy_create_index.secondCall.args[0], "_id",
+              "second createIndex first argument");
+        equal(context.spy_create_index.secondCall.args[1], "_id",
+              "second createIndex second argument");
+        deepEqual(context.spy_create_index.secondCall.args[2], {unique: false},
+                  "second createIndex third argument");
+
+        equal(context.spy_create_index.thirdCall.args[0], "_id_attachment",
+              "third createIndex first argument");
+        deepEqual(context.spy_create_index.thirdCall.args[1],
+                  ["_id", "_attachment"],
+                  "third createIndex second argument");
+        deepEqual(context.spy_create_index.thirdCall.args[2],
+                  {unique: false},
+                  "third createIndex third argument");
+
+        equal(context.spy_create_index.getCall(3).args[0], "_id",
+              "fourth createIndex first argument");
+        equal(context.spy_create_index.getCall(3).args[1], "_id",
+                  "fourth createIndex second argument");
+        deepEqual(context.spy_create_index.getCall(3).args[2], {unique: false},
+                  "fourth createIndex third argument");
+
+        ok(context.spy_transaction.calledOnce, "transaction count " +
+           context.spy_transaction.callCount);
+        deepEqual(context.spy_transaction.firstCall.args[0], ["metadata"],
+                  "transaction first argument");
+        equal(context.spy_transaction.firstCall.args[1], "readonly",
+              "transaction second argument");
+
+        ok(context.spy_store.calledOnce, "store count " +
+           context.spy_store.callCount);
+        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+                  "store first argument");
+
+        ok(context.spy_index.calledOnce, "index count " +
+           context.spy_index.callCount);
+        deepEqual(context.spy_index.firstCall.args[0], "_id",
+                  "index first argument");
+
+        equal(context.spy_key_cursor.callCount, 0, "key_cursor count " +
+           context.spy_key_cursor.callCount);
+        ok(context.spy_cursor.calledOnce, "cursor count " +
+           context.spy_cursor.callCount);
 
       })
       .fail(function (error) {
@@ -246,6 +351,43 @@
             }, {
               "id": "2",
               "value": {}
+            }],
+            "total_rows": 2
+          }
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("handle include_docs", function () {
+    var context = this;
+    stop();
+    expect(1);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return RSVP.all([
+          context.jio.put("2", {"title": "title2"}),
+          context.jio.put("1", {"title": "title1"})
+        ]);
+      })
+      .then(function () {
+        return context.jio.allDocs({include_docs: true});
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          "data": {
+            "rows": [{
+              "id": "1",
+              "value": {"title": "title1"}
+            }, {
+              "id": "2",
+              "value": {"title": "title2"}
             }],
             "total_rows": 2
           }
