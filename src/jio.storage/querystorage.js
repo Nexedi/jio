@@ -156,10 +156,11 @@
           if (is_manual_query_needed) {
             len = result.length;
             for (i = 0; i < len; i += 1) {
+              result[i].doc.__id = result[i].id;
               data_rows.push(result[i].doc);
             }
             if (options.select_list) {
-              options.select_list.push("_id");
+              options.select_list.push("__id");
             }
             result = jIO.QueryFactory.create(options.query || "",
                                              context._key_schema).
@@ -178,13 +179,13 @@
             len = result.length;
             for (i = 0; i < len; i += 1) {
               element = {
-                id: result[i]._id,
+                id: result[i].__id,
                 value: options.select_list ? result[i] : {},
                 doc: {}
               };
               if (options.select_list) {
-                // Does not work if user manually request _id
-                delete element.value._id;
+                // Does not work if user manually request __id
+                delete element.value.__id;
               }
               if (options.include_docs) {
                 // XXX To implement

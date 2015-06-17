@@ -764,7 +764,6 @@
           doc: {
             title: "foo",
             id: "ID foo",
-            _id: "foo",
             another: "property"
           }
         }, {
@@ -773,7 +772,6 @@
           doc: {
             title: "bar",
             id: "ID bar",
-            _id: "bar",
             another: "property"
           }
         }];
