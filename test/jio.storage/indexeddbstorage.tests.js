@@ -384,10 +384,12 @@
           "data": {
             "rows": [{
               "id": "1",
-              "value": {"title": "title1"}
+              "doc": {"title": "title1"},
+              "value": {}
             }, {
               "id": "2",
-              "value": {"title": "title2"}
+              "doc": {"title": "title2"},
+              "value": {}
             }],
             "total_rows": 2
           }

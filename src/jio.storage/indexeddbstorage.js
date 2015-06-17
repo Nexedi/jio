@@ -176,7 +176,8 @@
     function pushIncludedMetadata(cursor) {
       result_list.push({
         "id": cursor.key,
-        "value": cursor.value.doc
+        "value": {},
+        "doc": cursor.value.doc
       });
     }
 
