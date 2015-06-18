@@ -34,18 +34,18 @@
       ///////////////////////////
       // Memory storage
       ///////////////////////////
-//       return g.run({
-//         type: "query",
-//         sub_storage: {
-//           type: "uuid",
-//           sub_storage: {
-//             type: "union",
-//             storage_list: [{
-//               type: "memory"
-//             }]
-//           }
-//         }
-//       });
+      return g.run({
+        type: "query",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "union",
+            storage_list: [{
+              type: "memory"
+            }]
+          }
+        }
+      });
 
       ///////////////////////////
       // IndexedDB storage
