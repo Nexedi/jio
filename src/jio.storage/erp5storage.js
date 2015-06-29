@@ -70,15 +70,9 @@
     "TextAreaField": null
   };
 
-  function extractPropertyFromForm(context, id) {
-    return context.getAttachment(id, "view")
-      .push(function (blob) {
-        return jIO.util.readBlobAsText(blob);
-      })
-      .push(function (evt) {
-        return JSON.parse(evt.target.result);
-      })
-      .push(function (json) {
+  function extractPropertyFromFormJSON(json) {
+    return new RSVP.Queue()
+      .push(function () {
         var form = json._embedded._view,
           converted_json = {
             portal_type: json.portal_type
@@ -116,6 +110,19 @@
       });
   }
 
+  function extractPropertyFromForm(context, id) {
+    return context.getAttachment(id, "view")
+      .push(function (blob) {
+        return jIO.util.readBlobAsText(blob);
+      })
+      .push(function (evt) {
+        return JSON.parse(evt.target.result);
+      })
+      .push(function (json) {
+        return extractPropertyFromFormJSON(json);
+      });
+  }
+
   // XXX docstring
   function ERP5Storage(spec) {
     if (typeof spec.url !== "string" || !spec.url) {
@@ -126,20 +133,75 @@
     this._default_view_reference = spec.default_view_reference;
   }
 
+  function convertJSONToGet(json) {
+    var key,
+      result = json.data;
+    // Remove all ERP5 hateoas links / convert them into jIO ID
+    for (key in result) {
+      if (result.hasOwnProperty(key)) {
+        if (!result[key]) {
+          delete result[key];
+        }
+      }
+    }
+    return result;
+  }
+
   ERP5Storage.prototype.get = function (id) {
     return extractPropertyFromForm(this, id)
       .push(function (result) {
-        var key;
-        result = result.data;
-        // Remove all ERP5 hateoas links / convert them into jIO ID
-        for (key in result) {
-          if (result.hasOwnProperty(key)) {
-            if (!result[key]) {
-              delete result[key];
-            }
+        return convertJSONToGet(result);
+      });
+  };
+
+  ERP5Storage.prototype.bulk = function (request_list) {
+    var i,
+      storage = this,
+      bulk_list = [];
+
+
+    for (i = 0; i < request_list.length; i += 1) {
+      if (request_list[i].method !== "get") {
+        throw new Error("ERP5Storage: not supported " +
+                        request_list[i].method + " in bulk");
+      }
+      bulk_list.push({
+        relative_url: request_list[i].parameter_list[0],
+        view: storage._default_view_reference
+      });
+    }
+    return getSiteDocument(storage)
+      .push(function (site_hal) {
+        var form_data = new FormData();
+        form_data.append("bulk_list", JSON.stringify(bulk_list));
+        return jIO.util.ajax({
+          "type": "POST",
+          "url": site_hal._actions.bulk.href,
+          "data": form_data,
+//           "headers": {
+//             "Content-Type": "application/json"
+//           },
+          "xhrFields": {
+            withCredentials: true
           }
+        });
+      })
+      .push(function (response) {
+        var result_list = [],
+          hateoas = JSON.parse(response.target.responseText);
+
+        function pushResult(json) {
+          json.portal_type = json._links.type.name;
+          return extractPropertyFromFormJSON(json)
+            .push(function (json2) {
+              return convertJSONToGet(json2);
+            });
         }
-        return result;
+
+        for (i = 0; i < hateoas.result_list.length; i += 1) {
+          result_list.push(pushResult(hateoas.result_list[i]));
+        }
+        return RSVP.all(result_list);
       });
   };
 
