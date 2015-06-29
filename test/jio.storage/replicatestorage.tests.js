@@ -1825,4 +1825,84 @@
       });
   });
 
+  test("bulk remote document creation", function () {
+    stop();
+    expect(3);
+
+    var id,
+      post_id = "123456789",
+      context = this;
+
+    function Storage200Bulk(spec) {
+      this._sub_storage = jIO.createJIO(spec.sub_storage);
+    }
+    Storage200Bulk.prototype.bulk = function (args) {
+      deepEqual(args, [{
+        method: "get",
+        parameter_list: [post_id]
+      }]);
+      return this._sub_storage.get(post_id)
+        .push(function (doc) {
+          return [doc];
+        });
+    };
+    Storage200Bulk.prototype.post = function (param) {
+      return this.put(post_id, param);
+    };
+    Storage200Bulk.prototype.put = function () {
+      return this._sub_storage.put.apply(this._sub_storage, arguments);
+    };
+    Storage200Bulk.prototype.hasCapacity = function () {
+      return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+    };
+    Storage200Bulk.prototype.buildQuery = function () {
+      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    };
+    jIO.addStorage(
+      'replicatestorage200bulk',
+      Storage200Bulk
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "memory"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage200bulk",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.__storage._remote_sub_storage.post({"title": "bar"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "bar"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 }(jIO, QUnit));

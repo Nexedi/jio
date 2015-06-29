@@ -167,7 +167,8 @@
         });
     }
 
-    function checkLocalCreation(queue, source, destination, id, options) {
+    function checkLocalCreation(queue, source, destination, id, options,
+                                getMethod) {
       var remote_doc;
       queue
         .push(function () {
@@ -187,7 +188,7 @@
         .push(function () {
           // This document was never synced.
           // Push it to the remote storage and store sync information
-          return source.get(id);
+          return getMethod(id);
         })
         .push(function (doc) {
           var local_hash = generateHash(JSON.stringify(doc)),
@@ -210,6 +211,34 @@
           // Already exists on destination
           throw new jIO.util.jIOError("Conflict on '" + id + "'",
                                       409);
+        });
+    }
+
+    function checkBulkLocalCreation(queue, source, destination, id_list,
+                                    options) {
+      queue
+        .push(function () {
+          return source.bulk(id_list);
+        })
+        .push(function (result_list) {
+          var i,
+            sub_queue = new RSVP.Queue();
+
+          function getResult(j) {
+            return function (id) {
+              if (id !== id_list[j].parameter_list[0]) {
+                throw new Error("Does not access expected ID " + id);
+              }
+              return result_list[j];
+            };
+          }
+
+          for (i = 0; i < result_list.length; i += 1) {
+            checkLocalCreation(sub_queue, source, destination,
+                               id_list[i].parameter_list[0],
+                               options, getResult(i));
+          }
+          return sub_queue;
         });
     }
 
@@ -312,6 +341,7 @@
         .push(function (result_list) {
           var i,
             local_dict = {},
+            new_list = [],
             signature_dict = {},
             key;
           for (i = 0; i < result_list[0].data.total_rows; i += 1) {
@@ -328,13 +358,26 @@
               signature_dict[result_list[1].data.rows[i].id] = i;
             }
           }
+
           if (options.check_creation === true) {
             for (key in local_dict) {
               if (local_dict.hasOwnProperty(key)) {
                 if (!signature_dict.hasOwnProperty(key)) {
-                  checkLocalCreation(queue, source, destination, key, options);
+                  if (options.use_bulk_get === true) {
+                    new_list.push({
+                      method: "get",
+                      parameter_list: [key]
+                    });
+                  } else {
+                    checkLocalCreation(queue, source, destination, key,
+                                       options, source.get.bind(source));
+                  }
                 }
               }
+            }
+            if ((options.use_bulk_get === true) && (new_list.length !== 0)) {
+              checkBulkLocalCreation(queue, source, destination, new_list,
+                                     options);
             }
           }
           for (key in signature_dict) {
@@ -404,11 +447,23 @@
         }
       })
       .push(function () {
+        // Autoactivate bulk if substorage implements it
+        // Keep it like this until the bulk API is stabilized
+        var use_bulk_get = false;
+        try {
+          use_bulk_get = context._remote_sub_storage.hasCapacity("bulk");
+        } catch (error) {
+          if (!((error instanceof jIO.util.jIOError) &&
+               (error.status_code === 501))) {
+            throw error;
+          }
+        }
         if (context._check_remote_modification ||
             context._check_remote_creation ||
             context._check_remote_deletion) {
           return pushStorage(context._remote_sub_storage,
                              context._local_sub_storage, {
+              use_bulk_get: use_bulk_get,
               check_modification: context._check_remote_modification,
               check_creation: context._check_remote_creation,
               check_deletion: context._check_remote_deletion

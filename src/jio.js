@@ -258,6 +258,7 @@
     return argument_list[0];
   });
   declareMethod(JioProxyStorage, "get", checkId);
+  declareMethod(JioProxyStorage, "bulk");
   declareMethod(JioProxyStorage, "remove", checkId, function (argument_list) {
     return argument_list[0];
   });
@@ -403,7 +404,11 @@
   };
 
   JioProxyStorage.prototype.hasCapacity = function (name) {
-    var storage_method = this.__storage.hasCapacity;
+    var storage_method = this.__storage.hasCapacity,
+      capacity_method = this.__storage[name];
+    if (capacity_method !== undefined) {
+      return true;
+    }
     if ((storage_method === undefined) ||
         !storage_method.apply(this.__storage, arguments)) {
       throw new jIO.util.jIOError(
