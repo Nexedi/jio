@@ -22,7 +22,11 @@
 (function (jIO, RSVP, Rusha) {
   "use strict";
 
-  var rusha = new Rusha();
+  var rusha = new Rusha(),
+    CONFLICT_THROW = 0,
+    CONFLICT_KEEP_LOCAL = 1,
+    CONFLICT_KEEP_REMOTE = 2,
+    CONFLICT_CONTINUE = 3;
 
   /****************************************************
    Use a local jIO to read/write/search documents
@@ -53,6 +57,24 @@
     });
 
     this._use_remote_post = spec.use_remote_post || false;
+
+    this._conflict_handling = spec.conflict_handling || 0;
+    // 0: no resolution (ie, throw an Error)
+    // 1: keep the local state
+    //    (overwrites the remote document with local content)
+    //    (delete remote document if local is deleted)
+    // 2: keep the remote state
+    //    (overwrites the local document with remote content)
+    //    (delete local document if remote is deleted)
+    // 3: keep both copies (leave documents untouched, no signature update)
+    if ((this._conflict_handling !== CONFLICT_THROW) &&
+        (this._conflict_handling !== CONFLICT_KEEP_LOCAL) &&
+        (this._conflict_handling !== CONFLICT_KEEP_REMOTE) &&
+        (this._conflict_handling !== CONFLICT_CONTINUE)) {
+      throw new jIO.util.jIOError("Unsupported conflict handling: " +
+                                  this._conflict_handling, 400);
+    }
+
     this._check_local_modification = spec.check_local_modification;
     if (this._check_local_modification === undefined) {
       this._check_local_modification = true;
@@ -208,6 +230,13 @@
                 skip_document_dict[id] = null;
               });
           }
+          if (options.conflict_ignore === true) {
+            return;
+          }
+          if (options.conflict_force === true) {
+            return propagateModification(source, destination, doc, local_hash,
+                                         id, options);
+          }
           // Already exists on destination
           throw new jIO.util.jIOError("Conflict on '" + id + "'",
                                       409);
@@ -279,7 +308,8 @@
         });
     }
 
-    function checkSignatureDifference(queue, source, destination, id) {
+    function checkSignatureDifference(queue, source, destination, id,
+                                      conflict_force, conflict_ignore) {
       queue
         .push(function () {
           return RSVP.all([
@@ -308,8 +338,13 @@
                         skip_document_dict[id] = null;
                       });
                   }
-                  throw new jIO.util.jIOError("Conflict on '" + id + "'",
-                                              409);
+                  if (conflict_ignore === true) {
+                    return;
+                  }
+                  if (conflict_force !== true) {
+                    throw new jIO.util.jIOError("Conflict on '" + id + "'",
+                                                409);
+                  }
                 }
                 return propagateModification(source, destination, doc,
                                              local_hash, id);
@@ -384,7 +419,9 @@
             if (signature_dict.hasOwnProperty(key)) {
               if (local_dict.hasOwnProperty(key)) {
                 if (options.check_modification === true) {
-                  checkSignatureDifference(queue, source, destination, key);
+                  checkSignatureDifference(queue, source, destination, key,
+                                           options.conflict_force,
+                                           options.conflict_ignore);
                 }
               } else {
                 if (options.check_deletion === true) {
@@ -440,6 +477,12 @@
                              context._remote_sub_storage,
                              {
               use_post: context._use_remote_post,
+              conflict_force: (context._conflict_handling ===
+                               CONFLICT_KEEP_LOCAL),
+              conflict_ignore: ((context._conflict_handling ===
+                                 CONFLICT_CONTINUE) ||
+                                (context._conflict_handling ===
+                                 CONFLICT_KEEP_REMOTE)),
               check_modification: context._check_local_modification,
               check_creation: context._check_local_creation,
               check_deletion: context._check_local_deletion
@@ -464,6 +507,10 @@
           return pushStorage(context._remote_sub_storage,
                              context._local_sub_storage, {
               use_bulk_get: use_bulk_get,
+              conflict_force: (context._conflict_handling ===
+                               CONFLICT_KEEP_REMOTE),
+              conflict_ignore: (context._conflict_handling ===
+                                CONFLICT_CONTINUE),
               check_modification: context._check_remote_modification,
               check_creation: context._check_remote_creation,
               check_deletion: context._check_remote_deletion

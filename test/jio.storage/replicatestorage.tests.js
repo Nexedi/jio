@@ -46,6 +46,7 @@
 
     deepEqual(jio.__storage._query_options, {});
     equal(jio.__storage._use_remote_post, false);
+    equal(jio.__storage._conflict_handling, 0);
     equal(jio.__storage._check_local_creation, true);
     equal(jio.__storage._check_local_deletion, true);
     equal(jio.__storage._check_local_modification, true);
@@ -80,6 +81,7 @@
       },
       query: {query: 'portal_type: "Foo"', limit: [0, 1234567890]},
       use_remote_post: true,
+      conflict_handling: 3,
       check_local_creation: false,
       check_local_deletion: false,
       check_local_modification: false,
@@ -93,6 +95,7 @@
       {query: 'portal_type: "Foo"', limit: [0, 1234567890]}
     );
     equal(jio.__storage._use_remote_post, true);
+    equal(jio.__storage._conflict_handling, 3);
     equal(jio.__storage._check_local_creation, false);
     equal(jio.__storage._check_local_deletion, false);
     equal(jio.__storage._check_local_modification, false);
@@ -102,6 +105,31 @@
 
     equal(jio.__storage._signature_hash,
           "_replicate_623653d45a4e770a2c9f6b71e3144d18ee1b5bec");
+  });
+
+  test("reject unknow conflict resolution", function () {
+    throws(
+      function () {
+        jIO.createJIO({
+          type: "replicate",
+          local_sub_storage: {
+            type: "replicatestorage200"
+          },
+          remote_sub_storage: {
+            type: "replicatestorage500"
+          },
+          query: {query: 'portal_type: "Foo"', limit: [0, 1234567890]},
+          conflict_handling: 4
+        });
+      },
+      function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 400);
+        equal(error.message,
+              "Unsupported conflict handling: 4");
+        return true;
+      }
+    );
   });
 
   /////////////////////////////////////////////////////////////////
@@ -847,6 +875,195 @@
       });
   });
 
+  test("local and remote document creations: keep local", function () {
+    stop();
+    expect(3);
+
+    var context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      conflict_handling: 1
+    });
+
+    RSVP.all([
+      context.jio.put("conflict", {"title": "foo"}),
+      context.jio.__storage._remote_sub_storage.put("conflict",
+                                                    {"title": "bar"})
+    ])
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .then(function () {
+        return context.jio.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote document creations: keep remote", function () {
+    stop();
+    expect(3);
+
+    var context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      conflict_handling: 2
+    });
+
+    RSVP.all([
+      context.jio.put("conflict", {"title": "foo"}),
+      context.jio.__storage._remote_sub_storage.put("conflict",
+                                                    {"title": "bar"})
+    ])
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
+        });
+      })
+      .then(function () {
+        return context.jio.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "bar"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "bar"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote document creations: continue", function () {
+    stop();
+    expect(4);
+
+    var context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      conflict_handling: 3
+    });
+
+    RSVP.all([
+      context.jio.put("conflict", {"title": "foo"}),
+      context.jio.__storage._remote_sub_storage.put("conflict",
+                                                    {"title": "bar"})
+    ])
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get("conflict");
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+//        equal(error.message, "Cannot find document: conflict");
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "bar"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("local and remote same document creations", function () {
     stop();
     expect(1);
@@ -1176,6 +1393,216 @@
         deepEqual(result, {
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote document modifications: keep local", function () {
+    stop();
+    expect(3);
+
+    var id,
+      context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      conflict_handling: 1
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.put(id, {"title": "foo4"}),
+          context.jio.__storage._remote_sub_storage.put(id, {"title": "foo5"})
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "6f700e813022233a785692585484c21cb5a412fd"
+        });
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo4"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo4"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote document modifications: keep remote", function () {
+    stop();
+    expect(3);
+
+    var id,
+      context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      conflict_handling: 2
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.put(id, {"title": "foo4"}),
+          context.jio.__storage._remote_sub_storage.put(id, {"title": "foo5"})
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "7bea6f87fd1dda14e340e5b14836cc8578fd615f"
+        });
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo5"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote document modifications: continue", function () {
+    stop();
+    expect(3);
+
+    var id,
+      context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      conflict_handling: 3
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.put(id, {"title": "foo4"}),
+          context.jio.__storage._remote_sub_storage.put(id, {"title": "foo5"})
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo4"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
       })
       .always(function () {
         start();
