@@ -101,6 +101,53 @@
     }).always(start);
   });
 
+  test('Chinese Character', function () {
+    var doc_list = [
+      {"identifier": ["测试一", "测试四"]},
+      {"identifier": ["测试一", "测试五"]},
+      {"identifier": ["a", "b"]}
+    ];
+    stop();
+    jIO.QueryFactory.create(
+      '(identifier: "%测试一%" OR identifier: "%测试二%") AND identifier: "%测试四%"'
+    )
+      .exec(
+        doc_list
+      ).then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": ["测试一", "测试四"]}
+        ], 'Only first document should be kept');
+
+        doc_list = [
+          {"identifier": ["测试一", "测试四"]},
+          {"identifier": ["测试一", "测试五"]},
+          {"identifier": ["测试四", "b"]}
+        ];
+        return jIO.QueryFactory.create('identifier: "%测试%"')
+          .exec(doc_list);
+      })
+      .then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": ["测试一", "测试四"]},
+          {"identifier": ["测试一", "测试五"]},
+          {"identifier": ["测试四", "b"]}
+        ], 'All document should be kept');
+
+        doc_list = [
+          {"identifier": "测试一"},
+          {"identifier": "测试一", "title": "标题"},
+          {"identifier": "测试一", "title": "b"}
+        ];
+        return jIO.QueryFactory.create('identifier: "%测试%" AND title: "标题"')
+          .exec(doc_list);
+      })
+      .then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "测试一", "title": "标题"}
+        ], 'Only second document should be kept');
+      }).always(start);
+  });
+
   test('Wildcard Character', function () {
     var doc_list = [
       {"identifier": "a"},

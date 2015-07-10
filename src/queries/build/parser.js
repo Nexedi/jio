@@ -162,7 +162,7 @@ switch( state )
 
 	case 15:
 		if( info.src.charCodeAt( pos ) == 34 ) state = 7;
-		else if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 33 ) || ( info.src.charCodeAt( pos ) >= 35 && info.src.charCodeAt( pos ) <= 91 ) || ( info.src.charCodeAt( pos ) >= 93 && info.src.charCodeAt( pos ) <= 254 ) ) state = 15;
+	else if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 33 ) || ( info.src.charCodeAt( pos ) >= 35 && info.src.charCodeAt( pos ) <= 91 ) || ( info.src.charCodeAt( pos ) >= 93 && info.src.charCodeAt( pos ) <= 254 ) || info.src.charCodeAt( pos ) > 255 ) state = 15;
 		else if( info.src.charCodeAt( pos ) == 92 ) state = 17;
 		else state = -1;
 		break;
