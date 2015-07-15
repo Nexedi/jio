@@ -296,8 +296,10 @@
       });
   };
 
-  ERP5Storage.prototype.getAttachment = function (id, action) {
-
+  ERP5Storage.prototype.getAttachment = function (id, action, options) {
+    if (options === undefined) {
+      options = {};
+    }
     if (action === "view") {
       if (this._default_view_reference === undefined) {
         throw new jIO.util.jIOError(
@@ -335,21 +337,71 @@
     if (action.indexOf(this._url) === 0) {
       return new RSVP.Queue()
         .push(function () {
-          return jIO.util.ajax({
-            "type": "GET",
-            "url": action,
-            "xhrFields": {
-              withCredentials: true
+          var start,
+            end,
+            range,
+            request_options = {
+              "type": "GET",
+              "dataType": "blob",
+              "url": action,
+              "xhrFields": {
+                withCredentials: true
+              }
+            };
+          if (options.start !== undefined ||  options.end !== undefined) {
+            start = options.start || 0;
+            end = options.end;
+            if (end !== undefined && end < 0) {
+              throw new jIO.util.jIOError("end must be positive",
+                                          400);
             }
-          });
+            if (start < 0) {
+              range = "bytes=" + start;
+            } else if (end === undefined) {
+              range = "bytes=" + start + "-";
+            } else {
+              if (start > end) {
+                throw new jIO.util.jIOError("start is greater than end",
+                                            400);
+              }
+              range = "bytes=" + start + "-" + end;
+            }
+            request_options.headers = {Range: range};
+          }
+          return jIO.util.ajax(request_options);
         })
         .push(function (evt) {
-          var result = JSON.parse(evt.target.responseText);
-          result._id = id;
-          return new Blob(
-            [JSON.stringify(result)],
-            {"type": evt.target.getResponseHeader("Content-Type")}
-          );
+          var content_type = evt.target.getResponseHeader("Content-Type");
+          if (content_type === "application/json") {
+            return new RSVP.Queue()
+              .push(function () {
+                if (evt.target.responseText === undefined) {
+                  return new RSVP.Queue()
+                    .push(function () {
+                      return jIO.util.readBlobAsText(evt.target.response);
+                    })
+                    .push(function (evt) {
+                      return evt.target.result;
+                    });
+                }
+                return evt.target.responseText;
+              })
+              .push(function (response_text) {
+                var result = JSON.parse(response_text);
+                result._id = id;
+                return new Blob(
+                  [JSON.stringify(result)],
+                  {"type": content_type}
+                );
+              });
+          }
+          if (evt.target.response === undefined) {
+            return new Blob(
+              [evt.target.responseText],
+              {"type": content_type}
+            );
+          }
+          return evt.target.response;
         });
     }
     throw new jIO.util.jIOError("ERP5: not support get attachment: " + action,
