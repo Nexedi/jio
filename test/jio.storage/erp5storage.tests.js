@@ -917,6 +917,75 @@
       });
   });
 
+  test("getAttachment: non-JSON callable url", function () {
+    var callable_url = domain + "foobar",
+      id = "fake",
+      server = this.server;
+
+    this.server.respondWith("GET", callable_url, [200, {
+      "Content-Type": "text/plain"
+    }, "foo\nbaré"]);
+
+    stop();
+    expect(8);
+
+    this.jio.getAttachment(id, callable_url)
+      .then(function (result) {
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, callable_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+
+        ok(result instanceof Blob, "Data is Blob");
+        deepEqual(result.type, "text/plain", "Check mimetype");
+        return jIO.util.readBlobAsText(result);
+      })
+      .then(function (result) {
+        var expected = "foo\nbaré";
+        equal(result.target.result, expected, "Attachment correctly fetched");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("getAttachment: slicing parameters", function () {
+    var callable_url = domain + "foobar",
+      id = "fake",
+      server = this.server;
+
+    this.server.respondWith("GET", callable_url, [200, {
+      "Content-Type": "application/octet-stream"
+    }, "foo\nbaré"]);
+
+    stop();
+    expect(8);
+
+    this.jio.getAttachment(id, callable_url,
+                           {start: 123, end: 456})
+      .then(function (result) {
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, callable_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[0].requestHeaders.Range, "bytes=123-456");
+
+        ok(result instanceof Blob, "Data is Blob");
+        deepEqual(result.type, "application/octet-stream", "Check mimetype");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // erp5Storage.hasCapacity
   /////////////////////////////////////////////////////////////////
