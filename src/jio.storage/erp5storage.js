@@ -288,7 +288,21 @@
       });
   };
 
-  ERP5Storage.prototype.getAttachment = function (id, action) {
+  ERP5Storage.prototype.getAttachment = function (id, action, options) {
+    var transaction,
+      type,
+      start,
+      end;
+    if (options === undefined) {
+      options = {};
+    }
+    start = options.start || "0";
+    end = options.end || "";
+
+    if (start > end) {
+      throw new jIO.util.jIOError("_start is greater than _end",
+                                  400);
+    }
 
     if (action === "view") {
       if (this._default_view_reference === undefined) {
@@ -329,6 +343,10 @@
         .push(function () {
           return jIO.util.ajax({
             "type": "GET",
+            "dataType": "blob",
+            "headers": {
+              Range: "bytes=" + start + "-" + end
+            },
             "url": action,
             "xhrFields": {
               withCredentials: true
@@ -336,12 +354,20 @@
           });
         })
         .push(function (evt) {
-          var result = JSON.parse(evt.target.responseText);
-          result._id = id;
-          return new Blob(
-            [JSON.stringify(result)],
-            {"type": evt.target.getResponseHeader("Content-Type")}
-          );
+          var content_type = evt.target.getResponseHeader("Content-Type");
+          if (content_type === "application/json") {
+            return jIO.util.readBlobAsText(evt.target.response)
+              .push(function (event) {
+                var result = JSON.parse(event.target.result);
+                result._id = id;
+                return new Blob(
+                  [JSON.stringify(result)],
+                  {"type": content_type}
+                );
+              });
+          } else {
+            return evt.target.response;
+          }
         });
     }
     throw new jIO.util.jIOError("ERP5: not support get attachment: " + action,
