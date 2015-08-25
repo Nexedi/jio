@@ -82,16 +82,27 @@
   }
 
   DavStorage.prototype.put = function (id, param) {
+    var that = this;
     id = restrictDocumentId(id);
     if (Object.getOwnPropertyNames(param).length > 0) {
       // Reject if param has some properties
       throw new jIO.util.jIOError("Can not store properties: " +
                                   Object.getOwnPropertyNames(param), 400);
     }
-    return ajax(this, {
-      type: "MKCOL",
-      url: this._url + id
-    });
+    return new RSVP.Queue()
+      .push(function () {
+        return ajax(that, {
+          type: "MKCOL",
+          url: that._url + id
+        });
+      })
+      .push(undefined, function (err) {
+        if ((err.target !== undefined) &&
+            (err.target.status === 405)) {
+          return;
+        }
+        throw err;
+      });
   };
 
   DavStorage.prototype.remove = function (id) {

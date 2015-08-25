@@ -94,6 +94,26 @@
       });
   });
 
+  test("don't throw error when putting existing directory", function () {
+    var url = domain + "/existing/",
+      server = this.server;
+    this.server.respondWith("MKCOL", url, [405, {
+      "Content-Type": "text/xml"
+    }, "MKCOL https://example.org/existing/ 405 (Method Not Allowed)"]);
+    stop();
+    expect(1);
+    this.jio.put("/existing/", {})
+      .then(function () {
+        equal(server.requests[0].status, 405);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("reject ID not starting with /", function () {
     stop();
     expect(3);
