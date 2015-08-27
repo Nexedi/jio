@@ -196,13 +196,24 @@
 
 
   DavStorage.prototype.putAttachment = function (id, name, blob) {
+    var that = this;
     id = restrictDocumentId(id);
     restrictAttachmentId(name);
-    return ajax(this, {
-      type: "PUT",
-      url: this._url + id + name,
-      data: blob
-    });
+
+    return new RSVP.Queue()
+      .push(function () {
+        return ajax(that, {
+          type: "PUT",
+          url: that._url + id + name,
+          data: blob
+        });
+      })
+      .push(undefined, function (error) {
+        if (error.target.status === 403) {
+          throw new jIO.util.jIOError("Cannot access subdocument", 404);
+        }
+        throw error;
+      });
   };
 
   DavStorage.prototype.getAttachment = function (id, name) {

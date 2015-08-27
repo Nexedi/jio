@@ -765,6 +765,29 @@
       });
   });
 
+  test("putAttachment to inexisting directory: expecting a 404", function () {
+    var blob = new Blob(["foo"]),
+      url = domain + "/inexistent_dir/attachment1";
+    this.server.respondWith("PUT", url, [403, {"": ""}, ""]);
+    stop();
+    expect(3);
+
+    this.jio.putAttachment(
+      "/inexistent_dir/",
+      "attachment1",
+      blob
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot access subdocument");
+        equal(error.status_code, 404);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+
   test("putAttachment document", function () {
     var blob = new Blob(["foo"]),
       url = domain + "/putAttachment1/attachment1",
