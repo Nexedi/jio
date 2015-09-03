@@ -36,6 +36,7 @@ zip:
 	@cp lib/require/require.js              $(TMPDIR)/jio/
 	@cp src/jio.storage/localstorage.js     $(TMPDIR)/jio/storage/
 	@cp src/jio.storage/davstorage.js       $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/dropboxstorage.js   $(TMPDIR)/jio/storage/
 	@cp src/jio.storage/erp5storage.js      $(TMPDIR)/jio/storage/
 	@cp src/jio.storage/indexstorage.js     $(TMPDIR)/jio/storage/
 	@cp src/jio.storage/gidstorage.js       $(TMPDIR)/jio/storage/
@@ -68,6 +69,7 @@ zip:
 	@$(UGLIFY) lib/require/require.js              >$(TMPDIR)/jio/require.min.js 2>/dev/null
 	@$(UGLIFY) src/jio.storage/localstorage.js     >$(TMPDIR)/jio/storage/localstorage.min.js 2>/dev/null
 	@$(UGLIFY) src/jio.storage/davstorage.js       >$(TMPDIR)/jio/storage/davstorage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/dropboxstorage.js   >$(TMPDIR)/jio/storage/dropboxstorage.min.js 2>/dev/null
 	@$(UGLIFY) src/jio.storage/erp5storage.js      >$(TMPDIR)/jio/storage/erp5storage.min.js 2>/dev/null
 	@$(UGLIFY) src/jio.storage/indexstorage.js     >$(TMPDIR)/jio/storage/indexstorage.min.js 2>/dev/null
 	@$(UGLIFY) src/jio.storage/gidstorage.js       >$(TMPDIR)/jio/storage/gidstorage.min.js 2>/dev/null

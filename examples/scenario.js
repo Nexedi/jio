@@ -83,6 +83,23 @@
 //       });
 
       ///////////////////////////
+      // Dropbox storage
+      ///////////////////////////
+//       return g.run({
+//         type: "query",
+//         sub_storage: {
+//           type: "uuid",
+//           sub_storage: {
+//             type: "drivetojiomapping",
+//             sub_storage: {
+//               "type": "dropbox",
+//               "access_token" : "TOKEN"
+//             }
+//           }
+//         }
+//       });
+
+      ///////////////////////////
       // Qiniu storage
       ///////////////////////////
 //       return g.run({

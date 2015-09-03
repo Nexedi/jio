@@ -1,742 +1,982 @@
-/*jslint indent: 2, maxlen: 200, nomen: true, unparam: true */
-/*global window, define, module, test_util, RSVP, jIO, local_storage, test, ok,
-  deepEqual, sinon, expect, stop, start, Blob */
-(function (jIO, QUnit) {
+/*jslint nomen: true */
+/*global Blob, sinon*/
+(function (jIO, QUnit, Blob, sinon) {
   "use strict";
-//   var test = QUnit.test,
-//     stop = QUnit.stop,
-//     start = QUnit.start,
-//     ok = QUnit.ok,
-//     expect = QUnit.expect,
-//     deepEqual = QUnit.deepEqual,
-//     equal = QUnit.equal,
-  var module = QUnit.module;
-//     throws = QUnit.throws;
+  var test = QUnit.test,
+    stop = QUnit.stop,
+    start = QUnit.start,
+    ok = QUnit.ok,
+    expect = QUnit.expect,
+    deepEqual = QUnit.deepEqual,
+    equal = QUnit.equal,
+    module = QUnit.module,
+    token = "sample_token";
 
-  module("DropboxStorage");
+  /////////////////////////////////////////////////////////////////
+  // DropboxStorage constructor
+  /////////////////////////////////////////////////////////////////
+  module("DropboxStorage.constructor");
+
+  test("create storage", function () {
+    var jio = jIO.createJIO({
+      type: "dropbox",
+      access_token: token
+    });
+    equal(jio.__type, "dropbox");
+    deepEqual(jio.__storage._access_token, token);
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // DropboxStorage.put
+  /////////////////////////////////////////////////////////////////
+  module("DropboxStorage.put", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "dropbox",
+        access_token: token
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("put document", function () {
+    var url = "https://api.dropboxapi.com/1/fileops/" +
+      "create_folder?access_token="
+      + token + "&root=dropbox&path=/put1/",
+      server = this.server;
+    this.server.respondWith("POST", url, [201, {
+      "Content-Type": "text/xml"
+    }, ""]);
+
+    stop();
+    expect(7);
+
+    this.jio.put("/put1/", {})
+      .then(function () {
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, url);
+        equal(server.requests[0].status, 201);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].responseText, "");
+        deepEqual(server.requests[0].requestHeaders, {
+          "Content-Type": "text/plain;charset=utf-8"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("don't throw error when putting existing directory", function () {
+    var url = "https://api.dropboxapi.com/1/fileops/create_folder" +
+      "?access_token=" + token + "&root=dropbox&path=/existing/",
+      server = this.server;
+    this.server.respondWith("POST", url, [405, {
+      "Content-Type": "text/xml"
+    }, "POST" + url + "(Forbidden)"]);
+    stop();
+    expect(1);
+    this.jio.put("/existing/", {})
+      .then(function () {
+        equal(server.requests[0].status, 405);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject ID not starting with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.put("put1/", {})
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id put1/ is forbidden (no begin /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject ID not ending with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.put("/put1", {})
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id /put1 is forbidden (no end /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject to store any property", function () {
+    stop();
+    expect(3);
+
+    this.jio.put("/put1/", {title: "foo"})
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Can not store properties: title");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // DropboxStorage.remove
+  /////////////////////////////////////////////////////////////////
+  module("DropboxStorage.remove", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "dropbox",
+        access_token: token
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("remove document", function () {
+    var url_get = "https://api.dropboxapi.com/1/metadata/dropbox" +
+      "//remove1/?access_token=" + token,
+      url_delete = "https://api.dropboxapi.com/1/fileops/delete/?" +
+      "access_token=" + token + "&root=dropbox&path=/remove1/",
+      server = this.server;
+    this.server.respondWith("GET", url_get, [204, {
+      "Content-Type": "text/xml"
+    }, '{"is_dir": true}']);
+    this.server.respondWith("POST", url_delete, [204, {
+      "Content-Type": "text/xml"
+    }, '']);
+    stop();
+    expect(13);
+
+    this.jio.remove("/remove1/")
+      .then(function () {
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, url_get);
+        equal(server.requests[0].status, 204);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].responseText, '{"is_dir": true}');
+        deepEqual(server.requests[0].requestHeaders, {});
+        equal(server.requests[1].method, "POST");
+        equal(server.requests[1].url, url_delete);
+        equal(server.requests[1].status, 204);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].responseText, '');
+        deepEqual(server.requests[1].requestHeaders, {
+          "Content-Type": "text/plain;charset=utf-8"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject ID not starting with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.remove("remove1/")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id remove1/ is forbidden (no begin /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject ID not ending with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.remove("/remove1")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id /remove1 is forbidden (no end /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // DropboxStorage.get
+  /////////////////////////////////////////////////////////////////
+  module("DropboxStorage.get", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "dropbox",
+        access_token: token
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("reject ID not starting with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.get("get1/")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id get1/ is forbidden (no begin /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject ID not ending with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.get("/get1")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id /get1 is forbidden (no end /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get inexistent document", function () {
+    var url_get = "https://api.dropboxapi.com/1/metadata/dropbox" +
+      "//inexistent/?access_token=" + token;
+    this.server.respondWith("GET", url_get, [404, {
+      "Content-Type": "text/xml"
+    }, '']);
+    stop();
+    expect(3);
+
+    this.jio.get("/inexistent/")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document");
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get document", function () {
+    var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
+      "//id1/?access_token=" + token;
+    this.server.respondWith("GET", url, [200, {
+      "Content-Type": "text/xml"
+    }, '{"is_dir": true, "contents": []}'
+                                        ]);
+    stop();
+    expect(1);
+
+    this.jio.get("/id1/")
+      .then(function (result) {
+        deepEqual(result, {}, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // DropboxStorage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("DropboxStorage.allAttachments", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "dropbox",
+        access_token: token
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("reject ID not starting with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.allAttachments("get1/")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id get1/ is forbidden (no begin /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject ID not ending with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.allAttachments("/get1")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id /get1 is forbidden (no end /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get inexistent document", function () {
+    var url = "/inexistent/";
+    this.server.respondWith("PROPFIND", url, [404, {
+      "Content-Type": "text/html"
+    }, "foo"]);
+
+    stop();
+    expect(3);
+
+    this.jio.allAttachments("/inexistent/")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document");
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get document without attachment", function () {
+    var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
+      "//id1/?access_token=" + token;
+    this.server.respondWith("GET", url, [200, {
+      "Content-Type": "text/xml"
+    }, '{"is_dir": true, "contents": []}'
+                                        ]);
+    stop();
+    expect(1);
+
+    this.jio.allAttachments("/id1/")
+      .then(function (result) {
+        deepEqual(result, {}, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get document with attachment", function () {
+    var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
+      "//id1/?access_token=" + token;
+    this.server.respondWith("GET", url, [200, {
+      "Content-Type": "text/xml"
+    }, '{"is_dir": true, "path": "/id1", ' +
+                                         '"contents": ' +
+                                         '[{"rev": "143bb45509", ' +
+                                         '"thumb_exists": false, ' +
+                                         '"path": "/id1/attachment1", ' +
+                                         '"is_dir": false, "bytes": 151}, ' +
+                                         '{"rev": "153bb45509", ' +
+                                         '"thumb_exists": false, ' +
+                                         '"path": "/id1/attachment2", ' +
+                                         '"is_dir": false, "bytes": 11}, ' +
+                                         '{"rev": "173bb45509", ' +
+                                         '"thumb_exists": false, ' +
+                                         '"path": "/id1/fold1", ' +
+                                         '"is_dir": true, "bytes": 0}], ' +
+                                         '"icon": "folder"}'
+                                        ]);
+    stop();
+    expect(1);
+
+    this.jio.allAttachments("/id1/")
+      .then(function (result) {
+        deepEqual(result, {
+          attachment1: {},
+          attachment2: {}
+        }, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // DropboxStorage.putAttachment
+  /////////////////////////////////////////////////////////////////
+  module("DropboxStorage.putAttachment", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "dropbox",
+        access_token: token
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("reject ID not starting with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.putAttachment(
+      "putAttachment1/",
+      "attachment1",
+      new Blob([""])
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id putAttachment1/ is forbidden (no begin /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject ID not ending with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.putAttachment(
+      "/putAttachment1",
+      "attachment1",
+      new Blob([""])
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id /putAttachment1 is forbidden (no end /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject attachment with / character", function () {
+    stop();
+    expect(3);
+
+    this.jio.putAttachment(
+      "/putAttachment1/",
+      "attach/ment1",
+      new Blob([""])
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "attachment attach/ment1 is forbidden");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("putAttachment to inexisting directory: expecting a 404", function () {
+    var blob = new Blob(["foo"]),
+      url = "/inexistent_dir/attachment1";
+    this.server.respondWith("PUT", url, [405, {"": ""}, ""]);
+    stop();
+    expect(3);
+
+    this.jio.putAttachment(
+      "/inexistent_dir/",
+      "attachment1",
+      blob
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot access subdocument");
+        equal(error.status_code, 404);
+      })
+      .always(function () {
+        start();
+      });
+  });
 
 
-//   /**
-//    * all(promises): Promise
-//    *
-//    * Produces a promise that is resolved when all the given promises are
-//    * fulfilled. The resolved value is an array of each of the answers of the
-//    * given promises.
-//    *
-//    * @param  {Array} promises The promises to use
-//    * @return {Promise} A new promise
-//    */
-//   function all(promises) {
-//     var results = [], i, count = 0;
-// 
-//     function cancel() {
-//       var j;
-//       for (j = 0; j < promises.length; j += 1) {
-//         if (typeof promises[j].cancel === 'function') {
-//           promises[j].cancel();
-//         }
-//       }
-//     }
-//     return new RSVP.Promise(function (resolve, reject, notify) {
-//       /*jslint unparam: true */
-//       function succeed(j) {
-//         return function (answer) {
-//           results[j] = answer;
-//           count += 1;
-//           if (count !== promises.length) {
-//             return;
-//           }
-//           resolve(results);
-//         };
-//       }
-// 
-//       function notified(j) {
-//         return function (answer) {
-//           notify({
-//             "promise": promises[j],
-//             "index": j,
-//             "notified": answer
-//           });
-//         };
-//       }
-//       for (i = 0; i < promises.length; i += 1) {
-//         promises[i].then(succeed(i), succeed(i), notified(i));
-//       }
-//     }, cancel);
-//   }
-// 
-//   test("Post & Get", function () {
-//     expect(6);
-//     var jio = jIO.createJIO({
-//       "type": "dropbox",
-//       "access_token": "v43SQLCEoi8AAAAAAAAAAVixCoMfDelgGj3NRPfE" +
-//         "nqscAuNGp2LhoS8-GiAaDD4C"
-//     }, {
-//       "workspace": {}
-//     });
-// 
-//     stop();
-//     all([
-// 
-//       // get inexistent document
-//       jio.get({
-//         "_id": "inexistent"
-//       }).always(function (answer) {
-// 
-//         deepEqual(answer, {
-//           "error": "not_found",
-//           "id": "inexistent",
-//           "message": "Cannot find document",
-//           "method": "get",
-//           "reason": "Not Found",
-//           "result": "error",
-//           "status": 404,
-//           "statusText": "Not Found"
-//         }, "Get inexistent document");
-// 
-//       }),
-// 
-//       // post without id
-//       jio.post({})
-//         .then(function (answer) {
-//           var id = answer.id;
-//           delete answer.id;
-//           deepEqual(answer, {
-//             "method": "post",
-//             "result": "success",
-//             "status": 201,
-//             "statusText": "Created"
-//           }, "Post without id");
-// 
-//           // We check directly on the document to get its own id
-//           return jio.get({'_id': id});
-//         }).always(function (answer) {
-// 
-//           var uuid = answer.data._id;
-//           ok(util.isUuid(uuid), "Uuid should look like " +
-//              "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx : " + uuid);
-// 
-//       }).then(function () {
-//         return jio.remove({"_id": "post1"})
-//       }).always(function () {
-//           return jio.post({
-//             "_id": "post1",
-//             "title": "myPost1"
-//           });
-// 
-//       }).always(function (answer) {
-// 
-//         deepEqual(answer, {
-//           "id": "post1",
-//           "method": "post",
-//           "result": "success",
-//           "status": 201,
-//           "statusText": "Created"
-//         }, "Post");
-// 
-//       }).then(function () {
-// 
-//         return jio.get({
-//           "_id": "post1"
-//         });
-// 
-//       }).always(function (answer) {
-// 
-//         deepEqual(answer, {
-//           "data": {
-//             "_id": "post1",
-//             "title": "myPost1"
-//           },
-//           "id": "post1",
-//           "method": "get",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//         }, "Get, Check document");
-//       }).then(function () {
-// 
-//         // post but document already exists
-//         return jio.post({"_id": "post1", "title": "myPost2"});
-// 
-//       }).always(function (answer) {
-// 
-//         deepEqual(answer, {
-//           "error": "conflict",
-//           "id": "post1",
-//           "message": "Cannot create a new document",
-//           "method": "post",
-//           "reason": "document exists",
-//           "result": "error",
-//           "status": 409,
-//           "statusText": "Conflict"
-//         }, "Post but document already exists");
-// 
-//       })
-// 
-//     ]).always(start);
-// 
-//   });
-// 
-//   test("Put & Get", function () {
-//     expect(4);
-//     var jio = jIO.createJIO({
-//       "type": "dropbox",
-//       "access_token": "v43SQLCEoi8AAAAAAAAAAVixCoMfDelgGj3NRPfE" +
-//         "nqscAuNGp2LhoS8-GiAaDD4C"
-//     }, {
-//       "workspace": {}
-//     });
-// 
-//     stop();
-// 
-//     // put non empty document
-//     jio.put({
-//       "_id": "put1",
-//       "title": "myPut1"
-//     }).always(function (answer) {
-// 
-//       deepEqual(answer, {
-//         "id": "put1",
-//         "method": "put",
-//         "result": "success",
-//         "status": 204,
-//         "statusText": "No Content"
-//       }, "Creates a document");
-// 
-//     }).then(function () {
-// 
-//       return jio.get({
-//         "_id": "put1"
-//       });
-// 
-//     }).always(function (answer) {
-// 
-//       deepEqual(answer, {
-//         "data": {
-//           "_id": "put1",
-//           "title": "myPut1"
-//         },
-//         "id": "put1",
-//         "method": "get",
-//         "result": "success",
-//         "status": 200,
-//         "statusText": "Ok"
-//       }, "Get, Check document");
-// 
-//     }).then(function () {
-// 
-//       // put but document already exists
-//       return jio.put({
-//         "_id": "put1",
-//         "title": "myPut2"
-//       });
-// 
-//     }).always(function (answer) {
-// 
-//       deepEqual(answer, {
-//         "id": "put1",
-//         "method": "put",
-//         "result": "success",
-//         "status": 204,
-//         "statusText": "No Content"
-//       }, "Update the document");
-// 
-//     }).then(function () {
-// 
-//       return jio.get({
-//         "_id": "put1"
-//       });
-// 
-//     }).always(function (answer) {
-// 
-//       deepEqual(answer, {
-//         "data": {
-//           "_id": "put1",
-//           "title": "myPut2"
-//         },
-//         "id": "put1",
-//         "method": "get",
-//         "result": "success",
-//         "status": 200,
-//         "statusText": "Ok"
-//       }, "Get, Check document");
-// 
-//     }).always(start);
-// 
-//   });
-// 
-//   test("PutAttachment & Get & GetAttachment", function () {
-//     expect(10);
-//     var jio = jIO.createJIO({
-//       "type": "dropbox",
-//       "access_token": "v43SQLCEoi8AAAAAAAAAAVixCoMfDelgGj3NRPfE" +
-//         "nqscAuNGp2LhoS8-GiAaDD4C"
-//     }, {
-//       "workspace": {}
-//     });
-// 
-//     stop();
-// 
-//     all([
-// 
-//       // get an attachment from an inexistent document
-//       jio.getAttachment({
-//         "_id": "inexistent",
-//         "_attachment": "a"
-//       }).always(function (answer) {
-// 
-//         deepEqual(answer, {
-//           "attachment": "a",
-//           "error": "not_found",
-//           "id": "inexistent",
-//           "message": "Unable to get attachment",
-//           "method": "getAttachment",
-//           "reason": "Missing document",
-//           "result": "error",
-//           "status": 404,
-//           "statusText": "Not Found"
-//         }, "GetAttachment from inexistent document");
-// 
-//       }),
-// 
-//       // put a document then get an attachment from the empty document
-//       jio.put({
-//         "_id": "b"
-//       }).then(function () {
-//         return jio.getAttachment({
-//           "_id": "b",
-//           "_attachment": "inexistent"
-//         });
-// 
-//       }).always(function (answer) {
-// 
-//         deepEqual(answer, {
-//           "attachment": "inexistent",
-//           "error": "not_found",
-//           "id": "b",
-//           "message": "Cannot find attachment",
-//           "method": "getAttachment",
-//           "reason": "Not Found",
-//           "result": "error",
-//           "status": 404,
-//           "statusText": "Not Found"
-//         }, "Get inexistent attachment");
-// 
-//       }),
-// 
-//       // put an attachment to an inexistent document
-//       jio.putAttachment({
-//         "_id": "inexistent",
-//         "_attachment": "putattmt2",
-//         "_data": ""
-//       }).always(function (answer) {
-// 
-//         deepEqual(answer, {
-//           "attachment": "putattmt2",
-//           "error": "not_found",
-//           "id": "inexistent",
-//           "message": "Impossible to add attachment",
-//           "method": "putAttachment",
-//           "reason": "Missing document",
-//           "result": "error",
-//           "status": 404,
-//           "statusText": "Not Found"
-//         }, "PutAttachment to inexistent document");
-// 
-//       }),
-// 
-//       // add a document to the storage
-//       // don't need to be tested
-//       jio.put({
-//         "_id": "putattmt1",
-//         "title": "myPutAttmt1"
-//       }).then(function () {
-// 
-//         return jio.putAttachment({
-//           "_id": "putattmt1",
-//           "_attachment": "putattmt2",
-//           "_data": ""
-//         });
-// 
-//       }).always(function (answer) {
-// 
-//         deepEqual(answer, {
-//           "attachment": "putattmt2",
-//           "digest": "sha256-4ea5c508a6566e76240543f8feb06fd45" +
-//             "7777be39549c4016436afda65d2330e",
-//           "id": "putattmt1",
-//           "method": "putAttachment",
-//           "result": "success",
-//           "status": 201,
-//           "statusText": "Created"
-//         }, "PutAttachment to a document, without data");
-// 
-//       }).then(function () {
-// 
-//         // check document and attachment
-//         return all([
-//           jio.get({
-//             "_id": "putattmt1"
-//           }),
-//           jio.getAttachment({
-//             "_id": "putattmt1",
-//             "_attachment": "putattmt2"
-//           })
-//         ]);
-// 
-//         // XXX check attachment with a getAttachment
-// 
-//       }).always(function (answers) {
-// 
-//         deepEqual(answers[0], {
-//           "data": {
-//             "_attachments": {
-//               "putattmt2": {
-//                 "content_type": "",
-//                 "digest": "sha256-4ea5c508a6566e76240543f8feb06fd45" +
-//                   "7777be39549c4016436afda65d2330e",
-//                 "length": 0
-//               }
-//             },
-//             "_id": "putattmt1",
-//             "title": "myPutAttmt1"
-//           },
-//           "id": "putattmt1",
-//           "method": "get",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//         }, "Get, Check document");
-//         ok(answers[1].data instanceof Blob, "Data is Blob");
-//         deepEqual(answers[1].data.type, "", "Check mimetype");
-//         deepEqual(answers[1].data.size, 0, "Check size");
-// 
-//         delete answers[1].data;
-//         deepEqual(answers[1], {
-//           "attachment": "putattmt2",
-//           "id": "putattmt1",
-//           "digest": "sha256-4ea5c508a6566e76240543f8feb06fd45" +
-//             "7777be39549c4016436afda65d2330e",
-//           "method": "getAttachment",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//         }, "Get Attachment, Check Response");
-// 
-//       })
-// 
-//     ]).then( function () {
-//       return jio.put({
-//         "_id": "putattmt1",
-//         "foo": "bar",
-//         "title": "myPutAttmt1"
-//       });
-//     }).then (function () {
-//       return jio.get({
-//         "_id": "putattmt1"
-//       });
-//     }).always(function (answer) {
-// 
-//         deepEqual(answer, {
-//           "data": {
-//             "_attachments": {
-//               "putattmt2": {
-//                 "content_type": "",
-//                 "digest": "sha256-4ea5c508a6566e76240543f8feb06fd457777be39549c4016436afda65d2330e",
-//                 "length": 0
-//               }
-//             },
-//             "_id": "putattmt1",
-//             "foo": "bar",
-//             "title": "myPutAttmt1"
-//           },
-//           "id": "putattmt1",
-//           "method": "get",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//         }, "Get, Check put kept document attachment");
-//     })
-//       .always(start);
-// 
-//   });
-// 
-//   test("Remove & RemoveAttachment", function () {
-//     expect(5);
-//     var jio = jIO.createJIO({
-//       "type": "dropbox",
-//       "access_token": "v43SQLCEoi8AAAAAAAAAAVixCoMfDelgGj3NRPfE" +
-//         "nqscAuNGp2LhoS8-GiAaDD4C"
-//     }, {
-//       "workspace": {}
-//     });
-// 
-//     stop();
-// 
-//     jio.put({
-//       "_id": "a"
-//     }).then(function () {
-// 
-//       return jio.putAttachment({
-//         "_id": "a",
-//         "_attachment": "b",
-//         "_data": "c"
-//       });
-// 
-//     }).then(function () {
-// 
-//       return jio.removeAttachment({
-//         "_id": "a",
-//         "_attachment": "b"
-//       });
-// 
-//     }).always(function (answer) {
-// 
-//       deepEqual(answer, {
-//         "attachment": "b",
-//         "id": "a",
-//         "method": "removeAttachment",
-//         "result": "success",
-//         "status": 200,
-//         "statusText": "Ok"
-//       }, "Remove existent attachment");
-// 
-//     }).then(function () {
-//       return jio.get({'_id' : "a"});
-//     }).always(function (answer) {
-//       deepEqual(answer, {
-//           "data": {
-//             "_id": "a",
-//           },
-//           "id": "a",
-//           "method": "get",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//       }, "Attachment removed from metadata");
-// 
-//     })
-//       .then(function () {
-// 
-//       // Promise.all always return success
-//       return all([jio.removeAttachment({
-//         "_id": "a",
-//         "_attachment": "b"
-//       })]);
-// 
-//     }).always(function (answers) {
-// 
-//       deepEqual(answers[0], {
-//         "attachment": "b",
-//         "error": "not_found",
-//         "id": "a",
-//         "message": "Attachment not found",
-//         "method": "removeAttachment",
-//         "reason": "missing attachment",
-//         "result": "error",
-//         "status": 404,
-//         "statusText": "Not Found"
-//       }, "Remove removed attachment");
-// 
-//     }).then(function () {
-// 
-//       return jio.remove({
-//         "_id": "a"
-//       });
-// 
-//     }).always(function (answer) {
-// 
-//       deepEqual(answer, {
-//         "id": "a",
-//         "method": "remove",
-//         "result": "success",
-//         "status": 200,
-//         "statusText": "Ok"
-//       }, "Remove existent document");
-// 
-//     }).then(function () {
-// 
-//       return jio.remove({
-//         "_id": "a"
-//       });
-// 
-//     }).always(function (answer) {
-// 
-//       deepEqual(answer, {
-//         "error": "not_found",
-//         "id": "a",
-//         "message": "Document not found",
-//         "method": "remove",
-//         "reason": "Not Found",
-//         "result": "error",
-//         "status": 404,
-//         "statusText": "Not Found"
-//       }, "Remove removed document");
-// 
-//     }).always(start);
-// 
-//   });
-// 
-//   test("AllDocs", function () {
-//     expect(2);
-//     var shared = {}, jio;
-//     jio = jIO.createJIO({
-//       "type": "dropbox",
-//       "access_token": "v43SQLCEoi8AAAAAAAAAAVixCoMfDelgGj3NRPfE" +
-//         "nqscAuNGp2LhoS8-GiAaDD4C",
-//       "application_name": "AllDocs-test"
-//     }, {
-//       "workspace": {}
-//     });
-// 
-//     stop();
-// 
-//     shared.date_a = new Date(0);
-//     shared.date_b = new Date();
-// 
-//     // Clean storage and put some document before listing them
-//     all([
-//       jio.allDocs()
-//         .then(function (document_list) {
-//           var promise_list = [], i;
-//           for (i = 0; i < document_list.data.total_rows; i += 1) {
-//             promise_list.push(
-//               jio.remove({
-//                 '_id': document_list.data.rows[i].id
-//               })
-//             );
-//           }
-//           return RSVP.all(promise_list);
-//         })
-//     ])
-//       .then(function () {
-//         return RSVP.all([
-//           jio.put({
-//             "_id": "a",
-//             "title": "one",
-//             "date": shared.date_a
-//           }).then(function () {
-//             return jio.putAttachment({
-//               "_id": "a",
-//               "_attachment": "aa",
-//               "_data": "aaa"
-//             });
-//           }),
-//           jio.put({
-//             "_id": "b",
-//             "title": "two",
-//             "date": shared.date_a
-//           }),
-//           jio.put({
-//             "_id": "c",
-//             "title": "one",
-//             "date": shared.date_b
-//           }),
-//           jio.put({
-//             "_id": "d",
-//             "title": "two",
-//             "date": shared.date_b
-//           })
-//         ]);
-//       }).then(function () {
-// 
-//         // get a list of documents
-//         return jio.allDocs();
-// 
-//       }).always(function (answer) {
-// 
-//         // sort answer rows for comparison
-//         if (answer.data && answer.data.rows) {
-//           answer.data.rows.sort(function (a, b) {
-//             return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-//           });
-//         }
-// 
-//         deepEqual(answer, {
-//           "data": {
-//             "rows": [{
-//               "id": "a",
-//               "value": {}
-//             }, {
-//               "id": "b",
-//               "value": {}
-//             }, {
-//               "id": "c",
-//               "value": {}
-//             }, {
-//               "id": "d",
-//               "value": {}
-//             }],
-//             "total_rows": 4
-//           },
-//           "method": "allDocs",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//         }, "AllDocs");
-// 
-//       }).then(function () {
-// 
-//         // get a list of documents
-//         return jio.allDocs({
-//           "include_docs": true
-//         });
-// 
-//       }).always(function (answer) {
-// 
-//         deepEqual(answer, {
-//           "data": {
-//             "rows": [{
-//               "doc": {
-//                 "_attachments": {
-//                   "aa": {
-//                     "content_type": "",
-//                     "digest": "sha256-4ea5c508a6566e76240543f8feb06fd45" +
-//                       "7777be39549c4016436afda65d2330e",
-//                     "length": 3
-//                   }
-//                 },
-//                 "_id": "a",
-//                 "date": shared.date_a.toJSON(),
-//                 "title": "one"
-//               },
-//               "id": "a",
-//               "value": {}
-//             }, {
-//               "doc": {
-//                 "_id": "b",
-//                 "date": shared.date_a.toJSON(),
-//                 "title": "two"
-//               },
-//               "id": "b",
-//               "value": {}
-//             }, {
-//               "doc": {
-//                 "_id": "c",
-//                 "date": shared.date_b.toJSON(),
-//                 "title": "one"
-//               },
-//               "id": "c",
-//               "value": {}
-//             }, {
-//               "doc": {
-//                 "_id": "d",
-//                 "date": shared.date_b.toJSON(),
-//                 "title": "two"
-//               },
-//               "id": "d",
-//               "value": {}
-//             }],
-//             "total_rows": 4
-//           },
-//           "method": "allDocs",
-//           "result": "success",
-//           "status": 200,
-//           "statusText": "Ok"
-//         }, "AllDocs include docs");
-// 
-//       }).always(start);
-// 
-//   });
+  test("putAttachment document", function () {
+    var blob = new Blob(["foo"]),
+      url_get_id = "https://api.dropboxapi.com/1/metadata/dropbox" +
+        "//putAttachment1/?access_token=" + token,
+      url_get_att = "https://api.dropboxapi.com/1/metadata/dropbox" +
+        "//putAttachment1/attachment1/?access_token=" + token,
+      url_put_att = "https://content.dropboxapi.com/1/files_put/dropbox/" +
+        "putAttachment1/attachment1?access_token=" + token,
+      server = this.server;
 
-}(jIO, QUnit));
+    this.server.respondWith("GET", url_get_id, [204, {
+      "Content-Type": "text/xml"
+    }, '{"is_dir": true, "contents": []}']);
+
+    this.server.respondWith("GET", url_get_att, [404, {
+      "Content-Type": "text/xml"
+    }, '']);
+
+    this.server.respondWith("PUT", url_put_att, [204, {
+      "Content-Type": "text/xml"
+    }, ""]);
+
+    stop();
+    expect(17);
+
+    this.jio.putAttachment(
+      "/putAttachment1/",
+      "attachment1",
+      blob
+    )
+      .then(function () {
+        equal(server.requests.length, 3);
+
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, url_get_id);
+        equal(server.requests[0].status, 204);
+        equal(server.requests[0].responseText,
+              "{\"is_dir\": true, \"contents\": []}");
+        deepEqual(server.requests[0].requestHeaders, {});
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, url_get_att);
+        equal(server.requests[1].status, 404);
+        equal(server.requests[1].responseText, "");
+        deepEqual(server.requests[1].requestHeaders, {});
+
+        equal(server.requests[2].method, "PUT");
+        equal(server.requests[2].url, url_put_att);
+        equal(server.requests[2].status, 204);
+        equal(server.requests[2].responseText, "");
+        deepEqual(server.requests[2].requestHeaders, {
+          "Content-Type": "text/plain;charset=utf-8"
+        });
+        equal(server.requests[2].requestBody, blob);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // DropboxStorage.removeAttachment
+  /////////////////////////////////////////////////////////////////
+  module("DropboxStorage.removeAttachment", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "dropbox",
+        access_token: token
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("reject ID not starting with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.removeAttachment(
+      "removeAttachment1/",
+      "attachment1"
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id removeAttachment1/ is forbidden (no begin /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject ID not ending with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.removeAttachment(
+      "/removeAttachment1",
+      "attachment1"
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id /removeAttachment1 is forbidden (no end /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject attachment with / character", function () {
+    stop();
+    expect(3);
+
+    this.jio.removeAttachment(
+      "/removeAttachment1/",
+      "attach/ment1"
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "attachment attach/ment1 is forbidden");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("removeAttachment document", function () {
+    var url_get_id = "https://api.dropboxapi.com/1/metadata/dropbox" +
+      "//removeAttachment1/attachment1/?access_token=" + token,
+      url_delete = "https://api.dropboxapi.com/1/fileops/delete/" +
+      "?access_token=" + token + "&root=dropbox" +
+      "&path=/removeAttachment1/attachment1",
+      server = this.server;
+
+    this.server.respondWith("GET", url_get_id, [204, {
+      "Content-Type": "text/xml"
+    }, '{"is_dir": false}']);
+    this.server.respondWith("POST", url_delete, [204, {
+      "Content-Type": "text/xml"
+    }, ""]);
+
+    stop();
+    expect(13);
+
+    this.jio.removeAttachment(
+      "/removeAttachment1/",
+      "attachment1"
+    )
+      .then(function () {
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, url_get_id);
+        equal(server.requests[0].status, 204);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].responseText, "{\"is_dir\": false}");
+        deepEqual(server.requests[0].requestHeaders, {});
+
+        equal(server.requests[1].method, "POST");
+        equal(server.requests[1].url, url_delete);
+        equal(server.requests[1].status, 204);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].responseText, "");
+        deepEqual(server.requests[1].requestHeaders, {
+          "Content-Type": "text/plain;charset=utf-8"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remove inexistent attachment", function () {
+    var url_get_id = "https://api.dropboxapi.com/1/metadata/dropbox" +
+      "//removeAttachment1/attachment1?access_token=" + token;
+
+    this.server.respondWith("GET", url_get_id, [404, {
+      "Content-Type": "text/xml"
+    }, '']);
+
+    stop();
+    expect(3);
+
+    this.jio.removeAttachment(
+      "/removeAttachment1/",
+      "attachment1"
+    )
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: /removeAttachment1/" +
+                             ", attachment1");
+        equal(error.status_code, 404);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // DropboxStorage.getAttachment
+  /////////////////////////////////////////////////////////////////
+  module("DropboxStorage.getAttachment", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "dropbox",
+        access_token: token
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("reject ID not starting with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.getAttachment(
+      "getAttachment1/",
+      "attachment1"
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id getAttachment1/ is forbidden (no begin /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject ID not ending with /", function () {
+    stop();
+    expect(3);
+
+    this.jio.getAttachment(
+      "/getAttachment1",
+      "attachment1"
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id /getAttachment1 is forbidden (no end /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("reject attachment with / character", function () {
+    stop();
+    expect(3);
+
+    this.jio.getAttachment(
+      "/getAttachment1/",
+      "attach/ment1"
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "attachment attach/ment1 is forbidden");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("getAttachment document", function () {
+    var url = "https://content.dropboxapi.com/1/files/dropbox//" +
+      "getAttachment1/attachment1?access_token=" + token,
+      server = this.server;
+    this.server.respondWith("GET", url, [200, {
+      "Content-Type": "text/plain"
+    }, "foo\nbaré"]);
+
+    stop();
+    expect(9);
+
+    this.jio.getAttachment(
+      "/getAttachment1/",
+      "attachment1"
+    )
+      .then(function (result) {
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, url);
+        equal(server.requests[0].status, 200);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].responseText, "foo\nbaré");
+
+        ok(result instanceof Blob, "Data is Blob");
+        deepEqual(result.type, "text/plain", "Check mimetype");
+        return jIO.util.readBlobAsText(result);
+      })
+      .then(function (result) {
+        equal(result.target.result, "foo\nbaré",
+              "Attachment correctly fetched");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get inexistent attachment", function () {
+    var url = "https://content.dropboxapi.com/1/files/dropbox//" +
+      "getAttachment1/attachment1?access_token=" + token;
+
+    this.server.respondWith("GET", url, [404, {
+      "Content-Type": "text/xml"
+    }, ""]);
+    stop();
+    expect(3);
+
+    this.jio.getAttachment(
+      "/getAttachment1/",
+      "attachment1"
+    )
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: /getAttachment1/" +
+                             ", attachment1");
+        equal(error.status_code, 404);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+}(jIO, QUnit, Blob, sinon));
