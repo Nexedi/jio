@@ -169,6 +169,10 @@
       });
   };
 
+  //currently, putattachment will fail with files larger than 150MB,
+  //due to the Dropbox API. the API provides the "chunked_upload" method
+  //to pass this limit, but upload process becomes more complex to implement.
+
   DropboxStorage.prototype.putAttachment = function (id, name, blob) {
     var that = this;
 
