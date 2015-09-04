@@ -20,7 +20,8 @@
   test("create storage", function () {
     var jio = jIO.createJIO({
       type: "dropbox",
-      access_token: token
+      access_token: token,
+      root : "dropbox"
     });
     equal(jio.__type, "dropbox");
     deepEqual(jio.__storage._access_token, token);
@@ -38,7 +39,8 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token
+        access_token: token,
+        root : "dropbox"
       });
     },
     teardown: function () {
@@ -166,7 +168,8 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token
+        access_token: token,
+        root : "dropbox"
       });
     },
     teardown: function () {
@@ -264,7 +267,8 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token
+        access_token: token,
+        root : "dropbox"
       });
     },
     teardown: function () {
@@ -366,7 +370,8 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token
+        access_token: token,
+        root : "dropbox"
       });
     },
     teardown: function () {
@@ -507,7 +512,8 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token
+        access_token: token,
+        root : "dropbox"
       });
     },
     teardown: function () {
@@ -679,7 +685,8 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token
+        access_token: token,
+        root : "dropbox"
       });
     },
     teardown: function () {
@@ -840,7 +847,8 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token
+        access_token: token,
+        root : "dropbox"
       });
     },
     teardown: function () {

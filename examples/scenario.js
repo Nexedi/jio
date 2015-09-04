@@ -93,7 +93,8 @@
 //             type: "drivetojiomapping",
 //             sub_storage: {
 //               "type": "dropbox",
-//               "access_token" : "TOKEN"
+//               "access_token" : "TOKEN",
+//               "root" : "dropbox"      
 //             }
 //           }
 //         }

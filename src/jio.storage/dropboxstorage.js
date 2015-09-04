@@ -49,8 +49,12 @@
       throw new TypeError("Access Token' must be a string " +
                           "which contains more than one character.");
     }
+    if (typeof spec.root !== 'string' || !spec.root ||
+        (spec.root !== "dropbox" && spec.root !== "sandbox")) {
+      throw new TypeError("root must be 'dropbox' or 'sandbox'");
+    }
     this._access_token = spec.access_token;
-    this._root = "dropbox";
+    this._root = spec.root;
   }
 
   DropboxStorage.prototype.put = function (id, param) {
