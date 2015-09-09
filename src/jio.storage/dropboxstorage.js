@@ -7,16 +7,23 @@
  * JIO Dropbox Storage. Type = "dropbox".
  * Dropbox "database" storage.
  */
-/*global FormData, btoa, Blob, DOMParser, define, jIO, RSVP, ProgressEvent */
-/*js2lint nomen: true, unparam: true, bitwise: true */
-/*jslint nomen: true, unparam: true*/
+/*global Blob, jIO, RSVP, UriTemplate*/
+/*jslint nomen: true*/
 
-(function (jIO, RSVP, DOMParser, Blob) {
+(function (jIO, RSVP, Blob, UriTemplate) {
   "use strict";
-  var UPLOAD_URL = "https://content.dropboxapi.com/1/files_put/",
-    CREATE_DIR_URL = "https://api.dropboxapi.com/1/fileops/create_folder",
-    REMOVE_URL = "https://api.dropboxapi.com/1/fileops/delete/",
-    GET_URL = "https://content.dropboxapi.com/1/files";
+  var UPLOAD_URL = "https://content.dropboxapi.com/1/files_put/" +
+      "{+root}{+id}{+name}{?access_token}",
+    upload_template = UriTemplate.parse(UPLOAD_URL),
+    CREATE_DIR_URL = "https://api.dropboxapi.com/1/fileops/create_folder" +
+      "{?access_token,root,path}",
+    create_dir_template = UriTemplate.parse(CREATE_DIR_URL),
+    REMOVE_URL = "https://api.dropboxapi.com/1/fileops/delete/" +
+      "{?access_token,root,path}",
+    remote_template = UriTemplate.parse(REMOVE_URL),
+    GET_URL = "https://content.dropboxapi.com/1/files" +
+      "{/root,id}{+name}{?access_token}",
+    get_template = UriTemplate.parse(GET_URL);
     //LIST_URL = 'https://api.dropboxapi.com/1/metadata/sandbox/';
 
   function restrictDocumentId(id) {
@@ -68,10 +75,12 @@
     return new RSVP.Queue()
       .push(function () {
         return jIO.util.ajax({
-          "type": "POST",
-          "url": CREATE_DIR_URL +
-            '?access_token=' + that._access_token +
-            '&root=' + that._root + '&path=' + id
+          type: "POST",
+          url: create_dir_template.expand({
+            access_token: that._access_token,
+            root: that._root,
+            path: id
+          })
         });
       })
       .push(undefined, function (err) {
@@ -84,25 +93,20 @@
   };
 
   DropboxStorage.prototype.remove = function (id) {
-    var that = this;
     id = restrictDocumentId(id);
-    return new RSVP.Queue()
-      .push(function () {
-        return that.get(id);
+    return jIO.util.ajax({
+      type: "POST",
+      url: remote_template.expand({
+        access_token: this._access_token,
+        root: this._root,
+        path: id
       })
-      .push(function () {
-        return jIO.util.ajax({
-          "type": "POST",
-          "url": REMOVE_URL +
-            '?access_token=' + that._access_token +
-            '&root=' + that._root + '&path=' + id
-        });
-      });
+    });
   };
 
   DropboxStorage.prototype.get = function (id) {
-    var that = this,
-      obj;
+    var that = this;
+
     if (id === "/") {
       return {};
     }
@@ -117,16 +121,16 @@
             '?access_token=' + that._access_token
         });
       })
-      .push(function (xml) {
-        obj = JSON.parse(xml.target.response || xml.target.responseText);
-        if (obj.is_dir === true) {
+      .push(function (evt) {
+        var obj = JSON.parse(evt.target.response ||
+                             evt.target.responseText);
+        if (obj.is_dir) {
           return {};
         }
-        throw new jIO.util.jIOError("cannot load" + id +
-                                    ". Invalid HTTP", 404);
+        throw new jIO.util.jIOError("Not a directory: " + id, 404);
       }, function (error) {
-        if (error !== undefined && error.target.status === 404) {
-          throw new jIO.util.jIOError("Cannot find document", 404);
+        if (error.target !== undefined && error.target.status === 404) {
+          throw new jIO.util.jIOError("Cannot find document: " + id, 404);
         }
         throw error;
       });
@@ -134,12 +138,7 @@
 
   DropboxStorage.prototype.allAttachments = function (id) {
 
-    var that = this,
-      i,
-      title,
-      ret,
-      obj;
-
+    var that = this;
     id = restrictDocumentId(id);
 
     return new RSVP.Queue()
@@ -151,23 +150,22 @@
             '?access_token=' + that._access_token
         });
       })
-      .push(function (xml) {
-        obj = JSON.parse(xml.target.response || xml.target.responseText);
-        if (obj.is_dir === false) {
-          throw new jIO.util.jIOError("cannot load" + id +
-                                      ". Invalid HTTP", 404);
+      .push(function (evt) {
+        var obj = JSON.parse(evt.target.response || evt.target.responseText),
+          i,
+          result = {};
+        if (!obj.is_dir) {
+          throw new jIO.util.jIOError("Not a directory: " + id, 404);
         }
-        ret = {};
         for (i = 0; i < obj.contents.length; i += 1) {
-          if (obj.contents[i].is_dir !== true) {
-            title = obj.contents[i].path.split("/").pop();
-            ret[title] = {};
+          if (!obj.contents[i].is_dir) {
+            result[obj.contents[i].path.split("/").pop()] = {};
           }
         }
-        return ret;
+        return result;
       }, function (error) {
-        if (error !== undefined && error.target.status === 404) {
-          throw new jIO.util.jIOError("Cannot find document", 404);
+        if (error.target !== undefined && error.target.status === 404) {
+          throw new jIO.util.jIOError("Cannot find document: " + id, 404);
         }
         throw error;
       });
@@ -178,37 +176,20 @@
   //to pass this limit, but upload process becomes more complex to implement.
 
   DropboxStorage.prototype.putAttachment = function (id, name, blob) {
-    var that = this;
-
     id = restrictDocumentId(id);
     restrictAttachmentId(name);
 
-    return new RSVP.Queue()
-      .push(function () {
-        return that.get(id);
-      })
-      .push(undefined, function (error) {
-        throw new jIO.util.jIOError("Cannot access subdocument", 404);
-      })
-      .push(function () {
-        return that.get(id + name + '/');
-      })
-      .push(function () {
-        throw new jIO.util.jIOError("Cannot overwrite directory", 404);
-      }, function (error) {
-        if ((error instanceof jIO.util.jIOError) &&
-            ((error.message === "cannot load" + id + name + '/. Invalid HTTP')
-             || (error.message === "Cannot find document"))) {
-          return jIO.util.ajax({
-            "type": "PUT",
-            "url": UPLOAD_URL + that._root + id + name +
-              '?access_token=' + that._access_token,
-            dataType: blob.type,
-            data: blob
-          });
-        }
-        throw error;
-      });
+    return jIO.util.ajax({
+      type: "PUT",
+      url: upload_template.expand({
+        root: this._root,
+        id: id,
+        name: name,
+        access_token: this._access_token
+      }),
+      dataType: blob.type,
+      data: blob
+    });
   };
 
   DropboxStorage.prototype.getAttachment = function (id, name) {
@@ -220,19 +201,23 @@
     return new RSVP.Queue()
       .push(function () {
         return jIO.util.ajax({
-          "type": "GET",
-          "url": GET_URL + "/" + that._root + "/" + id + name +
-            '?access_token=' + that._access_token
+          type: "GET",
+          url: get_template.expand({
+            root: that._root,
+            id: id,
+            name: name,
+            access_token: that._access_token
+          })
         });
       })
-      .push(function (response) {
+      .push(function (evt) {
         return new Blob(
-          [response.target.response || response.target.responseText],
-          {"type": response.target.getResponseHeader('Content-Type') ||
+          [evt.target.response || evt.target.responseText],
+          {"type": evt.target.getResponseHeader('Content-Type') ||
             "application/octet-stream"}
         );
       }, function (error) {
-        if (error !== undefined && error.target.status === 404) {
+        if (error.target !== undefined && error.target.status === 404) {
           throw new jIO.util.jIOError("Cannot find attachment: " +
                                       id + ", " + name, 404);
         }
@@ -241,35 +226,19 @@
   };
 
   DropboxStorage.prototype.removeAttachment = function (id, name) {
-    var that = this;
-
     id = restrictDocumentId(id);
     restrictAttachmentId(name);
-    return new RSVP.Queue()
-      .push(function () {
-        return that.get(id + name + '/');
+
+    return jIO.util.ajax({
+      type: "POST",
+      url: remote_template.expand({
+        access_token: this._access_token,
+        root: this._root,
+        path: id + name
       })
-      .push(function () {
-        throw new jIO.util.jIOError("Cannot remove directory", 404);
-      }, function (error) {
-        if (error instanceof jIO.util.jIOError &&
-            error.message === "Cannot find document") {
-          throw new jIO.util.jIOError("Cannot find attachment: " +
-                                      id + ", " + name, 404);
-        }
-        if (error instanceof jIO.util.jIOError &&
-            error.message === "cannot load" + id + name + '/. Invalid HTTP') {
-          return jIO.util.ajax({
-            "type": "POST",
-            "url": REMOVE_URL +
-              '?access_token=' + that._access_token +
-              '&root=' + that._root + '&path=' + id + name
-          });
-        }
-        throw error;
-      });
+    });
   };
 
   jIO.addStorage('dropbox', DropboxStorage);
 
-}(jIO, RSVP, DOMParser, Blob));
+}(jIO, RSVP, Blob, UriTemplate));
