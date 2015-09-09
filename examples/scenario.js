@@ -94,7 +94,7 @@
 //             sub_storage: {
 //               "type": "dropbox",
 //               "access_token" : "TOKEN",
-//               "root" : "dropbox"      
+//               "root" : "dropbox"
 //             }
 //           }
 //         }
@@ -244,20 +244,20 @@
           })
 
           .then(function () {
-            return jio.put("test.txt", {});
+            return jio.put("foo❤/test.txt", {});
           })
 
           .then(function () {
             return jio.putAttachment(
-              "test.txt",
+              "foo❤/test.txt",
               "enclosure",
-              new Blob(["fooé\nbar"], {type: "text/plain"})
+              new Blob(["fooé\nbar测试四😈"], {type: "text/plain"})
             );
           })
 
           .then(function () {
             ok(true, "Attachment stored");
-            return jio.getAttachment("test.txt", "enclosure");
+            return jio.getAttachment("foo❤/test.txt", "enclosure");
           })
 
           .then(function (blob) {
@@ -265,14 +265,14 @@
           })
 
           .then(function (result) {
-            equal(result.target.result, "fooé\nbar", "Attachment correctly fetched");
-            return jio.get("test.txt");
+            equal(result.target.result, "fooé\nbar测试四😈", "Attachment correctly fetched");
+            return jio.get("foo❤/test.txt");
 
           })
           .then(function (doc) {
             deepEqual(doc, {}, "Document correctly fetched");
 
-            return jio.allAttachments("test.txt");
+            return jio.allAttachments("foo❤/test.txt");
           })
           .then(function (doc) {
             deepEqual(doc, {
@@ -280,7 +280,7 @@
             },
               "Attachment list correctly fetched");
 
-            return jio.removeAttachment("test.txt", "enclosure");
+            return jio.removeAttachment("foo❤/test.txt", "enclosure");
           })
 
           .then(function () {
