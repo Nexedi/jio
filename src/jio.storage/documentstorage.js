@@ -1,6 +1,6 @@
 /*jslint nomen: true*/
-/*global Blob, atob, btoa*/
-(function (jIO, Blob, atob, btoa) {
+/*global Blob, atob, btoa, RSVP*/
+(function (jIO, Blob, atob, btoa, RSVP) {
   "use strict";
 
   /**
@@ -74,10 +74,24 @@
   };
 
   DocumentStorage.prototype.remove = function (id) {
-    return this._sub_storage.removeAttachment(
-      this._document_id,
-      getSubAttachmentIdFromParam(id)
-    )
+    var context = this;
+    return this.allAttachments(id)
+      .push(function (result) {
+        var key,
+          promise_list = [];
+        for (key in result) {
+          if (result.hasOwnProperty(key)) {
+            promise_list.push(context.removeAttachment(id, key));
+          }
+        }
+        return RSVP.all(promise_list);
+      })
+      .push(function () {
+        return context._sub_storage.removeAttachment(
+          context._document_id,
+          getSubAttachmentIdFromParam(id)
+        );
+      })
       .push(function () {
         return id;
       });
@@ -141,4 +155,4 @@
 
   jIO.addStorage('document', DocumentStorage);
 
-}(jIO, Blob, atob, btoa));
+}(jIO, Blob, atob, btoa, RSVP));

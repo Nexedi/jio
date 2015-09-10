@@ -226,22 +226,59 @@
   // documentStorage.remove
   /////////////////////////////////////////////////////////////////
   module("documentStorage.remove");
+
   test("remove called substorage removeAttachment", function () {
     stop();
-    expect(3);
+    expect(8);
 
-    var jio = jIO.createJIO({
+    var i = 0,
+      jio;
+
+    function StorageRemoveWithAttachment() {
+      return this;
+    }
+    StorageRemoveWithAttachment.prototype.allAttachments = function (id) {
+      equal(id, "foo", "allAttachments 200 called");
+      var result = {};
+      result['jio_attachment/' + btoa("bar") + "/" +
+                          btoa("bar1")] = {};
+      result['jio_attachment/' + btoa("bar") + "/" +
+                          btoa("bar2")] = {};
+      result['jio_attachment/' + btoa("foo") + "/" +
+                          btoa("foo3")] = {};
+      return result;
+    };
+    StorageRemoveWithAttachment.prototype.removeAttachment =
+      function (id, name) {
+        if (i === 0) {
+          equal(id, "foo", "removeAttachment called");
+          equal(name, "jio_attachment/YmFy/YmFyMQ==",
+                "removeAttachment called");
+        } else if (i === 1) {
+          equal(id, "foo", "removeAttachment called");
+          equal(name, "jio_attachment/YmFy/YmFyMg==",
+                "removeAttachment called");
+        } else if (i === 2) {
+          equal(id, "foo", "removeAttachment called");
+          equal(name, "jio_document/YmFy.json",
+                "removeAttachment called");
+        } else {
+          ok(false, "Unexpected removeAttachment call: " + id + " " + name);
+        }
+        i += 1;
+        return id;
+      };
+
+    jIO.addStorage('documentstorageremovewithattachment',
+                   StorageRemoveWithAttachment);
+
+    jio = jIO.createJIO({
       type: "document",
       document_id: "foo",
       sub_storage: {
-        type: "documentstorage200"
+        type: "documentstorageremovewithattachment"
       }
     });
-    Storage200.prototype.removeAttachment = function (id, name) {
-      equal(id, "foo", "removeAttachment 200 called");
-      equal(name, "jio_document/YmFy.json", "removeAttachment 200 called");
-      return id;
-    };
 
     jio.remove("bar")
       .then(function (result) {
