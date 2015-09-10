@@ -34,7 +34,21 @@
 
     ok(jio.__storage._sub_storage instanceof jio.constructor);
     equal(jio.__storage._sub_storage.__type, "documentstorage200");
+    equal(jio.__storage._repair_attachment, false);
 
+  });
+
+  test("accept parameters", function () {
+    var jio = jIO.createJIO({
+      type: "document",
+      document_id: "foo",
+      repair_attachment: true,
+      sub_storage: {
+        type: "documentstorage200"
+      }
+    });
+
+    equal(jio.__storage._repair_attachment, true);
   });
 
   /////////////////////////////////////////////////////////////////
@@ -532,14 +546,111 @@
     }),
       expected_options = {foo: "bar"};
 
-    Storage200.prototype.repair = function (options) {
+    function StorageSimpleRepair() {
+      return this;
+    }
+
+    StorageSimpleRepair.prototype.allAttachments = function () {
+      ok(false, "allAttachments 200 called");
+    };
+
+    StorageSimpleRepair.prototype.repair = function (options) {
       deepEqual(options, expected_options, "repair 200 called");
       return "OK";
     };
 
+    jIO.addStorage('documentstoragesimplerepair',
+                   StorageSimpleRepair);
+
+    jio = jIO.createJIO({
+      type: "document",
+      document_id: "foo",
+      sub_storage: {
+        type: "documentstoragesimplerepair"
+      }
+    });
+
     jio.repair(expected_options)
       .then(function (result) {
         equal(result, "OK");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("repair clean all garbage left from a previous bug", function () {
+    stop();
+    expect(7);
+
+    var i = 0,
+      jio;
+
+    function StorageRepairWithGarbage() {
+      return this;
+    }
+    StorageRepairWithGarbage.prototype.allAttachments = function (id) {
+      equal(id, "foo", "allAttachments 200 called");
+      var result = {};
+      // Not matching attachment
+      result.notmatchingfoo = {};
+      // Standalone document
+      result['jio_document/' + btoa("standalonefoo") + '.json'] = {};
+      // Document with attachments
+      result['jio_document/' + btoa("withdocfoo") + '.json'] = {};
+      result['jio_attachment/' + btoa("withdocfoo") + "/" +
+                          btoa("bar1")] = {};
+      result['jio_attachment/' + btoa("withdocfoo") + "/" +
+                          btoa("bar2")] = {};
+      // Garbage attachments
+      result['jio_attachment/' + btoa("garbagefoo1") + "/" +
+                          btoa("foo3")] = {};
+      result['jio_attachment/' + btoa("garbagefoo2") + "/" +
+                          btoa("foo4")] = {};
+      return result;
+    };
+    StorageRepairWithGarbage.prototype.removeAttachment =
+      function (id, name) {
+        if (i === 0) {
+          equal(id, "foo", "removeAttachment called");
+          equal(name, 'jio_attachment/' + btoa("garbagefoo1") + "/" +
+                              btoa("foo3"));
+        } else if (i === 1) {
+          equal(id, "foo", "removeAttachment called");
+          equal(name, 'jio_attachment/' + btoa("garbagefoo2") + "/" +
+                              btoa("foo4"));
+        } else {
+          ok(false, "Unexpected removeAttachment call: " + id + " " + name);
+        }
+        i += 1;
+        return name;
+      };
+    StorageRepairWithGarbage.prototype.repair = function () {
+      ok(true, "repair called");
+      return "OK";
+    };
+
+    jIO.addStorage('documentstoragerepairwithgarbage',
+                   StorageRepairWithGarbage);
+
+    jio = jIO.createJIO({
+      type: "document",
+      document_id: "foo",
+      sub_storage: {
+        type: "documentstoragerepairwithgarbage"
+      },
+      repair_attachment: true
+    });
+
+    jio.repair()
+      .then(function (result) {
+        deepEqual(result, [
+          "jio_attachment/Z2FyYmFnZWZvbzE=/Zm9vMw==",
+          "jio_attachment/Z2FyYmFnZWZvbzI=/Zm9vNA=="
+        ]);
       })
       .fail(function (error) {
         ok(false, error);

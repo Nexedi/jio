@@ -12,6 +12,7 @@
   function DocumentStorage(spec) {
     this._sub_storage = jIO.createJIO(spec.sub_storage);
     this._document_id = spec.document_id;
+    this._repair_attachment = spec.repair_attachment || false;
   }
 
   var DOCUMENT_EXTENSION = ".json",
@@ -98,7 +99,76 @@
   };
 
   DocumentStorage.prototype.repair = function () {
-    return this._sub_storage.repair.apply(this._sub_storage, arguments);
+    var context = this;
+    return this._sub_storage.repair.apply(this._sub_storage, arguments)
+      .push(function (result) {
+        if (context._repair_attachment) {
+          return context._sub_storage.allAttachments(context._document_id)
+            .push(function (result_dict) {
+              var promise_list = [],
+                id_dict = {},
+                attachment_dict = {},
+                id,
+                attachment,
+                exec,
+                key;
+              for (key in result_dict) {
+                if (result_dict.hasOwnProperty(key)) {
+                  id = undefined;
+                  attachment = undefined;
+                  if (DOCUMENT_REGEXP.test(key)) {
+                    try {
+                      id = atob(DOCUMENT_REGEXP.exec(key)[1]);
+                    } catch (error) {
+                      // Check if unable to decode base64 data
+                      if (!error instanceof ReferenceError) {
+                        throw error;
+                      }
+                    }
+                    if (id !== undefined) {
+                      id_dict[id] = null;
+                    }
+                  } else if (ATTACHMENT_REGEXP.test(key)) {
+                    exec = ATTACHMENT_REGEXP.exec(key);
+                    try {
+                      id = atob(exec[1]);
+                      attachment = atob(exec[2]);
+                    } catch (error) {
+                      // Check if unable to decode base64 data
+                      if (!error instanceof ReferenceError) {
+                        throw error;
+                      }
+                    }
+                    if (attachment !== undefined) {
+                      if (!id_dict.hasOwnProperty(id)) {
+                        if (!attachment_dict.hasOwnProperty(id)) {
+                          attachment_dict[id] = {};
+                        }
+                        attachment_dict[id][attachment] = null;
+                      }
+                    }
+                  }
+                }
+              }
+              for (id in attachment_dict) {
+                if (attachment_dict.hasOwnProperty(id)) {
+                  if (!id_dict.hasOwnProperty(id)) {
+                    for (attachment in attachment_dict[id]) {
+                      if (attachment_dict[id].hasOwnProperty(attachment)) {
+                        promise_list.push(context.removeAttachment(
+                          id,
+                          attachment
+                        ));
+                      }
+                    }
+                  }
+                }
+              }
+              return RSVP.all(promise_list);
+            });
+        }
+        return result;
+      });
   };
 
   DocumentStorage.prototype.hasCapacity = function (capacity) {
