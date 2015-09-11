@@ -50,9 +50,8 @@
   });
 
   test("put document", function () {
-    var url = "https://api.dropboxapi.com/1/fileops/" +
-      "create_folder?access_token="
-      + token + "&root=dropbox&path=/put1/",
+    var url = "https://api.dropboxapi.com/1/fileops/create_folder?access_token="
+      + token + "&root=dropbox&path=%2Fput1%2F",
       server = this.server;
     this.server.respondWith("POST", url, [201, {
       "Content-Type": "text/xml"
@@ -82,8 +81,8 @@
   });
 
   test("don't throw error when putting existing directory", function () {
-    var url = "https://api.dropboxapi.com/1/fileops/create_folder" +
-      "?access_token=" + token + "&root=dropbox&path=/existing/",
+    var url = "https://api.dropboxapi.com/1/fileops/create_folder?access_token="
+      + token + "&root=dropbox&path=%2Fexisting%2F",
       server = this.server;
     this.server.respondWith("POST", url, [405, {
       "Content-Type": "text/xml"
@@ -177,37 +176,25 @@
       delete this.server;
     }
   });
-
   test("remove document", function () {
-    var url_get = "https://api.dropboxapi.com/1/metadata/dropbox" +
-      "//remove1/?access_token=" + token,
-      url_delete = "https://api.dropboxapi.com/1/fileops/delete/?" +
-      "access_token=" + token + "&root=dropbox&path=/remove1/",
+    var url_delete = "https://api.dropboxapi.com/1/fileops/delete/?" +
+      "access_token=" + token + "&root=dropbox&path=%2Fremove1%2F",
       server = this.server;
-    this.server.respondWith("GET", url_get, [204, {
-      "Content-Type": "text/xml"
-    }, '{"is_dir": true}']);
     this.server.respondWith("POST", url_delete, [204, {
       "Content-Type": "text/xml"
     }, '']);
     stop();
-    expect(13);
+    expect(7);
 
     this.jio.remove("/remove1/")
       .then(function () {
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, url_get);
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, url_delete);
         equal(server.requests[0].status, 204);
         equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, '{"is_dir": true}');
-        deepEqual(server.requests[0].requestHeaders, {});
-        equal(server.requests[1].method, "POST");
-        equal(server.requests[1].url, url_delete);
-        equal(server.requests[1].status, 204);
-        equal(server.requests[1].requestBody, undefined);
-        equal(server.requests[1].responseText, '');
-        deepEqual(server.requests[1].requestHeaders, {
+        equal(server.requests[0].responseText, '');
+        deepEqual(server.requests[0].requestHeaders, {
           "Content-Type": "text/plain;charset=utf-8"
         });
       })
@@ -325,7 +312,7 @@
     this.jio.get("/inexistent/")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document");
+        equal(error.message, "Cannot find document: /inexistent/");
         equal(error.status_code, 404);
       })
       .fail(function (error) {
@@ -428,7 +415,7 @@
     this.jio.allAttachments("/inexistent/")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document");
+        equal(error.message, "Cannot find document: /inexistent/");
         equal(error.status_code, 404);
       })
       .fail(function (error) {
@@ -588,53 +575,19 @@
       });
   });
 
-  test("putAttachment to inexisting directory: expecting a 404", function () {
-    var blob = new Blob(["foo"]),
-      url = "/inexistent_dir/attachment1";
-    this.server.respondWith("PUT", url, [405, {"": ""}, ""]);
-    stop();
-    expect(3);
-
-    this.jio.putAttachment(
-      "/inexistent_dir/",
-      "attachment1",
-      blob
-    )
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot access subdocument");
-        equal(error.status_code, 404);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-
   test("putAttachment document", function () {
     var blob = new Blob(["foo"]),
-      url_get_id = "https://api.dropboxapi.com/1/metadata/dropbox" +
-        "//putAttachment1/?access_token=" + token,
-      url_get_att = "https://api.dropboxapi.com/1/metadata/dropbox" +
-        "//putAttachment1/attachment1/?access_token=" + token,
-      url_put_att = "https://content.dropboxapi.com/1/files_put/dropbox/" +
-        "putAttachment1/attachment1?access_token=" + token,
+      url_put_att = "https://content.dropboxapi.com/1/files_put/dropbox"
+        + "/putAttachment1/"
+        + "attachment1?access_token=" + token,
       server = this.server;
-
-    this.server.respondWith("GET", url_get_id, [204, {
-      "Content-Type": "text/xml"
-    }, '{"is_dir": true, "contents": []}']);
-
-    this.server.respondWith("GET", url_get_att, [404, {
-      "Content-Type": "text/xml"
-    }, '']);
 
     this.server.respondWith("PUT", url_put_att, [204, {
       "Content-Type": "text/xml"
     }, ""]);
 
     stop();
-    expect(17);
+    expect(7);
 
     this.jio.putAttachment(
       "/putAttachment1/",
@@ -642,28 +595,16 @@
       blob
     )
       .then(function () {
-        equal(server.requests.length, 3);
+        equal(server.requests.length, 1);
 
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, url_get_id);
+        equal(server.requests[0].method, "PUT");
+        equal(server.requests[0].url, url_put_att);
         equal(server.requests[0].status, 204);
-        equal(server.requests[0].responseText,
-              "{\"is_dir\": true, \"contents\": []}");
-        deepEqual(server.requests[0].requestHeaders, {});
-        equal(server.requests[1].method, "GET");
-        equal(server.requests[1].url, url_get_att);
-        equal(server.requests[1].status, 404);
-        equal(server.requests[1].responseText, "");
-        deepEqual(server.requests[1].requestHeaders, {});
-
-        equal(server.requests[2].method, "PUT");
-        equal(server.requests[2].url, url_put_att);
-        equal(server.requests[2].status, 204);
-        equal(server.requests[2].responseText, "");
-        deepEqual(server.requests[2].requestHeaders, {
+        equal(server.requests[0].responseText, "");
+        deepEqual(server.requests[0].requestHeaders, {
           "Content-Type": "text/plain;charset=utf-8"
         });
-        equal(server.requests[2].requestBody, blob);
+        equal(server.requests[0].requestBody, blob);
       })
       .fail(function (error) {
         ok(false, error);
@@ -759,42 +700,31 @@
   });
 
   test("removeAttachment document", function () {
-    var url_get_id = "https://api.dropboxapi.com/1/metadata/dropbox" +
-      "//removeAttachment1/attachment1/?access_token=" + token,
-      url_delete = "https://api.dropboxapi.com/1/fileops/delete/" +
+    var url_delete = "https://api.dropboxapi.com/1/fileops/delete/" +
       "?access_token=" + token + "&root=dropbox" +
-      "&path=/removeAttachment1/attachment1",
+      "&path=%2FremoveAttachment1%2Fattachment1",
       server = this.server;
 
-    this.server.respondWith("GET", url_get_id, [204, {
-      "Content-Type": "text/xml"
-    }, '{"is_dir": false}']);
     this.server.respondWith("POST", url_delete, [204, {
       "Content-Type": "text/xml"
     }, ""]);
 
     stop();
-    expect(13);
+    expect(7);
 
     this.jio.removeAttachment(
       "/removeAttachment1/",
       "attachment1"
     )
       .then(function () {
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, url_get_id);
+        equal(server.requests.length, 1);
+
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, url_delete);
         equal(server.requests[0].status, 204);
         equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, "{\"is_dir\": false}");
-        deepEqual(server.requests[0].requestHeaders, {});
-
-        equal(server.requests[1].method, "POST");
-        equal(server.requests[1].url, url_delete);
-        equal(server.requests[1].status, 204);
-        equal(server.requests[1].requestBody, undefined);
-        equal(server.requests[1].responseText, "");
-        deepEqual(server.requests[1].requestHeaders, {
+        equal(server.requests[0].responseText, "");
+        deepEqual(server.requests[0].requestHeaders, {
           "Content-Type": "text/plain;charset=utf-8"
         });
       })
@@ -921,8 +851,8 @@
   });
 
   test("getAttachment document", function () {
-    var url = "https://content.dropboxapi.com/1/files/dropbox//" +
-      "getAttachment1/attachment1?access_token=" + token,
+    var url = "https://content.dropboxapi.com/1/files/dropbox/" +
+        "%2FgetAttachment1%2Fattachment1?access_token=" + token,
       server = this.server;
     this.server.respondWith("GET", url, [200, {
       "Content-Type": "text/plain"

@@ -171,9 +171,12 @@
       });
   };
 
-  //currently, putattachment will fail with files larger than 150MB,
+  //currently, putAttachment will fail with files larger than 150MB,
   //due to the Dropbox API. the API provides the "chunked_upload" method
   //to pass this limit, but upload process becomes more complex to implement.
+  //
+  //putAttachment will also create a folder if you try to put an attachment
+  //to an inexisting foler.
 
   DropboxStorage.prototype.putAttachment = function (id, name, blob) {
     id = restrictDocumentId(id);
@@ -225,18 +228,29 @@
       });
   };
 
+  //removeAttachment removes also directories.(due to Dropbox API)
+
   DropboxStorage.prototype.removeAttachment = function (id, name) {
+    var that = this;
     id = restrictDocumentId(id);
     restrictAttachmentId(name);
 
-    return jIO.util.ajax({
-      type: "POST",
-      url: remote_template.expand({
-        access_token: this._access_token,
-        root: this._root,
-        path: id + name
-      })
-    });
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.ajax({
+          type: "POST",
+          url: remote_template.expand({
+            access_token: that._access_token,
+            root: that._root,
+            path: id + name
+          })
+        });
+      }).push(undefined, function (error) {
+        if (error.target !== undefined && error.target.status === 404) {
+          throw new jIO.util.jIOError("Cannot find attachment: " +
+                                      id + ", " + name, 404);
+        }
+      });
   };
 
   jIO.addStorage('dropbox', DropboxStorage);
