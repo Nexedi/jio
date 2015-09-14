@@ -1,6 +1,7 @@
-/*global window, RSVP, Blob, XMLHttpRequest, QueryFactory, Query, FileReader */
-(function (window, RSVP, Blob, QueryFactory, Query,
-           FileReader) {
+/*global window, RSVP, Blob, XMLHttpRequest, QueryFactory, Query, atob,
+  FileReader, ArrayBuffer, Uint8Array */
+(function (window, RSVP, Blob, QueryFactory, Query, atob,
+           FileReader, ArrayBuffer, Uint8Array) {
   "use strict";
 
   var util = {},
@@ -172,6 +173,25 @@
     });
   }
   util.readBlobAsDataURL = readBlobAsDataURL;
+
+  // https://gist.github.com/davoclavo/4424731
+  function dataURItoBlob(dataURI) {
+    // convert base64 to raw binary data held in a string
+    var byteString = atob(dataURI.split(',')[1]),
+    // separate out the mime component
+      mimeString = dataURI.split(',')[0].split(':')[1],
+    // write the bytes of the string to an ArrayBuffer
+      arrayBuffer = new ArrayBuffer(byteString.length),
+      _ia = new Uint8Array(arrayBuffer),
+      i;
+    mimeString = mimeString.slice(0, mimeString.length - ";base64".length);
+    for (i = 0; i < byteString.length; i += 1) {
+      _ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([arrayBuffer], {type: mimeString});
+  }
+
+  util.dataURItoBlob = dataURItoBlob;
 
   // tools
   function checkId(argument_list, storage, method_name) {
@@ -515,4 +535,5 @@
   jIO = new JioBuilder();
   window.jIO = jIO;
 
-}(window, RSVP, Blob, QueryFactory, Query, FileReader));
+}(window, RSVP, Blob, QueryFactory, Query, atob,
+  FileReader, ArrayBuffer, Uint8Array));

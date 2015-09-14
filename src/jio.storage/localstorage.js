@@ -5,8 +5,7 @@
  */
 
 /*jslint nomen: true*/
-/*global jIO, sessionStorage, localStorage, Blob, RSVP, atob,
-         ArrayBuffer, Uint8Array*/
+/*global jIO, sessionStorage, localStorage, RSVP */
 
 /**
  * JIO Local Storage. Type = 'local'.
@@ -22,8 +21,7 @@
  * @class LocalStorage
  */
 
-(function (jIO, sessionStorage, localStorage, Blob, RSVP,
-           atob, ArrayBuffer, Uint8Array) {
+(function (jIO, sessionStorage, localStorage, RSVP) {
   "use strict";
 
   function LocalStorage(spec) {
@@ -60,23 +58,6 @@
     return attachments;
   };
 
-  // https://gist.github.com/davoclavo/4424731
-  function dataURItoBlob(dataURI) {
-    // convert base64 to raw binary data held in a string
-    var byteString = atob(dataURI.split(',')[1]),
-      // separate out the mime component
-      mimeString = dataURI.split(',')[0].split(':')[1],
-      // write the bytes of the string to an ArrayBuffer
-      arrayBuffer = new ArrayBuffer(byteString.length),
-      _ia = new Uint8Array(arrayBuffer),
-      i;
-    mimeString = mimeString.slice(0, mimeString.length - ";base64".length);
-    for (i = 0; i < byteString.length; i += 1) {
-      _ia[i] = byteString.charCodeAt(i);
-    }
-    return new Blob([arrayBuffer], {type: mimeString});
-  }
-
   LocalStorage.prototype.getAttachment = function (id, name) {
     restrictDocumentId(id);
 
@@ -88,7 +69,7 @@
         404
       );
     }
-    return dataURItoBlob(textstring);
+    return jIO.util.dataURItoBlob(textstring);
   };
 
   LocalStorage.prototype.putAttachment = function (id, name, blob) {
@@ -125,5 +106,4 @@
 
   jIO.addStorage('local', LocalStorage);
 
-}(jIO, sessionStorage, localStorage, Blob, RSVP,
-  atob, ArrayBuffer, Uint8Array));
+}(jIO, sessionStorage, localStorage, RSVP));

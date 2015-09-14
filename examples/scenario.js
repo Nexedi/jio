@@ -25,7 +25,10 @@
 //             type: "document",
 //             document_id: "/",
 //             sub_storage: {
-//               type: "local"
+//               type: "zip",
+//               sub_storage: {
+//                 type: "local"
+//               }
 //             }
 //           }
 //         }

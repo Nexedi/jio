@@ -45,6 +45,7 @@
     "grunt-contrib-qunit": "~0.3.0",
     "grunt-contrib-watch": "~0.5.3",
     "grunt-jslint": "~1.0.0",
+    "lz-string": "^1.4.4",
     "sinon": "~1.7.3",
     "connect-livereload": "~0.3.0",
     "grunt-open": "~0.2.2",
