@@ -61,7 +61,7 @@
         });
       })
       .push(function (data) {
-        obj = JSON.parse(data.target.response);
+        obj = JSON.parse(data.target.response || data.target.responseText);
         for (i = 0; i < obj.items.length; i += 1) {
           result.push(obj.items[i]);
         }
@@ -119,8 +119,7 @@
                    itPa += 1) {
 
                 if ((!it_name && files[itFi].parents[itPa].isRoot) ||
-                    (it_name &&
-                     files[itFi].parents[itPa].id === parentId)) {
+                    (it_name && files[itFi].parents[itPa].id === parentId)) {
 
                   if (foundItem === true) {
                     //if 2 files with same name in same folder.
@@ -159,23 +158,28 @@
   function GdriveStorage(spec) {
     if (spec === undefined || spec.access_token === undefined ||
         typeof spec.access_token !== 'string') {
-      throw new TypeError("Access Token' must be a string " +
+      throw new TypeError("Access Token must be a string " +
                           "which contains more than one character.");
+    }
+    if (spec.trashing !== undefined &&
+        (spec.trashing !== true && spec.trashing !== false)) {
+      throw new TypeError("trashing parameter" +
+                          " must be a boolean (true or false)");
     }
     this._trashing = spec.trashing || true;
     this._access_token = spec.access_token;
     return;
   }
 
-  function createPostRequest(title, parent, data, datatype) {
+  function createPostRequest(title, parent, data, datatype, boundary) {
     var str,
-      boundary = "-------314159265358979323846",
       parentlist = parent ? '{id: "' + parent + '"}' : "",
       type = data ? "" : '"mimeType" : "' + FOLDER + '",\n';
 
-    str = '--' + boundary +
-      '\nContent-Type: application/json; charset=UTF-8\n\n' +
-      '{\n"title": "' + title + '",\n' + type +
+    str = '--' + boundary + '\n' +
+      'Content-Type: application/json; charset=UTF-8\n\n' +
+      '{\n"title": "' + title + '",\n' +
+      type +
       '"parents": [' + parentlist + ']\n}\n\n' +
       '--' + boundary;
 
@@ -202,8 +206,8 @@
       })
       .push(function (result) {
         files = result;
-        if (title.length === 0 || (files.id && !data) ||
-            (!files.parent && title.length > 1)) {
+        if ((files.id && !data) || (!files.parent && title.length > 1) ||
+            files.isDir) {
           throw new jIO.util.jIOError("Method Not Allowed", 405);
         }
       })
@@ -224,7 +228,8 @@
           headers: {
             "Content-Type" : 'multipart/related; boundary="' + boundary + '"'
           },
-          data : createPostRequest(title.pop(), files.parent, blob, data.type)
+          data : createPostRequest(title.pop(), files.parent,
+                                   blob, data.type, boundary)
         });
       }, undefined);
   }
@@ -252,10 +257,10 @@
         return getFileId(id, token);
       })
       .push(function (result) {
-        if (!result.id) {
+        if (title.length && !result.id) {
           throw new jIO.util.jIOError("Not Found", 404);
         }
-        if (title.length === 0 || result.isDir !== deleteDir) {
+        if (!title.length || result.isDir !== deleteDir) {
           throw new jIO.util.jIOError("Method Not Allowed", 405);
         }
         return jIO.util.ajax({
@@ -291,15 +296,11 @@
         return getFileId(id, that._access_token);
       })
       .push(function (result) {
-        if (result.isDir) {
-          return {};
-        }
-        throw new jIO.util.jIOError("Not a directory: " + id, 404);
-      }, function (error) {
-        if (error.target !== undefined && error.target.status === 404) {
+        if (!result.id) {
           throw new jIO.util.jIOError("Cannot find document: " + id, 404);
         }
-        throw error;
+        if (result.isDir) { return {}; }
+        throw new jIO.util.jIOError("Not a directory: " + id, 404);
       });
   };
 
