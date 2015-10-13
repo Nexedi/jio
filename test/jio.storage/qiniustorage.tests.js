@@ -1,15 +1,13 @@
-
-/*global define, module, test_util, RSVP, jIO, test, ok,
-  deepEqual, sinon, expect, stop, start, Blob, equal, define */
+/*global define, module, RSVP, jIO, test, ok,
+  deepEqual, sinon, expect, stop, start, Blob, equal, define, console */
 /*jslint indent: 2 */
 (function (dependencies, module) {
   "use strict";
   if (typeof define === 'function' && define.amd) {
     return define(dependencies, module);
   }
-  module(test_util, RSVP, jIO);
+  module(RSVP, jIO);
 }([
-  'test_util',
   'rsvp',
   'jio',
   'hmacsha1',
@@ -21,12 +19,12 @@
 
   var qiniu_spec = {
     "type": "qiniu",
-    "bucket": "uth6nied",
-    "access_key": "Imh9CFmpVZ5L1TE04Pjt-UmR_Ccr2cW9-KjSmvSA",
-    "secret_key": "vFkNUlI2U4B7G1sz8UL_Z25kYHozfz82z4vMWPgo"
+    "bucket": "7xn150.com1.z0.glb.clouddn.com",
+    "access_key": "s90kGV3JYDDQPivaPVpwxrHMi9RCpncLgLctGDJQ",
+    "secret_key": "hfqndzXIfqP6aMpTOdgT_UjiUjARkiFXz98Cthjx"
   };
 
-  module("QiniuStorage", {
+  module("QiniuStorage ", {
     setup: function () {
       this.server = sinon.fakeServer.create();
 
@@ -45,9 +43,12 @@
   test('get', function () {
     var key = "foobar12345",
       server = this.server,
-      download_url = 'http://uth6nied.u.qiniudn.com/foobar12345?' +
+    /*  download_url = 'http://uth6nied.u.qiniudn.com/foobar12345?' +
         'e=2451491200&token=Imh9CFmpVZ5L1TE04Pjt-UmR_Ccr2cW9-KjSmvSA:' +
-        'hISFzrC4dQvdOR8A_MozNsB5cME=',
+        'hISFzrC4dQvdOR8A_MozNsB5cME=', */
+      download_url = 'http://7xn150.com1.z0.glb.clouddn.com/foobar12345?' +
+        'e=2451491200&token=s90kGV3JYDDQPivaPVpwxrHMi9RCpncLgLctGDJQ:' +
+        'lWIEfRXIf6tbwWjuX381DHTSxnU=',
       data = {
         "_id": key,
         "foo": "bar"
@@ -58,15 +59,12 @@
     }, JSON.stringify(data)]);
 
     stop();
-    this.jio_storage.get({"_id": key})
+    this.jio_storage.get(key)
       .then(function (result) {
+        console.log("result", result);
         deepEqual(result, {
-          "data": data,
-          "id": key,
-          "method": "get",
-          "result": "success",
-          "status": 200,
-          "statusText": "Ok"
+          "_id": key,
+          "foo": "bar"
         });
       })
       .fail(function (error) {
@@ -79,11 +77,14 @@
 
   test('getAttachment', function () {
     var key = "foobar12345",
+      object,
+      resultdata,
       attachment = "barfoo54321",
       server = this.server,
-      download_url = 'http://uth6nied.u.qiniudn.com/foobar12345/barfoo54321' +
-        '?e=2451491200&token=Imh9CFmpVZ5L1TE04Pjt-UmR_Ccr2cW9-KjSmvSA:' +
-        'L88mHkZkfjr11DqPUqb5gsDjHFY=',
+      download_url = 'http://7xn150.com1.z0.glb.clouddn.com/foobar12345' +
+        '/barfoo54321?e=2451491200&token=s90kGV3JYDDQPivaPVpwxrHMi9RCpncL' +
+        'gLctGDJQ:l_yS8PFderOhMyqHN0FN41tdJOM=',
+
       data = {
         "_id": key,
         "foo": "bar",
@@ -95,24 +96,33 @@
     }, JSON.stringify(data)]);
 
     stop();
-    this.jio_storage.getAttachment({"_id": key, "_attachment": attachment})
+    this.jio_storage.getAttachment(key, attachment)
       .then(function (result) {
-        return jIO.util.readBlobAsText(result.data).then(function (e) {
+        return jIO.util.readBlobAsText(result).then(function (e) {
+          object = JSON.parse(e.target.result);
           return {
-            "result": result,
-            "text": e.target.result
+            "result": object,
+            "text": object.target.responseText
           };
         });
       }).then(function (result) {
+        console.log("result", result);
+        resultdata = {
+          "data": result.result.target.responseText,
+          "id": result.result.id,
+          "attachment": result.result.target.attachment,
+          "method": result.result.target.method,
+          "status": result.result.target.status,
+          "statusText": result.result.target.statusText
+        };
         result.result.data = result.text;
-        deepEqual(result.result, {
+        deepEqual(resultdata, {
           "data": JSON.stringify(data),
           "id": key,
           "attachment": attachment,
-          "method": "getAttachment",
-          "result": "success",
+          "method": "GET",
           "status": 200,
-          "statusText": "Ok"
+          "statusText": "OK"
         });
       })
       .fail(function (error) {
@@ -122,7 +132,7 @@
         start();
       });
   });
-
+/*
   test('post', function () {
     var key = "foobar12345",
       server = this.server,
@@ -155,10 +165,10 @@
         start();
       });
   });
+*/
 
-  test('put', function () {
-    var key = "foobar12345",
-      server = this.server,
+  test('QiniuStorage.put', function () {
+    var server = this.server,
       upload_url = 'http://up.qiniu.com/',
       data = {"ok": "excellent"};
 
@@ -167,9 +177,9 @@
     }, JSON.stringify(data)]);
 
     stop();
-    this.jio_storage.put({"_id": key})
-      .then(function () {
-        throw new Error("Not implemented");
+    this.jio_storage.put("bar", {"title": "foo"})
+      .then(function (result) {
+        equal(result, "bar");
       })
       .fail(function (error) {
         ok(false, error);
@@ -179,25 +189,23 @@
       });
   });
 
-  test('putAttachment', function () {
-    var key = "foobar12345",
-      attachment = "barfoo54321",
-      server = this.server,
-      upload_url = 'http://up.qiniu.com/',
-      data = {"ok": "excellent"};
+  test('QiniuStorage putAttachment', function () {
+    var server = this.server,
+      blob = new Blob(["foo"]),
+      upload_url = 'http://up.qiniu.com/';
 
     server.respondWith("POST", upload_url, [200, {
       "Content-Type": "application/json"
-    }, JSON.stringify(data)]);
+    }, "foo"]);
 
     stop();
-    this.jio_storage.putAttachment({
-      "_id": key,
-      "_attachment": attachment,
-      "_blob": "bar"
-    })
+    this.jio_storage.putAttachment("bar", "foo", blob)
       .then(function () {
-        throw new Error("Not implemented");
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, upload_url);
+        equal(server.requests[0].status, "200");
+        equal(server.requests[0].responseText, "foo");
       })
       .fail(function (error) {
         ok(false, error);
