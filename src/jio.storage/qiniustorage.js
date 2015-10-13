@@ -8,7 +8,7 @@
  * JIO Qiniu Storage. Type = "qiniu".
  * Qiniu "database" storage.
  */
-/*global FormData, btoa, Blob, CryptoJS, define, jIO */
+/*global JSON, FormData, btoa, Blob, CryptoJS, define, jIO, RSVP, console */
 /*jslint indent: 2, maxlen: 80, nomen: true, unparam: true, bitwise: true */
 (function (dependencies, module) {
   "use strict";
@@ -93,12 +93,12 @@
     data = new FormData();
     if (update === true) {
       put_policy = JSON.stringify({
-        "scope": this._bucket + ':' + key,
+        "scope": "bucket" + ':' + key,
         "deadline": DEADLINE
       });
     } else {
       put_policy = JSON.stringify({
-        "scope": this._bucket,
+        "scope": "bucket",
         "deadline": DEADLINE
       });
     }
@@ -125,6 +125,20 @@
 
   };
 
+  QiniuStorage.prototype.hasCapacity = function (name) {
+    return (name === "list");
+  };
+  QiniuStorage.prototype.buildQuery = function () {
+   // return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    var gadget = this;
+    return new RSVP.Queue()
+      .push(function () {
+        return gadget.allDocs();
+      })
+      .push(function (result) {
+        console.log("result", result);
+      });
+  };
   /**
    * Create a document.
    *
@@ -168,8 +182,20 @@
    * @param  {Object} command The JIO command
    * @param  {Object} metadata The metadata to store
    */
-  QiniuStorage.prototype.put = function (command, metadata) {
-    return this._put(
+  QiniuStorage.prototype.put = function (id, param) {
+    var gadget = this;
+    return new RSVP.Queue()
+      .push(function () {
+        return gadget._put(
+          id,
+          new Blob([JSON.stringify(param)], {type: "application/json"}),
+          true
+        );
+      })
+      .push(function (doc) {
+        return doc;
+      });
+  /* return this._put(
       metadata._id,
       new Blob([JSON.stringify(metadata)], {type: "application/json"}),
       true
@@ -189,19 +215,20 @@
         event.target.statusText,
         "Unable to put doc"
       );
-    });
+    }); */
   };
 
   QiniuStorage.prototype._get = function (key) {
-    var download_url = 'http://' + this._bucket + '.u.qiniudn.com/' + key
-//     var download_url = 'http://' + this._bucket + '.dn.qbox.me/' + key
-        + '?e=' + DEADLINE,
+    var download_url = 'http://' + this._bucket + '/' + key
+    //     var download_url = 'http://' + this._bucket + '.dn.qbox.me/' + key
+      + '?e=' + DEADLINE,
+      downloadurl = '',
       token = b64_hmac_sha1(this._secret_key, download_url);
-
+    downloadurl = download_url + "&token=" + this._access_key + ':' + token;
     return jIO.util.ajax({
       "type": "GET",
-      "url": download_url + "&token=" + this._access_key + ':' + token
-//       "dataType": "blob"
+      "url": downloadurl
+      //       "dataType": "blob"
     });
   };
 
@@ -210,55 +237,66 @@
   * @method get
   * @param  {object} command The JIO command
   **/
-  QiniuStorage.prototype.get = function (command, param) {
-    return this._get(param._id)
-      .then(function (doc) {
-        if (doc.target.responseText !== undefined) {
-          command.success({"data": JSON.parse(doc.target.responseText)});
-        } else {
-          command.error(
-            "not_found",
-            "missing",
-            "Cannot find document"
-          );
+  QiniuStorage.prototype.get = function (id) {
+    var gadget = this;
+    return new RSVP.Queue()
+      .push(function () {
+        return gadget._get(id);
+      })
+      .push(function (doc) {
+        if (doc.target.response !== undefined) {
+          return JSON.parse(doc.target.response);
         }
-      }).fail(function (event) {
-        command.error(
-          event.target.status,
-          event.target.statusText,
-          "Unable to get doc"
-        );
+        if (doc.target.responseText !== undefined) {
+          return JSON.parse(doc.target.responseText);
+        }
+      })
+      .push(undefined, function (error) {
+        if ((error.target !== undefined) &&
+            (error.target.status === 404)) {
+          throw new jIO.util.jIOError("Cannot find document", 404);
+        }
+        throw error;
       });
   };
 
   /**
-   * Get an attachment
+   * Get an attaURITemplatechment
    *
    * @method getAttachment
    * @param  {Object} command The JIO command
    * @param  {Object} param The given parameters
    * @param  {Object} options The command options
    */
-  QiniuStorage.prototype.getAttachment = function (command, param) {
-    return this._get(param._id + "/" + param._attachment)
-      .then(function (doc) {
-        if (doc.target.response) {
-          command.success({"data": doc.target.response});
-        } else {
-        // XXX Handle error
-          command.error(
-            "not_found",
-            "missing",
-            "Cannot find document"
-          );
+  QiniuStorage.prototype.getAttachment = function (param, attachment) {
+    var gadget = this;
+
+    return new RSVP.Queue()
+      .push(function () {
+      //  return gadget._get(param._id + "/" + param._attachment);
+        return gadget._get(param + "/" + attachment);
+      })
+      .push(function (doc) {
+        if (doc.target.response !== undefined) {
+          return new Blob([doc.target.response]);
         }
-      }).fail(function (event) {
-        command.error(
-          event.target.status,
-          event.target.statusText,
-          "Unable to get attachment"
-        );
+        if (doc.target !== undefined) {
+          console.log("doc target", doc.target);
+          doc.id = param;
+          doc.target.attachment = attachment;
+          return new Blob([JSON.stringify(doc)], {type: "application/json"});
+        }
+
+      }).fail(function (error) {
+        if ((error.target !== undefined) &&
+            (error.target.status === 404)) {
+          throw new jIO.util.jIOError("Cannot find attachment: "
+                                      + param._id + " , " + param._attachment,
+                                      404);
+        }
+        throw error;
       });
+
   };
 
   /**
@@ -269,28 +307,23 @@
    * @param  {Object} param The given parameters
    * @param  {Object} options The command options
    */
-  QiniuStorage.prototype.putAttachment = function (command, param) {
-    return this._put(
-      param._id + "/" + param._attachment,
-      param._blob,
-      true
-    ).then(function (doc) {
-      if (doc !== null) {
-        command.success({"data": doc});
-      } else {
-        command.error(
-          "not_found",
-          "missing",
-          "Cannot find document"
+  QiniuStorage.prototype.putAttachment = function (id, param, blob) {
+    var gadget = this;
+/*    console.log("params id", id);
+    console.log("params blob", param);
+    console.log("param options", blob);
+    console.log("param jio read blob", jIO.util.readBlobAsText(blob)); */
+    return new RSVP.Queue()
+      .push(function () {
+        return gadget._put(
+          id + "/" + param,
+          blob,
+          true
         );
-      }
-    }).fail(function (event) {
-      command.error(
-        event.target.status,
-        event.target.statusText,
-        "Unable to put attachment"
-      );
-    });
+      })
+      .push(function (doc) {
+        return doc;
+      });
   };
 
   /**
@@ -300,71 +333,155 @@
    * @param  {Object} command The JIO command
    * @param  {Object} param The given parameters
    */
-  QiniuStorage.prototype.remove = function (command, param) {
-
-    var DELETE_HOST = "http://rs.qiniu.com",
+  QiniuStorage.prototype.removeAttachment = function (id, name) {
+    var gadget = this,
+      DELETE_HOST = "http://rs.qiniu.com",
       DELETE_PREFIX = "/delete/",
       encoded_entry_uri = urlsafe_base64_encode(btoa(
-        this._bucket + ':' + param._id
+        this._bucket + ':' + id + "/" + name
       )),
       delete_url = DELETE_HOST + DELETE_PREFIX + encoded_entry_uri,
       data = DELETE_PREFIX + encoded_entry_uri + '\n',
-      token = b64_hmac_sha1(this._secret_key, data);
+      token = b64_hmac_sha1(gadget._secret_key, data);
 
-    jIO.util.ajax({
-      "type": "POST",
-      "url": delete_url,
-      "headers": {
-        Authorization: "QBox " + this._access_key + ':' + token,
-        "Content-Type": 'application/x-www-form-urlencoded'
-      }
-    }).then(
-      command.success
-    ).fail(function (error) {
-      command.error(
-        "not_found",
-        "missing",
-        "Unable to delete doc"
-      );
-    });
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.ajax({
+          "type": "POST",
+          "url": delete_url,
+          "headers": {
+            "Authorization": "QBox " + gadget._access_key + ':' + token,
+            "Content-Type": 'application/x-www-form-urlencoded'
+          }
+        });
+      })
+      .push(function (error) {
+        if ((error.target !== undefined) &&
+            (error.target.status === 401)) {
+          throw new jIO.util.jIOError("Cannot find attachment: "
+                                      + id, 401);
+        }
+        throw error;
+      }).fail(function (error) {
+        console.log("removeAttachment error", error);
+      });
   };
 
-  QiniuStorage.prototype.allDocs = function (command, param, options) {
-    var LIST_HOST = "http://rsf.qiniu.com",
-      LIST_PREFIX = "/list?bucket=" + this._bucket,
-      list_url = LIST_HOST + LIST_PREFIX,
-      token = b64_hmac_sha1(this._secret_key, LIST_PREFIX + '\n');
-
-    jIO.util.ajax({
-      "type": "POST",
-      "url": list_url,
-      "headers": {
-        Authorization: "QBox " + this._access_key + ':' + token,
-        "Content-Type": 'application/x-www-form-urlencoded'
-      }
-    }).then(function (response) {
-      var data = JSON.parse(response.target.responseText),
-        count = data.items.length,
-        result = [],
-        item,
-        i;
-      for (i = 0; i < count; i += 1) {
-        item = data.items[i];
-        result.push({
-          id: item.key,
-          key: item.key,
-          doc: {},
-          value: {}
+  QiniuStorage.prototype.remove = function (id) {
+    var gadget = this,
+      DELETE_HOST = "http://rs.qiniu.com",
+      DELETE_PREFIX = "/delete/",
+      encoded_entry_uri = urlsafe_base64_encode(btoa(
+        "bucket:" + id
+      )),
+      delete_url = DELETE_HOST + DELETE_PREFIX + encoded_entry_uri,
+      data = DELETE_PREFIX + encoded_entry_uri + '\n{"id": id}',
+      token = b64_hmac_sha1(gadget._secret_key, data);
+    console.log(token);
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.ajax({
+          "type": "POST",
+          "url": delete_url,
+          "headers": {
+            "Authorization": 'QBox ' +  gadget._access_key + ':' + token,
+            "Content-Type": 'application/x-www-form-urlencoded'
+          }
         });
-      }
-      command.success({"data": {"rows": result, "total_rows": count}});
-    }).fail(function (error) {
-      command.error(
-        "error",
-        "did not work as expected",
-        "Unable to call allDocs"
-      );
-    });
+      })
+      .push(function (error) {
+        if ((error.target !== undefined) &&
+            (error.target.status === 401)) {
+          throw new jIO.util.jIOError("Cannot find attachment: "
+                                      + id, 401);
+        }
+        throw error;
+      });
+  };
+
+  QiniuStorage.prototype.allAttachments = function (param) {
+    var LIST_HOST = "http://rsf.qbox.me",
+      LIST_PREFIX = "/list?bucket=" + this._bucket + "/" + param,
+      list_url = LIST_HOST + LIST_PREFIX,
+      token = b64_hmac_sha1(this._secret_key, LIST_PREFIX + '\n'),
+      that = this;
+
+    return new RSVP.Queue()
+      .push(function () {
+        console.log("this AK", that);
+        return jIO.util.ajax({
+          "type": "POST",
+          "url": list_url,
+          "headers": {
+            Authorization: "QBox " + that._access_key + ':' + token,
+            "Content-Type": 'application/x-www-form-urlencoded'
+          }
+        });
+      })
+      .push(function (response) {
+        console.log("response", response);
+        /*var data = JSON.parse(response.target.responseText),
+          count = data.items.length,
+          result = [],
+          item,
+          i;
+        for (i = 0; i < count; i += 1) {
+          item = data.items[i];
+          result.push({
+            id: item.key,
+            key: item.key,
+            doc: {},
+            value: {}
+          });
+        }*/
+      }).fail(function (error) {
+        console.log("allAttachment error", error);
+      });
+  };
+
+  QiniuStorage.prototype.allDocs = function () {
+    console.log("i am here");
+    var gadget = this,
+      // LIST_HOST = "http://rsf.qbox.me",
+      LIST_PREFIX = "http://rsf.qbox.me/list?bucket=" +
+         this._bucket + "&prefix="
+         + encodeURIComponent("id"),
+      // list_url = LIST_HOST + LIST_PREFIX,
+      list_url = LIST_PREFIX,
+      token = b64_hmac_sha1(this._secret_key, LIST_PREFIX + '\n');
+    console.log("i am here");
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.ajax({
+          "type": "POST",
+          "url": list_url,
+          "headers": {
+            "Host": "rsf.qbox.me",
+            "Authorization": "QBox " + gadget._access_key + ':' + token,
+            "Content-Type": 'application/x-www-form-urlencoded'
+          }
+        });
+      })
+      .push(function (response) {
+        console.log("response", response);
+        var data = JSON.parse(response.target.responseText),
+          count = data.items.length,
+          result = [],
+          item,
+          i;
+        for (i = 0; i < count; i += 1) {
+          item = data.items[i];
+          result.push({
+            id: item.key,
+            key: item.key,
+            doc: {},
+            value: {}
+          });
+        }
+   //   command.success({"data": {"rows": result, "total_rows": count}});
+      }).fail(function (error) {
+        console.log("allDocs error", error);
+      });
 
   };
 
