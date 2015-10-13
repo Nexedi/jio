@@ -37,18 +37,18 @@
       ///////////////////////////
       // Memory storage
       ///////////////////////////
-      return g.run({
-        type: "query",
-        sub_storage: {
-          type: "uuid",
-          sub_storage: {
-            type: "union",
-            storage_list: [{
-              type: "memory"
-            }]
-          }
-        }
-      });
+//      return g.run({
+//        type: "query",
+//        sub_storage: {
+//          type: "uuid",
+//          sub_storage: {
+//            type: "union",
+//            storage_list: [{
+//              type: "memory"
+//            }]
+//          }
+//        }
+//      });
 
       ///////////////////////////
       // IndexedDB storage
@@ -85,18 +85,18 @@
       ///////////////////////////
       // Qiniu storage
       ///////////////////////////
-//       return g.run({
-//         type: "query",
-//         sub_storage: {
-//           type: "uuid",
-//           sub_storage: {
-//             "type": "qiniu",
-//             "bucket": "BUCKET",
-//             "access_key": "ACCESSKEY",
-//             "secret_key": "SECRETKEY"
-//           }
-//         }
-//       });
+      return g.run({
+        type: "query",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            "type": "qiniu",
+            "bucket": "7xn150.com1.z0.glb.clouddn.com",
+            "access_key": "s90kGV3JYDDQPivaPVpwxrHMi9RCpncLgLctGDJQ",
+            "secret_key": "hfqndzXIfqP6aMpTOdgT_UjiUjARkiFXz98Cthjx"
+          }
+        }
+      });
 
       ///////////////////////////
       // Replicate storage
@@ -159,7 +159,10 @@
             deepEqual(doc, {"title": "I don't have ID éà&\n"},
                       "Document correctly fetched");
             // Remove the doc
-            return jio.remove(doc_id);
+            return jio.remove(doc_id)
+              .fail(function (error) {
+                console.log("remove error", error);
+              });
           })
           .then(function (doc_id) {
             ok(doc_id, "Document removed");
@@ -249,7 +252,6 @@
           .then(function (result) {
             equal(result.target.result, "fooé\nbar", "Attachment correctly fetched");
             return jio.get("test.txt");
-
           })
           .then(function (doc) {
             deepEqual(doc, {}, "Document correctly fetched");
