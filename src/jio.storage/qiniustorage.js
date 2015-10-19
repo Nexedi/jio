@@ -38,7 +38,6 @@ jIO, RSVP, console, UriTemplate */
     // b2, b3 to b3, b2, b1, b0.
     var encodedArray = [],
       i,
-    //change CrytoJS to rusha
       encoded = CryptoJS.HmacSHA1(message, secret_key),
       encodedString;
     for (i = 0; i < 5; i = i + 1) {
