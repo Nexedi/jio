@@ -8,7 +8,8 @@
  * JIO Qiniu Storage. Type = "qiniu".
  * Qiniu "database" storage.
  * Qiniu storage not support resource manage operation,
- * so remove,removeAttachment,allDocs,allAttachment isn't working
+ * remove,removeAttachment,allDocs,allAttachment is belong 
+ * to resource manage operation, so it isn't working
  */
 
 /*global JSON, FormData, btoa, Blob, CryptoJS, define,
