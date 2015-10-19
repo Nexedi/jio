@@ -70,14 +70,14 @@
       });
   }
 
-  function listFiles(result, token) {
+  function listDirectory(result, token) {
     return new RSVP.Queue()
       .push(function () {
         return listPage(result, token);
       })
       .push(function () {
         if (result.nextPageToken) {
-          return listFiles(result, token);
+          return listDirectory(result, token);
         }
         return result;
       });
@@ -85,56 +85,56 @@
 
   function splitpath(path) {
     var name = path.split("/"),
-      it_name;
+      i;
 
-    for (it_name = 0; it_name < name.length; it_name += 1) {
-      if (name[it_name] === "") {
-        name.splice(it_name, 1);
-        it_name -= 1;
+    for (i = 0; i < name.length; i += 1) {
+      if (name[i] === "") {
+        name.splice(i, 1);
+        i -= 1;
       }
     }
     return name;
   }
 
   function getFileId(path, token, list) {
-    var it_name,
-      itFi,
-      itPa,
-      parentId,
-      foundItem,
+    var i,
+      j,
+      k,
+      parent_id,
+      found_item,
       result = {},
       name = splitpath(path);
 
     if (!name.length) {return result; }
     return new RSVP.Queue()
       .push(function () {
-        return list || listFiles([], token);
+        return list || listDirectory([], token);
       })
-      .push(function (files) {
-        for (it_name = 0; it_name < name.length; it_name += 1) {
-          foundItem = false;
-          for (itFi = 0; itFi < files.length; itFi += 1) {
-            if (files[itFi].title  === name[it_name]) {
-              for (itPa = 0; itPa < files[itFi].parents.length;
-                   itPa += 1) {
+      .push(function (file_list) {
+        for (i = 0; i < name.length; i += 1) {
+          found_item = false;
+          for (j = 0; j < file_list.length; j += 1) {
+            if (file_list[j].title  === name[i]) {
+              for (k = 0; k < file_list[j].parents.length;
+                   k += 1) {
 
-                if ((!it_name && files[itFi].parents[itPa].isRoot) ||
-                    (it_name && files[itFi].parents[itPa].id === parentId)) {
+                if ((!i && file_list[j].parents[k].isRoot) ||
+                    (i && file_list[j].parents[k].id === parent_id)) {
 
-                  if (foundItem === true) {
+                  if (found_item === true) {
                     //if 2 files with same name in same folder.
                     throw new jIO.util.jIOError("Method not implemented", 405);
                   }
-                  foundItem = true;
-                  parentId = files[itFi].id;
+                  found_item = true;
+                  parent_id = file_list[j].id;
 
-                  if (it_name === (name.length - 2) &&
-                      files[itFi].mimeType === FOLDER) {
-                    result.parent = parentId;
+                  if (i === (name.length - 2) &&
+                      file_list[j].mimeType === FOLDER) {
+                    result.parent = parent_id;
                   }
-                  if (it_name === (name.length - 1)) {
-                    result.id = parentId;
-                    result.isDir = (files[itFi].mimeType === FOLDER)
+                  if (i === (name.length - 1)) {
+                    result.id = parent_id;
+                    result.is_dir = (file_list[j].mimeType === FOLDER)
                       ? true : false;
                   }
                   break;
@@ -143,7 +143,7 @@
               }
             }
           }
-          if (!foundItem) {break; }
+          if (!found_item) {break; }
         }
         return result;
       });
@@ -176,9 +176,14 @@
       parentlist = parent ? '{id: "' + parent + '"}' : "",
       type = data ? "" : '"mimeType" : "' + FOLDER + '",\n';
 
+    if (title.indexOf(boundary) !== -1 ||
+        (datatype && datatype.indexOf(boundary) !== -1)) {
+      throw new TypeError("you can't put this string in any element of " +
+                          "your request (title, datatype):\n" + boundary);
+    }
     str = '--' + boundary + '\n' +
       'Content-Type: application/json; charset=UTF-8\n\n' +
-      '{\n"title": "' + title + '",\n' +
+      '{\n"title": "' + encodeURIComponent(title) + '",\n' +
       type +
       '"parents": [' + parentlist + ']\n}\n\n' +
       '--' + boundary;
@@ -198,16 +203,17 @@
   function putElement(id, data, token) {
     var title = splitpath(id),
       boundary = "-------314159265358979323846",
-      files;
+      file_list;
 
     return new RSVP.Queue()
       .push(function () {
         return getFileId(id, token);
       })
       .push(function (result) {
-        files = result;
-        if ((files.id && !data) || (!files.parent && title.length > 1) ||
-            files.isDir) {
+        file_list = result;
+        if ((file_list.id && !data) ||
+            (!file_list.parent && title.length > 1) ||
+            file_list.is_dir) {
           throw new jIO.util.jIOError("Method Not Allowed", 405);
         }
       })
@@ -218,17 +224,17 @@
       .push(function (blob) {
         var update = false;
         if (blob) {blob = blob.currentTarget.result; }
-        if (blob && files.id) {update = true; }
+        if (blob && file_list.id) {update = true; }
         return jIO.util.ajax({
           "type": update ? "PUT" : "POST",
           "url": upload_template.expand({
             access_token: token,
-            id: update ? files.id : []
+            id: update ? file_list.id : []
           }),
           headers: {
             "Content-Type" : 'multipart/related; boundary="' + boundary + '"'
           },
-          data : createPostRequest(title.pop(), files.parent,
+          data : createPostRequest(title.pop(), file_list.parent,
                                    blob, data.type, boundary)
         });
       }, undefined);
@@ -260,7 +266,7 @@
         if (title.length && !result.id) {
           throw new jIO.util.jIOError("Not Found", 404);
         }
-        if (!title.length || result.isDir !== deleteDir) {
+        if (!title.length || result.is_dir !== deleteDir) {
           throw new jIO.util.jIOError("Method Not Allowed", 405);
         }
         return jIO.util.ajax({
@@ -299,7 +305,7 @@
         if (!result.id) {
           throw new jIO.util.jIOError("Cannot find document: " + id, 404);
         }
-        if (result.isDir) { return {}; }
+        if (result.is_dir) { return {}; }
         throw new jIO.util.jIOError("Not a directory: " + id, 404);
       });
   };
@@ -307,16 +313,16 @@
   GdriveStorage.prototype.allAttachments = function (id) {
 
     var that = this,
-      files,
+      file_list,
       title = splitpath(id),
-      itFi,
-      itPa;
+      i,
+      j;
 
     id = restrictDocumentId(id);
     return new RSVP.Queue()
       .push(function () {
-        files = listFiles([], that._access_token);
-        return files;
+        file_list = listDirectory([], that._access_token);
+        return file_list;
       })
       .push(function (list) {
         var result;
@@ -326,21 +332,21 @@
       .push(function (obj) {
         var result = {};
 
-        files = files.fulfillmentValue;
+        file_list = file_list.fulfillmentValue;
         if (title.length) {
           if (!obj.id) {
             throw new jIO.util.jIOError("Cannot find document: " + id, 404);
           }
-          if (!obj.isDir) {
+          if (!obj.is_dir) {
             throw new jIO.util.jIOError("Not a directory: " + id, 404);
           }
         }
-        for (itFi = 0; itFi < files.length; itFi += 1) {
-          for (itPa = 0; itPa < files[itFi].parents.length; itPa += 1) {
-            if (files[itFi].mimeType !== FOLDER &&
-                ((!title.length && files[itFi].parents[itPa].isRoot) ||
-                 (title.length && files[itFi].parents[itPa].id === obj.id))) {
-              result[files[itFi].title] = {};
+        for (i = 0; i < file_list.length; i += 1) {
+          for (j = 0; j < file_list[i].parents.length; j += 1) {
+            if (file_list[i].mimeType !== FOLDER &&
+                ((!title.length && file_list[i].parents[j].isRoot) ||
+                 (title.length && file_list[i].parents[j].id === obj.id))) {
+              result[file_list[i].title] = {};
               break;
             }
           }
@@ -366,7 +372,7 @@
             404
           );
         }
-        if (result.isDir) {
+        if (result.is_dir) {
           throw new jIO.util.jIOError("Method not implemented", 405);
         }
         return jIO.util.ajax({
