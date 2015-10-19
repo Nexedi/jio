@@ -71,7 +71,7 @@
 
 
   CryptStorage.prototype.putAttachment = function (id, name, blob) {
-    var iv = crypto.getRandomValues(new Uint8Array(12)),
+    var initializaton_vector = crypto.getRandomValues(new Uint8Array(12)),
       that = this;
 
     return new RSVP.Queue()
@@ -89,11 +89,14 @@
         for (i = 0; i < strLen; i += 1) {
           bufView[i] = dataURL.charCodeAt(i);
         }
-        return crypto.subtle.encrypt({name : "AES-GCM", iv : iv},
+        return crypto.subtle.encrypt({
+          name : "AES-GCM",
+          initializaton_vector : initializaton_vector
+        },
                                      that._key, buf);
       })
       .push(function (coded) {
-        var blob = new Blob([iv, coded], {type: MIME_TYPE});
+        var blob = new Blob([initializaton_vector, coded], {type: MIME_TYPE});
         return that._sub_storage.putAttachment(id, name, blob);
       });
   };
@@ -111,11 +114,14 @@
             return jIO.util.readBlobAsArrayBuffer(blob);
           })
           .push(function (coded) {
-            var iv;
+            var initializaton_vector;
 
             coded = coded.currentTarget.result;
-            iv = new Uint8Array(coded.slice(0, 12));
-            return crypto.subtle.decrypt({name : "AES-GCM", iv : iv},
+            initializaton_vector = new Uint8Array(coded.slice(0, 12));
+            return crypto.subtle.decrypt({
+              name : "AES-GCM",
+              initializaton_vector : initializaton_vector
+            },
                                          that._key, coded.slice(12));
           })
           .push(function (arr) {
