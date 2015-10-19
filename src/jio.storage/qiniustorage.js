@@ -196,25 +196,5 @@ jIO, RSVP, console, UriTemplate */
 
   };
 
-  /**
-   * Add an attachment to a document
-   *
-   * @method putAttachment
-   * @id  {Object} Document id
-   * @param  {Object} param The given parameters
-   * @blob  {Object} attachment packaged into a blob
-   */
-  QiniuStorage.prototype.putAttachment = function (id, param, blob) {
-    var gadget = this;
-    return new RSVP.Queue()
-      .push(function () {
-        return gadget._put(
-          id + "/" + param,
-          blob,
-          true
-        );
-      });
-  };
-
   jIO.addStorage('qiniu', QiniuStorage);
 }(jIO, RSVP, Blob, UriTemplate));

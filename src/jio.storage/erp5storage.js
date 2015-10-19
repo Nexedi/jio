@@ -79,7 +79,8 @@
           },
           form_data_json = {},
           field,
-          key;
+          key,
+          prefix_length;
 
         form_data_json.form_id = {
           "key": [form.form_id.key],
@@ -89,15 +90,20 @@
         for (key in form) {
           if (form.hasOwnProperty(key)) {
             field = form[key];
-            if ((key.indexOf('my_') === 0) &&
-                (field.editable) &&
+            prefix_length = 0;
+            if (key.indexOf('my_') === 0 && field.editable) {
+              prefix_length = 3;
+            }
+            if (key.indexOf('your_') === 0) {
+              prefix_length = 5;
+            }
+            if ((prefix_length !== 0) &&
                 (allowed_field_dict.hasOwnProperty(field.type))) {
-
-              form_data_json[key.substring(3)] = {
+              form_data_json[key.substring(prefix_length)] = {
                 "default": field["default"],
                 "key": field.key
               };
-              converted_json[key.substring(3)] = field["default"];
+              converted_json[key.substring(prefix_length)] = field["default"];
             }
           }
         }
