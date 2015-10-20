@@ -8,12 +8,12 @@
  * JIO Qiniu Storage. Type = "qiniu".
  * Qiniu "database" storage.
  * Qiniu storage not support resource manage operation,
- * remove,removeAttachment,allDocs,allAttachment is belong 
+ * remove,removeAttachment,allDocs,allAttachment is belong
  * to resource manage operation, so it isn't working
  */
 
 /*global JSON, FormData, btoa, Blob, CryptoJS, define,
-jIO, RSVP, console, UriTemplate */
+jIO, RSVP, UriTemplate */
 /*jslint indent: 2, maxlen: 80, nomen: true, bitwise: true */
 (function (jIO, RSVP, Blob, UriTemplate) {
   "use strict";
@@ -80,25 +80,28 @@ jIO, RSVP, console, UriTemplate */
     this._secret_key = spec.secret_key;
   }
 
-  QiniuStorage.prototype._put = function (key, blob, update) {
+  /**
+   *Add an attachment to a document
+   *
+   * @method putAttachment
+   * @id  {Object} Document id
+   * @param  {Object} param The given parameters
+   * @blob  {Object} attachment packaged into a blob
+   */
+  QiniuStorage.prototype.putAttachment = function (id, param, blob) {
     var data,
       put_policy,
       encoded,
       encode_signed,
-      upload_token;
+      upload_token,
+      key;
 
+    key = id + "/" + param;
     data = new FormData();
-    if (update === true) {
-      put_policy = JSON.stringify({
-        "scope": "bucket" + ':' + key,
-        "deadline": DEADLINE
-      });
-    } else {
-      put_policy = JSON.stringify({
-        "scope": "bucket",
-        "deadline": DEADLINE
-      });
-    }
+    put_policy = JSON.stringify({
+      "scope": "bucket" + ':' + key,
+      "deadline": DEADLINE
+    });
 
     encoded = btoa(put_policy);
     encode_signed = b64_hmac_sha1(this._secret_key, encoded);
@@ -112,38 +115,29 @@ jIO, RSVP, console, UriTemplate */
       key
     );
 
-    return jIO.util.ajax({
-      "type": "POST",
-      "url": UPLOAD_URL,
-      "data": data
-    });
-
-  };
-
-  /**                                                                                                                                                  * Add an attachment to a document
-   *
-   * @method putAttachment
-   * @id  {Object} Document id
-   * @param  {Object} param The given parameters
-   * @blob  {Object} attachment packaged into a blob
-   */
-  QiniuStorage.prototype.putAttachment = function (id, param, blob) {
-    var gadget = this;
     return new RSVP.Queue()
       .push(function () {
-        return gadget._put(
-          id + "/" + param,
-          blob,
-          true
-        );
+        return jIO.util.ajax({
+          "type": "POST",
+          "url": UPLOAD_URL,
+          "data": data
+        });
       });
   };
 
-  QiniuStorage.prototype._get = function (key) {
-    var download_url = 'http://' + this._bucket + '/' + key
-      + '?e=' + DEADLINE,
+  /**
+   * Get an attaURITemplatechment
+   *
+   * @method getAttachment
+   * @param  {Object} param The given parameters
+   * @param  {Object} attachment attachment name
+   */
+  QiniuStorage.prototype.getAttachment = function (param, attachment) {
+    var download_url = 'http://' + this._bucket + '/' + param
+      + "/" + attachment + '?e=' + DEADLINE,
       token = b64_hmac_sha1(this._secret_key, download_url),
-      gadget = this;
+      gadget = this,
+      key = param + "/" + attachment;
 
     return new RSVP.Queue()
       .push(function () {
@@ -157,22 +151,6 @@ jIO, RSVP, console, UriTemplate */
             token: token
           })
         });
-      });
-  };
-
-  /**
-   * Get an attaURITemplatechment
-   *
-   * @method getAttachment
-   * @param  {Object} param The given parameters
-   * @param  {Object} attachment attachment name
-   */
-  QiniuStorage.prototype.getAttachment = function (param, attachment) {
-    var gadget = this;
-
-    return new RSVP.Queue()
-      .push(function () {
-        return gadget._get(param + "/" + attachment);
       })
       .push(function (doc) {
         if (doc.target.response !== undefined) {
