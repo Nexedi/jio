@@ -394,7 +394,8 @@
 
   ERP5Storage.prototype.hasCapacity = function (name) {
     return ((name === "list") || (name === "query") ||
-            (name === "select") || (name === "limit"));
+            (name === "select") || (name === "limit") ||
+            (name === "sort"));
   };
 
   ERP5Storage.prototype.buildQuery = function (options) {
@@ -412,7 +413,8 @@
               query: options.query,
               // XXX Force erp5 to return embedded document
               select_list: options.select_list || ["title", "reference"],
-              limit: options.limit
+              limit: options.limit,
+              sort_on: options.sort_on
             }),
           "xhrFields": {
             withCredentials: true
