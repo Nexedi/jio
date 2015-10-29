@@ -40,7 +40,7 @@
     expect(3);
 
     this.jio[fun]("inexistent", encl ? "enclosure" : undefined,
-                  blob ? blob : undefined)
+                  blob || undefined)
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find document: inexistent");
@@ -145,7 +145,7 @@
   });
 
   test("post with invalid credentials", function () {
-  var puturl = domain + "/upload/drive/v2/files?uploadType" +
+    var puturl = domain + "/upload/drive/v2/files?uploadType" +
       "=multipart&access_token=" + token;
 
     this.server.respondWith("POST", puturl, [401, {
