@@ -357,20 +357,58 @@
   });
 
   test("get all docs", function () {
+    var objectResult = {"data": {"rows": [], "total_rows": 6}},
+      server = this.server;
+
+    objectResult.data.rows.push(
+      {"id": "0B4kh3jbjOf5Lb2theE8xWHhvWXM", "title": "attach1",
+        "mimeType": "text/plain",
+        "parents": [{"id": "0B4kh3jbjOf5LN0Y2V0ZJS0VxS00", "isRoot": false}],
+        "value": {}}
+    );
+    objectResult.data.rows.push(
+      {"id": "0B4kh3jbjOf5LamRlX21MZlVCYXM", "title": "file2",
+        "mimeType": "text/plain",
+        "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
+    );
+    objectResult.data.rows.push(
+      {"id": "0B4kh3jbjOf5LTVlUWVVROWlBZzg",
+        "title": "file1", "mimeType": "text/plain",
+        "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
+    );
+    objectResult.data.rows.push(
+      {"id": "0B4kh3jbjOf5LYTRaaV9YUkJ4a0U",
+        "title": "folder2",
+        "mimeType": "application/vnd.google-apps.folder",
+        "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
+    );
+    objectResult.data.rows.push(
+      {"id": "0B4kh3jbjOf5LN0Y2V0ZJS0VxS00",
+        "title": "folder1",
+        "mimeType": "application/vnd.google-apps.folder",
+        "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
+    );
+    objectResult.data.rows.push(
+      {"id": "0B4kh3jbjOf5Lc3RhcnRlcl9maWxl",
+        "title": "How to get started with Drive",
+        "mimeType": "application/pdf",
+        "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
+    );
+
     this.server.respondWith("GET", listUrl, [200, {
     }, sampleList]);
     stop();
-    expect(6);
-    var server = this.server;
+    expect(7);
 
     this.jio.allDocs()
-      .then(function () {
+      .then(function (res) {
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "GET");
         equal(server.requests[0].url, listUrl);
         equal(server.requests[0].status, 200);
         equal(server.requests[0].requestBody, undefined);
         equal(server.requests[0].responseText, sampleList);
+        deepEqual(res, objectResult);
       })
       .fail(function (error) {
         ok(false, error);

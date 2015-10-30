@@ -10,7 +10,7 @@
 /*global jIO, Blob, RSVP, UriTemplate, JSON*/
 /*jslint nomen: true*/
 
-(function (jIO, Blob, RSVP, UriTemplate) {
+(function (jIO, Blob, RSVP, UriTemplate, JSON) {
   "use strict";
 
   var UPLOAD_URL = "https://www.googleapis.com{/upload}/drive/v2/files{/id}" +
@@ -64,7 +64,7 @@
         }
         result.nextPageToken = obj.nextPageToken;
         return result;
-      }, function (error) {handleError(error); });
+      }, handleError);
   }
 
   function checkName(name) {
@@ -227,4 +227,4 @@
 
   jIO.addStorage('gdrive', GdriveStorage);
 
-}(jIO, Blob, RSVP, UriTemplate));
+}(jIO, Blob, RSVP, UriTemplate, JSON));
