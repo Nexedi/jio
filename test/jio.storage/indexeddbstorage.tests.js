@@ -1319,6 +1319,38 @@
       });
   });
 
+  test("retrieving slice of data", function () {
+    var context = this,
+      attachment = "attachment";
+    stop();
+    expect(1);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put("foo", {"title": "bar"});
+      })
+      .then(function () {
+        return context.jio.putAttachment("foo", attachment, big_string);
+      })
+      .then(function () {
+        return context.jio.getAttachment("foo", attachment,
+                                         {"start": 2000005, "end": 2000015});
+      })
+      .then(function (result) {
+        return jIO.util.readBlobAsText(result);
+      })
+      .then(function (result) {
+        var expected = "aaaaaaaaaa";
+        equal(result.target.result, expected, "Attachment correctly fetched");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // indexeddbStorage.removeAttachment
   /////////////////////////////////////////////////////////////////
