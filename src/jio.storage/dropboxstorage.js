@@ -213,7 +213,6 @@
       .push(function () {
         return jIO.util.ajax({
           type: "GET",
-          dataType: "blob",
           url: get_template.expand({
             root: that._root,
             id: id,
