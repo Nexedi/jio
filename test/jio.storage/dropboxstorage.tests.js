@@ -10,6 +10,7 @@
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
     module = QUnit.module,
+    throws = QUnit.throws,
     token = "sample_token";
 
   /////////////////////////////////////////////////////////////////
@@ -21,10 +22,30 @@
     var jio = jIO.createJIO({
       type: "dropbox",
       access_token: token,
-      root : "dropbox"
+      root : "sandbox"
     });
     equal(jio.__type, "dropbox");
     deepEqual(jio.__storage._access_token, token);
+    deepEqual(jio.__storage._root, "sandbox");
+  });
+
+  test("reject invalid root", function () {
+
+    throws(
+      function () {
+        jIO.createJIO({
+          type: "dropbox",
+          access_token: token,
+          root : "foobar"
+        });
+      },
+      function (error) {
+        ok(error instanceof TypeError);
+        equal(error.message,
+              "root must be 'dropbox' or 'sandbox'");
+        return true;
+      }
+    );
   });
 
   /////////////////////////////////////////////////////////////////
@@ -301,11 +322,6 @@
   });
 
   test("get inexistent document", function () {
-    var url_get = "https://api.dropboxapi.com/1/metadata/dropbox" +
-      "//inexistent/?access_token=" + token;
-    this.server.respondWith("GET", url_get, [404, {
-      "Content-Type": "text/xml"
-    }, '']);
     stop();
     expect(3);
 
@@ -323,9 +339,9 @@
       });
   });
 
-  test("get document", function () {
+  test("get directory", function () {
     var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
-      "//id1/?access_token=" + token;
+      "/id1/?access_token=" + token;
     this.server.respondWith("GET", url, [200, {
       "Content-Type": "text/xml"
     }, '{"is_dir": true, "contents": []}'
@@ -336,6 +352,30 @@
     this.jio.get("/id1/")
       .then(function (result) {
         deepEqual(result, {}, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get file", function () {
+    var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
+      "/id1/?access_token=" + token;
+    this.server.respondWith("GET", url, [200, {
+      "Content-Type": "text/xml"
+    }, '{"is_dir": false, "contents": []}'
+                                        ]);
+    stop();
+    expect(3);
+
+    this.jio.get("/id1/")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Not a directory: /id1/");
+        equal(error.status_code, 404);
       })
       .fail(function (error) {
         ok(false, error);
@@ -403,12 +443,31 @@
       });
   });
 
-  test("get inexistent document", function () {
-    var url = "/inexistent/";
-    this.server.respondWith("PROPFIND", url, [404, {
-      "Content-Type": "text/html"
-    }, "foo"]);
+  test("get file", function () {
+    var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
+      "/id1/?access_token=" + token;
+    this.server.respondWith("GET", url, [200, {
+      "Content-Type": "text/xml"
+    }, '{"is_dir": false, "contents": []}'
+                                        ]);
+    stop();
+    expect(3);
 
+    this.jio.allAttachments("/id1/")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Not a directory: /id1/");
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get inexistent document", function () {
     stop();
     expect(3);
 
@@ -428,7 +487,7 @@
 
   test("get document without attachment", function () {
     var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
-      "//id1/?access_token=" + token;
+      "/id1/?access_token=" + token;
     this.server.respondWith("GET", url, [200, {
       "Content-Type": "text/xml"
     }, '{"is_dir": true, "contents": []}'
@@ -450,7 +509,7 @@
 
   test("get document with attachment", function () {
     var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
-      "//id1/?access_token=" + token;
+      "/id1/?access_token=" + token;
     this.server.respondWith("GET", url, [200, {
       "Content-Type": "text/xml"
     }, '{"is_dir": true, "path": "/id1", ' +
@@ -737,13 +796,6 @@
   });
 
   test("remove inexistent attachment", function () {
-    var url_get_id = "https://api.dropboxapi.com/1/metadata/dropbox" +
-      "//removeAttachment1/attachment1?access_token=" + token;
-
-    this.server.respondWith("GET", url_get_id, [404, {
-      "Content-Type": "text/xml"
-    }, '']);
-
     stop();
     expect(3);
 
@@ -890,12 +942,6 @@
   });
 
   test("get inexistent attachment", function () {
-    var url = "https://content.dropboxapi.com/1/files/dropbox//" +
-      "getAttachment1/attachment1?access_token=" + token;
-
-    this.server.respondWith("GET", url, [404, {
-      "Content-Type": "text/xml"
-    }, ""]);
     stop();
     expect(3);
 
