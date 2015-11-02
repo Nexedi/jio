@@ -11,25 +11,9 @@
     equal = QUnit.equal,
     throws = QUnit.throws,
     module = QUnit.module,
-    key;
-
-  crypto.subtle.importKey(
-    "jwk",
-    {
-      kty: "oct",
-      k: "L6hUS9PdMP5AIxXyiFM0GOBukp0heD5wHPRctvWBcVg",
-      alg: "A256GCM",
-      ext: true
-    },
-    {
-      name: "AES-GCM"
-    },
-    true,
-    ["encrypt", "decrypt"]
-  )
-    .then(function (res) {
-      key = res;
-    });
+    key = {"alg": "A256GCM", "ext": true,
+           "k": "seeaLzpu8dHG07bO2ANH2GywbTqs_zrs4Vq8zmtYeE4",
+           "key_ops": ["encrypt", "decrypt"], "kty": "oct"};
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -50,6 +34,7 @@
       key: key,
       sub_storage: {type : "cryptstorage200"}
     });
+
     equal(jio.__type, "crypt");
     equal(jio.__storage._sub_storage.__type, "cryptstorage200");
   });
@@ -405,10 +390,11 @@
     var id = "/",
       attachment = "stringattachment",
       value = "azertyuio\npàç_è-('é&",
-      tocheck = "data:application/x-jio-aes-gcm-encryption;base64,L3" +
-        "LcvzpAlxu8/xd0fW7lPHZs5AP0ncexWoTfH57PCVkvrtp1JoB" +
-        "wDzUYO+DHsfjAkzXkxhHHNUmxAtDiiSkRSvcbderS9FfIC7U6" +
-        "KoGcqiP3OkEseL9Rd7F+qBwGuuDJyg==",
+      tocheck = "data:application/x-jio-aes-gcm-encryption;base64" +
+        ",+p/Ho+KgGHZC2zDLMbQQS2tXcsy0g+Ho41VZnlPEkXdmG9zm36c8iLCkv" +
+        "lanyWCN510NK4hj1EgWQ6WrLS5pCmA/yeAWh+HyfPkYKDRHVBl6+Hxd53I" +
+        "TmiWQ6Vix2jaIQg==",
+
       blob =  jIO.util.dataURItoBlob(tocheck);
 
 
@@ -455,7 +441,17 @@
   });
 
   function decodeAES(blob) {
+    var decryptKey;
+
     return new RSVP.Queue()
+      .push(function () {
+        return crypto.subtle.importKey("jwk", key,
+                                       "AES-GCM", false, ["decrypt"]);
+      })
+      .push(function (res) {
+        decryptKey = res;
+        return;
+      })
       .push(function () {
         return jIO.util.readBlobAsArrayBuffer(blob);
       })
@@ -465,7 +461,7 @@
         coded = coded.currentTarget.result;
         iv = new Uint8Array(coded.slice(0, 12));
         return crypto.subtle.decrypt({name : "AES-GCM", iv : iv},
-                                     key, coded.slice(12));
+                                     decryptKey, coded.slice(12));
       })
       .push(function (arr) {
 

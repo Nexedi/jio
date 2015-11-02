@@ -7,17 +7,24 @@
 /*jslint nomen: true*/
 /*global jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer*/
 
-(function (jIO, RSVP, DOMException, Blob) {
+(function (jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer) {
   "use strict";
 
 
   // you the cryptography system used by this storage is AES-GCM.
-  // here is an example of how to generate a key.
+  // here is an example of how to generate a key to the json format.
 
-  // var key;
+  // var key,
+  //     jsonKey;
   // crypto.subtle.generateKey({name: "AES-GCM",length: 256},
   //                           (true), ["encrypt", "decrypt"])
   // .then(function(res){key = res;});
+  //
+  // window.crypto.subtle.exportKey("jwk", key)
+  // .then(function(res){jsonKey = val})
+  //
+  //var storage = jIO.createJIO({type: "crypt", key: jsonKey,
+  //                             sub_storage: {...}});
 
   // find more informations about this cryptography system on
   // https://github.com/diafygi/webcrypto-examples#aes-gcm
@@ -32,11 +39,27 @@
   var MIME_TYPE = "application/x-jio-aes-gcm-encryption";
 
   function CryptStorage(spec) {
-    if (!spec.key || typeof spec.key !== "object") {
-      throw new TypeError("'key' must be a CryptoKey object");
-    }
     this._key = spec.key;
+    this._jsonKey = true;
     this._sub_storage = jIO.createJIO(spec.sub_storage);
+  }
+
+  function convertKey(that) {
+    return new RSVP.Queue()
+      .push(function () {
+        return crypto.subtle.importKey("jwk", that._key,
+                                       "AES-GCM", false,
+                                       ["encrypt", "decrypt"]);
+      })
+      .push(function (res) {
+        that._key = res;
+        that._jsonKey = false;
+        return;
+      }, function () {
+        throw new TypeError(
+          "'key' must be a CryptoKey to JSON Web Key format"
+        );
+      });
   }
 
   CryptStorage.prototype.get = function () {
@@ -76,6 +99,12 @@
 
     return new RSVP.Queue()
       .push(function () {
+        if (that._jsonKey === true) {
+          return convertKey(that);
+        }
+        return;
+      })
+      .push(function () {
         return jIO.util.readBlobAsDataURL(blob);
       })
       .push(function (dataURL) {
@@ -91,7 +120,7 @@
         }
         return crypto.subtle.encrypt({
           name : "AES-GCM",
-          initializaton_vector : initializaton_vector
+          iv : initializaton_vector
         },
                                      that._key, buf);
       })
@@ -111,6 +140,12 @@
         }
         return new RSVP.Queue()
           .push(function () {
+            if (that._jsonKey === true) {
+              return convertKey(that);
+            }
+            return;
+          })
+          .push(function () {
             return jIO.util.readBlobAsArrayBuffer(blob);
           })
           .push(function (coded) {
@@ -120,7 +155,7 @@
             initializaton_vector = new Uint8Array(coded.slice(0, 12));
             return crypto.subtle.decrypt({
               name : "AES-GCM",
-              initializaton_vector : initializaton_vector
+              iv : initializaton_vector
             },
                                          that._key, coded.slice(12));
           })
@@ -135,7 +170,7 @@
               }
               throw error;
             }
-          });
+          }, function () { return blob; });
       });
   };
 
@@ -151,4 +186,4 @@
 
   jIO.addStorage('crypt', CryptStorage);
 
-}(jIO, RSVP, DOMException, Blob));
+}(jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer));
