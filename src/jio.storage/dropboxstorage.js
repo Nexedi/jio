@@ -23,8 +23,11 @@
     remote_template = UriTemplate.parse(REMOVE_URL),
     GET_URL = "https://content.dropboxapi.com/1/files" +
       "{/root,id}{+name}{?access_token}",
-    get_template = UriTemplate.parse(GET_URL);
+    get_template = UriTemplate.parse(GET_URL),
     //LIST_URL = 'https://api.dropboxapi.com/1/metadata/sandbox/';
+    METADATA_URL = "https://api.dropboxapi.com/1/metadata" +
+      "{/root}{+id}{?access_token}",
+    metadata_template = UriTemplate.parse(METADATA_URL);
 
   function restrictDocumentId(id) {
     if (id.indexOf("/") !== 0) {
@@ -86,6 +89,7 @@
       .push(undefined, function (err) {
         if ((err.target !== undefined) &&
             (err.target.status === 405)) {
+          // Directory already exists, no need to fail
           return;
         }
         throw err;
@@ -115,10 +119,12 @@
     return new RSVP.Queue()
       .push(function () {
         return jIO.util.ajax({
-          "type": "GET",
-          "url": "https://api.dropboxapi.com/1/metadata/" +
-            that._root + "/" + id +
-            '?access_token=' + that._access_token
+          type: "GET",
+          url: metadata_template.expand({
+            access_token: that._access_token,
+            root: that._root,
+            id: id
+          })
         });
       })
       .push(function (evt) {
@@ -144,10 +150,12 @@
     return new RSVP.Queue()
       .push(function () {
         return jIO.util.ajax({
-          "type": "GET",
-          "url": "https://api.dropboxapi.com/1/metadata/" +
-            that._root + "/" + id +
-            '?access_token=' + that._access_token
+          type: "GET",
+          url: metadata_template.expand({
+            access_token: that._access_token,
+            root: that._root,
+            id: id
+          })
         });
       })
       .push(function (evt) {
@@ -250,6 +258,7 @@
           throw new jIO.util.jIOError("Cannot find attachment: " +
                                       id + ", " + name, 404);
         }
+        throw error;
       });
   };
 
