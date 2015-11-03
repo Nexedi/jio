@@ -32,8 +32,14 @@
       '":"0AIkh3jbjOf5LUk9PVA","isRoot":true}]}\n,{"id":"0B4kh3jbjOf5Lc3' +
       'RhcnRlcl9maWxl","title":"How to get started with Drive","mimeType' +
       '":"application/pdf","parents":[{"id":"0AIkh3jbjOf5LUk9PVA","isRoo' +
-      't":true}]}]}';
-
+      't":true}]}]}',
+    partSample1 = '{"nextPageToken": "nptkn01",' +
+      '"items":[{"id":"0B4kh3jbjOf5Lb2theE8xWHhvWXM","title":"' +
+      'attach1","mimeType":"text/plain","parents":[{"id":"0B4kh3jbjOf5LN' +
+      '0Y2V0ZJS0VxS00","isRoot":false}]}]}',
+    partSample2 = '{"items":[{"id":"0B4kh3jbjOf5LamRlX21MZ' +
+      'lVCYXM","title":"file2","mimeType":"text/plain","parents":[{"id":' +
+      '"0AIkh3jbjOf5LUk9PVA","isRoot":true}]}]}';
 
   function error404Tester(fun, encl, blob) {
     stop();
@@ -417,6 +423,57 @@
         start();
       });
   });
+
+  test("allDocs with multiple API requests (nextPageToken)", function () {
+    var objectResult = {"data": {"rows": [], "total_rows": 2}},
+      server = this.server,
+      tokenUrl = domain + "/drive/v2/files" +
+        "?prettyPrint=false&pageToken=nptkn01&q=trashed=false" +
+        "&fields=nextPageToken,items(id,mimeType,title,parents(id,isRoot))" +
+        "&access_token=" + token;
+
+    objectResult.data.rows.push(
+      {"id": "0B4kh3jbjOf5Lb2theE8xWHhvWXM", "title": "attach1",
+        "mimeType": "text/plain",
+        "parents": [{"id": "0B4kh3jbjOf5LN0Y2V0ZJS0VxS00", "isRoot": false}],
+        "value": {}}
+    );
+    objectResult.data.rows.push(
+      {"id": "0B4kh3jbjOf5LamRlX21MZlVCYXM", "title": "file2",
+        "mimeType": "text/plain",
+        "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
+    );
+
+    this.server.respondWith("GET", listUrl, [200, {
+    }, partSample1]);
+    this.server.respondWith("GET", tokenUrl, [200, {
+    }, partSample2]);
+    stop();
+    expect(12);
+    this.jio.allDocs()
+      .then(function (res) {
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, listUrl);
+        equal(server.requests[0].status, 200);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].responseText, partSample1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[1].url, tokenUrl);
+        equal(server.requests[1].status, 200);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].responseText, partSample2);
+        deepEqual(res, objectResult);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+
 
   /////////////////////////////////////////////////////////////////
   // Google Drive Storage.putAttachment
