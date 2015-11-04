@@ -1,282 +1,189 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global jIO: true, sjcl: true, $: true, setTimeout: true */
-jIO.addStorage('crypt', function (spec, my) {
-  /*jslint todo: true*/
-  spec = spec || {};
-  var that = my.basicStorage(spec, my),
-    priv = {},
-    is_valid_storage = (spec.storage ? true : false),
-    super_serialized = that.serialized;
+/*
+ * Copyright 2015, Nexedi SA
+ * Released under the LGPL license.
+ * http://www.gnu.org/licenses/lgpl.html
+ */
 
-  priv.username = spec.username || '';
-  priv.password = spec.password || '';
-  priv.sub_storage_spec = spec.storage || {
-    type: 'base'
-  };
-  priv.sub_storage_string = JSON.stringify(priv.sub_storage_string);
+/*jslint nomen: true*/
+/*global jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer*/
 
-  that.serialized = function () {
-    var o = super_serialized();
-    o.username = priv.username;
-    o.password = priv.password; // TODO : unsecured !!!
-    o.storage = priv.sub_storage_string;
-    return o;
-  };
+(function (jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer) {
+  "use strict";
 
-  that.validateState = function () {
-    if (priv.username && is_valid_storage) {
-      return '';
-    }
-    return 'Need at least two parameters: "username" and "storage".';
-  };
 
-  // TODO : IT IS NOT SECURE AT ALL!
-  // WE MUST REWORK CRYPTED STORAGE!
-  priv.encrypt_param_object = {
-    "iv": "kaprWwY/Ucr7pumXoTHbpA",
-    "v": 1,
-    "iter": 1000,
-    "ks": 256,
-    "ts": 128,
-    "mode": "ccm",
-    "adata": "",
-    "cipher": "aes",
-    "salt": "K4bmZG9d704"
-  };
-  priv.decrypt_param_object = {
-    "iv": "kaprWwY/Ucr7pumXoTHbpA",
-    "ks": 256,
-    "ts": 128,
-    "salt": "K4bmZG9d704"
-  };
-  priv.encrypt = function (data, callback) {
-    // end with a callback in order to improve encrypt to an
-    // asynchronous encryption.
-    var tmp = sjcl.encrypt(priv.username + ':' + priv.password, data,
-      priv.encrypt_param_object);
-    callback(JSON.parse(tmp).ct);
-  };
-  priv.decrypt = function (data, callback) {
-    var tmp, param = $.extend(true, {}, priv.decrypt_param_object);
-    param.ct = data || '';
-    param = JSON.stringify(param);
-    try {
-      tmp = sjcl.decrypt(priv.username + ':' + priv.password, param);
-    } catch (e) {
-      callback({
-        status: 403,
-        statusText: 'Forbidden',
-        error: 'forbidden',
-        message: 'Unable to decrypt.',
-        reason: 'unable to decrypt'
-      });
-      return;
-    }
-    callback(undefined, tmp);
-  };
+  // you the cryptography system used by this storage is AES-GCM.
+  // here is an example of how to generate a key to the json format.
 
-  priv.newAsyncModule = function () {
-    var async = {};
-    async.call = function (obj, function_name, arglist) {
-      obj._wait = obj._wait || {};
-      if (obj._wait[function_name]) {
-        obj._wait[function_name] -= 1;
-        return function () {
-          return;
-        };
-      }
-      // ok if undef or 0
-      arglist = arglist || [];
-      setTimeout(function () {
-        obj[function_name].apply(obj[function_name], arglist);
-      });
-    };
-    async.neverCall = function (obj, function_name) {
-      obj._wait = obj._wait || {};
-      obj._wait[function_name] = -1;
-    };
-    async.wait = function (obj, function_name, times) {
-      obj._wait = obj._wait || {};
-      obj._wait[function_name] = times;
-    };
-    async.end = function () {
-      async.call = function () {
+  // var key,
+  //     jsonKey;
+  // crypto.subtle.generateKey({name: "AES-GCM",length: 256},
+  //                           (true), ["encrypt", "decrypt"])
+  // .then(function(res){key = res;});
+  //
+  // window.crypto.subtle.exportKey("jwk", key)
+  // .then(function(res){jsonKey = val})
+  //
+  //var storage = jIO.createJIO({type: "crypt", key: jsonKey,
+  //                             sub_storage: {...}});
+
+  // find more informations about this cryptography system on
+  // https://github.com/diafygi/webcrypto-examples#aes-gcm
+
+  /**
+   * The JIO Cryptography Storage extension
+   *
+   * @class CryptStorage
+   * @constructor
+   */
+
+  var MIME_TYPE = "application/x-jio-aes-gcm-encryption";
+
+  function CryptStorage(spec) {
+    this._key = spec.key;
+    this._jsonKey = true;
+    this._sub_storage = jIO.createJIO(spec.sub_storage);
+  }
+
+  function convertKey(that) {
+    return new RSVP.Queue()
+      .push(function () {
+        return crypto.subtle.importKey("jwk", that._key,
+                                       "AES-GCM", false,
+                                       ["encrypt", "decrypt"]);
+      })
+      .push(function (res) {
+        that._key = res;
+        that._jsonKey = false;
         return;
-      };
-    };
-    return async;
+      }, function () {
+        throw new TypeError(
+          "'key' must be a CryptoKey to JSON Web Key format"
+        );
+      });
+  }
+
+  CryptStorage.prototype.get = function () {
+    return this._sub_storage.get.apply(this._sub_storage,
+                                       arguments);
   };
 
-  that.post = function (command) {
-    that.put(command);
+  CryptStorage.prototype.post = function () {
+    return this._sub_storage.post.apply(this._sub_storage,
+                                        arguments);
   };
 
-  /**
-   * Saves a document.
-   * @method put
-   */
-  that.put = function (command) {
-    var new_file_name, new_file_content, am = priv.newAsyncModule(),
-      o = {};
-    o.encryptFilePath = function () {
-      priv.encrypt(command.getDocId(), function (res) {
-        new_file_name = res;
-        am.call(o, 'save');
-      });
-    };
-    o.encryptFileContent = function () {
-      priv.encrypt(command.getDocContent(), function (res) {
-        new_file_content = res;
-        am.call(o, 'save');
-      });
-    };
-    o.save = function () {
-      var success = function (val) {
-        val.id = command.getDocId();
-        that.success(val);
-      },
-        error = function (err) {
-          that.error(err);
-        },
-        cloned_doc = command.cloneDoc();
+  CryptStorage.prototype.put = function () {
+    return this._sub_storage.put.apply(this._sub_storage,
+                                       arguments);
+  };
 
-      cloned_doc._id = new_file_name;
-      cloned_doc.content = new_file_content;
-      that.addJob('put', priv.sub_storage_spec, cloned_doc,
-        command.cloneOption(), success, error);
-    };
-    am.wait(o, 'save', 1);
-    am.call(o, 'encryptFilePath');
-    am.call(o, 'encryptFileContent');
-  }; // end put
+  CryptStorage.prototype.remove = function () {
+    return this._sub_storage.remove.apply(this._sub_storage,
+                                          arguments);
+  };
 
-  /**
-   * Loads a document.
-   * @method get
-   */
-  that.get = function (command) {
-    var new_file_name, am = priv.newAsyncModule(),
-      o = {};
-    o.encryptFilePath = function () {
-      priv.encrypt(command.getDocId(), function (res) {
-        new_file_name = res;
-        am.call(o, 'get');
-      });
-    };
-    o.get = function () {
-      that.addJob('get', priv.sub_storage_spec, new_file_name,
-        command.cloneOption(), o.success, o.error);
-    };
-    o.success = function (val) {
-      val._id = command.getDocId();
-      if (command.getOption('metadata_only')) {
-        that.success(val);
-      } else {
-        priv.decrypt(val.content, function (err, res) {
-          if (err) {
-            that.error(err);
-          } else {
-            val.content = res;
-            that.success(val);
-          }
-        });
-      }
-    };
-    o.error = function (error) {
-      that.error(error);
-    };
-    am.call(o, 'encryptFilePath');
-  }; // end get
+  CryptStorage.prototype.hasCapacity = function () {
+    return this._sub_storage.hasCapacity.apply(this._sub_storage,
+                                               arguments);
+  };
 
-  /**
-   * Gets a document list.
-   * @method allDocs
-   */
-  that.allDocs = function (command) {
-    var result_array = [],
-      am = priv.newAsyncModule(),
-      o = {};
-    o.allDocs = function () {
-      that.addJob('allDocs', priv.sub_storage_spec, null,
-        command.cloneOption(), o.onSuccess, o.error);
-    };
-    o.onSuccess = function (val) {
-      if (val.total_rows === 0) {
-        return am.call(o, 'success');
-      }
-      result_array = val.rows;
-      var i, decrypt = function (c) {
-        priv.decrypt(result_array[c].id, function (err, res) {
-          if (err) {
-            am.call(o, 'error', [err]);
-          } else {
-            result_array[c].id = res;
-            result_array[c].key = res;
-            am.call(o, 'success');
-          }
-        });
-        if (!command.getOption('metadata_only')) {
-          priv.decrypt(
-            result_array[c].value.content,
+  CryptStorage.prototype.buildQuery = function () {
+    return this._sub_storage.buildQuery.apply(this._sub_storage,
+                                              arguments);
+  };
 
-            function (err, res) {
-              if (err) {
-                am.call(o, 'error', [err]);
-              } else {
-                result_array[c].value.content = res;
-                am.call(o, 'success');
-              }
-            }
-          );
+
+  CryptStorage.prototype.putAttachment = function (id, name, blob) {
+    var initializaton_vector = crypto.getRandomValues(new Uint8Array(12)),
+      that = this;
+
+    return new RSVP.Queue()
+      .push(function () {
+        if (that._jsonKey === true) {
+          return convertKey(that);
         }
-      };
-      if (command.getOption('metadata_only')) {
-        am.wait(o, 'success', val.total_rows - 1);
-      } else {
-        am.wait(o, 'success', val.total_rows * 2 - 1);
-      }
-      for (i = 0; i < result_array.length; i += 1) {
-        decrypt(i);
-      }
-    };
-    o.error = function (error) {
-      am.end();
-      that.error(error);
-    };
-    o.success = function () {
-      am.end();
-      that.success({
-        total_rows: result_array.length,
-        rows: result_array
-      });
-    };
-    am.call(o, 'allDocs');
-  }; // end allDocs
+        return;
+      })
+      .push(function () {
+        return jIO.util.readBlobAsDataURL(blob);
+      })
+      .push(function (dataURL) {
+        //string->arraybuffer
+        var strLen = dataURL.currentTarget.result.length,
+          buf = new ArrayBuffer(strLen),
+          bufView = new Uint8Array(buf),
+          i;
 
-  /**
-   * Removes a document.
-   * @method remove
-   */
-  that.remove = function (command) {
-    var new_file_name, o = {};
-    o.encryptDocId = function () {
-      priv.encrypt(command.getDocId(), function (res) {
-        new_file_name = res;
-        o.removeDocument();
+        dataURL = dataURL.currentTarget.result;
+        for (i = 0; i < strLen; i += 1) {
+          bufView[i] = dataURL.charCodeAt(i);
+        }
+        return crypto.subtle.encrypt({
+          name : "AES-GCM",
+          iv : initializaton_vector
+        },
+                                     that._key, buf);
+      })
+      .push(function (coded) {
+        var blob = new Blob([initializaton_vector, coded], {type: MIME_TYPE});
+        return that._sub_storage.putAttachment(id, name, blob);
       });
-    };
-    o.removeDocument = function () {
-      var cloned_doc = command.cloneDoc();
-      cloned_doc._id = new_file_name;
-      that.addJob('remove', priv.sub_storage_spec, cloned_doc,
-        command.cloneOption(), o.success, that.error);
-    };
-    o.success = function (val) {
-      val.id = command.getDocId();
-      that.success(val);
-    };
-    o.encryptDocId();
-  }; // end remove
+  };
 
-  return that;
-});
+  CryptStorage.prototype.getAttachment = function (id, name) {
+    var that = this;
+
+    return that._sub_storage.getAttachment(id, name)
+      .push(function (blob) {
+        if (blob.type !== MIME_TYPE) {
+          return blob;
+        }
+        return new RSVP.Queue()
+          .push(function () {
+            if (that._jsonKey === true) {
+              return convertKey(that);
+            }
+            return;
+          })
+          .push(function () {
+            return jIO.util.readBlobAsArrayBuffer(blob);
+          })
+          .push(function (coded) {
+            var initializaton_vector;
+
+            coded = coded.currentTarget.result;
+            initializaton_vector = new Uint8Array(coded.slice(0, 12));
+            return crypto.subtle.decrypt({
+              name : "AES-GCM",
+              iv : initializaton_vector
+            },
+                                         that._key, coded.slice(12));
+          })
+          .push(function (arr) {
+            //arraybuffer->string
+            arr = String.fromCharCode.apply(null, new Uint8Array(arr));
+            try {
+              return jIO.util.dataURItoBlob(arr);
+            } catch (error) {
+              if (error instanceof DOMException) {
+                return blob;
+              }
+              throw error;
+            }
+          }, function () { return blob; });
+      });
+  };
+
+  CryptStorage.prototype.removeAttachment = function () {
+    return this._sub_storage.removeAttachment.apply(this._sub_storage,
+                                                    arguments);
+  };
+
+  CryptStorage.prototype.allAttachments = function () {
+    return this._sub_storage.allAttachments.apply(this._sub_storage,
+                                                  arguments);
+  };
+
+  jIO.addStorage('crypt', CryptStorage);
+
+}(jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer));
