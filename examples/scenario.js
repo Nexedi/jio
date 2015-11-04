@@ -143,16 +143,13 @@
       //   sub_storage: {
       //     type: "uuid",
       //     sub_storage: {
-      //       type: "document",
-      //       document_id: "/",
+      //       type: "crypt",
+      //       key: {"alg": "A256GCM", "ext": true,
+      //             "k": "seeaLzpu8dHG07bO2ANH2GywbTqs_zrs4Vq8zmtYeE4",
+      //             "key_ops": ["encrypt", "decrypt"], "kty": "oct"},
       //       sub_storage: {
-      //         type: "crypt",
-      //         key: {"alg": "A256GCM", "ext": true,
-      //               "k": "seeaLzpu8dHG07bO2ANH2GywbTqs_zrs4Vq8zmtYeE4",
-      //               "key_ops": ["encrypt", "decrypt"], "kty": "oct"},
-      //         sub_storage: {
-      //           type: "local"
-      //         }
+      //         type: "indexeddb",
+      //         database: "test427"
       //       }
       //     }
       //   }
