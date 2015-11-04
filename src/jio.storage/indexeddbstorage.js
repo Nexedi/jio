@@ -350,6 +350,7 @@
         var array_buffer_list = [],
           blob,
           i,
+          index,
           len = result_list.length;
         for (i = 0; i < len; i += 1) {
           array_buffer_list.push(result_list[i].blob);
@@ -357,8 +358,10 @@
         if ((options.start === undefined) && (options.end === undefined)) {
           return new Blob(array_buffer_list, {type: type});
         }
+        index = Math.floor(start / UNITE) * UNITE;
         blob = new Blob(array_buffer_list, {type: "application/octet-stream"});
-        return blob.slice(start, end, "application/octet-stream");
+        return blob.slice(start - index, end - index,
+                          "application/octet-stream");
       });
   };
 
