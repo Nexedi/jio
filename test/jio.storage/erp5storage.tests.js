@@ -212,9 +212,15 @@
               type: "DateTimeField"
             },
             your_reference: {
-              key: "field_your_title",
+              key: "field_your_reference",
               "default": "bar",
               editable: true,
+              type: "StringField"
+            },
+            your_reference_non_editable: {
+              key: "field_your_reference_non_editable",
+              "default": "bar",
+              editable: false,
               type: "StringField"
             },
             sort_index: {
@@ -247,6 +253,8 @@
       .then(function (result) {
         deepEqual(result, {
           portal_type: "Person",
+          reference: "bar",
+          reference_non_editable: "bar",
           title: "foo"
         }, "Check document");
         equal(server.requests.length, 2);
@@ -1150,9 +1158,15 @@
               type: "DateTimeField"
             },
             your_reference: {
-              key: "field_your_title",
+              key: "field_your_reference",
               "default": "bar",
               editable: true,
+              type: "StringField"
+            },
+            your_reference_non_editable: {
+              key: "field_your_reference_non_editable",
+              "default": "bar",
+              editable: false,
               type: "StringField"
             },
             sort_index: {
@@ -1182,9 +1196,9 @@
     }, ""]);
 
     stop();
-    expect(21);
+    expect(23);
 
-    this.jio.put(id, {title: "barè", id: "foo"})
+    this.jio.put(id, {title: "barè", id: "foo", reference: "bar2"})
       .then(function (result) {
         equal(result, id);
         equal(server.requests.length, 3);
@@ -1201,7 +1215,7 @@
         ok(server.requests[2].requestBody instanceof FormData);
         equal(server.requests[2].withCredentials, true);
 
-        equal(context.spy.callCount, 3, "FormData.append count");
+        equal(context.spy.callCount, 4, "FormData.append count");
         equal(context.spy.firstCall.args[0], "form_id", "First append call");
         equal(context.spy.firstCall.args[1], "Base_view", "First append call");
         equal(context.spy.secondCall.args[0], "field_my_title",
@@ -1210,6 +1224,9 @@
         equal(context.spy.thirdCall.args[0], "field_my_id",
               "Third append call");
         equal(context.spy.thirdCall.args[1], "foo", "Third append call");
+        equal(context.spy.getCall(3).args[0], "field_your_reference",
+              "Fourth append call");
+        equal(context.spy.getCall(3).args[1], "bar2", "Fourth append call");
       })
       .fail(function (error) {
         ok(false, error);
@@ -1265,9 +1282,15 @@
               type: "DateTimeField"
             },
             your_reference: {
-              key: "field_your_title",
+              key: "field_your_reference",
               "default": "bar",
               editable: true,
+              type: "StringField"
+            },
+            your_reference_non_editable: {
+              key: "field_your_reference_non_editable",
+              "default": "bar",
+              editable: false,
               type: "StringField"
             },
             sort_index: {
@@ -1389,7 +1412,7 @@
               type: "DateTimeField"
             },
             your_reference: {
-              key: "field_your_title",
+              key: "field_your_reference",
               "default": "bar",
               editable: true,
               type: "StringField"
@@ -1425,13 +1448,14 @@
     }, ""]);
 
     stop();
-    expect(33);
+    expect(35);
 
     this.jio.post({
       title: "barè",
       id: "foo",
       portal_type: "Foo",
-      parent_relative_url: "foo_module"
+      parent_relative_url: "foo_module",
+      reference: "bar2"
     })
       .then(function (result) {
         equal(result, id);
@@ -1462,7 +1486,7 @@
         ok(server.requests[4].requestBody instanceof FormData);
         equal(server.requests[4].withCredentials, true);
 
-        equal(context.spy.callCount, 5, "FormData.append count");
+        equal(context.spy.callCount, 6, "FormData.append count");
 
         equal(context.spy.firstCall.args[0], "portal_type",
               "First append call");
@@ -1480,6 +1504,9 @@
         equal(context.spy.getCall(4).args[0], "field_my_id",
               "Fifth append call");
         equal(context.spy.getCall(4).args[1], "foo", "Fifth append call");
+        equal(context.spy.getCall(5).args[0], "field_your_reference",
+              "Sixth append call");
+        equal(context.spy.getCall(5).args[1], "bar2", "Sixth append call");
       })
       .fail(function (error) {
         ok(false, error);
@@ -1560,9 +1587,15 @@
               type: "DateTimeField"
             },
             your_reference: {
-              key: "field_your_title",
+              key: "field_your_reference",
               "default": "bar",
               editable: true,
+              type: "StringField"
+            },
+            your_reference_non_editable: {
+              key: "field_your_reference_non_editable",
+              "default": "bar",
+              editable: false,
               type: "StringField"
             },
             sort_index: {
@@ -1661,6 +1694,8 @@
         equal(result_list.length, 2);
         deepEqual(result, {
           portal_type: "Person",
+          reference: "bar",
+          reference_non_editable: "bar",
           title: "foo"
         }, "Check document");
         deepEqual(result2, {
