@@ -209,7 +209,7 @@
         });
       })
       .push(undefined, function (error) {
-        if (error.target.status === 403) {
+        if (error.target.status === 403 || error.target.status === 424) {
           throw new jIO.util.jIOError("Cannot access subdocument", 404);
         }
         throw error;
