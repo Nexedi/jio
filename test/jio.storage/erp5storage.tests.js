@@ -12,7 +12,8 @@
     module = QUnit.module,
     domain = "https://example.org",
     traverse_template = domain + "?mode=traverse{&relative_url,view}",
-    search_template = domain + "?mode=search{&query,select_list*,limit*}",
+    search_template = domain + "?mode=search{&query,select_list*,limit*," +
+      "local_roles*}",
     add_url = domain + "lets?add=somedocument",
     bulk_url = domain + "lets?run=bulk",
     root_hateoas = JSON.stringify({
@@ -1036,6 +1037,266 @@
               }
             }],
             total_rows: 2
+          }
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, search_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("extract simple single local_roles", function () {
+    var search_url = domain + "?mode=search&" +
+                     "select_list=destination&select_list=source&limit=5" +
+                     "&local_roles=Assignee",
+      search_hateoas = JSON.stringify({
+        "_embedded": {
+          "contents": []
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, search_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.allDocs({
+      limit: [5],
+      select_list: ["destination", "source"],
+      query: 'local_roles:"Assignee"'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [],
+            total_rows: 0
+          }
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, search_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("extract simple multiple local_roles", function () {
+    var search_url = domain + "?mode=search&" +
+                     "select_list=destination&select_list=source&limit=5&" +
+                     "local_roles=Assignee&" +
+                     "local_roles=Assignor",
+      search_hateoas = JSON.stringify({
+        "_embedded": {
+          "contents": []
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, search_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.allDocs({
+      limit: [5],
+      select_list: ["destination", "source"],
+      query: 'local_roles:"Assignee" OR local_roles:"Assignor"'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [],
+            total_rows: 0
+          }
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, search_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("extract complex AND single local_roles", function () {
+    var search_url = domain + "?mode=search&" +
+                     "query=%28%20portal_type%3A%20%20%22Person%22%20%29&" +
+                     "select_list=destination&select_list=source&limit=5&" +
+                     "local_roles=Assignee",
+      search_hateoas = JSON.stringify({
+        "_embedded": {
+          "contents": []
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, search_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.allDocs({
+      limit: [5],
+      select_list: ["destination", "source"],
+      query: 'portal_type:"Person" AND local_roles:"Assignee"'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [],
+            total_rows: 0
+          }
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, search_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("extract complex OR single local_roles", function () {
+    var search_url = domain + "?mode=search&" +
+                     "query=portal_type%3A%22Person%22%20OR%20" +
+                     "local_roles%3A%22Assignee%22&" +
+                     "select_list=destination&select_list=source&limit=5",
+      search_hateoas = JSON.stringify({
+        "_embedded": {
+          "contents": []
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, search_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.allDocs({
+      limit: [5],
+      select_list: ["destination", "source"],
+      query: 'portal_type:"Person" OR local_roles:"Assignee"'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [],
+            total_rows: 0
+          }
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, search_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("extract sub multiple local_roles", function () {
+    var search_url = domain + "?mode=search&" +
+                     "query=%28%20portal_type%3A%20%20%22Person%22%20%29&" +
+                     "select_list=destination&select_list=source&limit=5&" +
+                     "local_roles=Assignee&local_roles=Assignor",
+      search_hateoas = JSON.stringify({
+        "_embedded": {
+          "contents": []
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, search_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.allDocs({
+      limit: [5],
+      select_list: ["destination", "source"],
+      query: 'portal_type:"Person" AND (local_roles:"Assignee" OR ' +
+             'local_roles:"Assignor")'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [],
+            total_rows: 0
           }
         }, "Check document");
         equal(server.requests.length, 2);

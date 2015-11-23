@@ -10,9 +10,11 @@
 // }
 
 /*jslint nomen: true, unparam: true */
-/*global jIO, UriTemplate, FormData, RSVP, URI, Blob*/
+/*global jIO, UriTemplate, FormData, RSVP, URI, Blob, objectToSearchText,
+         SimpleQuery, ComplexQuery*/
 
-(function (jIO, UriTemplate, FormData, RSVP, URI, Blob) {
+(function (jIO, UriTemplate, FormData, RSVP, URI, Blob, objectToSearchText,
+           SimpleQuery, ComplexQuery) {
   "use strict";
 
   function getSiteDocument(storage) {
@@ -398,6 +400,38 @@
             (name === "sort"));
   };
 
+  function isSingleLocalRoles(parsed_query) {
+    if ((parsed_query instanceof SimpleQuery) &&
+        (parsed_query.key === 'local_roles')) {
+      // local_roles:"Assignee"
+      return parsed_query.value;
+    }
+  }
+
+  function isMultipleLocalRoles(parsed_query) {
+    var i,
+      sub_query,
+      is_multiple = true,
+      local_role_list = [];
+    if ((parsed_query instanceof ComplexQuery) &&
+        (parsed_query.operator === 'OR')) {
+
+      for (i = 0; i < parsed_query.query_list.length; i += 1) {
+        sub_query = parsed_query.query_list[i];
+        if ((sub_query instanceof SimpleQuery) &&
+            (sub_query.key === 'local_roles')) {
+          local_role_list.push(sub_query.value);
+        } else {
+          is_multiple = false;
+        }
+      }
+      if (is_multiple) {
+        // local_roles:"Assignee" OR local_roles:"Assignor"
+        return local_role_list;
+      }
+    }
+  }
+
   ERP5Storage.prototype.buildQuery = function (options) {
 //     if (typeof options.query !== "string") {
 //       options.query = (options.query ?
@@ -406,15 +440,63 @@
 //     }
     return getSiteDocument(this)
       .push(function (site_hal) {
+        var query = options.query,
+          i,
+          parsed_query,
+          sub_query,
+          result_list,
+          local_roles;
+        if (options.query) {
+          parsed_query = jIO.QueryFactory.create(options.query);
+
+          result_list = isSingleLocalRoles(parsed_query);
+          if (result_list) {
+            query = undefined;
+            local_roles = result_list;
+          } else {
+
+            result_list = isMultipleLocalRoles(parsed_query);
+            if (result_list) {
+              query = undefined;
+              local_roles = result_list;
+            } else if ((parsed_query instanceof ComplexQuery) &&
+                       (parsed_query.operator === 'AND')) {
+
+              // portal_type:"Person" AND local_roles:"Assignee"
+              for (i = 0; i < parsed_query.query_list.length; i += 1) {
+                sub_query = parsed_query.query_list[i];
+
+                result_list = isSingleLocalRoles(sub_query);
+                if (result_list) {
+                  local_roles = result_list;
+                  parsed_query.query_list.splice(i, 1);
+                  query = objectToSearchText(parsed_query);
+                  i = parsed_query.query_list.length;
+                } else {
+                  result_list = isMultipleLocalRoles(sub_query);
+                  if (result_list) {
+                    local_roles = result_list;
+                    parsed_query.query_list.splice(i, 1);
+                    query = objectToSearchText(parsed_query);
+                    i = parsed_query.query_list.length;
+                  }
+                }
+              }
+            }
+
+          }
+        }
+
         return jIO.util.ajax({
           "type": "GET",
           "url": UriTemplate.parse(site_hal._links.raw_search.href)
                             .expand({
-              query: options.query,
+              query: query,
               // XXX Force erp5 to return embedded document
               select_list: options.select_list || ["title", "reference"],
               limit: options.limit,
-              sort_on: options.sort_on
+              sort_on: options.sort_on,
+              local_roles: local_roles
             }),
           "xhrFields": {
             withCredentials: true
@@ -446,4 +528,5 @@
 
   jIO.addStorage("erp5", ERP5Storage);
 
-}(jIO, UriTemplate, FormData, RSVP, URI, Blob));
+}(jIO, UriTemplate, FormData, RSVP, URI, Blob, objectToSearchText,
+  SimpleQuery, ComplexQuery));
