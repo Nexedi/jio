@@ -137,7 +137,12 @@
             JSON.stringify(param) + '\n\n--' + boundary + "--"
         });
       })
-      .push(undefined, function (error) {handleError(error, id); });
+      .push(function (result) {
+        var obj = JSON.parse(result.target.responseText);
+
+        return obj.id;
+      },
+            function (error) {handleError(error, id); });
   }
 
   GdriveStorage.prototype.put = function (id, param) {
@@ -209,10 +214,10 @@
       })
       .push(function (evt) {
         return evt.target.response ||
-          attach ? new Blob([evt.target.responseText],
-                            {"type" :
-                             evt.target.responseHeaders["Content-Type"]}) :
-                            evt.target.responseText;
+          (attach ? new Blob([evt.target.responseText],
+                             {"type" :
+                              evt.target.responseHeaders["Content-Type"]}) :
+              evt.target.responseText);
       }, function (error) {handleError(error, id); });
   }
 

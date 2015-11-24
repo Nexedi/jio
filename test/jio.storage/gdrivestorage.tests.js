@@ -363,38 +363,38 @@
   });
 
   test("get all docs", function () {
-    var objectResult = {"data": {"rows": [], "total_rows": 6}},
+    var object_result = {"data": {"rows": [], "total_rows": 6}},
       server = this.server;
 
-    objectResult.data.rows.push(
+    object_result.data.rows.push(
       {"id": "0B4kh3jbjOf5Lb2theE8xWHhvWXM", "title": "attach1",
         "mimeType": "text/plain",
         "parents": [{"id": "0B4kh3jbjOf5LN0Y2V0ZJS0VxS00", "isRoot": false}],
         "value": {}}
     );
-    objectResult.data.rows.push(
+    object_result.data.rows.push(
       {"id": "0B4kh3jbjOf5LamRlX21MZlVCYXM", "title": "file2",
         "mimeType": "text/plain",
         "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
     );
-    objectResult.data.rows.push(
+    object_result.data.rows.push(
       {"id": "0B4kh3jbjOf5LTVlUWVVROWlBZzg",
         "title": "file1", "mimeType": "text/plain",
         "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
     );
-    objectResult.data.rows.push(
+    object_result.data.rows.push(
       {"id": "0B4kh3jbjOf5LYTRaaV9YUkJ4a0U",
         "title": "folder2",
         "mimeType": "application/vnd.google-apps.folder",
         "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
     );
-    objectResult.data.rows.push(
+    object_result.data.rows.push(
       {"id": "0B4kh3jbjOf5LN0Y2V0ZJS0VxS00",
         "title": "folder1",
         "mimeType": "application/vnd.google-apps.folder",
         "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
     );
-    objectResult.data.rows.push(
+    object_result.data.rows.push(
       {"id": "0B4kh3jbjOf5Lc3RhcnRlcl9maWxl",
         "title": "How to get started with Drive",
         "mimeType": "application/pdf",
@@ -414,7 +414,7 @@
         equal(server.requests[0].status, 200);
         equal(server.requests[0].requestBody, undefined);
         equal(server.requests[0].responseText, sampleList);
-        deepEqual(res, objectResult);
+        deepEqual(res, object_result);
       })
       .fail(function (error) {
         ok(false, error);
@@ -425,20 +425,20 @@
   });
 
   test("allDocs with multiple API requests (nextPageToken)", function () {
-    var objectResult = {"data": {"rows": [], "total_rows": 2}},
+    var object_result = {"data": {"rows": [], "total_rows": 2}},
       server = this.server,
       tokenUrl = domain + "/drive/v2/files" +
         "?prettyPrint=false&pageToken=nptkn01&q=trashed=false" +
         "&fields=nextPageToken,items(id,mimeType,title,parents(id,isRoot))" +
         "&access_token=" + token;
 
-    objectResult.data.rows.push(
+    object_result.data.rows.push(
       {"id": "0B4kh3jbjOf5Lb2theE8xWHhvWXM", "title": "attach1",
         "mimeType": "text/plain",
         "parents": [{"id": "0B4kh3jbjOf5LN0Y2V0ZJS0VxS00", "isRoot": false}],
         "value": {}}
     );
-    objectResult.data.rows.push(
+    object_result.data.rows.push(
       {"id": "0B4kh3jbjOf5LamRlX21MZlVCYXM", "title": "file2",
         "mimeType": "text/plain",
         "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
@@ -463,7 +463,7 @@
         equal(server.requests[1].status, 200);
         equal(server.requests[1].requestBody, undefined);
         equal(server.requests[1].responseText, partSample2);
-        deepEqual(res, objectResult);
+        deepEqual(res, object_result);
       })
       .fail(function (error) {
         ok(false, error);
