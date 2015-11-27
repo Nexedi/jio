@@ -14,30 +14,18 @@
     token = "sample_token",
     domain = "https://www.googleapis.com",
     boundary = "---------314159265358979323846",
-    listUrl = domain + "/drive/v2/files" +
+    list_url = domain + "/drive/v2/files" +
       "?prettyPrint=false&pageToken=&q=trashed=false" +
       "&fields=nextPageToken,items(id,mimeType,title,parents(id,isRoot))" +
       "&access_token=" + token,
-    sampleList = '{"items":[{"id":"0B4kh3jbjOf5Lb2theE8xWHhvWXM","title":"' +
-      'attach1","mimeType":"text/plain","parents":[{"id":"0B4kh3jbjOf5LN' +
-      '0Y2V0ZJS0VxS00","isRoot":false}]}\n,{"id":"0B4kh3jbjOf5LamRlX21MZ' +
-      'lVCYXM","title":"file2","mimeType":"text/plain","parents":[{"id":' +
-      '"0AIkh3jbjOf5LUk9PVA","isRoot":true}]}\n,{"id":"0B4kh3jbjOf5LTVlU' +
-      'WVVROWlBZzg","title":"file1","mimeType":"text/plain","parents":[{' +
-      '"id":"0AIkh3jbjOf5LUk9PVA","isRoot":true}]}\n,{"id":"0B4kh3jbjOf5' +
-      'LYTRaaV9YUkJ4a0U","title":"folder2","mimeType":"application/vnd.g' +
-      'oogle-apps.folder","parents":[{"id":"0AIkh3jbjOf5LUk9PVA","isRoot' +
-      '":true}]}\n,{"id":"0B4kh3jbjOf5LN0Y2V0ZJS0VxS00","title":"folder1' +
-      '","mimeType":"application/vnd.google-apps.folder","parents":[{"id' +
-      '":"0AIkh3jbjOf5LUk9PVA","isRoot":true}]}\n,{"id":"0B4kh3jbjOf5Lc3' +
-      'RhcnRlcl9maWxl","title":"How to get started with Drive","mimeType' +
-      '":"application/pdf","parents":[{"id":"0AIkh3jbjOf5LUk9PVA","isRoo' +
-      't":true}]}]}',
-    partSample1 = '{"nextPageToken": "nptkn01",' +
+    sample_list = '{"items":[' +
+      '{"id":"0B4kh3jbjOf5LamRlX21MZlVCYXM"}]}',
+
+    part_sample1 = '{"nextPageToken": "nptkn01",' +
       '"items":[{"id":"0B4kh3jbjOf5Lb2theE8xWHhvWXM","title":"' +
       'attach1","mimeType":"text/plain","parents":[{"id":"0B4kh3jbjOf5LN' +
       '0Y2V0ZJS0VxS00","isRoot":false}]}]}',
-    partSample2 = '{"items":[{"id":"0B4kh3jbjOf5LamRlX21MZ' +
+    part_sample2 = '{"items":[{"id":"0B4kh3jbjOf5LamRlX21MZ' +
       'lVCYXM","title":"file2","mimeType":"text/plain","parents":[{"id":' +
       '"0AIkh3jbjOf5LUk9PVA","isRoot":true}]}]}';
 
@@ -117,55 +105,28 @@
 
   test("post document", function () {
     var server = this.server,
-      jsonRes,
-      puturl = domain + "/upload/drive/v2/files?uploadType" +
+      put_url = domain + "/upload/drive/v2/files?uploadType" +
         "=multipart&access_token=" + token,
       body = boundary +
         '\nContent-Type: application/json; charset=UTF-8' +
         '\n\n{\"title\":\"metadata\"}\n\n' + boundary + "--",
-      resText = '{"id": "sampleId"}';
-    this.server.respondWith("POST", puturl, [200, {
+      res_text = '{"id": "sampleId"}';
+    this.server.respondWith("POST", put_url, [200, {
       "Content-Type": "text/xml"
-    }, resText]);
+    }, res_text]);
 
     stop();
     expect(7);
 
     this.jio.post({title: "metadata"})
       .then(function (obj) {
-        jsonRes = JSON.parse(obj.target.responseText);
+        equal(obj, "sampleId");
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "POST");
-        equal(server.requests[0].url, puturl);
+        equal(server.requests[0].url, put_url);
         equal(server.requests[0].status, 200);
         equal(server.requests[0].requestBody, body);
-        equal(server.requests[0].responseText, resText);
-        equal(jsonRes.id, "sampleId");
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("post with invalid credentials", function () {
-    var puturl = domain + "/upload/drive/v2/files?uploadType" +
-      "=multipart&access_token=" + token;
-
-    this.server.respondWith("POST", puturl, [401, {
-      "Content-Type": "text/xml"
-    }, ""]);
-
-    stop();
-    expect(3);
-
-    this.jio.post()
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "access token invalid or expired");
-        equal(error.status_code, 401);
+        equal(server.requests[0].responseText, res_text);
       })
       .fail(function (error) {
         ok(false, error);
@@ -198,15 +159,15 @@
 
   test("put document", function () {
     var server = this.server,
-      puturl = domain + "/drive/v2/files/sampleId?uploadType" +
+      put_url = domain + "/drive/v2/files/sampleId?uploadType" +
         "=multipart&access_token=" + token,
       body = boundary +
         '\nContent-Type: application/json; charset=UTF-8' +
         '\n\n{\"title\":\"metadata\"}\n\n' + boundary + "--",
-      resText = '{"id": "sampleId"}';
-    this.server.respondWith("PUT", puturl, [200, {
+      res_text = '{"id": "sampleId"}';
+    this.server.respondWith("PUT", put_url, [200, {
       "Content-Type": "text/xml"
-    }, resText]);
+    }, res_text]);
 
     stop();
     expect(7);
@@ -215,10 +176,10 @@
       .then(function (obj) {
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "PUT");
-        equal(server.requests[0].url, puturl);
+        equal(server.requests[0].url, put_url);
         equal(server.requests[0].status, 200);
         equal(server.requests[0].requestBody, body);
-        equal(server.requests[0].responseText, resText);
+        equal(server.requests[0].responseText, res_text);
         equal(obj, "sampleId");
       })
       .fail(function (error) {
@@ -363,46 +324,14 @@
   });
 
   test("get all docs", function () {
-    var object_result = {"data": {"rows": [], "total_rows": 6}},
+    var object_result = {"data": {"rows": [{"id":
+                                            "0B4kh3jbjOf5LamRlX21MZlVCYXM",
+                                            "value": {}}],
+                                  "total_rows": 1}},
       server = this.server;
 
-    object_result.data.rows.push(
-      {"id": "0B4kh3jbjOf5Lb2theE8xWHhvWXM", "title": "attach1",
-        "mimeType": "text/plain",
-        "parents": [{"id": "0B4kh3jbjOf5LN0Y2V0ZJS0VxS00", "isRoot": false}],
-        "value": {}}
-    );
-    object_result.data.rows.push(
-      {"id": "0B4kh3jbjOf5LamRlX21MZlVCYXM", "title": "file2",
-        "mimeType": "text/plain",
-        "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
-    );
-    object_result.data.rows.push(
-      {"id": "0B4kh3jbjOf5LTVlUWVVROWlBZzg",
-        "title": "file1", "mimeType": "text/plain",
-        "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
-    );
-    object_result.data.rows.push(
-      {"id": "0B4kh3jbjOf5LYTRaaV9YUkJ4a0U",
-        "title": "folder2",
-        "mimeType": "application/vnd.google-apps.folder",
-        "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
-    );
-    object_result.data.rows.push(
-      {"id": "0B4kh3jbjOf5LN0Y2V0ZJS0VxS00",
-        "title": "folder1",
-        "mimeType": "application/vnd.google-apps.folder",
-        "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
-    );
-    object_result.data.rows.push(
-      {"id": "0B4kh3jbjOf5Lc3RhcnRlcl9maWxl",
-        "title": "How to get started with Drive",
-        "mimeType": "application/pdf",
-        "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
-    );
-
-    this.server.respondWith("GET", listUrl, [200, {
-    }, sampleList]);
+    this.server.respondWith("GET", list_url, [200, {
+    }, sample_list]);
     stop();
     expect(7);
 
@@ -410,10 +339,10 @@
       .then(function (res) {
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, listUrl);
+        equal(server.requests[0].url, list_url);
         equal(server.requests[0].status, 200);
         equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, sampleList);
+        equal(server.requests[0].responseText, sample_list);
         deepEqual(res, object_result);
       })
       .fail(function (error) {
@@ -427,7 +356,7 @@
   test("allDocs with multiple API requests (nextPageToken)", function () {
     var object_result = {"data": {"rows": [], "total_rows": 2}},
       server = this.server,
-      tokenUrl = domain + "/drive/v2/files" +
+      token_url = domain + "/drive/v2/files" +
         "?prettyPrint=false&pageToken=nptkn01&q=trashed=false" +
         "&fields=nextPageToken,items(id,mimeType,title,parents(id,isRoot))" +
         "&access_token=" + token;
@@ -444,25 +373,25 @@
         "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
     );
 
-    this.server.respondWith("GET", listUrl, [200, {
-    }, partSample1]);
-    this.server.respondWith("GET", tokenUrl, [200, {
-    }, partSample2]);
+    this.server.respondWith("GET", list_url, [200, {
+    }, part_sample1]);
+    this.server.respondWith("GET", token_url, [200, {
+    }, part_sample2]);
     stop();
     expect(12);
     this.jio.allDocs()
       .then(function (res) {
         equal(server.requests.length, 2);
         equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, listUrl);
+        equal(server.requests[0].url, list_url);
         equal(server.requests[0].status, 200);
         equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, partSample1);
+        equal(server.requests[0].responseText, part_sample1);
         equal(server.requests[0].method, "GET");
-        equal(server.requests[1].url, tokenUrl);
+        equal(server.requests[1].url, token_url);
         equal(server.requests[1].status, 200);
         equal(server.requests[1].requestBody, undefined);
-        equal(server.requests[1].responseText, partSample2);
+        equal(server.requests[1].responseText, part_sample2);
         deepEqual(res, object_result);
       })
       .fail(function (error) {
@@ -496,6 +425,28 @@
     }
   });
 
+  test("reject non enclosure attachment", function () {
+    stop();
+    expect(3);
+
+    this.jio.putAttachment(
+      "sampleId",
+      "not_enclosure",
+      new Blob()
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Only support 'enclosure' attachment");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("putAttachment document", function () {
     var blob = new Blob(["foo"]),
       url_put_att = domain + "/upload/drive/v2/files/sampleId?" +
@@ -504,7 +455,7 @@
 
     this.server.respondWith("PUT", url_put_att, [204, {
       "Content-Type": "text/xml"
-    }, ""]);
+    }, '{"mimeType": "text/xml"}']);
     stop();
     expect(7);
 
@@ -519,7 +470,7 @@
         equal(server.requests[0].method, "PUT");
         equal(server.requests[0].url, url_put_att);
         equal(server.requests[0].status, 204);
-        equal(server.requests[0].responseText, "");
+        equal(server.requests[0].responseText, "{\"mimeType\": \"text/xml\"}");
         deepEqual(server.requests[0].requestHeaders, {
           "Content-Type": "text/plain;charset=utf-8"
         });
@@ -538,53 +489,29 @@
     tester("putAttachment", true, new Blob());
   });
 
-  /////////////////////////////////////////////////////////////////
-  // Google Drive Storage.removeAttachment
-  /////////////////////////////////////////////////////////////////
-  module("Google Drive Storage.removeAttachment", {
-    setup: function () {
-
-      this.server = sinon.fakeServer.create();
-      this.server.autoRespond = true;
-      this.server.autoRespondAfter = 5;
-
-      this.jio = jIO.createJIO({
-        type: "gdrive",
-        access_token: token
-      });
-    },
-    teardown: function () {
-      this.server.restore();
-      delete this.server;
-    }
-  });
-
-  test("removeAttachment document", function () {
-    var url_delete =  domain + "/upload/drive/v2/files/sampleId?" +
-      "uploadType=media&access_token=" + token,
+  test("putAttachment to folder", function () {
+    var blob = new Blob([""]),
+      url_put_att = domain + "/upload/drive/v2/files/sampleId?" +
+        "uploadType=media&access_token=" + token,
       server = this.server;
 
-    this.server.respondWith("PUT", url_delete, [204, {
+    this.server.respondWith("PUT", url_put_att, [204, {
       "Content-Type": "text/xml"
-    }, ""]);
-
+    }, '{"mimeType": "application/vnd.google-apps.folder"}']);
     stop();
-    expect(6);
+    expect(4);
 
-    this.jio.removeAttachment(
+    this.jio.putAttachment(
       "sampleId",
-      "enclosure"
+      "enclosure",
+      blob
     )
-      .then(function () {
-        equal(server.requests.length, 1);
-
-        equal(server.requests[0].method, "PUT");
-        equal(server.requests[0].url, url_delete);
-        equal(server.requests[0].status, 204);
-        equal(server.requests[0].responseText, "");
-        deepEqual(server.requests[0].requestHeaders, {
-          "Content-Type": "text/plain;charset=utf-8"
-        });
+      .fail(function (error) {
+        equal(server.requests[0].responseText,
+              "{\"mimeType\": \"application/vnd.google-apps.folder\"}");
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "cannot put attachments to folder");
+        equal(error.status_code, 400);
       })
       .fail(function (error) {
         ok(false, error);
@@ -594,10 +521,6 @@
       });
   });
 
-  test("remove inexistent attachmentt", function () {
-    var tester = error404Tester.bind(this);
-    tester("removeAttachment", true);
-  });
 
   /////////////////////////////////////////////////////////////////
   // Google Drive Storage.getAttachment
@@ -619,6 +542,28 @@
       delete this.server;
     }
   });
+
+  test("reject non enclosure attachment", function () {
+    stop();
+    expect(3);
+
+    this.jio.getAttachment(
+      "sampleId",
+      "not_enclosure"
+    )
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Only support 'enclosure' attachment");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 
   test("getAttachment document", function () {
     var url = domain + "/drive/v2/files/" +

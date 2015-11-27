@@ -34,12 +34,6 @@
         404
       );
     }
-    if (error.target.status === 401) {
-      throw new jIO.util.jIOError(
-        "access token invalid or expired",
-        401
-      );
-    }
     throw error;
   }
 
@@ -167,17 +161,18 @@
           data: blob
         });
       })
-      .push(undefined, function (error) {handleError(error, id); });
+      .push(function (data) {
+        data = JSON.parse(data.target.responseText);
+        if (data.mimeType === "application/vnd.google-apps.folder") {
+          throw new jIO.util.jIOError("cannot put attachments to folder", 400);
+        }
+        return data;
+      }, function (error) {handleError(error, id); });
   }
 
   GdriveStorage.prototype.putAttachment = function (id, name, blob) {
     checkName(name);
     return sendData(id, blob, this._access_token);
-  };
-
-  GdriveStorage.prototype.removeAttachment = function (id, name) {
-    checkName(name);
-    return sendData(id, new Blob(), this._access_token);
   };
 
   GdriveStorage.prototype.remove = function (id) {
