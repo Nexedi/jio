@@ -212,7 +212,7 @@
           (attach ? new Blob([evt.target.responseText],
                              {"type" :
                               evt.target.responseHeaders["Content-Type"]}) :
-              evt.target.responseText);
+              JSON.parse(evt.target.responseText));
       }, function (error) {handleError(error, id); });
   }
 
@@ -223,6 +223,21 @@
   GdriveStorage.prototype.getAttachment = function (id, name) {
     checkName(name);
     return getData(id, true, this._access_token);
+  };
+
+  GdriveStorage.prototype.allAttachments = function (id) {
+    var token = this._access_token;
+
+    return new RSVP.Queue()
+      .push(function () {
+        return getData(id, false, token);
+      })
+      .push(function (data) {
+        if (data.mimeType === "application/vnd.google-apps.folder") {
+          return {};
+        }
+        return {"enclosure": {}};
+      });
   };
 
   jIO.addStorage('gdrive', GdriveStorage);

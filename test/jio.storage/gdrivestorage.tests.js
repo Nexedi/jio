@@ -292,7 +292,10 @@
 
     this.jio.get("sampleId")
       .then(function (result) {
-        deepEqual(result, body, "Check document");
+        deepEqual(result,
+                  {"id": "sampleId",
+                   "mimeType": "application/vnd.google-apps.folder",
+                   "title": "folder1"}, "Check document");
       })
       .fail(function (error) {
         ok(false, error);
@@ -606,6 +609,82 @@
   test("get inexistent attachment", function () {
     var tester = error404Tester.bind(this);
     tester("getAttachment", true);
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // Google Drive Storage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("Google Drive Storage.allAttachments", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "gdrive",
+        access_token: token
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("allAttachments on file", function () {
+    var url = domain + "/drive/v2/files/sampleId?alt=",
+      body = '{"id": "sampleId", "mimeType":' +
+        '"text/xml", "title": "folder1"}';
+
+    this.server.respondWith("GET", url, [200, {
+      "Content-Type": "text/xml"
+    }, body
+                                        ]);
+    stop();
+    expect(1);
+
+    this.jio.allAttachments("sampleId")
+      .then(function (result) {
+        deepEqual(result, {enclosure: {}}, "enclosure on file");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+
+
+  test("allAttachments on directory", function () {
+    var url = domain + "/drive/v2/files/sampleId?alt=",
+      body = '{"id": "sampleId", "mimeType":' +
+        '"application/vnd.google-apps.folder", "title": "folder1"}';
+
+    this.server.respondWith("GET", url, [200, {
+      "Content-Type": "text/xml"
+    }, body
+                                        ]);
+    stop();
+    expect(1);
+
+    this.jio.allAttachments("sampleId")
+      .then(function (result) {
+        deepEqual(result, {}, "empty result on directory");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get inexistent attachment", function () {
+    var tester = error404Tester.bind(this);
+    tester("allAttachments");
   });
 
 }(jIO, QUnit, Blob, sinon));
