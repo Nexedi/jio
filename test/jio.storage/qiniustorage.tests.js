@@ -1,73 +1,111 @@
-
-/*global define, module, test_util, RSVP, jIO, test, ok,
-  deepEqual, sinon, expect, stop, start, Blob, equal, define */
-/*jslint indent: 2 */
-(function (dependencies, module) {
+/*jslint nomen: true*/
+/*global Blob, sinon, FormData*/
+(function (jIO, Blob, sinon, FormData) {
   "use strict";
-  if (typeof define === 'function' && define.amd) {
-    return define(dependencies, module);
-  }
-  module(test_util, RSVP, jIO);
-}([
-  'test_util',
-  'rsvp',
-  'jio',
-  'hmacsha1',
-  'qiniustorage',
-  'qunit'
-// ], function (util, RSVP, jIO) {
-], function () {
-  "use strict";
+  var test = QUnit.test,
+    stop = QUnit.stop,
+    start = QUnit.start,
+    ok = QUnit.ok,
+    equal = QUnit.equal,
+    deepEqual = QUnit.deepEqual,
+    module = QUnit.module,
+    expect = QUnit.expect,
+    bucket = "98ad7.com1.z0.glb.clouddn.com",
+    access_key = "phooMooch6au2shaechah8ee5si3za",
+    secret_key = "owiehei3j_utaex0kiShoof2goixieb",
+    qiniu_spec = {
+      type: "qiniu",
+      bucket: bucket,
+      access_key: access_key,
+      secret_key: secret_key
+    };
 
-  var qiniu_spec = {
-    "type": "qiniu",
-    "bucket": "uth6nied",
-    "access_key": "Imh9CFmpVZ5L1TE04Pjt-UmR_Ccr2cW9-KjSmvSA",
-    "secret_key": "vFkNUlI2U4B7G1sz8UL_Z25kYHozfz82z4vMWPgo"
-  };
+  /////////////////////////////////////////////////////////////////
+  // qiniuStorage constructor
+  /////////////////////////////////////////////////////////////////
+  module("qiniuStorage.constructor");
 
-  module("QiniuStorage", {
+  test("Storage store parameters", function () {
+    var jio = jIO.createJIO(qiniu_spec);
+
+    equal(jio.__type, "qiniu");
+    deepEqual(jio.__storage._bucket, qiniu_spec.bucket);
+    deepEqual(jio.__storage._access_key, qiniu_spec.access_key);
+    deepEqual(jio.__storage._secret_key, qiniu_spec.secret_key);
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // qiniuStorage.get
+  /////////////////////////////////////////////////////////////////
+  module("qiniuStorage.get", {
     setup: function () {
-      this.server = sinon.fakeServer.create();
+      this.jio = jIO.createJIO(qiniu_spec);
+    }
+  });
 
+  test("get non valid document ID", function () {
+    stop();
+    expect(3);
+
+    this.jio.get("inexistent")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id inexistent is forbidden (!== /)");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get document without attachment", function () {
+    var id = "/";
+    stop();
+    expect(1);
+
+    this.jio.get(id)
+      .then(function (result) {
+        deepEqual(result, {}, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // qiniuStorage.getAttachment
+  /////////////////////////////////////////////////////////////////
+  module("qiniuStorage.getAttachment", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
       this.server.autoRespondAfter = 5;
 
-      this.jio_storage = jIO.createJIO(qiniu_spec);
+      this.jio = jIO.createJIO(qiniu_spec);
+
     },
     teardown: function () {
       this.server.restore();
       delete this.server;
-      delete this.jio_storage;
     }
   });
 
-  test('get', function () {
-    var key = "foobar12345",
-      server = this.server,
-      download_url = 'http://uth6nied.u.qiniudn.com/foobar12345?' +
-        'e=2451491200&token=Imh9CFmpVZ5L1TE04Pjt-UmR_Ccr2cW9-KjSmvSA:' +
-        'hISFzrC4dQvdOR8A_MozNsB5cME=',
-      data = {
-        "_id": key,
-        "foo": "bar"
-      };
-
-    server.respondWith("GET", download_url, [200, {
-      "Content-Type": "application/json"
-    }, JSON.stringify(data)]);
-
+  test("get attachment from inexistent document", function () {
     stop();
-    this.jio_storage.get({"_id": key})
-      .then(function (result) {
-        deepEqual(result, {
-          "data": data,
-          "id": key,
-          "method": "get",
-          "result": "success",
-          "status": 200,
-          "statusText": "Ok"
-        });
+    expect(3);
+
+    this.jio.getAttachment("inexistent", "a")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id inexistent is forbidden (!== /)");
+        equal(error.status_code, 400);
       })
       .fail(function (error) {
         ok(false, error);
@@ -78,42 +116,27 @@
   });
 
   test('getAttachment', function () {
-    var key = "foobar12345",
-      attachment = "barfoo54321",
+    var attachment = "foobar12345/barfoo54321/e",
       server = this.server,
-      download_url = 'http://uth6nied.u.qiniudn.com/foobar12345/barfoo54321' +
-        '?e=2451491200&token=Imh9CFmpVZ5L1TE04Pjt-UmR_Ccr2cW9-KjSmvSA:' +
-        'L88mHkZkfjr11DqPUqb5gsDjHFY=',
-      data = {
-        "_id": key,
-        "foo": "bar",
-        "nut": "nut"
-      };
+      download_url = 'http://' + bucket + '/' +
+        encodeURI(attachment) +
+        '?e=2451491200&token=' + access_key +
+        '%3AxOQx24teaT_yQXl5fU3CjUJSho4%3D';
 
     server.respondWith("GET", download_url, [200, {
       "Content-Type": "application/octet-stream"
-    }, JSON.stringify(data)]);
+    }, JSON.stringify({foo: 'baré'})]);
 
     stop();
-    this.jio_storage.getAttachment({"_id": key, "_attachment": attachment})
+    this.jio.getAttachment('/', attachment, {format: 'json'})
       .then(function (result) {
-        return jIO.util.readBlobAsText(result.data).then(function (e) {
-          return {
-            "result": result,
-            "text": e.target.result
-          };
-        });
-      }).then(function (result) {
-        result.result.data = result.text;
-        deepEqual(result.result, {
-          "data": JSON.stringify(data),
-          "id": key,
-          "attachment": attachment,
-          "method": "getAttachment",
-          "result": "success",
-          "status": 200,
-          "statusText": "Ok"
-        });
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, download_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, undefined);
+
+        deepEqual(result, {foo: 'baré'});
       })
       .fail(function (error) {
         ok(false, error);
@@ -123,53 +146,37 @@
       });
   });
 
-  test('post', function () {
-    var key = "foobar12345",
-      server = this.server,
-      upload_url = 'http://up.qiniu.com/',
-      data = {"ok": "excellent"};
+  /////////////////////////////////////////////////////////////////
+  // qiniuStorage.putAttachment
+  /////////////////////////////////////////////////////////////////
+  module("qiniuStorage.putAttachment", {
+    setup: function () {
 
-    server.respondWith("POST", upload_url, [200, {
-      "Content-Type": "application/json"
-    }, JSON.stringify(data)]);
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
 
-    stop();
-    this.jio_storage.post({"_id": key})
-      .then(function (result) {
-        deepEqual(result, {
-          "id": key,
-          "method": "post",
-          "result": "success",
-          "status": 201,
-          "statusText": "Created"
-        });
-        return jIO.util.readBlobAsBinaryString(server.requests[0].requestBody);
-      })
-      .then(function (e) {
-        equal(e.target.result, "XXX test FormData verification");
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
+      this.jio = jIO.createJIO(qiniu_spec);
+
+      this.spy = sinon.spy(FormData.prototype, "append");
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+      this.spy.restore();
+      delete this.spy;
+    }
   });
 
-  test('put', function () {
-    var key = "foobar12345",
-      server = this.server,
-      upload_url = 'http://up.qiniu.com/',
-      data = {"ok": "excellent"};
-
-    server.respondWith("POST", upload_url, [200, {
-      "Content-Type": "application/json"
-    }, JSON.stringify(data)]);
-
+  test("put an attachment to an inexistent document", function () {
     stop();
-    this.jio_storage.put({"_id": key})
-      .then(function () {
-        throw new Error("Not implemented");
+    expect(3);
+
+    this.jio.putAttachment("inexistent", "putattmt2", "")
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "id inexistent is forbidden (!== /)");
+        equal(error.status_code, 400);
       })
       .fail(function (error) {
         ok(false, error);
@@ -180,9 +187,10 @@
   });
 
   test('putAttachment', function () {
-    var key = "foobar12345",
-      attachment = "barfoo54321",
+    var context = this,
+      attachment = "foobar12345/barfoo54321/e",
       server = this.server,
+      blob = new Blob([JSON.stringify({foo: 'baré'})]),
       upload_url = 'http://up.qiniu.com/',
       data = {"ok": "excellent"};
 
@@ -191,13 +199,37 @@
     }, JSON.stringify(data)]);
 
     stop();
-    this.jio_storage.putAttachment({
-      "_id": key,
-      "_attachment": attachment,
-      "_blob": "bar"
-    })
+    this.jio.putAttachment(
+      '/',
+      attachment,
+      blob
+    )
       .then(function () {
-        throw new Error("Not implemented");
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, upload_url);
+        equal(server.requests[0].status, 200);
+        ok(server.requests[0].requestBody instanceof FormData);
+
+        equal(context.spy.callCount, 3, "FormData.append count " +
+           context.spy.callCount);
+        equal(context.spy.firstCall.args[0], "key", "First append call");
+        equal(context.spy.firstCall.args[1], attachment,
+              "First append call");
+        equal(context.spy.secondCall.args[0], "token",
+              "Second append call");
+        equal(
+          context.spy.secondCall.args[1],
+          access_key + ":" +
+            "TcUXVk75do5aEqQeahrYgXt1X9s=:" +
+            "eyJzY29wZSI6ImJ1Y2tldDpmb29iYXIxMjM0NS9iYXJmb281NDMyMS9l" +
+            "IiwiZGVhZGxpbmUiOjI0NTE0OTEyMDB9",
+          "Second append call"
+        );
+        equal(context.spy.thirdCall.args[0], "file", "Third append call");
+        equal(context.spy.thirdCall.args[1], blob, "Third append call");
+
+        equal(server.requests[0].withCredentials, undefined);
       })
       .fail(function (error) {
         ok(false, error);
@@ -207,4 +239,53 @@
       });
   });
 
-}));
+  /////////////////////////////////////////////////////////////////
+  // qiniuStorage.hasCapacity
+  /////////////////////////////////////////////////////////////////
+  module("qiniuStorage.hasCapacity", {
+    setup: function () {
+      this.jio = jIO.createJIO(qiniu_spec);
+    }
+  });
+
+  test("can list documents", function () {
+    ok(this.jio.hasCapacity("list"));
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // qiniuStorage.buildQuery
+  /////////////////////////////////////////////////////////////////
+  module("qiniuStorage.buildQuery", {
+    setup: function () {
+      this.jio = jIO.createJIO(qiniu_spec);
+    }
+  });
+
+  test("only return one document", function () {
+    stop();
+    expect(1);
+
+    this.jio.allDocs()
+      .then(function (result) {
+        deepEqual(result, {
+          "data": {
+            "rows": [
+              {
+                "id": "/",
+                "value": {}
+              }
+            ],
+            "total_rows": 1
+          }
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+
+      .always(function () {
+        start();
+      });
+  });
+
+}(jIO, Blob, sinon, FormData));
