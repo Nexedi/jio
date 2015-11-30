@@ -195,15 +195,6 @@
       });
   };
 
-  websqlStorage.prototype.allDocs = function () {
-    var db = this._database;
-
-    return new RSVP.Queue()
-      .push(function () {
-        return sqlExec(db, "SELECT id FROM documents");
-      });
-  };
-
   function sendBlobPart(db, id, name, blob, nbSlice) {
     return new RSVP.Queue()
       .push(function () {
@@ -332,7 +323,41 @@
         if (result.rowsAffected === 0) {
           throw new jIO.util.jIOError("Cannot find document", 404);
         }
-        return id;
+        return name;
+      });
+  };
+
+  websqlStorage.prototype.hasCapacity = function (name) {
+    return (name === "list" || (name === "include"));
+  };
+
+  websqlStorage.prototype.buildQuery = function (options) {
+    var db = this._database,
+      query =  "SELECT id";
+
+    if (options === undefined) { options = {}; }
+    if (options.include_docs === true) {
+      query += ", data AS doc";
+    }
+    query += " FROM documents ORDER BY id";
+
+    return new RSVP.Queue()
+      .push(function () {
+        return sqlExec(db, query, []);
+      })
+      .push(function (result) {
+        var array = [],
+          len = result.rows.length,
+          i;
+
+        for (i = 0; i < len; i += 1) {
+          array.push(result.rows[i]);
+          array[i].value = {};
+          if (array[i].doc !== undefined) {
+            array[i].doc = JSON.parse(array[i].doc);
+          }
+        }
+        return array;
       });
   };
 

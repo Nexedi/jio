@@ -14,7 +14,7 @@
     db = openDatabase('jio:qunit', '1.0', '', 2 * 1024 * 1024),
     j;
 
-  function exec(db, transac, args) {
+  function exec(transac, args) {
     return new RSVP.Promise(function (resolve, reject) {
       db.transaction(function (tx) {
         /*jslint unparam: true*/
@@ -33,16 +33,16 @@
   function deleteWebsql() {
     return new RSVP.Queue()
       .push(function () {
-        return exec(db, "DELETE FROM documents", []);
+        return exec("DELETE FROM documents", []);
       })
       .push(function () {
-        return exec(db, "DELETE FROM metadata", []);
+        return exec("DELETE FROM metadata", []);
       })
       .push(function () {
-        return exec(db, "DELETE FROM attachment", []);
+        return exec("DELETE FROM attachment", []);
       })
       .push(function () {
-        return exec(db, "DELETE FROM blob", []);
+        return exec("DELETE FROM blob", []);
       });
   }
 
@@ -55,13 +55,25 @@
   // websqlStorage.constructor
   /////////////////////////////////////////////////////////////////
   module("websqlStorage.constructor");
-  test("default unite value", function () {
+  test("creation of the storage", function () {
     var jio = jIO.createJIO({
       type: "websql",
       database: "qunit"
     });
 
     equal(jio.__type, "websql");
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // websqlStorage.hasCapacity
+  /////////////////////////////////////////////////////////////////
+  module("websqlStorage.hasCapacity");
+  test("can list documents", function () {
+    var jio = jIO.createJIO({
+      type: "websql",
+      database: "qunit"
+    });
+    ok(jio.hasCapacity("list"));
   });
 
   /////////////////////////////////////////////////////////////////
@@ -86,7 +98,13 @@
         return context.jio.allDocs();
       })
       .then(function (result) {
-        deepEqual(result, {});
+        deepEqual(result, {
+          "data": {
+            "rows": [
+            ],
+            "total_rows": 0
+          }
+        });
       })
       .fail(function (error) {
         ok(false, error);
@@ -173,9 +191,7 @@
       });
   });
 
-  /////////////////////////////////////////////////////////////////
-  // websqlStorage.get
-  /////////////////////////////////////////////////////////////////
+
   module("websqlStorage.get", {
     setup: function () {
       this.jio = jIO.createJIO({
@@ -184,7 +200,6 @@
       });
     }
   });
-
 
   test("get inexistent document", function () {
     var context = this;
@@ -398,7 +413,39 @@
     }
   });
 
-//bientot ici: de beaux tests.
+  test("remove document", function () {
+    var context = this;
+
+    stop();
+    expect(3);
+
+    deleteWebsql()
+      .then(function () {
+        return context.jio.put("foo", {});
+      })
+      .then(function () {
+        return exec("SELECT id FROM documents", []);
+      })
+      .then(function (selectResult) {
+        equal(selectResult.rows.length, 1, "putAttachment done");
+      })
+      .then(function () {
+        return context.jio.remove("foo");
+      })
+      .then(function (result) {
+        equal(result, "foo");
+        return exec("SELECT id FROM documents", []);
+      })
+      .then(function (selectResult) {
+        equal(selectResult.rows.length, 0, "remove done");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
 
   /////////////////////////////////////////////////////////////////
   // websqlStorage.getAttachment
@@ -492,7 +539,7 @@
       });
     }
   });
-/*
+
   test("remove attachment", function () {
     var context = this,
       attachment = "attachment";
@@ -507,14 +554,30 @@
         return context.jio.putAttachment("foo", attachment, big_string);
       })
       .then(function () {
-        exec("SELECT * FROM attachment ")
-        return context.jio.getAttachment("foo", attachment,
-                                         {"start": 15, "end": 25});
+        return exec("SELECT id, attachment FROM attachment UNION ALL" +
+                    " SELECT id, attachment FROM blob", []);
       })
-*/
-
-
-//bientot ici: de beaux tests.
+      .then(function (selectResult) {
+        equal(selectResult.rows.length, 2, "putAttachment done");
+      })
+      .then(function () {
+        return context.jio.removeAttachment("foo", attachment);
+      })
+      .then(function (result) {
+        equal(result, attachment);
+        return exec("SELECT id, attachment FROM attachment UNION ALL" +
+                    " SELECT id, attachment FROM blob", []);
+      })
+      .then(function (selectResult) {
+        equal(selectResult.rows.length, 0, "removeAttachment done");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
 
   /////////////////////////////////////////////////////////////////
   // websqlStorage.putAttachment
@@ -528,5 +591,41 @@
     }
   });
 
-//bientot ici: de beaux tests.
+  test("put attachment", function () {
+    var context = this,
+      attachment = "attachment";
+    stop();
+    expect(2);
+
+    deleteWebsql()
+      .then(function () {
+        return context.jio.put("foo", {"title": "bar"});
+      })
+      .then(function () {
+        return context.jio.putAttachment("foo", attachment, big_string);
+      })
+      .then(function () {
+        return exec("SELECT id, attachment FROM attachment UNION ALL" +
+                    " SELECT id, attachment FROM blob", []);
+      })
+      .then(function (selectResult) {
+        equal(selectResult.rows.length, 2, "putAttachment done");
+      })
+      .then(function () {
+        return context.jio.getAttachment("foo", attachment);
+      })
+      .then(function (result) {
+        return jIO.util.readBlobAsText(result);
+      })
+      .then(function (result) {
+        equal(result.target.result, big_string, "attachment correctly fetched");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 }(jIO, QUnit, openDatabase, Blob));
