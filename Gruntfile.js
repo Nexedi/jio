@@ -173,25 +173,21 @@ module.exports = function (grunt) {
           'src/jio.js',
 
           'node_modules/rusha/rusha.js',
-/*
+
           'src/jio.storage/replicatestorage.js',
           'src/jio.storage/shastorage.js',
           'src/jio.storage/uuidstorage.js',
           'src/jio.storage/memorystorage.js',
           'src/jio.storage/localstorage.js',
           'src/jio.storage/zipstorage.js',
-          'src/jio.storage/cryptstorage.js',
-          'src/jio.storage/dropboxstorage.js',
-*/
           'src/jio.storage/websqlstorage.js',
+          'src/jio.storage/dropboxstorage.js',
           'src/jio.storage/davstorage.js',
-/*
           'src/jio.storage/unionstorage.js',
           'src/jio.storage/erp5storage.js',
           'src/jio.storage/querystorage.js',
           'src/jio.storage/drivetojiomapping.js',
           'src/jio.storage/documentstorage.js',
-*/
           'src/jio.storage/indexeddbstorage.js'
         ],
         dest: 'dist/<%= pkg.name %>-<%= pkg.version %>.js'
