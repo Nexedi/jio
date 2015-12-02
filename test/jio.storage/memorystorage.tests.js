@@ -58,9 +58,9 @@
         equal(uuid, "put1");
         deepEqual(test.jio.__storage._database.put1, {
           attachments: {},
-          doc: JSON.stringify({
+          doc: {
             "title": "myPut1"
-          })
+          }
         });
       })
       .fail(function (error) {
@@ -88,9 +88,9 @@
         deepEqual(test.jio.__storage._database.put1, {
           "foo": "bar",
           "attachments": {"foo": "bar"},
-          doc: JSON.stringify({
+          doc: {
             "title": "myPut2"
-          })
+          }
         });
       })
       .fail(function (error) {
@@ -133,7 +133,7 @@
   test("get document", function () {
     var id = "post1";
     this.jio.__storage._database[id] = {
-      "doc": JSON.stringify({title: "myPost1"})
+      "doc": {title: "myPost1"}
     };
     stop();
     expect(1);
@@ -156,7 +156,7 @@
     var id = "putattmt1";
 
     this.jio.__storage._database[id] = {
-      "doc": JSON.stringify({}),
+      "doc": {},
       "attachments": {
         putattmt2: undefined
       }
@@ -539,6 +539,42 @@
               {
                 "id": "foo1",
                 "value": {}
+              }
+            ],
+            "total_rows": 2
+          }
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+
+      .always(function () {
+        start();
+      });
+  });
+
+  test("list documents with include_docs", function () {
+    this.jio.__storage._database.foo2 = "bar2";
+    this.jio.__storage._database.foo1 = "bar1";
+
+    stop();
+    expect(1);
+
+    this.jio.allDocs({include_docs: true})
+      .then(function (result) {
+        deepEqual(result, {
+          "data": {
+            "rows": [
+              {
+                "id": "foo2",
+                "value": {},
+                "doc": "bar2"
+              },
+              {
+                "id": "foo1",
+                "value": {},
+                "doc": "bar1"
               }
             ],
             "total_rows": 2

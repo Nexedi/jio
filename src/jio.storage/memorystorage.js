@@ -39,13 +39,13 @@
         attachments: {}
       };
     }
-    this._database[id].doc = JSON.stringify(metadata);
+    this._database[id].doc = metadata;
     return id;
   };
 
   MemoryStorage.prototype.get = function (id) {
     try {
-      return JSON.parse(this._database[id].doc);
+      return this._database[id].doc;
     } catch (error) {
       if (error instanceof TypeError) {
         throw new jIO.util.jIOError(
@@ -133,18 +133,26 @@
 
 
   MemoryStorage.prototype.hasCapacity = function (name) {
-    return (name === "list");
+    return ((name === "list") || (name === "include"));
   };
 
-  MemoryStorage.prototype.buildQuery = function () {
+  MemoryStorage.prototype.buildQuery = function (options) {
     var rows = [],
       i;
     for (i in this._database) {
       if (this._database.hasOwnProperty(i)) {
-        rows.push({
-          id: i,
-          value: {}
-        });
+        if (options.include_docs === true) {
+          rows.push({
+            id: i,
+            value: {},
+            doc: this._database[i]
+          });
+        } else {
+          rows.push({
+            id: i,
+            value: {}
+          });
+        }
 
       }
     }
