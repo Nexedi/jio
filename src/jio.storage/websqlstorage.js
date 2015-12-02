@@ -37,7 +37,10 @@
     });
   }
 
-  function createDatabase(db) {
+  function initDatabase(that) {
+    var db = that._database;
+    if (that._base_created === true) {return; }
+    that._base_created = true;
     return new RSVP.Queue()
       .push(function () {
         return sqlExec(db, "CREATE TABLE IF NOT EXISTS documents" +
@@ -89,7 +92,7 @@
       throw new TypeError("blob_len parameter must be a number >= 20");
     }
     this._blob_length = spec.blob_length || 2000000;
-    createDatabase(this._database);
+    this._base_created = false;
   }
 
   function addProperty(db, id, prop, value) {
@@ -109,11 +112,15 @@
 
   websqlStorage.prototype.put = function (id, param) {
     var db = this._database,
+      that = this,
       dataString = JSON.stringify(param),
       i,
       arrayLen;
 
     return new RSVP.Queue()
+      .push(function () {
+        return initDatabase(that);
+      })
       .push(function () {
         return sqlExec(db, "INSERT OR REPLACE INTO " +
                        "documents(id, data) VALUES(?,?)",
@@ -139,9 +146,13 @@
   };
 
   websqlStorage.prototype.remove = function (id) {
-    var db = this._database;
+    var db = this._database,
+      that = this;
 
     return new RSVP.Queue()
+      .push(function () {
+        return initDatabase(that);
+      })
       .push(function () {
         return sqlExec(db, "DELETE FROM documents WHERE id = ?", [id]);
       })
@@ -155,9 +166,13 @@
   };
 
   websqlStorage.prototype.get = function (id) {
-    var db = this._database;
+    var db = this._database,
+      that = this;
 
     return new RSVP.Queue()
+      .push(function () {
+        return initDatabase(that);
+      })
       .push(function () {
         return sqlExec(db, "SELECT data FROM documents WHERE id = ?", [id]);
       })
@@ -170,9 +185,13 @@
   };
 
   websqlStorage.prototype.allAttachments = function (id) {
-    var db = this._database;
+    var db = this._database,
+      that = this;
 
     return new RSVP.Queue()
+      .push(function () {
+        return initDatabase(that);
+      })
       .push(function () {
         return sqlExec(db, "SELECT COUNT(*) FROM documents WHERE id = ?", [id]);
       })
@@ -195,11 +214,10 @@
       });
   };
 
-  function sendBlobPart(db, id, name, blob, nbSlice) {
-    return new RSVP.Queue()
-      .push(function () {
-        return jIO.util.readBlobAsDataURL(blob);
-      })
+  function sendBlobPart(db, id, name, blob, nbSlice, queue) {
+    queue.push(function () {
+      return jIO.util.readBlobAsDataURL(blob);
+    })
       .push(function (strBlob) {
         strBlob = strBlob.currentTarget.result;
         return sqlExec(db, "INSERT INTO blob(id, attachment, part, blob)" +
@@ -209,9 +227,13 @@
 
   websqlStorage.prototype.putAttachment = function (id, name, blob) {
     var db = this._database,
+      that = this,
       partSize = this._blob_length;
 
     return new RSVP.Queue()
+      .push(function () {
+        return initDatabase(that);
+      })
       .push(function () {
         return sqlExec(db, "SELECT COUNT(*) FROM documents WHERE id = ?", [id]);
       })
@@ -233,17 +255,20 @@
       })
       .push(function () {
         var blobSize = blob.size,
+          queue = new RSVP.Queue(),
           i,
           index;
 
         for (i = 0, index = 0; i < blobSize; i += partSize, index += 1) {
-          sendBlobPart(db, id, name, blob.slice(i, i + partSize), index);
+          sendBlobPart(db, id, name, blob.slice(i, i + partSize), index, queue);
         }
+        return queue;
       });
   };
 
   websqlStorage.prototype.getAttachment = function (id, name, options) {
     var db = this._database,
+      that = this,
       partSize = this._blob_length,
       start,
       end,
@@ -271,6 +296,9 @@
     }
 
     return new RSVP.Queue()
+      .push(function () {
+        return initDatabase(that);
+      })
       .push(function () {
         var command = "SELECT part, blob FROM blob WHERE id = ? AND " +
           "attachment = ? AND part >= ?",
@@ -312,9 +340,12 @@
   };
 
   websqlStorage.prototype.removeAttachment = function (id, name) {
-    var db = this._database;
-
+    var db = this._database,
+      that = this;
     return new RSVP.Queue()
+      .push(function () {
+        return initDatabase(that);
+      })
       .push(function () {
         return sqlExec(db, "DELETE FROM attachment WHERE " +
                        "id = ? AND attachment = ?", [id, name]);
@@ -333,6 +364,7 @@
 
   websqlStorage.prototype.buildQuery = function (options) {
     var db = this._database,
+      that = this,
       query =  "SELECT id";
 
     if (options === undefined) { options = {}; }
@@ -342,6 +374,9 @@
     query += " FROM documents ORDER BY id";
 
     return new RSVP.Queue()
+      .push(function () {
+        return initDatabase(that);
+      })
       .push(function () {
         return sqlExec(db, query, []);
       })
