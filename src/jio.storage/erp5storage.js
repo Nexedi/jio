@@ -10,10 +10,10 @@
 // }
 
 /*jslint nomen: true, unparam: true */
-/*global jIO, UriTemplate, FormData, RSVP, URI, Blob, objectToSearchText,
+/*global jIO, UriTemplate, FormData, RSVP, URI, Blob,
          SimpleQuery, ComplexQuery*/
 
-(function (jIO, UriTemplate, FormData, RSVP, URI, Blob, objectToSearchText,
+(function (jIO, UriTemplate, FormData, RSVP, URI, Blob,
            SimpleQuery, ComplexQuery) {
   "use strict";
 
@@ -470,14 +470,14 @@
                 if (result_list) {
                   local_roles = result_list;
                   parsed_query.query_list.splice(i, 1);
-                  query = objectToSearchText(parsed_query);
+                  query = jIO.Query.objectToSearchText(parsed_query);
                   i = parsed_query.query_list.length;
                 } else {
                   result_list = isMultipleLocalRoles(sub_query);
                   if (result_list) {
                     local_roles = result_list;
                     parsed_query.query_list.splice(i, 1);
-                    query = objectToSearchText(parsed_query);
+                    query = jIO.Query.objectToSearchText(parsed_query);
                     i = parsed_query.query_list.length;
                   }
                 }
@@ -528,5 +528,5 @@
 
   jIO.addStorage("erp5", ERP5Storage);
 
-}(jIO, UriTemplate, FormData, RSVP, URI, Blob, objectToSearchText,
+}(jIO, UriTemplate, FormData, RSVP, URI, Blob,
   SimpleQuery, ComplexQuery));

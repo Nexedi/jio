@@ -60,8 +60,7 @@ module.exports = function (grunt) {
         }
       },
       jio: {
-        src: ['src/jio.js', 'src/jio/**/*.js', 'src/jio/*.js'],
-        exclude: ['src/jio/intro.js', 'src/jio/outro.js'],
+        src: ['src/jio.js'],
         directives: {
           maxlen: 80,
           indent: 2,
@@ -70,7 +69,7 @@ module.exports = function (grunt) {
         }
       },
       jio_storages: {
-        src: ['src/jio.storage/**/*.js'],
+        src: ['src/jio.storage/*.js'],
         directives: {
           maxlen: 80,
           indent: 2,
@@ -110,16 +109,11 @@ module.exports = function (grunt) {
         },
       },
       queries: {
-        src: ['src/queries/core/**/*.js'],
+        src: ['src/queries/*.js'],
         exclude: [
-          'src/queries/begin.js',
-          'src/queries/end.js',
           'src/queries/parser-begin.js',
           'src/queries/parser-end.js'
         ],
-        options: {
-          errorsOnly: true
-        },
         directives: {
           maxlen: 80,
           indent: 2,
@@ -157,26 +151,14 @@ module.exports = function (grunt) {
           'node_modules/lz-string/libs/lz-string.js',
 //           'node_modules/moment/moment.js',
           'lib/moment/moment-2.5.0.js',
-//           'src/*.js',
-//           'src/jio/intro.js',
-// 
-//           // core
-//           'src/jio/core/globals.js',
-//           'src/jio/core/util.js',
-//           'src/jio/core/**/*.js',
-//           'src/jio/features/**/*.js',
 
           // queries
-          'src/queries/core/globals.js',
-          'src/queries/core/query.js',
           'src/queries/parser-begin.js',
           'src/queries/build/parser.js',
           'src/queries/parser-end.js',
-          'src/queries/core/tools.js',
-          'src/queries/core/**/*.js',
+          'src/queries/query.js',
 
           'src/jio.date/*.js',
-//           'src/jio/outro.js',
 
           'src/jio.js',
 
