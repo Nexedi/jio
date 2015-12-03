@@ -219,7 +219,6 @@
    *                 second is the length.
    */
   Query.prototype.exec = function (item_list, option) {
-    var i, promises = [];
     if (!Array.isArray(item_list)) {
       throw new TypeError("Query().exec(): Argument 1 is not of type 'array'");
     }
@@ -230,36 +229,25 @@
       throw new TypeError("Query().exec(): " +
                           "Optional argument 2 is not of type 'object'");
     }
-    for (i = 0; i < item_list.length; i += 1) {
-      if (!item_list[i]) {
-        promises.push(RSVP.resolve(false));
-      } else {
-        promises.push(this.match(item_list[i]));
+    var context = this,
+      i;
+    for (i = item_list.length - 1; i >= 0; i -= 1) {
+      if (!context.match(item_list[i])) {
+        item_list.splice(i, 1);
       }
     }
+
+    if (option.sort_on) {
+      sortOn(option.sort_on, item_list);
+    }
+
+    if (option.limit) {
+      limit(option.limit, item_list);
+    }
+
+    select(option.select_list || [], item_list);
+
     return new RSVP.Queue()
-      .push(function () {
-        return RSVP.all(promises);
-      })
-      .push(function (answers) {
-        var j;
-        for (j = answers.length - 1; j >= 0; j -= 1) {
-          if (!answers[j]) {
-            item_list.splice(j, 1);
-          }
-        }
-        if (option.sort_on) {
-          return sortOn(option.sort_on, item_list);
-        }
-      })
-      .push(function () {
-        if (option.limit) {
-          return limit(option.limit, item_list);
-        }
-      })
-      .push(function () {
-        return select(option.select_list || [], item_list);
-      })
       .push(function () {
         return item_list;
       });
@@ -273,7 +261,7 @@
    * @return {Boolean} true if match, false otherwise
    */
   Query.prototype.match = function () {
-    return RSVP.resolve(true);
+    return true;
   };
 
   /**
@@ -534,30 +522,15 @@
    * @return {Boolean} true if all match, false otherwise
    */
   ComplexQuery.prototype.AND = function (item) {
-    var queue = new RSVP.Queue(),
-      context = this,
+    var result = true,
       i = 0;
 
-    function executeNextIfNotFalse(result) {
-      if (result === false) {
-        // No need to evaluate the other elements, as one is false
-        return result;
-      }
-      if (context.query_list.length === i) {
-        // No new element to loop on
-        return true;
-      }
-      queue
-        .push(function () {
-          var sub_result = context.query_list[i].match(item);
-          i += 1;
-          return sub_result;
-        })
-        .push(executeNextIfNotFalse);
+    while (result && (i !== this.query_list.length)) {
+      result = this.query_list[i].match(item);
+      i += 1;
     }
+    return result;
 
-    executeNextIfNotFalse(true);
-    return queue;
   };
 
   /**
@@ -568,31 +541,16 @@
    * @param  {Object} item The item to match
    * @return {Boolean} true if one match, false otherwise
    */
-  ComplexQuery.prototype.OR =  function (item) {
-    var queue = new RSVP.Queue(),
-      context = this,
+  ComplexQuery.prototype.OR = function (item) {
+    var result = false,
       i = 0;
 
-    function executeNextIfNotTrue(result) {
-      if (result === true) {
-        // No need to evaluate the other elements, as one is true
-        return result;
-      }
-      if (context.query_list.length === i) {
-        // No new element to loop on
-        return false;
-      }
-      queue
-        .push(function () {
-          var sub_result = context.query_list[i].match(item);
-          i += 1;
-          return sub_result;
-        })
-        .push(executeNextIfNotTrue);
+    while ((!result) && (i !== this.query_list.length)) {
+      result = this.query_list[i].match(item);
+      i += 1;
     }
 
-    executeNextIfNotTrue(false);
-    return queue;
+    return result;
   };
 
   /**
@@ -604,13 +562,7 @@
    * @return {Boolean} true if one match, false otherwise
    */
   ComplexQuery.prototype.NOT = function (item) {
-    return new RSVP.Queue()
-      .push(function () {
-        return this.query_list[0].match(item);
-      })
-      .push(function (answer) {
-        return !answer;
-      });
+    return !this.query_list[0].match(item);
   };
 
   /**
@@ -828,7 +780,7 @@
       value = this.value;
     }
     if (object_value === undefined || value === undefined) {
-      return RSVP.resolve(false);
+      return false;
     }
     return matchMethod(object_value, value);
   };
@@ -876,13 +828,13 @@
         value = value.content;
       }
       if (typeof value.cmp === "function") {
-        return RSVP.resolve(value.cmp(comparison_value) === 0);
+        return (value.cmp(comparison_value) === 0);
       }
       if (comparison_value.toString() === value.toString()) {
-        return RSVP.resolve(true);
+        return true;
       }
     }
-    return RSVP.resolve(false);
+    return false;
   };
 
   /**
@@ -904,15 +856,15 @@
         value = value.content;
       }
       if (typeof value.cmp === "function") {
-        return RSVP.resolve(value.cmp(comparison_value) === 0);
+        return (value.cmp(comparison_value) === 0);
       }
       if (
         searchTextToRegExp(comparison_value.toString()).test(value.toString())
       ) {
-        return RSVP.resolve(true);
+        return true;
       }
     }
-    return RSVP.resolve(false);
+    return false;
   };
 
   /**
@@ -934,13 +886,13 @@
         value = value.content;
       }
       if (typeof value.cmp === "function") {
-        return RSVP.resolve(value.cmp(comparison_value) !== 0);
+        return (value.cmp(comparison_value) !== 0);
       }
       if (comparison_value.toString() === value.toString()) {
-        return RSVP.resolve(false);
+        return false;
       }
     }
-    return RSVP.resolve(true);
+    return true;
   };
 
   /**
@@ -961,9 +913,9 @@
       value = value.content;
     }
     if (typeof value.cmp === "function") {
-      return RSVP.resolve(value.cmp(comparison_value) < 0);
+      return (value.cmp(comparison_value) < 0);
     }
-    return RSVP.resolve(value < comparison_value);
+    return (value < comparison_value);
   };
 
   /**
@@ -985,9 +937,9 @@
       value = value.content;
     }
     if (typeof value.cmp === "function") {
-      return RSVP.resolve(value.cmp(comparison_value) <= 0);
+      return (value.cmp(comparison_value) <= 0);
     }
-    return RSVP.resolve(value <= comparison_value);
+    return (value <= comparison_value);
   };
 
   /**
@@ -1009,9 +961,9 @@
       value = value.content;
     }
     if (typeof value.cmp === "function") {
-      return RSVP.resolve(value.cmp(comparison_value) > 0);
+      return (value.cmp(comparison_value) > 0);
     }
-    return RSVP.resolve(value > comparison_value);
+    return (value > comparison_value);
   };
 
   /**
@@ -1033,9 +985,9 @@
       value = value.content;
     }
     if (typeof value.cmp === "function") {
-      return RSVP.resolve(value.cmp(comparison_value) >= 0);
+      return (value.cmp(comparison_value) >= 0);
     }
-    return RSVP.resolve(value >= comparison_value);
+    return (value >= comparison_value);
   };
 
   query_class_dict.simple = SimpleQuery;
