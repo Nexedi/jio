@@ -3,7 +3,12 @@
 (function (RSVP, window, parseStringToObject) {
   "use strict";
 
-  var query_class_dict = {};
+  var query_class_dict = {},
+    regexp_escape = /[\-\[\]{}()*+?.,\\\^$|#\s]/g,
+    regexp_percent = /%/g,
+    regexp_underscore = /_/g,
+    regexp_operator = /^(?:AND|OR|NOT)$/i,
+    regexp_comparaison = /^(?:!?=|<=?|>=?)$/i;
 
   /**
    * Convert metadata values to array of strings. ex:
@@ -383,11 +388,7 @@
    * @return {String} The escaped string
    */
   function stringEscapeRegexpCharacters(string) {
-    if (typeof string === "string") {
-      return string.replace(/([\\\.\$\[\]\(\)\{\}\^\?\*\+\-])/g, "\\$1");
-    }
-    throw new TypeError("Query.stringEscapeRegexpCharacters(): " +
-                        "Argument no 1 is not of type 'string'");
+    return string.replace(regexp_escape, "\\$&");
   }
 
   /**
@@ -425,13 +426,9 @@
     if (use_wildcard_characters === false) {
       return new RegExp("^" + stringEscapeRegexpCharacters(string) + "$");
     }
-    return new RegExp("^" + stringEscapeRegexpCharacters(string).replace(
-      /%/g,
-      ".*"
-    ).replace(
-      /_/g,
-      "."
-    ) + "$");
+    return new RegExp("^" + stringEscapeRegexpCharacters(string)
+      .replace(regexp_percent, '.*')
+      .replace(regexp_underscore, '.') + "$");
   }
 
   /**
@@ -483,7 +480,7 @@
    */
   ComplexQuery.prototype.match = function (item) {
     var operator = this.operator;
-    if (!(/^(?:AND|OR|NOT)$/i.test(operator))) {
+    if (!(regexp_operator.test(operator))) {
       operator = "AND";
     }
     return this[operator.toUpperCase()](item);
@@ -770,9 +767,9 @@
       value = null,
       key = this.key;
 
-    if (!(/^(?:!?=|<=?|>=?)$/i.test(operator))) {
+    if (!(regexp_comparaison.test(operator))) {
       // `operator` is not correct, we have to change it to "like" or "="
-      if (/%/.test(this.value)) {
+      if (regexp_percent.test(this.value)) {
         // `value` contains a non escaped `%`
         operator = "like";
       } else {
@@ -881,10 +878,7 @@
       if (typeof value.cmp === "function") {
         return RSVP.resolve(value.cmp(comparison_value) === 0);
       }
-      if (
-        searchTextToRegExp(comparison_value.toString(), false).
-          test(value.toString())
-      ) {
+      if (comparison_value.toString() === value.toString()) {
         return RSVP.resolve(true);
       }
     }
@@ -942,10 +936,7 @@
       if (typeof value.cmp === "function") {
         return RSVP.resolve(value.cmp(comparison_value) !== 0);
       }
-      if (
-        searchTextToRegExp(comparison_value.toString(), false).
-          test(value.toString())
-      ) {
+      if (comparison_value.toString() === value.toString()) {
         return RSVP.resolve(false);
       }
     }
