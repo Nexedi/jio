@@ -1,3 +1,3 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true */
+/*jslint sloppy: true */
 
 var query_class_dict = {};

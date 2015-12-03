@@ -119,6 +119,14 @@ module.exports = function (grunt) {
         ],
         options: {
           errorsOnly: true
+        },
+        directives: {
+          maxlen: 80,
+          indent: 2,
+          maxerr: 3,
+          predef: [
+            'jIO'
+          ]
         }
       },
       examples: {

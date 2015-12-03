@@ -1,5 +1,5 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global Query, exports */
+/*jslint sloppy: true */
+/*global Query*/
 
 function objectToSearchText(query) {
   var str_list = [];

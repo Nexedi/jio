@@ -1,6 +1,5 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global Query, inherits, query_class_dict, window,
-  searchTextToRegExp, RSVP */
+/*jslint sloppy: true, nomen: true */
+/*global inherits, query_class_dict, window, searchTextToRegExp, RSVP, Query */
 
 var checkKeySchema = function (key_schema) {
   var prop;
@@ -114,7 +113,6 @@ SimpleQuery.prototype.match = function (item) {
     value = null,
     key = this.key;
 
-  /*jslint regexp: true */
   if (!(/^(?:!?=|<=?|>=?)$/i.test(operator))) {
     // `operator` is not correct, we have to change it to "like" or "="
     if (/%/.test(this.value)) {

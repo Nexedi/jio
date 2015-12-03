@@ -1,5 +1,5 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global Query, RSVP, deepClone */
+/*jslint sloppy: true, nomen: true */
+/*global Query, RSVP*/
 
 /**
  * Escapes regexp special chars from a string.
@@ -106,22 +106,13 @@ function inherits(constructor, superConstructor) {
 }
 
 /**
- * Does nothing
- */
-function emptyFunction() {
-  return;
-}
-
-/**
- * Filter a list of items, modifying them to select only wanted keys. If
- * `clone` is true, then the method will act on a cloned list.
+ * Filter a list of items, modifying them to select only wanted keys.
  *
  * @param  {Array} select_option Key list to keep
  * @param  {Array} list The item list to filter
- * @param  {Boolean} [clone=false] If true, modifies a clone of the list
  * @return {Array} The filtered list
  */
-function select(select_option, list, clone) {
+function select(select_option, list) {
   var i, j, new_item;
   if (!Array.isArray(select_option)) {
     throw new TypeError("jioquery.select(): " +
@@ -130,9 +121,6 @@ function select(select_option, list, clone) {
   if (!Array.isArray(list)) {
     throw new TypeError("jioquery.select(): " +
                         "Argument 2 is not of type Array");
-  }
-  if (clone === true) {
-    list = deepClone(list);
   }
   for (i = 0; i < list.length; i += 1) {
     new_item = {};
@@ -154,22 +142,17 @@ function select(select_option, list, clone) {
 Query.select = select;
 
 /**
- * Sort a list of items, according to keys and directions. If `clone` is true,
- * then the method will act on a cloned list.
+ * Sort a list of items, according to keys and directions.
  *
  * @param  {Array} sort_on_option List of couples [key, direction]
  * @param  {Array} list The item list to sort
- * @param  {Boolean} [clone=false] If true, modifies a clone of the list
  * @return {Array} The filtered list
  */
-function sortOn(sort_on_option, list, clone) {
+function sortOn(sort_on_option, list) {
   var sort_index;
   if (!Array.isArray(sort_on_option)) {
     throw new TypeError("jioquery.sortOn(): " +
                         "Argument 1 is not of type 'array'");
-  }
-  if (clone) {
-    list = deepClone(list);
   }
   for (sort_index = sort_on_option.length - 1; sort_index >= 0;
        sort_index -= 1) {
@@ -184,15 +167,13 @@ function sortOn(sort_on_option, list, clone) {
 Query.sortOn = sortOn;
 
 /**
- * Limit a list of items, according to index and length. If `clone` is true,
- * then the method will act on a cloned list.
+ * Limit a list of items, according to index and length.
  *
  * @param  {Array} limit_option A couple [from, length]
  * @param  {Array} list The item list to limit
- * @param  {Boolean} [clone=false] If true, modifies a clone of the list
  * @return {Array} The filtered list
  */
-function limit(limit_option, list, clone) {
+function limit(limit_option, list) {
   if (!Array.isArray(limit_option)) {
     throw new TypeError("jioquery.limit(): " +
                         "Argument 1 is not of type 'array'");
@@ -200,9 +181,6 @@ function limit(limit_option, list, clone) {
   if (!Array.isArray(list)) {
     throw new TypeError("jioquery.limit(): " +
                         "Argument 2 is not of type 'array'");
-  }
-  if (clone) {
-    list = deepClone(list);
   }
   list.splice(0, limit_option[0]);
   if (limit_option[1]) {

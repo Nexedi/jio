@@ -1,4 +1,4 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
+/*jslint sloppy: true */
 /*global Query: true, query_class_dict: true, inherits: true,
          window, QueryFactory, RSVP */
 
@@ -35,12 +35,10 @@ function ComplexQuery(spec, key_schema) {
    * @optional
    */
   this.query_list = spec.query_list || [];
-  /*jslint unparam: true*/
   this.query_list = this.query_list.map(
     // decorate the map to avoid sending the index as key_schema argument
-    function (o, i) { return QueryFactory.create(o, key_schema); }
+    function (o) { return QueryFactory.create(o, key_schema); }
   );
-  /*jslint unparam: false*/
 
 }
 inherits(ComplexQuery, Query);

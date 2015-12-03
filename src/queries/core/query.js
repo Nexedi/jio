@@ -1,7 +1,5 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global parseStringToObject: true, emptyFunction: true, sortOn: true, limit:
-  true, select: true, window, stringEscapeRegexpCharacters: true,
-  deepClone, RSVP*/
+/*jslint sloppy: true */
+/*global sortOn: true, limit: true, select: true, window, RSVP*/
 
 /**
  * The query to use to filter a list of objects.
@@ -19,7 +17,7 @@ function Query() {
    * @param  {Object} object The object shared in the parse process
    * @param  {Object} option Some option gave in parse()
    */
-  this.onParseStart = emptyFunction;
+//   this.onParseStart = emptyFunction;
 
   /**
    * Called when parsing a simple query. Must be overridden!
@@ -28,7 +26,7 @@ function Query() {
    * @param  {Object} object The object shared in the parse process
    * @param  {Object} option Some option gave in parse()
    */
-  this.onParseSimpleQuery = emptyFunction;
+//   this.onParseSimpleQuery = emptyFunction;
 
   /**
    * Called when parsing a complex query. Must be overridden!
@@ -37,7 +35,7 @@ function Query() {
    * @param  {Object} object The object shared in the parse process
    * @param  {Object} option Some option gave in parse()
    */
-  this.onParseComplexQuery = emptyFunction;
+//   this.onParseComplexQuery = emptyFunction;
 
   /**
    * Called after parsing the query. Must be overridden!
@@ -46,8 +44,9 @@ function Query() {
    * @param  {Object} object The object shared in the parse process
    * @param  {Object} option Some option gave in parse()
    */
-  this.onParseEnd = emptyFunction;
+//   this.onParseEnd = emptyFunction;
 
+  return;
 }
 
 /**

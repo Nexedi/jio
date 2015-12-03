@@ -1,6 +1,5 @@
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true */
-/*global window, ComplexQuery, SimpleQuery, Query, parseStringToObject,
-  query_class_dict */
+/*jslint sloppy: true */
+/*global window, Query, parseStringToObject, query_class_dict */
 
 /**
  * Provides static methods to create Query object
