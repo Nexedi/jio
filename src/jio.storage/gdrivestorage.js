@@ -14,15 +14,14 @@
   "use strict";
 
   var UPLOAD_URL = "https://www.googleapis.com{/upload}/drive/v2/files{/id}" +
-      "{?uploadType}{&access_token}",
+      "{?uploadType,access_token}",
     upload_template = UriTemplate.parse(UPLOAD_URL),
     REMOVE_URL = "https://www.googleapis.com/drive/v2/" +
       "files{/id,trash}{?access_token}",
     remove_template = UriTemplate.parse(REMOVE_URL),
     LIST_URL = "https://www.googleapis.com/drive/v2/files" +
       "?prettyPrint=false{&pageToken}&q=trashed=false" +
-      "&fields=nextPageToken,items(id,mimeType,title,parents(id,isRoot))" +
-      "{&access_token}",
+      "&fields=nextPageToken,items(id){&access_token}",
     list_template = UriTemplate.parse(LIST_URL),
     GET_URL = "https://www.googleapis.com/drive/v2/files{/id}{?alt}",
     get_template = UriTemplate.parse(GET_URL);

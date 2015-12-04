@@ -16,18 +16,14 @@
     boundary = "---------314159265358979323846",
     list_url = domain + "/drive/v2/files" +
       "?prettyPrint=false&pageToken=&q=trashed=false" +
-      "&fields=nextPageToken,items(id,mimeType,title,parents(id,isRoot))" +
+      "&fields=nextPageToken,items(id)" +
       "&access_token=" + token,
     sample_list = '{"items":[' +
       '{"id":"0B4kh3jbjOf5LamRlX21MZlVCYXM"}]}',
 
     part_sample1 = '{"nextPageToken": "nptkn01",' +
-      '"items":[{"id":"0B4kh3jbjOf5Lb2theE8xWHhvWXM","title":"' +
-      'attach1","mimeType":"text/plain","parents":[{"id":"0B4kh3jbjOf5LN' +
-      '0Y2V0ZJS0VxS00","isRoot":false}]}]}',
-    part_sample2 = '{"items":[{"id":"0B4kh3jbjOf5LamRlX21MZ' +
-      'lVCYXM","title":"file2","mimeType":"text/plain","parents":[{"id":' +
-      '"0AIkh3jbjOf5LUk9PVA","isRoot":true}]}]}';
+      '"items":[{"id":"0B4kh3jbjOf5Lb2theE8xWHhvWXM"}]}',
+    part_sample2 = '{"items":[{"id":"0B4kh3jbjOf5LamRlX21MZ"}]}';
 
   function error404Tester(fun, encl, blob) {
     stop();
@@ -361,19 +357,14 @@
       server = this.server,
       token_url = domain + "/drive/v2/files" +
         "?prettyPrint=false&pageToken=nptkn01&q=trashed=false" +
-        "&fields=nextPageToken,items(id,mimeType,title,parents(id,isRoot))" +
+        "&fields=nextPageToken,items(id)" +
         "&access_token=" + token;
 
     object_result.data.rows.push(
-      {"id": "0B4kh3jbjOf5Lb2theE8xWHhvWXM", "title": "attach1",
-        "mimeType": "text/plain",
-        "parents": [{"id": "0B4kh3jbjOf5LN0Y2V0ZJS0VxS00", "isRoot": false}],
-        "value": {}}
+      {"id": "0B4kh3jbjOf5Lb2theE8xWHhvWXM", "value": {}}
     );
     object_result.data.rows.push(
-      {"id": "0B4kh3jbjOf5LamRlX21MZlVCYXM", "title": "file2",
-        "mimeType": "text/plain",
-        "parents": [{"id": "0AIkh3jbjOf5LUk9PVA", "isRoot": true}], "value": {}}
+      {"id": "0B4kh3jbjOf5LamRlX21MZ", "value": {}}
     );
 
     this.server.respondWith("GET", list_url, [200, {
