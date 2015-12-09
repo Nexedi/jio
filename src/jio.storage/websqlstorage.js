@@ -17,62 +17,63 @@
   /**
    * The JIO Websql Storage extension
    *
-   * @class websqlStorage
+   * @class WebSQLStorage
    * @constructor
    */
 
-  /*jslint unparam: true*/
-  function sqlExec(db, transac, args) {
+  function queueSql(db, query_list, argument_list) {
     return new RSVP.Promise(function (resolve, reject) {
+      /*jslint unparam: true*/
       db.transaction(function (tx) {
-        var len = transac.length,
-          res = [],
+        var len = query_list.length,
+          result_list = [],
           i;
 
-        function transacSuccess(tx, results) {
-          res.push(results);
-          if (res.length === len) {
-            resolve(res);
+        function resolveTransaction(tx, result) {
+          result_list.push(result);
+          if (result_list.length === len) {
+            resolve(result_list);
           }
         }
-        function transacFailure(tx, error) {
+        function rejectTransaction(tx, error) {
           reject(error);
           return true;
         }
         for (i = 0; i < len; i += 1) {
-          tx.executeSql(transac[i], args[i], transacSuccess, transacFailure);
+          tx.executeSql(query_list[i], argument_list[i], resolveTransaction,
+                        rejectTransaction);
         }
       }, function (tx, error) {
         reject(error);
       });
+      /*jslint unparam: false*/
     });
   }
-  /*jslint unparam: false*/
 
   function initDatabase(db) {
-    var queries;
-
-    queries = ["CREATE TABLE IF NOT EXISTS documents" +
-               "(id VARCHAR PRIMARY KEY NOT NULL, data TEXT)",
-               "CREATE TABLE IF NOT EXISTS attachment" +
-               "(id VARCHAR, attachment VARCHAR, " +
-               "CONSTRAINT un_id_attachment UNIQUE (id, attachment))",
-               "CREATE TABLE IF NOT EXISTS blob" +
-               "(id VARCHAR, attachment VARCHAR, part INT, blob TEXT)",
-               "CREATE TRIGGER IF NOT EXISTS jIOremove " +
-               "BEFORE DELETE ON documents FOR EACH ROW BEGIN DELETE " +
-               "FROM attachment WHERE id = OLD.id;END;",
-               "CREATE TRIGGER IF NOT EXISTS jIOremoveAttachment " +
-               "BEFORE DELETE ON attachment FOR EACH ROW " +
-               "BEGIN DELETE from blob WHERE id = OLD.id " +
-               "AND attachment = OLD.attachment;END;"];
+    var query_list = [
+      "CREATE TABLE IF NOT EXISTS document" +
+        "(id VARCHAR PRIMARY KEY NOT NULL, data TEXT)",
+      "CREATE TABLE IF NOT EXISTS attachment" +
+        "(id VARCHAR, attachment VARCHAR, " +
+        "CONSTRAINT uniq UNIQUE (id, attachment))",
+      "CREATE TABLE IF NOT EXISTS blob" +
+        "(id VARCHAR, attachment VARCHAR, part INT, blob TEXT)",
+      "CREATE TRIGGER IF NOT EXISTS remove " +
+        "BEFORE DELETE ON document FOR EACH ROW BEGIN DELETE " +
+        "FROM attachment WHERE id = OLD.id;END;",
+      "CREATE TRIGGER IF NOT EXISTS removeAttachment " +
+        "BEFORE DELETE ON attachment FOR EACH ROW " +
+        "BEGIN DELETE from blob WHERE id = OLD.id " +
+        "AND attachment = OLD.attachment;END;"
+    ];
     return new RSVP.Queue()
       .push(function () {
-        return sqlExec(db, queries, [[], [], [], [], []]);
+        return queueSql(db, query_list, [[], [], [], [], []]);
       });
   }
 
-  function websqlStorage(spec) {
+  function WebSQLStorage(spec) {
     if (typeof spec.database !== 'string' || !spec.database) {
       throw new TypeError("database must be a string " +
                           "which contains more than one character.");
@@ -85,41 +86,41 @@
       throw new TypeError("blob_len parameter must be a number >= 20");
     }
     this._blob_length = spec.blob_length || 2000000;
-    this._init_base = initDatabase(this._database);
+    this._init_db_promise = initDatabase(this._database);
   }
 
-  websqlStorage.prototype.put = function (id, param) {
+  WebSQLStorage.prototype.put = function (id, param) {
     var db = this._database,
       that = this,
-      dataString = JSON.stringify(param);
+      data_string = JSON.stringify(param);
 
     return new RSVP.Queue()
       .push(function () {
-        return that._init_base;
+        return that._init_db_promise;
       })
       .push(function () {
-        return sqlExec(db, ["INSERT OR REPLACE INTO " +
-                            "documents(id, data) VALUES(?,?)"],
-                       [[id, dataString]]);
+        return queueSql(db, ["INSERT OR REPLACE INTO " +
+                            "document(id, data) VALUES(?,?)"],
+                       [[id, data_string]]);
       })
       .push(function () {
         return id;
       });
   };
 
-  websqlStorage.prototype.remove = function (id) {
+  WebSQLStorage.prototype.remove = function (id) {
     var db = this._database,
       that = this;
 
     return new RSVP.Queue()
       .push(function () {
-        return that._init_base;
+        return that._init_db_promise;
       })
       .push(function () {
-        return sqlExec(db, ["DELETE FROM documents WHERE id = ?"], [[id]]);
+        return queueSql(db, ["DELETE FROM document WHERE id = ?"], [[id]]);
       })
-      .push(function (result) {
-        if (result[0].rowsAffected === 0) {
+      .push(function (result_list) {
+        if (result_list[0].rowsAffected === 0) {
           throw new jIO.util.jIOError("Cannot find document", 404);
         }
         return id;
@@ -127,81 +128,82 @@
 
   };
 
-  websqlStorage.prototype.get = function (id) {
+  WebSQLStorage.prototype.get = function (id) {
     var db = this._database,
       that = this;
 
     return new RSVP.Queue()
       .push(function () {
-        return that._init_base;
+        return that._init_db_promise;
       })
       .push(function () {
-        return sqlExec(db, ["SELECT data FROM documents WHERE id = ?"], [[id]]);
+        return queueSql(db, ["SELECT data FROM document WHERE id = ?"],
+                        [[id]]);
       })
-      .push(function (result) {
-        if (result[0].rows.length === 0) {
+      .push(function (result_list) {
+        if (result_list[0].rows.length === 0) {
           throw new jIO.util.jIOError("Cannot find document", 404);
         }
-        return JSON.parse(result[0].rows[0].data);
+        return JSON.parse(result_list[0].rows[0].data);
       });
   };
 
-  websqlStorage.prototype.allAttachments = function (id) {
+  WebSQLStorage.prototype.allAttachments = function (id) {
     var db = this._database,
       that = this;
 
     return new RSVP.Queue()
       .push(function () {
-        return that._init_base;
+        return that._init_db_promise;
       })
       .push(function () {
-        return sqlExec(db, ["SELECT id FROM documents WHERE id = ?"], [[id]]);
+        return queueSql(db, [
+          "SELECT id FROM document WHERE id = ?",
+          "SELECT attachment FROM attachment WHERE id = ?"
+        ], [[id], [id]]);
       })
-      .push(function (result) {
-        if (result[0].rows.length === 0) {
+      .push(function (result_list) {
+        if (result_list[0].rows.length === 0) {
           throw new jIO.util.jIOError("Cannot find document", 404);
         }
-        return sqlExec(db, ["SELECT attachment FROM attachment WHERE id = ?"],
-                       [[id]]);
-      })
-      .push(function (result) {
-        var len = result[0].rows.length,
+
+        var len = result_list[1].rows.length,
           obj = {},
           i;
 
         for (i = 0; i < len; i += 1) {
-          obj[result[0].rows[i].attachment] = {};
+          obj[result_list[1].rows[i].attachment] = {};
         }
         return obj;
       });
   };
 
-  function sendBlobPart(blob, args, index, queue) {
+  function sendBlobPart(blob, argument_list, index, queue) {
     queue.push(function () {
       return jIO.util.readBlobAsDataURL(blob);
     })
       .push(function (strBlob) {
-        args[index + 3].push(strBlob.currentTarget.result);
+        argument_list[index + 3].push(strBlob.currentTarget.result);
         return;
       });
   }
 
-  websqlStorage.prototype.putAttachment = function (id, name, blob) {
+  WebSQLStorage.prototype.putAttachment = function (id, name, blob) {
     var db = this._database,
       that = this,
-      partSize = this._blob_length;
+      part_size = this._blob_length;
 
     return new RSVP.Queue()
       .push(function () {
-        return that._init_base;
+        return that._init_db_promise;
       })
       .push(function () {
-        return sqlExec(db, ["SELECT id FROM documents WHERE id = ?"], [[id]]);
+        return queueSql(db, ["SELECT id FROM document WHERE id = ?"], [[id]]);
       })
       .push(function (result) {
-        var queries = [],
-          args = [],
-          blobSize = blob.size,
+        var query_list = [],
+          argument_list = [],
+          blob_size = blob.size,
           queue = new RSVP.Queue(),
           i,
           index;
@@ -209,32 +211,34 @@
         if (result[0].rows.length === 0) {
           throw new jIO.util.jIOError("Cannot access subdocument", 404);
         }
-        queries.push("INSERT OR REPLACE INTO attachment(id, attachment)" +
+        query_list.push("INSERT OR REPLACE INTO attachment(id, attachment)" +
                      " VALUES(?, ?)");
-        args.push([id, name]);
-        queries.push("DELETE FROM blob WHERE id = ? AND attachment = ?");
-        args.push([id, name]);
-        queries.push("INSERT INTO blob(id, attachment, part, blob)" +
+        argument_list.push([id, name]);
+        query_list.push("DELETE FROM blob WHERE id = ? AND attachment = ?");
+        argument_list.push([id, name]);
+        query_list.push("INSERT INTO blob(id, attachment, part, blob)" +
                      "VALUES(?, ?, ?, ?)");
-        args.push([id, name, -1, blob.type || "application/octet-stream"]);
+        argument_list.push([id, name, -1,
+                            blob.type || "application/octet-stream"]);
 
-        for (i = 0, index = 0; i < blobSize; i += partSize, index += 1) {
-          queries.push("INSERT INTO blob(id, attachment, part, blob)" +
+        for (i = 0, index = 0; i < blob_size; i += part_size, index += 1) {
+          query_list.push("INSERT INTO blob(id, attachment, part, blob)" +
                        "VALUES(?, ?, ?, ?)");
-          args.push([id, name, index]);
-          sendBlobPart(blob.slice(i, i + partSize), args, index, queue);
+          argument_list.push([id, name, index]);
+          sendBlobPart(blob.slice(i, i + part_size), argument_list, index,
+                       queue);
         }
         queue.push(function () {
-          return sqlExec(db, queries, args);
+          return queueSql(db, query_list, argument_list);
         });
         return queue;
       });
   };
 
-  websqlStorage.prototype.getAttachment = function (id, name, options) {
+  WebSQLStorage.prototype.getAttachment = function (id, name, options) {
     var db = this._database,
       that = this,
-      partSize = this._blob_length,
+      part_size = this._blob_length,
       start,
       end,
       start_index,
@@ -253,35 +257,36 @@
                                   400);
     }
 
-    start_index = Math.floor(start / partSize);
+    start_index = Math.floor(start / part_size);
     if (start === 0) { start_index -= 1; }
-    end_index =  Math.floor(end / partSize);
-    if (end % partSize === 0) {
+    end_index =  Math.floor(end / part_size);
+    if (end % part_size === 0) {
       end_index -= 1;
     }
 
     return new RSVP.Queue()
       .push(function () {
-        return that._init_base;
+        return that._init_db_promise;
       })
       .push(function () {
         var command = "SELECT part, blob FROM blob WHERE id = ? AND " +
           "attachment = ? AND part >= ?",
-          args = [id, name, start_index];
+          argument_list = [id, name, start_index];
 
         if (end !== -1) {
           command += " AND part <= ?";
-          args.push(end_index);
+          argument_list.push(end_index);
         }
-        return sqlExec(db, [command], [args]);
+        return queueSql(db, [command], [argument_list]);
       })
-      .push(function (response) {
+      .push(function (response_list) {
         var i,
-          blobArray = [],
+          response,
+          blob_array = [],
           blob,
           type;
 
-        response = response[0].rows;
+        response = response_list[0].rows;
         if (response.length === 0) {
           throw new jIO.util.jIOError("Cannot find document", 404);
         }
@@ -290,30 +295,30 @@
             type = response[i].blob;
             start_index += 1;
           } else {
-            blobArray.push(jIO.util.dataURItoBlob(response[i].blob));
+            blob_array.push(jIO.util.dataURItoBlob(response[i].blob));
           }
         }
         if ((start === 0) && (options.end === undefined)) {
-          return new Blob(blobArray, {type: type});
+          return new Blob(blob_array, {type: type});
         }
-        blob = new Blob(blobArray, {});
-        return blob.slice(start - (start_index * partSize),
+        blob = new Blob(blob_array, {});
+        return blob.slice(start - (start_index * part_size),
                           end === -1 ? blob.size :
-                          end - (start_index * partSize),
+                          end - (start_index * part_size),
                           "application/octet-stream");
       });
   };
 
-  websqlStorage.prototype.removeAttachment = function (id, name) {
+  WebSQLStorage.prototype.removeAttachment = function (id, name) {
     var db = this._database,
       that = this;
 
     return new RSVP.Queue()
       .push(function () {
-        return that._init_base;
+        return that._init_db_promise;
       })
       .push(function () {
-        return sqlExec(db, ["DELETE FROM attachment WHERE " +
+        return queueSql(db, ["DELETE FROM attachment WHERE " +
                             "id = ? AND attachment = ?"], [[id, name]]);
       })
       .push(function (result) {
@@ -324,26 +329,26 @@
       });
   };
 
-  websqlStorage.prototype.hasCapacity = function (name) {
+  WebSQLStorage.prototype.hasCapacity = function (name) {
     return (name === "list" || (name === "include"));
   };
 
-  websqlStorage.prototype.buildQuery = function (options) {
+  WebSQLStorage.prototype.buildQuery = function (options) {
     var db = this._database,
       that = this,
       query =  "SELECT id";
 
     return new RSVP.Queue()
       .push(function () {
-        return that._init_base;
+        return that._init_db_promise;
       })
       .push(function () {
         if (options === undefined) { options = {}; }
         if (options.include_docs === true) {
           query += ", data AS doc";
         }
-        query += " FROM documents ORDER BY id";
-        return sqlExec(db, [query], [[]]);
+        query += " FROM document";
+        return queueSql(db, [query], [[]]);
       })
       .push(function (result) {
         var array = [],
@@ -361,6 +366,6 @@
       });
   };
 
-  jIO.addStorage('websql', websqlStorage);
+  jIO.addStorage('websql', WebSQLStorage);
 
 }(jIO, RSVP, Blob, openDatabase));
