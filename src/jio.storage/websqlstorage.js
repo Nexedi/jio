@@ -21,61 +21,54 @@
    * @constructor
    */
 
+  /*jslint unparam: true*/
   function sqlExec(db, transac, args) {
     return new RSVP.Promise(function (resolve, reject) {
       db.transaction(function (tx) {
-        /*jslint unparam: true*/
-        tx.executeSql(transac, args,
-                      function (tx, results) {
-            resolve(results);
-          },
-                      function (tx, error) {
-            reject(error);
-          });
+        var len = transac.length,
+          res = [],
+          i;
+
+        function transacSuccess(tx, results) {
+          res.push(results);
+          if (res.length === len) {
+            resolve(res);
+          }
+        }
+        function transacFailure(tx, error) {
+          reject(error);
+          return true;
+        }
+        for (i = 0; i < len; i += 1) {
+          tx.executeSql(transac[i], args[i], transacSuccess, transacFailure);
+        }
+      }, function (tx, error) {
+        reject(error);
       });
-      /*jslint unparam: false*/
     });
   }
+  /*jslint unparam: false*/
 
-  function initDatabase(that) {
-    var db = that._database;
-    if (that._base_created === true) {return; }
-    that._base_created = true;
+  function initDatabase(db) {
+    var queries;
+
+    queries = ["CREATE TABLE IF NOT EXISTS documents" +
+               "(id VARCHAR PRIMARY KEY NOT NULL, data TEXT)",
+               "CREATE TABLE IF NOT EXISTS attachment" +
+               "(id VARCHAR, attachment VARCHAR, " +
+               "CONSTRAINT un_id_attachment UNIQUE (id, attachment))",
+               "CREATE TABLE IF NOT EXISTS blob" +
+               "(id VARCHAR, attachment VARCHAR, part INT, blob TEXT)",
+               "CREATE TRIGGER IF NOT EXISTS jIOremove " +
+               "BEFORE DELETE ON documents FOR EACH ROW BEGIN DELETE " +
+               "FROM attachment WHERE id = OLD.id;END;",
+               "CREATE TRIGGER IF NOT EXISTS jIOremoveAttachment " +
+               "BEFORE DELETE ON attachment FOR EACH ROW " +
+               "BEGIN DELETE from blob WHERE id = OLD.id " +
+               "AND attachment = OLD.attachment;END;"];
     return new RSVP.Queue()
       .push(function () {
-        return sqlExec(db, "CREATE TABLE IF NOT EXISTS documents" +
-                       "(id VARCHAR PRIMARY KEY NOT NULL, data TEXT)");
-      })
-      .push(function () {
-        return sqlExec(db, "CREATE TABLE IF NOT EXISTS metadata" +
-                       "(doc VARCHAR, prop VARCHAR, stringValue " +
-                       "TEXT, nbrValue INT)");
-      })
-      .push(function () {
-        return sqlExec(db, "CREATE TABLE IF NOT EXISTS attachment" +
-                       "(id VARCHAR, attachment VARCHAR, " +
-                       "CONSTRAINT un_id_attachment UNIQUE (id, attachment))");
-      })
-      .push(function () {
-        return sqlExec(db, "CREATE TABLE IF NOT EXISTS blob" +
-                       "(id VARCHAR, attachment VARCHAR, part INT, blob TEXT)");
-      })
-      .push(function () {
-        return sqlExec(db, "CREATE TRIGGER IF NOT EXISTS jIOremove " +
-                       "BEFORE DELETE ON documents FOR EACH ROW BEGIN DELETE " +
-                       "FROM metadata WHERE doc = OLD.id; DELETE FROM  " +
-                       "attachment WHERE id = OLD.id;END;");
-      })
-      .push(function () {
-        return sqlExec(db, "CREATE TRIGGER IF NOT EXISTS jIOupdate " +
-                       "BEFORE INSERT ON documents FOR EACH ROW BEGIN " +
-                       "DELETE FROM metadata WHERE doc = NEW.id;END;");
-      })
-      .push(function () {
-        return sqlExec(db, "CREATE TRIGGER IF NOT EXISTS jIOremoveAttachment" +
-                       "BEFORE DELETE ON attachment FOR EACH ROW " +
-                       "BEGIN DELETE from blob WHERE id = OLD.id " +
-                       "AND attachment = OLD.attachment;END;");
+        return sqlExec(db, queries, [[], [], [], [], []]);
       });
   }
 
@@ -92,55 +85,24 @@
       throw new TypeError("blob_len parameter must be a number >= 20");
     }
     this._blob_length = spec.blob_length || 2000000;
-    this._base_created = false;
-  }
-
-  function addProperty(db, id, prop, value) {
-    var type = typeof value;
-
-    if (type === "string") {
-      return (sqlExec(db, "INSERT INTO metadata(doc, prop, stringValue) " +
-                         "VALUES(?, ?, ?)",
-                         [id, prop, value]));
-    }
-    if (type === "number") {
-      return (sqlExec(db, "INSERT INTO metadata(doc, prop, nbrValue) " +
-                         "VALUES(?, ?, ?)",
-                         [id, prop, value]));
-    }
+    this._init_base = initDatabase(this._database);
   }
 
   websqlStorage.prototype.put = function (id, param) {
     var db = this._database,
       that = this,
-      dataString = JSON.stringify(param),
-      i,
-      arrayLen;
+      dataString = JSON.stringify(param);
 
     return new RSVP.Queue()
       .push(function () {
-        return initDatabase(that);
+        return that._init_base;
       })
       .push(function () {
-        return sqlExec(db, "INSERT OR REPLACE INTO " +
-                       "documents(id, data) VALUES(?,?)",
-                       [id, dataString]);
+        return sqlExec(db, ["INSERT OR REPLACE INTO " +
+                            "documents(id, data) VALUES(?,?)"],
+                       [[id, dataString]]);
       })
       .push(function () {
-        var prop;
-
-        for (prop in param) {
-          if (param.hasOwnProperty(prop)) {
-            if (param[prop] instanceof Array) {
-              arrayLen = param[prop].length;
-              for (i = 0; i < arrayLen; i += 1) {
-                addProperty(db, id, prop, param[prop][i]);
-              }
-            } else {
-              addProperty(db, id, prop, param[prop]);
-            }
-          }
-        }
         return id;
       });
   };
@@ -151,13 +113,13 @@
 
     return new RSVP.Queue()
       .push(function () {
-        return initDatabase(that);
+        return that._init_base;
       })
       .push(function () {
-        return sqlExec(db, "DELETE FROM documents WHERE id = ?", [id]);
+        return sqlExec(db, ["DELETE FROM documents WHERE id = ?"], [[id]]);
       })
       .push(function (result) {
-        if (result.rowsAffected === 0) {
+        if (result[0].rowsAffected === 0) {
           throw new jIO.util.jIOError("Cannot find document", 404);
         }
         return id;
@@ -171,16 +133,16 @@
 
     return new RSVP.Queue()
       .push(function () {
-        return initDatabase(that);
+        return that._init_base;
       })
       .push(function () {
-        return sqlExec(db, "SELECT data FROM documents WHERE id = ?", [id]);
+        return sqlExec(db, ["SELECT data FROM documents WHERE id = ?"], [[id]]);
       })
       .push(function (result) {
-        if (result.rows.length === 0) {
+        if (result[0].rows.length === 0) {
           throw new jIO.util.jIOError("Cannot find document", 404);
         }
-        return JSON.parse(result.rows[0].data);
+        return JSON.parse(result[0].rows[0].data);
       });
   };
 
@@ -190,38 +152,37 @@
 
     return new RSVP.Queue()
       .push(function () {
-        return initDatabase(that);
+        return that._init_base;
       })
       .push(function () {
-        return sqlExec(db, "SELECT COUNT(*) FROM documents WHERE id = ?", [id]);
+        return sqlExec(db, ["SELECT id FROM documents WHERE id = ?"], [[id]]);
       })
       .push(function (result) {
-        if (result.rows[0]["COUNT(*)"] === 0) {
+        if (result[0].rows.length === 0) {
           throw new jIO.util.jIOError("Cannot find document", 404);
         }
-        return sqlExec(db, "SELECT attachment FROM attachment WHERE id = ?",
-                       [id]);
+        return sqlExec(db, ["SELECT attachment FROM attachment WHERE id = ?"],
+                       [[id]]);
       })
       .push(function (result) {
-        var len = result.rows.length,
+        var len = result[0].rows.length,
           obj = {},
           i;
 
         for (i = 0; i < len; i += 1) {
-          obj[result.rows[i].attachment] = {};
+          obj[result[0].rows[i].attachment] = {};
         }
         return obj;
       });
   };
 
-  function sendBlobPart(db, id, name, blob, nbSlice, queue) {
+  function sendBlobPart(blob, args, index, queue) {
     queue.push(function () {
       return jIO.util.readBlobAsDataURL(blob);
     })
       .push(function (strBlob) {
-        strBlob = strBlob.currentTarget.result;
-        return sqlExec(db, "INSERT INTO blob(id, attachment, part, blob)" +
-                       "VALUES(?, ?, ?, ?)", [id, name, nbSlice, strBlob]);
+        args[index + 3].push(strBlob.currentTarget.result);
+        return;
       });
   }
 
@@ -232,36 +193,40 @@
 
     return new RSVP.Queue()
       .push(function () {
-        return initDatabase(that);
+        return that._init_base;
       })
       .push(function () {
-        return sqlExec(db, "SELECT COUNT(*) FROM documents WHERE id = ?", [id]);
+        return sqlExec(db, ["SELECT id FROM documents WHERE id = ?"], [[id]]);
       })
       .push(function (result) {
-        if (result.rows[0]["COUNT(*)"] === 0) {
-          throw new jIO.util.jIOError("Cannot access subdocument", 404);
-        }
-        return sqlExec(db, "INSERT OR REPLACE INTO attachment(id, attachment)" +
-                " VALUES(?, ?)", [id, name]);
-      })
-      .push(function () {
-        return sqlExec(db, "DELETE FROM blob WHERE " +
-                       "id = ? AND attachment = ?", [id, name]);
-      })
-      .push(function () {
-        return sqlExec(db, "INSERT INTO " +
-                       "blob(id, attachment, part, blob) VALUES(?, ?, ?, ?)",
-                       [id, name, -1, blob.type || "application/octet-stream"]);
-      })
-      .push(function () {
-        var blobSize = blob.size,
+        var queries = [],
+          args = [],
+          blobSize = blob.size,
           queue = new RSVP.Queue(),
           i,
           index;
 
-        for (i = 0, index = 0; i < blobSize; i += partSize, index += 1) {
-          sendBlobPart(db, id, name, blob.slice(i, i + partSize), index, queue);
+        if (result[0].rows.length === 0) {
+          throw new jIO.util.jIOError("Cannot access subdocument", 404);
         }
+        queries.push("INSERT OR REPLACE INTO attachment(id, attachment)" +
+                     " VALUES(?, ?)");
+        args.push([id, name]);
+        queries.push("DELETE FROM blob WHERE id = ? AND attachment = ?");
+        args.push([id, name]);
+        queries.push("INSERT INTO blob(id, attachment, part, blob)" +
+                     "VALUES(?, ?, ?, ?)");
+        args.push([id, name, -1, blob.type || "application/octet-stream"]);
+
+        for (i = 0, index = 0; i < blobSize; i += partSize, index += 1) {
+          queries.push("INSERT INTO blob(id, attachment, part, blob)" +
+                       "VALUES(?, ?, ?, ?)");
+          args.push([id, name, index]);
+          sendBlobPart(blob.slice(i, i + partSize), args, index, queue);
+        }
+        queue.push(function () {
+          return sqlExec(db, queries, args);
+        });
         return queue;
       });
   };
@@ -297,7 +262,7 @@
 
     return new RSVP.Queue()
       .push(function () {
-        return initDatabase(that);
+        return that._init_base;
       })
       .push(function () {
         var command = "SELECT part, blob FROM blob WHERE id = ? AND " +
@@ -308,7 +273,7 @@
           command += " AND part <= ?";
           args.push(end_index);
         }
-        return sqlExec(db, command, args);
+        return sqlExec(db, [command], [args]);
       })
       .push(function (response) {
         var i,
@@ -316,7 +281,7 @@
           blob,
           type;
 
-        response = response.rows;
+        response = response[0].rows;
         if (response.length === 0) {
           throw new jIO.util.jIOError("Cannot find document", 404);
         }
@@ -342,16 +307,17 @@
   websqlStorage.prototype.removeAttachment = function (id, name) {
     var db = this._database,
       that = this;
+
     return new RSVP.Queue()
       .push(function () {
-        return initDatabase(that);
+        return that._init_base;
       })
       .push(function () {
-        return sqlExec(db, "DELETE FROM attachment WHERE " +
-                       "id = ? AND attachment = ?", [id, name]);
+        return sqlExec(db, ["DELETE FROM attachment WHERE " +
+                            "id = ? AND attachment = ?"], [[id, name]]);
       })
       .push(function (result) {
-        if (result.rowsAffected === 0) {
+        if (result[0].rowsAffected === 0) {
           throw new jIO.util.jIOError("Cannot find document", 404);
         }
         return name;
@@ -367,26 +333,25 @@
       that = this,
       query =  "SELECT id";
 
-    if (options === undefined) { options = {}; }
-    if (options.include_docs === true) {
-      query += ", data AS doc";
-    }
-    query += " FROM documents ORDER BY id";
-
     return new RSVP.Queue()
       .push(function () {
-        return initDatabase(that);
+        return that._init_base;
       })
       .push(function () {
-        return sqlExec(db, query, []);
+        if (options === undefined) { options = {}; }
+        if (options.include_docs === true) {
+          query += ", data AS doc";
+        }
+        query += " FROM documents ORDER BY id";
+        return sqlExec(db, [query], [[]]);
       })
       .push(function (result) {
         var array = [],
-          len = result.rows.length,
+          len = result[0].rows.length,
           i;
 
         for (i = 0; i < len; i += 1) {
-          array.push(result.rows[i]);
+          array.push(result[0].rows[i]);
           array[i].value = {};
           if (array[i].doc !== undefined) {
             array[i].doc = JSON.parse(array[i].doc);
