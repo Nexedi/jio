@@ -198,7 +198,7 @@
         return context.jio.allDocs();
       })
       .then(function () {
-        equal(context.spy.args[5][0], 'SELECT id FROM document ORDER BY id');
+        equal(context.spy.args[5][0], 'SELECT id FROM document');
         deepEqual(context.spy.args[5][1], []);
         spyStorageCreation(context);
         return;
@@ -228,7 +228,7 @@
       })
       .then(function () {
         equal(context.spy.args[5][0],
-              'SELECT id, data AS doc FROM document ORDER BY id');
+              'SELECT id, data AS doc FROM document');
         deepEqual(context.spy.args[5][1], []);
         spyStorageCreation(context);
         return;
@@ -338,12 +338,12 @@
         deepEqual(result, {
           "data": {
             "rows": [{
-              "id": "1",
-              "doc": {"title": "title1"},
-              "value": {}
-            }, {
               "id": "2",
               "doc": {"title": "title2"},
+              "value": {}
+            }, {
+              "id": "1",
+              "doc": {"title": "title1"},
               "value": {}
             }],
             "total_rows": 2

@@ -347,7 +347,7 @@
         if (options.include_docs === true) {
           query += ", data AS doc";
         }
-        query += " FROM document ORDER BY id";
+        query += " FROM document";
         return queueSql(db, [query], [[]]);
       })
       .push(function (result) {
