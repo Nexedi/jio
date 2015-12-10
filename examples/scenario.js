@@ -51,6 +51,20 @@
       });
 
       ///////////////////////////
+      // WebSQL storage
+      ///////////////////////////
+//      return g.run({
+//        type: "query",
+//        sub_storage: {
+//          type: "uuid",
+//          sub_storage: {
+//            "type": "websql",
+//            "database": "test"
+//          }
+//        }
+//      });
+
+      ///////////////////////////
       // IndexedDB storage
       ///////////////////////////
 //       return g.run({

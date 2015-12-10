@@ -171,6 +171,7 @@ module.exports = function (grunt) {
           'src/jio.storage/localstorage.js',
           'src/jio.storage/zipstorage.js',
           'src/jio.storage/cryptstorage.js',
+          'src/jio.storage/websqlstorage.js',
           'src/jio.storage/dropboxstorage.js',
           'src/jio.storage/davstorage.js',
           'src/jio.storage/gdrivestorage.js',

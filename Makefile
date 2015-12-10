@@ -46,6 +46,7 @@ zip:
 	@cp src/jio.storage/gdrivestorage.js    $(TMPDIR)/jio/storage/
 	@cp src/jio.storage/revisionstorage.js  $(TMPDIR)/jio/storage/
 	@cp src/jio.storage/zipstorage.js       $(TMPDIR)/jio/storage/
+	@cp src/jio.storage/websqlstorage.js       $(TMPDIR)/jio/storage/
 	@cp src/jio.storage/replicaterevisionstorage.js     $(TMPDIR)/jio/storage/
 	@cp src/jio.storage/s3storage.js        $(TMPDIR)/jio/storage/
 	@cp src/jio.storage/splitstorage.js     $(TMPDIR)/jio/storage/
@@ -71,6 +72,7 @@ zip:
 	@$(UGLIFY) src/jio.storage/localstorage.js     >$(TMPDIR)/jio/storage/localstorage.min.js 2>/dev/null
 	@$(UGLIFY) src/jio.storage/davstorage.js       >$(TMPDIR)/jio/storage/davstorage.min.js 2>/dev/null
 	@$(UGLIFY) src/jio.storage/dropboxstorage.js   >$(TMPDIR)/jio/storage/dropboxstorage.min.js 2>/dev/null
+	@$(UGLIFY) src/jio.storage/websqlstorage.js 	 >$(TMPDIR)/jio/storage/websqlstorage.min.js 2>/dev/null
 	@$(UGLIFY) src/jio.storage/erp5storage.js      >$(TMPDIR)/jio/storage/erp5storage.min.js 2>/dev/null
 	@$(UGLIFY) src/jio.storage/indexstorage.js     >$(TMPDIR)/jio/storage/indexstorage.min.js 2>/dev/null
 	@$(UGLIFY) src/jio.storage/gidstorage.js       >$(TMPDIR)/jio/storage/gidstorage.min.js 2>/dev/null
