@@ -47,18 +47,15 @@
           'KEY NOT NULL, data TEXT)');
     equal(context.spy.args[1][0],
           'CREATE TABLE IF NOT EXISTS attachment(id VARCHAR, attachment' +
-          ' VARCHAR, CONSTRAINT uniq UNIQUE (id, attachment))');
-    equal(context.spy.args[2][0],
-          'CREATE TABLE IF NOT EXISTS blob(id VARCHAR, attachment' +
           ' VARCHAR, part INT, blob TEXT)');
+    equal(context.spy.args[2][0],
+          "CREATE TRIGGER IF NOT EXISTS removeAttachment " +
+          "BEFORE DELETE ON document FOR EACH ROW " +
+          "BEGIN DELETE from attachment WHERE id = OLD.id;END;");
     equal(context.spy.args[3][0],
-          'CREATE TRIGGER IF NOT EXISTS remove BEFORE DELETE ON ' +
-          'document FOR EACH ROW BEGIN DELETE FROM attachment ' +
-          'WHERE id = OLD.id;END;');
-    equal(context.spy.args[4][0],
-          'CREATE TRIGGER IF NOT EXISTS removeAttachment BEFORE DELETE ON ' +
-          'attachment FOR EACH ROW BEGIN DELETE from blob WHERE id = OLD.id ' +
-          'AND attachment = OLD.attachment;END;');
+          "CREATE INDEX IF NOT EXISTS index_document ON document (id);");
+    equal(context.spy.args[4][0], "CREATE INDEX IF NOT EXISTS " +
+          "index_attachment ON attachment (id, attachment);");
   }
 
   function deleteRow(it, queue, result) {
@@ -542,7 +539,7 @@
               'SELECT id FROM document WHERE id = ?');
         deepEqual(context.spy.args[6][1], ['foo']);
         equal(context.spy.args[7][0],
-              'SELECT attachment FROM attachment WHERE id = ?');
+              'SELECT DISTINCT attachment FROM attachment WHERE id = ?');
         deepEqual(context.spy.args[7][1], ['foo']);
       })
       .then(function () {
@@ -769,7 +766,7 @@
   test("spy webSQL usage with two attachments", function () {
     var context = this;
     stop();
-    expect(30);
+    expect(26);
     context.spy.then(function (value) {
       context.spy = value;
       return;
@@ -795,41 +792,36 @@
               'SELECT id FROM document WHERE id = ?');
         deepEqual(context.spy.args[6][1], ['foo']);
         equal(context.spy.args[7][0],
-              'INSERT OR REPLACE INTO attachment(id, attachment) VALUES(?, ?)');
+              'DELETE FROM attachment WHERE id = ? AND attachment = ?');
         deepEqual(context.spy.args[7][1], ['foo', 'attachment1']);
-
         equal(context.spy.args[8][0],
-              'DELETE FROM blob WHERE id = ? AND attachment = ?');
-        deepEqual(context.spy.args[8][1], ['foo', 'attachment1']);
+              'INSERT INTO attachment(id, attachment, ' +
+              'part, blob)VALUES(?, ?, ?, ?)');
+        deepEqual(context.spy.args[8][1],
+                  ['foo', 'attachment1', -1, 'text/plain;charset=utf-8']);
         equal(context.spy.args[9][0],
-              'INSERT INTO blob(id, attachment, ' +
+              'INSERT INTO attachment(id, attachment, ' +
               'part, blob)VALUES(?, ?, ?, ?)');
         deepEqual(context.spy.args[9][1],
-                  ['foo', 'attachment1', -1, 'text/plain;charset=utf-8']);
-        equal(context.spy.args[10][0],
-              'INSERT INTO blob(id, attachment, part, blob)VALUES(?, ?, ?, ?)');
-        deepEqual(context.spy.args[10][1],
                   ['foo', 'attachment1', 0, 'data:;base64,YmFy']);
-        equal(context.spy.args[11][0],
+        equal(context.spy.args[10][0],
               'SELECT id FROM document WHERE id = ?');
-        deepEqual(context.spy.args[11][1], ['foo']);
+        deepEqual(context.spy.args[10][1], ['foo']);
+        equal(context.spy.args[11][0],
+               'DELETE FROM attachment WHERE id = ? AND attachment = ?');
+        deepEqual(context.spy.args[11][1], ['foo', 'attachment2']);
         equal(context.spy.args[12][0],
-              'INSERT OR REPLACE INTO attachment(id, attachment) VALUES(?, ?)');
-        deepEqual(context.spy.args[12][1], ['foo', 'attachment2']);
-        equal(context.spy.args[13][0],
-               'DELETE FROM blob WHERE id = ? AND attachment = ?');
-        deepEqual(context.spy.args[13][1], ['foo', 'attachment2']);
-        equal(context.spy.args[14][0],
-              'INSERT INTO blob(id, attachment, ' +
+              'INSERT INTO attachment(id, attachment, ' +
               'part, blob)VALUES(?, ?, ?, ?)');
-        deepEqual(context.spy.args[14][1],
+        deepEqual(context.spy.args[12][1],
                   ['foo', 'attachment2', -1, 'text/plain;charset=utf-8']);
-        equal(context.spy.args[15][0],
-              'INSERT INTO blob(id, attachment, part, blob)VALUES(?, ?, ?, ?)');
-        deepEqual(context.spy.args[15][1],
+        equal(context.spy.args[13][0],
+              'INSERT INTO attachment(id, attachment, ' +
+              'part, blob)VALUES(?, ?, ?, ?)');
+        deepEqual(context.spy.args[13][1],
                   ['foo', 'attachment2', 0, 'data:;base64,YmFyMg==']);
-        equal(context.spy.args[16][0], 'DELETE FROM document WHERE id = ?');
-        deepEqual(context.spy.args[16][1], ['foo']);
+        equal(context.spy.args[14][0], 'DELETE FROM document WHERE id = ?');
+        deepEqual(context.spy.args[14][1], ['foo']);
       })
       .then(function () {
         return deleteWebsql();
@@ -902,7 +894,7 @@
   test("spy webSQL usage", function () {
     var context = this;
     stop();
-    expect(22);
+    expect(20);
     context.spy.then(function (value) {
       context.spy = value;
       return;
@@ -926,30 +918,29 @@
               'SELECT id FROM document WHERE id = ?');
         deepEqual(context.spy.args[6][1], ['foo']);
         equal(context.spy.args[7][0],
-              'INSERT OR REPLACE INTO attachment(id, attachment) VALUES(?, ?)');
+              'DELETE FROM attachment WHERE id = ? AND attachment = ?');
         deepEqual(context.spy.args[7][1], ['foo', 'attachment']);
         equal(context.spy.args[8][0],
-              'DELETE FROM blob WHERE id = ? AND attachment = ?');
-        deepEqual(context.spy.args[8][1], ['foo', 'attachment']);
-        equal(context.spy.args[9][0],
-              'INSERT INTO blob(id, attachment, part, blob)' +
+              'INSERT INTO attachment(id, attachment, part, blob)' +
               'VALUES(?, ?, ?, ?)');
-        deepEqual(context.spy.args[9][1],
+        deepEqual(context.spy.args[8][1],
                   ['foo', 'attachment', -1, 'text/plain;charset=utf-8']);
-        equal(context.spy.args[10][0],
-              'INSERT INTO blob(id, attachment, part, blob)VALUES(?, ?, ?, ?)');
-        deepEqual(context.spy.args[10][1],
+        equal(context.spy.args[9][0],
+              'INSERT INTO attachment(id, attachment, ' +
+              'part, blob)VALUES(?, ?, ?, ?)');
+        deepEqual(context.spy.args[9][1],
                   ['foo', 'attachment', 0,
                    'data:;base64,YWFhYWFhYWFhYWFhYWFhYWFhYWE=']);
-        equal(context.spy.args[11][0],
-              'INSERT INTO blob(id, attachment, part, blob)VALUES(?, ?, ?, ?)');
-        deepEqual(context.spy.args[11][1],
+        equal(context.spy.args[10][0],
+              'INSERT INTO attachment(id, attachment, ' +
+              'part, blob)VALUES(?, ?, ?, ?)');
+        deepEqual(context.spy.args[10][1],
                   ['foo', 'attachment', 1,
                    'data:;base64,YWFhYWFhYWFhYWFhYWFhYWFhYWE=']);
-        equal(context.spy.args[12][0],
-              'SELECT part, blob FROM blob WHERE id = ? ' +
+        equal(context.spy.args[11][0],
+              'SELECT part, blob FROM attachment WHERE id = ? ' +
               'AND attachment = ? AND part >= ?');
-        deepEqual(context.spy.args[12][1], ['foo', 'attachment', -1]);
+        deepEqual(context.spy.args[11][1], ['foo', 'attachment', -1]);
       })
       .then(function () {
         return deleteWebsql();
@@ -1058,7 +1049,7 @@
   test("spy webSQL usage", function () {
     var context = this;
     stop();
-    expect(20);
+    expect(18);
     context.spy.then(function (value) {
       context.spy = value;
       return;
@@ -1082,25 +1073,23 @@
               'SELECT id FROM document WHERE id = ?');
         deepEqual(context.spy.args[6][1], ['foo']);
         equal(context.spy.args[7][0],
-              'INSERT OR REPLACE INTO attachment(id, attachment) VALUES(?, ?)');
+              'DELETE FROM attachment WHERE id = ? AND attachment = ?');
         deepEqual(context.spy.args[7][1], ['foo', 'attachment']);
         equal(context.spy.args[8][0],
-              'DELETE FROM blob WHERE id = ? AND attachment = ?');
-        deepEqual(context.spy.args[8][1], ['foo', 'attachment']);
-        equal(context.spy.args[9][0],
-              'INSERT INTO blob(id, attachment, part, blob)' +
+              'INSERT INTO attachment(id, attachment, part, blob)' +
               'VALUES(?, ?, ?, ?)');
-        deepEqual(context.spy.args[9][1],
+        deepEqual(context.spy.args[8][1],
                   ['foo', 'attachment', -1, 'text/plain;charset=utf-8']);
-        equal(context.spy.args[10][0],
-              'INSERT INTO blob(id, attachment, part, blob)VALUES(?, ?, ?, ?)');
-        deepEqual(context.spy.args[10][1],
+        equal(context.spy.args[9][0],
+              'INSERT INTO attachment(id, attachment, ' +
+              'part, blob)VALUES(?, ?, ?, ?)');
+        deepEqual(context.spy.args[9][1],
                   ['foo', 'attachment', 0,
                    "data:;base64,YWFhYWFhYWFhYWFhYWFhYWF" +
                    "hYWFhYWFhYWFhYWFhYWFhYWFhYWFhYQ=="]);
-        equal(context.spy.args[11][0],
+        equal(context.spy.args[10][0],
               'DELETE FROM attachment WHERE id = ? AND attachment = ?');
-        deepEqual(context.spy.args[11][1], ['foo', 'attachment']);
+        deepEqual(context.spy.args[10][1], ['foo', 'attachment']);
       })
       .then(function () {
         return deleteWebsql();
@@ -1132,19 +1121,17 @@
         return context.jio.putAttachment("foo", attachment, big_string);
       })
       .then(function () {
-        return exec("SELECT id, attachment FROM attachment UNION ALL" +
-                    " SELECT id, attachment FROM blob", []);
+        return exec("SELECT id, attachment FROM attachment", []);
       })
       .then(function (selectResult) {
-        equal(selectResult.rows.length, 3, "putAttachment done");
+        equal(selectResult.rows.length, 2, "putAttachment done");
       })
       .then(function () {
         return context.jio.removeAttachment("foo", attachment);
       })
       .then(function (result) {
         equal(result, attachment);
-        return exec("SELECT id, attachment FROM attachment UNION ALL" +
-                    " SELECT id, attachment FROM blob", []);
+        return exec("SELECT id, attachment FROM attachment", []);
       })
       .then(function (selectResult) {
         equal(selectResult.rows.length, 0, "removeAttachment done");
@@ -1178,7 +1165,7 @@
   test("spy webSQL usage", function () {
     var context = this;
     stop();
-    expect(20);
+    expect(18);
     context.spy.then(function (value) {
       context.spy = value;
       return;
@@ -1199,24 +1186,23 @@
               'SELECT id FROM document WHERE id = ?');
         deepEqual(context.spy.args[6][1], ['foo']);
         equal(context.spy.args[7][0],
-              'INSERT OR REPLACE INTO attachment(id, attachment) VALUES(?, ?)');
+              'DELETE FROM attachment WHERE id = ? AND attachment = ?');
         deepEqual(context.spy.args[7][1], ['foo', 'attachment']);
         equal(context.spy.args[8][0],
-              'DELETE FROM blob WHERE id = ? AND attachment = ?');
-        deepEqual(context.spy.args[8][1], ['foo', 'attachment']);
-        equal(context.spy.args[9][0],
-              'INSERT INTO blob(id, attachment, part, blob)' +
+              'INSERT INTO attachment(id, attachment, part, blob)' +
               'VALUES(?, ?, ?, ?)');
-        deepEqual(context.spy.args[9][1],
+        deepEqual(context.spy.args[8][1],
                   ['foo', 'attachment', -1, 'text/plain;charset=utf-8']);
-        equal(context.spy.args[10][0],
-              'INSERT INTO blob(id, attachment, part, blob)VALUES(?, ?, ?, ?)');
-        deepEqual(context.spy.args[10][1],
+        equal(context.spy.args[9][0],
+              'INSERT INTO attachment(id, attachment, ' +
+              'part, blob)VALUES(?, ?, ?, ?)');
+        deepEqual(context.spy.args[9][1],
                   ['foo', 'attachment', 0,
                    'data:;base64,YWFhYWFhYWFhYWFhYWFhYWFhYWE=']);
-        equal(context.spy.args[11][0],
-              'INSERT INTO blob(id, attachment, part, blob)VALUES(?, ?, ?, ?)');
-        deepEqual(context.spy.args[11][1],
+        equal(context.spy.args[10][0],
+              'INSERT INTO attachment(id, attachment, ' +
+              'part, blob)VALUES(?, ?, ?, ?)');
+        deepEqual(context.spy.args[10][1],
                   ['foo', 'attachment', 1,
                    'data:;base64,YWFhYWFhYWFhYWFhYWFhYWFhYWE=']);
       })
@@ -1250,11 +1236,10 @@
         return context.jio.putAttachment("foo", attachment, big_string);
       })
       .then(function () {
-        return exec("SELECT id, attachment FROM attachment UNION ALL" +
-                    " SELECT id, attachment FROM blob", []);
+        return exec("SELECT id, attachment FROM attachment", []);
       })
       .then(function (selectResult) {
-        equal(selectResult.rows.length, 4, "putAttachment done");
+        equal(selectResult.rows.length, 3, "putAttachment done");
       })
       .then(function () {
         return context.jio.getAttachment("foo", attachment);

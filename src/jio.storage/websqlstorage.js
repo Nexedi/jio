@@ -55,21 +55,17 @@
       "CREATE TABLE IF NOT EXISTS document" +
         "(id VARCHAR PRIMARY KEY NOT NULL, data TEXT)",
       "CREATE TABLE IF NOT EXISTS attachment" +
-        "(id VARCHAR, attachment VARCHAR, " +
-        "CONSTRAINT uniq UNIQUE (id, attachment))",
-      "CREATE TABLE IF NOT EXISTS blob" +
         "(id VARCHAR, attachment VARCHAR, part INT, blob TEXT)",
-      "CREATE TRIGGER IF NOT EXISTS remove " +
-        "BEFORE DELETE ON document FOR EACH ROW BEGIN DELETE " +
-        "FROM attachment WHERE id = OLD.id;END;",
       "CREATE TRIGGER IF NOT EXISTS removeAttachment " +
-        "BEFORE DELETE ON attachment FOR EACH ROW " +
-        "BEGIN DELETE from blob WHERE id = OLD.id " +
-        "AND attachment = OLD.attachment;END;"
+        "BEFORE DELETE ON document FOR EACH ROW " +
+        "BEGIN DELETE from attachment WHERE id = OLD.id;END;",
+      "CREATE INDEX IF NOT EXISTS index_document ON document (id);",
+      "CREATE INDEX IF NOT EXISTS index_attachment " +
+        "ON attachment (id, attachment);"
     ];
     return new RSVP.Queue()
       .push(function () {
-        return queueSql(db, query_list, [[], [], [], [], []]);
+        return queueSql(db, query_list, []);
       });
   }
 
@@ -159,7 +155,7 @@
       .push(function () {
         return queueSql(db, [
           "SELECT id FROM document WHERE id = ?",
-          "SELECT attachment FROM attachment WHERE id = ?"
+          "SELECT DISTINCT attachment FROM attachment WHERE id = ?"
         ], [[id], [id]]);
       })
       .push(function (result_list) {
@@ -183,7 +179,7 @@
       return jIO.util.readBlobAsDataURL(blob);
     })
       .push(function (strBlob) {
-        argument_list[index + 3].push(strBlob.currentTarget.result);
+        argument_list[index + 2].push(strBlob.currentTarget.result);
         return;
       });
   }
@@ -211,18 +207,16 @@
         if (result[0].rows.length === 0) {
           throw new jIO.util.jIOError("Cannot access subdocument", 404);
         }
-        query_list.push("INSERT OR REPLACE INTO attachment(id, attachment)" +
-                     " VALUES(?, ?)");
+        query_list.push("DELETE FROM attachment WHERE id = ? " +
+                        "AND attachment = ?");
         argument_list.push([id, name]);
-        query_list.push("DELETE FROM blob WHERE id = ? AND attachment = ?");
-        argument_list.push([id, name]);
-        query_list.push("INSERT INTO blob(id, attachment, part, blob)" +
+        query_list.push("INSERT INTO attachment(id, attachment, part, blob)" +
                      "VALUES(?, ?, ?, ?)");
         argument_list.push([id, name, -1,
                             blob.type || "application/octet-stream"]);
 
         for (i = 0, index = 0; i < blob_size; i += part_size, index += 1) {
-          query_list.push("INSERT INTO blob(id, attachment, part, blob)" +
+          query_list.push("INSERT INTO attachment(id, attachment, part, blob)" +
                        "VALUES(?, ?, ?, ?)");
           argument_list.push([id, name, index]);
           sendBlobPart(blob.slice(i, i + part_size), argument_list, index,
@@ -269,7 +263,7 @@
         return that._init_db_promise;
       })
       .push(function () {
-        var command = "SELECT part, blob FROM blob WHERE id = ? AND " +
+        var command = "SELECT part, blob FROM attachment WHERE id = ? AND " +
           "attachment = ? AND part >= ?",
           argument_list = [id, name, start_index];
 
