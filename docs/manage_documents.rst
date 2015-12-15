@@ -29,39 +29,16 @@ attachments are simple strings.
 
     {
         // document metadata
-        _id: 'Identifier',
         title: 'A Title!',
         creator: 'Mr.Author'
     }
-
-You can also retrieve document attachment metadata in this object.
-
-.. code-block:: javascript
-
-    {
-        // document metadata
-        _id   : 'Identifier',
-        title : 'A Title!',
-        creator: 'Mr.Author',
-        _attachments: {
-            // attachment metadata
-            'body.html': {
-                length: 12893,
-                digest: 'sha256-XXXX...',
-                content_type: 'text/html'
-            }
-        }
-    }
-
 
 :ref:`Here <metadata-head>` is a draft about metadata to use with jIO.
 
 Basic Methods
 -------------
 
-Below you can see examples of the main jIO methods. All examples are using
-revisions (as in revision storage or replicated revision storage), so you can
-see how method calls should be made with either of these storages.
+Below you can see examples of the main jIO methods.
 
 .. code-block:: javascript
 
@@ -69,48 +46,48 @@ see how method calls should be made with either of these storages.
     var jio_instance = jIO.createJIO(storage_description);
 
     // create and store new document
-    jio_instance.post({title: 'some title'}).
+    jio_instance.post('document_name').
       then(function (response) {
         // console.log(response);
       });
 
     // create or update an existing document
-    jio_instance.put({_id: 'my_document', title: 'New Title'}).
+    jio_instance.put('document_name', {}).
       then(function (response) {
         // console.log(response);
       });
 
     // add an attachment to a document
-    jio_instance.putAttachment({_id: 'my_document',
-                                _attachment: 'its_attachment',
-                                _data: 'abc',
-                                _mimetype: 'text/plain'}).
+    jio_instance.putAttachment('document_name',
+                               'attachment_name',
+                               new_blob([data], {'type' : data_mimetype});
+      ).
       then(function (response) {
         // console.log(response);
       });
 
     // read a document
-    jio_instance.get({_id: 'my_document'}).
+    jio_instance.get('document_name').
       then(function (response) {
         // console.log(response);
       });
 
     // read an attachment
-    jio_instance.getAttachment({_id: 'my_document',
-                                _attachment: 'its_attachment'}).
+    jio_instance.getAttachment('document_name',
+                               'attachment_name').
       then(function (response) {
         // console.log(response);
       });
 
     // delete a document and its attachment(s)
-    jio_instance.remove({_id: 'my_document'}).
+    jio_instance.remove('document_name').
       then(function (response) {
         // console.log(response);
       });
 
     // delete an attachment
-    jio_instance.removeAttachment({_id: 'my_document',
-                                   _attachment: 'its_attachment'}).
+    jio_instance.removeAttachment('document_name',
+                                  'attachment_name').
       then(function (response) {
         // console.log(response);
       });
@@ -157,87 +134,37 @@ Here is a list of responses returned by jIO according to methods and options:
 ==============================================   ==================   ===============================================
 Available for                                    Option               Response (Callback first parameter)
 ==============================================   ==================   ===============================================
-``.post()``, ``.put()``, ``.remove()``           Any                  .. code-block:: javascript
-                                                  
-                                                                       {
-                                                                         result: 'success',
-                                                                         method: 'post',
-                                                                         // or put or remove
-                                                                         id: 'my_doc_id',
-                                                                         status: 204,
-                                                                         statusText: 'No Content'
-                                                                       }
-``.putAttachment()``, ``.removeAttachment()``    Any                  .. code-block:: javascript
-                                                 
-                                                                       {
-                                                                         result: 'success',
-                                                                         method: 'putAttachment',
-                                                                         // or removeAttachment
-                                                                         id: 'my_doc_id',
-                                                                         attachment: 'my_attachment_id',
-                                                                         status: 204,
-                                                                         statusText: 'No Content'
-                                                                       }
-``.get()``                                       Any                  .. code-block:: javascript
-                                                 
-                                                                       {
-                                                                         result: 'success',
-                                                                         method: 'get',
-                                                                         id: 'my_doc_id',
-                                                                         status: 200,
-                                                                         statusText: 'Ok',
-                                                                         data: {
-                                                                           // Here, the document metadata
-                                                                         }
-                                                                       }
+``.post()``, ``.put()``, ``.remove()``           Any                  id of the document affected (string)
+
+``.putAttachment()``, ``.removeAttachment()``    Any                  no specific value
+
+``.get()``                                       Any                  document_metadata (object)
 ``.getAttachment()``                             Any                  .. code-block:: javascript
-                                                 
-                                                                       {
-                                                                         result: 'success',
-                                                                         method: 'getAttachment',
-                                                                         id: 'my_doc_id',
-                                                                         attachment: 'my_attachment_id',
-                                                                         status: 200,
-                                                                         statusText: 'Ok',
-                                                                         data: Blob // Here, the attachment content
-                                                                       }
+
+                                                                        new Blob([data], {"type": content_type})
+
 ``.allDocs()``                                   No option            .. code-block:: javascript
-                                                 
+
                                                                        {
-                                                                         result: 'success',
-                                                                         method: 'allDocs',
-                                                                         id: 'my_doc_id',
-                                                                         status: 200,
-                                                                         statusText: 'Ok',
-                                                                         data:  {
                                                                            total_rows: 1,
                                                                            rows: [{
                                                                              id: 'mydoc',
-                                                                             key: 'mydoc', // optional
                                                                              value: {},
                                                                            }]
                                                                          }
-                                                                       }
+
 ``.allDocs()``                                   include_docs: true   .. code-block:: javascript
-                                                 
+
                                                                        {
-                                                                         result: 'success',
-                                                                         method: 'allDocs',
-                                                                         id: 'my_doc_id',
-                                                                         status: 200,
-                                                                         statusText: 'Ok',
-                                                                         data:  {
                                                                            total_rows: 1,
                                                                            rows: [{
                                                                              id: 'mydoc',
-                                                                             key: 'mydoc', // optional
-                                                                             value: {},
-                                                                             doc: {
+                                                                             value: {
                                                                                // Here, 'mydoc' metadata
                                                                              }
                                                                            }]
                                                                          }
-                                                                       }
+
 ==============================================   ==================   ===============================================
 
 
@@ -248,12 +175,7 @@ In case of error, the ``errorCallback`` first parameter looks like:
 .. code-block:: javascript
 
     {
-      result: 'error',
-      method: 'get',
-      status: 404,
-      statusText: 'Not Found',
-      error: 'not_found',
-      reason: 'document missing',
+      status_code: 404,
       message: 'Unable to get the requested document'
     }
 
@@ -267,59 +189,42 @@ The following example creates a new jIO in localStorage and then posts a documen
 .. code-block:: javascript
 
     // create a new jIO
-    var jio_instance = jIO.createJIO({
-      type: 'local',
-      username: 'usr',
-      application_name: 'app'
-    });
+    var jio_instance = jIO.createJIO({type: 'indexeddb'});
 
-    // post the document 'metadata'
-    jio_instance.post({
+    // post the document 'myVideo'
+    jio_instance.put( 'metadata', {
       title       : 'My Video',
       type        : 'MovingImage',
       format      : 'video/ogg',
       description : 'Images Compilation'
-    }, function (err, response) {
-      var id;
-      if (err) {
-        return alert('Error posting the document meta');
-      }
-      id = response.id;
+    })
+    .push(undefined, function(err) {
+        return alert('Error posting the document metadata');
+      });
 
       // post a thumbnail attachment
-      jio_instance.putAttachment({
-        _id: id,
-        _attachment: 'thumbnail',
-        _data: my_image,
-        _mimetype: 'image/jpeg'
-      }, function (err, response) {
-        if (err) {
-          return alert('Error attaching thumbnail');
-        }
-
-        // post video attachment
-        jio_instance.putAttachment({
-          _id: id,
-          _attachment: 'video',
-          _data: my_video,
-          _mimetype: 'video/ogg'
-        }, function (err, response) {
-          if (err) {
-            return alert('Error attaching the video');
-          }
-          alert('Video Stored');
-        });
+    jio_instance.putAttachment('metadatda',
+      'thumbnail',
+      new Blob([my_image], {type: 'image/jpeg'})
+      ).push(undefined, function(err) {
+      return alert('Error attaching thumbnail');
       });
-    });
 
+      // post video attachment
+      jio_instance.putAttachment('metadatda',
+        'video',
+        new Blob([my_video], {type: 'video/ogg'})
+      ).push(undefined, function(err) {
+                return alert('Error attaching video');
+        });
+        alert('Video Stored');
 
-localStorage now contains:
+indexedDB Storage now contains:
 
 .. code-block:: javascript
 
     {
-      "jio/local/usr/app/12345678-1234-1234-1234-123456789012": {
-        "_id": "12345678-1234-1234-1234-123456789012",
+      "/myVideo/": {
         "title": "My Video",
         "type": "MovingImage",
         "format": "video/ogg",
@@ -337,7 +242,7 @@ localStorage now contains:
           }
         }
       },
-      "jio/local/usr/app/myVideo/thumbnail": "/9j/4AAQSkZ...",
-      "jio/local/usr/app/myVideo/video": "..."
+      "/myVideo/thumbnail": "...",
+      "/myVideo/video": "..."
     }
 
