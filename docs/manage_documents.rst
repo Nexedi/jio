@@ -46,13 +46,13 @@ Below you can see examples of the main jIO methods.
     var jio_instance = jIO.createJIO(storage_description);
 
     // create and store new document
-    jio_instance.post('document_name').
+    jio_instance.post({title: 'my document'}).
       then(function (response) {
         // console.log(response);
       });
 
     // create or update an existing document
-    jio_instance.put('document_name', {}).
+    jio_instance.put('document_name', {title: 'another document'}).
       then(function (response) {
         // console.log(response);
       });
@@ -60,7 +60,7 @@ Below you can see examples of the main jIO methods.
     // add an attachment to a document
     jio_instance.putAttachment('document_name',
                                'attachment_name',
-                               new_blob([data], {'type' : data_mimetype});
+                               new Blob([data], {'type' : data_mimetype});
       ).
       then(function (response) {
         // console.log(response);
