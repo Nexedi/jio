@@ -38,9 +38,8 @@ jIO documentation
 
     getting_started
     manage_documents
-    revision_storages
+    replicate_storage
     available_storages
-    gid_storage
     query
     keys
     metadata

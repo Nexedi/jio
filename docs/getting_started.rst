@@ -79,8 +79,6 @@ Getting started
                              |  Deletes a document's attachment
     ``.allDocs()``           |  ``my_jio.allDocs([options]);``
                              |  Retrieves a list of existing documents
-    ``.check()``             |  ``my_jio.check(document, [options]);``
-                             |  Checks the document state
     ``.repair()``            |  ``my_jio.repair(document, [options]);``
                              |  Repairs the document
     =======================  ======================================================
@@ -122,29 +120,29 @@ Storage dependencies
 Storage connectors
 ^^^^^^^^^^^^^^^^^^
 
-* localstorage.js
-* davstorage.js
-* searchableencryptionstorage.js (depends on sjcl) (WIP)
-* s3storage.js (depends on sha1, jQuery) (WIP)
+* Localstorage
+* MemoryStorage
+* IndexedDB
+* WebSQL
+* DavStorage
+* Dropbox
+* Google Drive
+* ERP5Storage
+* s3storage.js (WIP)
 * xwikistorage.js (depends on jQuery) (WIP)
-* erp5storage.js (WIP)
-* restsqlstorage.js (depends on jQuery) (WIP)
-* mioga2storage.js (depends on jQuery) (WIP)
 
 Storage handlers
 ^^^^^^^^^^^^^^^^
 
-* indexstorage.js
-* gidstorage.js
-* splitstorage.js (WIP)
-* replicatestorage.js (WIP)
-
-Revision based storage handlers
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-* revisionstorage.js (depends on sha256)
-* replicaterevisionstorage.js
-
+* Zipstorage
+* ShaStorage
+* UUIDStorage
+* QueryStorage
+* CryptStorage
+* UnionStorage
+* FileSystemBridgeStorage
+* Document Storage
+* Replicate Storage
 
 Unit tests
 ^^^^^^^^^^
@@ -155,9 +153,5 @@ the test suite with each release.
 Fork jIO
 ^^^^^^^^
 
-The same source code is kept in three synchronized repositories.
-Feel free to use any of them.
-
-* `GitHub <https://github.com/nexedi/jio>`_: ``git clone https://github.com/nexedi/jio.git``
-* `Gitorius <https://gitorious.org/nexedi/jio>`_: ``git clone https://git.gitorious.org/nexedi/jio.git``
-* `Git Erp5 <http://git.erp5.org/gitweb/jio.git>`_ (read only): ``git clone http://git.erp5.org/repos/jio.git``
+| Feel free to use the Gitlab repository:
+| `GitLab <https://lab.nexedi.com/nexedi/jio.git>`_: ``git clone https://lab.nexedi.com/nexedi/jio.git``

@@ -16,80 +16,114 @@ When building storage trees, there is no limit on the number of storages you
 can use. The only thing you have to be aware of is compatibility of simple and
 revision based storages.
 
-
 Connectors
 ----------
 
 LocalStorage
 ^^^^^^^^^^^^
 
-Three methods are provided:
+This storage has only one document, so **post**, **put**, **remove** and **get** method are useless on it.
 
-* ``.createDescription(username, [application_name], [mode='localStorage'])``
-* ``.createLocalDescription(username, [application_name])``
-* ``.createMemoryDescription(username, [application_name])``
+===============   ==========  ==========  ============================================================
+parameter         required?   type        description
+===============   ==========  ==========  ============================================================
+``type``          yes         string      name of the storage type (here: "local")
+``sessiononly``   no          boolean     | false: create a storage with unlimited duration.
+                                          | true: the storage duration is limited to the user session.
+                                          | (default to false)
+===============   ==========  ==========  ============================================================
 
-All parameters are strings.
 
-Examples:
+Example:
 
 .. code-block:: javascript
 
-    // to work on browser localStorage
-    var jio = jIO.createJIO(local_storage.createDescription('me'));
+    var jio = jIO.createJIO({
+      type:        "local",
+      sessiononly: true
+    });
 
-    // to work on browser memory
-    var jio = jIO.createJIO(local_storage.createMemoryDescription('me'));
+MemoryStorage
+^^^^^^^^^^^^^
+| Stores the data in a Javascript object, in memory.
+| The storage's data isn't saved when your web page is closed or reloaded.
+| The storage doesn't take any argument at creation.
 
-    // or
-    {
-      "type": "local",
-      "username": "me",
-      "application_name": "my app name", // optional
-      "mode": "memory" // optional, "localStorage" by default
-    }
+Example:
+
+.. code-block:: javascript
+
+    var jio = jIO.createJIO({type: "memory"});
+
+
+IndexedDB
+^^^^^^^^^^^^
+
+=================   ==========  ==========  ==========================================================
+parameter           required?   type        description
+=================   ==========  ==========  ==========================================================
+``type``            yes         string      name of the storage type (here: "indexeddb")
+``database``        yes         string      name of the database.
+=================   ==========  ==========  ==========================================================
+
+
+Example:
+
+.. code-block:: javascript
+
+  {
+    "type":     "indexeddb",
+    "database": "mydb"
+  }
+
+WebSQL
+^^^^^^^^^^^^
+
+=================   ==========  ==========  ==========================================================
+parameter           required?   type        description
+=================   ==========  ==========  ==========================================================
+``type``            yes         string      name of the storage type (here: "websql")
+``database``        yes         string      name of the database.
+=================   ==========  ==========  ==========================================================
+
+
+Example:
+
+.. code-block:: javascript
+
+  {
+    "type":     "websql",
+    "database": "mydb"
+  }
+
 
 DavStorage
 ^^^^^^^^^^
 
-The method ``dav_storage.createDescription()`` generates a DAV storage description for
-*none*, *basic* or *digest* authentication.
+================   ==========  ==========  ==========================================================
+parameter          required?   type        description
+================   ==========  ==========  ==========================================================
+``type``           yes         string      name of the storage type (here: "dav")
+``url``            yes         string      url of your webdav server
+``basic_login``    no          string      | login and password of your dav, base64 encoded like this:
+                                           | ``btoa(username + ":" + password)``
+================   ==========  ==========  ==========================================================
 
-NB: digest **is not implemented yet**.
 
-.. code-block:: javascript
-
-  dav_storage.createDescription(url, auth_type,
-                                [realm], [username], [password]);
-
-All parameters are strings.
-
-=============   ========================
-parameter       required?
-=============   ========================
-``url``         yes
-``auth_type``   yes
-``realm``       if auth_type == 'digest'
-``username``    if auth_type != 'none'
-``password``    if auth-type != 'none'
-=============   ========================
-
-If ``auth_type`` is the string ``"none"``, then ``realm``, ``username`` and ``password`` are never used.
-
-Descriptions:
+Example:
 
 .. code-block:: javascript
 
   // No authentication
   {
     "type": "dav",
-    "url": url
+    "url":  url
   }
 
   // Basic authentication
   {
-    "type": "dav",
-    "url": "url,
+    "type":        "dav",
+    "url":         url,
     "basic_login": btoa(username + ":" + password)
   }
 
@@ -98,169 +132,251 @@ Descriptions:
 **Be careful**: The generated description never contains a readable password, but
 for basic authentication, the password is just base64 encoded.
 
-S3Storage
-^^^^^^^^^
 
-Live tests OK!
+Dropbox
+^^^^^^^
 
-Here is a basic description for jIO. Documentation comming soon.
+=================   ==========  ==========  ==========================================================
+parameter           required?   type        description
+=================   ==========  ==========  ==========================================================
+``type``            yes         string      name of the storage type (here: "dropbox")
+``access_token``    yes         string      access token for your account.
+                                            See specific documentation on how to retreive it.
+``root``            no          string      | "dropbox" for full access to account files,
+                                            | "sandbox" for app limited file access.
+                                            | default to "dropbox".
+=================   ==========  ==========  ==========================================================
+
+
+Example:
 
 .. code-block:: javascript
 
   {
-    "type": "s3",
-    "AWSIdentifier": "my aws identifier",
-    "password": "my password",
-    "server": "bucket_name"
+    "type":         "dropbox",
+    "access_token": "sample_token"
+    "root":         "dropbox"
   }
 
-XWikiStorage
+Google Drive
 ^^^^^^^^^^^^
 
-Work is in progress.
+=================   ==========  ==========  ==========================================================
+parameter           required?   type        description
+=================   ==========  ==========  ==========================================================
+``type``            yes         string      name of the storage type (here: "gdrive")
+``access_token``    yes         string      access token for your account.
+                                            See specific documentation on how to retreive it.
+``trashing``        no          boolean     | true: sends files to the trash bin when doing a "remove"
+                                            | false: deletes permanently files when doing a "remove"
+                                            | default to true.
+=================   ==========  ==========  ==========================================================
 
-Searchable Encryption Storage
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Comes with a specific server with can query encrypted documents.
-
-Work is in progress. Documentation comming soon.
+Example:
 
 .. code-block:: javascript
 
   {
-    "type": "searchableencryption",
-    "password": "your password",
-    "url": "http://your/url"
+    "type":         "gdrive",
+    "access_token": "sample_token"
+    "trashing":     true
+  }
+
+ERP5Storage
+^^^^^^^^^^^
+===========================   ==========  ==========  ==========================================================
+parameter                     required?   type        description
+===========================   ==========  ==========  ==========================================================
+``type``                      yes         string      name of the storage type (here: "erp5")
+``url``                       yes         string      url of your erp5 account.
+``default_view_reference``    no          string      | reference of the action used
+                                                      | for the delivering of the document
+===========================   ==========  ==========  ==========================================================
+
+Example:
+
+.. code-block:: javascript
+
+  {
+    "type": "erp5",
+    "url":  erp5_url
   }
 
 Handlers
 --------
 
-IndexStorage
-^^^^^^^^^^^^
-
-This handler indexes documents metadata into a database (which is a simple
-document) to increase the speed of ``.allDocs()`` requests. However, it is not able to
-manage the ``include_docs`` option.
-
-Here is the description:
-
-.. code-block:: javascript
-
-   {
-     type: 'index',
-     indices: [{
-       // doc id where to store indices
-       id: 'index_title_subject.json',
-       // metadata to index
-       index: ['title', 'subject'],
-       attachment: 'db.json', // default 'body'
-       // additional metadata to add to database, default undefined
-       metadata: {
-         type: 'Dataset',
-         format: 'application/json',
-         title: 'My index database',
-         creator: 'Me'
-       },
-       // default equal to parent sub_storage field
-       sub_storage: <sub storage where to store index>
-     }, {
-       id: 'index_year.json',
-       index: 'year'
-       ...
-     }],
-     sub_storage: <sub storage description>
-   }
-
-
-GIDStorage
+Zipstorage
 ^^^^^^^^^^
 
-:ref:`Full description here <gid-storage>`.
+This handler compresses and decompresses files to reduce network and storage usage.
 
-SplitStorage
-^^^^^^^^^^^^
-
-Work is in progress. The interoperability is not enabled yet.
-
-This storage splits metadata and attachment data to *n* parts where *n* is the
-number of sub storages. Each parts are stored on one sub storage only.
+Usage:
 
 .. code-block:: javascript
 
-   {
-     type: 'split',
-     storage_list: [
-       <sub storage description>,
-       ...
-     ]
-   }
+  {
+    "type":        "zip",
+    "sub_storage": <your storage>
+  }
 
-Other split modes will be added later.
+ShaStorage
+^^^^^^^^^^
 
+This handler provides a post method that creates a document that has for name the SHA-1 hash of his parameters.
+
+.. code-block:: javascript
+
+  {
+    "type":        "sha",
+    "sub_storage": <your storage>
+  }
+
+UUIDStorage
+^^^^^^^^^^^
+
+This handler provides a post method to create a document that has a unique ID for name.
+
+.. code-block:: javascript
+
+  {
+    "type":        "uuid",
+    "sub_storage": <your storage>
+  }
+
+QueryStorage
+^^^^^^^^^^^^
+
+This handler provides an allDocs method with queries support to the substorage.
+
+.. code-block:: javascript
+
+  {
+    "type":        "query",
+    "sub_storage": <your storage>
+  }
+
+CryptStorage
+^^^^^^^^^^^^
+
+| This handler encrypts and decrypts attachments before storing them.
+| You need to generate a Crypto key at the JSON format to use the handler.
+| (see https://developer.mozilla.org/fr/docs/Web/API/Window/crypto for more informations)
+
+Usage:
+
+.. code-block:: javascript
+
+  var key,
+    jsonKey,
+    jio;
+
+  //creation of an encryption/decryption key.
+
+  crypto.subtle.generateKey({name: "AES-GCM",length: 256},
+                            (true), ["encrypt", "decrypt"])
+  .then(function(res){key = res;});
+  window.crypto.subtle.exportKey("jwk", key)
+  .then(function(res){jsonKey = res})
+
+  //creation of the storage
+
+  jio = jIO.createJIO({
+  {
+    "type":        "crypt",
+    "key":         json_key
+    "sub_storage": <your storage>
+  }
+
+
+UnionStorage
+^^^^^^^^^^^^
+
+This handler takes in argument an array of storages.
+When using a method, UnionStorage tries it on the first storage of the array,
+and, in case of failure, tries with the next storage,
+and repeats the operation until success, or end of storage's array.
+
+.. code-block:: javascript
+
+  {
+    "type":        "union",
+    "storage_list": [
+    sub_storage_description_1,
+    sub_storage_description_2,
+    sub_storage_description_X
+   ]
+  }
+
+FileSystemBridgeStorage
+^^^^^^^^^^^^^^^^^^^^^^^
+
+This handler adds an abstraction level on top of the webDav Jio storage,
+ensuring each document has only one attachment, and limiting the storage to one repertory.
+
+.. code-block:: javascript
+
+  {
+    "type": "drivetojiomapping",
+    "sub_storage": <your dav storage>
+  }
+
+Document Storage
+^^^^^^^^^^^^^^^^
+
+This handler creates a storage from a document in a storage,
+by filling his attachments with a new jIO storage.
+
+======================   ==========  ==========  ============================================================
+parameter                required?   type        description
+======================   ==========  ==========  ============================================================
+``type``                 yes         string      name of the storage type (here: "document")
+``document_id``          no          string      id of the document to use.
+``repair_attachment``    no          boolean     verify if the document is in good state. (default to false)
+======================   ==========  ==========  ============================================================
 
 Replicate Storage
 ^^^^^^^^^^^^^^^^^
 
-Work is in progress.
+Replicate Storage synchronizes documents between a local and a remote storage.
+
+===============================   ==========  ==========  ============================================================
+parameter                         required?   type        description
+===============================   ==========  ==========  ============================================================
+``type``                          yes         string      name of the storage type (here: "replicate")
+``local_sub_storage``             yes         object      local sub_storage description.
+``remote_sub_storage``            yes         object      remote sub_storage description.
+``query_options``                 no          object      query object to limit the synchronisation to specific files.
+``use_remote_post``               no          boolean     | true: at file modification, modifies the local file id.
+                                                          | false:  at file modification, modifies the remote file id.
+                                                          | default to false.
+``conflict_handling``             no          number      | 0: no conflict resolution (throws error)
+                                                          | 1: keep the local state.
+                                                          | 2: keep the remote state.
+                                                          | 3: keep both states (no signature update)
+                                                          | default to 0.
+``check_local_modification``      no          boolean     synchronise when local files are modified.
+``check_local_creation``          no          boolean     synchronise when local files are created.
+``check_local_deletion``          no          boolean     synchronise when local files are deleted.
+``check_remote_modification``     no          boolean     synchronise when remote files are modified.
+``check_remote_creation``         no          boolean     synchronise when local files are created.
+``check_remote_deletion``         no          boolean     synchronise when local files are deleted.
+===============================   ==========  ==========  ============================================================
+
+synchronisation parameters are set by default to true.
 
 .. code-block:: javascript
 
    {
-     type: 'replicate',
-     storage_list: [
-       <sub storage description>,
-       ...
-     ]
+     type:                     'replicate',
+     local_sub_storage:        { 'type': 'local'}
+     remote_sub_storage:       {
+                                  'type':        'dav',
+                                  'url':         'http://mydav.com',
+                                  'basic_login': 'aGFwcHkgZWFzdGVy'
+                               }
+     use_remote_post:          false,
+     conflict_handling :       2,
+     check_local_creation:     false,
+     check_remote_deletion:    false
    }
-
-
-Revision Based Handlers
------------------------
-
-A revision based handler is a storage which is able to do some document
-versioning using simple storages listed above.
-
-On jIO command parameter, ``_id`` is still used to identify a document, but
-another id ``_rev`` must be defined to use a specific revision of that document.
-
-On command responses, you will find another field ``rev`` which will represent the
-new revision produced by your action. All the document history is kept unless
-you decide to delete older revisions.
-
-Other fields ``conflicts``, ``revisions`` and ``revs_info`` can be returned if the
-options **conflicts: true**, **revs: true** or **revs_info: true** are set.
-
-Revision Storage
-^^^^^^^^^^^^^^^^
-
-This backend uses its sub storage to manage document and their revision. For
-more information, :ref:`see here <revision-storages-conflicts-and-resolution>`.
-
-Description:
-
-.. code-block:: javascript
-
-  {
-    "type": "revision",
-    "sub_storage": <sub storage description>
-  }
-
-
-Replicate Revision Storage
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Replicate revisions across multiple revision based storages.
-
-Description:
-
-.. code-block:: javascript
-
-  {
-    "type": "revision",
-    "storage_list": [
-      <revision based sub storage description>,
-      ...
-    ]
-  }

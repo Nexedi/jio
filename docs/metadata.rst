@@ -58,11 +58,6 @@ List of metadata to use
 Identification
 ^^^^^^^^^^^^^^
 
-* **_id**
-
-  A specific jIO metadata which helps the storage to find a document
-  (can be a real path name, a dc:identifier, a uuid, ...). **String Only**
-
 * **identifier**
 
   | ``{"identifier": "http://domain/jio_home_page"}``
