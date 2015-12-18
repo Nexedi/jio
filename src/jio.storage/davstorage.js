@@ -31,6 +31,13 @@
       }
       options.headers.Authorization = storage._authorization;
     }
+
+    if (storage._with_credentials !== undefined) {
+      if (options.xhrFields === undefined) {
+        options.xhrFields = {};
+      }
+      options.xhrFields.withCredentials = storage._with_credentials;
+    }
 //       if (start !== undefined) {
 //         if (end !== undefined) {
 //           headers.Range = "bytes=" + start + "-" + end;
@@ -78,7 +85,7 @@
     if (typeof spec.basic_login === 'string') {
       this._authorization = "Basic " + spec.basic_login;
     }
-
+    this._with_credentials = spec.with_credentials;
   }
 
   DavStorage.prototype.put = function (id, param) {

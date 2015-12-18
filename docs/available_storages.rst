@@ -100,14 +100,17 @@ Example:
 DavStorage
 ^^^^^^^^^^
 
-================   ==========  ==========  ==========================================================
-parameter          required?   type        description
-================   ==========  ==========  ==========================================================
-``type``           yes         string      name of the storage type (here: "dav")
-``url``            yes         string      url of your webdav server
-``basic_login``    no          string      | login and password of your dav, base64 encoded like this:
-                                           | ``btoa(username + ":" + password)``
-================   ==========  ==========  ==========================================================
+=====================   ==========  ==========  ==========================================================
+parameter               required?   type        description
+=====================   ==========  ==========  ==========================================================
+``type``                yes         string      name of the storage type (here: "dav")
+``url``                 yes         string      url of your webdav server
+``basic_login``         no          string      | login and password of your dav, base64 encoded like this:
+                                                | ``btoa(username + ":" + password)``
+``with_credentials``    no          boolean     | true: send domain cookie
+                                                | false: do not send domain cookie
+                                                | default to false.
+=====================   ==========  ==========  ==========================================================
 
 
 Example:

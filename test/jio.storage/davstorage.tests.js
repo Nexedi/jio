@@ -27,18 +27,20 @@
     equal(jio.__type, "dav");
     deepEqual(jio.__storage._url, domain);
     deepEqual(jio.__storage._authorization, undefined);
+    deepEqual(jio.__storage._with_credentials, undefined);
   });
 
   test("Storage store basic login", function () {
     var jio = jIO.createJIO({
       type: "dav",
       url: domain,
-      basic_login: basic_login
+      basic_login: basic_login,
+      with_credentials: true
     });
 
     equal(jio.__type, "dav");
     deepEqual(jio.__storage._url, domain);
-    deepEqual(jio.__storage._authorization, "Basic login:passwd");
+    deepEqual(jio.__storage._with_credentials, true);
   });
 
   /////////////////////////////////////////////////////////////////
@@ -54,7 +56,8 @@
       this.jio = jIO.createJIO({
         type: "dav",
         url: domain,
-        basic_login: basic_login
+        basic_login: basic_login,
+        with_credentials: true
       });
     },
     teardown: function () {
@@ -71,7 +74,7 @@
     }, ""]);
 
     stop();
-    expect(7);
+    expect(8);
 
     this.jio.put("/put1/", {})
       .then(function () {
@@ -85,6 +88,7 @@
           Authorization: "Basic login:passwd",
           "Content-Type": "text/plain;charset=utf-8"
         });
+        equal(server.requests[0].withCredentials, true);
       })
       .fail(function (error) {
         ok(false, error);
@@ -181,7 +185,8 @@
       this.jio = jIO.createJIO({
         type: "dav",
         url: domain,
-        basic_login: basic_login
+        basic_login: basic_login,
+        with_credentials: true
       });
     },
     teardown: function () {
@@ -198,7 +203,7 @@
     }, ""]);
 
     stop();
-    expect(7);
+    expect(8);
 
     this.jio.remove("/remove1/")
       .then(function () {
@@ -212,6 +217,7 @@
           Authorization: "Basic login:passwd",
           "Content-Type": "text/plain;charset=utf-8"
         });
+        equal(server.requests[0].withCredentials, true);
       })
       .fail(function (error) {
         ok(false, error);
@@ -270,7 +276,8 @@
       this.jio = jIO.createJIO({
         type: "dav",
         url: domain,
-        basic_login: basic_login
+        basic_login: basic_login,
+        with_credentials: true
       });
     },
     teardown: function () {
@@ -454,7 +461,8 @@
       this.jio = jIO.createJIO({
         type: "dav",
         url: domain,
-        basic_login: basic_login
+        basic_login: basic_login,
+        with_credentials: true
       });
     },
     teardown: function () {
@@ -690,7 +698,8 @@
       this.jio = jIO.createJIO({
         type: "dav",
         url: domain,
-        basic_login: basic_login
+        basic_login: basic_login,
+        with_credentials: true
       });
     },
     teardown: function () {
@@ -797,7 +806,7 @@
     }, ""]);
 
     stop();
-    expect(7);
+    expect(8);
 
     this.jio.putAttachment(
       "/putAttachment1/",
@@ -815,6 +824,7 @@
           Authorization: "Basic login:passwd",
           "Content-Type": "text/plain;charset=utf-8"
         });
+        equal(server.requests[0].withCredentials, true);
       })
       .fail(function (error) {
         ok(false, error);
@@ -837,7 +847,8 @@
       this.jio = jIO.createJIO({
         type: "dav",
         url: domain,
-        basic_login: basic_login
+        basic_login: basic_login,
+        with_credentials: true
       });
     },
     teardown: function () {
@@ -917,7 +928,7 @@
     }, ""]);
 
     stop();
-    expect(7);
+    expect(8);
 
     this.jio.removeAttachment(
       "/removeAttachment1/",
@@ -934,6 +945,7 @@
           Authorization: "Basic login:passwd",
           "Content-Type": "text/plain;charset=utf-8"
         });
+        equal(server.requests[0].withCredentials, true);
       })
       .fail(function (error) {
         ok(false, error);
@@ -983,7 +995,8 @@
       this.jio = jIO.createJIO({
         type: "dav",
         url: domain,
-        basic_login: basic_login
+        basic_login: basic_login,
+        with_credentials: true
       });
     },
     teardown: function () {
@@ -1063,7 +1076,7 @@
     }, "foo\nbaré"]);
 
     stop();
-    expect(10);
+    expect(11);
 
     this.jio.getAttachment(
       "/getAttachment1/",
@@ -1079,6 +1092,7 @@
         deepEqual(server.requests[0].requestHeaders, {
           Authorization: "Basic login:passwd"
         });
+        equal(server.requests[0].withCredentials, true);
 
         ok(result instanceof Blob, "Data is Blob");
         deepEqual(result.type, "text/plain", "Check mimetype");
