@@ -20,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "http://git.erp5.org/repos/jio.git"
+    "url": "https://lab.nexedi.com/nexedi/jio.git"
   },
   "keywords": [
     "io",
@@ -29,13 +29,13 @@
     "cloud"
   ],
   "dependencies": {
-    "rsvp": "git+http://git.erp5.org/repos/rsvp.js.git",
-    "uritemplate": "git+http://git.erp5.org/repos/uritemplate-js.git",
+    "rsvp": "git+https://lab.nexedi.com/nexedi/rsvp.js.git",
+    "uritemplate": "git+https://lab.nexedi.com/nexedi/uritemplate-js.git",
     "moment": "2.8.3",
     "rusha": "0.8.2"
   },
   "devDependencies": {
-    "renderjs": "git+http://git.erp5.org/repos/renderjs.git",
+    "renderjs": "git+https://lab.nexedi.com/nexedi/renderjs.git",
     "jscc-node": "0.3.x",
     "grunt": "0.4.x",
     "grunt-cli": "~0.1.11",
