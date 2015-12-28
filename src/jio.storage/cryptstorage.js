@@ -149,23 +149,25 @@
 
             coded = coded.currentTarget.result;
             initializaton_vector = new Uint8Array(coded.slice(0, 12));
-            return crypto.subtle.decrypt({
-              name : "AES-GCM",
-              iv : initializaton_vector
-            },
-                                         that._key, coded.slice(12));
-          })
-          .push(function (arr) {
-            //arraybuffer->string
-            arr = String.fromCharCode.apply(null, new Uint8Array(arr));
-            try {
-              return jIO.util.dataURItoBlob(arr);
-            } catch (error) {
-              if (error instanceof DOMException) {
-                return blob;
-              }
-              throw error;
-            }
+            return new RSVP.Queue()
+              .push(function () {
+                return crypto.subtle.decrypt({
+                  name : "AES-GCM",
+                  iv : initializaton_vector
+                },
+                                             that._key, coded.slice(12));
+              })
+              .push(function (arr) {
+                //arraybuffer->string
+                arr = String.fromCharCode.apply(null, new Uint8Array(arr));
+                return jIO.util.dataURItoBlob(arr);
+              })
+              .push(undefined, function (error) {
+                if (error instanceof DOMException) {
+                  return blob;
+                }
+                throw error;
+              });
           });
       });
   };
