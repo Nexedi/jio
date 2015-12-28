@@ -55,10 +55,6 @@
         that._key = res;
         that._jsonKey = false;
         return;
-      }, function () {
-        throw new TypeError(
-          "'key' must be a CryptoKey to JSON Web Key format"
-        );
       });
   }
 
@@ -170,7 +166,7 @@
               }
               throw error;
             }
-          }, function () { return blob; });
+          });
       });
   };
 
