@@ -209,3 +209,25 @@ To find out more about queries, please refer to the documentation.
 jIO is an open-source library and is licensed under the LGPL license. More
 information on LGPL can be found
 [here](http://en.wikipedia.org/wiki/GNU_Lesser_General_Public_License).
+
+### Contribute
+
+Get development environment:
+
+
+    git clone https://lab.nexedi.com/nexedi/jio.git jio.git
+    cd jio.git
+    npm install
+    alias grunt="./node_modules/grunt-cli/bin/grunt"
+    grunt
+
+
+Run tests:
+
+
+    grunt server
+
+
+and open http://127.0.0.1:9000/test/tests.html
+
+Submit merge requests on lab.nexedi.com.
