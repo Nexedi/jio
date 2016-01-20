@@ -1,3 +1,3 @@
-  return result;
+  return parser.parse(string);
 } // parseStringToObject
 
