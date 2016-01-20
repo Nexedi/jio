@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
 /*global define, exports, require, module, jIO, window, test, ok,
-  deepEqual, stop, start */
+  deepEqual, stop, start, expect */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -24,6 +24,7 @@
       {"identifier": ["b", "c"]}
     ];
     stop();
+    expect(1);
     jIO.QueryFactory.create('').exec(doc_list).
       then(function (doc_list) {
         deepEqual(doc_list, [
@@ -39,6 +40,7 @@
       {"identifier": ["b", "c"]}
     ];
     stop();
+    expect(2);
     jIO.QueryFactory.create('identifier: "a"').exec(doc_list).
       then(function (doc_list) {
         deepEqual(doc_list, [
@@ -66,6 +68,7 @@
       {"identifier": ["b", "c"]}
     ];
     stop();
+    expect(3);
     jIO.QueryFactory.create(
       'identifier: "b" AND identifier: "c"'
     ).exec(doc_list).then(function (doc_list) {
@@ -108,6 +111,7 @@
       {"identifier": ["a", "b"]}
     ];
     stop();
+    expect(4);
     jIO.QueryFactory.create(
       '(identifier: "%测试一%" OR identifier: "%测试二%") AND identifier: "%测试四%"'
     )
@@ -145,6 +149,15 @@
         deepEqual(doc_list, [
           {"identifier": "测试一", "title": "标题"}
         ], 'Only second document should be kept');
+
+        return jIO.QueryFactory.create('测试')
+          .exec(doc_list);
+      })
+      .then(function (doc_list) {
+        deepEqual(doc_list, [], 'No document should be kept');
+      })
+      .fail(function (error) {
+        ok(false, error);
       }).always(start);
   });
 
@@ -156,6 +169,7 @@
       {"identifier": ["ab", "b"]}
     ];
     stop();
+    expect(4);
     jIO.QueryFactory.create('identifier: "a%"').exec(
       doc_list
     ).then(function (doc_list) {
@@ -222,6 +236,7 @@
       {"identifier": "b", "title": "d"}
     ];
     stop();
+    expect(1);
     jIO.QueryFactory.create('').exec(doc_list, {
       "select_list": ["title"],
       "limit": [2, 1],
