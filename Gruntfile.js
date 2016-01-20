@@ -239,6 +239,7 @@ module.exports = function (grunt) {
           '<%= jslint.jio_storages.src %>',
           '<%= jslint.tests.src %>',
           '<%= jslint.queries.src %>',
+          '<%= concat.jio.src %>',
           '<%= qunit.files %>',
           'test/**/*.js',
           'examples/*'
