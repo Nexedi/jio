@@ -575,6 +575,62 @@
       });
   });
 
+  test("putAttachment convert data URL", function () {
+    var submit_url = domain + "/Form_view/Base_edit",
+      id = "fake",
+      form_json = {
+        my_foo_file: {
+          url: 'data:text/plain;charset=utf-8;base64,Zm9v',
+          file_name: 'bar.stream'
+        }
+      },
+      context = this,
+      server = this.server;
+
+    this.server.respondWith("POST", submit_url, [204, {
+      "Content-Type": "text/xml"
+    }, ""]);
+
+    stop();
+    expect(12);
+
+    this.jio.putAttachment(
+      id,
+      submit_url,
+      new Blob([JSON.stringify(form_json)])
+    )
+      .then(function () {
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, submit_url);
+        equal(server.requests[0].status, 204);
+        ok(server.requests[0].requestBody instanceof FormData);
+
+        ok(context.spy.calledOnce, "FormData.append count " +
+           context.spy.callCount);
+        equal(context.spy.firstCall.args[0], "my_foo_file",
+              "First append call");
+        ok(context.spy.firstCall.args[1] instanceof Blob,
+           "First append call");
+        equal(context.spy.firstCall.args[1].type, "text/plain;charset=utf-8",
+              "First append call");
+        equal(context.spy.firstCall.args[2], "bar.stream",
+              "First append call");
+
+        equal(server.requests[0].withCredentials, true);
+        return jIO.util.readBlobAsText(context.spy.firstCall.args[1]);
+      })
+      .then(function (evt) {
+        equal(evt.target.result, 'foo');
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // erp5Storage.getAttachment
   /////////////////////////////////////////////////////////////////

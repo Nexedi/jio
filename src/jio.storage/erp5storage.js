@@ -370,16 +370,25 @@
       .push(function (evt) {
         var form_data = JSON.parse(evt.target.result),
           data = new FormData(),
+          array,
           i,
-          key;
+          key,
+          value;
         for (key in form_data) {
           if (form_data.hasOwnProperty(key)) {
             if (Array.isArray(form_data[key])) {
-              for (i = 0; i < form_data[key].length; i += 1) {
-                data.append(key, form_data[key][i]);
-              }
+              array = form_data[key];
             } else {
-              data.append(key, form_data[key]);
+              array = [form_data[key]];
+            }
+            for (i = 0; i < array.length; i += 1) {
+              value = array[i];
+              if (typeof value === "object") {
+                data.append(key, jIO.util.dataURItoBlob(value.url),
+                            value.file_name);
+              } else {
+                data.append(key, value);
+              }
             }
           }
         }
