@@ -309,11 +309,12 @@
     }
 
     function checkSignatureDifference(queue, source, destination, id,
-                                      conflict_force, conflict_ignore) {
+                                      conflict_force, conflict_ignore,
+                                      getMethod) {
       queue
         .push(function () {
           return RSVP.all([
-            source.get(id),
+            getMethod(id),
             context._signature_sub_storage.get(id)
           ]);
         })
@@ -361,6 +362,35 @@
         });
     }
 
+    function checkBulkSignatureDifference(queue, source, destination, id_list,
+                                          conflict_force, conflict_ignore) {
+      queue
+        .push(function () {
+          return source.bulk(id_list);
+        })
+        .push(function (result_list) {
+          var i,
+            sub_queue = new RSVP.Queue();
+
+          function getResult(j) {
+            return function (id) {
+              if (id !== id_list[j].parameter_list[0]) {
+                throw new Error("Does not access expected ID " + id);
+              }
+              return result_list[j];
+            };
+          }
+
+          for (i = 0; i < result_list.length; i += 1) {
+            checkSignatureDifference(sub_queue, source, destination,
+                               id_list[i].parameter_list[0],
+                               conflict_force, conflict_ignore,
+                               getResult(i));
+          }
+          return sub_queue;
+        });
+    }
+
     function pushStorage(source, destination, options) {
       var queue = new RSVP.Queue();
       if (!options.hasOwnProperty("use_post")) {
@@ -377,6 +407,7 @@
           var i,
             local_dict = {},
             new_list = [],
+            change_list = [],
             signature_dict = {},
             key;
           for (i = 0; i < result_list[0].data.total_rows; i += 1) {
@@ -419,9 +450,17 @@
             if (signature_dict.hasOwnProperty(key)) {
               if (local_dict.hasOwnProperty(key)) {
                 if (options.check_modification === true) {
-                  checkSignatureDifference(queue, source, destination, key,
-                                           options.conflict_force,
-                                           options.conflict_ignore);
+                  if (options.use_bulk_get === true) {
+                    change_list.push({
+                      method: "get",
+                      parameter_list: [key]
+                    });
+                  } else {
+                    checkSignatureDifference(queue, source, destination, key,
+                                             options.conflict_force,
+                                             options.conflict_ignore,
+                                             source.get.bind(source));
+                  }
                 }
               } else {
                 if (options.check_deletion === true) {
@@ -429,6 +468,12 @@
                 }
               }
             }
+          }
+          if ((options.use_bulk_get === true) && (change_list.length !== 0)) {
+            checkBulkSignatureDifference(queue, source, destination,
+                                         change_list,
+                                         options.conflict_force,
+                                         options.conflict_ignore);
           }
         });
     }
