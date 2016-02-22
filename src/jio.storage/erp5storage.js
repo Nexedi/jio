@@ -311,7 +311,6 @@
                                    {"_view": this._default_view_reference})
         .push(function (response) {
           var result = JSON.parse(response.target.responseText);
-          result._id = id;
           result.portal_type = result._links.type.name;
           // Remove all ERP5 hateoas links / convert them into jIO ID
 
@@ -371,34 +370,10 @@
           return jIO.util.ajax(request_options);
         })
         .push(function (evt) {
-          var content_type = evt.target.getResponseHeader("Content-Type");
-          if (content_type === "application/json") {
-            return new RSVP.Queue()
-              .push(function () {
-                if (evt.target.responseText === undefined) {
-                  return new RSVP.Queue()
-                    .push(function () {
-                      return jIO.util.readBlobAsText(evt.target.response);
-                    })
-                    .push(function (evt) {
-                      return evt.target.result;
-                    });
-                }
-                return evt.target.responseText;
-              })
-              .push(function (response_text) {
-                var result = JSON.parse(response_text);
-                result._id = id;
-                return new Blob(
-                  [JSON.stringify(result)],
-                  {"type": content_type}
-                );
-              });
-          }
           if (evt.target.response === undefined) {
             return new Blob(
               [evt.target.responseText],
-              {"type": content_type}
+              {"type": evt.target.getResponseHeader("Content-Type")}
             );
           }
           return evt.target.response;

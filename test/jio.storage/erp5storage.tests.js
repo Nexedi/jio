@@ -744,7 +744,6 @@
       })
       .then(function (result) {
         var expected = JSON.parse(document_hateoas);
-        expected._id = id;
         expected.portal_type = "Person";
         deepEqual(JSON.parse(result.target.result), expected,
               "Attachment correctly fetched");
@@ -905,7 +904,6 @@
       })
       .then(function (result) {
         var expected = JSON.parse(document_hateoas);
-        expected._id = id;
         deepEqual(JSON.parse(result.target.result), expected,
               "Attachment correctly fetched");
       })
