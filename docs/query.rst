@@ -79,7 +79,7 @@ Example:
 How to use Queries outside jIO?
 -------------------------------
 
-Refer to the `JIO Query sample page <http://git.erp5.org/gitweb/jio.git/blob/HEAD:/examples/example-queries.html?js=1>`_
+Refer to the `JIO Query sample page <https://lab.nexedi.com/nexedi/jio/blob/master/examples/example-queries.html>`_
 for how to use these methods, in and outside jIO. The module provides:
 
 .. code-block:: javascript

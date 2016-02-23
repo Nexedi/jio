@@ -53,56 +53,7 @@ Create a constructor:
       }
     }
 
-Create 9 methods: ``post``, ``put``, ``putAttachment``, ``get``, ``getAttachment``,
-``remove``, ``removeAttachment``, ``allDocs``. ``repair`` method is optional.
-
-.. code-block:: javascript
-
-    MyStorage.prototype.post = function(command, metadata, option) {
-      var document_id = metadata._id;
-      // [...]
-    };
-
-    MyStorage.prototype.get = function(command, param, option) {
-      var document_id = param._id;
-      // [...]
-    };
-
-    MyStorage.prototype.putAttachment = function(command, param, option) {
-      var document_id = param._id;
-      var attachment_id = param._attachment;
-      var attachment_data = param._blob;
-      // [...]
-    };
-
-    // [...]
-
-
-
-(To help you design your methods, some tools are provided by jIO.util.)
-
-The second parameter ``metadata`` or ``param`` is the first parameter provided by the jIO user.
-
-The third parameter ``option`` is the option parameter provided by the jIO user.
-
-Methods should return:
-
-* **post()**, **put()**, **remove()** --> id of the document affected (string)
-
-* **putAttachment()** or **removeAttachment()** --> no specific value
-
-* **get()** --> document_metadata (object)
-
-* **getAttachment()** -->
-
-  .. code-block:: javascript
-
-    new Blob([data], {"type": content_type})
-
-* **allDocs()** --> list of all documents (restricted by a query, if given). (object)
-
-
-After creating all methods, your storage must be added to jIO. This is done
+Your storage must be added to jIO. This is done
 with the ``jIO.addStorage()`` method, which requires two parameters: the storage
 type (string) and a constructor (function). It is called like this:
 

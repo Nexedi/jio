@@ -104,11 +104,11 @@ Promises
 Each jIO method (with the exception of ``.createJIO()``) returns a Promise object, which allows us to get responses into
 callback parameters and to chain callbacks with other returned values.
 
-jIO uses a custom version of `RSVP.js <https://github.com/tildeio/rsvp.js>`_, adding canceler and progression features.
+jIO uses a custom version of `RSVP.js <https://lab.nexedi.com/nexedi/rsvp.js>`_, adding canceler and progression features.
 
 You can read more about promises:
 
-* `RSVP.js <https://github.com/tildeio/rsvp.js#rsvpjs-->`_ on GitHub
+* `RSVP.js <https://lab.nexedi.com/nexedi/rsvp.js>`_ on GitHub
 * `Promises/A+ <http://promisesaplus.com/>`_
 * `CommonJS Promises <http://wiki.commonjs.org/wiki/Promises>`_
 

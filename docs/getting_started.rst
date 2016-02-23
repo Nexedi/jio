@@ -10,32 +10,10 @@ Getting started
     .. code-block:: html
 
       <!-- jio core + dependencies -->
-      <script src="sha256.amd.js"></script>
-      <script src="rsvp-custom.js"></script>
+      <script src="rsvp.js"></script>
       <script src="jio.js"></script>
 
-      <!-- storages + dependencies -->
-      <script src="localstorage.js"></script>
-      <script src="davstorage.js"></script>
-
       <script ...>
-
-
-    With `RequireJS <http://requirejs.org/>`_, the main.js should look like:
-
-    .. code-block:: javascript
-
-        require.config({
-            paths: {
-                // jio core + dependency
-                sha256: 'sha256.amd',   // AMD-compatible version of sha256.js
-                rsvp: 'rsvp-custom',
-                jio: 'jio',
-                // storages + dependencies
-                localstorage: 'localstorage',
-                davstorage: 'davstorage'
-            }
-        });
 
 
 #.  jIO connects to a number of storages and allows adding handlers (or
@@ -90,65 +68,15 @@ Getting started
 Download & Fork
 ---------------
 
-Please note that the current (2.0.0-wip) version is not stable yet.
+You can get latest jIO release by using on of those links:
 
-You can use one of the ZIP packages, which include all the dependencies and storages:
+`Full download <https://lab.nexedi.com/nexedi/jio/raw/master/dist/jio-latest.js>`_
+`Minified download <https://lab.nexedi.com/nexedi/jio/raw/master/dist/jio-latest.min.js>`_
 
-`Full download (172k) <_static/jio-2.0.0-wip.zip>`_
-`Minified download (87k) <_static/jio-2.0.0-wip-min.zip>`_
+You can get latest RSVP release by using on of those links:
 
-or you can create your own set of files, which are are provided in the above packages and the source repository:
-
-
-Core
-^^^^
-
-* sha256.amd.js
-* rsvp-custom.js, AMD only version: rsvp-custom.amd.js
-* jio.js
-
-Storage dependencies
-^^^^^^^^^^^^^^^^^^^^
-
-.. XXX this is a little confusing.
-
-* `jquery.js <http://code.jquery.com/jquery.js>`_
-* `Stanford Javascript Crypto Library <http://bitwiseshiftleft.github.io/sjcl/>`_, `sjcl.zip <https://crypto.stanford.edu/sjcl/sjcl.zip>`_
-* `pajhome.org.uk sha1 <http://pajhome.org.uk/crypt/md5/sha1.html>`_, AMD-compatible version: `sha1.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha1.amd.js>`_
-* `anmar.eu.org jssha2 <http://anmar.eu.org/projects/jssha2/>`_, `jssha2.zip <http://anmar.eu.org/projects/jssha2/files/jssha2-0.3.zip>`_, AMD-compatible versions: `sha2.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha2.amd.js>`_, `sha256.amd.js <http://git.erp5.org/gitweb/jio.git/blob_plain/refs/heads/master:/src/sha256.amd.js>`_
-
-Storage connectors
-^^^^^^^^^^^^^^^^^^
-
-* Localstorage
-* MemoryStorage
-* IndexedDB
-* WebSQL
-* DavStorage
-* Dropbox
-* Google Drive
-* ERP5Storage
-* s3storage.js (WIP)
-* xwikistorage.js (depends on jQuery) (WIP)
-
-Storage handlers
-^^^^^^^^^^^^^^^^
-
-* Zipstorage
-* ShaStorage
-* UUIDStorage
-* QueryStorage
-* CryptStorage
-* UnionStorage
-* FileSystemBridgeStorage
-* Document Storage
-* Replicate Storage
-
-Unit tests
-^^^^^^^^^^
-
-We monitor code quality with a `test agent <http://www.j-io.org/quality/unit_test>`_ that runs
-the test suite with each release.
+`Full download <https://lab.nexedi.com/nexedi/rsvp.js/raw/master/dist/rsvp-2.0.4.js>`_
+`Minified download <https://lab.nexedi.com/nexedi/rsvp.js/raw/master/dist/rsvp-2.0.4.min.js>`_
 
 Fork jIO
 ^^^^^^^^
