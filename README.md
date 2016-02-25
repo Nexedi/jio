@@ -5,6 +5,8 @@
 
 ### Getting Started
 
+#Klaus test#
+
 To set up jIO you should include jio.js, dependencies and the connectors for the storages
 you want to use in the HTML page header (note that more dependencies may be required
 depending on type of storages being used):
