@@ -174,6 +174,7 @@ module.exports = function (grunt) {
           'src/jio.storage/gdrivestorage.js',
           'src/jio.storage/unionstorage.js',
           'src/jio.storage/erp5storage.js',
+          'src/jio.storage/filterstorage.js',
           'src/jio.storage/querystorage.js',
           'src/jio.storage/drivetojiomapping.js',
           'src/jio.storage/documentstorage.js',
