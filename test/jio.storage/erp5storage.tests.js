@@ -13,7 +13,7 @@
     domain = "https://example.org",
     traverse_template = domain + "?mode=traverse{&relative_url,view}",
     search_template = domain + "?mode=search{&query,select_list*,limit*," +
-      "local_roles*}",
+      "sort_on*,local_roles*}",
     add_url = domain + "lets?add=somedocument",
     bulk_url = domain + "lets?run=bulk",
     root_hateoas = JSON.stringify({
@@ -1102,7 +1102,9 @@
 
   test("filter documents", function () {
     var search_url = domain + "?mode=search&query=title%3A%20%22two%22&" +
-                     "select_list=destination&select_list=source&limit=5",
+                     "select_list=destination&select_list=source&limit=5&" +
+                     "sort_on=%5B%22title%22%2C%22descending%22%5D&" +
+                     "sort_on=%5B%22id%22%2C%22descending%22%5D",
       search_hateoas = JSON.stringify({
 
         "_embedded": {
@@ -1142,7 +1144,8 @@
     this.jio.allDocs({
       limit: [5],
       select_list: ["destination", "source"],
-      query: 'title: "two"'
+      query: 'title: "two"',
+      sort_on: [["title", "descending"], ["id", "descending"]]
     })
       .then(function (result) {
         deepEqual(result, {
