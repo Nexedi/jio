@@ -481,7 +481,9 @@
           parsed_query,
           sub_query,
           result_list,
-          local_roles;
+          local_roles,
+          tmp_list = [],
+          tmp;
         if (options.query) {
           parsed_query = jIO.QueryFactory.create(options.query);
 
@@ -521,6 +523,14 @@
             }
 
           }
+        }
+
+        if (options.sort_on) {
+          for (i = 0; i < options.sort_on.length; i += 1) {
+            tmp = options.sort_on[i][0] + ":" + options.sort_on[i][1];
+            tmp_list.push(tmp);
+          }
+          options.sort_on = tmp_list;
         }
 
         return jIO.util.ajax({
