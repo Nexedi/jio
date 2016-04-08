@@ -124,11 +124,6 @@
             form_id: {
               key: "form_id",
               "default": "Base_view"
-            },
-            "_actions": {
-              put: {
-                href: "one erp5 url"
-              }
             }
           }
         }
@@ -229,11 +224,6 @@
               "default": "foobar",
               editable: true,
               type: "StringField"
-            },
-            "_actions": {
-              put: {
-                href: "one erp5 url"
-              }
             }
           }
         }
@@ -1717,6 +1707,71 @@
         equal(error.message,
               "ERP5: can not store property: title_non_editable");
         equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("put non editable ERP5 document", function () {
+    var id = "person_module/20150119_azerty",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id) + "&view=bar_view",
+      document_hateoas = JSON.stringify({
+        // Kept property
+        "title": "foo",
+        // Remove all _ properties
+        "_bar": "john doo",
+        "_links": {
+          type: {
+            name: "Person"
+          }
+        },
+        "_embedded": {
+          "_view": {
+            form_id: {
+              key: "form_id",
+              "default": "Base_view"
+            },
+            my_title: {
+              key: "field_my_title",
+              "default": "foo",
+              editable: true,
+              type: "StringField"
+            }
+          }
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, document_hateoas]);
+
+    stop();
+    expect(12);
+
+    this.jio.put(id, {title: "barè"})
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "ERP5: can not modify document: " + id);
+        equal(error.status_code, 403);
+
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, traverse_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
       })
       .fail(function (error) {
         ok(false, error);
