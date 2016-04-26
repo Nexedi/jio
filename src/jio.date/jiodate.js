@@ -41,10 +41,12 @@
     JIODate;
 
 
-  JIODate = function (str) {
+  JIODate = function (str, mode) {
+    mode = mode || 'local';
+
     // in case of forgotten 'new'
     if (!(this instanceof JIODate)) {
-      return new JIODate(str);
+      return new JIODate(str, mode);
     }
 
     if (str instanceof JIODate) {
@@ -70,29 +72,29 @@
     if (str.match(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+\-][0-2]\d:[0-5]\d|Z)/)
           || str.match(/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d\d\d/)) {
       // ISO, milliseconds
-      this.mom = moment(str);
+      this.mom = moment_constructor(str);
       this.setPrecision(MSEC);
     } else if (str.match(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d([+\-][0-2]\d:[0-5]\d|Z)/)
           || str.match(/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/)) {
       // ISO, seconds
-      this.mom = moment(str);
+      this.mom = moment_constructor(str);
       this.setPrecision(SEC);
     } else if (str.match(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d([+\-][0-2]\d:[0-5]\d|Z)/)
           || str.match(/\d\d\d\d-\d\d-\d\d \d\d:\d\d/)) {
       // ISO, minutes
-      this.mom = moment(str);
+      this.mom = moment_constructor(str);
       this.setPrecision(MIN);
     } else if (str.match(/\d\d\d\d-\d\d-\d\d \d\d/)) {
-      this.mom = moment(str);
+      this.mom = moment_constructor(str);
       this.setPrecision(HOUR);
     } else if (str.match(/\d\d\d\d-\d\d-\d\d/)) {
-      this.mom = moment(str);
+      this.mom = mode === 'utc' ? moment.utc(str) : moment(str);
       this.setPrecision(DAY);
     } else if (str.match(/\d\d\d\d-\d\d/)) {
-      this.mom = moment(str);
+      this.mom = mode === 'utc' ? moment.utc(str) : moment(str);
       this.setPrecision(MONTH);
     } else if (str.match(/\d\d\d\d/)) {
-      this.mom = moment(str);
+      this.mom = mode === 'utc' ? moment.utc(str) : moment(str);
       this.setPrecision(YEAR);
     }
 
@@ -118,6 +120,16 @@
       m2 = other.mom,
       p = lesserPrecision(this._precision, other._precision);
     return m1.isBefore(m2, p) ? -1 : (m1.isSame(m2, p) ? 0 : +1);
+  };
+
+
+  JIODate.prototype.utcMode = function () {
+    this.mom.utc();
+  };
+
+
+  JIODate.prototype.localMode = function () {
+    this.mom.local();
   };
 
 
@@ -150,7 +162,7 @@
 
 
 //   _export('JIODate', JIODate);
-// 
+//
 //   _export('YEAR', YEAR);
 //   _export('MONTH', MONTH);
 //   _export('DAY', DAY);

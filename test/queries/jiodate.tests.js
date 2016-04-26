@@ -5,6 +5,7 @@
   var test = QUnit.test,
     ok = QUnit.ok,
     strictEqual = QUnit.strictEqual,
+    notStrictEqual = QUnit.notStrictEqual,
     equal = QUnit.equal,
     module = QUnit.module,
     JIODate = jiodate.JIODate,
@@ -18,10 +19,40 @@
     ok(JIODate() instanceof JIODate);
   });
 
+  test("A JIODate can be in UTC or local time mode", function () {
+    var d = JIODate('2012-03-04T08:52:13.746Z');
+    ok(moment.isMoment(d.mom));
+
+    d.localMode();
+    equal(d.mom._isUTC, false);
+    notStrictEqual(d.mom.toISOString(), '2012-03-04T08:52:13.746');
+
+    d.utcMode();
+    equal(d.mom._isUTC, true);
+    strictEqual(d.mom.toISOString(), '2012-03-04T08:52:13.746Z');
+  });
+
+  // This test is to ensure there is a way to tell JIODate if the date is in
+  // UTC or local time for date-only strings. The main purpose of this feature
+  // is to make our tests timezone agnostic.
+  test("Parsing only-date string can be in utc or local mode", function () {
+    var d_local = JIODate('2016-02-01'),
+      d_utc = JIODate('2016-02-01', 'utc');
+
+    equal(d_local.mom._isUTC, false);
+    notStrictEqual(d_local.mom.toISOString(), '2016-02-01T00:00:00.000Z');
+
+    equal(d_utc.mom._isUTC, true);
+    strictEqual(d_utc.mom.toISOString(), '2016-02-01T00:00:00.000Z');
+  });
 
   test("Parsing from ISO string and exposing Moment/Date objects", function () {
     var d = JIODate('2012-03-04T08:52:13.746Z');
     ok(moment.isMoment(d.mom));
+
+    // Putting JIODate into UTC time mode to ignore timezone differences
+    d.utcMode();
+
     strictEqual(d.mom.toISOString(), '2012-03-04T08:52:13.746Z');
     strictEqual(d.mom.year(), 2012);
     strictEqual(d.mom.month(), 2);
@@ -32,7 +63,7 @@
     strictEqual(d.mom.week(), 10);
     strictEqual(d.mom.isoWeek(), 9);
     strictEqual(d.mom.day(), 0);
-    strictEqual(d.mom.hours(), 9);
+    strictEqual(d.mom.hours(), 8);
     strictEqual(d.mom.minutes(), 52);
     strictEqual(d.mom.seconds(), 13);
     strictEqual(d.mom.milliseconds(), 746);
@@ -130,16 +161,18 @@
 
   test("Display timestamp value trucated to precision", function () {
     var d = JIODate('2012-03-04T08:52:13.746Z');
+    d.utcMode();
 
-    // XXX No timezone
-
-    strictEqual(d.toPrecisionString(jiodate.MSEC), '2012-03-04 09:52:13.746');
-    strictEqual(d.toPrecisionString(jiodate.SEC), '2012-03-04 09:52:13');
-    strictEqual(d.toPrecisionString(jiodate.MIN), '2012-03-04 09:52');
-    strictEqual(d.toPrecisionString(jiodate.HOUR), '2012-03-04 09');
-    strictEqual(d.toPrecisionString(jiodate.DAY), '2012-03-04');
-    strictEqual(d.toPrecisionString(jiodate.MONTH), '2012-03');
-    strictEqual(d.toPrecisionString(jiodate.YEAR), '2012');
+    strictEqual(
+      d.toPrecisionString(jiodate.MSEC, true),
+      '2012-03-04 08:52:13.746'
+    );
+    strictEqual(d.toPrecisionString(jiodate.SEC, true), '2012-03-04 08:52:13');
+    strictEqual(d.toPrecisionString(jiodate.MIN, true), '2012-03-04 08:52');
+    strictEqual(d.toPrecisionString(jiodate.HOUR, true), '2012-03-04 08');
+    strictEqual(d.toPrecisionString(jiodate.DAY, true), '2012-03-04');
+    strictEqual(d.toPrecisionString(jiodate.MONTH, true), '2012-03');
+    strictEqual(d.toPrecisionString(jiodate.YEAR, true), '2012');
 
     throws(
       function () {
@@ -150,7 +183,7 @@
     );
 
     d.setPrecision(jiodate.HOUR);
-    strictEqual(d.toPrecisionString(), '2012-03-04 09');
+    strictEqual(d.toPrecisionString(), '2012-03-04 08');
   });
 
 
@@ -180,37 +213,41 @@
   test("Parsing of partial timestamp values with any precision", function () {
     var d;
 
-    d = JIODate('2012-05-02 06:07:08.989');
+    d = JIODate('2012-05-02 06:07:08.989Z');
+    d.utcMode();
     strictEqual(d.getPrecision(), 'millisecond');
     strictEqual(d.toPrecisionString(), '2012-05-02 06:07:08.989');
-    strictEqual(d.mom.toISOString(), '2012-05-02T04:07:08.989Z');
+    strictEqual(d.mom.toISOString(), '2012-05-02T06:07:08.989Z');
 
-    d = JIODate('2012-05-02 06:07:08');
+    d = JIODate('2012-05-02 06:07:08Z');
+    d.utcMode();
     strictEqual(d.getPrecision(), 'second');
     strictEqual(d.toPrecisionString(), '2012-05-02 06:07:08');
-    strictEqual(d.mom.toISOString(), '2012-05-02T04:07:08.000Z');
+    strictEqual(d.mom.toISOString(), '2012-05-02T06:07:08.000Z');
 
-    d = JIODate('2012-05-02 06:07');
+    d = JIODate('2012-05-02 06:07Z');
+    d.utcMode();
     strictEqual(d.getPrecision(), 'minute');
     strictEqual(d.toPrecisionString(), '2012-05-02 06:07');
-    strictEqual(d.mom.toISOString(), '2012-05-02T04:07:00.000Z');
+    strictEqual(d.mom.toISOString(), '2012-05-02T06:07:00.000Z');
 
-    d = JIODate('2012-05-02 06');
+    d = JIODate('2012-05-02 06Z');
+    d.utcMode();
     strictEqual(d.getPrecision(), 'hour');
     strictEqual(d.toPrecisionString(), '2012-05-02 06');
-    strictEqual(d.mom.toISOString(), '2012-05-02T04:00:00.000Z');
+    strictEqual(d.mom.toISOString(), '2012-05-02T06:00:00.000Z');
 
-    d = JIODate('2012-05-02');
+    d = JIODate('2012-05-02', 'utc');
     strictEqual(d.getPrecision(), 'day');
     strictEqual(d.toPrecisionString(), '2012-05-02');
-    strictEqual(d.mom.toISOString(), '2012-05-01T22:00:00.000Z');
+    strictEqual(d.mom.toISOString(), '2012-05-02T00:00:00.000Z');
 
-    d = JIODate('2012-05');
+    d = JIODate('2012-05', 'utc');
     strictEqual(d.getPrecision(), 'month');
     strictEqual(d.toPrecisionString(), '2012-05');
     strictEqual(d.mom.toISOString(), '2012-05-01T00:00:00.000Z');
 
-    d = JIODate('2012');
+    d = JIODate('2012', 'utc');
     strictEqual(d.getPrecision(), 'year');
     strictEqual(d.toPrecisionString(), '2012');
     strictEqual(d.mom.toISOString(), '2012-01-01T00:00:00.000Z');
@@ -226,6 +263,10 @@
         dday = JIODate('2012-05-02'),
         dmonth = JIODate('2012-05'),
         dyear = JIODate('2012');
+
+      [dmsec, dsec, dmin, dhour, dday, dmonth, dyear].map(function (jiodate) {
+        jiodate.utcMode();
+      });
 
       strictEqual(dmsec.cmp(dsec), 0);
       strictEqual(dmsec.cmp(dmin), 0);
