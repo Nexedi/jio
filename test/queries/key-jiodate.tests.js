@@ -32,7 +32,11 @@
       key_set: {
         date: {
           read_from: 'date',
-          cast_to: jiodate.JIODate
+          cast_to: function (date_str) {
+            var d = jiodate.JIODate(date_str);
+            d.utcMode();
+            return d;
+          }
         }
       }
     }, query_list = [], promise = [];

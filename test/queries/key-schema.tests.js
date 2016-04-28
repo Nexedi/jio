@@ -43,19 +43,19 @@
     match_lookup: {
       sameDay: function (a, b) {
         return (
-          (a.getFullYear() === b.getFullYear()) &&
-            (a.getMonth() === b.getMonth()) &&
-              (a.getDate() === b.getDate())
+          (a.getUTCFullYear() === b.getUTCFullYear()) &&
+            (a.getUTCMonth() === b.getUTCMonth()) &&
+              (a.getUTCDate() === b.getUTCDate())
         );
       },
       sameMonth: function (a, b) {
         return (
-          (a.getFullYear() === b.getFullYear()) &&
-            (a.getMonth() === b.getMonth())
+          (a.getUTCFullYear() === b.getUTCFullYear()) &&
+            (a.getUTCMonth() === b.getUTCMonth())
         );
       },
       sameYear: function (a, b) {
-        return (a.getFullYear() === b.getFullYear());
+        return (a.getUTCFullYear() === b.getUTCFullYear());
       },
       equalState: translationEqualityMatcher({'ouvert': 'open'})
     },

@@ -256,13 +256,13 @@
 
   test("Comparison between heterogeneous values is done with " +
        "the lesser precision", function () {
-      var dmsec = JIODate('2012-05-02 06:07:08.989'),
-        dsec = JIODate('2012-05-02 06:07:08'),
-        dmin = JIODate('2012-05-02 06:07'),
-        dhour = JIODate('2012-05-02 06'),
-        dday = JIODate('2012-05-02'),
-        dmonth = JIODate('2012-05'),
-        dyear = JIODate('2012');
+      var dmsec = JIODate('2012-05-02 06:07:08.989Z'),
+        dsec = JIODate('2012-05-02 06:07:08Z'),
+        dmin = JIODate('2012-05-02 06:07Z'),
+        dhour = JIODate('2012-05-02 06Z'),
+        dday = JIODate('2012-05-02', 'utc'),
+        dmonth = JIODate('2012-05', 'utc'),
+        dyear = JIODate('2012', 'utc');
 
       [dmsec, dsec, dmin, dhour, dday, dmonth, dyear].map(function (jiodate) {
         jiodate.utcMode();
@@ -317,9 +317,9 @@
       strictEqual(dyear.cmp(dday), 0);
       strictEqual(dyear.cmp(dmonth), 0);
 
-      strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:07')), +1);
-      strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:08')), 0);
-      strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:09')), -1);
+      strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:07Z')), +1);
+      strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:08Z')), 0);
+      strictEqual(dmsec.cmp(JIODate('2012-05-02 06:07:09Z')), -1);
     });
 
 }(QUnit, jiodate, moment));

@@ -80,6 +80,7 @@
       // no need to clone
       return obj;
     }
+
     return new Date(obj);
   };
 
@@ -98,21 +99,21 @@
 
     var sameDay = function (a, b) {
       return (
-        (a.getFullYear() === b.getFullYear()) &&
-          (a.getMonth() === b.getMonth()) &&
-            (a.getDate() === b.getDate())
+        (a.getUTCFullYear() === b.getUTCFullYear()) &&
+          (a.getUTCMonth() === b.getUTCMonth()) &&
+            (a.getUTCDate() === b.getUTCDate())
       );
     };
 
     var sameMonth = function (a, b) {
       return (
-        (a.getFullYear() === b.getFullYear()) &&
-          (a.getMonth() === b.getMonth())
+        (a.getUTCFullYear() === b.getUTCFullYear()) &&
+          (a.getUTCMonth() === b.getUTCMonth())
       );
     };
 
     var sameYear = function (a, b) {
-      return (a.getFullYear() === b.getFullYear());
+      return (a.getUTCFullYear() === b.getUTCFullYear());
     };
 
     var keys = {
@@ -324,7 +325,7 @@
         read_from: 'date',
         cast_to: dateCast,
         equal_match: function alwaysTrue(o1) { /*, o2*/
-          return o1.getDate() === 2;
+          return o1.getUTCDate() === 2;
         }
       }
     }, promise = [];
