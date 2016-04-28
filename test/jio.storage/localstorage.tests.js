@@ -1,8 +1,8 @@
 /*jslint nomen: true */
-/*global sessionStorage, localStorage, Blob, document, btoa,
-         unescape, HTMLCanvasElement, XMLHttpRequest*/
+/*global sessionStorage, localStorage, Blob, document, btoa, atob, Uint8Array,
+         unescape, HTMLCanvasElement*/
 (function (jIO, sessionStorage, localStorage, QUnit, Blob, document,
-           btoa, unescape, HTMLCanvasElement, XMLHttpRequest) {
+           btoa, atob, Uint8Array, unescape, HTMLCanvasElement) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -365,13 +365,22 @@
         'toBlob',
         {
           value: function (callback, type, quality) {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', this.toDataURL(type, quality));
-            xhr.responseType = 'arraybuffer';
-            xhr.onload = function () {
-              callback(new Blob([this.response], {type: type || 'image/png'}));
-            };
-            xhr.send();
+            var byte_string, ia, i,
+              data_uri = this.toDataURL(type, quality);
+
+            if (data_uri.split(',')[0].indexOf('base64') >= 0) {
+              byte_string = atob(data_uri.split(',')[1]);
+            } else {
+              byte_string = unescape(data_uri.split(',')[1]);
+            }
+
+            // write the bytes of the string to a typed array
+            ia = new Uint8Array(byte_string.length);
+            for (i = 0; i < byte_string.length; i += 1) {
+              ia[i] = byte_string.charCodeAt(i);
+            }
+
+            return callback(new Blob([ia], {type: type || 'image/png'}));
           }
         }
       );
@@ -496,4 +505,4 @@
   });
 
 }(jIO, sessionStorage, localStorage, QUnit, Blob, document,
-  btoa, unescape, HTMLCanvasElement, XMLHttpRequest));
+  btoa, atob, Uint8Array, unescape, HTMLCanvasElement));
