@@ -125,12 +125,12 @@
   test('Standard date keys', function () {
     var docList = function () {
       return [
-        {'identifier': 'a', 'date': '2013-01-01'},
-        {'identifier': 'b', 'date': '2013-02-01'},
-        {'identifier': 'bb', 'date': '2013-02-02'},
-        {'identifier': 'bbb', 'date': '2013-02-03'},
-        {'identifier': 'c', 'date': '2013-03-03'},
-        {'identifier': 'd', 'date': '2013-04-04'}
+        {'identifier': 'a', 'date': '2013-01-01 00:00:00.000'},
+        {'identifier': 'b', 'date': '2013-02-01 00:00:00.000'},
+        {'identifier': 'bb', 'date': '2013-02-02 00:00:00.000'},
+        {'identifier': 'bbb', 'date': '2013-02-03 00:00:00.000'},
+        {'identifier': 'c', 'date': '2013-03-03 00:00:00.000'},
+        {'identifier': 'd', 'date': '2013-04-04 00:00:00.000'}
       ];
     }, promise = [];
 
@@ -140,12 +140,12 @@
       jIO.QueryFactory.create({
         type: 'simple',
         key: 'date_day',
-        value: '2013-02-02'
+        value: '2013-02-02 00:00:00.000'
       }, key_schema).
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'identifier': 'bb', 'date': '2013-02-02'}
+            {'identifier': 'bb', 'date': '2013-02-02 00:00:00.000'}
           ], 'Key Schema: same_day');
         })
     );
@@ -154,14 +154,14 @@
       jIO.QueryFactory.create({
         type: 'simple',
         key: 'date_month',
-        value: '2013-02-10'
+        value: '2013-02-10 00:00:00.000'
       }, key_schema).
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'date': '2013-02-01', 'identifier': 'b'},
-            {'date': '2013-02-02', 'identifier': 'bb'},
-            {'date': '2013-02-03', 'identifier': 'bbb'}
+            {'date': '2013-02-01 00:00:00.000', 'identifier': 'b'},
+            {'date': '2013-02-02 00:00:00.000', 'identifier': 'bb'},
+            {'date': '2013-02-03 00:00:00.000', 'identifier': 'bbb'}
           ], 'Key Schema: date_month');
         })
     );
@@ -170,7 +170,7 @@
       jIO.QueryFactory.create({
         type: 'simple',
         key: 'date_year',
-        value: '2013-02-10'
+        value: '2013-02-10 00:00:00.000'
       }, key_schema).
         exec(docList()).
         then(function (dl) {

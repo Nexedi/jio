@@ -87,12 +87,12 @@
   test('Simple Key with date casting', function () {
     var docList = function () {
       return [
-        {'identifier': 'a', 'date': '2013-01-01'},
-        {'identifier': 'b', 'date': '2013-02-01'},
-        {'identifier': 'bb', 'date': '2013-02-02'},
-        {'identifier': 'bbb', 'date': '2013-02-03'},
-        {'identifier': 'c', 'date': '2013-03-03'},
-        {'identifier': 'd', 'date': '2013-04-04'}
+        {'identifier': 'a', 'date': '2013-01-01 00:00:00.000'},
+        {'identifier': 'b', 'date': '2013-02-01 00:00:00.000'},
+        {'identifier': 'bb', 'date': '2013-02-02 00:00:00.000'},
+        {'identifier': 'bbb', 'date': '2013-02-03 00:00:00.000'},
+        {'identifier': 'c', 'date': '2013-03-03 00:00:00.000'},
+        {'identifier': 'd', 'date': '2013-04-04 00:00:00.000'}
       ];
     }, promise = [];
 
@@ -143,12 +143,12 @@
       jIO.QueryFactory.create({
         type: 'simple',
         key: keys.day,
-        value: '2013-02-02'
+        value: '2013-02-02 00:00:00.000'
       }).
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'identifier': 'bb', 'date': '2013-02-02'}
+            {'identifier': 'bb', 'date': '2013-02-02 00:00:00.000'}
           ], 'It should be possible to compare dates with sameDay');
         })
     );
@@ -157,14 +157,14 @@
       jIO.QueryFactory.create({
         type: 'simple',
         key: keys.month,
-        value: '2013-02-10'
+        value: '2013-02-10 00:00:00.000'
       }).
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'date': '2013-02-01', 'identifier': 'b'},
-            {'date': '2013-02-02', 'identifier': 'bb'},
-            {'date': '2013-02-03', 'identifier': 'bbb'}
+            {'date': '2013-02-01 00:00:00.000', 'identifier': 'b'},
+            {'date': '2013-02-02 00:00:00.000', 'identifier': 'bb'},
+            {'date': '2013-02-03 00:00:00.000', 'identifier': 'bbb'}
           ], 'It should be possible to compare dates with sameMonth');
         })
     );
@@ -173,7 +173,7 @@
       jIO.QueryFactory.create({
         type: 'simple',
         key: keys.year,
-        value: '2013-02-10'
+        value: '2013-02-10 00:00:00.000'
       }).
         exec(docList()).
         then(function (dl) {
@@ -186,7 +186,7 @@
       jIO.QueryFactory.create({
         type: 'simple',
         key: keys.broken,
-        value: '2013-02-10'
+        value: '2013-02-10 00:00:00.000'
       }).
         exec(docList()).
         then(function (dl) {
@@ -315,9 +315,9 @@
   test('Simple Key with both equal_match and operator attributes', function () {
     var docList = function () {
       return [
-        {'identifier': '1', 'date': '2013-01-01'},
-        {'identifier': '2', 'date': '2013-02-02'},
-        {'identifier': '3', 'date': '2013-03-03'}
+        {'identifier': '1', 'date': '2013-01-01 00:00:00.000'},
+        {'identifier': '2', 'date': '2013-02-02 00:00:00.000'},
+        {'identifier': '3', 'date': '2013-03-03 00:00:00.000'}
       ];
     }, keys = {
       mydate: {
@@ -335,12 +335,12 @@
       jIO.QueryFactory.create({
         type: 'simple',
         key: keys.mydate,
-        value: '2013-02-02'
+        value: '2013-02-02 00:00:00.000'
       }).
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'identifier': '2', 'date': '2013-02-02'}
+            {'identifier': '2', 'date': '2013-02-02 00:00:00.000'}
           ], "'equal_match' with no 'operator'");
         })
     );
@@ -355,7 +355,7 @@
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'identifier': '2', 'date': '2013-02-02'}
+            {'identifier': '2', 'date': '2013-02-02 00:00:00.000'}
           ], "'equal_match' overrides '=' operator");
         })
     );
@@ -365,13 +365,13 @@
         type: 'simple',
         key: keys.mydate,
         operator: '>=',
-        value: '2013-02-02'
+        value: '2013-02-02 00:00:00.000'
       }).
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'identifier': '2', 'date': '2013-02-02'},
-            {'identifier': '3', 'date': '2013-03-03'}
+            {'identifier': '2', 'date': '2013-02-02 00:00:00.000'},
+            {'identifier': '3', 'date': '2013-03-03 00:00:00.000'}
           ], "'equal_match' does not override '>' operator");
         })
     );
