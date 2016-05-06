@@ -21,6 +21,13 @@
 
   test("Parsing from ISO string and exposing Moment/Date objects", function () {
     var d = JIODate('2012-03-04T08:52:13.746Z');
+    // Because the above JIODate is created in ISO string, which uses UTC time,
+    // it's necessary to set the moment to use the UTC mode. Otherwise different
+    // timezones may have different results for the getters below, as they will
+    // try to convert it to local time. 
+    //
+    d.mom.utc();
+
     ok(moment.isMoment(d.mom));
     strictEqual(d.mom.toISOString(), '2012-03-04T08:52:13.746Z');
     strictEqual(d.mom.year(), 2012);
@@ -32,7 +39,7 @@
     strictEqual(d.mom.week(), 10);
     strictEqual(d.mom.isoWeek(), 9);
     strictEqual(d.mom.day(), 0);
-    strictEqual(d.mom.hours(), 9);
+    strictEqual(d.mom.hours(), 8);
     strictEqual(d.mom.minutes(), 52);
     strictEqual(d.mom.seconds(), 13);
     strictEqual(d.mom.milliseconds(), 746);
@@ -129,14 +136,12 @@
 
 
   test("Display timestamp value trucated to precision", function () {
-    var d = JIODate('2012-03-04T08:52:13.746Z');
+    var d = JIODate('2012-03-04T08:52:13.746');
 
-    // XXX No timezone
-
-    strictEqual(d.toPrecisionString(jiodate.MSEC), '2012-03-04 09:52:13.746');
-    strictEqual(d.toPrecisionString(jiodate.SEC), '2012-03-04 09:52:13');
-    strictEqual(d.toPrecisionString(jiodate.MIN), '2012-03-04 09:52');
-    strictEqual(d.toPrecisionString(jiodate.HOUR), '2012-03-04 09');
+    strictEqual(d.toPrecisionString(jiodate.MSEC), '2012-03-04 08:52:13.746');
+    strictEqual(d.toPrecisionString(jiodate.SEC), '2012-03-04 08:52:13');
+    strictEqual(d.toPrecisionString(jiodate.MIN), '2012-03-04 08:52');
+    strictEqual(d.toPrecisionString(jiodate.HOUR), '2012-03-04 08');
     strictEqual(d.toPrecisionString(jiodate.DAY), '2012-03-04');
     strictEqual(d.toPrecisionString(jiodate.MONTH), '2012-03');
     strictEqual(d.toPrecisionString(jiodate.YEAR), '2012');
@@ -150,7 +155,7 @@
     );
 
     d.setPrecision(jiodate.HOUR);
-    strictEqual(d.toPrecisionString(), '2012-03-04 09');
+    strictEqual(d.toPrecisionString(), '2012-03-04 08');
   });
 
 
@@ -183,37 +188,58 @@
     d = JIODate('2012-05-02 06:07:08.989');
     strictEqual(d.getPrecision(), 'millisecond');
     strictEqual(d.toPrecisionString(), '2012-05-02 06:07:08.989');
-    strictEqual(d.mom.toISOString(), '2012-05-02T04:07:08.989Z');
+    strictEqual(
+      d.mom.toDate().valueOf(),
+      new Date('2012-05-02 06:07:08.989').valueOf()
+    );
 
     d = JIODate('2012-05-02 06:07:08');
     strictEqual(d.getPrecision(), 'second');
     strictEqual(d.toPrecisionString(), '2012-05-02 06:07:08');
-    strictEqual(d.mom.toISOString(), '2012-05-02T04:07:08.000Z');
+    strictEqual(
+      d.mom.toDate().valueOf(),
+      new Date('2012-05-02 06:07:08.000').valueOf()
+    );
 
     d = JIODate('2012-05-02 06:07');
     strictEqual(d.getPrecision(), 'minute');
     strictEqual(d.toPrecisionString(), '2012-05-02 06:07');
-    strictEqual(d.mom.toISOString(), '2012-05-02T04:07:00.000Z');
+    strictEqual(
+      d.mom.toDate().valueOf(),
+      new Date('2012-05-02 06:07:00.000').valueOf()
+    );
 
     d = JIODate('2012-05-02 06');
     strictEqual(d.getPrecision(), 'hour');
     strictEqual(d.toPrecisionString(), '2012-05-02 06');
-    strictEqual(d.mom.toISOString(), '2012-05-02T04:00:00.000Z');
+    strictEqual(
+      d.mom.toDate().valueOf(),
+      new Date('2012-05-02 06:00:00.000').valueOf()
+    );
 
     d = JIODate('2012-05-02');
     strictEqual(d.getPrecision(), 'day');
     strictEqual(d.toPrecisionString(), '2012-05-02');
-    strictEqual(d.mom.toISOString(), '2012-05-01T22:00:00.000Z');
+    strictEqual(
+      d.mom.toDate().valueOf(),
+      new Date('2012-05-02 00:00:00.000').valueOf()
+    );
 
     d = JIODate('2012-05');
     strictEqual(d.getPrecision(), 'month');
     strictEqual(d.toPrecisionString(), '2012-05');
-    strictEqual(d.mom.toISOString(), '2012-05-01T00:00:00.000Z');
+    strictEqual(
+      d.mom.toDate().valueOf(),
+      new Date('2012-05-01 00:00:00.000').valueOf()
+    );
 
     d = JIODate('2012');
     strictEqual(d.getPrecision(), 'year');
     strictEqual(d.toPrecisionString(), '2012');
-    strictEqual(d.mom.toISOString(), '2012-01-01T00:00:00.000Z');
+    strictEqual(
+      d.mom.toDate().valueOf(),
+      new Date('2012-01-01 00:00:00.000').valueOf()
+    );
   });
 
 

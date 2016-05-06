@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 100, nomen: true, vars: true */
 /*global define, exports, require, module, jIO, window, test, ok,
-  deepEqual, sinon, start, stop, RSVP */
+  deepEqual, sinon, start, stop, RSVP, jiodate */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -9,10 +9,10 @@
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    return module(require('jio'));
+    return module(require('jio'), require('jiodate'));
   }
-  module(jIO);
-}(['jio', 'qunit'], function (jIO) {
+  module(jIO, jiodate);
+}(['jio', 'jiodate', 'qunit'], function (jIO, jiodate) {
   "use strict";
 
   module('Custom Key Queries with Schema');
@@ -32,30 +32,26 @@
   var key_schema = {
     cast_lookup: {
       dateType: function (obj) {
-        if (Object.prototype.toString.call(obj) === '[object Date]') {
-          // no need to clone
-          return obj;
-        }
-        return new Date(obj);
+        return new jiodate.JIODate(obj);
       }
     },
 
     match_lookup: {
       sameDay: function (a, b) {
         return (
-          (a.getFullYear() === b.getFullYear()) &&
-            (a.getMonth() === b.getMonth()) &&
-              (a.getDate() === b.getDate())
+          (a.mom.year() === b.mom.year()) &&
+            (a.mom.month() === b.mom.month()) &&
+              (a.mom.date() === b.mom.date())
         );
       },
       sameMonth: function (a, b) {
         return (
-          (a.getFullYear() === b.getFullYear()) &&
-            (a.getMonth() === b.getMonth())
+          (a.mom.year() === b.mom.year()) &&
+            (a.mom.month() === b.mom.month())
         );
       },
       sameYear: function (a, b) {
-        return (a.getFullYear() === b.getFullYear());
+        return (a.mom.year() === b.mom.year());
       },
       equalState: translationEqualityMatcher({'ouvert': 'open'})
     },

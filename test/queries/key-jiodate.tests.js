@@ -24,9 +24,9 @@
   test('Stock comparison operators with year precision', function () {
     var docList = function () {
       return [
-        {'identifier': 'twenty ten', 'date': '2010-03-04T08:52:13.746Z'},
-        {'identifier': 'twenty eleven', 'date': '2011-03-04T08:52:13.746Z'},
-        {'identifier': 'twenty twelve', 'date': '2012-03-04T08:52:13.746Z'}
+        {'identifier': 'twenty ten', 'date': '2010-03-04 08:52:13.746'},
+        {'identifier': 'twenty eleven', 'date': '2011-03-04 08:52:13.746'},
+        {'identifier': 'twenty twelve', 'date': '2012-03-04 08:52:13.746'}
       ];
     }, key_schema = {
       key_set: {
@@ -48,7 +48,7 @@
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'date': '2011-03-04T08:52:13.746Z', 'identifier': 'twenty eleven'}
+            {'date': '2011-03-04 08:52:13.746', 'identifier': 'twenty eleven'}
           ], 'Match with "date = 2011" (query tree form)');
         })
     );
@@ -63,8 +63,8 @@
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'date': '2010-03-04T08:52:13.746Z', 'identifier': 'twenty ten'},
-            {'date': '2012-03-04T08:52:13.746Z', 'identifier': 'twenty twelve'}
+            {'date': '2010-03-04 08:52:13.746', 'identifier': 'twenty ten'},
+            {'date': '2012-03-04 08:52:13.746', 'identifier': 'twenty twelve'}
           ], 'Match with "date != 2011" (query tree form)');
         })
     );
@@ -79,7 +79,7 @@
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'date': '2010-03-04T08:52:13.746Z', 'identifier': 'twenty ten'}
+            {'date': '2010-03-04 08:52:13.746', 'identifier': 'twenty ten'}
           ], 'Match with "date < 2011" (query tree form)');
         })
     );
@@ -94,8 +94,8 @@
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'date': '2010-03-04T08:52:13.746Z', 'identifier': 'twenty ten'},
-            {'date': '2011-03-04T08:52:13.746Z', 'identifier': 'twenty eleven'}
+            {'date': '2010-03-04 08:52:13.746', 'identifier': 'twenty ten'},
+            {'date': '2011-03-04 08:52:13.746', 'identifier': 'twenty eleven'}
           ], 'Match with "date <= 2011" (query tree form)');
         })
     );
@@ -110,7 +110,7 @@
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'date': '2012-03-04T08:52:13.746Z', 'identifier': 'twenty twelve'}
+            {'date': '2012-03-04 08:52:13.746', 'identifier': 'twenty twelve'}
           ], 'Match with "date > 2011" (query tree form)');
         })
     );
@@ -125,8 +125,8 @@
         exec(docList()).
         then(function (dl) {
           deepEqual(dl, [
-            {'date': '2011-03-04T08:52:13.746Z', 'identifier': 'twenty eleven'},
-            {'date': '2012-03-04T08:52:13.746Z', 'identifier': 'twenty twelve'}
+            {'date': '2011-03-04 08:52:13.746', 'identifier': 'twenty eleven'},
+            {'date': '2012-03-04 08:52:13.746', 'identifier': 'twenty twelve'}
           ], 'Match with "date >= 2011" (query tree form)');
         })
     );
@@ -135,14 +135,14 @@
       [
         'date: < "2011" OR date: "2012-03"',
         [
-          {'date': '2010-03-04T08:52:13.746Z', 'identifier': 'twenty ten'},
-          {'date': '2012-03-04T08:52:13.746Z', 'identifier': 'twenty twelve'}
+          {'date': '2010-03-04 08:52:13.746', 'identifier': 'twenty ten'},
+          {'date': '2012-03-04 08:52:13.746', 'identifier': 'twenty twelve'}
         ]
       ],
       [
-        'date: >= "2011-01" AND date: != "2012-03-04T08:52:13.746Z"',
+        'date: >= "2011-01" AND date: != "2012-03-04 08:52:13.746"',
         [
-          {'date': '2011-03-04T08:52:13.746Z', 'identifier': 'twenty eleven'}
+          {'date': '2011-03-04 08:52:13.746', 'identifier': 'twenty eleven'}
         ]
       ]
     ];
