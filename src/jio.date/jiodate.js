@@ -92,7 +92,22 @@
       this.mom = moment(str);
       this.setPrecision(MONTH);
     } else if (str.match(/\d\d\d\d/)) {
-      this.mom = moment(str);
+      // Creating a moment with only the year will show this deprecation
+      // warning:
+      //
+      // Deprecation warning: moment construction falls back to js Date. This is
+      // discouraged and will be removed in upcoming major release. Please refer
+      // to https://github.com/moment/moment/issues/1407 for more info.
+      //
+      // TL;DR: parsing year-only strings with momentjs falls back to native
+      // Date and it won't correctly represent the year in local time if UTF
+      // offset is negative.
+      //
+      // The solution is to use the format parameter, so momentjs won't fall
+      // back to the native Date and we will have the correct year in local
+      // time.
+      //
+      this.mom = moment(str, 'YYYY');
       this.setPrecision(YEAR);
     }
 

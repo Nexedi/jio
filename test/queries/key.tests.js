@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 120, nomen: true, vars: true */
 /*global define, exports, require, module, jIO, window, test, ok,
-  equal, deepEqual, sinon, stop, start, RSVP */
+  equal, deepEqual, sinon, stop, start, RSVP, jiodate */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -9,10 +9,10 @@
     return define(dependencies, module);
   }
   if (typeof exports === 'object') {
-    return module(require('jio'));
+    return module(require('jio'), require('jiodate'));
   }
-  module(jIO);
-}(['jio', 'qunit'], function (jIO) {
+  module(jIO, jiodate);
+}(['jio', 'jiodate', 'qunit'], function (jIO, jiodate) {
   "use strict";
 
   module('Custom Key Queries');
@@ -76,11 +76,7 @@
 
 
   var dateCast = function (obj) {
-    if (Object.prototype.toString.call(obj) === '[object Date]') {
-      // no need to clone
-      return obj;
-    }
-    return new Date(obj);
+    return new jiodate.JIODate(obj);
   };
 
 
@@ -98,21 +94,21 @@
 
     var sameDay = function (a, b) {
       return (
-        (a.getFullYear() === b.getFullYear()) &&
-          (a.getMonth() === b.getMonth()) &&
-            (a.getDate() === b.getDate())
+        (a.mom.year() === b.mom.year()) &&
+          (a.mom.month() === b.mom.month()) &&
+            (a.mom.date() === b.mom.date())
       );
     };
 
     var sameMonth = function (a, b) {
       return (
-        (a.getFullYear() === b.getFullYear()) &&
-          (a.getMonth() === b.getMonth())
+        (a.mom.year() === b.mom.year()) &&
+          (a.mom.month() === b.mom.month())
       );
     };
 
     var sameYear = function (a, b) {
-      return (a.getFullYear() === b.getFullYear());
+      return (a.mom.year() === b.mom.year());
     };
 
     var keys = {
@@ -324,7 +320,7 @@
         read_from: 'date',
         cast_to: dateCast,
         equal_match: function alwaysTrue(o1) { /*, o2*/
-          return o1.getDate() === 2;
+          return o1.mom.date() === 2;
         }
       }
     }, promise = [];
