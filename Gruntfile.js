@@ -150,7 +150,7 @@ module.exports = function (grunt) {
           'node_modules/uritemplate/bin/uritemplate.js',
           'node_modules/lz-string/libs/lz-string.js',
 //           'node_modules/moment/moment.js',
-          'lib/moment/moment-2.5.0.js',
+          'lib/moment/moment-2.13.0.js',
 
           // queries
           'src/queries/parser-begin.js',
