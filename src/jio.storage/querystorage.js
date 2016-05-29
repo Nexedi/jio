@@ -46,6 +46,8 @@
   QueryStorage.prototype.hasCapacity = function (name) {
     if (name === "list") {
       return this._sub_storage.hasCapacity(name);
+    } else if (name === "bulk") {
+      return false;
     }
     return true;
   };
