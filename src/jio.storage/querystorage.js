@@ -44,10 +44,19 @@
   };
 
   QueryStorage.prototype.hasCapacity = function (name) {
+    var this_storage_capacity_list = ["limit",
+                                      "include",
+                                      "sort",
+                                      "select",
+                                      "query"];
+
+    if (this_storage_capacity_list.indexOf(name) !== -1) {
+      return true;
+    }
     if (name === "list") {
       return this._sub_storage.hasCapacity(name);
     }
-    return true;
+    return false;
   };
   QueryStorage.prototype.buildQuery = function (options) {
     var substorage = this._sub_storage,

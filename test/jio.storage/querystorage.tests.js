@@ -307,7 +307,7 @@
   // queryStorage.hasCapacity
   /////////////////////////////////////////////////////////////////
   module("queryStorage.hasCapacity");
-  test("hasCapacity is true by default", function () {
+  test("hasCapacity is false by default", function () {
     var jio = jIO.createJIO({
       type: "query",
       sub_storage: {
@@ -315,7 +315,18 @@
       }
     });
 
-    equal(jio.hasCapacity("foo"), true);
+    throws(
+      function () {
+        jio.hasCapacity("foo");
+      },
+      function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 501);
+        equal(error.message,
+              "Capacity 'foo' is not implemented on 'query'");
+        return true;
+      }
+    );
   });
 
   test("hasCapacity list return substorage value", function () {
