@@ -238,7 +238,9 @@
                                          id, options);
           }
           // Already exists on destination
-          throw new jIO.util.jIOError("Conflict on '" + id + "'",
+          throw new jIO.util.jIOError("Conflict on '" + id + "': " +
+                                      JSON.stringify(doc) + " !== " +
+                                      JSON.stringify(remote_doc),
                                       409);
         });
     }
@@ -343,7 +345,9 @@
                     return;
                   }
                   if (conflict_force !== true) {
-                    throw new jIO.util.jIOError("Conflict on '" + id + "'",
+                    throw new jIO.util.jIOError("Conflict on '" + id + "': " +
+                                                JSON.stringify(doc) + " !== " +
+                                                JSON.stringify(remote_doc),
                                                 409);
                   }
                 }

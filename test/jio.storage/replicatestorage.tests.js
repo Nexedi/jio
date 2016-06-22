@@ -859,7 +859,8 @@
       })
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Conflict on 'conflict'");
+        equal(error.message, "Conflict on 'conflict': " +
+                             "{\"title\":\"foo\"} !== {\"title\":\"bar\"}");
         equal(error.status_code, 409);
       })
       .then(function () {
@@ -1383,7 +1384,8 @@
       })
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Conflict on '" + id + "'");
+        equal(error.message, "Conflict on '" + id + "': " +
+                             "{\"title\":\"foo4\"} !== {\"title\":\"foo5\"}");
         equal(error.status_code, 409);
       })
       .then(function () {
