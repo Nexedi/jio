@@ -85,6 +85,11 @@
           prefix_length,
           result;
 
+        if (json._links.hasOwnProperty('parent')) {
+          converted_json.parent_relative_url =
+            new URI(json._links.parent.href).segment(2);
+        }
+
         form_data_json.form_id = {
           "key": [form.form_id.key],
           "default": form.form_id["default"]

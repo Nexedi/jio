@@ -175,6 +175,9 @@
         "_links": {
           type: {
             name: "Person"
+          },
+          parent: {
+            href: "urn:jio:get:foo_module"
           }
         },
         "_embedded": {
@@ -244,6 +247,7 @@
       .then(function (result) {
         deepEqual(result, {
           portal_type: "Person",
+          parent_relative_url: "foo_module",
           reference: "bar",
           reference_non_editable: "bar",
           title: "foo"
@@ -1995,6 +1999,9 @@
         "_links": {
           type: {
             name: "Person"
+          },
+          parent: {
+            href: "urn:jio:get:bar_module"
           }
         },
         "_embedded": {
@@ -2135,6 +2142,7 @@
         equal(result_list.length, 2);
         deepEqual(result, {
           portal_type: "Person",
+          parent_relative_url: "bar_module",
           reference: "bar",
           reference_non_editable: "bar",
           title: "foo"
