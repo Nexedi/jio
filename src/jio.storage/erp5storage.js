@@ -77,7 +77,7 @@
       .push(function () {
         var form = json._embedded._view,
           converted_json = {
-            portal_type: json.portal_type
+            portal_type: json._links.type.name
           },
           form_data_json = {},
           field,
@@ -204,7 +204,6 @@
           hateoas = JSON.parse(response.target.responseText);
 
         function pushResult(json) {
-          json.portal_type = json._links.type.name;
           return extractPropertyFromFormJSON(json)
             .push(function (json2) {
               return convertJSONToGet(json2);
@@ -322,7 +321,6 @@
                                    {"_view": this._default_view_reference})
         .push(function (response) {
           var result = JSON.parse(response.target.responseText);
-          result.portal_type = result._links.type.name;
           // Remove all ERP5 hateoas links / convert them into jIO ID
 
           // XXX Change default action to an jio urn with attachment name inside
