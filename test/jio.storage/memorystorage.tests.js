@@ -58,9 +58,7 @@
         equal(uuid, "put1");
         deepEqual(test.jio.__storage._database.put1, {
           attachments: {},
-          doc: {
-            "title": "myPut1"
-          }
+          doc: "{\"title\":\"myPut1\"}"
         });
       })
       .fail(function (error) {
@@ -88,9 +86,7 @@
         deepEqual(test.jio.__storage._database.put1, {
           "foo": "bar",
           "attachments": {"foo": "bar"},
-          doc: {
-            "title": "myPut2"
-          }
+          doc: "{\"title\":\"myPut2\"}"
         });
       })
       .fail(function (error) {
@@ -133,7 +129,7 @@
   test("get document", function () {
     var id = "post1";
     this.jio.__storage._database[id] = {
-      "doc": {title: "myPost1"}
+      "doc": "{\"title\":\"myPost1\"}"
     };
     stop();
     expect(1);
@@ -156,7 +152,7 @@
     var id = "putattmt1";
 
     this.jio.__storage._database[id] = {
-      "doc": {},
+      "doc": "{}",
       "attachments": {
         putattmt2: undefined
       }
@@ -370,14 +366,14 @@
     this.jio.__storage._database[id] = {
       "doc": JSON.stringify({}),
       "attachments": {
-        "putattmt2": blob
+        "putattmt2": "data:x-application/foo;base64,dGVzdA=="
       }
     };
 
     this.jio.getAttachment(id, attachment)
       .then(function (result) {
         ok(result instanceof Blob, "Data is Blob");
-        equal(result, blob);
+        deepEqual(result, blob);
       })
       .fail(function (error) {
         ok(false, error);
@@ -431,7 +427,8 @@
 
     jio.putAttachment(id, "putattmt2", blob)
       .then(function () {
-        equal(jio.__storage._database[id].attachments.putattmt2, blob);
+        equal(jio.__storage._database[id].attachments.putattmt2,
+              "data:x-application/foo;base64,dGVzdA==");
       })
       .fail(function (error) {
         ok(false, error);
@@ -555,8 +552,8 @@
   });
 
   test("list documents with include_docs", function () {
-    this.jio.__storage._database.foo2 = "bar2";
-    this.jio.__storage._database.foo1 = "bar1";
+    this.jio.__storage._database.foo2 = {doc: "{\"title\":\"bar2\"}"};
+    this.jio.__storage._database.foo1 = {doc: "{\"title\":\"bar1\"}"};
 
     stop();
     expect(1);
@@ -569,12 +566,12 @@
               {
                 "id": "foo2",
                 "value": {},
-                "doc": "bar2"
+                "doc": {title: "bar2"}
               },
               {
                 "id": "foo1",
                 "value": {},
-                "doc": "bar1"
+                "doc": {title: "bar1"}
               }
             ],
             "total_rows": 2

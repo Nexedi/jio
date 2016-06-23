@@ -5,7 +5,7 @@
  */
 
 /*jslint nomen: true*/
-/*global jIO*/
+/*global jIO, RSVP*/
 
 /**
  * JIO Memory Storage. Type = 'memory'.
@@ -20,7 +20,7 @@
  * @class MemoryStorage
  */
 
-(function (jIO) {
+(function (jIO, JSON, RSVP) {
   "use strict";
 
   /**
@@ -39,13 +39,13 @@
         attachments: {}
       };
     }
-    this._database[id].doc = metadata;
+    this._database[id].doc = JSON.stringify(metadata);
     return id;
   };
 
   MemoryStorage.prototype.get = function (id) {
     try {
-      return this._database[id].doc;
+      return JSON.parse(this._database[id].doc);
     } catch (error) {
       if (error instanceof TypeError) {
         throw new jIO.util.jIOError(
@@ -92,7 +92,7 @@
           404
         );
       }
-      return result;
+      return jIO.util.dataURItoBlob(result);
     } catch (error) {
       if (error instanceof TypeError) {
         throw new jIO.util.jIOError(
@@ -114,7 +114,13 @@
       }
       throw error;
     }
-    attachment_dict[name] = blob;
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.readBlobAsDataURL(blob);
+      })
+      .push(function (evt) {
+        attachment_dict[name] = evt.target.result;
+      });
   };
 
   MemoryStorage.prototype.removeAttachment = function (id, name) {
@@ -145,7 +151,7 @@
           rows.push({
             id: i,
             value: {},
-            doc: this._database[i]
+            doc: JSON.parse(this._database[i].doc)
           });
         } else {
           rows.push({
@@ -161,4 +167,4 @@
 
   jIO.addStorage('memory', MemoryStorage);
 
-}(jIO));
+}(jIO, JSON, RSVP));
