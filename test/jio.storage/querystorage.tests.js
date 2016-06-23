@@ -426,7 +426,6 @@
     });
 
     jio.allDocs({
-      include_docs: false,
       sort_on: [["title", "ascending"]],
       limit: [5],
       select_list: ["title", "id"],
@@ -495,7 +494,6 @@
     });
 
     jio.allDocs({
-      include_docs: false,
       sort_on: [["title", "ascending"]],
       limit: [0, 5],
       select_list: ["title", "id"],
@@ -571,7 +569,6 @@
     });
 
     jio.allDocs({
-      include_docs: false,
       sort_on: [["title", "ascending"]],
       limit: [0, 5],
       select_list: ["title", "id"],
@@ -647,7 +644,6 @@
     });
 
     jio.allDocs({
-      include_docs: false,
       sort_on: [["title", "ascending"]],
       limit: [0, 5],
       select_list: ["title", "id"],
@@ -723,7 +719,6 @@
     });
 
     jio.allDocs({
-      include_docs: false,
       sort_on: [["title", "ascending"]],
       limit: [0, 5],
       select_list: ["title", "id"],
@@ -800,7 +795,6 @@
       });
 
       jio.allDocs({
-        include_docs: false,
         sort_on: [["title", "ascending"]],
         limit: [0, 5],
         select_list: ["title", "id"],

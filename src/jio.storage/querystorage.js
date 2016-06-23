@@ -45,7 +45,6 @@
 
   QueryStorage.prototype.hasCapacity = function (name) {
     var this_storage_capacity_list = ["limit",
-                                      "include",
                                       "sort",
                                       "select",
                                       "query"];
