@@ -24,7 +24,7 @@
     // Because the above JIODate is created in ISO string, which uses UTC time,
     // it's necessary to set the moment to use the UTC mode. Otherwise different
     // timezones may have different results for the getters below, as they will
-    // try to convert it to local time. 
+    // try to convert it to local time.
     //
     d.mom.utc();
 
@@ -190,7 +190,12 @@
     strictEqual(d.toPrecisionString(), '2012-05-02 06:07:08.989');
     strictEqual(
       d.mom.toDate().valueOf(),
-      new Date('2012-05-02 06:07:08.989').valueOf()
+      // This Date constructor needs to be used because of older Firefox
+      // versions that do not parse some date strings formats correctly. It
+      // uses months from 0 to 11. So if we want to create  a date in May, we
+      // need to use 4 instead of 5.
+      //
+      new Date(2012, 4, 2, 6, 7, 8, 989).valueOf()
     );
 
     d = JIODate('2012-05-02 06:07:08');
@@ -198,7 +203,7 @@
     strictEqual(d.toPrecisionString(), '2012-05-02 06:07:08');
     strictEqual(
       d.mom.toDate().valueOf(),
-      new Date('2012-05-02 06:07:08.000').valueOf()
+      new Date(2012, 4, 2, 6, 7, 8, 0).valueOf()
     );
 
     d = JIODate('2012-05-02 06:07');
@@ -206,7 +211,7 @@
     strictEqual(d.toPrecisionString(), '2012-05-02 06:07');
     strictEqual(
       d.mom.toDate().valueOf(),
-      new Date('2012-05-02 06:07:00.000').valueOf()
+      new Date(2012, 4, 2, 6, 7, 0, 0).valueOf()
     );
 
     d = JIODate('2012-05-02 06');
@@ -214,7 +219,7 @@
     strictEqual(d.toPrecisionString(), '2012-05-02 06');
     strictEqual(
       d.mom.toDate().valueOf(),
-      new Date('2012-05-02 06:00:00.000').valueOf()
+      new Date(2012, 4, 2, 6, 0, 0, 0).valueOf()
     );
 
     d = JIODate('2012-05-02');
@@ -222,7 +227,7 @@
     strictEqual(d.toPrecisionString(), '2012-05-02');
     strictEqual(
       d.mom.toDate().valueOf(),
-      new Date('2012-05-02 00:00:00.000').valueOf()
+      new Date(2012, 4, 2, 0, 0, 0, 0).valueOf()
     );
 
     d = JIODate('2012-05');
@@ -230,7 +235,7 @@
     strictEqual(d.toPrecisionString(), '2012-05');
     strictEqual(
       d.mom.toDate().valueOf(),
-      new Date('2012-05-01 00:00:00.000').valueOf()
+      new Date(2012, 4, 1, 0, 0, 0, 0).valueOf()
     );
 
     d = JIODate('2012');
@@ -238,7 +243,7 @@
     strictEqual(d.toPrecisionString(), '2012');
     strictEqual(
       d.mom.toDate().valueOf(),
-      new Date('2012-01-01 00:00:00.000').valueOf()
+      new Date(2012, 0, 1, 0, 0, 0, 0).valueOf()
     );
   });
 
