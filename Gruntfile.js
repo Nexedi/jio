@@ -164,6 +164,7 @@ module.exports = function (grunt) {
 
           'node_modules/rusha/rusha.js',
 
+          'src/jio.storage/attachaspropertystorage.js',
           'src/jio.storage/replicatestorage.js',
           'src/jio.storage/shastorage.js',
           'src/jio.storage/uuidstorage.js',
