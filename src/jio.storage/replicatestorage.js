@@ -35,8 +35,17 @@
   ****************************************************/
 
   function generateHash(content) {
-    // XXX Improve performance by moving calculation to WebWorker
-    return rusha.digestFromString(content);
+    var s = '', ret;
+    if (typeof content === "string") {
+      ret = rusha.digestFromString(content);
+    } else {
+      Object.keys(content).sort().forEach(function (i) {
+        s = s + content[i];
+      });
+      // XXX Improve performance by moving calculation to WebWorker
+      ret = rusha.digestFromString(s);
+    }
+    return ret;
   }
 
   function ReplicateStorage(spec) {
@@ -213,14 +222,14 @@
           return getMethod(id);
         })
         .push(function (doc) {
-          var local_hash = generateHash(JSON.stringify(doc)),
+          var local_hash = generateHash(doc),
             remote_hash;
           if (remote_doc === undefined) {
             return propagateModification(source, destination, doc, local_hash,
                                          id, options);
           }
 
-          remote_hash = generateHash(JSON.stringify(remote_doc));
+          remote_hash = generateHash(remote_doc);
           if (local_hash === remote_hash) {
             // Same document
             return context._signature_sub_storage.put(id, {
@@ -281,7 +290,7 @@
           status_hash = result.hash;
           return destination.get(id)
             .push(function (doc) {
-              var remote_hash = generateHash(JSON.stringify(doc));
+              var remote_hash = generateHash(doc);
               if (remote_hash === status_hash) {
                 return destination.remove(id)
                   .push(function () {
@@ -320,14 +329,14 @@
         })
         .push(function (result_list) {
           var doc = result_list[0],
-            local_hash = generateHash(JSON.stringify(doc)),
+            local_hash = generateHash(doc),
             status_hash = result_list[1].hash;
 
           if (local_hash !== status_hash) {
             // Local modifications
             return destination.get(id)
               .push(function (remote_doc) {
-                var remote_hash = generateHash(JSON.stringify(remote_doc));
+                var remote_hash = generateHash(remote_doc);
                 if (remote_hash !== status_hash) {
                   // Modifications on both sides
                   if (local_hash === remote_hash) {
