@@ -231,6 +231,10 @@
         var form_data = new FormData();
         form_data.append("portal_type", data.portal_type);
         form_data.append("parent_relative_url", data.parent_relative_url);
+        if (data.id) {
+          form_data.append("id", data.id);
+          delete data.id;
+        }
         return jIO.util.ajax({
           type: "POST",
           url: site_hal._actions.add.href,
@@ -270,7 +274,9 @@
                 400
               );
             }
-            if ((key !== "portal_type") && (key !== "parent_relative_url")) {
+            if ((key !== "portal_type")
+                && (key !== "parent_relative_url")
+                && (key !== "id")) {
               if (!json.hasOwnProperty(key)) {
                 throw new jIO.util.jIOError(
                   "ERP5: can not store property: " + key,
