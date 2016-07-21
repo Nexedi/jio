@@ -99,6 +99,36 @@
     if (this._check_remote_deletion === undefined) {
       this._check_remote_deletion = true;
     }
+    this._check_local_attachment_modification =
+      spec.check_local_attachment_modification;
+    if (this._check_local_attachment_modification === undefined) {
+      this._check_local_attachment_modification = true;
+    }
+    this._check_local_attachment_creation =
+      spec.check_local_attachment_creation;
+    if (this._check_local_attachment_creation === undefined) {
+      this._check_local_attachment_creation = true;
+    }
+    this._check_local_attachment_deletion =
+      spec.check_local_attachment_deletion;
+    if (this._check_local_attachment_deletion === undefined) {
+      this._check_local_attachment_deletion = true;
+    }
+    this._check_remote_attachment_modification =
+      spec.check_remote_attachment_modification;
+    if (this._check_remote_attachment_modification === undefined) {
+      this._check_remote_attachment_modification = true;
+    }
+    this._check_remote_attachment_creation =
+      spec.check_remote_attachment_creation;
+    if (this._check_remote_attachment_creation === undefined) {
+      this._check_remote_attachment_creation = true;
+    }
+    this._check_remote_attachment_deletion =
+      spec.check_remote_attachment_deletion;
+    if (this._check_remote_attachment_deletion === undefined) {
+      this._check_remote_attachment_deletion = true;
+    }
   }
 
   ReplicateStorage.prototype.remove = function (id) {
@@ -124,6 +154,32 @@
   ReplicateStorage.prototype.get = function () {
     return this._local_sub_storage.get.apply(this._local_sub_storage,
                                              arguments);
+  };
+  ReplicateStorage.prototype.getAttachment = function () {
+    return this._local_sub_storage.getAttachment.apply(this._local_sub_storage,
+                                                       arguments);
+  };
+  ReplicateStorage.prototype.allAttachments = function () {
+    return this._local_sub_storage.allAttachments.apply(this._local_sub_storage,
+                                                       arguments);
+  };
+  ReplicateStorage.prototype.putAttachment = function (id) {
+    if (id === this._signature_hash) {
+      throw new jIO.util.jIOError(this._signature_hash + " is frozen",
+                                  403);
+    }
+    return this._local_sub_storage.putAttachment.apply(this._local_sub_storage,
+                                                       arguments);
+  };
+  ReplicateStorage.prototype.removeAttachment = function (id) {
+    if (id === this._signature_hash) {
+      throw new jIO.util.jIOError(this._signature_hash + " is frozen",
+                                  403);
+    }
+    return this._local_sub_storage.removeAttachment.apply(
+      this._local_sub_storage,
+      arguments
+    );
   };
   ReplicateStorage.prototype.hasCapacity = function () {
     return this._local_sub_storage.hasCapacity.apply(this._local_sub_storage,

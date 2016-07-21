@@ -1,5 +1,6 @@
 /*jslint nomen: true*/
-(function (jIO, QUnit) {
+/*global Blob*/
+(function (jIO, QUnit, Blob) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -9,7 +10,14 @@
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
     module = QUnit.module,
-    throws = QUnit.throws;
+    throws = QUnit.throws,
+    big_string = "",
+    j;
+
+  for (j = 0; j < 3000000; j += 1) {
+    big_string += "a";
+  }
+
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -53,6 +61,12 @@
     equal(jio.__storage._check_remote_creation, true);
     equal(jio.__storage._check_remote_deletion, true);
     equal(jio.__storage._check_remote_modification, true);
+    equal(jio.__storage._check_local_attachment_creation, true);
+    equal(jio.__storage._check_local_attachment_deletion, true);
+    equal(jio.__storage._check_local_attachment_modification, true);
+    equal(jio.__storage._check_remote_attachment_creation, true);
+    equal(jio.__storage._check_remote_attachment_deletion, true);
+    equal(jio.__storage._check_remote_attachment_modification, true);
 
     equal(jio.__storage._signature_hash,
           "_replicate_7209dfbcaff00f6637f939fdd71fa896793ed385");
@@ -87,7 +101,13 @@
       check_local_modification: false,
       check_remote_creation: false,
       check_remote_deletion: false,
-      check_remote_modification: false
+      check_remote_modification: false,
+      check_local_attachment_creation: false,
+      check_local_attachment_deletion: false,
+      check_local_attachment_modification: false,
+      check_remote_attachment_creation: false,
+      check_remote_attachment_deletion: false,
+      check_remote_attachment_modification: false
     });
 
     deepEqual(
@@ -102,6 +122,12 @@
     equal(jio.__storage._check_remote_creation, false);
     equal(jio.__storage._check_remote_deletion, false);
     equal(jio.__storage._check_remote_modification, false);
+    equal(jio.__storage._check_local_attachment_creation, false);
+    equal(jio.__storage._check_local_attachment_deletion, false);
+    equal(jio.__storage._check_local_attachment_modification, false);
+    equal(jio.__storage._check_remote_attachment_creation, false);
+    equal(jio.__storage._check_remote_attachment_deletion, false);
+    equal(jio.__storage._check_remote_attachment_modification, false);
 
     equal(jio.__storage._signature_hash,
           "_replicate_11881e431308c0ec8c0e6430be98db380e1b92f8");
@@ -413,6 +439,216 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, jio.__storage._signature_hash + " is frozen");
         equal(error.status_code, 403);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.getAttachment
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.getAttachment");
+  test("getAttachment called substorage getAttachment", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    }),
+      blob = new Blob([big_string]);
+
+    Storage200.prototype.getAttachment = function (id, name) {
+      equal(id, "bar", "getAttachment 200 called");
+      equal(name, "foo", "getAttachment 200 called");
+      return blob;
+    };
+
+    jio.getAttachment("bar", "foo")
+      .then(function (result) {
+        equal(result, blob);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.putAttachment
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.putAttachment");
+  test("putAttachment called substorage putAttachment", function () {
+    stop();
+    expect(4);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    }),
+      blob = new Blob([""]);
+
+    Storage200.prototype.putAttachment = function (id, name, blob2) {
+      equal(id, "bar", "putAttachment 200 called");
+      equal(name, "foo", "putAttachment 200 called");
+      deepEqual(blob2, blob,
+                "putAttachment 200 called");
+      return "OK";
+    };
+
+    jio.putAttachment("bar", "foo", blob)
+      .then(function (result) {
+        equal(result, "OK");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("putAttachment can not modify the signature", function () {
+    stop();
+    expect(3);
+
+    delete Storage200.prototype.putAttachment;
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    }),
+      blob = new Blob([""]);
+
+    jio.putAttachment(jio.__storage._signature_hash, "Foo", blob)
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, jio.__storage._signature_hash + " is frozen");
+        equal(error.status_code, 403);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.removeAttachment
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.removeAttachment");
+  test("removeAttachment called substorage removeAttachment", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+
+    Storage200.prototype.removeAttachment = function (id, name) {
+      equal(id, "bar", "removeAttachment 200 called");
+      equal(name, "foo", "removeAttachment 200 called");
+      return "OK";
+    };
+
+    jio.removeAttachment("bar", "foo")
+      .then(function (result) {
+        equal(result, "OK");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("removeAttachment can not modify the signature", function () {
+    stop();
+    expect(3);
+
+    delete Storage200.prototype.removeAttachment;
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+
+    jio.removeAttachment(jio.__storage._signature_hash, "Foo")
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, jio.__storage._signature_hash + " is frozen");
+        equal(error.status_code, 403);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.allAttachments");
+  test("allAttachments called substorage allAttachments", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+
+    Storage200.prototype.allAttachments = function (id) {
+      equal(id, "bar", "allAttachments, 200 called");
+      return {attachmentname: {}};
+    };
+
+    jio.allAttachments("bar")
+      .then(function (result) {
+        deepEqual(result, {
+          attachmentname: {}
+        }, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
       })
       .always(function () {
         start();
@@ -2627,4 +2863,4 @@
       });
   });
 
-}(jIO, QUnit));
+}(jIO, QUnit, Blob));
