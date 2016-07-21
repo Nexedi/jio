@@ -1,8 +1,14 @@
 /*global window, RSVP, Blob, XMLHttpRequest, QueryFactory, Query, atob,
-  FileReader, ArrayBuffer, Uint8Array */
+  FileReader, ArrayBuffer, Uint8Array, navigator */
 (function (window, RSVP, Blob, QueryFactory, Query, atob,
-           FileReader, ArrayBuffer, Uint8Array) {
+           FileReader, ArrayBuffer, Uint8Array, navigator) {
   "use strict";
+
+  if (window.openDatabase === undefined) {
+    window.openDatabase = function () {
+      throw new Error('WebSQL is not supported by ' + navigator.userAgent);
+    };
+  }
 
   var util = {},
     jIO;
@@ -504,4 +510,4 @@
   window.jIO = jIO;
 
 }(window, RSVP, Blob, QueryFactory, Query, atob,
-  FileReader, ArrayBuffer, Uint8Array));
+  FileReader, ArrayBuffer, Uint8Array, navigator));

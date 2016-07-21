@@ -11,8 +11,16 @@
     equal = QUnit.equal,
     module = QUnit.module,
     big_string = "",
-    db = openDatabase('jio:qunit', '1.0', '', 2 * 1024 * 1024),
+    db,
     j;
+
+  try {
+    db = openDatabase('jio:qunit', '1.0', '', 2 * 1024 * 1024);
+  } catch (ignore) {
+  }
+  if (db === undefined) {
+    return;
+  }
 
   function getSpy() {
     return new RSVP.Promise(function (resolve, reject) {
