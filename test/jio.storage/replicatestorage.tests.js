@@ -1,5 +1,6 @@
 /*jslint nomen: true*/
-(function (jIO, QUnit) {
+/*global Blob*/
+(function (jIO, QUnit, Blob) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -9,7 +10,14 @@
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
     module = QUnit.module,
-    throws = QUnit.throws;
+    throws = QUnit.throws,
+    big_string = "",
+    j;
+
+  for (j = 0; j < 30; j += 1) {
+    big_string += "a";
+  }
+
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -58,6 +66,12 @@
     equal(jio.__storage._check_remote_creation, true);
     equal(jio.__storage._check_remote_deletion, true);
     equal(jio.__storage._check_remote_modification, true);
+    equal(jio.__storage._check_local_attachment_creation, true);
+    equal(jio.__storage._check_local_attachment_deletion, true);
+    equal(jio.__storage._check_local_attachment_modification, true);
+    equal(jio.__storage._check_remote_attachment_creation, true);
+    equal(jio.__storage._check_remote_attachment_deletion, true);
+    equal(jio.__storage._check_remote_attachment_modification, true);
 
     equal(jio.__storage._signature_hash,
           "_replicate_7209dfbcaff00f6637f939fdd71fa896793ed385");
@@ -95,7 +109,13 @@
       check_local_modification: false,
       check_remote_creation: false,
       check_remote_deletion: false,
-      check_remote_modification: false
+      check_remote_modification: false,
+      check_local_attachment_creation: false,
+      check_local_attachment_deletion: false,
+      check_local_attachment_modification: false,
+      check_remote_attachment_creation: false,
+      check_remote_attachment_deletion: false,
+      check_remote_attachment_modification: false
     });
 
     deepEqual(
@@ -110,6 +130,12 @@
     equal(jio.__storage._check_remote_creation, false);
     equal(jio.__storage._check_remote_deletion, false);
     equal(jio.__storage._check_remote_modification, false);
+    equal(jio.__storage._check_local_attachment_creation, false);
+    equal(jio.__storage._check_local_attachment_deletion, false);
+    equal(jio.__storage._check_local_attachment_modification, false);
+    equal(jio.__storage._check_remote_attachment_creation, false);
+    equal(jio.__storage._check_remote_attachment_deletion, false);
+    equal(jio.__storage._check_remote_attachment_modification, false);
 
     equal(jio.__storage._signature_sub_storage.__storage._sub_storage.__type,
           "signaturestorage2713");
@@ -430,6 +456,216 @@
   });
 
   /////////////////////////////////////////////////////////////////
+  // replicateStorage.getAttachment
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.getAttachment");
+  test("getAttachment called substorage getAttachment", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    }),
+      blob = new Blob([big_string]);
+
+    Storage200.prototype.getAttachment = function (id, name) {
+      equal(id, "bar", "getAttachment 200 called");
+      equal(name, "foo", "getAttachment 200 called");
+      return blob;
+    };
+
+    jio.getAttachment("bar", "foo")
+      .then(function (result) {
+        equal(result, blob);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.putAttachment
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.putAttachment");
+  test("putAttachment called substorage putAttachment", function () {
+    stop();
+    expect(4);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    }),
+      blob = new Blob([""]);
+
+    Storage200.prototype.putAttachment = function (id, name, blob2) {
+      equal(id, "bar", "putAttachment 200 called");
+      equal(name, "foo", "putAttachment 200 called");
+      deepEqual(blob2, blob,
+                "putAttachment 200 called");
+      return "OK";
+    };
+
+    jio.putAttachment("bar", "foo", blob)
+      .then(function (result) {
+        equal(result, "OK");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("putAttachment can not modify the signature", function () {
+    stop();
+    expect(3);
+
+    delete Storage200.prototype.putAttachment;
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    }),
+      blob = new Blob([""]);
+
+    jio.putAttachment(jio.__storage._signature_hash, "Foo", blob)
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, jio.__storage._signature_hash + " is frozen");
+        equal(error.status_code, 403);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.removeAttachment
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.removeAttachment");
+  test("removeAttachment called substorage removeAttachment", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+
+    Storage200.prototype.removeAttachment = function (id, name) {
+      equal(id, "bar", "removeAttachment 200 called");
+      equal(name, "foo", "removeAttachment 200 called");
+      return "OK";
+    };
+
+    jio.removeAttachment("bar", "foo")
+      .then(function (result) {
+        equal(result, "OK");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("removeAttachment can not modify the signature", function () {
+    stop();
+    expect(3);
+
+    delete Storage200.prototype.removeAttachment;
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+
+    jio.removeAttachment(jio.__storage._signature_hash, "Foo")
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, jio.__storage._signature_hash + " is frozen");
+        equal(error.status_code, 403);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // replicateStorage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("replicateStorage.allAttachments");
+  test("allAttachments called substorage allAttachments", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "replicatestorage200"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage500"
+      }
+    });
+
+    Storage200.prototype.allAttachments = function (id) {
+      equal(id, "bar", "allAttachments, 200 called");
+      return {attachmentname: {}};
+    };
+
+    jio.allAttachments("bar")
+      .then(function (result) {
+        deepEqual(result, {
+          attachmentname: {}
+        }, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
   // replicateStorage.repair use cases
   /////////////////////////////////////////////////////////////////
   module("replicateStorage.repair", {
@@ -479,6 +715,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -632,6 +869,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -662,6 +900,24 @@
     };
     Storage200DelayedAllDocs.prototype.put = function () {
       return this._sub_storage.put.apply(this._sub_storage, arguments);
+    };
+    Storage200DelayedAllDocs.prototype.allAttachments = function () {
+      return this._sub_storage.allAttachments.apply(
+        this._sub_storage,
+        arguments
+      );
+    };
+    Storage200DelayedAllDocs.prototype.putAttachment = function () {
+      return this._sub_storage.putAttachment.apply(
+        this._sub_storage,
+        arguments
+      );
+    };
+    Storage200DelayedAllDocs.prototype.getAttachment = function () {
+      return this._sub_storage.getAttachment.apply(
+        this._sub_storage,
+        arguments
+      );
     };
     Storage200DelayedAllDocs.prototype.hasCapacity = function () {
       return true;
@@ -743,6 +999,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -779,6 +1036,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
         });
       })
@@ -922,6 +1180,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -987,6 +1246,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            attachments_hash: {},
             hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
           });
         })
@@ -1050,6 +1310,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
         });
       })
@@ -1115,6 +1376,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            attachments_hash: {},
             hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
           });
         })
@@ -1289,6 +1551,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1328,6 +1591,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1370,6 +1634,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "9819187e39531fdc9bcfd40dbc6a7d3c78fe8dab"
         });
       })
@@ -1437,6 +1702,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1482,6 +1748,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "4b1dde0f80ac38514771a9d25b5278e38f560e0f"
         });
       })
@@ -1552,6 +1819,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1598,6 +1866,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1649,6 +1918,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "6f700e813022233a785692585484c21cb5a412fd"
         });
       })
@@ -1719,6 +1989,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "7bea6f87fd1dda14e340e5b14836cc8578fd615f"
         });
       })
@@ -1789,6 +2060,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1842,6 +2114,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
         });
       })
@@ -1957,6 +2230,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -2069,6 +2343,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -2173,6 +2448,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
         });
       })
@@ -2218,6 +2494,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
         });
       })
@@ -2492,6 +2769,24 @@
     Storage200Bulk.prototype.buildQuery = function () {
       return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
     };
+    Storage200Bulk.prototype.putAttachment = function () {
+      return this._sub_storage.putAttachment.apply(
+        this._sub_storage,
+        arguments
+      );
+    };
+    Storage200Bulk.prototype.getAttachment = function () {
+      return this._sub_storage.getAttachment.apply(
+        this._sub_storage,
+        arguments
+      );
+    };
+    Storage200Bulk.prototype.allAttachments = function () {
+      return this._sub_storage.allAttachments.apply(
+        this._sub_storage,
+        arguments
+      );
+    };
     jIO.addStorage(
       'replicatestorage200bulk',
       Storage200Bulk
@@ -2528,6 +2823,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
         });
       })
@@ -2572,6 +2868,24 @@
     Storage200Bulk.prototype.buildQuery = function () {
       return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
     };
+    Storage200Bulk.prototype.putAttachment = function () {
+      return this._sub_storage.putAttachment.apply(
+        this._sub_storage,
+        arguments
+      );
+    };
+    Storage200Bulk.prototype.getAttachment = function () {
+      return this._sub_storage.getAttachment.apply(
+        this._sub_storage,
+        arguments
+      );
+    };
+    Storage200Bulk.prototype.allAttachments = function () {
+      return this._sub_storage.allAttachments.apply(
+        this._sub_storage,
+        arguments
+      );
+    };
     jIO.addStorage(
       'replicatestorage200bulkremotemodification',
       Storage200Bulk
@@ -2608,6 +2922,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          attachments_hash: {},
           hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
         });
       })
@@ -2637,4 +2952,3207 @@
       });
   });
 
-}(jIO, QUnit));
+  test("local attachment creation", function () {
+    stop();
+    expect(3);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(id, "foo", blob);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "foo",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(result, big_string);
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            "foo": "cd762363c1c11ecb48611583520bba111f0034d4"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local attachment creation not checked", function () {
+    stop();
+    expect(6);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_local_attachment_creation: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(id, "foo", blob);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "foo",
+          {format: "text"}
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , foo");
+        equal(error.status_code, 404);
+        return context.jio.getAttachment(
+          id,
+          "foo",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(result, big_string);
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {},
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test(
+    "local creation creation: attachment list",
+    function () {
+      stop();
+      expect(7);
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        attachment_list: ["foo"]
+      });
+
+      var id,
+        context = this,
+        blob = new Blob([big_string]),
+        blob2 = new Blob([big_string + "a"]);
+
+      context.jio.post({"title": "foo"})
+        .then(function (result) {
+          id = result;
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.putAttachment(
+              id,
+              "foo",
+              blob
+            ),
+            context.jio.putAttachment(
+              id,
+              "bar",
+              blob2
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .then(function (result) {
+          deepEqual(result, {"title": "foo"});
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.getAttachment(
+            id,
+            "foo",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, big_string === result);
+        })
+        .then(function () {
+          return context.jio.getAttachment(
+            id,
+            "bar",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, big_string + "a" === result);
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.getAttachment(
+            id,
+            "bar"
+          );
+        })
+        .fail(function (error) {
+          ok(error instanceof jIO.util.jIOError);
+          equal(
+            error.message,
+            "Cannot find attachment: " + id + " , bar"
+          );
+          equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            attachments_hash: {
+              "foo": "cd762363c1c11ecb48611583520bba111f0034d4"
+            },
+            hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+          });
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    }
+  );
+
+  test("local document creation with attachment creation and use remote post",
+       function () {
+      stop();
+      expect(17);
+
+      var id,
+        post_id,
+        context = this,
+        blob = new Blob([big_string]);
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        use_remote_post: true,
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      });
+
+      context.jio.post({"title": "foo"})
+        .then(function (result) {
+          id = result;
+          return context.jio.putAttachment(id, "foo", blob);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        // Document 'id' has been deleted in both storages
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          ok(error instanceof jIO.util.jIOError);
+          equal(error.message, "Cannot find document: " + id);
+          equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._local_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          ok(error instanceof jIO.util.jIOError);
+          equal(error.message, "Cannot find document: " + id);
+          equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._local_sub_storage.getAttachment(
+            id,
+            "foo"
+          );
+        })
+        .fail(function (error) {
+          ok(error instanceof jIO.util.jIOError);
+          equal(error.message, "Cannot find attachment: " + id + " , foo");
+          equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .then(function () {
+          ok(false, "Signature should have been deleted");
+        })
+        .fail(function (error) {
+          ok(error instanceof jIO.util.jIOError);
+          equal(error.status_code, 404);
+        })
+        // But another document should have been created
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.allDocs();
+        })
+        .then(function (result) {
+          equal(result.data.total_rows, 1);
+          post_id = result.data.rows[0].id;
+          return context.jio.__storage._remote_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            title: "foo"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._local_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            title: "foo"
+          });
+          return context.jio.__storage._local_sub_storage.getAttachment(
+            post_id,
+            "foo",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(result, big_string);
+          return context.jio.__storage._remote_sub_storage.getAttachment(
+            post_id,
+            "foo",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(result, big_string);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            attachments_hash: {
+              "foo": "cd762363c1c11ecb48611583520bba111f0034d4"
+            },
+            hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+          });
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    });
+
+  test("remote attachment creation", function () {
+    stop();
+    expect(3);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    context.jio.__storage._remote_sub_storage.post({"title": "bar"})
+      .then(function (result) {
+        id = result;
+        return context.jio.__storage._remote_sub_storage.putAttachment(
+          id,
+          "foo",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "bar"
+        });
+        return context.jio.getAttachment(
+          id,
+          "foo",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(result, big_string);
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            "foo": "cd762363c1c11ecb48611583520bba111f0034d4"
+          },
+          hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote attachment creation not checked", function () {
+    stop();
+    expect(7);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_remote_attachment_creation: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.__storage._remote_sub_storage.post({"title": "bar"})
+      .then(function (result) {
+        id = result;
+        return context.jio.__storage._remote_sub_storage.putAttachment(
+          id,
+          "foo",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "bar"
+        });
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "foo",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(result, big_string);
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "bar"
+        });
+        return context.jio.__storage._local_sub_storage.getAttachment(
+          id,
+          "foo"
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , foo");
+        equal(error.status_code, 404);
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {},
+          hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test(
+    "remote creation only synchronize needed attachments: attachment list",
+    function () {
+      stop();
+      expect(7);
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        attachment_list: ["foo"]
+      });
+
+      var id,
+        context = this,
+        blob = new Blob([big_string]),
+        blob2 = new Blob([big_string + "a"]);
+
+      context.jio.__storage._remote_sub_storage.post({"title": "foo"})
+        .then(function (result) {
+          id = result;
+          return RSVP.all([
+            context.jio.__storage._remote_sub_storage.putAttachment(
+              id,
+              "foo",
+              blob
+            ),
+            context.jio.__storage._remote_sub_storage.putAttachment(
+              id,
+              "bar",
+              blob2
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.get(id);
+        })
+        .then(function (result) {
+          deepEqual(result, {"title": "foo"});
+        })
+        .then(function () {
+          return context.jio.getAttachment(
+            id,
+            "foo",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, big_string === result);
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.getAttachment(
+            id,
+            "bar",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, big_string + "a" === result);
+        })
+        .then(function () {
+          return context.jio.getAttachment(
+            id,
+            "bar"
+          );
+        })
+        .fail(function (error) {
+          ok(error instanceof jIO.util.jIOError);
+          equal(
+            error.message,
+            "Cannot find attachment: " + id + " , bar"
+          );
+          equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            attachments_hash: {
+              "foo": "cd762363c1c11ecb48611583520bba111f0034d4"
+            },
+            hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+          });
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    }
+  );
+
+  test("local and remote attachment creations", function () {
+    stop();
+    expect(4);
+
+    var context = this,
+      blob = new Blob([big_string]),
+      blob2 = new Blob([big_string + "a"]);
+
+    context.jio.put("conflict", {"title": "foo"})
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.__storage._local_sub_storage.putAttachment(
+            "conflict",
+            "conflict",
+            blob
+          ),
+          context.jio.__storage._remote_sub_storage.putAttachment(
+            "conflict",
+            "conflict",
+            blob2
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Conflict on 'conflict' " +
+                             "with attachment 'conflict'");
+        equal(error.status_code, 409);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {},
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote attachment creations: keep local",
+    function () {
+      stop();
+      expect(3);
+
+      var context = this,
+        blob = new Blob([big_string]),
+        blob2 = new Blob([big_string + "a"]);
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        conflict_handling: 1
+      });
+
+      context.jio.put("conflict", {"title": "foo"})
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.__storage._local_sub_storage.putAttachment(
+              "conflict",
+              "conflict",
+              blob
+            ),
+            context.jio.__storage._remote_sub_storage.putAttachment(
+              "conflict",
+              "conflict",
+              blob2
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get("conflict");
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            attachments_hash: {
+              conflict: "cd762363c1c11ecb48611583520bba111f0034d4"
+            },
+            hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+          });
+          return context.jio.getAttachment(
+            "conflict",
+            "conflict",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, result === big_string);
+          // XXX For some reason this crash
+          //equal(result, big_string + "a");
+          return context.jio.__storage._remote_sub_storage.getAttachment(
+            "conflict",
+            "conflict",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, result === big_string);
+          // XXX For some reason this crash too
+          //deepEqual(result, big_string + "a");
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    });
+
+  test("local and remote attachment creations: keep remote",
+    function () {
+      stop();
+      expect(3);
+
+      var context = this,
+        blob = new Blob([big_string]),
+        blob2 = new Blob([big_string + "a"]);
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        conflict_handling: 2
+      });
+
+      context.jio.put("conflict", {"title": "foo"})
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.__storage._local_sub_storage.putAttachment(
+              "conflict",
+              "conflict",
+              blob
+            ),
+            context.jio.__storage._remote_sub_storage.putAttachment(
+              "conflict",
+              "conflict",
+              blob2
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get("conflict");
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            attachments_hash: {
+              conflict: "65cf771ad2cc0b1e8f89361e3b7bec2365b3ad24"
+            },
+            hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+          });
+          return context.jio.getAttachment(
+            "conflict",
+            "conflict",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, result === big_string + "a");
+          // XXX For some reason this crash
+          //equal(result, big_string + "a");
+          return context.jio.__storage._remote_sub_storage.getAttachment(
+            "conflict",
+            "conflict",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, result === big_string + "a");
+          // XXX For some reason this crash too
+          //deepEqual(result, big_string + "a");
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    });
+
+  test("local and remote attachment creations: continue",
+    function () {
+      stop();
+      expect(3);
+
+      var context = this,
+        blob = new Blob([big_string]),
+        blob2 = new Blob([big_string + "a"]);
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        conflict_handling: 3
+      });
+
+      context.jio.put("conflict", {"title": "foo"})
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.__storage._local_sub_storage.putAttachment(
+              "conflict",
+              "conflict",
+              blob
+            ),
+            context.jio.__storage._remote_sub_storage.putAttachment(
+              "conflict",
+              "conflict",
+              blob2
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get("conflict");
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            attachments_hash: {},
+            hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+          });
+          return context.jio.getAttachment(
+            "conflict",
+            "conflict",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, result === big_string);
+          // XXX For some reason this crash
+          //equal(result, big_string + "a");
+          return context.jio.__storage._remote_sub_storage.getAttachment(
+            "conflict",
+            "conflict",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, result === big_string + "a");
+          // XXX For some reason this crash too
+          //deepEqual(result, big_string + "a");
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    });
+
+  test("local and remote attachment same creations",
+    function () {
+      stop();
+      expect(1);
+
+      var context = this,
+        blob = new Blob([big_string]);
+
+      context.jio.put("conflict", {"title": "foo"})
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.__storage._local_sub_storage.putAttachment(
+              "conflict",
+              "conflict",
+              blob
+            ),
+            context.jio.__storage._remote_sub_storage.putAttachment(
+              "conflict",
+              "conflict",
+              blob
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get("conflict");
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            attachments_hash: {
+              conflict: "cd762363c1c11ecb48611583520bba111f0034d4"
+            },
+            hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+          });
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    });
+
+  test("no attachment modification", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.__storage._local_sub_storage.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            conflict: "cd762363c1c11ecb48611583520bba111f0034d4"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local attachment modification", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]),
+      blob2 = new Blob([big_string + "a"]);
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.__storage._local_sub_storage.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._local_sub_storage.putAttachment(
+          id,
+          "conflict",
+          blob2
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            conflict: "65cf771ad2cc0b1e8f89361e3b7bec2365b3ad24"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+        return context.jio.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string + "a");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local attachment modification not checked", function () {
+    stop();
+    expect(3);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]),
+      blob2 = new Blob([big_string + "a"]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_local_attachment_modification: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.__storage._local_sub_storage.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._local_sub_storage.putAttachment(
+          id,
+          "conflict",
+          blob2
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            conflict: "cd762363c1c11ecb48611583520bba111f0034d4"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+        return context.jio.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string + "a");
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote attachment modification", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]),
+      blob2 = new Blob([big_string + "a"]);
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.__storage._local_sub_storage.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.putAttachment(
+          id,
+          "conflict",
+          blob2
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            conflict: "65cf771ad2cc0b1e8f89361e3b7bec2365b3ad24"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+        return context.jio.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string + "a");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote attachment modification not checked", function () {
+    stop();
+    expect(3);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]),
+      blob2 = new Blob([big_string + "a"]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_remote_attachment_modification: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.__storage._local_sub_storage.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.putAttachment(
+          id,
+          "conflict",
+          blob2
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            conflict: "cd762363c1c11ecb48611583520bba111f0034d4"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+        return context.jio.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string);
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string + "a");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote attachment modifications", function () {
+    stop();
+    expect(4);
+
+    var context = this,
+      blob1 = new Blob([big_string]),
+      blob2 = new Blob([big_string + "a"]),
+      blob = new Blob([big_string + "b"]);
+
+    context.jio.put("conflict", {"title": "foo"})
+      .then(function () {
+        return context.jio.putAttachment(
+          "conflict",
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.__storage._local_sub_storage.putAttachment(
+            "conflict",
+            "conflict",
+            blob1
+          ),
+          context.jio.__storage._remote_sub_storage.putAttachment(
+            "conflict",
+            "conflict",
+            blob2
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(false);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Conflict on 'conflict' " +
+                             "with attachment 'conflict'");
+        equal(error.status_code, 409);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            conflict: "9a73ce4f16b7fa5d2b4d8f723a754fef048fb9f8"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote attachment modifications: keep local", function () {
+    stop();
+    expect(3);
+
+    var context = this,
+      blob1 = new Blob([big_string]),
+      blob2 = new Blob([big_string + "a"]),
+      blob = new Blob([big_string + "b"]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      conflict_handling: 1
+    });
+
+    context.jio.put("conflict", {"title": "foo"})
+      .then(function () {
+        return context.jio.putAttachment(
+          "conflict",
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.__storage._local_sub_storage.putAttachment(
+            "conflict",
+            "conflict",
+            blob1
+          ),
+          context.jio.__storage._remote_sub_storage.putAttachment(
+            "conflict",
+            "conflict",
+            blob2
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            conflict: "cd762363c1c11ecb48611583520bba111f0034d4"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+        return context.jio.getAttachment(
+          "conflict",
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string);
+        // XXX For some reason this crash
+        //equal(result, big_string + "a");
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          "conflict",
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string);
+        // XXX For some reason this crash too
+        //deepEqual(result, big_string + "a");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote attachment modifications: keep remote", function () {
+    stop();
+    expect(3);
+
+    var context = this,
+      blob1 = new Blob([big_string]),
+      blob2 = new Blob([big_string + "a"]),
+      blob = new Blob([big_string + "b"]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      conflict_handling: 2
+    });
+
+    context.jio.put("conflict", {"title": "foo"})
+      .then(function () {
+        return context.jio.putAttachment(
+          "conflict",
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.__storage._local_sub_storage.putAttachment(
+            "conflict",
+            "conflict",
+            blob1
+          ),
+          context.jio.__storage._remote_sub_storage.putAttachment(
+            "conflict",
+            "conflict",
+            blob2
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            conflict: "65cf771ad2cc0b1e8f89361e3b7bec2365b3ad24"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+        return context.jio.getAttachment(
+          "conflict",
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string + "a");
+        // XXX For some reason this crash
+        //equal(result, big_string + "a");
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          "conflict",
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string + "a");
+        // XXX For some reason this crash too
+        //deepEqual(result, big_string + "a");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote attachment modifications: continue", function () {
+    stop();
+    expect(3);
+
+    var context = this,
+      blob1 = new Blob([big_string]),
+      blob2 = new Blob([big_string + "a"]),
+      blob = new Blob([big_string + "b"]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      conflict_handling: 3
+    });
+
+    context.jio.put("conflict", {"title": "foo"})
+      .then(function () {
+        return context.jio.putAttachment(
+          "conflict",
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.__storage._local_sub_storage.putAttachment(
+            "conflict",
+            "conflict",
+            blob1
+          ),
+          context.jio.__storage._remote_sub_storage.putAttachment(
+            "conflict",
+            "conflict",
+            blob2
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get("conflict");
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            "conflict": "9a73ce4f16b7fa5d2b4d8f723a754fef048fb9f8"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+        return context.jio.getAttachment(
+          "conflict",
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string);
+        // XXX For some reason this crash
+        //equal(result, big_string + "a");
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          "conflict",
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string + "a");
+        // XXX For some reason this crash too
+        //deepEqual(result, big_string + "a");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote attachment same modifications", function () {
+    stop();
+    expect(1);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]),
+      blob2 = new Blob([big_string + "a"]);
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.__storage._local_sub_storage.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.__storage._local_sub_storage.putAttachment(
+            id,
+            "conflict",
+            blob2
+          ),
+          context.jio.__storage._remote_sub_storage.putAttachment(
+            id,
+            "conflict",
+            blob2
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            conflict: "65cf771ad2cc0b1e8f89361e3b7bec2365b3ad24"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local attachment deletion", function () {
+    stop();
+    expect(5);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.removeAttachment(id, "conflict");
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , conflict");
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {},
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local attachment deletion: not checked", function () {
+    stop();
+    expect(6);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_local_attachment_deletion: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.removeAttachment(id, "conflict");
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.getAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , conflict");
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            "conflict": "cd762363c1c11ecb48611583520bba111f0034d4"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local attachment deletion: attachment list", function () {
+    stop();
+    expect(5);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      attachment_list: ["conflict"]
+    });
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return RSVP.all([
+          context.jio.putAttachment(
+            id,
+            "conflict",
+            blob
+          ),
+          context.jio.putAttachment(
+            id,
+            "noconflict",
+            blob
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.removeAttachment(id, "conflict");
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , conflict");
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {},
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local attachment deletion: not checked, attachment list", function () {
+    stop();
+    expect(6);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_local_attachment_deletion: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      attachment_list: ["conflict"]
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return RSVP.all([
+          context.jio.putAttachment(
+            id,
+            "conflict",
+            blob
+          ),
+          context.jio.putAttachment(
+            id,
+            "noconflict",
+            blob
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.removeAttachment(id, "conflict");
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.getAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , conflict");
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            "conflict": "cd762363c1c11ecb48611583520bba111f0034d4"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote attachment deletion", function () {
+    stop();
+    expect(5);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.removeAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.__storage._local_sub_storage.getAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , conflict");
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {},
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote attachment deletion: not checked", function () {
+    stop();
+    expect(6);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_remote_attachment_deletion: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.removeAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , conflict");
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            "conflict": "cd762363c1c11ecb48611583520bba111f0034d4"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote attachment deletion: attachment list", function () {
+    stop();
+    expect(5);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      attachment_list: ["conflict"]
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return RSVP.all([
+          context.jio.putAttachment(
+            id,
+            "conflict",
+            blob
+          ),
+          context.jio.putAttachment(
+            id,
+            "noconflict",
+            blob
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.removeAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.__storage._local_sub_storage.getAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , conflict");
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {},
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote attachment deletion: not checked, attachment list", function () {
+    stop();
+    expect(6);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_remote_attachment_deletion: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      attachment_list: ["conflict"]
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return RSVP.all([
+          context.jio.putAttachment(
+            id,
+            "conflict",
+            blob
+          ),
+          context.jio.putAttachment(
+            id,
+            "noconflict",
+            blob
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.removeAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , conflict");
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, result === big_string);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            "conflict": "cd762363c1c11ecb48611583520bba111f0034d4"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local and remote attachment deletions", function () {
+    stop();
+    expect(8);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]);
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.__storage._local_sub_storage.removeAttachment(
+            id,
+            "conflict"
+          ),
+          context.jio.__storage._remote_sub_storage.removeAttachment(
+            id,
+            "conflict"
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        ok(true, "Removal correctly synced");
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "conflict"
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , conflict");
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , conflict");
+        equal(error.status_code, 404);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {},
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local deletion and remote modifications of attachment", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string + "a"]),
+      blob2 = new Blob([big_string]);
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.removeAttachment(
+            id,
+            "conflict"
+          ),
+          context.jio.__storage._remote_sub_storage.putAttachment(
+            id,
+            "conflict",
+            blob2
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, big_string === result);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            "conflict": "cd762363c1c11ecb48611583520bba111f0034d4"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test(
+    "local deletion and remote modifications of attachment: attachment list",
+    function () {
+      stop();
+      expect(2);
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        attachment_list: ["conflict"]
+      });
+
+      var id,
+        context = this,
+        blob = new Blob([big_string + "a"]),
+        blob2 = new Blob([big_string]);
+
+      context.jio.post({"title": "foo"})
+        .then(function (result) {
+          id = result;
+          return context.jio.putAttachment(
+            id,
+            "conflict",
+            blob
+          );
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.removeAttachment(
+              id,
+              "conflict"
+            ),
+            context.jio.__storage._remote_sub_storage.putAttachment(
+              id,
+              "conflict",
+              blob2
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.getAttachment(
+            id,
+            "conflict",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, big_string === result);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            attachments_hash: {
+              "conflict": "cd762363c1c11ecb48611583520bba111f0034d4"
+            },
+            hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+          });
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    }
+  );
+
+  test("local modifications and remote deletion of attachment", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string + "a"]),
+      blob2 = new Blob([big_string]);
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(
+          id,
+          "conflict",
+          blob
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.putAttachment(
+            id,
+            "conflict",
+            blob2
+          ),
+          context.jio.__storage._remote_sub_storage.removeAttachment(
+            id,
+            "conflict"
+          )
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "conflict",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(true, big_string === result);
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          attachments_hash: {
+            "conflict": "cd762363c1c11ecb48611583520bba111f0034d4"
+          },
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test(
+    "local modifications and remote deletion of attachment: attachment list",
+    function () {
+      stop();
+      expect(2);
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        attachment_list: ["conflict"]
+      });
+
+      var id,
+        context = this,
+        blob = new Blob([big_string + "a"]),
+        blob2 = new Blob([big_string]);
+
+      context.jio.post({"title": "foo"})
+        .then(function (result) {
+          id = result;
+          return context.jio.putAttachment(
+            id,
+            "conflict",
+            blob
+          );
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.putAttachment(
+              id,
+              "conflict",
+              blob2
+            ),
+            context.jio.__storage._remote_sub_storage.removeAttachment(
+              id,
+              "conflict"
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.getAttachment(
+            id,
+            "conflict",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, big_string === result);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            attachments_hash: {
+              "conflict": "cd762363c1c11ecb48611583520bba111f0034d4"
+            },
+            hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+          });
+        })
+        .always(function () {
+          start();
+        });
+    }
+  );
+
+  test(
+    "local and remote document creations with conflicting attachment:"
+      + " keep local, remote post",
+    function () {
+        stop();
+        expect(3);
+
+        var context = this,
+          blob = new Blob([big_string]),
+          blob2 = new Blob([big_string + "a"]);
+
+        this.jio = jIO.createJIO({
+          type: "replicate",
+          use_remote_post: 1,
+          local_sub_storage: {
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
+          },
+          remote_sub_storage: {
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
+          },
+          conflict_handling: 1
+        });
+
+        RSVP.all([
+          context.jio.put("conflict", {"title": "foo"}),
+          context.jio.__storage._remote_sub_storage.put("conflict",
+                                                        {"title": "bar"})
+        ])
+          .then(function () {
+            return RSVP.all([
+              context.jio.__storage._local_sub_storage.putAttachment(
+                "conflict",
+                "conflict",
+                blob
+              ),
+              context.jio.__storage._remote_sub_storage.putAttachment(
+                "conflict",
+                "conflict",
+                blob2
+              )
+            ]);
+          })
+          .then(function () {
+            return context.jio.repair();
+          })
+          .then(function () {
+            return context.jio.__storage._signature_sub_storage.get("conflict");
+          })
+          .then(function (result) {
+            deepEqual(result, {
+              attachments_hash: {
+                conflict: "cd762363c1c11ecb48611583520bba111f0034d4"
+              },
+              hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+            });
+            return context.jio.getAttachment(
+              "conflict",
+              "conflict",
+              {format: "text"}
+            );
+          })
+          .then(function (result) {
+            equal(true, result === big_string);
+            // XXX For some reason this crash
+            //equal(result, big_string + "a");
+            return context.jio.__storage._remote_sub_storage.getAttachment(
+              "conflict",
+              "conflict",
+              {format: "text"}
+            );
+          })
+          .then(function (result) {
+            equal(true, result === big_string);
+            // XXX For some reason this crash too
+            //deepEqual(result, big_string + "a");
+          })
+          .fail(function (error) {
+            ok(false, error);
+          })
+          .always(function () {
+            start();
+          });
+      }
+  );
+
+  test(
+    "local and remote document creations with conflicting attachment:"
+      + " keep remote, remote post",
+    function () {
+        stop();
+        expect(3);
+
+        var context = this,
+          blob = new Blob([big_string]),
+          blob2 = new Blob([big_string + "a"]);
+
+        this.jio = jIO.createJIO({
+          type: "replicate",
+          use_remote_post: 1,
+          local_sub_storage: {
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
+          },
+          remote_sub_storage: {
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
+          },
+          conflict_handling: 2
+        });
+
+        RSVP.all([
+          context.jio.put("conflict", {"title": "foo"}),
+          context.jio.__storage._remote_sub_storage.put("conflict",
+                                                        {"title": "bar"})
+        ])
+          .then(function () {
+            return RSVP.all([
+              context.jio.__storage._local_sub_storage.putAttachment(
+                "conflict",
+                "conflict",
+                blob
+              ),
+              context.jio.__storage._remote_sub_storage.putAttachment(
+                "conflict",
+                "conflict",
+                blob2
+              )
+            ]);
+          })
+          .then(function () {
+            return context.jio.repair();
+          })
+          .then(function () {
+            return context.jio.__storage._signature_sub_storage.get("conflict");
+          })
+          .then(function (result) {
+            deepEqual(result, {
+              attachments_hash: {
+                conflict: "65cf771ad2cc0b1e8f89361e3b7bec2365b3ad24"
+              },
+              hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
+            });
+            return context.jio.getAttachment(
+              "conflict",
+              "conflict",
+              {format: "text"}
+            );
+          })
+          .then(function (result) {
+            equal(true, result === big_string + "a");
+            // XXX For some reason this crash
+            //equal(result, big_string + "a");
+            return context.jio.__storage._remote_sub_storage.getAttachment(
+              "conflict",
+              "conflict",
+              {format: "text"}
+            );
+          })
+          .then(function (result) {
+            equal(true, result === big_string + "a");
+            // XXX For some reason this crash too
+            //deepEqual(result, big_string + "a");
+          })
+          .fail(function (error) {
+            ok(false, error);
+          })
+          .always(function () {
+            start();
+          });
+      }
+  );
+
+  test(
+    "local and remote document creations with conflicting attachment:"
+      + " continue, remote post",
+    function () {
+        stop();
+        expect(6);
+
+        var context = this,
+          blob = new Blob([big_string]),
+          blob2 = new Blob([big_string + "a"]);
+
+        this.jio = jIO.createJIO({
+          type: "replicate",
+          use_remote_post: 1,
+          local_sub_storage: {
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
+          },
+          remote_sub_storage: {
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
+          },
+          conflict_handling: 3
+        });
+
+        RSVP.all([
+          context.jio.put("conflict", {"title": "foo"}),
+          context.jio.__storage._remote_sub_storage.put("conflict",
+                                                        {"title": "bar"})
+        ])
+          .then(function () {
+            return RSVP.all([
+              context.jio.__storage._local_sub_storage.putAttachment(
+                "conflict",
+                "conflict",
+                blob
+              ),
+              context.jio.__storage._remote_sub_storage.putAttachment(
+                "conflict",
+                "conflict",
+                blob2
+              )
+            ]);
+          })
+          .then(function () {
+            return context.jio.repair();
+          })
+          .then(function () {
+            return context.jio.__storage._signature_sub_storage.get("conflict");
+          })
+          .fail(function (error) {
+            ok(error instanceof jIO.util.jIOError);
+            //        equal(error.message, "Cannot find document: conflict");
+            equal(error.status_code, 404);
+            return context.jio.getAttachment(
+              "conflict",
+              "conflict",
+              {format: "text"}
+            );
+          })
+          .then(function (result) {
+            equal(true, result === big_string);
+            // XXX For some reason this crash
+            //equal(result, big_string + "a");
+            return context.jio.__storage._remote_sub_storage.getAttachment(
+              "conflict",
+              "conflict",
+              {format: "text"}
+            );
+          })
+          .then(function (result) {
+            equal(true, result === big_string + "a");
+            // XXX For some reason this crash too
+            //deepEqual(result, big_string + "a");
+            return context.jio.get("conflict");
+          })
+          .then(function (result) {
+            deepEqual(result, {
+              title: "foo"
+            });
+          })
+          .then(function () {
+            return context.jio.__storage._remote_sub_storage.get("conflict");
+          })
+          .then(function (result) {
+            deepEqual(result, {
+              title: "bar"
+            });
+          })
+          .fail(function (error) {
+            ok(false, error);
+          })
+          .always(function () {
+            start();
+          });
+      }
+  );
+
+  test(
+    "local document modifications and remote attachment modification",
+    function () {
+      stop();
+      expect(3);
+
+      var id,
+        context = this,
+        blob = new Blob([big_string + "a"]),
+        blob2 = new Blob([big_string]);
+
+      context.jio.post({"title": "foo"})
+        .then(function (result) {
+          id = result;
+          return context.jio.putAttachment(
+            id,
+            "conflict",
+            blob
+          );
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.put(id, {"title": "bar"}),
+            context.jio.__storage._remote_sub_storage.putAttachment(
+              id,
+              "conflict",
+              blob2
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.get(id);
+        })
+        .then(function (result) {
+          deepEqual(result, {"title": "bar"});
+        })
+        .then(function () {
+          return context.jio.getAttachment(
+            id,
+            "conflict",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, big_string === result);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            attachments_hash: {
+              "conflict": "cd762363c1c11ecb48611583520bba111f0034d4"
+            },
+            hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
+          });
+        })
+        .always(function () {
+          start();
+        });
+    }
+  );
+
+  test(
+    "local document deletion and remote attachment modification",
+    function () {
+      stop();
+      expect(3);
+
+      var id,
+        context = this,
+        blob = new Blob([big_string + "a"]),
+        blob2 = new Blob([big_string]);
+
+      context.jio.post({"title": "foo"})
+        .then(function (result) {
+          id = result;
+          return context.jio.putAttachment(
+            id,
+            "conflict",
+            blob
+          );
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.remove(id),
+            context.jio.__storage._remote_sub_storage.putAttachment(
+              id,
+              "conflict",
+              blob2
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.get(id);
+        })
+        .then(function (result) {
+          deepEqual(result, {"title": "foo"});
+        })
+        .then(function () {
+          return context.jio.getAttachment(
+            id,
+            "conflict",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, big_string === result);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            attachments_hash: {
+              "conflict": "cd762363c1c11ecb48611583520bba111f0034d4"
+            },
+            hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+          });
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    }
+  );
+
+  test(
+    "local attachment modification and remote document deletion",
+    function () {
+      stop();
+      expect(3);
+
+      var id,
+        context = this,
+        blob = new Blob([big_string + "a"]),
+        blob2 = new Blob([big_string]);
+
+      context.jio.post({"title": "foo"})
+        .then(function (result) {
+          id = result;
+          return context.jio.putAttachment(
+            id,
+            "conflict",
+            blob
+          );
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.putAttachment(
+              id,
+              "conflict",
+              blob2
+            ),
+            context.jio.__storage._remote_sub_storage.remove(id)
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .then(function (result) {
+          deepEqual(result, {"title": "foo"});
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.getAttachment(
+            id,
+            "conflict",
+            {format: "text"}
+          );
+        })
+        .then(function (result) {
+          equal(true, big_string === result);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            attachments_hash: {
+              "conflict": "cd762363c1c11ecb48611583520bba111f0034d4"
+            },
+            hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+          });
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    }
+  );
+
+}(jIO, QUnit, Blob));
