@@ -104,7 +104,7 @@
     equal(jio.__storage._check_remote_modification, false);
 
     equal(jio.__storage._signature_hash,
-          "_replicate_623653d45a4e770a2c9f6b71e3144d18ee1b5bec");
+          "_replicate_11881e431308c0ec8c0e6430be98db380e1b92f8");
   });
 
   test("reject unknow conflict resolution", function () {
@@ -2062,7 +2062,7 @@
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find document: " +
-                "_replicate_e0cd4a29dc7c74a9de1d7a9cdbfcbaa776863d67");
+                "_replicate_8662994dcefb3a2ceec61e86953efda8ec6520d6");
         equal(error.status_code, 404);
       })
       .then(function () {
@@ -2076,7 +2076,7 @@
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find document: " +
-                "_replicate_e0cd4a29dc7c74a9de1d7a9cdbfcbaa776863d67");
+                "_replicate_8662994dcefb3a2ceec61e86953efda8ec6520d6");
         equal(error.status_code, 404);
       })
       .fail(function (error) {

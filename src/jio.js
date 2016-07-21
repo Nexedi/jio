@@ -110,6 +110,38 @@
   }
   util.readBlobAsDataURL = readBlobAsDataURL;
 
+  function stringify(obj) {
+    // Implement a stable JSON.stringify
+    // Object's keys are alphabetically ordered
+    var key,
+      key_list,
+      i,
+      value,
+      result_list;
+    if (obj.constructor === Object) {
+      key_list = Object.keys(obj).sort();
+      result_list = [];
+      for (i = 0; i < key_list.length; i += 1) {
+        key = key_list[i];
+        value = stringify(obj[key]);
+        if (value !== undefined) {
+          result_list.push(stringify(key) + ':' + value);
+        }
+      }
+      return '{' + result_list.join(',') + '}';
+    }
+    if (obj.constructor === Array) {
+      result_list = [];
+      for (i = 0; i < obj.length; i += 1) {
+        result_list.push(stringify(obj[i]));
+      }
+      return '[' + result_list.join(',') + ']';
+    }
+    return JSON.stringify(obj);
+  }
+  util.stringify = stringify;
+
+
   // https://gist.github.com/davoclavo/4424731
   function dataURItoBlob(dataURI) {
     // convert base64 to raw binary data held in a string

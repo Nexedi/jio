@@ -19,7 +19,7 @@
 /*jslint nomen: true*/
 /*global jIO, RSVP, Rusha*/
 
-(function (jIO, RSVP, Rusha) {
+(function (jIO, RSVP, Rusha, stringify) {
   "use strict";
 
   var rusha = new Rusha(),
@@ -46,9 +46,9 @@
     this._remote_sub_storage = jIO.createJIO(spec.remote_sub_storage);
 
     this._signature_hash = "_replicate_" + generateHash(
-      JSON.stringify(spec.local_sub_storage) +
-        JSON.stringify(spec.remote_sub_storage) +
-        JSON.stringify(this._query_options)
+      stringify(spec.local_sub_storage) +
+        stringify(spec.remote_sub_storage) +
+        stringify(this._query_options)
     );
     this._signature_sub_storage = jIO.createJIO({
       type: "document",
@@ -213,14 +213,14 @@
           return getMethod(id);
         })
         .push(function (doc) {
-          var local_hash = generateHash(JSON.stringify(doc)),
+          var local_hash = generateHash(stringify(doc)),
             remote_hash;
           if (remote_doc === undefined) {
             return propagateModification(source, destination, doc, local_hash,
                                          id, options);
           }
 
-          remote_hash = generateHash(JSON.stringify(remote_doc));
+          remote_hash = generateHash(stringify(remote_doc));
           if (local_hash === remote_hash) {
             // Same document
             return context._signature_sub_storage.put(id, {
@@ -239,8 +239,8 @@
           }
           // Already exists on destination
           throw new jIO.util.jIOError("Conflict on '" + id + "': " +
-                                      JSON.stringify(doc) + " !== " +
-                                      JSON.stringify(remote_doc),
+                                      stringify(doc) + " !== " +
+                                      stringify(remote_doc),
                                       409);
         });
     }
@@ -283,7 +283,7 @@
           status_hash = result.hash;
           return destination.get(id)
             .push(function (doc) {
-              var remote_hash = generateHash(JSON.stringify(doc));
+              var remote_hash = generateHash(stringify(doc));
               if (remote_hash === status_hash) {
                 return destination.remove(id)
                   .push(function () {
@@ -322,14 +322,14 @@
         })
         .push(function (result_list) {
           var doc = result_list[0],
-            local_hash = generateHash(JSON.stringify(doc)),
+            local_hash = generateHash(stringify(doc)),
             status_hash = result_list[1].hash;
 
           if (local_hash !== status_hash) {
             // Local modifications
             return destination.get(id)
               .push(function (remote_doc) {
-                var remote_hash = generateHash(JSON.stringify(remote_doc));
+                var remote_hash = generateHash(stringify(remote_doc));
                 if (remote_hash !== status_hash) {
                   // Modifications on both sides
                   if (local_hash === remote_hash) {
@@ -346,8 +346,8 @@
                   }
                   if (conflict_force !== true) {
                     throw new jIO.util.jIOError("Conflict on '" + id + "': " +
-                                                JSON.stringify(doc) + " !== " +
-                                                JSON.stringify(remote_doc),
+                                                stringify(doc) + " !== " +
+                                                stringify(remote_doc),
                                                 409);
                   }
                 }
@@ -570,4 +570,4 @@
 
   jIO.addStorage('replicate', ReplicateStorage);
 
-}(jIO, RSVP, Rusha));
+}(jIO, RSVP, Rusha, jIO.util.stringify));
