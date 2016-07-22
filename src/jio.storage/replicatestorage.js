@@ -144,14 +144,17 @@
     skip_document_dict[context._signature_hash] = null;
 
     function propagateModification(source, destination, doc, hash, id,
-                                   options) {
+                                   force_put, options) {
       var result,
         post_id,
         to_skip = true;
       if (options === undefined) {
         options = {};
       }
-      if (options.use_post) {
+      if (force_put === undefined) {
+        force_put = false;
+      }
+      if (force_put === false && options.use_post) {
         result = destination.post(doc)
           .push(function (new_id) {
             to_skip = false;
@@ -217,7 +220,7 @@
             remote_hash;
           if (remote_doc === undefined) {
             return propagateModification(source, destination, doc, local_hash,
-                                         id, options);
+                                         id, false, options);
           }
 
           remote_hash = generateHash(stringify(remote_doc));
@@ -235,7 +238,7 @@
           }
           if (options.conflict_force === true) {
             return propagateModification(source, destination, doc, local_hash,
-                                         id, options);
+                                         id, true, options);
           }
           // Already exists on destination
           throw new jIO.util.jIOError("Conflict on '" + id + "': " +
@@ -352,7 +355,7 @@
                   }
                 }
                 return propagateModification(source, destination, doc,
-                                             local_hash, id);
+                                             local_hash, id, true);
               }, function (error) {
                 if ((error instanceof jIO.util.jIOError) &&
                     (error.status_code === 404)) {

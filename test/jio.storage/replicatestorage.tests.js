@@ -939,6 +939,71 @@
       });
   });
 
+  test("local and remote document creations: keep local, remote post",
+    function () {
+      stop();
+      expect(3);
+
+      var context = this;
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        use_remote_post: 1,
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        conflict_handling: 1
+      });
+
+      RSVP.all([
+        context.jio.put("conflict", {"title": "foo"}),
+        context.jio.__storage._remote_sub_storage.put("conflict",
+                                                      {"title": "bar"})
+      ])
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get("conflict");
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+          });
+        })
+        .then(function () {
+          return context.jio.get("conflict");
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            title: "foo"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get("conflict");
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            title: "foo"
+          });
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    });
+
   test("local and remote document creations: keep remote", function () {
     stop();
     expect(3);
@@ -1002,6 +1067,71 @@
       });
   });
 
+  test("local and remote document creations: keep remote, remote post",
+    function () {
+      stop();
+      expect(3);
+
+      var context = this;
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        use_remote_post: 1,
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        conflict_handling: 2
+      });
+
+      RSVP.all([
+        context.jio.put("conflict", {"title": "foo"}),
+        context.jio.__storage._remote_sub_storage.put("conflict",
+                                                      {"title": "bar"})
+      ])
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get("conflict");
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
+          });
+        })
+        .then(function () {
+          return context.jio.get("conflict");
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            title: "bar"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get("conflict");
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            title: "bar"
+          });
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    });
+
   test("local and remote document creations: continue", function () {
     stop();
     expect(4);
@@ -1064,6 +1194,71 @@
         start();
       });
   });
+
+  test("local and remote document creations: continue, remote post",
+    function () {
+      stop();
+      expect(4);
+
+      var context = this;
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        use_remote_post: 1,
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        },
+        conflict_handling: 3
+      });
+
+      RSVP.all([
+        context.jio.put("conflict", {"title": "foo"}),
+        context.jio.__storage._remote_sub_storage.put("conflict",
+                                                      {"title": "bar"})
+      ])
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get("conflict");
+        })
+        .fail(function (error) {
+          ok(error instanceof jIO.util.jIOError);
+          //        equal(error.message, "Cannot find document: conflict");
+          equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.get("conflict");
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            title: "foo"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get("conflict");
+        })
+        .then(function (result) {
+          deepEqual(result, {
+            title: "bar"
+          });
+        })
+        .fail(function (error) {
+          ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    });
 
   test("local and remote same document creations", function () {
     stop();
