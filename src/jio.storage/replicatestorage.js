@@ -235,7 +235,7 @@
           }
           if (options.conflict_force === true) {
             return propagateModification(source, destination, doc, local_hash,
-                                         id, options);
+                                         id);
           }
           // Already exists on destination
           throw new jIO.util.jIOError("Conflict on '" + id + "': " +
