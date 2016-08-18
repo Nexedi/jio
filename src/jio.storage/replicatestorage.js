@@ -39,6 +39,11 @@
     return rusha.digestFromString(content);
   }
 
+  function generateHashFromArrayBuffer(content) {
+    // XXX Improve performance by moving calculation to WebWorker
+    return rusha.digestFromArrayBuffer(content);
+  }
+
   function ReplicateStorage(spec) {
     this._query_options = spec.query || {};
 
@@ -197,22 +202,47 @@
       skip_document_dict = {};
 
     // Do not sync the signature document
-    skip_document_dict[context._signature_hash] = null;
+    skip_document_dict[context._signature_hash] = {skip: true};
 
-    function propagateModification(source, destination, doc, hash, id,
+    function moveAttachment(queue, source, id, new_id, attachment) {
+      queue
+        .push(function () {
+          return source.getAttachment(id, attachment);
+        })
+        .push(function (attachment_blob) {
+          return source.putAttachment(new_id, attachment,
+                                      attachment_blob);
+        })
+        .push(function () {
+          return source.removeAttachment(id, attachment);
+        });
+    }
+
+    function propagateModification(source, destination, doc, id,
                                    options) {
       var result,
-        post_id,
-        to_skip = true;
+        post_id;
       if (options === undefined) {
         options = {};
       }
       if (options.use_post) {
         result = destination.post(doc)
           .push(function (new_id) {
-            to_skip = false;
             post_id = new_id;
             return source.put(post_id, doc);
+          })
+          .push(function () {
+            return source.allAttachments(id);
+          })
+          .push(function (attachments_dict) {
+            var queue = new RSVP.Queue(),
+              attachment;
+            for (attachment in attachments_dict) {
+              if (attachments_dict.hasOwnProperty(attachment)) {
+                moveAttachment(queue, source, id, post_id, attachment);
+              }
+            }
+            return queue;
           })
           .push(function () {
             return source.remove(id);
@@ -221,28 +251,16 @@
             return context._signature_sub_storage.remove(id);
           })
           .push(function () {
-            to_skip = true;
-            return context._signature_sub_storage.put(post_id, {
-              "hash": hash
-            });
-          })
-          .push(function () {
-            skip_document_dict[post_id] = null;
+            skip_document_dict[post_id] = {skip: true};
+            return post_id;
           });
       } else {
         result = destination.put(id, doc)
           .push(function () {
-            return context._signature_sub_storage.put(id, {
-              "hash": hash
-            });
+            return id;
           });
       }
-      return result
-        .push(function () {
-          if (to_skip) {
-            skip_document_dict[id] = null;
-          }
-        });
+      return result;
     }
 
     function checkLocalDeletion(queue, destination, id, source) {
@@ -262,7 +280,8 @@
                     return context._signature_sub_storage.remove(id);
                   })
                   .push(function () {
-                    skip_document_dict[id] = null;
+                    //skip_document_dict[id] = {skip: true};
+                    return;
                   });
               }
               // Modifications on remote side
@@ -274,7 +293,8 @@
                   (error.status_code === 404)) {
                 return context._signature_sub_storage.remove(id)
                   .push(function () {
-                    skip_document_dict[id] = null;
+                    //skip_document_dict[id] = {skip: true};
+                    return;
                   });
               }
               throw error;
@@ -282,17 +302,142 @@
         });
     }
 
+    function checkLocalAttachmentDeletion(queue, destination,
+                                          id, attachment_id,
+                                          hash_document,
+                                          source) {
+      var status_hash,
+        attachment_blob,
+        attachment_signature_dict = hash_document.attachments_hash;
+      queue
+        .push(function () {
+          status_hash = attachment_signature_dict[attachment_id];
+          return destination.getAttachment(id, attachment_id)
+            .push(function (result) {
+              attachment_blob = result;
+              // Calculate Attachment Hash
+              return new RSVP.Queue()
+                .push(function () {
+                  return jIO.util.readBlobAsArrayBuffer(attachment_blob);
+                })
+                .push(function (evt) {
+                  return generateHashFromArrayBuffer(evt.target.result);
+                })
+                .push(function (remote_hash) {
+                  if (remote_hash === status_hash) {
+                    return destination.removeAttachment(id, attachment_id)
+                      .push(function () {
+                        hash_document.updated = true;
+                        delete attachment_signature_dict[attachment_id];
+                        // XX Should add to a skip dict or list
+                      });
+                  }
+                  // Modifications on remote side
+                  // Push them locally
+                  return source.putAttachment(
+                    id,
+                    attachment_id,
+                    attachment_blob
+                  )
+                    .push(function () {
+                      hash_document.updated = true;
+                      attachment_signature_dict[attachment_id] = remote_hash;
+                    });
+                });
+            }, function (error) {
+              if ((error instanceof jIO.util.jIOError) &&
+                  (error.status_code === 404)) {
+                hash_document.updated = true;
+                delete attachment_signature_dict[attachment_id];
+                return;
+                // XX Should add to a skip dict or list
+              }
+              throw error;
+            });
+        });
+
+    }
+
+    function checkAttachmentSignatureDifference(queue, source, destination,
+                                                id, attachment_id,
+                                                hash_document,
+                                                options) {
+      var attachment_blob,
+        attachment_signature_dict = hash_document.attachments_hash;
+      queue
+        .push(function () {
+          return source.getAttachment(id, attachment_id);
+        })
+        .push(function (result) {
+          attachment_blob = result;
+          // Calculate Attachment Hash
+          return new RSVP.Queue()
+            .push(function () {
+              return jIO.util.readBlobAsArrayBuffer(attachment_blob);
+            })
+            .push(function (evt) {
+              return generateHashFromArrayBuffer(evt.target.result);
+            });
+        })
+        .push(function (local_hash) {
+          var status_hash = attachment_signature_dict[attachment_id];
+          if (local_hash !== status_hash) {
+            // Local modification
+            return destination.getAttachment(id, attachment_id,
+                                             {format: "array_buffer"})
+              .push(function (remote_attachment) {
+                var remote_hash = generateHashFromArrayBuffer(
+                  remote_attachment
+                );
+                if (remote_hash !== status_hash) {
+                  // Modification on  both Side
+                  if (remote_hash === local_hash) {
+                    // Same modification on both side
+                    hash_document.updated = true;
+                    attachment_signature_dict[attachment_id] = local_hash;
+                    return;
+                    // XXX Should add a skip attachment list here
+                  }
+                  if (options.conflict_ignore === true) {
+                    return;
+                  }
+                  if (options.conflict_force !== true) {
+                    throw new jIO.util.jIOError("Conflict on '" + id
+                                                + "' with attachment '"
+                                                + attachment_id + "'",
+                                                409);
+                  }
+                }
+                hash_document.updated = true;
+                attachment_signature_dict[attachment_id] = local_hash;
+                return destination.putAttachment(id, attachment_id,
+                                                 attachment_blob);
+              }, function (error) {
+                if ((error instanceof jIO.util.jIOError) &&
+                    (error.status_code === 404)) {
+                  hash_document.updated = true;
+                  attachment_signature_dict[attachment_id] = local_hash;
+                  return destination.putAttachment(id, attachment_id,
+                                                   attachment_blob);
+                }
+                throw error;
+              });
+          }
+        });
+    }
+
     function checkSignatureDifference(queue, source, destination, id,
                                       conflict_force, conflict_ignore,
                                       is_creation, is_modification,
                                       getMethod, options) {
+      var hash_document;
       queue
         .push(function () {
           // Optimisation to save a get call to signature storage
           if (is_creation === true) {
             return RSVP.all([
               getMethod(id),
-              {hash: undefined}
+              {hash: undefined, attachments_hash: {}}
             ]);
           }
           if (is_modification === true) {
@@ -310,6 +455,9 @@
             local_hash = generateHash(stringify(doc)),
             status_hash = result_list[1].hash;
 
+          hash_document = result_list[1];
+          // XXX Hackish
+          hash_document.updated = false;
           if (local_hash !== status_hash) {
             // Local modifications
             return destination.get(id)
@@ -319,15 +467,12 @@
                   // Modifications on both sides
                   if (local_hash === remote_hash) {
                     // Same modifications on both side \o/
-                    return context._signature_sub_storage.put(id, {
-                      "hash": local_hash
-                    })
-                      .push(function () {
-                        skip_document_dict[id] = null;
-                      });
+                    hash_document.updated = true;
+                    hash_document.hash = local_hash;
+                    return id;
                   }
                   if (conflict_ignore === true) {
-                    return;
+                    return id;
                   }
                   if (conflict_force !== true) {
                     throw new jIO.util.jIOError("Conflict on '" + id + "': " +
@@ -336,8 +481,9 @@
                                                 409);
                   }
                 }
-                return propagateModification(source, destination, doc,
-                                             local_hash, id);
+                hash_document.hash = local_hash;
+                hash_document.updated = true;
+                return propagateModification(source, destination, doc, id);
               }, function (error) {
                 var use_post;
                 if ((error instanceof jIO.util.jIOError) &&
@@ -351,15 +497,63 @@
                     // modification
                     use_post = false;
                   }
-                  return propagateModification(source, destination, doc,
-                                               local_hash, id,
+                  hash_document.hash = local_hash;
+                  hash_document.updated = true;
+                  return propagateModification(source, destination, doc, id,
                                                {use_post: use_post});
                 }
                 throw error;
               });
           }
+          return id;
+        })
+        .push(function (current_id) {
+          id = current_id;
+          return source.allAttachments(id);
+        })
+        .push(function (local_attachment_dict) {
+          var attachment_id,
+            attachment_creation,
+            attachment_modification,
+            attachment_signature_dict = hash_document.attachments_hash,
+            attachment_queue = new RSVP.Queue();
+          for (attachment_id in local_attachment_dict) {
+            if (local_attachment_dict.hasOwnProperty(attachment_id)) {
+              attachment_modification = options.check_attachment_modification
+                && attachment_signature_dict.hasOwnProperty(attachment_id);
+              attachment_creation = options.check_attachment_creation
+                && !attachment_signature_dict.hasOwnProperty(attachment_id);
+              if (attachment_creation || attachment_modification) {
+                checkAttachmentSignatureDifference(attachment_queue,
+                                                   source, destination,
+                                                   id, attachment_id,
+                                                   hash_document,
+                                                   options);
+              }
+            }
+          }
+          if (options.check_attachment_deletion === true) {
+            for (attachment_id in attachment_signature_dict) {
+              if (attachment_signature_dict.hasOwnProperty(attachment_id)) {
+                if (!local_attachment_dict.hasOwnProperty(attachment_id)) {
+                  checkLocalAttachmentDeletion(attachment_queue, destination,
+                                               id, attachment_id,
+                                               hash_document,
+                                               source);
+                }
+              }
+            }
+          }
+          return attachment_queue;
+        })
+        .push(function () {
+          if (hash_document.updated === true) {
+            delete hash_document.updated;
+            return context._signature_sub_storage.put(id, hash_document);
+          }
         });
     }
+
 
     function checkBulkSignatureDifference(queue, source, destination, id_list,
                                           document_status_list, options,
@@ -415,16 +609,18 @@
             is_creation,
             key;
           for (i = 0; i < result_list[0].data.total_rows; i += 1) {
-            if (!skip_document_dict.hasOwnProperty(
+            if (!(skip_document_dict.hasOwnProperty(
                 result_list[0].data.rows[i].id
-              )) {
+              ) && skip_document_dict[result_list[0].data.rows[i].id].skip
+                    === true)) {
               local_dict[result_list[0].data.rows[i].id] = i;
             }
           }
           for (i = 0; i < result_list[1].data.total_rows; i += 1) {
-            if (!skip_document_dict.hasOwnProperty(
+            if (!(skip_document_dict.hasOwnProperty(
                 result_list[1].data.rows[i].id
-              )) {
+              ) && skip_document_dict[result_list[1].data.rows[i].id].skip
+                    === true)) {
               signature_dict[result_list[1].data.rows[i].id] = i;
             }
           }
@@ -526,7 +722,13 @@
                                  CONFLICT_KEEP_REMOTE)),
               check_modification: context._check_local_modification,
               check_creation: context._check_local_creation,
-              check_deletion: context._check_local_deletion
+              check_deletion: context._check_local_deletion,
+              check_attachment_modification:
+                context._check_local_attachment_modification,
+              check_attachment_creation:
+                context._check_local_attachment_creation,
+              check_attachment_deletion:
+                context._check_local_attachment_deletion
             });
         }
       })
@@ -554,7 +756,13 @@
                                 CONFLICT_CONTINUE),
               check_modification: context._check_remote_modification,
               check_creation: context._check_remote_creation,
-              check_deletion: context._check_remote_deletion
+              check_deletion: context._check_remote_deletion,
+              check_attachment_modification:
+                context._check_remote_attachment_modification,
+              check_attachment_creation:
+                context._check_remote_attachment_creation,
+              check_attachment_deletion:
+                context._check_remote_attachment_deletion
             });
         }
       });
