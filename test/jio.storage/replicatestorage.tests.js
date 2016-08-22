@@ -4841,6 +4841,9 @@
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
+      .fail(function (error) {
+        ok(false, error);
+      })
       .always(function () {
         start();
       });
@@ -5371,13 +5374,13 @@
           return context.jio.repair();
         })
         .then(function () {
-          return context.jio._remote_sub_storage.get(id);
+          return context.jio.__storage._remote_sub_storage.get(id);
         })
         .then(function (result) {
           deepEqual(result, {"title": "foo"});
         })
         .then(function () {
-          return context.jio._remote_sub_storage.getAttachment(
+          return context.jio.__storage._remote_sub_storage.getAttachment(
             id,
             "conflict",
             {format: "text"}
