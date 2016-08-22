@@ -891,6 +891,24 @@
     Storage200DelayedAllDocs.prototype.put = function () {
       return this._sub_storage.put.apply(this._sub_storage, arguments);
     };
+    Storage200DelayedAllDocs.prototype.allAttachments = function () {
+      return this._sub_storage.allAttachments.apply(
+        this._sub_storage,
+        arguments
+      );
+    };
+    Storage200DelayedAllDocs.prototype.putAttachment = function () {
+      return this._sub_storage.putAttachment.apply(
+        this._sub_storage,
+        arguments
+      );
+    };
+    Storage200DelayedAllDocs.prototype.getAttachment = function () {
+      return this._sub_storage.getAttachment.apply(
+        this._sub_storage,
+        arguments
+      );
+    };
     Storage200DelayedAllDocs.prototype.hasCapacity = function () {
       return true;
     };
