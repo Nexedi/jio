@@ -2219,6 +2219,167 @@
       });
   });
 
+  test(
+    "local deletion and remote modifications:"
+      + " remote document modification not checked",
+    function () {
+        stop();
+        expect(8);
+
+        var id,
+          context = this;
+
+        this.jio = jIO.createJIO({
+          type: "replicate",
+          check_remote_modification: false,
+          local_sub_storage: {
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
+          },
+          remote_sub_storage: {
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
+          }
+        });
+
+        context.jio.post({"title": "foo"})
+          .then(function (result) {
+            id = result;
+            return context.jio.repair();
+          })
+          .then(function () {
+            return RSVP.all([
+              context.jio.remove(id),
+              context.jio.__storage._remote_sub_storage.put(
+                id,
+                {"title": "foo99"}
+              )
+            ]);
+          })
+          .then(function () {
+            return context.jio.repair();
+          })
+          .then(function () {
+            return context.jio.get(id);
+          })
+          .then(function () {
+            ok(false, "Document should be deleted");
+          })
+          .fail(function (error) {
+            ok(error instanceof jIO.util.jIOError);
+            equal(error.message, "Cannot find document: " + id);
+            equal(error.status_code, 404);
+          })
+          .then(function () {
+            return context.jio.__storage._remote_sub_storage.get(id);
+          })
+          .then(function () {
+            ok(false, "Document should be remotely deleted");
+          })
+          .fail(function (error) {
+            ok(error instanceof jIO.util.jIOError);
+            equal(error.message, "Cannot find document: " + id);
+            equal(error.status_code, 404);
+          })
+          .then(function () {
+            return context.jio.__storage._signature_sub_storage.get(id);
+          })
+          .then(function () {
+            ok(false, "Signature should be deleted");
+          })
+          .fail(function (error) {
+            ok(error instanceof jIO.util.jIOError);
+            equal(error.status_code, 404);
+          })
+          .always(function () {
+            start();
+          });
+      }
+  );
+
+  test(
+    "local modifications and remote deletion:"
+      + " local document modification not checked",
+    function () {
+        stop();
+        expect(8);
+
+        var id,
+          context = this;
+
+        this.jio = jIO.createJIO({
+          type: "replicate",
+          check_local_modification: false,
+          local_sub_storage: {
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
+          },
+          remote_sub_storage: {
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
+          }
+        });
+
+        context.jio.post({"title": "foo"})
+          .then(function (result) {
+            id = result;
+            return context.jio.repair();
+          })
+          .then(function () {
+            return RSVP.all([
+              context.jio.put(id, {"title": "foo99"}),
+              context.jio.__storage._remote_sub_storage.remove(id)
+            ]);
+          })
+          .then(function () {
+            return context.jio.repair();
+          })
+          .then(function () {
+            return context.jio.get(id);
+          })
+          .then(function () {
+            ok(false, "Document should be deleted");
+          })
+          .fail(function (error) {
+            ok(error instanceof jIO.util.jIOError);
+            equal(error.message, "Cannot find document: " + id);
+            equal(error.status_code, 404);
+          })
+          .then(function () {
+            return context.jio.__storage._remote_sub_storage.get(id);
+          })
+          .then(function () {
+            ok(false, "Document should be remotely deleted");
+          })
+          .fail(function (error) {
+            ok(error instanceof jIO.util.jIOError);
+            equal(error.message, "Cannot find document: " + id);
+            equal(error.status_code, 404);
+          })
+          .then(function () {
+            return context.jio.__storage._signature_sub_storage.get(id);
+          })
+          .then(function () {
+            ok(false, "Signature should be deleted");
+          })
+          .fail(function (error) {
+            ok(error instanceof jIO.util.jIOError);
+            equal(error.status_code, 404);
+          })
+          .always(function () {
+            start();
+          });
+      }
+  );
+
   test("signature document is not synced", function () {
     stop();
     expect(6);
