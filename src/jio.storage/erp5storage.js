@@ -11,7 +11,7 @@
 
 /*jslint nomen: true, unparam: true */
 /*global jIO, UriTemplate, FormData, RSVP, URI, Blob,
-         SimpleQuery, ComplexQuery*/
+         SimpleQuery, ComplexQuery, location*/
 
 (function (jIO, UriTemplate, FormData, RSVP, URI, Blob,
            SimpleQuery, ComplexQuery) {
@@ -147,7 +147,9 @@
       throw new TypeError("ERP5 'url' must be a string " +
                           "which contains more than one character.");
     }
-    this._url = spec.url;
+    this._url = (new URI(spec.url))
+              .absoluteTo(location.href)
+              .toString();
     this._default_view_reference = spec.default_view_reference;
   }
 
