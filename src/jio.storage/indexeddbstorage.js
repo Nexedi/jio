@@ -28,9 +28,11 @@
  */
 
 /*jslint nomen: true */
-/*global indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange*/
+/*global indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
+        DOMError, Event*/
 
-(function (indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange) {
+(function (indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
+           DOMError) {
   "use strict";
 
   // Read only as changing it can lead to data corruption
@@ -89,7 +91,14 @@
         if (request.result) {
           request.result.close();
         }
-        reject(error);
+        if ((error !== undefined) &&
+            (error.target instanceof IDBOpenDBRequest) &&
+            (error.target.error instanceof DOMError)) {
+          reject("Connection to: " + db_name + " failed: " +
+                 error.target.error.message);
+        } else {
+          reject(error);
+        }
       };
 
       request.onabort = function () {
@@ -450,4 +459,4 @@
   };
 
   jIO.addStorage("indexeddb", IndexedDBStorage);
-}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange));
+}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest, DOMError));
