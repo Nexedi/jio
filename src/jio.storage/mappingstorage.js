@@ -14,7 +14,10 @@
     option.query = this._mapping_dict.id.equal + ': "' + index + '"';
     return this._sub_storage.allDocs(option)
       .push(function (data) {
-        return data.data.rows[0].id;
+        if (data.data.rows.length > 0) {
+          return data.data.rows[0].id;
+        }
+        return undefined;
       });
   };
 
@@ -51,7 +54,7 @@
   };
 
   MappingStorage.prototype.put = function (index, doc) {
-    var prop,
+    var prop, that = this,
       doc_mapped = JSON.parse(JSON.stringify(this._default_dict));
     for (prop in doc) {
       if (doc.hasOwnProperty(prop)) {
@@ -63,9 +66,15 @@
       return this._sub_storage.put(index, doc_mapped);
     }
     doc_mapped[this._mapping_dict.id.equal] = index;
-    return this._sub_storage.post(doc_mapped)
-      .push(function () {
-        return index;
+    return this._getSubStorageId(index)
+      .push(function (id) {
+        if (id === undefined) {
+          return that._sub_storage.post(doc_mapped)
+            .push(function () {
+              return index;
+            });
+        }
+        return that._sub_storage.put(id, doc_mapped);
       });
   };
 
@@ -130,12 +139,15 @@
       });
   };
 
-  MappingStorage.prototype.hasCapacity = function () {
+  MappingStorage.prototype.hasCapacity = function (name) {
+    if (name === "include_docs") {
+      return true;
+    }
     return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
   };
 
   MappingStorage.prototype.buildQuery = function (option) {
-    var that = this, i, select_list = [], sort_on = [], query;
+    var that = this, i, select_list = [], sort_on = [], query, prop;
 
     function mapQuery(one_query) {
       var i, query_list = [];
@@ -167,6 +179,14 @@
         select_list.push(this._mapping_dict[option.select_list[i]].equal);
       }
     }
+    if (option.include_docs) {
+      select_list = [];
+      for (prop in this._mapping_dict) {
+        if (this._mapping_dict.hasOwnProperty(prop)) {
+          select_list.push(this._mapping_dict[prop].equal);
+        }
+      }
+    }
     if (this._mapping_dict.id !== undefined
         && this._mapping_dict.id.equal !== "id") {
       select_list.push(this._mapping_dict.id.equal);
@@ -177,8 +197,7 @@
         query: mapQuery(query),
         select_list: select_list,
         sort_on: sort_on,
-        limit: option.limit,
-        include_docs: option.include_docs || false
+        limit: option.limit
       }
     )
       .push(function (result) {
