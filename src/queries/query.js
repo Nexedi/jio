@@ -478,21 +478,17 @@
    * #crossLink "Query/toString:method"
    */
   ComplexQuery.prototype.toString = function () {
-    var str_list = [], this_operator = this.operator;
+    var result = "", i;
     if (this.operator === "NOT") {
-      str_list.push("NOT (");
-      str_list.push(this.query_list[0].toString());
-      str_list.push(")");
-      return str_list.join(" ");
+      return "NOT ( " + this.query_list[0].toString() + " )";
     }
-    this.query_list.forEach(function (query) {
-      str_list.push("(");
-      str_list.push(query.toString());
-      str_list.push(")");
-      str_list.push(this_operator);
-    });
-    str_list.length -= 1;
-    return str_list.join(" ");
+    for (i = 0; i < this.query_list.length; i += 1) {
+      result += "( " + this.query_list[i].toString() + " )";
+      if (i < this.query_list.length - 1) {
+        result += " " + this.operator + " ";
+      }
+    }
+    return result;
   };
 
   /**

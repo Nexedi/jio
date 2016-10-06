@@ -6746,21 +6746,17 @@ return new Parser;
    * #crossLink "Query/toString:method"
    */
   ComplexQuery.prototype.toString = function () {
-    var str_list = [], this_operator = this.operator;
+    var result = "", i;
     if (this.operator === "NOT") {
-      str_list.push("NOT (");
-      str_list.push(this.query_list[0].toString());
-      str_list.push(")");
-      return str_list.join(" ");
+      return "NOT ( " + this.query_list[0].toString() + " )";
     }
-    this.query_list.forEach(function (query) {
-      str_list.push("(");
-      str_list.push(query.toString());
-      str_list.push(")");
-      str_list.push(this_operator);
-    });
-    str_list.length -= 1;
-    return str_list.join(" ");
+    for (i = 0; i < this.query_list.length; i += 1) {
+      result += "( " + this.query_list[i].toString() + " )";
+      if (i < this.query_list.length - 1) {
+        result += " " + this.operator + " ";
+      }
+    }
+    return result;
   };
 
   /**
@@ -8442,10 +8438,11 @@ return new Parser;
     this._signature_sub_storage = jIO.createJIO({
       type: "document",
       document_id: this._signature_hash,
-      sub_storage: spec.local_sub_storage
+      sub_storage: spec.signature_storage || spec.local_sub_storage
     });
 
     this._use_remote_post = spec.use_remote_post || false;
+    this._use_bulk_get = spec.use_bulk !== undefined ? spec.use_bulk : true;
 
     this._conflict_handling = spec.conflict_handling || 0;
     // 0: no resolution (ie, throw an Error)
@@ -8866,13 +8863,15 @@ return new Parser;
       .push(function () {
         // Autoactivate bulk if substorage implements it
         // Keep it like this until the bulk API is stabilized
-        var use_bulk_get = false;
-        try {
-          use_bulk_get = context._remote_sub_storage.hasCapacity("bulk");
-        } catch (error) {
-          if (!((error instanceof jIO.util.jIOError) &&
-               (error.status_code === 501))) {
-            throw error;
+        if (context._use_bulk_get) {
+          try {
+            context.use_bulk_get =
+              context._remote_sub_storage.hasCapacity("bulk");
+          } catch (error) {
+            if (!((error instanceof jIO.util.jIOError) &&
+                 (error.status_code === 501))) {
+              throw error;
+            }
           }
         }
         if (context._check_remote_modification ||
@@ -8880,7 +8879,7 @@ return new Parser;
             context._check_remote_deletion) {
           return pushStorage(context._remote_sub_storage,
                              context._local_sub_storage, {
-              use_bulk_get: use_bulk_get,
+              use_bulk_get: context.use_bulk_get,
               conflict_force: (context._conflict_handling ===
                                CONFLICT_KEEP_REMOTE),
               conflict_ignore: (context._conflict_handling ===
@@ -12786,93 +12785,187 @@ return new Parser;
 
 }(jIO, RSVP, Blob, openDatabase));
 ;/*jslint indent:2, maxlen: 80, nomen: true */
-/*global jIO */
-(function (jIO) {
+/*global jIO, RSVP */
+(function (jIO, RSVP) {
   "use strict";
 
   function MappingStorage(spec) {
     this._mapping_dict = spec.mapping_dict || {};
     this._default_dict = spec.default_dict || {};
     this._sub_storage = jIO.createJIO(spec.sub_storage);
+    this._map_all_properties = spec.map_all_properties || false;
+
+    this._id_is_mapped = (this._mapping_dict.id !== undefined
+            && this._mapping_dict.id.equal !== "id");
   }
 
-  MappingStorage.prototype._getSubStorageId = function (index) {
-    var option = {};
-    option.query = this._mapping_dict.id.equal + ': "' + index + '"';
-    return this._sub_storage.allDocs(option)
-      .push(function (data) {
-        if (data.data.rows.length > 0) {
-          return data.data.rows[0].id;
+  function getSubStorageId(storage, index) {
+    var query;
+    return new RSVP.Queue()
+      .push(function () {
+        var property;
+        if (!storage._id_is_mapped) {
+          return index;
         }
-        return undefined;
+        if (storage._mapping_dict.id.equal !== undefined) {
+          query = storage._mapping_dict.id.equal + ': "' + index + '"';
+          if (storage._mapping_dict.id.query_limit !== undefined) {
+            query += ' AND ' + storage._mapping_dict.id.query_limit;
+          }
+          for (property in storage._default_dict) {
+            if (storage._default_dict.hasOwnProperty(property)) {
+              query += ' AND ' + property + ': "'
+                + storage._default_dict[property].equal + '"';
+            }
+          }
+          return storage._sub_storage.allDocs({"query": query})
+            .push(function (data) {
+              if (data.data.rows.length === 0) {
+                return undefined;
+              }
+              if (data.data.rows.length > 1) {
+                throw new TypeError("id must be unique field");
+              }
+              return data.data.rows[0].id;
+            });
+        }
+        throw new jIO.util.jIOError(
+          "Unsuported option: " + storage._mapping_dict.id,
+          400
+        );
       });
-  };
+  }
 
-  MappingStorage.prototype._mapDocFromStorage = function (object) {
-    var result = {},
-      that = this,
-      prop;
-    for (prop in that._mapping_dict) {
-      if (that._mapping_dict.hasOwnProperty(prop)) {
-        if (prop !== "id") {
-          result[prop] = object[that._mapping_dict[prop].equal];
+  function unmapProperty(storage, property, doc, mapped_doc) {
+    if (storage._mapping_dict[property].equal !== undefined) {
+      doc[storage._mapping_dict[property].equal] = mapped_doc[property];
+      return;
+    }
+    throw new jIO.util.jIOError(
+      "Unsuported option(s): " + storage._mapping_dict[property],
+      400
+    );
+  }
+
+  function mapProperty(storage, property, doc, mapped_doc) {
+    if (storage._mapping_dict[property].equal !== undefined) {
+      if (doc.hasOwnProperty(storage._mapping_dict[property].equal)) {
+        mapped_doc[property] = doc[storage._mapping_dict[property].equal];
+      }
+      return;
+    }
+    throw new jIO.util.jIOError(
+      "Unsuported option(s): " + storage._mapping_dict[property],
+      400
+    );
+  }
+
+  function unmapDefaultProperty(storage, doc, property) {
+    if (storage._default_dict[property].equal !== undefined) {
+      doc[property] = storage._default_dict[property].equal;
+      return;
+    }
+    throw new jIO.util.jIOError(
+      "Unsuported option(s): " + storage._mapping_dict[property],
+      400
+    );
+  }
+
+  function mapDocument(storage, doc, delete_id) {
+    var mapped_doc = {},
+      property;
+    for (property in storage._mapping_dict) {
+      if (storage._mapping_dict.hasOwnProperty(property)) {
+        mapProperty(storage, property, doc, mapped_doc);
+      }
+    }
+    if (storage._map_all_properties) {
+      for (property in doc) {
+        if (doc.hasOwnProperty(property)) {
+          if (!storage._mapping_dict.hasOwnProperty(property)
+              && !storage._default_dict.hasOwnProperty(property)) {
+            mapped_doc[property] = doc[property];
+          }
         }
       }
     }
-    return result;
-  };
+    if (delete_id) {
+      delete mapped_doc.id;
+    }
+    return mapped_doc;
+  }
+
+  function unmapDocument(storage, mapped_doc) {
+    var doc = {}, property;
+    for (property in storage._default_dict) {
+      if (storage._default_dict.hasOwnProperty(property)) {
+        unmapDefaultProperty(storage, doc, property);
+      }
+    }
+    for (property in mapped_doc) {
+      if (mapped_doc.hasOwnProperty(property)
+          && storage._mapping_dict[property] !== undefined) {
+        unmapProperty(storage, property, doc, mapped_doc);
+      }
+    }
+    if (storage._map_all_properties) {
+      for (property in doc) {
+        if (doc.hasOwnProperty(property)) {
+          if (!storage._mapping_dict.hasOwnProperty(property)
+              && !storage._default_dict.hasOwnProperty(property)) {
+            doc[property] = mapped_doc[property];
+          }
+        }
+      }
+    }
+    return doc;
+  }
 
   MappingStorage.prototype.get = function (index) {
     var that = this;
-    if (this._mapping_dict.id === undefined ||
-        this._mapping_dict.id.equal === "id") {
-      return this._sub_storage.get(index)
-        .push(function (result) {
-          return that._mapDocFromStorage(result);
-        });
-    }
-    return this._getSubStorageId(index)
+    return getSubStorageId(this, index)
       .push(function (id) {
-        return that._sub_storage.get(id);
+        if (id !== undefined) {
+          return that._sub_storage.get(id);
+        }
+        throw new jIO.util.jIOError("Cannot find document " + id, 404);
       })
-      .push(function (result) {
-        return that._mapDocFromStorage(result);
+      .push(function (doc) {
+        return mapDocument(that, doc, true);
+      })
+      .push(undefined, function (error) {
+        throw error;
       });
   };
 
+  MappingStorage.prototype.post = function () {
+    if (!this._id_is_mapped) {
+      return this._sub_storage.post.apply(this._sub_storage, arguments);
+    }
+    throw new jIO.util.jIOError("Can't use post with id mapped", 400);
+  };
+
   MappingStorage.prototype.put = function (index, doc) {
-    var prop, that = this,
-      doc_mapped = JSON.parse(JSON.stringify(this._default_dict));
-    for (prop in doc) {
-      if (doc.hasOwnProperty(prop)) {
-        doc_mapped[this._mapping_dict[prop].equal] = doc[prop];
-      }
-    }
-    if (this._mapping_dict.id === undefined ||
-         this._mapping_dict.id.equal === "id") {
-      return this._sub_storage.put(index, doc_mapped);
-    }
-    doc_mapped[this._mapping_dict.id.equal] = index;
-    return this._getSubStorageId(index)
+    var that = this,
+      mapped_doc = unmapDocument(this, doc);
+    return getSubStorageId(this, index)
       .push(function (id) {
-        if (id === undefined) {
-          return that._sub_storage.post(doc_mapped)
-            .push(function () {
-              return index;
-            });
+        if (that._mapping_dict.id && that._mapping_dict.id.equal !== "id") {
+          mapped_doc[that._mapping_dict.id.equal] = index;
         }
-        return that._sub_storage.put(id, doc_mapped);
+        if (id !== undefined) {
+          return that._sub_storage.put(id, mapped_doc);
+        }
+        return that._sub_storage.post(mapped_doc);
+      })
+      .push(function () {
+        return index;
       });
   };
 
   MappingStorage.prototype.remove = function (index) {
     var that = this;
-    if (this._mapping_dict.id === undefined
-        || this._mapping_dict.id.equal === "id") {
-      return this._sub_storage.remove.apply(this._sub_storage,
-        arguments);
-    }
-    return this._getSubStorageId(index)
+    return getSubStorageId(this, index)
       .push(function (id) {
         return that._sub_storage.remove(id);
       })
@@ -12882,77 +12975,61 @@ return new Parser;
   };
 
   MappingStorage.prototype.putAttachment = function (doc_id) {
-    var that = this;
-    if (this._mapping_dict.id === undefined
-        || this._mapping_dict.id.equal === "id") {
-      return this._sub_storage.putAttachment.apply(this._sub_storage,
-        arguments);
-    }
-    return this._getSubStorageId(doc_id)
+    var that = this, argument_list = arguments;
+    return getSubStorageId(this, doc_id)
       .push(function (id) {
-        doc_id = id;
+        argument_list[0] = id;
         return that._sub_storage.putAttachment.apply(that._sub_storage,
-          arguments);
+          argument_list);
       });
   };
 
   MappingStorage.prototype.getAttachment = function (doc_id) {
-    var that = this;
-    if (this._mapping_dict.id === undefined
-        || this._mapping_dict.id.equal === "id") {
-      return this._sub_storage.getAttachment.apply(this._sub_storage,
-        arguments);
-    }
-    return this._getSubStorageId(doc_id)
+    var that = this, argument_list = arguments;
+    return getSubStorageId(this, doc_id)
       .push(function (id) {
-        doc_id = id;
+        argument_list[0] = id;
         return that._sub_storage.getAttachment.apply(that._sub_storage,
-          arguments);
+          argument_list);
       });
   };
 
   MappingStorage.prototype.removeAttachment = function (doc_id) {
-    var that = this;
-    if (this._mapping_dict.id === undefined
-        || this._mapping_dict.id.equal === "id") {
-      return this._sub_storage.removeAttachment.apply(this._sub_storage,
-        arguments);
-    }
-    return this._getSubStorageId(doc_id)
+    var that = this, argument_list = arguments;
+    return getSubStorageId(this, doc_id)
       .push(function (id) {
-        doc_id = id;
+        argument_list[0] = id;
         return that._sub_storage.removeAttachment.apply(that._sub_storage,
-          arguments);
+          argument_list);
       });
   };
 
-  MappingStorage.prototype.hasCapacity = function (name) {
-    if (name === "include_docs") {
-      return true;
-    }
+  MappingStorage.prototype.hasCapacity = function () {
     return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
   };
 
   MappingStorage.prototype.buildQuery = function (option) {
-    var that = this, i, select_list = [], sort_on = [], query, prop;
+    var that = this,
+      i,
+      query,
+      select_list = [],
+      sort_on = [];
 
     function mapQuery(one_query) {
-      var i, query_list = [];
+      var i, result = "", key;
       if (one_query.type === "complex") {
         for (i = 0; i < one_query.query_list.length; i += 1) {
-          query_list.push(mapQuery(one_query.query_list[i]));
+          result += "(" + mapQuery(one_query.query_list[i]) + ")";
+          if (i < one_query.query_list.length - 1) {
+            result += " " + one_query.operator + " ";
+          }
         }
-        return {
-          operator: one_query.operator,
-          query_list: query_list,
-          type: "complex"
-        };
+        return result;
       }
-      return {
-        key: that._mapping_dict[one_query.key].equal,
-        type: "simple",
-        value: one_query.value
-      };
+      key = that._mapping_dict[one_query.key].equal;
+      return (key ? key + ":" : "") +
+        (one_query.operator ? " " + one_query.operator : "") +
+        ' "' + one_query.value + '"';
     }
 
     if (option.sort_on !== undefined) {
@@ -12963,25 +13040,23 @@ return new Parser;
     }
     if (option.select_list !== undefined) {
       for (i = 0; i < option.select_list.length; i += 1) {
-        select_list.push(this._mapping_dict[option.select_list[i]].equal);
-      }
-    }
-    if (option.include_docs) {
-      select_list = [];
-      for (prop in this._mapping_dict) {
-        if (this._mapping_dict.hasOwnProperty(prop)) {
-          select_list.push(this._mapping_dict[prop].equal);
+        if (this._mapping_dict.hasOwnProperty(option.select_list[i])) {
+          select_list.push(this._mapping_dict[option.select_list[i]].equal);
         }
       }
     }
-    if (this._mapping_dict.id !== undefined
-        && this._mapping_dict.id.equal !== "id") {
+    if (this._id_is_mapped) {
       select_list.push(this._mapping_dict.id.equal);
     }
-    query = jIO.Query.parseStringToObject(option.query);
+    if (option.query !== undefined) {
+      query = mapQuery(jIO.QueryFactory.create(option.query));
+    }
+    if (this._mapping_dict.id.query_limit !== undefined) {
+      query += 'AND( ' + this._mapping_dict.id.query_limit + ' )';
+    }
     return this._sub_storage.allDocs(
       {
-        query: mapQuery(query),
+        query: query,
         select_list: select_list,
         sort_on: sort_on,
         limit: option.limit
@@ -12989,14 +13064,13 @@ return new Parser;
     )
       .push(function (result) {
         for (i = 0; i < result.data.total_rows; i += 1) {
-          if (that._mapping_dict.id !== undefined
-              && that._mapping_dict.id.equal !== "id") {
-            result.data.rows[i].id =
-              result.data.rows[i].value[that._mapping_dict.id.equal];
-            delete result.data.rows[i].value[that._mapping_dict.id.equal];
-          }
           result.data.rows[i].value =
-            that._mapDocFromStorage(result.data.rows[i].value);
+            mapDocument(that, result.data.rows[i].value, false);
+          if (result.data.rows[i].id !== undefined) {
+            result.data.rows[i].id =
+                result.data.rows[i].value.id;
+            delete result.data.rows[i].value.id;
+          }
         }
         return result.data.rows;
       });
@@ -13004,4 +13078,4 @@ return new Parser;
 
   jIO.addStorage('mapping', MappingStorage);
 
-}(jIO));
+}(jIO, RSVP));
