@@ -53,10 +53,11 @@
     this._signature_sub_storage = jIO.createJIO({
       type: "document",
       document_id: this._signature_hash,
-      sub_storage: spec.local_sub_storage
+      sub_storage: spec.signature_storage || spec.local_sub_storage
     });
 
     this._use_remote_post = spec.use_remote_post || false;
+    this._use_bulk_get = spec.use_bulk !== undefined ? spec.use_bulk : true;
 
     this._conflict_handling = spec.conflict_handling || 0;
     // 0: no resolution (ie, throw an Error)
@@ -477,13 +478,15 @@
       .push(function () {
         // Autoactivate bulk if substorage implements it
         // Keep it like this until the bulk API is stabilized
-        var use_bulk_get = false;
-        try {
-          use_bulk_get = context._remote_sub_storage.hasCapacity("bulk");
-        } catch (error) {
-          if (!((error instanceof jIO.util.jIOError) &&
-               (error.status_code === 501))) {
-            throw error;
+        if (context._use_bulk_get) {
+          try {
+            context.use_bulk_get =
+              context._remote_sub_storage.hasCapacity("bulk");
+          } catch (error) {
+            if (!((error instanceof jIO.util.jIOError) &&
+                 (error.status_code === 501))) {
+              throw error;
+            }
           }
         }
         if (context._check_remote_modification ||
@@ -491,7 +494,7 @@
             context._check_remote_deletion) {
           return pushStorage(context._remote_sub_storage,
                              context._local_sub_storage, {
-              use_bulk_get: use_bulk_get,
+              use_bulk_get: context.use_bulk_get,
               conflict_force: (context._conflict_handling ===
                                CONFLICT_KEEP_REMOTE),
               conflict_ignore: (context._conflict_handling ===

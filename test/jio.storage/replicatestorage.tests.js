@@ -24,6 +24,11 @@
   }
   jIO.addStorage('replicatestorage500', Storage500);
 
+  function Storage2713() {
+    return this;
+  }
+  jIO.addStorage('signaturestorage2713', Storage2713);
+
   /////////////////////////////////////////////////////////////////
   // replicateStorage.constructor
   /////////////////////////////////////////////////////////////////
@@ -53,6 +58,7 @@
     equal(jio.__storage._check_remote_creation, true);
     equal(jio.__storage._check_remote_deletion, true);
     equal(jio.__storage._check_remote_modification, true);
+    equal(jio.__storage._use_bulk_get, true);
 
     equal(jio.__storage._signature_hash,
           "_replicate_7209dfbcaff00f6637f939fdd71fa896793ed385");
@@ -79,6 +85,9 @@
       remote_sub_storage: {
         type: "replicatestorage500"
       },
+      signature_storage: {
+        type: "signaturestorage2713"
+      },
       query: {query: 'portal_type: "Foo"', limit: [0, 1234567890]},
       use_remote_post: true,
       conflict_handling: 3,
@@ -87,7 +96,8 @@
       check_local_modification: false,
       check_remote_creation: false,
       check_remote_deletion: false,
-      check_remote_modification: false
+      check_remote_modification: false,
+      use_bulk: false
     });
 
     deepEqual(
@@ -102,7 +112,10 @@
     equal(jio.__storage._check_remote_creation, false);
     equal(jio.__storage._check_remote_deletion, false);
     equal(jio.__storage._check_remote_modification, false);
+    equal(jio.__storage._use_bulk_get, false);
 
+    equal(jio.__storage._signature_sub_storage.__storage._sub_storage.__type,
+          "signaturestorage2713");
     equal(jio.__storage._signature_hash,
           "_replicate_11881e431308c0ec8c0e6430be98db380e1b92f8");
   });
@@ -2578,6 +2591,178 @@
           type: "memory"
         }
       }
+    });
+
+    context.jio.__storage._remote_sub_storage.post({"title": "bar"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "bar"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.put(
+          id,
+          {"title": "foo"}
+        );
+      })
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "foo"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote document creation with bulk off", function () {
+    stop();
+    expect(2);
+
+    var id,
+      post_id = "123456789",
+      context = this;
+
+    function Storage200Bulk(spec) {
+      this._sub_storage = jIO.createJIO(spec.sub_storage);
+    }
+    Storage200Bulk.prototype.get = function () {
+      return this._sub_storage.get.apply(this._sub_storage, arguments);
+    };
+    Storage200Bulk.prototype.bulk = function () {
+      throw new Error("Bulk called");
+    };
+    Storage200Bulk.prototype.post = function (param) {
+      return this.put(post_id, param);
+    };
+    Storage200Bulk.prototype.put = function () {
+      return this._sub_storage.put.apply(this._sub_storage, arguments);
+    };
+    Storage200Bulk.prototype.hasCapacity = function () {
+      return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+    };
+    Storage200Bulk.prototype.buildQuery = function () {
+      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    };
+    jIO.addStorage(
+      'replicatestorage200nobulk',
+      Storage200Bulk
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "memory"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage200nobulk",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      use_bulk: false
+    });
+
+    context.jio.__storage._remote_sub_storage.post({"title": "bar"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "bar"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote document modification with bulk off", function () {
+    stop();
+    expect(3);
+
+    var id,
+      post_id = "123456789",
+      context = this;
+
+    function Storage200Bulk(spec) {
+      this._sub_storage = jIO.createJIO(spec.sub_storage);
+    }
+    Storage200Bulk.prototype.get = function () {
+      return this._sub_storage.get.apply(this._sub_storage, arguments);
+    };
+    Storage200Bulk.prototype.bulk = function () {
+      throw new Error("bulk called");
+    };
+    Storage200Bulk.prototype.post = function (param) {
+      return this.put(post_id, param);
+    };
+    Storage200Bulk.prototype.put = function () {
+      return this._sub_storage.put.apply(this._sub_storage, arguments);
+    };
+    Storage200Bulk.prototype.hasCapacity = function () {
+      return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+    };
+    Storage200Bulk.prototype.buildQuery = function () {
+      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    };
+    jIO.addStorage(
+      'replicatestorage200nobulkremotemodification',
+      Storage200Bulk
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "memory"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage200nobulkremotemodification",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      use_bulk: false
     });
 
     context.jio.__storage._remote_sub_storage.post({"title": "bar"})
