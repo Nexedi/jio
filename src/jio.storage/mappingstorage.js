@@ -1,5 +1,5 @@
 /*jslint indent:2, maxlen: 80, nomen: true */
-/*global jIO, RSVP */
+/*global jIO, RSVP, UriTemplate */
 (function (jIO, RSVP) {
   "use strict";
 
@@ -8,6 +8,7 @@
     this._default_dict = spec.default_dict || {};
     this._sub_storage = jIO.createJIO(spec.sub_storage);
     this._map_all_property = spec.map_all_property || false;
+    this._attachment_uri_template = spec.attachment_uri_template;
 
     this._id_is_mapped = (this._mapping_dict.id !== undefined
             && this._mapping_dict.id.equal !== "id");
@@ -193,6 +194,10 @@
     return getSubStorageId(this, doc_id)
       .push(function (id) {
         argument_list[0] = id;
+        if (that._attachment_uri_template) {
+          argument_list[1] = UriTemplate.parse(that._attachment_uri_template)
+            .expand({id: id});
+        }
         return that._sub_storage.putAttachment.apply(that._sub_storage,
           argument_list);
       });
@@ -203,6 +208,10 @@
     return getSubStorageId(this, doc_id)
       .push(function (id) {
         argument_list[0] = id;
+        if (that._attachment_uri_template) {
+          argument_list[1] = UriTemplate.parse(that._attachment_uri_template)
+            .expand({id: id});
+        }
         return that._sub_storage.getAttachment.apply(that._sub_storage,
           argument_list);
       });
@@ -213,6 +222,10 @@
     return getSubStorageId(this, doc_id)
       .push(function (id) {
         argument_list[0] = id;
+        if (that._attachment_uri_template) {
+          argument_list[1] = UriTemplate.parse(that._attachment_uri_template)
+            .expand({id: id});
+        }
         return that._sub_storage.removeAttachment.apply(that._sub_storage,
           argument_list);
       });
@@ -230,7 +243,7 @@
       sort_on = [];
 
     function mapQuery(one_query) {
-      var i, result = "", key;
+      var i, result = "(", key;
       if (one_query.type === "complex") {
         for (i = 0; i < one_query.query_list.length; i += 1) {
           result += "(" + mapQuery(one_query.query_list[i]) + ")";
@@ -238,6 +251,7 @@
             result += " " + one_query.operator + " ";
           }
         }
+        result += ")";
         return result;
       }
       if (that._mapping_dict.hasOwnProperty(one_query.key)) {
@@ -272,7 +286,12 @@
       query = mapQuery(jIO.QueryFactory.create(option.query));
     }
     if (this._mapping_dict.id.query_limit !== undefined) {
-      query += 'AND( ' + this._mapping_dict.id.query_limit + ' )';
+      if (query !== undefined) {
+        query += ' AND ';
+      } else {
+        query = "";
+      }
+      query += this._mapping_dict.id.query_limit;
     }
     return this._sub_storage.allDocs(
       {
@@ -297,5 +316,4 @@
   };
 
   jIO.addStorage('mapping', MappingStorage);
-
 }(jIO, RSVP));
