@@ -12793,7 +12793,7 @@ return new Parser;
     this._mapping_dict = spec.mapping_dict || {};
     this._default_dict = spec.default_dict || {};
     this._sub_storage = jIO.createJIO(spec.sub_storage);
-    this._map_all_properties = spec.map_all_properties || false;
+    this._map_all_property = spec.map_all_property || false;
 
     this._id_is_mapped = (this._mapping_dict.id !== undefined
             && this._mapping_dict.id.equal !== "id");
@@ -12879,7 +12879,7 @@ return new Parser;
         mapProperty(storage, property, doc, mapped_doc);
       }
     }
-    if (storage._map_all_properties) {
+    if (storage._map_all_property) {
       for (property in doc) {
         if (doc.hasOwnProperty(property)) {
           if (!storage._mapping_dict.hasOwnProperty(property)
@@ -12908,7 +12908,7 @@ return new Parser;
         unmapProperty(storage, property, doc, mapped_doc);
       }
     }
-    if (storage._map_all_properties) {
+    if (storage._map_all_property) {
       for (property in doc) {
         if (doc.hasOwnProperty(property)) {
           if (!storage._mapping_dict.hasOwnProperty(property)
@@ -13026,7 +13026,13 @@ return new Parser;
         }
         return result;
       }
-      key = that._mapping_dict[one_query.key].equal;
+      if (that._mapping_dict.hasOwnProperty(one_query.key)) {
+        key = that._mapping_dict[one_query.key].equal;
+      } else {
+        if (that._map_all_property) {
+          key = one_query.key;
+        }
+      }
       return (key ? key + ":" : "") +
         (one_query.operator ? " " + one_query.operator : "") +
         ' "' + one_query.value + '"';

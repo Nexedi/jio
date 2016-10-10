@@ -50,6 +50,7 @@
 
     deepEqual(jio.__storage._mapping_dict, {"bar": {"equal": "foo"}});
     deepEqual(jio.__storage._default_dict, {"foo": {"equal": "bar"}});
+    equal(jio.__storage._map_all_property, false);
   });
 
   /////////////////////////////////////////////////////////////////
@@ -191,6 +192,52 @@
     Storage2713.prototype.get = function (id) {
       equal(id, "2713", "get 2713 called");
       return {"otherTitle": "foo"};
+    };
+
+    jio.get("42")
+      .then(function (result) {
+        deepEqual(result, {
+          "title": "foo"
+        });
+      }).fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get with map_all_property", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      mapping_dict: {
+        "id": {"equal": "otherId"}
+      },
+      map_all_property: true
+    });
+
+    Storage2713.prototype.hasCapacity = function () {
+      return true;
+    };
+
+    Storage2713.prototype.buildQuery = function (options) {
+      deepEqual(
+        options,
+        {query: 'otherId: "42"'},
+        "allDoc 2713 called"
+      );
+      return [{id: "2713"}];
+    };
+
+    Storage2713.prototype.get = function (id) {
+      equal(id, "2713", "get 2713 called");
+      return {"title": "foo"};
     };
 
     jio.get("42")
@@ -579,6 +626,63 @@
                 {
                   "id": "42",
                   "value": {},
+                  "doc": {}
+                }
+              ],
+              "total_rows": 1
+            }
+          }, "allDocs check");
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("allDocs id and prop mapped and map_all_property", function () {
+    stop();
+    expect(1);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "query",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      },
+      mapping_dict: {
+        "id": {"equal": "otherId"},
+        "title": {"equal": "otherTitle"}
+      },
+      map_all_property: true
+    });
+
+    jio.put("42",
+      {
+        "title": "foo",
+        "smth": "bar",
+        "stmth2": "bar2"
+      })
+        .push(function () {
+        return jio.allDocs({
+          query: 'title: "foo"',
+          select_list: ["title", "smth", "smth2"]
+        });
+      })
+        .push(function (result) {
+        deepEqual(result,
+          {
+            "data": {
+              "rows": [
+                {
+                  "id": "42",
+                  "value": {"title": "foo", "smth": "bar", "smth2": "bar2"},
                   "doc": {}
                 }
               ],
