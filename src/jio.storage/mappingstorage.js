@@ -1,5 +1,5 @@
 /*jslint indent:2, maxlen: 80, nomen: true */
-/*global jIO, RSVP */
+/*global jIO, RSVP, UriTemplate */
 (function (jIO, RSVP) {
   "use strict";
 
@@ -8,9 +8,27 @@
     this._default_dict = spec.default_dict || {};
     this._sub_storage = jIO.createJIO(spec.sub_storage);
     this._map_all_property = spec.map_all_property || false;
+    this._mapping_dict_attachment = spec.mapping_dict_attachment || undefined;
+    this._query = spec.query || {};
 
     this._id_is_mapped = (this._mapping_dict.id !== undefined
             && this._mapping_dict.id.equal !== "id");
+  }
+
+
+  function getAttachmentId(storage, sub_id, attachment_id, method) {
+    var mapping_dict = storage._mapping_dict_attachment;
+    return new RSVP.Queue()
+      .push(function () {
+        if (mapping_dict !== undefined
+            && mapping_dict[attachment_id] !== undefined
+            && mapping_dict[attachment_id].uri_template !== undefined) {
+          return UriTemplate.parse(
+            mapping_dict[attachment_id][method].uri_template
+          ).expand({id: sub_id});
+        }
+        return attachment_id;
+      });
   }
 
   function getSubStorageId(storage, index) {
@@ -23,8 +41,8 @@
         }
         if (storage._mapping_dict.id.equal !== undefined) {
           query = storage._mapping_dict.id.equal + ': "' + index + '"';
-          if (storage._mapping_dict.id.query_limit !== undefined) {
-            query += ' AND ' + storage._mapping_dict.id.query_limit;
+          if (storage._query.query !== undefined) {
+            query += ' AND ' + storage._query.query;
           }
           for (property in storage._default_dict) {
             if (storage._default_dict.hasOwnProperty(property)) {
@@ -32,7 +50,12 @@
                 + storage._default_dict[property].equal + '"';
             }
           }
-          return storage._sub_storage.allDocs({"query": query})
+          return storage._sub_storage.allDocs({
+            "query": query,
+            "sort_on": storage._query.sort_on,
+            "select_list": storage._query.select_list,
+            "limit": storage._query.limit
+          })
             .push(function (data) {
               if (data.data.rows.length === 0) {
                 return undefined;
@@ -185,32 +208,45 @@
       });
   };
 
-  MappingStorage.prototype.putAttachment = function (doc_id) {
-    var that = this, argument_list = arguments;
-    return getSubStorageId(this, doc_id)
-      .push(function (id) {
-        argument_list[0] = id;
-        return that._sub_storage.putAttachment.apply(that._sub_storage,
+  MappingStorage.prototype.putAttachment = function (id, attachment_id) {
+    var context = this, argument_list = arguments;
+    return getSubStorageId(context, id)
+      .push(function (sub_id) {
+        argument_list[0] = sub_id;
+        return getAttachmentId(context, sub_id, attachment_id, "put");
+      })
+      .push(function (sub_attachment_id) {
+        argument_list[1] = sub_attachment_id;
+        return context._sub_storage.putAttachment.apply(context._sub_storage,
           argument_list);
       });
   };
 
-  MappingStorage.prototype.getAttachment = function (doc_id) {
-    var that = this, argument_list = arguments;
-    return getSubStorageId(this, doc_id)
-      .push(function (id) {
-        argument_list[0] = id;
-        return that._sub_storage.getAttachment.apply(that._sub_storage,
+
+  MappingStorage.prototype.getAttachment = function (id, attachment_id) {
+    var context = this, argument_list = arguments;
+    return getSubStorageId(context, id)
+      .push(function (sub_id) {
+        argument_list[0] = sub_id;
+        return getAttachmentId(context, sub_id, attachment_id, "get");
+      })
+      .push(function (sub_attachment_id) {
+        argument_list[1] = sub_attachment_id;
+        return context._sub_storage.getAttachment.apply(context._sub_storage,
           argument_list);
       });
   };
 
-  MappingStorage.prototype.removeAttachment = function (doc_id) {
-    var that = this, argument_list = arguments;
-    return getSubStorageId(this, doc_id)
-      .push(function (id) {
-        argument_list[0] = id;
-        return that._sub_storage.removeAttachment.apply(that._sub_storage,
+  MappingStorage.prototype.removeAttachment = function (id, attachment_id) {
+    var context = this, argument_list = arguments;
+    return getSubStorageId(context, id)
+      .push(function (sub_id) {
+        argument_list[0] = sub_id;
+        return getAttachmentId(context, sub_id, attachment_id, "remove");
+      })
+      .push(function (sub_attachment_id) {
+        argument_list[1] = sub_attachment_id;
+        return context._sub_storage.removeAttachment.apply(context._sub_storage,
           argument_list);
       });
   };
@@ -219,15 +255,27 @@
     return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
   };
 
+  MappingStorage.prototype.bulk = function () {
+    var i, that = this, mapped_result = [];
+    return this._sub_storage.bulk.apply(arguments)
+      .push(function (result) {
+        for (i = 0; i < result.length; i += 1) {
+          mapped_result.push(mapDocument(that, result[i]), false);
+        }
+        return mapped_result;
+      });
+  };
+
   MappingStorage.prototype.buildQuery = function (option) {
     var that = this,
       i,
       query,
+      property,
       select_list = [],
       sort_on = [];
 
     function mapQuery(one_query) {
-      var i, result = "", key;
+      var i, result = "(", key;
       if (one_query.type === "complex") {
         for (i = 0; i < one_query.query_list.length; i += 1) {
           result += "(" + mapQuery(one_query.query_list[i]) + ")";
@@ -235,6 +283,7 @@
             result += " " + one_query.operator + " ";
           }
         }
+        result += ")";
         return result;
       }
       if (that._mapping_dict.hasOwnProperty(one_query.key)) {
@@ -251,18 +300,41 @@
 
     if (option.sort_on !== undefined) {
       for (i = 0; i < option.sort_on.length; i += 1) {
-        sort_on.push([this._mapping_dict[option.sort_on[i][0]].equal,
-          option.sort_on[i][1]]);
+        property = [this._mapping_dict[option.sort_on[i][0]].equal,
+          option.sort_on[i][1]];
+        if (sort_on.indexOf(property) < 0) {
+          sort_on.push(property);
+        }
+      }
+    }
+    if (this._query.sort_on !== undefined) {
+      for (i = 0; i < this._query.sort_on.length; i += 1) {
+        property = this._query.sort_on[i];
+        if (sort_on.indexOf(property) < 0) {
+          sort_on.push(property);
+        }
       }
     }
     if (option.select_list !== undefined) {
       for (i = 0; i < option.select_list.length; i += 1) {
+        property = false;
         if (this._mapping_dict.hasOwnProperty(option.select_list[i])) {
-          select_list.push(this._mapping_dict[option.select_list[i]].equal);
+          property = this._mapping_dict[option.select_list[i]].equal;
         } else {
           if (this._map_all_property) {
-            select_list.push(option.select_list[i]);
+            property = option.select_list[i];
           }
+        }
+        if (property && sort_on.indexOf(property) < 0) {
+          select_list.push(property);
+        }
+      }
+    }
+    if (this._query.select_list !== undefined) {
+      for (i = 0; i < this._query.select_list; i += 1) {
+        property = this._query.select_list[i];
+        if (select_list.indexOf(property) < 0) {
+          select_list.push(property);
         }
       }
     }
@@ -272,8 +344,14 @@
     if (option.query !== undefined) {
       query = mapQuery(jIO.QueryFactory.create(option.query));
     }
-    if (this._mapping_dict.id.query_limit !== undefined) {
-      query += 'AND( ' + this._mapping_dict.id.query_limit + ' )';
+
+    if (this._query.query !== undefined) {
+      if (query !== undefined) {
+        query += ' AND ';
+      } else {
+        query = "";
+      }
+      query += this._query.query;
     }
     return this._sub_storage.allDocs(
       {
@@ -298,5 +376,4 @@
   };
 
   jIO.addStorage('mapping', MappingStorage);
-
 }(jIO, RSVP));
