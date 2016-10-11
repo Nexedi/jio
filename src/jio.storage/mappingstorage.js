@@ -8,11 +8,27 @@
     this._default_dict = spec.default_dict || {};
     this._sub_storage = jIO.createJIO(spec.sub_storage);
     this._map_all_property = spec.map_all_property || false;
-    this._attachment_uri_template = spec.attachment_uri_template;
+    this._mapping_dict_attachment = spec.mapping_dict_attachment || undefined;
     this._query = spec.query || {};
 
     this._id_is_mapped = (this._mapping_dict.id !== undefined
             && this._mapping_dict.id.equal !== "id");
+  }
+
+  function getAttachmentId(storage, doc_id, id) {
+    return new RSVP.Queue()
+      .push(function () {
+        if (storage._mapping_dict_attachment === undefined
+            || (storage._mapping_dict_attachment.id !== undefined
+            && storage._mapping_dict_attachment.id.equal === "id")) {
+          return id;
+        }
+        if (storage._mapping_dict_attachment.uri_template !== undefined) {
+          return UriTemplate.parse(
+            storage._mapping_dict_attachment.uri_template
+          ).expand({id: doc_id});
+        }
+      });
   }
 
   function getSubStorageId(storage, index) {
@@ -192,43 +208,43 @@
       });
   };
 
-  MappingStorage.prototype.putAttachment = function (doc_id) {
+  MappingStorage.prototype.putAttachment = function (doc_id, attachment_id) {
     var that = this, argument_list = arguments;
     return getSubStorageId(this, doc_id)
       .push(function (id) {
         argument_list[0] = id;
-        if (that._attachment_uri_template) {
-          argument_list[1] = UriTemplate.parse(that._attachment_uri_template)
-            .expand({id: id});
-        }
+        return getAttachmentId(that, doc_id, attachment_id);
+      })
+      .push(function (id) {
+        argument_list[1] = id;
         return that._sub_storage.putAttachment.apply(that._sub_storage,
           argument_list);
       });
   };
 
-  MappingStorage.prototype.getAttachment = function (doc_id) {
+  MappingStorage.prototype.getAttachment = function (doc_id, attachment_id) {
     var that = this, argument_list = arguments;
     return getSubStorageId(this, doc_id)
       .push(function (id) {
         argument_list[0] = id;
-        if (that._attachment_uri_template) {
-          argument_list[1] = UriTemplate.parse(that._attachment_uri_template)
-            .expand({id: id});
-        }
+        return getAttachmentId(that, doc_id, attachment_id);
+      })
+      .push(function (id) {
+        argument_list[1] = id;
         return that._sub_storage.getAttachment.apply(that._sub_storage,
           argument_list);
       });
   };
 
-  MappingStorage.prototype.removeAttachment = function (doc_id) {
+  MappingStorage.prototype.removeAttachment = function (doc_id, attachment_id) {
     var that = this, argument_list = arguments;
     return getSubStorageId(this, doc_id)
       .push(function (id) {
         argument_list[0] = id;
-        if (that._attachment_uri_template) {
-          argument_list[1] = UriTemplate.parse(that._attachment_uri_template)
-            .expand({id: id});
-        }
+        return getAttachmentId(that, doc_id, attachment_id);
+      })
+      .push(function (id) {
+        argument_list[1] = id;
         return that._sub_storage.removeAttachment.apply(that._sub_storage,
           argument_list);
       });
@@ -236,6 +252,17 @@
 
   MappingStorage.prototype.hasCapacity = function () {
     return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+  };
+
+  MappingStorage.prototype.bulk = function () {
+    var i, that = this, mapped_result = [];
+    return this._sub_storage.bulk.apply(arguments)
+      .push(function (result) {
+        for (i = 0; i < result.length; i += 1) {
+          mapped_result.push(mapDocument(that, result[i]), false);
+        }
+        return mapped_result;
+      });
   };
 
   MappingStorage.prototype.buildQuery = function (option) {

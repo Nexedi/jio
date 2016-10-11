@@ -503,7 +503,7 @@
       sub_storage: {
         type: "mappingstorage2713"
       },
-      attachment_uri_template: "www.2713.foo/{id}"
+      mapping_dict_attachment: {"uri_template": "www.2713.foo/{id}"}
     }),
       blob = new Blob([""]);
     Storage2713.prototype.putAttachment = function (doc_id,
@@ -565,7 +565,7 @@
       sub_storage: {
         type: "mappingstorage2713"
       },
-      attachment_uri_template: "www.2713/{id}/ok.com"
+      mapping_dict_attachment: {"uri_template": "www.2713/{id}/ok.com"}
     }),
       blob = new Blob([""]);
     Storage2713.prototype.getAttachment = function (doc_id, attachment) {
@@ -624,7 +624,7 @@
       sub_storage: {
         type: "mappingstorage2713"
       },
-      attachment_uri_template: "www.2713/{id}.bar"
+      mapping_dict_attachment: {"uri_template": "www.2713/{id}.bar"}
     });
     Storage2713.prototype.removeAttachment = function (doc_id, attachment) {
       equal(doc_id, "42", "putAttachment 2713 called");
@@ -814,4 +814,65 @@
         start();
       });
   });
+
+  /////////////////////////////////////////////////////////////////
+  // mappingStorage.bulk
+  /////////////////////////////////////////////////////////////////
+  module("mappingstorage.bulk");
+  test("bulk with map_all_property", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      map_all_doc: true,
+      mapping_dict: {
+        "title": {"equal": "otherTitle"},
+        "id": {"equal": "otherId"}
+      }
+    });
+
+    Storage2713.prototype.hasCapacity = function () {
+      return true;
+    };
+
+    Storage2713.prototype.bulk = function () {
+      deepEqual(arguments, ["some", "arguments"], "bulk 2713 called");
+      return [
+        {
+          "otherId": "foo",
+          "otherTitle": "bar",
+          "bar": "foo"
+        }, {
+          "otherId": "bar",
+          "otherTitle": "foo",
+          "foo": "bar"
+        }
+      ];
+    };
+
+    jio.bulk("some", "arguments")
+      .push(function (result) {
+        deepEqual(
+          result,
+          [{
+            "id": "foo",
+            "title": "bar",
+            "bar": "foo"
+          }, {
+            "id": "bar",
+            "title": "foo",
+            "foo": "bar"
+          }],
+          "bulk test"
+        );
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 }(jIO, QUnit, Blob));
