@@ -9,6 +9,7 @@
     this._sub_storage = jIO.createJIO(spec.sub_storage);
     this._map_all_property = spec.map_all_property || false;
     this._attachment_uri_template = spec.attachment_uri_template;
+    this._query = spec.query || {};
 
     this._id_is_mapped = (this._mapping_dict.id !== undefined
             && this._mapping_dict.id.equal !== "id");
@@ -24,8 +25,8 @@
         }
         if (storage._mapping_dict.id.equal !== undefined) {
           query = storage._mapping_dict.id.equal + ': "' + index + '"';
-          if (storage._mapping_dict.id.query_limit !== undefined) {
-            query += ' AND ' + storage._mapping_dict.id.query_limit;
+          if (storage._query.query !== undefined) {
+            query += ' AND ' + storage._query.query;
           }
           for (property in storage._default_dict) {
             if (storage._default_dict.hasOwnProperty(property)) {
@@ -33,7 +34,12 @@
                 + storage._default_dict[property].equal + '"';
             }
           }
-          return storage._sub_storage.allDocs({"query": query})
+          return storage._sub_storage.allDocs({
+            "query": query,
+            "sort_on": storage._query.sort_on,
+            "select_list": storage._query.select_list,
+            "limit": storage._query.limit
+          })
             .push(function (data) {
               if (data.data.rows.length === 0) {
                 return undefined;
@@ -236,6 +242,7 @@
     var that = this,
       i,
       query,
+      property,
       select_list = [],
       sort_on = [];
 
@@ -265,18 +272,41 @@
 
     if (option.sort_on !== undefined) {
       for (i = 0; i < option.sort_on.length; i += 1) {
-        sort_on.push([this._mapping_dict[option.sort_on[i][0]].equal,
-          option.sort_on[i][1]]);
+        property = [this._mapping_dict[option.sort_on[i][0]].equal,
+          option.sort_on[i][1]];
+        if (sort_on.indexOf(property) < 0) {
+          sort_on.push(property);
+        }
+      }
+    }
+    if (this._query.sort_on !== undefined) {
+      for (i = 0; i < this._query.sort_on.length; i += 1) {
+        property = this._query.sort_on[i];
+        if (sort_on.indexOf(property) < 0) {
+          sort_on.push(property);
+        }
       }
     }
     if (option.select_list !== undefined) {
       for (i = 0; i < option.select_list.length; i += 1) {
+        property = false;
         if (this._mapping_dict.hasOwnProperty(option.select_list[i])) {
-          select_list.push(this._mapping_dict[option.select_list[i]].equal);
+          property = this._mapping_dict[option.select_list[i]].equal;
         } else {
           if (this._map_all_property) {
-            select_list.push(option.select_list[i]);
+            property = option.select_list[i];
           }
+        }
+        if (property && sort_on.indexOf(property) < 0) {
+          select_list.push(property);
+        }
+      }
+    }
+    if (this._query.select_list !== undefined) {
+      for (i = 0; i < this._query.select_list; i += 1) {
+        property = this._query.select_list[i];
+        if (select_list.indexOf(property) < 0) {
+          select_list.push(property);
         }
       }
     }
@@ -286,13 +316,13 @@
     if (option.query !== undefined) {
       query = mapQuery(jIO.QueryFactory.create(option.query));
     }
-    if (this._mapping_dict.id.query_limit !== undefined) {
+    if (this._query.query !== undefined) {
       if (query !== undefined) {
         query += ' AND ';
       } else {
         query = "";
       }
-      query += this._mapping_dict.id.query_limit;
+      query += this._query.query;
     }
     return this._sub_storage.allDocs(
       {
