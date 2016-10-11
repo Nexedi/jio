@@ -54,7 +54,7 @@
   function unmapProperty(storage, property, doc, mapped_doc) {
     if (storage._mapping_dict[property].equal !== undefined) {
       doc[storage._mapping_dict[property].equal] = mapped_doc[property];
-      return;
+      return storage._mapping_dict[property].equal;
     }
     throw new jIO.util.jIOError(
       "Unsuported option(s): " + storage._mapping_dict[property],
@@ -66,6 +66,7 @@
     if (storage._mapping_dict[property].equal !== undefined) {
       if (doc.hasOwnProperty(storage._mapping_dict[property].equal)) {
         mapped_doc[property] = doc[storage._mapping_dict[property].equal];
+        return storage._mapping_dict[property].equal;
       }
       return;
     }
@@ -78,7 +79,7 @@
   function unmapDefaultProperty(storage, doc, property) {
     if (storage._default_dict[property].equal !== undefined) {
       doc[property] = storage._default_dict[property].equal;
-      return;
+      return property;
     }
     throw new jIO.util.jIOError(
       "Unsuported option(s): " + storage._mapping_dict[property],
@@ -88,17 +89,17 @@
 
   function mapDocument(storage, doc, delete_id) {
     var mapped_doc = {},
-      property;
+      property,
+      property_list = [];
     for (property in storage._mapping_dict) {
       if (storage._mapping_dict.hasOwnProperty(property)) {
-        mapProperty(storage, property, doc, mapped_doc);
+        property_list.push(mapProperty(storage, property, doc, mapped_doc));
       }
     }
     if (storage._map_all_property) {
       for (property in doc) {
         if (doc.hasOwnProperty(property)) {
-          if (!storage._mapping_dict.hasOwnProperty(property)
-              && !storage._default_dict.hasOwnProperty(property)) {
+          if (property_list.indexOf(property) < 0) {
             mapped_doc[property] = doc[property];
           }
         }
@@ -118,15 +119,11 @@
       }
     }
     for (property in mapped_doc) {
-      if (mapped_doc.hasOwnProperty(property)
-          && storage._mapping_dict[property] !== undefined) {
-        unmapProperty(storage, property, doc, mapped_doc);
-      }
-    }
-    if (storage._map_all_property) {
-      for (property in doc) {
-        if (doc.hasOwnProperty(property)) {
-          if (!storage._mapping_dict.hasOwnProperty(property)
+      if (mapped_doc.hasOwnProperty(property)) {
+        if (storage._mapping_dict[property] !== undefined) {
+          unmapProperty(storage, property, doc, mapped_doc);
+        } else {
+          if (storage._map_all_property
               && !storage._default_dict.hasOwnProperty(property)) {
             doc[property] = mapped_doc[property];
           }
@@ -276,6 +273,10 @@
       for (i = 0; i < option.select_list.length; i += 1) {
         if (this._mapping_dict.hasOwnProperty(option.select_list[i])) {
           select_list.push(this._mapping_dict[option.select_list[i]].equal);
+        } else {
+          if (this._map_all_property) {
+            select_list.push(option.select_list[i]);
+          }
         }
       }
     }

@@ -12785,7 +12785,7 @@ return new Parser;
 
 }(jIO, RSVP, Blob, openDatabase));
 ;/*jslint indent:2, maxlen: 80, nomen: true */
-/*global jIO, RSVP */
+/*global jIO, RSVP, UriTemplate */
 (function (jIO, RSVP) {
   "use strict";
 
@@ -12794,6 +12794,7 @@ return new Parser;
     this._default_dict = spec.default_dict || {};
     this._sub_storage = jIO.createJIO(spec.sub_storage);
     this._map_all_property = spec.map_all_property || false;
+    this._attachment_uri_template = spec.attachment_uri_template;
 
     this._id_is_mapped = (this._mapping_dict.id !== undefined
             && this._mapping_dict.id.equal !== "id");
@@ -12839,7 +12840,7 @@ return new Parser;
   function unmapProperty(storage, property, doc, mapped_doc) {
     if (storage._mapping_dict[property].equal !== undefined) {
       doc[storage._mapping_dict[property].equal] = mapped_doc[property];
-      return;
+      return storage._mapping_dict[property].equal;
     }
     throw new jIO.util.jIOError(
       "Unsuported option(s): " + storage._mapping_dict[property],
@@ -12851,6 +12852,7 @@ return new Parser;
     if (storage._mapping_dict[property].equal !== undefined) {
       if (doc.hasOwnProperty(storage._mapping_dict[property].equal)) {
         mapped_doc[property] = doc[storage._mapping_dict[property].equal];
+        return storage._mapping_dict[property].equal;
       }
       return;
     }
@@ -12863,7 +12865,7 @@ return new Parser;
   function unmapDefaultProperty(storage, doc, property) {
     if (storage._default_dict[property].equal !== undefined) {
       doc[property] = storage._default_dict[property].equal;
-      return;
+      return property;
     }
     throw new jIO.util.jIOError(
       "Unsuported option(s): " + storage._mapping_dict[property],
@@ -12873,17 +12875,17 @@ return new Parser;
 
   function mapDocument(storage, doc, delete_id) {
     var mapped_doc = {},
-      property;
+      property,
+      property_list = [];
     for (property in storage._mapping_dict) {
       if (storage._mapping_dict.hasOwnProperty(property)) {
-        mapProperty(storage, property, doc, mapped_doc);
+        property_list.push(mapProperty(storage, property, doc, mapped_doc));
       }
     }
     if (storage._map_all_property) {
       for (property in doc) {
         if (doc.hasOwnProperty(property)) {
-          if (!storage._mapping_dict.hasOwnProperty(property)
-              && !storage._default_dict.hasOwnProperty(property)) {
+          if (property_list.indexOf(property) < 0) {
             mapped_doc[property] = doc[property];
           }
         }
@@ -12903,15 +12905,11 @@ return new Parser;
       }
     }
     for (property in mapped_doc) {
-      if (mapped_doc.hasOwnProperty(property)
-          && storage._mapping_dict[property] !== undefined) {
-        unmapProperty(storage, property, doc, mapped_doc);
-      }
-    }
-    if (storage._map_all_property) {
-      for (property in doc) {
-        if (doc.hasOwnProperty(property)) {
-          if (!storage._mapping_dict.hasOwnProperty(property)
+      if (mapped_doc.hasOwnProperty(property)) {
+        if (storage._mapping_dict[property] !== undefined) {
+          unmapProperty(storage, property, doc, mapped_doc);
+        } else {
+          if (storage._map_all_property
               && !storage._default_dict.hasOwnProperty(property)) {
             doc[property] = mapped_doc[property];
           }
@@ -12979,6 +12977,10 @@ return new Parser;
     return getSubStorageId(this, doc_id)
       .push(function (id) {
         argument_list[0] = id;
+        if (that._attachment_uri_template) {
+          argument_list[1] = UriTemplate.parse(that._attachment_uri_template)
+            .expand({id: id});
+        }
         return that._sub_storage.putAttachment.apply(that._sub_storage,
           argument_list);
       });
@@ -12989,6 +12991,10 @@ return new Parser;
     return getSubStorageId(this, doc_id)
       .push(function (id) {
         argument_list[0] = id;
+        if (that._attachment_uri_template) {
+          argument_list[1] = UriTemplate.parse(that._attachment_uri_template)
+            .expand({id: id});
+        }
         return that._sub_storage.getAttachment.apply(that._sub_storage,
           argument_list);
       });
@@ -12999,6 +13005,10 @@ return new Parser;
     return getSubStorageId(this, doc_id)
       .push(function (id) {
         argument_list[0] = id;
+        if (that._attachment_uri_template) {
+          argument_list[1] = UriTemplate.parse(that._attachment_uri_template)
+            .expand({id: id});
+        }
         return that._sub_storage.removeAttachment.apply(that._sub_storage,
           argument_list);
       });
@@ -13016,7 +13026,7 @@ return new Parser;
       sort_on = [];
 
     function mapQuery(one_query) {
-      var i, result = "", key;
+      var i, result = "(", key;
       if (one_query.type === "complex") {
         for (i = 0; i < one_query.query_list.length; i += 1) {
           result += "(" + mapQuery(one_query.query_list[i]) + ")";
@@ -13024,6 +13034,7 @@ return new Parser;
             result += " " + one_query.operator + " ";
           }
         }
+        result += ")";
         return result;
       }
       if (that._mapping_dict.hasOwnProperty(one_query.key)) {
@@ -13048,6 +13059,10 @@ return new Parser;
       for (i = 0; i < option.select_list.length; i += 1) {
         if (this._mapping_dict.hasOwnProperty(option.select_list[i])) {
           select_list.push(this._mapping_dict[option.select_list[i]].equal);
+        } else {
+          if (this._map_all_property) {
+            select_list.push(option.select_list[i]);
+          }
         }
       }
     }
@@ -13058,7 +13073,12 @@ return new Parser;
       query = mapQuery(jIO.QueryFactory.create(option.query));
     }
     if (this._mapping_dict.id.query_limit !== undefined) {
-      query += 'AND( ' + this._mapping_dict.id.query_limit + ' )';
+      if (query !== undefined) {
+        query += ' AND ';
+      } else {
+        query = "";
+      }
+      query += this._mapping_dict.id.query_limit;
     }
     return this._sub_storage.allDocs(
       {
@@ -13083,5 +13103,4 @@ return new Parser;
   };
 
   jIO.addStorage('mapping', MappingStorage);
-
 }(jIO, RSVP));

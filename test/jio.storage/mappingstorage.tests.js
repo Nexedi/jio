@@ -358,6 +358,38 @@
       });
   });
 
+  test("put with map_all_property", function () {
+    stop();
+    expect(3);
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      mapping_dict: {
+        "id": {"equal": "id"}
+      },
+      map_all_property: true
+    });
+
+    Storage2713.prototype.put = function (id, doc) {
+      deepEqual(doc,
+        {"title": "foo", "smth": "bar", "smth2": "bar2"}, "post 2713 called");
+      equal(id, "42", "put 2713 called");
+      return id;
+    };
+
+    jio.put("42", {"title": "foo", "smth": "bar", "smth2": "bar2"})
+      .then(function (result) {
+        equal(result, "42");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
   /////////////////////////////////////////////////////////////////
   // mappingStorage.remove 
   /////////////////////////////////////////////////////////////////
@@ -672,7 +704,7 @@
         .push(function () {
         return jio.allDocs({
           query: 'title: "foo"',
-          select_list: ["title", "smth", "smth2"]
+          select_list: ["title", "smth2", "smth"]
         });
       })
         .push(function (result) {
