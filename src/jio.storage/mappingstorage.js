@@ -15,19 +15,18 @@
             && this._mapping_dict.id.equal !== "id");
   }
 
-  function getAttachmentId(storage, doc_id, id) {
+  function getAttachmentId(storage, doc_id, att_id) {
+    var mapping_dict = storage._mapping_dict_attachment;
     return new RSVP.Queue()
       .push(function () {
-        if (storage._mapping_dict_attachment === undefined
-            || (storage._mapping_dict_attachment.id !== undefined
-            && storage._mapping_dict_attachment.id.equal === "id")) {
-          return id;
-        }
-        if (storage._mapping_dict_attachment.uri_template !== undefined) {
+        if (mapping_dict !== undefined
+            && mapping_dict[att_id] !== undefined
+            && mapping_dict[att_id].uri_template !== undefined) {
           return UriTemplate.parse(
-            storage._mapping_dict_attachment.uri_template
+            mapping_dict[att_id].uri_template
           ).expand({id: doc_id});
         }
+        return att_id;
       });
   }
 
