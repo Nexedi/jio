@@ -877,4 +877,37 @@
       });
   });
 
+  /////////////////////////////////////////////////////////////////
+  // mappingStorage.repair
+  /////////////////////////////////////////////////////////////////
+  module("mappingStorage.repair");
+
+  test("repair called substorage repair", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      mapping_dict: {"title": {"equal": "title"}}
+    });
+
+    Storage2713.prototype.repair = function (id_list) {
+      deepEqual(id_list, ["foo", "bar"], "repair 2713 called");
+      return "foobar";
+    };
+
+    jio.repair(["foo", "bar"])
+      .then(function (result) {
+        equal(result, "foobar", "Check repair");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
 }(jIO, QUnit, Blob));
