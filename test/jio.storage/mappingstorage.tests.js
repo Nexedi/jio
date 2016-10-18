@@ -35,7 +35,9 @@
     ok(jio.__storage._sub_storage instanceof jio.constructor);
     equal(jio.__storage._sub_storage.__type, "mappingstorage2713");
     deepEqual(jio.__storage._mapping_dict, {});
-    deepEqual(jio.__storage._default_dict, {});
+    deepEqual(jio.__storage._mapping_dict_attachment, {});
+    deepEqual(jio.__storage._query, {});
+    equal(jio.__storage._map_all_property, false);
   });
 
   test("accept parameters", function () {
@@ -45,12 +47,15 @@
         type: "mappingstorage2713"
       },
       mapping_dict: { "bar": {"equal": "foo"}},
-      default_dict: { "foo": {"equal": "bar"}}
+      map_all_property: true,
+      query: {"query": "foo"},
+      mapping_dict_attachment: {"foo": {"get": "bar"}}
     });
 
     deepEqual(jio.__storage._mapping_dict, {"bar": {"equal": "foo"}});
-    deepEqual(jio.__storage._default_dict, {"foo": {"equal": "bar"}});
-    equal(jio.__storage._map_all_property, false);
+    deepEqual(jio.__storage._query, {"query": "foo"});
+    deepEqual(jio.__storage._mapping_dict_attachment, {"foo": {"get": "bar"}});
+    equal(jio.__storage._map_all_property, true);
   });
 
   /////////////////////////////////////////////////////////////////
@@ -297,7 +302,7 @@
       sub_storage: {
         type: "mappingstorage2713"
       },
-      default_dict: {"title": {"equal": "foobar"}}
+      mapping_dict: {"title": {"default_value": "foobar"}}
     });
 
     Storage2713.prototype.put = function (id, param) {
@@ -503,7 +508,8 @@
       sub_storage: {
         type: "mappingstorage2713"
       },
-      mapping_dict_attachment: {"2713": {"uri_template": "www.2713.foo/{id}"}}
+      mapping_dict_attachment: {"2713": {"put":
+        {"uri_template": "www.2713.foo/{id}"}}}
     }),
       blob = new Blob([""]);
     Storage2713.prototype.putAttachment = function (doc_id,
@@ -566,7 +572,7 @@
         type: "mappingstorage2713"
       },
       mapping_dict_attachment: {
-        "2713": {"uri_template": "www.2713/{id}/ok.com"}
+        "2713": {"get": {"uri_template": "www.2713/{id}/ok.com"}}
       }
     }),
       blob = new Blob([""]);
@@ -626,7 +632,8 @@
       sub_storage: {
         type: "mappingstorage2713"
       },
-      mapping_dict_attachment: {"2713": {"uri_template": "www.2713/{id}.bar"}}
+      mapping_dict_attachment: {"2713":
+        {"remove": {"uri_template": "www.2713/{id}.bar"}}}
     });
     Storage2713.prototype.removeAttachment = function (doc_id, attachment) {
       equal(doc_id, "42", "putAttachment 2713 called");
@@ -820,7 +827,7 @@
   /////////////////////////////////////////////////////////////////
   // mappingStorage.bulk
   /////////////////////////////////////////////////////////////////
-  module("mappingstorage.bulk");
+/*  module("mappingstorage.bulk");
   test("bulk with map_all_property", function () {
     stop();
     expect(2);
@@ -875,6 +882,39 @@
       .always(function () {
         start();
       });
-  });
+  });*/
 
+  /////////////////////////////////////////////////////////////////
+  // mappingStorage.repair
+  /////////////////////////////////////////////////////////////////
+  module("mappingStorage.repair");
+
+  test("repair called substorage repair", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      mapping_dict: {"title": {"equal": "title"}}
+    });
+
+    Storage2713.prototype.repair = function (id_list) {
+      deepEqual(id_list, ["foo", "bar"], "repair 2713 called");
+      return "foobar";
+    };
+
+    jio.repair(["foo", "bar"])
+      .then(function (result) {
+        equal(result, "foobar", "Check repair");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
 }(jIO, QUnit, Blob));
