@@ -14,15 +14,16 @@
             && this._mapping_dict.id.equal !== "id");
   }
 
-  function getAttachmentId(storage, doc_id, att_id) {
+  function getAttachmentId(storage, doc_id, att_id, method) {
     var mapping_dict = storage._mapping_dict_attachment;
     return new RSVP.Queue()
       .push(function () {
         if (mapping_dict !== undefined
             && mapping_dict[att_id] !== undefined
-            && mapping_dict[att_id].uri_template !== undefined) {
+            && mapping_dict[att_id][method] !== undefined
+            && mapping_dict[att_id][method].uri_template !== undefined) {
           return UriTemplate.parse(
-            mapping_dict[att_id].uri_template
+            mapping_dict[att_id][method].uri_template
           ).expand({id: doc_id});
         }
         return att_id;
@@ -142,26 +143,28 @@
 
   MappingStorage.prototype.get = function (index) {
     var that = this;
-    return getSubStorageId(this, index)
-      .push(function (id) {
-        if (id !== undefined) {
-          return that._sub_storage.get(id);
-        }
-        throw new jIO.util.jIOError("Cannot find document " + id, 404);
-      })
-      .push(function (doc) {
-        return mapDocument(that, doc, true);
-      })
-      .push(undefined, function (error) {
-        throw error;
-      });
+    if (index !== undefined) {
+      return getSubStorageId(this, index)
+        .push(function (id) {
+          if (id !== undefined) {
+            return that._sub_storage.get(id);
+          }
+          throw new jIO.util.jIOError("Cannot find document " + index, 404);
+        })
+        .push(function (doc) {
+          return mapDocument(that, doc, true);
+        });
+    }
+    throw new jIO.util.jIOError("Cannot find document " + index, 404);
   };
 
-  MappingStorage.prototype.post = function () {
+  MappingStorage.prototype.post = function (doc_mapped) {
     if (!this._id_is_mapped) {
-      return this._sub_storage.post.apply(this._sub_storage, arguments);
+      return this._sub_storage.post.apply(
+        this._sub_storage,
+        unmapDocument(this, doc_mapped)
+      );
     }
-    throw new jIO.util.jIOError("Can't use post with id mapped", 400);
   };
 
   MappingStorage.prototype.put = function (index, doc) {
@@ -169,7 +172,7 @@
       mapped_doc = unmapDocument(this, doc);
     return getSubStorageId(this, index)
       .push(function (id) {
-        if (that._mapping_dict.id && that._mapping_dict.id.equal !== "id") {
+        if (this._id_is_mapped) {
           mapped_doc[that._mapping_dict.id.equal] = index;
         }
         if (id !== undefined) {
@@ -198,7 +201,7 @@
     return getSubStorageId(this, doc_id)
       .push(function (id) {
         argument_list[0] = id;
-        return getAttachmentId(that, doc_id, attachment_id);
+        return getAttachmentId(that, doc_id, attachment_id, "put");
       })
       .push(function (id) {
         argument_list[1] = id;
@@ -212,7 +215,7 @@
     return getSubStorageId(this, doc_id)
       .push(function (id) {
         argument_list[0] = id;
-        return getAttachmentId(that, doc_id, attachment_id);
+        return getAttachmentId(that, doc_id, attachment_id, "get");
       })
       .push(function (id) {
         argument_list[1] = id;
@@ -226,7 +229,7 @@
     return getSubStorageId(this, doc_id)
       .push(function (id) {
         argument_list[0] = id;
-        return getAttachmentId(that, doc_id, attachment_id);
+        return getAttachmentId(that, doc_id, attachment_id, "remove");
       })
       .push(function (id) {
         argument_list[1] = id;
