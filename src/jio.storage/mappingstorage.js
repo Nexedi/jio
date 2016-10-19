@@ -7,7 +7,7 @@
     this._mapping_dict = spec.mapping_dict || {};
     this._sub_storage = jIO.createJIO(spec.sub_storage);
     this._map_all_property = spec.map_all_property || false;
-    this._mapping_dict_attachment = spec.mapping_dict_attachment || undefined;
+    this._mapping_dict_attachment = spec.mapping_dict_attachment || {};
     this._query = spec.query || {};
 
     this._id_is_mapped = (this._mapping_dict.id !== undefined
@@ -18,8 +18,7 @@
     var mapping_dict = storage._mapping_dict_attachment;
     return new RSVP.Queue()
       .push(function () {
-        if (mapping_dict !== undefined
-            && mapping_dict[att_id] !== undefined
+        if (mapping_dict[att_id] !== undefined
             && mapping_dict[att_id][method] !== undefined
             && mapping_dict[att_id][method].uri_template !== undefined) {
           return UriTemplate.parse(
@@ -172,7 +171,7 @@
       mapped_doc = unmapDocument(this, doc);
     return getSubStorageId(this, index)
       .push(function (id) {
-        if (this._id_is_mapped) {
+        if (that._id_is_mapped) {
           mapped_doc[that._mapping_dict.id.equal] = index;
         }
         if (id !== undefined) {
