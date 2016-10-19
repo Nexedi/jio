@@ -245,12 +245,36 @@
     return this._sub_storage.repair.apply(this._sub_storage, arguments);
   };
 
-  MappingStorage.prototype.bulk = function () {
-    var i, that = this, mapped_result = [];
-    return this._sub_storage.bulk.apply(arguments)
+  MappingStorage.prototype.bulk = function (id_list) {
+    var i,
+      that = this,
+      mapped_result = [],
+      promise_list = id_list.map(function (parameter) {
+        return getSubStorageId(that, parameter.parameter_list[0])
+          .push(function (id) {
+            if (parameter.method === "put") {
+              return {
+                "method": parameter.method,
+                "parameter_list": [
+                  id,
+                  unmapDocument(parameter.parameter_list[1])
+                ]
+              };
+            }
+            return {"method": parameter.method, "parameter_list": [id]};
+          });
+      });
+
+    return new RSVP.Queue()
+      .push(function () {
+        return RSVP.all(promise_list);
+      })
+      .push(function (id_list_mapped) {
+        return that._sub_storage.bulk(id_list_mapped);
+      })
       .push(function (result) {
         for (i = 0; i < result.length; i += 1) {
-          mapped_result.push(mapDocument(that, result[i]), false);
+          mapped_result.push(mapDocument(that, result[i], false));
         }
         return mapped_result;
       });
