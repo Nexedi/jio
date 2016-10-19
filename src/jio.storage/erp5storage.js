@@ -496,7 +496,7 @@
           sub_query,
           result_list,
           local_roles,
-          tmp_list = [];
+          sort_list = [];
         if (options.query) {
           parsed_query = jIO.QueryFactory.create(options.query);
 
@@ -540,9 +540,8 @@
 
         if (options.sort_on) {
           for (i = 0; i < options.sort_on.length; i += 1) {
-            tmp_list.push(JSON.stringify(options.sort_on[i]));
+            sort_list.push(JSON.stringify(options.sort_on[i]));
           }
-          options.sort_on = tmp_list;
         }
 
         return jIO.util.ajax({
@@ -553,7 +552,7 @@
               // XXX Force erp5 to return embedded document
               select_list: options.select_list || ["title", "reference"],
               limit: options.limit,
-              sort_on: options.sort_on,
+              sort_on: sort_list,
               local_roles: local_roles
             }),
           "xhrFields": {
