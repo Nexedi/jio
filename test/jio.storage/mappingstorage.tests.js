@@ -827,7 +827,7 @@
   /////////////////////////////////////////////////////////////////
   // mappingStorage.bulk
   /////////////////////////////////////////////////////////////////
-/*  module("mappingstorage.bulk");
+  module("mappingstorage.bulk");
   test("bulk with map_all_property", function () {
     stop();
     expect(2);
@@ -837,7 +837,7 @@
       sub_storage: {
         type: "mappingstorage2713"
       },
-      map_all_doc: true,
+      map_all_property: true,
       mapping_dict: {
         "title": {"equal": "otherTitle"},
         "id": {"equal": "otherId"}
@@ -848,8 +848,28 @@
       return true;
     };
 
-    Storage2713.prototype.bulk = function () {
-      deepEqual(arguments, ["some", "arguments"], "bulk 2713 called");
+    Storage2713.prototype.buildQuery = function (option) {
+      if (option.query === 'otherId: "id1"') {
+        return [{id: "foo"}];
+      }
+      if (option.query === 'otherId: "id2"') {
+        return [{id: "bar"}];
+      }
+      throw new Error("invalid option:" + option.toString());
+    };
+
+    Storage2713.prototype.bulk = function (args) {
+      deepEqual(
+        args,
+        [{
+          method: "get",
+          parameter_list: ["foo"]
+        }, {
+          method: "get",
+          parameter_list: ["bar"]
+        }],
+        "bulk 2713 called"
+      );
       return [
         {
           "otherId": "foo",
@@ -863,7 +883,13 @@
       ];
     };
 
-    jio.bulk("some", "arguments")
+    jio.bulk([{
+      method: "get",
+      parameter_list: ["id1"]
+    }, {
+      method: "get",
+      parameter_list: ["id2"]
+    }])
       .push(function (result) {
         deepEqual(
           result,
@@ -882,7 +908,7 @@
       .always(function () {
         start();
       });
-  });*/
+  });
 
   /////////////////////////////////////////////////////////////////
   // mappingStorage.repair
