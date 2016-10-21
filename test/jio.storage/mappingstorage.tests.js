@@ -656,6 +656,62 @@
   // mappingStorage.allDocs
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.buildQuery");
+  test("allDocs with complex query, with map_all_property", function () {
+    stop();
+    expect(1);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "query",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      },
+      map_all_property: true
+    });
+
+    jio.put("42",
+      {
+        "title": "foo",
+        "smth": "bar"
+      })
+        .push(function () {
+        return jio.allDocs({
+          query: '(title: "foo") AND (smth: "bar")',
+          select_list: ["title", "smth"],
+          sort_on: [["title", "descending"]]
+        });
+      })
+        .push(function (result) {
+        deepEqual(result,
+          {
+            "data": {
+              "rows": [
+                {
+                  "id": "42",
+                  "value": {
+                    "title": "foo",
+                    "smth": "bar"
+                  },
+                  "doc": {}
+                }
+              ],
+              "total_rows": 1
+            }
+          }, "allDocs check");
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("allDocs with complex query, id and prop mapped", function () {
     stop();
     expect(1);
