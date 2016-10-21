@@ -57,15 +57,15 @@
       });
   }
 
-  function getSubStorageId(storage, index) {
+  function getSubStorageId(storage, id) {
     var query;
     return new RSVP.Queue()
       .push(function () {
-        if (!storage._id_is_mapped) {
-          return index;
+        if (!storage._id_is_mapped || id === undefined) {
+          return id;
         }
         if (storage._mapping_dict.id.equal !== undefined) {
-          query = storage._mapping_dict.id.equal + ': "' + index + '"';
+          query = storage._mapping_dict.id.equal + ': "' + id + '"';
           if (storage._query.query !== undefined) {
             query += ' AND ' + storage._query.query;
           }
@@ -80,7 +80,8 @@
                 return undefined;
               }
               if (data.data.rows.length > 1) {
-                throw new TypeError("id must be unique field");
+                throw new TypeError("id must be unique field: " + id
+                  + ", result:" + data.data.rows.toString());
               }
               return data.data.rows[0].id;
             });
@@ -108,20 +109,24 @@
   }
 
   function mapProperty(storage, property, doc, mapped_doc) {
-    if (storage._mapping_dict[property].equal !== undefined) {
-      if (doc.hasOwnProperty(storage._mapping_dict[property].equal)) {
-        mapped_doc[property] = doc[storage._mapping_dict[property].equal];
+    if (storage._mapping_dict[property] !== undefined) {
+      if (storage._mapping_dict[property].equal !== undefined) {
+        if (doc.hasOwnProperty(storage._mapping_dict[property].equal)) {
+          mapped_doc[property] = doc[storage._mapping_dict[property].equal];
+        }
         return storage._mapping_dict[property].equal;
       }
-      return;
+      if (storage._mapping_dict[property].default_value !== undefined) {
+        return property;
+      }
     }
-    if (storage._mapping_dict[property].default_value !== undefined) {
+    if (storage._map_all_property) {
+      if (doc.hasOwnProperty(property)) {
+        mapped_doc[property] = doc[property];
+      }
       return property;
     }
-    throw new jIO.util.jIOError(
-      "Unsuported option(s): " + storage._mapping_dict[property],
-      400
-    );
+    return false;
   }
 
   function mapDocument(storage, doc, delete_id) {
@@ -168,21 +173,19 @@
     return doc;
   }
 
-  MappingStorage.prototype.get = function (index) {
+  MappingStorage.prototype.get = function (id) {
     var that = this;
-    if (index !== undefined) {
-      return getSubStorageId(this, index)
-        .push(function (id) {
-          if (id !== undefined) {
-            return that._sub_storage.get(id);
-          }
-          throw new jIO.util.jIOError("Cannot find document " + index, 404);
-        })
-        .push(function (doc) {
-          return mapDocument(that, doc, true);
-        });
-    }
-    throw new jIO.util.jIOError("Cannot find document " + index, 404);
+    return getSubStorageId(this, id)
+      .push(function (id_mapped) {
+        return that._sub_storage.get(id_mapped);
+      })
+      .push(function (doc) {
+        return mapDocument(that, doc, true);
+      })
+      .push(undefined, function (error) {
+        throw new jIO.util.jIOError("Cannot find document " + id
+          + ", cause: " + error.message, 404);
+      });
   };
 
   MappingStorage.prototype.post = function (doc_mapped) {
@@ -194,32 +197,35 @@
     }
   };
 
-  MappingStorage.prototype.put = function (index, doc) {
+  MappingStorage.prototype.put = function (id, doc) {
     var that = this,
       mapped_doc = unmapDocument(this, doc);
-    return getSubStorageId(this, index)
-      .push(function (id) {
+    return getSubStorageId(this, id)
+      .push(function (id_mapped) {
         if (that._id_is_mapped) {
-          mapped_doc[that._mapping_dict.id.equal] = index;
+          mapped_doc[that._mapping_dict.id.equal] = id;
         }
-        if (id !== undefined) {
-          return that._sub_storage.put(id, mapped_doc);
+        if (id === undefined) {
+          throw new Error();
         }
+        return that._sub_storage.put(id_mapped, mapped_doc);
+      })
+      .push(undefined, function () {
         return that._sub_storage.post(mapped_doc);
       })
       .push(function () {
-        return index;
+        return id;
       });
   };
 
-  MappingStorage.prototype.remove = function (index) {
+  MappingStorage.prototype.remove = function (id) {
     var that = this;
-    return getSubStorageId(this, index)
-      .push(function (id) {
-        return that._sub_storage.remove(id);
+    return getSubStorageId(this, id)
+      .push(function (id_mapped) {
+        return that._sub_storage.remove(id_mapped);
       })
       .push(function () {
-        return index;
+        return id;
       });
   };
 
@@ -342,10 +348,9 @@
 
     if (option.sort_on !== undefined) {
       for (i = 0; i < option.sort_on.length; i += 1) {
-        property = [this._mapping_dict[option.sort_on[i][0]].equal,
-          option.sort_on[i][1]];
-        if (sort_on.indexOf(property) < 0) {
-          sort_on.push(property);
+        property = mapProperty(this, option.sort_on[i][0], {}, {});
+        if (property && sort_on.indexOf(property) < 0) {
+          select_list.push([property, option.sort_on[i][1]]);
         }
       }
     }
@@ -359,15 +364,8 @@
     }
     if (option.select_list !== undefined) {
       for (i = 0; i < option.select_list.length; i += 1) {
-        property = false;
-        if (this._mapping_dict.hasOwnProperty(option.select_list[i])) {
-          property = this._mapping_dict[option.select_list[i]].equal;
-        } else {
-          if (this._map_all_property) {
-            property = option.select_list[i];
-          }
-        }
-        if (property && sort_on.indexOf(property) < 0) {
+        property = mapProperty(this, option.select_list[i], {}, {});
+        if (property && select_list.indexOf(property) < 0) {
           select_list.push(property);
         }
       }
@@ -407,7 +405,7 @@
         for (i = 0; i < result.data.total_rows; i += 1) {
           result.data.rows[i].value =
             mapDocument(that, result.data.rows[i].value, false);
-          if (result.data.rows[i].id !== undefined) {
+          if (result.data.rows[i].id !== undefined && that._id_is_mapped) {
             result.data.rows[i].id =
                 result.data.rows[i].value.id;
             delete result.data.rows[i].value.id;
