@@ -53,7 +53,7 @@
     this._signature_sub_storage = jIO.createJIO({
       type: "document",
       document_id: this._signature_hash,
-      sub_storage: spec.local_sub_storage
+      sub_storage: spec.signature_storage || spec.local_sub_storage
     });
 
     this._use_remote_post = spec.use_remote_post || false;
