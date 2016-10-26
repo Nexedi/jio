@@ -48,12 +48,14 @@
       },
       mapping_dict: { "bar": {"equal": "foo"}},
       map_all_property: true,
-      query: {"query": "foo"},
+      query: {"query": 'foo: "bar"'},
       mapping_dict_attachment: {"foo": {"get": "bar"}}
     });
 
     deepEqual(jio.__storage._mapping_dict, {"bar": {"equal": "foo"}});
-    deepEqual(jio.__storage._query, {"query": "foo"});
+    equal(jio.__storage._query.query.key, "foo");
+    equal(jio.__storage._query.query.value, "bar");
+    equal(jio.__storage._query.query.type, "simple");
     deepEqual(jio.__storage._mapping_dict_attachment, {"foo": {"get": "bar"}});
     equal(jio.__storage._map_all_property, true);
   });
@@ -144,7 +146,7 @@
     };
 
     Storage2713.prototype.buildQuery = function (options) {
-      equal(options.query, 'otherId: "42"', "allDoc 2713 called");
+      equal(options.query, 'otherId:  "42"', "allDoc 2713 called");
       return [{id: "2713"}];
     };
 
@@ -189,7 +191,7 @@
     Storage2713.prototype.buildQuery = function (options) {
       equal(
         options.query,
-        'otherId: "42" AND otherTitle: "foo"',
+        '( otherId:  "42" AND otherTitle:  "foo" )',
         "allDoc 2713 called"
       );
       return [{id: "2713"}];
@@ -235,7 +237,7 @@
     Storage2713.prototype.buildQuery = function (options) {
       equal(
         options.query,
-        'otherId: "42"',
+        'otherId:  "42"',
         "allDoc 2713 called"
       );
       return [{id: "2713"}];
@@ -348,7 +350,7 @@
     };
 
     Storage2713.prototype.buildQuery = function (option) {
-      equal(option.query, 'otherId: "42"', "allDocs 2713 called");
+      equal(option.query, 'otherId:  "42"', "allDocs 2713 called");
       return [];
     };
 
@@ -446,7 +448,7 @@
     };
 
     Storage2713.prototype.buildQuery = function (options) {
-      equal(options.query, 'otherId: "42"', "allDoc 2713 called");
+      equal(options.query, 'otherId:  "42"', "allDoc 2713 called");
       return [{id: "2713"}];
     };
 
@@ -905,10 +907,10 @@
     };
 
     Storage2713.prototype.buildQuery = function (option) {
-      if (option.query === 'otherId: "id1"') {
+      if (option.query === 'otherId:  "id1"') {
         return [{id: "foo"}];
       }
-      if (option.query === 'otherId: "id2"') {
+      if (option.query === 'otherId:  "id2"') {
         return [{id: "bar"}];
       }
       throw new Error("invalid option:" + option.toString());
