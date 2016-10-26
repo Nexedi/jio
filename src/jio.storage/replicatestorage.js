@@ -57,6 +57,7 @@
     });
 
     this._use_remote_post = spec.use_remote_post || false;
+    this._use_bulk_get = spec.use_bulk !== undefined ? spec.use_bulk : true;
 
     this._conflict_handling = spec.conflict_handling || 0;
     // 0: no resolution (ie, throw an Error)
@@ -479,7 +480,8 @@
         // Keep it like this until the bulk API is stabilized
         var use_bulk_get = false;
         try {
-          use_bulk_get = context._remote_sub_storage.hasCapacity("bulk");
+          use_bulk_get = context._remote_sub_storage.hasCapacity("bulk")
+            && context._use_bulk_get;
         } catch (error) {
           if (!((error instanceof jIO.util.jIOError) &&
                (error.status_code === 501))) {
