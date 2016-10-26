@@ -24,6 +24,11 @@
   }
   jIO.addStorage('replicatestorage500', Storage500);
 
+  function Storage2713() {
+    return this;
+  }
+  jIO.addStorage('signaturestorage2713', Storage2713);
+
   /////////////////////////////////////////////////////////////////
   // replicateStorage.constructor
   /////////////////////////////////////////////////////////////////
@@ -79,6 +84,9 @@
       remote_sub_storage: {
         type: "replicatestorage500"
       },
+      signature_storage: {
+        type: "signaturestorage2713"
+      },
       query: {query: 'portal_type: "Foo"', limit: [0, 1234567890]},
       use_remote_post: true,
       conflict_handling: 3,
@@ -103,6 +111,8 @@
     equal(jio.__storage._check_remote_deletion, false);
     equal(jio.__storage._check_remote_modification, false);
 
+    equal(jio.__storage._signature_sub_storage.__storage._sub_storage.__type,
+          "signaturestorage2713");
     equal(jio.__storage._signature_hash,
           "_replicate_11881e431308c0ec8c0e6430be98db380e1b92f8");
   });
