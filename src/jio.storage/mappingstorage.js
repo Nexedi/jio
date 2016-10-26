@@ -1,5 +1,6 @@
 /*jslint indent:2, maxlen: 80, nomen: true */
-/*global jIO, RSVP, UriTemplate */
+/*global jIO, RSVP, UriTemplate, SimpleQuery, ComplexQuery, QueryFactory,
+  Query*/
 (function (jIO, RSVP) {
   "use strict";
 
@@ -10,6 +11,9 @@
     this._mapping_dict_attachment = spec.mapping_dict_attachment || {};
     this._query = spec.query || {};
 
+    if (this._query.query !== undefined) {
+      this._query.query = QueryFactory.create(this._query.query);
+    }
     this._id_is_mapped = (this._mapping_dict.id !== undefined
             && this._mapping_dict.id.equal !== "id");
     var property, query_list = [];
@@ -65,10 +69,19 @@
           return id;
         }
         if (storage._mapping_dict.id.equal !== undefined) {
-          query = storage._mapping_dict.id.equal + ': "' + id + '"';
+          query = new SimpleQuery({
+            key: storage._mapping_dict.id.equal,
+            value: id,
+            type: "simple"
+          });
           if (storage._query.query !== undefined) {
-            query += ' AND ' + storage._query.query;
+            query = new ComplexQuery({
+              operator: "AND",
+              query_list: [query, storage._query.query],
+              type: "complex"
+            });
           }
+          query = Query.objectToSearchText(query);
           return storage._sub_storage.allDocs({
             "query": query,
             "sort_on": storage._query.sort_on,
@@ -129,7 +142,7 @@
     return false;
   }
 
-  function mapDocument(storage, doc, delete_id) {
+  function mapDocument(storage, doc, id_delete) {
     var mapped_doc = {},
       property,
       property_list = [];
@@ -147,7 +160,7 @@
         }
       }
     }
-    if (delete_id) {
+    if (id_delete) {
       delete mapped_doc.id;
     }
     return mapped_doc;
@@ -174,13 +187,13 @@
   }
 
   MappingStorage.prototype.get = function (id) {
-    var that = this;
+    var context = this;
     return getSubStorageId(this, id)
-      .push(function (id_mapped) {
-        return that._sub_storage.get(id_mapped);
+      .push(function (sub_id) {
+        return context._sub_storage.get(sub_id);
       })
       .push(function (doc) {
-        return mapDocument(that, doc, true);
+        return mapDocument(context, doc, true);
       })
       .push(undefined, function (error) {
         throw new jIO.util.jIOError("Cannot find document " + id
@@ -198,20 +211,20 @@
   };
 
   MappingStorage.prototype.put = function (id, doc) {
-    var that = this,
+    var context = this,
       mapped_doc = unmapDocument(this, doc);
     return getSubStorageId(this, id)
-      .push(function (id_mapped) {
-        if (that._id_is_mapped) {
-          mapped_doc[that._mapping_dict.id.equal] = id;
+      .push(function (sub_id) {
+        if (context._id_is_mapped) {
+          mapped_doc[context._mapping_dict.id.equal] = id;
         }
         if (id === undefined) {
           throw new Error();
         }
-        return that._sub_storage.put(id_mapped, mapped_doc);
+        return context._sub_storage.put(sub_id, mapped_doc);
       })
       .push(undefined, function () {
-        return that._sub_storage.post(mapped_doc);
+        return context._sub_storage.post(mapped_doc);
       })
       .push(function () {
         return id;
@@ -219,10 +232,10 @@
   };
 
   MappingStorage.prototype.remove = function (id) {
-    var that = this;
+    var context = this;
     return getSubStorageId(this, id)
-      .push(function (id_mapped) {
-        return that._sub_storage.remove(id_mapped);
+      .push(function (sub_id) {
+        return context._sub_storage.remove(sub_id);
       })
       .push(function () {
         return id;
@@ -281,20 +294,11 @@
 
   MappingStorage.prototype.bulk = function (id_list) {
     var i,
-      that = this,
+      context = this,
       mapped_result = [],
       promise_list = id_list.map(function (parameter) {
-        return getSubStorageId(that, parameter.parameter_list[0])
+        return getSubStorageId(context, parameter.parameter_list[0])
           .push(function (id) {
-            if (parameter.method === "put") {
-              return {
-                "method": parameter.method,
-                "parameter_list": [
-                  id,
-                  unmapDocument(parameter.parameter_list[1])
-                ]
-              };
-            }
             return {"method": parameter.method, "parameter_list": [id]};
           });
       });
@@ -304,18 +308,18 @@
         return RSVP.all(promise_list);
       })
       .push(function (id_list_mapped) {
-        return that._sub_storage.bulk(id_list_mapped);
+        return context._sub_storage.bulk(id_list_mapped);
       })
       .push(function (result) {
         for (i = 0; i < result.length; i += 1) {
-          mapped_result.push(mapDocument(that, result[i], false));
+          mapped_result.push(mapDocument(context, result[i], false));
         }
         return mapped_result;
       });
   };
 
   MappingStorage.prototype.buildQuery = function (option) {
-    var that = this,
+    var context = this,
       i,
       query,
       property,
@@ -323,27 +327,16 @@
       sort_on = [];
 
     function mapQuery(one_query) {
-      var i, result = "(", key;
+      var i, query_list = [];
       if (one_query.type === "complex") {
         for (i = 0; i < one_query.query_list.length; i += 1) {
-          result += "(" + mapQuery(one_query.query_list[i]) + ")";
-          if (i < one_query.query_list.length - 1) {
-            result += " " + one_query.operator + " ";
-          }
+          query_list.push(mapQuery(one_query.query_list[i]));
         }
-        result += ")";
-        return result;
+        one_query.query_list = query_list;
+        return one_query;
       }
-      if (that._mapping_dict.hasOwnProperty(one_query.key)) {
-        key = that._mapping_dict[one_query.key].equal;
-      } else {
-        if (that._map_all_property) {
-          key = one_query.key;
-        }
-      }
-      return (key ? key + ":" : "") +
-        (one_query.operator ? " " + one_query.operator : "") +
-        ' "' + one_query.value + '"';
+      one_query.key = mapProperty(context, one_query.key, {}, {});
+      return one_query;
     }
 
     if (option.sort_on !== undefined) {
@@ -382,16 +375,22 @@
       select_list.push(this._mapping_dict.id.equal);
     }
     if (option.query !== undefined) {
-      query = mapQuery(jIO.QueryFactory.create(option.query));
+      query = mapQuery(QueryFactory.create(option.query));
     }
 
     if (this._query.query !== undefined) {
-      if (query !== undefined) {
-        query += ' AND ';
-      } else {
-        query = "";
+      if (query === undefined) {
+        query = this._query.query;
       }
-      query += this._query.query;
+      query = new ComplexQuery({
+        operator: "AND",
+        query_list: [query, this._query.query],
+        type: "complex"
+      });
+    }
+
+    if (query !== undefined) {
+      query = Query.objectToSearchText(query);
     }
     return this._sub_storage.allDocs(
       {
@@ -404,8 +403,8 @@
       .push(function (result) {
         for (i = 0; i < result.data.total_rows; i += 1) {
           result.data.rows[i].value =
-            mapDocument(that, result.data.rows[i].value, false);
-          if (result.data.rows[i].id !== undefined && that._id_is_mapped) {
+            mapDocument(context, result.data.rows[i].value, false);
+          if (result.data.rows[i].id !== undefined && context._id_is_mapped) {
             result.data.rows[i].id =
                 result.data.rows[i].value.id;
             delete result.data.rows[i].value.id;
