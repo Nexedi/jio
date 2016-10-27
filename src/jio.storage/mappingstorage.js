@@ -12,6 +12,34 @@
 
     this._id_is_mapped = (this._mapping_dict.id !== undefined
             && this._mapping_dict.id.equal !== "id");
+    var property, query_list = [];
+
+    // handle default_value.  
+    for (property in this._mapping_dict) {
+      if (this._mapping_dict.hasOwnProperty(property)) {
+        if (this._mapping_dict[property].default_value !== undefined) {
+          query_list.push(new SimpleQuery({
+            key: property,
+            value: this._mapping_dict[property].default_value,
+            type: "simple"
+          }));
+        }
+      }
+    }
+
+    if (this._query.query !== undefined) {
+      query_list.push(QueryFactory.create(this._query.query));
+    }
+
+    if (query_list.length > 1) {
+      this._query.query = new ComplexQuery({
+        type: "complex",
+        query_list: query_list,
+        operator: "AND"
+      });
+    } else if (query_list.length === 1) {
+      this._query.query = query_list[0];
+    }
   }
 
   function getAttachmentId(storage, sub_id, attachment_id, method) {
