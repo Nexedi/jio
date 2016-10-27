@@ -492,7 +492,7 @@
     };
     jio.putAttachment("42", "2713", blob)
       .then(function (result) {
-        equal(result, "42");
+        equal(result, "2713");
       })
       .fail(function (error) {
         ok(false, error);
@@ -523,7 +523,50 @@
     };
     jio.putAttachment("42", "2713", blob)
       .then(function (result) {
-        equal(result, "42");
+        equal(result, "2713");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("putAttachment with UriTemplate and id mapped", function () {
+    stop();
+    expect(5);
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      mapping_dict: {"id": {"equal": "otherId"}},
+      mapping_dict_attachment: {"2713": {"put":
+        {"uri_template": "www.2713.foo/{id}"}}}
+    }),
+      blob = new Blob([""]);
+
+    Storage2713.prototype.putAttachment = function (id,
+      attachment_id, attachment) {
+      equal(id, "13", "putAttachment 2713 called");
+      equal(attachment_id, "www.2713.foo/13", "putAttachment 2713 called");
+      deepEqual(attachment, blob, "putAttachment 2713 called");
+      return id;
+    };
+
+    Storage2713.prototype.hasCapacity = function () {
+      return true;
+    };
+
+    Storage2713.prototype.buildQuery = function (option) {
+      equal(option.query, 'otherId:  "42"');
+      return [{"id": "13"}];
+    };
+
+    jio.putAttachment("42", "2713", blob)
+      .then(function (result) {
+        equal(result, "2713");
       })
       .fail(function (error) {
         ok(false, error);
@@ -595,6 +638,48 @@
       });
   });
 
+  test("getAttachment with UriTemplate and id mapped", function () {
+    stop();
+    expect(4);
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      mapping_dict: {"id": {"equal": "otherId"}},
+      mapping_dict_attachment: {"2713": {"get":
+        {"uri_template": "www.2713.foo/{id}"}}}
+    }),
+      blob = new Blob([""]);
+
+    Storage2713.prototype.getAttachment = function (id,
+      attachment_id) {
+      equal(id, "13", "getAttachment 2713 called");
+      equal(attachment_id, "www.2713.foo/13", "getAttachment 2713 called");
+      return blob;
+    };
+
+    Storage2713.prototype.hasCapacity = function () {
+      return true;
+    };
+
+    Storage2713.prototype.buildQuery = function (option) {
+      equal(option.query, 'otherId:  "42"');
+      return [{"id": "13"}];
+    };
+
+    jio.getAttachment("42", "2713")
+      .then(function (result) {
+        deepEqual(result, blob);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // mappingStorage.removeAttachment
   /////////////////////////////////////////////////////////////////
@@ -610,13 +695,13 @@
       }
     });
     Storage2713.prototype.removeAttachment = function (doc_id, attachment) {
-      equal(doc_id, "42", "putAttachment 2713 called");
+      equal(doc_id, "42", "removeAttachment 2713 called");
       equal(attachment, "2713", "getAttachment 2713 called");
       return doc_id;
     };
     jio.removeAttachment("42", "2713")
       .then(function (result) {
-        deepEqual(result, "42");
+        deepEqual(result, "2713");
       })
       .fail(function (error) {
         ok(false, error);
@@ -638,13 +723,54 @@
         {"remove": {"uri_template": "www.2713/{id}.bar"}}}
     });
     Storage2713.prototype.removeAttachment = function (doc_id, attachment) {
-      equal(doc_id, "42", "putAttachment 2713 called");
-      equal(attachment, "www.2713/42.bar", "getAttachment 2713 called");
+      equal(doc_id, "42", "removeAttachment 2713 called");
+      equal(attachment, "www.2713/42.bar", "removeAttachment 2713 called");
       return doc_id;
     };
     jio.removeAttachment("42", "2713")
       .then(function (result) {
-        deepEqual(result, "42");
+        deepEqual(result, "2713");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("removeAttachment with UriTemplate and id mapped", function () {
+    stop();
+    expect(4);
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      mapping_dict: {"id": {"equal": "otherId"}},
+      mapping_dict_attachment: {"2713": {"remove":
+        {"uri_template": "www.2713.foo/{id}"}}}
+    });
+
+    Storage2713.prototype.removeAttachment = function (id,
+      attachment_id) {
+      equal(id, "13", "removeAttachment 2713 called");
+      equal(attachment_id, "www.2713.foo/13", "removeAttachment 2713 called");
+      return id;
+    };
+
+    Storage2713.prototype.hasCapacity = function () {
+      return true;
+    };
+
+    Storage2713.prototype.buildQuery = function (option) {
+      equal(option.query, 'otherId:  "42"');
+      return [{"id": "13"}];
+    };
+
+    jio.removeAttachment("42", "2713")
+      .then(function (result) {
+        equal(result, "2713");
       })
       .fail(function (error) {
         ok(false, error);
