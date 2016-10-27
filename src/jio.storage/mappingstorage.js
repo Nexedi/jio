@@ -52,7 +52,7 @@
       .push(function () {
         if (mapping_dict !== undefined
             && mapping_dict[attachment_id] !== undefined
-            && mapping_dict[attachment_id].uri_template !== undefined) {
+            && mapping_dict[attachment_id][method].uri_template !== undefined) {
           return UriTemplate.parse(
             mapping_dict[attachment_id][method].uri_template
           ).expand({id: sub_id});
@@ -253,6 +253,9 @@
         argument_list[1] = sub_attachment_id;
         return context._sub_storage.putAttachment.apply(context._sub_storage,
           argument_list);
+      })
+      .push(function () {
+        return attachment_id;
       });
   };
 
@@ -281,6 +284,9 @@
         argument_list[1] = sub_attachment_id;
         return context._sub_storage.removeAttachment.apply(context._sub_storage,
           argument_list);
+      })
+      .push(function () {
+        return attachment_id;
       });
   };
 
