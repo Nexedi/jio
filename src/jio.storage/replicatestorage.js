@@ -135,7 +135,7 @@
     if (this._check_remote_attachment_deletion === undefined) {
       this._check_remote_attachment_deletion = true;
     }
-    if (spec.attachment_list) {
+    if (spec.attachment_list !== undefined) {
       i_length = spec.attachment_list.length;
       this._attachment_dict = {};
       for (i = 0; i < i_length; i += 1) {
