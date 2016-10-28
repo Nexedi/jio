@@ -7,21 +7,25 @@
   function MappingStorage(spec) {
     this._mapping_dict = spec.mapping_dict || {};
     this._sub_storage = jIO.createJIO(spec.sub_storage);
-    this._map_all_property = spec.map_all_property || false;
-    this._mapping_dict_attachment = spec.mapping_dict_attachment || {};
+    this._map_all_property = spec.map_all_property !== undefined ?
+        spec.map_all_property : true;
+    this._attachment_mapping_dict = spec.attachment_mapping_dict || {};
     this._query = spec.query || {};
 
     if (this._query.query !== undefined) {
       this._query.query = QueryFactory.create(this._query.query);
     }
+    this._default_mapping = {};
     this._id_is_mapped = (this._mapping_dict.id !== undefined
             && this._mapping_dict.id.equal !== "id");
     var property, query_list = [];
 
-    // handle default_value.  
+    // handle default_value.
     for (property in this._mapping_dict) {
       if (this._mapping_dict.hasOwnProperty(property)) {
         if (this._mapping_dict[property].default_value !== undefined) {
+          this._default_mapping[property] =
+            this._mapping_dict[property].default_value;
           query_list.push(new SimpleQuery({
             key: property,
             value: this._mapping_dict[property].default_value,
@@ -47,7 +51,7 @@
   }
 
   function getAttachmentId(storage, sub_id, attachment_id, method) {
-    var mapping_dict = storage._mapping_dict_attachment;
+    var mapping_dict = storage._attachment_mapping_dict;
     return new RSVP.Queue()
       .push(function () {
         if (mapping_dict !== undefined
@@ -106,13 +110,19 @@
       });
   }
 
-  function unmapProperty(storage, property, doc, mapped_doc) {
-    if (storage._mapping_dict[property].equal !== undefined) {
-      doc[storage._mapping_dict[property].equal] = mapped_doc[property];
-      return storage._mapping_dict[property].equal;
+  function mapToSubProperty(storage, property, sub_doc, doc) {
+    if (storage._mapping_dict[property] !== undefined) {
+      if (storage._mapping_dict[property].equal !== undefined) {
+        sub_doc[storage._mapping_dict[property].equal] = doc[property];
+        return storage._mapping_dict[property].equal;
+      }
+      if (storage._mapping_dict[property].default_value !== undefined) {
+        sub_doc[property] = storage._mapping_dict[property].default_value;
+        return property;
+      }
     }
-    if (storage._mapping_dict[property].default_value !== undefined) {
-      doc[property] = storage._mapping_dict[property].default_value;
+    if (storage._map_all_property) {
+      sub_doc[property] = doc[property];
       return property;
     }
     throw new jIO.util.jIOError(
@@ -121,11 +131,11 @@
     );
   }
 
-  function mapProperty(storage, property, doc, mapped_doc) {
+  function mapToMainProperty(storage, property, sub_doc, doc) {
     if (storage._mapping_dict[property] !== undefined) {
       if (storage._mapping_dict[property].equal !== undefined) {
-        if (doc.hasOwnProperty(storage._mapping_dict[property].equal)) {
-          mapped_doc[property] = doc[storage._mapping_dict[property].equal];
+        if (sub_doc.hasOwnProperty(storage._mapping_dict[property].equal)) {
+          doc[property] = sub_doc[storage._mapping_dict[property].equal];
         }
         return storage._mapping_dict[property].equal;
       }
@@ -134,56 +144,53 @@
       }
     }
     if (storage._map_all_property) {
-      if (doc.hasOwnProperty(property)) {
-        mapped_doc[property] = doc[property];
+      if (sub_doc.hasOwnProperty(property)) {
+        doc[property] = sub_doc[property];
       }
       return property;
     }
     return false;
   }
 
-  function mapDocument(storage, doc, id_delete) {
-    var mapped_doc = {},
+  function mapToMainDocument(storage, sub_doc, delete_id_from_doc) {
+    var doc = {},
       property,
       property_list = [];
     for (property in storage._mapping_dict) {
       if (storage._mapping_dict.hasOwnProperty(property)) {
-        property_list.push(mapProperty(storage, property, doc, mapped_doc));
+        property_list.push(mapToMainProperty(storage, property, sub_doc, doc));
       }
     }
     if (storage._map_all_property) {
-      for (property in doc) {
-        if (doc.hasOwnProperty(property)) {
+      for (property in sub_doc) {
+        if (sub_doc.hasOwnProperty(property)) {
           if (property_list.indexOf(property) < 0) {
-            mapped_doc[property] = doc[property];
+            doc[property] = sub_doc[property];
           }
         }
       }
     }
-    if (id_delete) {
-      delete mapped_doc.id;
+    if (delete_id_from_doc) {
+      delete doc.id;
     }
-    return mapped_doc;
+    return doc;
   }
 
-  function unmapDocument(storage, mapped_doc) {
-    var doc = {}, property, property_list = [];
-    for (property in storage._mapping_dict) {
-      if (storage._mapping_dict.hasOwnProperty(property)) {
-        property_list.push(unmapProperty(storage, property, doc, mapped_doc));
+  function mapToSubstorageDocument(storage, doc) {
+    var sub_doc = {}, property;
+
+    for (property in doc) {
+      if (doc.hasOwnProperty(property)) {
+        mapToSubProperty(storage, property, sub_doc, doc);
       }
     }
-    if (storage._map_all_property) {
-      for (property in mapped_doc) {
-        if (mapped_doc.hasOwnProperty(property)) {
-          if (property_list.indexOf(property) < 0) {
-            doc[property] = mapped_doc[property];
-          }
-        }
+    for (property in storage._default_mapping) {
+      if (storage._default_mapping.hasOwnProperty(property)) {
+        sub_doc[property] = storage._default_mapping[property];
       }
     }
-    delete doc.id;
-    return doc;
+    delete sub_doc.id;
+    return sub_doc;
   }
 
   MappingStorage.prototype.get = function (id) {
@@ -192,8 +199,8 @@
       .push(function (sub_id) {
         return context._sub_storage.get(sub_id);
       })
-      .push(function (doc) {
-        return mapDocument(context, doc, true);
+      .push(function (sub_doc) {
+        return mapToMainDocument(context, sub_doc, true);
       })
       .push(undefined, function (error) {
         throw new jIO.util.jIOError("Cannot find document " + id
@@ -201,30 +208,31 @@
       });
   };
 
-  MappingStorage.prototype.post = function (doc_mapped) {
+  MappingStorage.prototype.post = function (doc) {
     if (!this._id_is_mapped) {
-      return this._sub_storage.post.apply(
-        this._sub_storage,
-        unmapDocument(this, doc_mapped)
-      );
+      return this._sub_storage.post(mapToSubstorageDocument(this, doc));
     }
+    throw new jIO.util.jIOError(
+      "post is not supported with id mapped",
+      400
+    );
   };
 
   MappingStorage.prototype.put = function (id, doc) {
     var context = this,
-      mapped_doc = unmapDocument(this, doc);
+      sub_doc = mapToSubstorageDocument(this, doc);
     return getSubStorageId(this, id)
       .push(function (sub_id) {
         if (context._id_is_mapped) {
-          mapped_doc[context._mapping_dict.id.equal] = id;
+          sub_doc[context._mapping_dict.id.equal] = id;
         }
         if (id === undefined) {
           throw new Error();
         }
-        return context._sub_storage.put(sub_id, mapped_doc);
+        return context._sub_storage.put(sub_id, sub_doc);
       })
       .push(undefined, function () {
-        return context._sub_storage.post(mapped_doc);
+        return context._sub_storage.post(sub_doc);
       })
       .push(function () {
         return id;
@@ -318,7 +326,7 @@
       })
       .push(function (result) {
         for (i = 0; i < result.length; i += 1) {
-          mapped_result.push(mapDocument(context, result[i], false));
+          mapped_result.push(mapToMainDocument(context, result[i], false));
         }
         return mapped_result;
       });
@@ -341,13 +349,13 @@
         one_query.query_list = query_list;
         return one_query;
       }
-      one_query.key = mapProperty(context, one_query.key, {}, {});
+      one_query.key = mapToMainProperty(context, one_query.key, {}, {});
       return one_query;
     }
 
     if (option.sort_on !== undefined) {
       for (i = 0; i < option.sort_on.length; i += 1) {
-        property = mapProperty(this, option.sort_on[i][0], {}, {});
+        property = mapToMainProperty(this, option.sort_on[i][0], {}, {});
         if (property && sort_on.indexOf(property) < 0) {
           select_list.push([property, option.sort_on[i][1]]);
         }
@@ -363,7 +371,7 @@
     }
     if (option.select_list !== undefined) {
       for (i = 0; i < option.select_list.length; i += 1) {
-        property = mapProperty(this, option.select_list[i], {}, {});
+        property = mapToMainProperty(this, option.select_list[i], {}, {});
         if (property && select_list.indexOf(property) < 0) {
           select_list.push(property);
         }
@@ -409,7 +417,7 @@
       .push(function (result) {
         for (i = 0; i < result.data.total_rows; i += 1) {
           result.data.rows[i].value =
-            mapDocument(context, result.data.rows[i].value, false);
+            mapToMainDocument(context, result.data.rows[i].value, false);
           if (result.data.rows[i].id !== undefined && context._id_is_mapped) {
             result.data.rows[i].id =
                 result.data.rows[i].value.id;

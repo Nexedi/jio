@@ -37,7 +37,7 @@
     deepEqual(jio.__storage._mapping_dict, {});
     deepEqual(jio.__storage._mapping_dict_attachment, {});
     deepEqual(jio.__storage._query, {});
-    equal(jio.__storage._map_all_property, false);
+    equal(jio.__storage._map_all_property, true);
   });
 
   test("accept parameters", function () {
@@ -47,7 +47,7 @@
         type: "mappingstorage2713"
       },
       mapping_dict: { "bar": {"equal": "foo"}},
-      map_all_property: true,
+      map_all_property: false,
       query: {"query": 'foo: "bar"'},
       mapping_dict_attachment: {"foo": {"get": "bar"}}
     });
@@ -57,7 +57,7 @@
     equal(jio.__storage._query.query.value, "bar");
     equal(jio.__storage._query.query.type, "simple");
     deepEqual(jio.__storage._mapping_dict_attachment, {"foo": {"get": "bar"}});
-    equal(jio.__storage._map_all_property, true);
+    equal(jio.__storage._map_all_property, false);
   });
 
   /////////////////////////////////////////////////////////////////
@@ -82,17 +82,15 @@
       return {title: "foo"};
     };
 
+    start();
     jio.get("bar")
-      .then(function (result) {
+      .push(function (result) {
         deepEqual(result, {
           "title": "foo"
         }, "Check document");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -113,16 +111,14 @@
       return {otherTitle: "foo"};
     };
 
+    start();
     jio.get("bar")
-      .then(function (result) {
+      .push(function (result) {
         deepEqual(result, {
           "title": "foo"
         });
-      }).fail(function (error) {
+      }).push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -155,16 +151,14 @@
       return {"otherTitle": "foo"};
     };
 
+    start();
     jio.get("42")
-      .then(function (result) {
+      .push(function (result) {
         deepEqual(result, {
           "title": "foo"
         });
-      }).fail(function (error) {
+      }).push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -202,16 +196,14 @@
       return {"otherTitle": "foo"};
     };
 
+    start();
     jio.get("42")
-      .then(function (result) {
+      .push(function (result) {
         deepEqual(result, {
           "title": "foo"
         });
-      }).fail(function (error) {
+      }).push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -226,8 +218,7 @@
       },
       mapping_dict: {
         "id": {"equal": "otherId"}
-      },
-      map_all_property: true
+      }
     });
 
     Storage2713.prototype.hasCapacity = function () {
@@ -248,16 +239,14 @@
       return {"title": "foo"};
     };
 
+    start();
     jio.get("42")
-      .then(function (result) {
+      .push(function (result) {
         deepEqual(result, {
           "title": "foo"
         });
-      }).fail(function (error) {
+      }).push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -284,15 +273,13 @@
       return id;
     };
 
+    start();
     jio.put("bar", {"title": "foo"})
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "bar");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -313,15 +300,13 @@
       return id;
     };
 
+    start();
     jio.put("bar", {})
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "bar");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -354,15 +339,13 @@
       return [];
     };
 
+    start();
     jio.put("42", {"title": "foo"})
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "42");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -387,17 +370,16 @@
       return id;
     };
 
+    start();
     jio.put("42", {"title": "foo", "smth": "bar", "smth2": "bar2"})
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "42");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
+
   /////////////////////////////////////////////////////////////////
   // mappingStorage.remove 
   /////////////////////////////////////////////////////////////////
@@ -417,15 +399,13 @@
       return id;
     };
 
+    start();
     jio.remove("bar", {"title": "foo"})
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "bar");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -457,17 +437,67 @@
       return "foo";
     };
 
+    start();
     jio.remove("42")
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "42");
-      }).fail(function (error) {
+      }).push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
+  /////////////////////////////////////////////////////////////////
+  // mappingStorage.remove 
+  /////////////////////////////////////////////////////////////////
+  module("mappingStorage.post");
+
+  test("post with mapped property", function () {
+    stop();
+    expect(2);
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      mapping_dict: {"title": {"equal": "otherTitle"}}
+    });
+    Storage2713.prototype.post = function (doc) {
+      deepEqual(doc, {"otherTitle": "foo"}, "remove 2713 called");
+      return "42";
+    };
+
+    start();
+    jio.post({"title": "foo"})
+      .push(function (result) {
+        equal(result, "42");
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
+      });
+  });
+
+  test("post with id mapped", function () {
+    stop();
+    expect(2);
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      mapping_dict: {"id": {"equal": "otherId"}}
+    });
+
+    Storage2713.prototype.post = function () {
+      return false;
+    };
+
+    start();
+    jio.post({"title": "foo"})
+      .push(undefined, function (error) {
+        equal(error.message, "post is not supported with id mapped");
+        equal(error.status_code, 400);
+      });
+  });
   /////////////////////////////////////////////////////////////////
   // mappingStorage.putAttachment
   /////////////////////////////////////////////////////////////////
@@ -490,15 +520,14 @@
       deepEqual(attachment, blob, "putAttachment 2713 called");
       return doc_id;
     };
+
+    start();
     jio.putAttachment("42", "2713", blob)
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "2713");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -521,15 +550,14 @@
       deepEqual(attachment, blob, "putAttachment 2713 called");
       return doc_id;
     };
+
+    start();
     jio.putAttachment("42", "2713", blob)
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "2713");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -564,15 +592,13 @@
       return [{"id": "13"}];
     };
 
+    start();
     jio.putAttachment("42", "2713", blob)
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "2713");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -596,15 +622,14 @@
       equal(attachment, "2713", "getAttachment 2713 called");
       return blob;
     };
+
+    start();
     jio.getAttachment("42", "2713")
-      .then(function (result) {
+      .push(function (result) {
         deepEqual(result, blob);
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -626,15 +651,14 @@
       equal(doc_id, "42", "getAttachment 2713 called");
       return blob;
     };
+
+    start();
     jio.getAttachment("42", "2713")
-      .then(function (result) {
+      .push(function (result) {
         deepEqual(result, blob);
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -668,15 +692,13 @@
       return [{"id": "13"}];
     };
 
+    start();
     jio.getAttachment("42", "2713")
-      .then(function (result) {
+      .push(function (result) {
         deepEqual(result, blob);
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -688,32 +710,34 @@
   test("removeAttachment use sub_storage one's", function () {
     stop();
     expect(3);
+
     var jio = jIO.createJIO({
       type: "mapping",
       sub_storage: {
         type: "mappingstorage2713"
       }
     });
+
     Storage2713.prototype.removeAttachment = function (doc_id, attachment) {
       equal(doc_id, "42", "removeAttachment 2713 called");
       equal(attachment, "2713", "getAttachment 2713 called");
       return doc_id;
     };
+
+    start();
     jio.removeAttachment("42", "2713")
-      .then(function (result) {
+      .push(function (result) {
         deepEqual(result, "2713");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
   test("removeAttachment use UriTemplate", function () {
     stop();
     expect(3);
+
     var jio = jIO.createJIO({
       type: "mapping",
       sub_storage: {
@@ -722,26 +746,27 @@
       mapping_dict_attachment: {"2713":
         {"remove": {"uri_template": "www.2713/{id}.bar"}}}
     });
+
     Storage2713.prototype.removeAttachment = function (doc_id, attachment) {
       equal(doc_id, "42", "removeAttachment 2713 called");
       equal(attachment, "www.2713/42.bar", "removeAttachment 2713 called");
       return doc_id;
     };
+
+    start();
     jio.removeAttachment("42", "2713")
-      .then(function (result) {
+      .push(function (result) {
         deepEqual(result, "2713");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
   test("removeAttachment with UriTemplate and id mapped", function () {
     stop();
     expect(4);
+
     var jio = jIO.createJIO({
       type: "mapping",
       sub_storage: {
@@ -768,15 +793,13 @@
       return [{"id": "13"}];
     };
 
+    start();
     jio.removeAttachment("42", "2713")
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "2713");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -802,6 +825,7 @@
       map_all_property: true
     });
 
+    start();
     jio.put("42",
       {
         "title": "foo",
@@ -834,9 +858,6 @@
       })
       .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -862,6 +883,7 @@
       }
     });
 
+    start();
     jio.put("42",
       {
         "title": "foo",
@@ -894,9 +916,6 @@
       })
       .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -921,6 +940,7 @@
       }
     });
 
+    start();
     jio.put("42",
       {
         "title": "foo",
@@ -946,9 +966,6 @@
       })
       .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
 
@@ -974,6 +991,7 @@
       map_all_property: true
     });
 
+    start();
     jio.put("42",
       {
         "title": "foo",
@@ -1002,9 +1020,60 @@
       })
       .push(undefined, function (error) {
         ok(false, error);
+      });
+  });
+
+  test("allDocs id and prop mapped and query", function () {
+    stop();
+    expect(1);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      query: {"query": 'otherId: "42"'},
+      mapping_dict: {
+        "id": {"equal": "otherId"},
+        "title": {"equal": "otherTitle"}
+      },
+      sub_storage: {
+        type: "query",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      }
+    });
+
+    start();
+    jio.put("42",
+      {
+        "title": "foo",
+        "smth": "bar"
       })
-      .always(function () {
-        start();
+        .push(function () {
+        return jio.allDocs({
+          query: 'title: "foo"',
+          select_list: ["title"]
+        });
+      })
+        .push(function (result) {
+        deepEqual(result,
+          {
+            "data": {
+              "rows": [
+                {
+                  "id": "42",
+                  "value": {"title": "foo"},
+                  "doc": {}
+                }
+              ],
+              "total_rows": 1
+            }
+          }, "allDocs check");
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
       });
   });
 
@@ -1067,6 +1136,7 @@
       ];
     };
 
+    start();
     jio.bulk([{
       method: "get",
       parameter_list: ["id1"]
@@ -1089,8 +1159,8 @@
           "bulk test"
         );
       })
-      .always(function () {
-        start();
+      .push(undefined, function (error) {
+        ok(false, error);
       });
   });
 
@@ -1116,15 +1186,14 @@
       return "foobar";
     };
 
+    start();
     jio.repair(["foo", "bar"])
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "foobar", "Check repair");
       })
-      .fail(function (error) {
+      .push(undefined, function (error) {
         ok(false, error);
-      })
-      .always(function () {
-        start();
       });
   });
+
 }(jIO, QUnit, Blob));
