@@ -35,7 +35,7 @@
     ok(jio.__storage._sub_storage instanceof jio.constructor);
     equal(jio.__storage._sub_storage.__type, "mappingstorage2713");
     deepEqual(jio.__storage._mapping_dict, {});
-    deepEqual(jio.__storage._mapping_dict_attachment, {});
+    deepEqual(jio.__storage._attachment_mapping_dict, {});
     deepEqual(jio.__storage._query, {});
     equal(jio.__storage._map_all_property, true);
   });
@@ -49,14 +49,14 @@
       mapping_dict: { "bar": {"equal": "foo"}},
       map_all_property: false,
       query: {"query": 'foo: "bar"'},
-      mapping_dict_attachment: {"foo": {"get": "bar"}}
+      attachment_mapping_dict: {"foo": {"get": "bar"}}
     });
 
     deepEqual(jio.__storage._mapping_dict, {"bar": {"equal": "foo"}});
     equal(jio.__storage._query.query.key, "foo");
     equal(jio.__storage._query.query.value, "bar");
     equal(jio.__storage._query.query.type, "simple");
-    deepEqual(jio.__storage._mapping_dict_attachment, {"foo": {"get": "bar"}});
+    deepEqual(jio.__storage._attachment_mapping_dict, {"foo": {"get": "bar"}});
     equal(jio.__storage._map_all_property, false);
   });
 
@@ -539,7 +539,7 @@
       sub_storage: {
         type: "mappingstorage2713"
       },
-      mapping_dict_attachment: {"2713": {"put":
+      attachment_mapping_dict: {"2713": {"put":
         {"uri_template": "www.2713.foo/{id}"}}}
     }),
       blob = new Blob([""]);
@@ -570,7 +570,7 @@
         type: "mappingstorage2713"
       },
       mapping_dict: {"id": {"equal": "otherId"}},
-      mapping_dict_attachment: {"2713": {"put":
+      attachment_mapping_dict: {"2713": {"put":
         {"uri_template": "www.2713.foo/{id}"}}}
     }),
       blob = new Blob([""]);
@@ -641,7 +641,7 @@
       sub_storage: {
         type: "mappingstorage2713"
       },
-      mapping_dict_attachment: {
+      attachment_mapping_dict: {
         "2713": {"get": {"uri_template": "www.2713/{id}/ok.com"}}
       }
     }),
@@ -671,7 +671,7 @@
         type: "mappingstorage2713"
       },
       mapping_dict: {"id": {"equal": "otherId"}},
-      mapping_dict_attachment: {"2713": {"get":
+      attachment_mapping_dict: {"2713": {"get":
         {"uri_template": "www.2713.foo/{id}"}}}
     }),
       blob = new Blob([""]);
@@ -743,7 +743,7 @@
       sub_storage: {
         type: "mappingstorage2713"
       },
-      mapping_dict_attachment: {"2713":
+      attachment_mapping_dict: {"2713":
         {"remove": {"uri_template": "www.2713/{id}.bar"}}}
     });
 
@@ -773,7 +773,7 @@
         type: "mappingstorage2713"
       },
       mapping_dict: {"id": {"equal": "otherId"}},
-      mapping_dict_attachment: {"2713": {"remove":
+      attachment_mapping_dict: {"2713": {"remove":
         {"uri_template": "www.2713.foo/{id}"}}}
     });
 
