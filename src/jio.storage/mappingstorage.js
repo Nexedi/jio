@@ -56,6 +56,7 @@
       .push(function () {
         if (mapping_dict !== undefined
             && mapping_dict[attachment_id] !== undefined
+            && mapping_dict[attachment_id][method] !== undefined
             && mapping_dict[attachment_id][method].uri_template !== undefined) {
           return UriTemplate.parse(
             mapping_dict[attachment_id][method].uri_template
@@ -363,9 +364,9 @@
     }
     if (this._query.sort_on !== undefined) {
       for (i = 0; i < this._query.sort_on.length; i += 1) {
-        property = this._query.sort_on[i];
+        property = mapToMainProperty(this, this._query.sort_on[i], {}, {});
         if (sort_on.indexOf(property) < 0) {
-          sort_on.push(property);
+          select_list.push([property, option.sort_on[i][1]]);
         }
       }
     }
