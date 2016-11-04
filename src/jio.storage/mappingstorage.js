@@ -1,7 +1,8 @@
 /*jslint indent:2, maxlen: 80, nomen: true */
 /*global jIO, RSVP, UriTemplate, SimpleQuery, ComplexQuery, QueryFactory,
   Query*/
-(function (jIO, RSVP) {
+(function (jIO, RSVP, UriTemplate, SimpleQuery, ComplexQuery, QueryFactory,
+  Query) {
   "use strict";
 
   function MappingStorage(spec) {
@@ -52,18 +53,15 @@
 
   function getAttachmentId(storage, sub_id, attachment_id, method) {
     var mapping_dict = storage._attachment_mapping_dict;
-    return new RSVP.Queue()
-      .push(function () {
-        if (mapping_dict !== undefined
-            && mapping_dict[attachment_id] !== undefined
-            && mapping_dict[attachment_id][method] !== undefined
-            && mapping_dict[attachment_id][method].uri_template !== undefined) {
-          return UriTemplate.parse(
-            mapping_dict[attachment_id][method].uri_template
-          ).expand({id: sub_id});
-        }
-        return attachment_id;
-      });
+    if (mapping_dict !== undefined
+        && mapping_dict[attachment_id] !== undefined
+        && mapping_dict[attachment_id][method] !== undefined
+        && mapping_dict[attachment_id][method].uri_template !== undefined) {
+      return UriTemplate.parse(
+        mapping_dict[attachment_id][method].uri_template
+      ).expand({id: sub_id});
+    }
+    return attachment_id;
   }
 
   function getSubStorageId(storage, id) {
@@ -95,7 +93,10 @@
           })
             .push(function (data) {
               if (data.data.rows.length === 0) {
-                return undefined;
+                throw new jIO.util.jIOError(
+                  "Can not find id",
+                  404
+                );
               }
               if (data.data.rows.length > 1) {
                 throw new TypeError("id must be unique field: " + id
@@ -194,6 +195,23 @@
     return sub_doc;
   }
 
+  function handleAttachment(context, argument_list, method) {
+    return getSubStorageId(context, argument_list[0])
+      .push(function (sub_id) {
+        argument_list[0] = sub_id;
+        argument_list[1] = getAttachmentId(
+          context,
+          sub_id,
+          argument_list[1],
+          method
+        );
+        return context._sub_storage[method + "Attachment"].apply(
+          context._sub_storage,
+          argument_list
+        );
+      });
+  }
+
   MappingStorage.prototype.get = function (id) {
     var context = this;
     return getSubStorageId(this, id)
@@ -202,10 +220,6 @@
       })
       .push(function (sub_doc) {
         return mapToMainDocument(context, sub_doc, true);
-      })
-      .push(undefined, function (error) {
-        throw new jIO.util.jIOError("Cannot find document " + id
-          + ", cause: " + error.message, 404);
       });
   };
 
@@ -220,20 +234,18 @@
   };
 
   MappingStorage.prototype.put = function (id, doc) {
+    doc.id = id;
     var context = this,
       sub_doc = mapToSubstorageDocument(this, doc);
     return getSubStorageId(this, id)
       .push(function (sub_id) {
-        if (context._id_is_mapped) {
-          sub_doc[context._mapping_dict.id.equal] = id;
-        }
-        if (id === undefined) {
-          throw new Error();
-        }
         return context._sub_storage.put(sub_id, sub_doc);
       })
-      .push(undefined, function () {
-        return context._sub_storage.post(sub_doc);
+      .push(undefined, function (error) {
+        if (error instanceof jIO.util.jIOError && error.status_code === 404) {
+          return context._sub_storage.post(sub_doc);
+        }
+        throw error;
       })
       .push(function () {
         return id;
@@ -252,48 +264,18 @@
   };
 
   MappingStorage.prototype.putAttachment = function (id, attachment_id) {
-    var context = this, argument_list = arguments;
-    return getSubStorageId(context, id)
-      .push(function (sub_id) {
-        argument_list[0] = sub_id;
-        return getAttachmentId(context, sub_id, attachment_id, "put");
-      })
-      .push(function (sub_attachment_id) {
-        argument_list[1] = sub_attachment_id;
-        return context._sub_storage.putAttachment.apply(context._sub_storage,
-          argument_list);
-      })
+    return handleAttachment(this, arguments, "put", id)
       .push(function () {
         return attachment_id;
       });
   };
 
-  MappingStorage.prototype.getAttachment = function (id, attachment_id) {
-    var context = this, argument_list = arguments;
-    return getSubStorageId(context, id)
-      .push(function (sub_id) {
-        argument_list[0] = sub_id;
-        return getAttachmentId(context, sub_id, attachment_id, "get");
-      })
-      .push(function (sub_attachment_id) {
-        argument_list[1] = sub_attachment_id;
-        return context._sub_storage.getAttachment.apply(context._sub_storage,
-          argument_list);
-      });
+  MappingStorage.prototype.getAttachment = function () {
+    return handleAttachment(this, arguments, "get");
   };
 
   MappingStorage.prototype.removeAttachment = function (id, attachment_id) {
-    var context = this, argument_list = arguments;
-    return getSubStorageId(context, id)
-      .push(function (sub_id) {
-        argument_list[0] = sub_id;
-        return getAttachmentId(context, sub_id, attachment_id, "remove");
-      })
-      .push(function (sub_attachment_id) {
-        argument_list[1] = sub_attachment_id;
-        return context._sub_storage.removeAttachment.apply(context._sub_storage,
-          argument_list);
-      })
+    return handleAttachment(this, arguments, "remove", id)
       .push(function () {
         return attachment_id;
       });
@@ -308,24 +290,25 @@
   };
 
   MappingStorage.prototype.bulk = function (id_list) {
-    var i,
-      context = this,
-      mapped_result = [],
-      promise_list = id_list.map(function (parameter) {
-        return getSubStorageId(context, parameter.parameter_list[0])
-          .push(function (id) {
-            return {"method": parameter.method, "parameter_list": [id]};
-          });
-      });
+    var context = this;
+
+    function mapId(parameter) {
+      return getSubStorageId(context, parameter.parameter_list[0])
+        .push(function (id) {
+          return {"method": parameter.method, "parameter_list": [id]};
+        });
+    }
 
     return new RSVP.Queue()
       .push(function () {
+        var promise_list = id_list.map(mapId);
         return RSVP.all(promise_list);
       })
       .push(function (id_list_mapped) {
         return context._sub_storage.bulk(id_list_mapped);
       })
       .push(function (result) {
+        var mapped_result = [], i;
         for (i = 0; i < result.length; i += 1) {
           mapped_result.push(mapToMainDocument(context, result[i], false));
         }
@@ -342,10 +325,10 @@
       sort_on = [];
 
     function mapQuery(one_query) {
-      var i, query_list = [];
+      var j, query_list = [];
       if (one_query.type === "complex") {
-        for (i = 0; i < one_query.query_list.length; i += 1) {
-          query_list.push(mapQuery(one_query.query_list[i]));
+        for (j = 0; j < one_query.query_list.length; j += 1) {
+          query_list.push(mapQuery(one_query.query_list[j]));
         }
         one_query.query_list = query_list;
         return one_query;
@@ -430,4 +413,4 @@
   };
 
   jIO.addStorage('mapping', MappingStorage);
-}(jIO, RSVP));
+}(jIO, RSVP, UriTemplate, SimpleQuery, ComplexQuery, QueryFactory, Query));
