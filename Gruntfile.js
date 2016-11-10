@@ -149,6 +149,7 @@ module.exports = function (grunt) {
           'lib/uri/URI.js',
           'node_modules/uritemplate/bin/uritemplate.js',
           'node_modules/lz-string/libs/lz-string.js',
+          'node_modules/jszip/dist/jszip.js',
 //           'node_modules/moment/moment.js',
           'lib/moment/moment-2.13.0.js',
 
@@ -169,6 +170,7 @@ module.exports = function (grunt) {
           'src/jio.storage/uuidstorage.js',
           'src/jio.storage/memorystorage.js',
           'src/jio.storage/zipstorage.js',
+          'src/jio.storage/zipfilestorage.js',
           'src/jio.storage/dropboxstorage.js',
           'src/jio.storage/davstorage.js',
           'src/jio.storage/gdrivestorage.js',
