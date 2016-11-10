@@ -1,3 +1,4 @@
+/*global module, require*/
 module.exports = function (grunt) {
   "use strict";
 
@@ -93,7 +94,7 @@ module.exports = function (grunt) {
           predef: [
             'jIO'
           ]
-        },
+        }
       },
       tests: {
         src: ['test/**/*.js'],
@@ -106,7 +107,7 @@ module.exports = function (grunt) {
             'QUnit',
             'jIO'
           ]
-        },
+        }
       },
       queries: {
         src: ['src/queries/*.js'],
@@ -136,8 +137,8 @@ module.exports = function (grunt) {
             'QUnit',
             'jIO'
           ]
-        },
-      },
+        }
+      }
     },
     concat: {
       options: {
