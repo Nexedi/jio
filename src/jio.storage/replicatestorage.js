@@ -213,7 +213,7 @@
     // Do not sync the signature document
     skip_document_dict[context._signature_hash] = {
       skip: true,
-      skip_attachments: true
+      skip_attachment_list: true
     };
 
     function allAttachmentMethod(storage, id) {
@@ -232,7 +232,7 @@
           && skip_document_dict[id].skip === true;
       }
       return skip_document_dict[id] !== undefined
-        && (skip_document_dict[id].skip_attachments === true
+        && (skip_document_dict[id].skip_attachment_list === true
         || (skip_document_dict[id].attachments !== undefined
             && skip_document_dict[id].attachments[attachment_id] === true));
     }
@@ -241,7 +241,7 @@
       if (skip_document_dict[id] === undefined) {
         skip_document_dict[id] = {
           skip: false,
-          skip_attachments: false,
+          skip_attachment_list: false,
           attachments: {}
         };
       }
@@ -276,9 +276,9 @@
                   return jIO.util.readBlobAsArrayBuffer(attachment_blob);
                 })
                 .push(function (evt) {
-                  return generateHashFromArrayBuffer(evt.target.result);
-                })
-                .push(function (remote_hash) {
+                  var remote_hash = generateHashFromArrayBuffer(
+                    evt.target.result
+                  );
                   if (remote_hash === status_hash) {
                     // No modification. Attachment can be removed.
                     return destination.removeAttachment(id, attachment_id)
@@ -351,12 +351,10 @@
                 return jIO.util.readBlobAsArrayBuffer(attachment_blob);
               })
               .push(function (evt) {
-                return generateHashFromArrayBuffer(
-                  evt.target.result
-                );
-              })
-              .push(function (hash) {
-                hash_document.attachments_hash[attachment_id] = hash;
+                hash_document.attachments_hash[attachment_id] =
+                  generateHashFromArrayBuffer(
+                    evt.target.result
+                  );
                 hash_document.updated = true;
                 return;
               });
@@ -379,11 +377,11 @@
         });
     }
 
-    function copyDocumentAndAttachments(source, destination,
-                                        source_id, destination_id,
-                                        doc,
-                                        hash_document,
-                                        garbage_collect) {
+    function copyDocumentAndAttachmentList(source, destination,
+                                           source_id, destination_id,
+                                           doc,
+                                           hash_document,
+                                           garbage_collect) {
       if (garbage_collect === undefined) {
         garbage_collect = false;
       }
@@ -422,7 +420,7 @@
           if (source_id === destination_id) {
             skip_document_dict[destination_id] = {
               skip: true,
-              skip_attachments: true
+              skip_attachment_list: true
             };
           }
           if (garbage_collect === true) {
@@ -435,7 +433,7 @@
             delete signature_dict[source_id];
             skip_document_dict[source_id] = {
               skip: true,
-              skip_attachments: true
+              skip_attachment_list: true
             };
             return context._signature_sub_storage.remove(source_id);
           }
@@ -460,17 +458,17 @@
             };
             post_id = new_id;
             signature_dict[post_id] = hash_document;
-            return copyDocumentAndAttachments(source, source,
-                                              id, post_id,
-                                              doc,
-                                              hash_document,
-                                              true);
+            return copyDocumentAndAttachmentList(source, source,
+                                                 id, post_id,
+                                                 doc,
+                                                 hash_document,
+                                                 true);
           })
           .push(function () {
-            return copyDocumentAndAttachments(source, destination,
-                                              post_id, post_id,
-                                              doc,
-                                              signature_dict[post_id]);
+            return copyDocumentAndAttachmentList(source, destination,
+                                                 post_id, post_id,
+                                                 doc,
+                                                 signature_dict[post_id]);
           })
           .push(function () {
             return post_id;
@@ -567,7 +565,7 @@
                       .push(function () {
                         skip_document_dict[id] = {
                           skip: true,
-                          skip_attachments: true
+                          skip_attachment_list: true
                         };
                         return;
                       });
@@ -597,7 +595,7 @@
                       signature_dict[id].updated = true;
                       skip_document_dict[id] = {
                         skip: true,
-                        skip_attachments: true
+                        skip_attachment_list: true
                       };
                       return;
                     });
@@ -610,7 +608,7 @@
                   .push(function () {
                     skip_document_dict[id] = {
                       skip: true,
-                      skip_attachments: true
+                      skip_attachment_list: true
                     };
                     delete signature_dict[id];
                     return;
@@ -647,16 +645,11 @@
         .push(function (result) {
           attachment_blob = result;
           // Calculate Attachment Hash
-          return new RSVP.Queue()
-            .push(function () {
-              return jIO.util.readBlobAsArrayBuffer(attachment_blob);
-            })
-            .push(function (evt) {
-              return generateHashFromArrayBuffer(evt.target.result);
-            });
+          return jIO.util.readBlobAsArrayBuffer(attachment_blob);
         })
-        .push(function (local_hash) {
-          var status_hash = attachment_signature_dict[attachment_id];
+        .push(function (evt) {
+          var status_hash = attachment_signature_dict[attachment_id],
+            local_hash = generateHashFromArrayBuffer(evt.target.result);
           if (local_hash !== status_hash) {
             // Local modification
             return destination.getAttachment(id, attachment_id,
@@ -708,7 +701,7 @@
                         // attachment to a non-existent attachment.
                       if ((error instanceof jIO.util.jIOError) &&
                           (error.status_code === 404)) {
-                        return copyDocumentAndAttachments(
+                        return copyDocumentAndAttachmentList(
                           source,
                           destination,
                           id,
@@ -748,7 +741,7 @@
       var hash_document;
       if (skip_document_dict[id] !== undefined
             && skip_document_dict[id].skip === true
-            && skip_document_dict[id].skip_attachments === true) {
+            && skip_document_dict[id].skip_attachment_list === true) {
         return;
       }
       queue
@@ -834,7 +827,7 @@
           id = current_id;
           hash_document = signature_dict[id];
           if (skip_document_dict[id] !== undefined
-              && skip_document_dict.skip_attachments === true) {
+              && skip_document_dict.skip_attachment_list === true) {
               // No attachments to check
             return {};
           }
