@@ -1,4 +1,4 @@
-/*global jIO, RSVP, DOMParser, Blob, JSZip */
+/*global jIO, RSVP, Blob, JSZip */
 /*jslint nomen: true*/
 
 /*
