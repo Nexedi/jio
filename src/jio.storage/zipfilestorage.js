@@ -12,7 +12,7 @@
 //   type: "zipfile",
 //   file: {string, blob, array},
 // }
-// You can get archived file by getAttachment("", "")
+// You can get archived file by getAttachment("/", "/")
 
 (function (jIO, RSVP, JSZip) {
   "use strict";
