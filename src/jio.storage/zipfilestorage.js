@@ -81,8 +81,10 @@
           })
             .then(function () {
               storage._zip = zip;
+              return zip;
             }, function (error) {
               storage._error = error;
+              throw error;
             });
         });
     } else {
