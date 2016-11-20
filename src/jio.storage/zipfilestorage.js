@@ -22,20 +22,16 @@
   //}
 
   function loadZip(storage) {
-    var queue;
     if (!storage._error) {
       if (storage._zip) {
-        queue = new RSVP.Queue()
+        return new RSVP.Queue()
           .push(function () {
             return storage._zip;
           });
-      } else {
-        queue = storage._unzip_queue;
       }
-    } else {
-      throw storage._error;
+      return storage._unzip_queue;
     }
-    return queue;
+    throw storage._error;
   }
 
 
@@ -119,21 +115,11 @@
     id = restrictDocumentId(id);
     return loadZip(this)
       .push(function (zip) {
-        var filename,
-          file;
         if (id === "") {
           return {};
         }
-        for (filename in zip.files) {
-          if (zip.files.hasOwnProperty(filename)) {
-            if (filename + '/' === id) {
-              file = zip.files[filename];
-              if (!file.dir) {
-                throw new jIO.util.jIOError("Cannot find document", 404);
-              }
-              return {};
-            }
-          }
+        if (zip.files.hasOwnProperty(id) && zip.files[id].dir) {
+          return {};
         }
         throw new jIO.util.jIOError("Cannot find document", 404);
       });
