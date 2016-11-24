@@ -64,7 +64,7 @@
     return attachment_id;
   }
 
-  function getSubStorageId(storage, id) {
+  function getSubStorageId(storage, id, sub_doc) {
     var query;
     return new RSVP.Queue()
       .push(function () {
@@ -72,6 +72,17 @@
           return id;
         }
         if (storage._mapping_dict.id.equal !== undefined) {
+          if (JSON.stringify(storage._mapping_dict)
+              .indexOf('{"equal":"id"}') >= 0
+              && sub_doc !== undefined) {
+            if (sub_doc.id !== undefined) {
+              return sub_doc.id;
+            }
+            throw new jIO.util.jIOError(
+              "Cannot find id field related",
+              400
+            );
+          }
           query = new SimpleQuery({
             key: storage._mapping_dict.id.equal,
             value: id,
@@ -154,10 +165,13 @@
     return false;
   }
 
-  function mapToMainDocument(storage, sub_doc, delete_id_from_doc) {
+  function mapToMainDocument(storage, sub_doc, sub_id, delete_id_from_doc) {
     var doc = {},
       property,
       property_list = [];
+    if (sub_id) {
+      sub_doc.id = sub_id;
+    }
     for (property in storage._mapping_dict) {
       if (storage._mapping_dict.hasOwnProperty(property)) {
         property_list.push(mapToMainProperty(storage, property, sub_doc, doc));
@@ -178,8 +192,9 @@
     return doc;
   }
 
-  function mapToSubstorageDocument(storage, doc) {
+  function mapToSubstorageDocument(storage, doc, id, delete_id_from_doc) {
     var sub_doc = {}, property;
+    doc.id = id;
 
     for (property in doc) {
       if (doc.hasOwnProperty(property)) {
@@ -191,7 +206,9 @@
         sub_doc[property] = storage._default_mapping[property];
       }
     }
-    delete sub_doc.id;
+    if (delete_id_from_doc) {
+      delete sub_doc.id;
+    }
     return sub_doc;
   }
 
@@ -216,16 +233,21 @@
     var context = this;
     return getSubStorageId(this, id)
       .push(function (sub_id) {
-        return context._sub_storage.get(sub_id);
-      })
-      .push(function (sub_doc) {
-        return mapToMainDocument(context, sub_doc, true);
+        return context._sub_storage.get(sub_id)
+          .push(function (sub_doc) {
+            return mapToMainDocument(context, sub_doc, sub_id, true);
+          });
       });
   };
 
   MappingStorage.prototype.post = function (doc) {
     if (!this._id_is_mapped) {
-      return this._sub_storage.post(mapToSubstorageDocument(this, doc));
+      return this._sub_storage.post(mapToSubstorageDocument(
+        this,
+        doc,
+        true,
+        true
+      ));
     }
     throw new jIO.util.jIOError(
       "post is not supported with id mapped",
@@ -234,15 +256,16 @@
   };
 
   MappingStorage.prototype.put = function (id, doc) {
-    doc.id = id;
     var context = this,
-      sub_doc = mapToSubstorageDocument(this, doc);
-    return getSubStorageId(this, id)
+      sub_doc = mapToSubstorageDocument(this, doc, id, false);
+    return getSubStorageId(this, id, sub_doc)
       .push(function (sub_id) {
+        delete sub_doc.id;
         return context._sub_storage.put(sub_id, sub_doc);
       })
       .push(undefined, function (error) {
         if (error instanceof jIO.util.jIOError && error.status_code === 404) {
+          delete sub_doc.id;
           return context._sub_storage.post(sub_doc);
         }
         throw error;
@@ -340,7 +363,12 @@
       .push(function (result) {
         var mapped_result = [], i;
         for (i = 0; i < result.length; i += 1) {
-          mapped_result.push(mapToMainDocument(context, result[i], false));
+          mapped_result.push(mapToMainDocument(
+            context,
+            result[i],
+            false,
+            true
+          ));
         }
         return mapped_result;
       });
@@ -431,12 +459,17 @@
       .push(function (result) {
         for (i = 0; i < result.data.total_rows; i += 1) {
           result.data.rows[i].value =
-            mapToMainDocument(context, result.data.rows[i].value, false);
-          if (result.data.rows[i].id !== undefined && context._id_is_mapped) {
+            mapToMainDocument(
+              context,
+              result.data.rows[i].value,
+              false,
+              false
+            );
+          if (context._id_is_mapped) {
             result.data.rows[i].id =
                 result.data.rows[i].value.id;
-            delete result.data.rows[i].value.id;
           }
+          delete result.data.rows[i].value.id;
         }
         return result.data.rows;
       });

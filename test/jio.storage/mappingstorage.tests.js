@@ -127,6 +127,36 @@
       });
   });
 
+  test("get with id mapped", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      mapping_dict: {"title": {"equal": "id"}}
+    });
+
+    Storage2713.prototype.get = function (id) {
+      equal(id, "bar", "get 2713 called");
+      return {};
+    };
+
+    jio.get("bar")
+      .push(function (result) {
+        deepEqual(result, {
+          "title": "bar"
+        });
+      }).push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("get with id and props mapped", function () {
     stop();
     expect(3);
@@ -357,6 +387,40 @@
     };
 
     jio.put("42", {"title": "foo"})
+      .push(function (result) {
+        equal(result, "42");
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("put with id mapped", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      mapping_dict: {
+        "id": {"equal": "otherId"},
+        "title": {"equal": "id"}
+      }
+    });
+
+    Storage2713.prototype.put = function (id, doc) {
+      deepEqual(doc,
+        {"otherId": "42"}, "post 2713 called");
+      equal(id, "bar");
+      return "bar";
+    };
+
+    jio.put("42", {"title": "bar"})
       .push(function (result) {
         equal(result, "42");
       })
