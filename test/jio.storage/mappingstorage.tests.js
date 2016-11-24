@@ -863,6 +863,69 @@
   });
 
   /////////////////////////////////////////////////////////////////
+  // mappingStorage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("mappingStorage.allAttachments");
+  test("allAttachments use sub_storage one's", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      }
+    });
+
+    Storage2713.prototype.allAttachments = function (doc_id) {
+      equal(doc_id, "42", "allAttachments 2713 called");
+      return {};
+    };
+
+    jio.allAttachments("42")
+      .push(function (result) {
+        deepEqual(result, {});
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("allAttachments use UriTemplate", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "mappingstorage2713"
+      },
+      attachment_mapping_dict: {
+        "2713": {"get": {"uri_template": "www.2713.bar"}}
+      }
+    });
+
+    Storage2713.prototype.allAttachments = function (doc_id) {
+      equal(doc_id, "42", "allAttachments 2713 called");
+      return {"www.2713.bar": {}};
+    };
+
+    jio.allAttachments("42")
+      .push(function (result) {
+        deepEqual(result, {"2713": {}});
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
   // mappingStorage.allDocs
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.buildQuery");

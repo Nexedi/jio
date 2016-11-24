@@ -281,8 +281,38 @@
       });
   };
 
-  MappingStorage.prototype.hasCapacity = function () {
-    return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+  MappingStorage.prototype.allAttachments = function (id) {
+    var context = this, sub_id;
+    return getSubStorageId(context, id)
+      .push(function (sub_id_result) {
+        sub_id = sub_id_result;
+        return context._sub_storage.allAttachments(sub_id);
+      })
+      .push(function (result) {
+        var attachment_id,
+          attachments = {},
+          mapping_dict = {};
+        for (attachment_id in context._attachment_mapping_dict) {
+          if (context._attachment_mapping_dict.hasOwnProperty(attachment_id)) {
+            mapping_dict[getAttachmentId(context, sub_id, attachment_id, "get")]
+              = attachment_id;
+          }
+        }
+        for (attachment_id in result) {
+          if (result.hasOwnProperty(attachment_id)) {
+            if (mapping_dict.hasOwnProperty(attachment_id)) {
+              attachments[mapping_dict[attachment_id]] = {};
+            } else {
+              attachments[attachment_id] = {};
+            }
+          }
+        }
+        return attachments;
+      });
+  };
+
+  MappingStorage.prototype.hasCapacity = function (name) {
+    return this._sub_storage.hasCapacity(name);
   };
 
   MappingStorage.prototype.repair = function () {
