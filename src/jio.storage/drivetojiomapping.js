@@ -29,6 +29,7 @@
       .push(function () {
         // First get the document itself if it exists
         return context._sub_storage.getAttachment(
+
           DOCUMENT_KEY,
           id + DOCUMENT_EXTENSION,
           {format: "json"}
@@ -41,6 +42,7 @@
           // Second, try to get default attachment
           return context._sub_storage.allAttachments(ROOT)
             .push(function (attachment_dict) {
+              // Creae a refrence document
               if (attachment_dict.hasOwnProperty(id)) {
                 return {};
               }
@@ -248,7 +250,72 @@
   };
 
   FileSystemBridgeStorage.prototype.repair = function () {
-    return this._sub_storage.repair.apply(this._sub_storage, arguments);
+    var context = this,
+      attachment_dict = {},
+      document_dict = {};
+    return this._sub_storage.repair.apply(this._sub_storage, arguments)
+      .push(function () {
+        return context._sub_storage.allAttachments(ROOT)
+          .push(function (result_dict) {
+            var key;
+            for (key in result_dict) {
+              if (result_dict.hasOwnProperty(key)) {
+                if (key !== undefined) {
+                  attachment_dict[key] = null;
+                }
+              }
+            }
+          })
+          .push(function () {
+            return context._sub_storage.allAttachments(DOCUMENT_KEY);
+          })
+          .push(function (result_dict) {
+            var key,
+              att,
+              type,
+              promise_list = [];
+
+            for (key in result_dict) {
+              if (result_dict.hasOwnProperty(key)) {
+                if (key !== undefined) {
+                  document_dict[key] = null;
+                }
+              }
+            }
+
+            for (att in attachment_dict) {
+              if (attachment_dict.hasOwnProperty(att)) {
+                if (att.endsWith(".jpg") || att.endsWith(".png") ||
+                    att.endsWith(".jpeg") || att.endsWith(".gif") ||
+                    att.endsWith(".png") || att.endsWith(".tiff")) {
+                  type = "Image";
+                } else if (att.endsWith('.pdf')) {
+                  type = "PDF";
+                } else if (att.endsWith('.svg')) {
+                  type = "Web Illustration";
+                } else if (att.endsWith('.txt') || att.endsWith('.js') ||
+                           att.endsWith('.html') || att.endsWith('.py') ||
+                           att.endsWith('_js') || att.endsWith('_html')) {
+                  type = "";
+                } else {
+                  type = "";
+                }
+                if (!document_dict.hasOwnProperty(att + '.json')) {
+                  promise_list.push(
+                    context._sub_storage.putAttachment(
+                      DOCUMENT_KEY,
+                      att + DOCUMENT_EXTENSION,
+                      new Blob([JSON.stringify({"type": type,
+                                                "title": att})],
+                                                {type: "application/json"})
+                    )
+                  );
+                }
+              }
+            }
+            return RSVP.all(promise_list);
+          });
+      });
   };
 
   jIO.addStorage('drivetojiomapping', FileSystemBridgeStorage);

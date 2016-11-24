@@ -101,6 +101,7 @@ module.exports = function (grunt) {
           maxlen: 80,
           indent: 2,
           maxerr: 3,
+          regexp: true,
           predef: [
             'RSVP',
             'QUnit',

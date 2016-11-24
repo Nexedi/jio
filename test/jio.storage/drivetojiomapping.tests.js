@@ -1078,9 +1078,13 @@
       return "OK";
     };
 
+    Storage200.prototype.allAttachments = function () {
+      return {};
+    };
+
     jio.repair(expected_options)
       .then(function (result) {
-        equal(result, "OK");
+        deepEqual(result, []);
       })
       .fail(function (error) {
         ok(false, error);
@@ -1089,5 +1093,56 @@
         start();
       });
   });
+
+  test("repair called substorage repair", function () {
+    stop();
+    expect(7);
+
+    var jio = jIO.createJIO({
+      type: "drivetojiomapping",
+      sub_storage: {
+        type: "drivetojiomapping200"
+      }
+    });
+
+    Storage200.prototype.repair = function (options) {
+      deepEqual(options, {}, "repair 200 called");
+      return "OK";
+    };
+
+    Storage200.prototype.putAttachment = function (id, name, blob) {
+      equal(id, "/.jio_documents/", "putAttachment called");
+      equal(name, "foo.pdf.json", " putAttachment called");
+      equal(blob.type, "application/json", " putAttachment called");
+      return {};
+    };
+
+    Storage200.prototype.allAttachments = function (id) {
+      var re = /\/\.jio_documents\/|\//g;
+      ok(re.test(id), "all attachment called");
+
+      if (id === "/") {
+        return {
+          "foo.pdf": {}
+        };
+      }
+
+      if (id === "/.jio_docments/") {
+        return {};
+      }
+    };
+
+    jio.repair({})
+      .then(function (result) {
+        deepEqual(result, [{}]);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 
 }(jIO, QUnit, Blob));
