@@ -247,8 +247,75 @@
     return this._sub_storage.removeAttachment(ROOT, id);
   };
 
+  function cloneToDocumentExtension(context, options) {
+    return context._sub_storage.getAttachment(ROOT,
+                                                options.title)
+      .push(function (result) {
+        return jIO.util.readBlobAsText(result);
+      })
+      .push(function (text) {
+        options.text_content = text.target.result;
+        return context._sub_storage.putAttachment(
+          DOCUMENT_KEY,
+          options.title + DOCUMENT_EXTENSION,
+          new Blob([JSON.stringify(options)],
+                   {type: "application/json"})
+        );
+      });
+  }
+
   FileSystemBridgeStorage.prototype.repair = function () {
-    return this._sub_storage.repair.apply(this._sub_storage, arguments);
+    var context = this,
+      attachment_dict = {},
+      document_dict = {};
+    return context._sub_storage.repair.apply(this._sub_storage, arguments)
+      .push(function () {
+        return context._sub_storage.allAttachments(ROOT);
+      })
+      .push(function (result_dict) {
+        var key;
+        for (key in result_dict) {
+          if (result_dict.hasOwnProperty(key)) {
+            if (key !== undefined) {
+              attachment_dict[key] = null;
+            }
+          }
+        }
+        return context._sub_storage.allAttachments(DOCUMENT_KEY);
+      })
+      .push(undefined, function (error) {
+        if ((error instanceof jIO.util.jIOError) &&
+            (error.status_code === 404)) {
+          return context._sub_storage.put(DOCUMENT_KEY, {});
+        }
+        throw error;
+      })
+      .push(function (result_dict) {
+        var key,
+          attachment,
+          extension,
+          promise_list = [],
+          options = {};
+        for (key in result_dict) {
+          if (result_dict.hasOwnProperty(key)) {
+            if (key !== undefined) {
+              document_dict[key] = null;
+            }
+          }
+        }
+        for (attachment in attachment_dict) {
+          if (attachment_dict.hasOwnProperty(attachment)) {
+            extension = attachment.slice((Math.max(0,
+                            attachment.lastIndexOf(".")) || Infinity) + 1);
+            options.type = extension;
+            options.title = attachment;
+            if (!document_dict.hasOwnProperty(attachment + '.json')) {
+              promise_list.push(cloneToDocumentExtension(context, options));
+            }
+          }
+        }
+        return RSVP.all(promise_list);
+      });
   };
 
   jIO.addStorage('drivetojiomapping', FileSystemBridgeStorage);
