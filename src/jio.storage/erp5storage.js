@@ -450,6 +450,10 @@
             (name === "sort"));
   };
 
+  ERP5Storage.prototype.hasCapacityMethod = function (name) {
+    return (name === "bulk");
+  };
+
   function isSingleLocalRoles(parsed_query) {
     if ((parsed_query instanceof SimpleQuery) &&
         (parsed_query.key === 'local_roles')) {

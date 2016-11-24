@@ -401,17 +401,22 @@
   };
 
   JioProxyStorage.prototype.hasCapacity = function (name) {
-    var storage_method = this.__storage.hasCapacity,
-      capacity_method = this.__storage[name];
-    if (capacity_method !== undefined) {
-      return true;
-    }
+    var storage_method = this.__storage.hasCapacity;
     if ((storage_method === undefined) ||
         !storage_method.apply(this.__storage, arguments)) {
       throw new jIO.util.jIOError(
         "Capacity '" + name + "' is not implemented on '" + this.__type + "'",
         501
       );
+    }
+    return true;
+  };
+
+  JioProxyStorage.prototype.hasCapacityMethod = function () {
+    var storage_method = this.__storage.hasCapacityMethod;
+    if ((storage_method === undefined) ||
+        !storage_method.apply(this.__storage, arguments)) {
+      return false;
     }
     return true;
   };
