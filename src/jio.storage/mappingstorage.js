@@ -99,9 +99,49 @@
           return storage._sub_storage.allDocs({
             "query": query,
             "sort_on": storage._query.sort_on,
-            "select_list": storage._query.select_list,
             "limit": storage._query.limit
           })
+            .push(function (data) {
+              if (data.data.rows.length === 0 &&
+                  storage._mapping_dict.id.default_property) {
+                query = new SimpleQuery({
+                  key: storage._mapping_dict.id.default_property,
+                  value: id,
+                  type: "simple"
+                });
+                if (storage._query.query !== undefined) {
+                  query = new ComplexQuery({
+                    operator: "AND",
+                    query_list: [query, storage._query.query],
+                    type: "complex"
+                  });
+                }
+                query = Query.objectToSearchText(query);
+                return storage._sub_storage.allDocs({
+                  "query": query,
+                  "select_list": [storage._mapping_dict.id.equal],
+                  "sort_on": storage._query.sort_on,
+                  "limit": storage._query.limit
+                })
+                  .push(function (data) {
+                    var i,
+                      rows = [],
+                      orig_rows = data.data.rows;
+                    if (orig_rows.length > 1) {
+                      for (i = 0; i < orig_rows.length; i += 1) {
+                        if (!orig_rows[i].value[
+                            storage._mapping_dict.id.equal
+                          ]) {
+                          rows.push(orig_rows[i]);
+                        }
+                      }
+                      data.data.rows = rows;
+                    }
+                    return data;
+                  });
+              }
+              return data;
+            })
             .push(function (data) {
               if (data.data.rows.length === 0) {
                 throw new jIO.util.jIOError(
@@ -124,13 +164,14 @@
   }
 
   function mapToSubProperty(storage, property, sub_doc, doc) {
-    if (storage._mapping_dict[property] !== undefined) {
-      if (storage._mapping_dict[property].equal !== undefined) {
-        sub_doc[storage._mapping_dict[property].equal] = doc[property];
-        return storage._mapping_dict[property].equal;
+    var prop_prop = storage._mapping_dict[property];
+    if (prop_prop !== undefined) {
+      if (prop_prop.equal !== undefined) {
+        sub_doc[prop_prop.equal] = doc[property];
+        return prop_prop.equal;
       }
-      if (storage._mapping_dict[property].default_value !== undefined) {
-        sub_doc[property] = storage._mapping_dict[property].default_value;
+      if (prop_prop.default_value !== undefined) {
+        sub_doc[property] = prop_prop.default_value;
         return property;
       }
     }
@@ -145,14 +186,20 @@
   }
 
   function mapToMainProperty(storage, property, sub_doc, doc) {
-    if (storage._mapping_dict[property] !== undefined) {
-      if (storage._mapping_dict[property].equal !== undefined) {
-        if (sub_doc.hasOwnProperty(storage._mapping_dict[property].equal)) {
-          doc[property] = sub_doc[storage._mapping_dict[property].equal];
+    var prop_prop = storage._mapping_dict[property];
+    if (prop_prop !== undefined) {
+      if (prop_prop.equal !== undefined) {
+        if (sub_doc.hasOwnProperty(prop_prop.equal)) {
+          doc[property] = sub_doc[prop_prop.equal];
+          return prop_prop.equal;
         }
-        return storage._mapping_dict[property].equal;
+        if (prop_prop.default_property &&
+            sub_doc.hasOwnProperty(prop_prop.default_property)) {
+          doc[property] = sub_doc[prop_prop.default_property];
+        }
+        return prop_prop.default_property;
       }
-      if (storage._mapping_dict[property].default_value !== undefined) {
+      if (prop_prop.default_value !== undefined) {
         return property;
       }
     }
@@ -429,6 +476,9 @@
     }
     if (this._id_is_mapped) {
       select_list.push(this._mapping_dict.id.equal);
+      if (this._mapping_dict.id.default_property) {
+        select_list.push(this._mapping_dict.id.default_property);
+      }
     }
     if (option.query !== undefined) {
       query = mapQuery(QueryFactory.create(option.query));
