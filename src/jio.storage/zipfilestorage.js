@@ -63,28 +63,25 @@
    * @constructor
    */
   function ZipFileStorage(spec) {
+    var storage = this,
+      zip = new JSZip();
     if (spec.file) {
-      //if (spec.file instanceof Blob) {
-      //  throw new TypeError("ZipFileStorage 'url' is not of type string");
-      //}
-      var storage = this;
       this._unzip_queue = new RSVP.Queue()
         .push(function () {
-          var zip = new JSZip();
           return zip.loadAsync(spec.file, {
             createFolders: true,
             checkCRC32: true
-          })
-            .then(function () {
-              storage._zip = zip;
-              return zip;
-            }, function (error) {
-              storage._error = error;
-              throw error;
-            });
+          });
+        })
+        .push(function () {
+          storage._zip = zip;
+          return zip;
+        }, function (error) {
+          storage._error = error;
+          throw error;
         });
     } else {
-      this._zip = new JSZip();
+      this._zip = zip;
     }
   }
 
