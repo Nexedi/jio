@@ -57,7 +57,10 @@
   }
 
   /**
-   * The JIO WebDAV Storage extension
+   * The JIO Zip File Storage extension
+   * It allow to use existing or to create
+   * empty zipfile represented as jiostorage
+   * and to receive modified zip file after.
    *
    * @class ZipFileStorage
    * @constructor
