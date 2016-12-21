@@ -150,7 +150,6 @@ module.exports = function (grunt) {
           'lib/uri/URI.js',
           'node_modules/uritemplate/bin/uritemplate.js',
           'node_modules/lz-string/libs/lz-string.js',
-          'node_modules/jszip/dist/jszip.min.js',
 //           'node_modules/moment/moment.js',
           'lib/moment/moment-2.13.0.js',
 
@@ -171,7 +170,6 @@ module.exports = function (grunt) {
           'src/jio.storage/uuidstorage.js',
           'src/jio.storage/memorystorage.js',
           'src/jio.storage/zipstorage.js',
-          'src/jio.storage/zipfilestorage.js',
           'src/jio.storage/dropboxstorage.js',
           'src/jio.storage/davstorage.js',
           'src/jio.storage/gdrivestorage.js',
@@ -187,6 +185,13 @@ module.exports = function (grunt) {
         ],
         dest: 'dist/<%= pkg.name %>-<%= pkg.version %>.js'
 //         dest: 'jio.js'
+      },
+      zipfile: {
+        src: [
+          'node_modules/jszip/dist/jszip.min.js',
+          'src/jio.storage/zipfilestorage.js'
+        ],
+        dest: 'dist/zipfilestorage-with-jszip.js'
       }
     },
     uglify: {
