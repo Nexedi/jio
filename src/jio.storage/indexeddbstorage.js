@@ -303,7 +303,8 @@
   };
 
   IndexedDBStorage.prototype.getAttachment = function (id, name, options) {
-    var type,
+    var transaction,
+      type,
       start,
       end;
     if (options === undefined) {
@@ -311,63 +312,48 @@
     }
     return openIndexedDB(this)
       .push(function (db) {
-        return new RSVP.Promise(function (resolve, reject) {
-          var transaction = openTransaction(db, ["attachment", "blob"],
-            "readonly"),
-            // XXX Should raise if key is not good
-            request = transaction.objectStore("attachment")
-            .get(buildKeyPath([id, name]));
-          request.onerror = function (error) {
-            transaction.abort();
-            reject(error);
-          };
-          request.onsuccess = function () {
-            var attachment = request.result,
-              total_length,
-              i,
-              promise_list = [],
-              store = transaction.objectStore("blob"),
-              start_index,
-              end_index;
+        transaction = openTransaction(db, ["attachment", "blob"], "readonly");
+        // XXX Should raise if key is not good
+        return handleGet(transaction.objectStore("attachment")
+                         .get(buildKeyPath([id, name])));
+      })
+      .push(function (attachment) {
+        var total_length = attachment.info.length,
+          i,
+          promise_list = [],
+          store = transaction.objectStore("blob"),
+          start_index,
+          end_index;
 
-            if (!attachment) {
-              return reject(
-                new jIO.util.jIOError("Cannot find attachment", 404)
-              );
-            }
+        type = attachment.info.content_type;
+        start = options.start || 0;
+        end = options.end || total_length;
+        if (end > total_length) {
+          end = total_length;
+        }
 
-            total_length = attachment.info.length;
-            type = attachment.info.content_type;
-            start = options.start || 0;
-            end = options.end || total_length;
-            if (end > total_length) {
-              end = total_length;
-            }
+        if (start < 0 || end < 0) {
+          throw new jIO.util.jIOError("_start and _end must be positive",
+                                      400);
+        }
+        if (start > end) {
+          throw new jIO.util.jIOError("_start is greater than _end",
+                                      400);
+        }
 
-            if (start < 0 || end < 0) {
-              throw new jIO.util.jIOError("_start and _end must be positive",
-                400);
-            }
-            if (start > end) {
-              throw new jIO.util.jIOError("_start is greater than _end",
-                400);
-            }
+        start_index = Math.floor(start / UNITE);
+        end_index =  Math.floor(end / UNITE);
+        if (end % UNITE === 0) {
+          end_index -= 1;
+        }
 
-            start_index = Math.floor(start / UNITE);
-            end_index =  Math.floor(end / UNITE);
-            if (end % UNITE === 0) {
-              end_index -= 1;
-            }
-
-            for (i = start_index; i <= end_index; i += 1) {
-              promise_list.push(
-                handleGet(store.get(buildKeyPath([id,
-                  name, i])))
-              );
-            }
-            resolve(RSVP.all(promise_list));
-          };
-        });
+        for (i = start_index; i <= end_index; i += 1) {
+          promise_list.push(
+            handleGet(store.get(buildKeyPath([id,
+                                name, i])))
+          );
+        }
+        return RSVP.all(promise_list);
       })
       .push(function (result_list) {
         var array_buffer_list = [],
@@ -427,12 +413,10 @@
         }
 
         // Remove previous attachment
-        transaction = openTransaction(db, ["attachment", "blob"],
-          "readwrite", false);
+        transaction = openTransaction(db, ["attachment", "blob"], "readwrite");
         return removeAttachment(transaction, id, name);
       })
       .push(function () {
-        transaction = openTransaction(db, ["attachment", "blob"], "readwrite");
 
         var promise_list = [
             handleRequest(transaction.objectStore("attachment").put({
