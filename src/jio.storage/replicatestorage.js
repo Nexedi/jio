@@ -227,7 +227,8 @@
     }
 
     function checkSignatureDifference(queue, source, destination, id,
-                                      conflict_force, conflict_ignore,
+                                      conflict_force, conflict_revert,
+                                      conflict_ignore,
                                       is_creation, is_modification,
                                       getMethod, options) {
       queue
@@ -273,7 +274,12 @@
                   if (conflict_ignore === true) {
                     return;
                   }
-                  if (conflict_force !== true) {
+                  if (conflict_revert === true) {
+                    return propagateModification(destination, source,
+                                                 remote_doc,
+                                                 remote_hash, id);
+                  }
+                  if (conflict_force === false) {
                     throw new jIO.util.jIOError("Conflict on '" + id + "': " +
                                                 stringify(doc) + " !== " +
                                                 stringify(remote_doc),
@@ -307,7 +313,8 @@
 
     function checkBulkSignatureDifference(queue, source, destination, id_list,
                                           document_status_list, options,
-                                          conflict_force, conflict_ignore) {
+                                          conflict_force, conflict_revert,
+                                          conflict_ignore) {
       queue
         .push(function () {
           return source.bulk(id_list);
@@ -328,7 +335,8 @@
           for (i = 0; i < result_list.length; i += 1) {
             checkSignatureDifference(sub_queue, source, destination,
                                id_list[i].parameter_list[0],
-                               conflict_force, conflict_ignore,
+                               conflict_force, conflict_revert,
+                               conflict_ignore,
                                document_status_list[i].is_creation,
                                document_status_list[i].is_modification,
                                getResult(i), options);
@@ -391,6 +399,7 @@
                 } else {
                   checkSignatureDifference(queue, source, destination, key,
                                            options.conflict_force,
+                                           options.conflict_revert,
                                            options.conflict_ignore,
                                            is_creation, is_modification,
                                            source.get.bind(source),
@@ -413,6 +422,7 @@
                                          document_list, document_status_list,
                                          options,
                                          options.conflict_force,
+                                         options.conflict_revert,
                                          options.conflict_ignore);
           }
         });
@@ -464,10 +474,10 @@
               use_post: context._use_remote_post,
               conflict_force: (context._conflict_handling ===
                                CONFLICT_KEEP_LOCAL),
-              conflict_ignore: ((context._conflict_handling ===
-                                 CONFLICT_CONTINUE) ||
-                                (context._conflict_handling ===
-                                 CONFLICT_KEEP_REMOTE)),
+              conflict_revert: (context._conflict_handling ===
+                                CONFLICT_KEEP_REMOTE),
+              conflict_ignore: (context._conflict_handling ===
+                                CONFLICT_CONTINUE),
               check_modification: context._check_local_modification,
               check_creation: context._check_local_creation,
               check_deletion: context._check_local_deletion
@@ -494,6 +504,8 @@
               use_bulk_get: use_bulk_get,
               conflict_force: (context._conflict_handling ===
                                CONFLICT_KEEP_REMOTE),
+              conflict_revert: (context._conflict_handling ===
+                                CONFLICT_KEEP_LOCAL),
               conflict_ignore: (context._conflict_handling ===
                                 CONFLICT_CONTINUE),
               check_modification: context._check_remote_modification,
