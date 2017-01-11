@@ -189,7 +189,104 @@
         });
     }
 
-    function checkLocalDeletion(queue, destination, id, source) {
+    function propagateDeletion(destination, id) {
+      return destination.remove(id)
+        .push(function () {
+          return context._signature_sub_storage.remove(id);
+        })
+        .push(function () {
+          skip_document_dict[id] = null;
+        });
+    }
+
+    function checkAndPropagate(status_hash, local_hash, doc,
+                               source, destination, id,
+                               conflict_force, conflict_revert,
+                               conflict_ignore,
+                               options) {
+      return destination.get(id)
+        .push(function (remote_doc) {
+          return [remote_doc, generateHash(stringify(remote_doc))];
+        }, function (error) {
+          if ((error instanceof jIO.util.jIOError) &&
+              (error.status_code === 404)) {
+            return [null, null];
+          }
+          throw error;
+        })
+        .push(function (remote_list) {
+          var remote_doc = remote_list[0],
+            remote_hash = remote_list[1];
+
+          if (local_hash === remote_hash) {
+            // Same modifications on both side
+            if (local_hash === null) {
+              // Deleted on both side, drop signature
+              return context._signature_sub_storage.remove(id)
+                .push(function () {
+                  skip_document_dict[id] = null;
+                });
+            }
+
+            return context._signature_sub_storage.put(id, {
+              "hash": local_hash
+            })
+              .push(function () {
+                skip_document_dict[id] = null;
+              });
+          }
+
+          if ((remote_hash === status_hash) || (conflict_force === true)) {
+            // Modified only locally. No conflict or force
+            if (local_hash === null) {
+              // Deleted locally
+              return propagateDeletion(destination, id);
+            }
+            return propagateModification(source, destination, doc,
+                                         local_hash, id,
+                                         {use_post: ((options.use_post) &&
+                                                     (remote_hash === null))});
+          }
+
+          // Conflict cases
+          if (conflict_ignore === true) {
+            return;
+          }
+
+          if ((conflict_revert === true) || (local_hash === null)) {
+            // Automatically resolve conflict or force revert
+            if (remote_hash === null) {
+              // Deleted remotely
+              return propagateDeletion(source, id);
+            }
+            return propagateModification(
+              destination,
+              source,
+              remote_doc,
+              remote_hash,
+              id,
+              {use_post: ((options.use_revert_post) &&
+                          (local_hash === null))}
+            );
+          }
+
+          // Minimize conflict if it can be resolved
+          if (remote_hash === null) {
+            // Copy remote modification remotely
+            return propagateModification(source, destination, doc,
+                                         local_hash, id,
+                                         {use_post: options.use_post});
+          }
+          throw new jIO.util.jIOError("Conflict on '" + id + "': " +
+                                      stringify(doc || '') + " !== " +
+                                      stringify(remote_doc || ''),
+                                      409);
+        });
+    }
+
+    function checkLocalDeletion(queue, destination, id, source,
+                                conflict_force, conflict_revert,
+                                conflict_ignore, options) {
       var status_hash;
       queue
         .push(function () {
@@ -197,32 +294,11 @@
         })
         .push(function (result) {
           status_hash = result.hash;
-          return destination.get(id)
-            .push(function (doc) {
-              var remote_hash = generateHash(stringify(doc));
-              if (remote_hash === status_hash) {
-                return destination.remove(id)
-                  .push(function () {
-                    return context._signature_sub_storage.remove(id);
-                  })
-                  .push(function () {
-                    skip_document_dict[id] = null;
-                  });
-              }
-              // Modifications on remote side
-              // Push them locally
-              return propagateModification(destination, source, doc,
-                                           remote_hash, id);
-            }, function (error) {
-              if ((error instanceof jIO.util.jIOError) &&
-                  (error.status_code === 404)) {
-                return context._signature_sub_storage.remove(id)
-                  .push(function () {
-                    skip_document_dict[id] = null;
-                  });
-              }
-              throw error;
-            });
+          return checkAndPropagate(status_hash, null, null,
+                                   source, destination, id,
+                                   conflict_force, conflict_revert,
+                                   conflict_ignore,
+                                   options);
         });
     }
 
@@ -237,7 +313,7 @@
           if (is_creation === true) {
             return RSVP.all([
               getMethod(id),
-              {hash: undefined}
+              {hash: null}
             ]);
           }
           if (is_modification === true) {
@@ -256,57 +332,11 @@
             status_hash = result_list[1].hash;
 
           if (local_hash !== status_hash) {
-            // Local modifications
-            return destination.get(id)
-              .push(function (remote_doc) {
-                var remote_hash = generateHash(stringify(remote_doc));
-                if (remote_hash !== status_hash) {
-                  // Modifications on both sides
-                  if (local_hash === remote_hash) {
-                    // Same modifications on both side \o/
-                    return context._signature_sub_storage.put(id, {
-                      "hash": local_hash
-                    })
-                      .push(function () {
-                        skip_document_dict[id] = null;
-                      });
-                  }
-                  if (conflict_ignore === true) {
-                    return;
-                  }
-                  if (conflict_revert === true) {
-                    return propagateModification(destination, source,
-                                                 remote_doc,
-                                                 remote_hash, id);
-                  }
-                  if (conflict_force === false) {
-                    throw new jIO.util.jIOError("Conflict on '" + id + "': " +
-                                                stringify(doc) + " !== " +
-                                                stringify(remote_doc),
-                                                409);
-                  }
-                }
-                return propagateModification(source, destination, doc,
-                                             local_hash, id);
-              }, function (error) {
-                var use_post;
-                if ((error instanceof jIO.util.jIOError) &&
-                    (error.status_code === 404)) {
-                  if (is_creation) {
-                    // Remote document does not exists, create it following
-                    // provided options
-                    use_post = options.use_post;
-                  } else {
-                    // Remote document has been erased, put it to save
-                    // modification
-                    use_post = false;
-                  }
-                  return propagateModification(source, destination, doc,
-                                               local_hash, id,
-                                               {use_post: use_post});
-                }
-                throw error;
-              });
+            return checkAndPropagate(status_hash, local_hash, doc,
+                                     source, destination, id,
+                                     conflict_force, conflict_revert,
+                                     conflict_ignore,
+                                     options);
           }
         });
     }
@@ -349,6 +379,9 @@
       var queue = new RSVP.Queue();
       if (!options.hasOwnProperty("use_post")) {
         options.use_post = false;
+      }
+      if (!options.hasOwnProperty("use_revert_post")) {
+        options.use_revert_post = false;
       }
       return queue
         .push(function () {
@@ -412,7 +445,11 @@
             for (key in signature_dict) {
               if (signature_dict.hasOwnProperty(key)) {
                 if (!local_dict.hasOwnProperty(key)) {
-                  checkLocalDeletion(queue, destination, key, source);
+                  checkLocalDeletion(queue, destination, key, source,
+                                     options.conflict_force,
+                                     options.conflict_revert,
+                                     options.conflict_ignore,
+                                     options);
                 }
               }
             }
@@ -502,6 +539,7 @@
           return pushStorage(context._remote_sub_storage,
                              context._local_sub_storage, {
               use_bulk_get: use_bulk_get,
+              use_revert_post: context._use_remote_post,
               conflict_force: (context._conflict_handling ===
                                CONFLICT_KEEP_REMOTE),
               conflict_revert: (context._conflict_handling ===
