@@ -421,7 +421,7 @@
     };
 
     Storage2713.prototype.buildQuery = function (option) {
-      equal(option.query, 'otherId: "42"', "allDocs 2713 called");
+      equal(option.query, 'otherId:  "42"', "allDocs 2713 called");
       return [];
     };
 
@@ -580,7 +580,7 @@
   });
 
   /////////////////////////////////////////////////////////////////
-  // mappingStorage.remove 
+  // mappingStorage.post 
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.post");
 
@@ -615,7 +615,7 @@
       });
   });
 
-  test("post with id mapped", function () {
+  test("post with id mapped, no id in doc", function () {
     stop();
     expect(2);
 
@@ -635,6 +635,65 @@
       .push(undefined, function (error) {
         equal(error.message, "post is not supported with id mapped");
         equal(error.status_code, 400);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("post with id mapped and in doc", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      map_id: ["equalSubProperty", "otherId"],
+      sub_storage: {
+        type: "mappingstorage2713"
+      }
+    });
+
+    Storage2713.prototype.post = function (doc) {
+      deepEqual(doc, {"title": "foo", "otherId": "bar"}, "post 2713 called");
+      return "42";
+    };
+
+    jio.post({"title": "foo", "otherId": "bar"})
+      .push(function (result) {
+        equal(result, "42");
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("post with sub_id mapped and in doc", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      mapping_dict: {"otherId": ["equalSubId"]},
+      sub_storage: {
+        type: "mappingstorage2713"
+      }
+    });
+
+    Storage2713.prototype.put = function (id, doc) {
+      deepEqual(doc, {"title": "foo"}, "put 2713 called");
+      equal(id, "bar", "put 2713 called");
+      return "bar";
+    };
+
+    jio.post({"title": "foo", "otherId": "bar"})
+      .push(function (result) {
+        equal(result, "bar");
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
       })
       .always(function () {
         start();
@@ -1150,7 +1209,7 @@
                   "doc": {}
                 }
               ],
-              "total_rows": 1
+              "total_rows": 2
             }
           }, "allDocs check");
       })
