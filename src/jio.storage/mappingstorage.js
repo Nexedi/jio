@@ -260,11 +260,16 @@
   };
 
   MappingStorage.prototype.post = function (doc) {
-    if (!this._id_is_mapped) {
-      return this._sub_storage.post(mapToSubstorageDocument(
-        this,
-        doc
-      ));
+    var sub_doc = mapToSubstorageDocument(
+      this,
+      doc
+    ),
+      id = doc[this._property_for_sub_id];
+    if (this._property_for_sub_id && id !== undefined) {
+      return this._sub_storage.put(id, sub_doc);
+    }
+    if (!this._id_mapped || doc[this._id_mapped] !== undefined) {
+      return this._sub_storage.post(sub_doc);
     }
     throw new jIO.util.jIOError(
       "post is not supported with id mapped",
