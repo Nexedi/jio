@@ -3658,7 +3658,10 @@
     Storage200Bulk.prototype.put = function () {
       return this._sub_storage.put.apply(this._sub_storage, arguments);
     };
-    Storage200Bulk.prototype.hasCapacity = function () {
+    Storage200Bulk.prototype.hasCapacity = function (name) {
+      if (name === "bulk_get") {
+        return true;
+      }
       return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
     };
     Storage200Bulk.prototype.buildQuery = function () {
@@ -3738,7 +3741,10 @@
     Storage200Bulk.prototype.put = function () {
       return this._sub_storage.put.apply(this._sub_storage, arguments);
     };
-    Storage200Bulk.prototype.hasCapacity = function () {
+    Storage200Bulk.prototype.hasCapacity = function (name) {
+      if (name === "bulk_get") {
+        return true;
+      }
       return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
     };
     Storage200Bulk.prototype.buildQuery = function () {
@@ -3809,4 +3815,114 @@
       });
   });
 
+  test("Donot bulk if substorage don't implement it", function () {
+    stop();
+    expect(2);
+
+    var id,
+      post_id = "123456789",
+      context = this;
+
+    function SubStorage200Bulk() {
+      return;
+    }
+
+    function Storage200Bulk(spec) {
+      this._sub_storage = jIO.createJIO(spec.sub_storage);
+    }
+
+    Storage200Bulk.prototype.bulk = function (args) {
+      deepEqual(args, [{
+        method: "get",
+        parameter_list: [post_id]
+      }]);
+      return this._sub_storage.bulk(args);
+    };
+    Storage200Bulk.prototype.get = function () {
+      return this._sub_storage.get.apply(this._sub_storage, arguments);
+    };
+    Storage200Bulk.prototype.post = function (param) {
+      return this.put(post_id, param);
+    };
+    Storage200Bulk.prototype.put = function () {
+      return this._sub_storage.put.apply(this._sub_storage, arguments);
+    };
+    Storage200Bulk.prototype.hasCapacity = function () {
+      return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+    };
+
+    Storage200Bulk.prototype.buildQuery = function () {
+      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    };
+
+    jIO.addStorage(
+      'replicatestorage200nobulk',
+      Storage200Bulk
+    );
+
+    SubStorage200Bulk.prototype.get = function () {
+      return {title: "bar"};
+    };
+    SubStorage200Bulk.prototype.post = function (param) {
+      return this.put(post_id, param);
+    };
+    SubStorage200Bulk.prototype.put = function () {
+      return post_id;
+    };
+    SubStorage200Bulk.prototype.hasCapacity = function (name) {
+      if (name === "bulk_get") {
+        return false;
+      }
+      return true;
+    };
+    SubStorage200Bulk.prototype.buildQuery = function () {
+      return [{id: "123456789", value: {"title": "bar"}}];
+    };
+
+    jIO.addStorage(
+      'replicatesubstorage200nobulk',
+      SubStorage200Bulk
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "memory"
+      },
+      remote_sub_storage: {
+        type: "replicatestorage200nobulk",
+        sub_storage: {
+          type: "replicatesubstorage200nobulk"
+        }
+      }
+    });
+
+    context.jio.__storage._remote_sub_storage.post({"title": "bar"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          title: "bar"
+        });
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
 }(jIO, QUnit));
