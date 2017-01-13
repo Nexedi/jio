@@ -479,7 +479,7 @@
         // Keep it like this until the bulk API is stabilized
         var use_bulk_get = false;
         try {
-          use_bulk_get = context._remote_sub_storage.hasCapacity("bulk");
+          use_bulk_get = context._remote_sub_storage.hasCapacity("allow_bulk");
         } catch (error) {
           if (!((error instanceof jIO.util.jIOError) &&
                (error.status_code === 501))) {
