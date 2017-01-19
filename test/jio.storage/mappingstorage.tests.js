@@ -46,9 +46,9 @@
       type: "mapping",
       map_all_property: false,
       query: {"query": 'foo: "bar"'},
-      attachment_mapping_dict: {"foo": {"get": "bar"}},
-      mapping_dict: { "bar": ["equalSubProperty", "foo"]},
-      map_id: ["equalSubProperty", "otherId"],
+      attachment: {"foo": {"get": "bar"}},
+      property: { "bar": ["equalSubProperty", "foo"]},
+      id: ["equalSubProperty", "otherId"],
       sub_storage: {
         type: "mappingstorage2713"
       }
@@ -71,13 +71,13 @@
   // mappingStorage.get 
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.get");
-  test("get called substorage get", function () {
+  test("called substorage get", function () {
     stop();
     expect(2);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      mapping_dict: {"title": ["equalSubProperty", "title"]},
+      property: {"title": ["equalSubProperty", "title"]},
       sub_storage: {
         type: "mappingstorage2713"
       }
@@ -102,89 +102,14 @@
       });
   });
 
-  test("get with id mapped", function () {
-    stop();
-    expect(2);
-
-    var jio = jIO.createJIO({
-      type: "mapping",
-      mapping_dict: {"title": ["equalSubId"]},
-      sub_storage: {
-        type: "mappingstorage2713"
-      }
-    });
-
-    Storage2713.prototype.get = function (id) {
-      equal(id, "bar", "get 2713 called");
-      return {};
-    };
-
-    jio.get("bar")
-      .push(function (result) {
-        deepEqual(result, {
-          "title": "bar"
-        });
-      }).push(undefined, function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("get with id and props mapped", function () {
+  test("with query and id equalSubProperty", function () {
     stop();
     expect(3);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
-      mapping_dict: {
-        "title": ["equalSubProperty", "otherTitle"]
-      },
-      sub_storage: {
-        type: "mappingstorage2713"
-      }
-    });
-
-    Storage2713.prototype.hasCapacity = function () {
-      return true;
-    };
-
-    Storage2713.prototype.buildQuery = function (options) {
-      equal(options.query, 'otherId:  "42"', "allDoc 2713 called");
-      return [{id: "2713"}];
-    };
-
-    Storage2713.prototype.get = function (id) {
-      equal(id, "2713", "get 2713 called");
-      return {"otherTitle": "foo"};
-    };
-
-    jio.get("42")
-      .push(function (result) {
-        deepEqual(result, {
-          "title": "foo"
-        });
-      }).push(undefined, function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("get with id mapped and query", function () {
-    stop();
-    expect(3);
-
-    var jio = jIO.createJIO({
-      type: "mapping",
+      id: ["equalSubProperty", 'otherId'],
       query: {"query": 'otherTitle: "foo"'},
-      map_id: ["equalSubProperty", "otherId"],
-      mapping_dict: {
-        "title": ["equalSubProperty", "otherTitle"]
-      },
       sub_storage: {
         type: "mappingstorage2713"
       }
@@ -205,7 +130,7 @@
 
     Storage2713.prototype.get = function (id) {
       equal(id, "2713", "get 2713 called");
-      return {"otherTitle": "foo"};
+      return {"title": "foo"};
     };
 
     jio.get("42")
@@ -221,17 +146,13 @@
       });
   });
 
-  test("get with not map_all_property", function () {
+  test("with id equalSubProperty", function () {
     stop();
     expect(3);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      map_all_property: false,
-      map_id: ["equalSubProperty", "otherId"],
-      mapping_dict: {
-        "title": ["equalSubProperty", "otherTitle"]
-      },
+      id: ["equalSubProperty", "otherId"],
       sub_storage: {
         type: "mappingstorage2713"
       }
@@ -242,17 +163,13 @@
     };
 
     Storage2713.prototype.buildQuery = function (options) {
-      equal(
-        options.query,
-        'otherId:  "42"',
-        "allDoc 2713 called"
-      );
+      equal(options.query, 'otherId:  "42"', "allDoc 2713 called");
       return [{id: "2713"}];
     };
 
     Storage2713.prototype.get = function (id) {
       equal(id, "2713", "get 2713 called");
-      return {"otherTitle": "foo", "foo": "bar"};
+      return {"title": "foo"};
     };
 
     jio.get("42")
@@ -268,13 +185,13 @@
       });
   });
 
-  test("get with props equal", function () {
+  test("with prop equalSubProperty", function () {
     stop();
     expect(2);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      mapping_dict: {
+      property: {
         "title": ["equalSubProperty", "otherTitle"]
       },
       sub_storage: {
@@ -300,13 +217,44 @@
       });
   });
 
-  test("get with ignore", function () {
+  test("with prop equalSubId", function () {
     stop();
     expect(2);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      mapping_dict: {
+      property: {"title": ["equalSubId"]},
+      sub_storage: {
+        type: "mappingstorage2713"
+      }
+    });
+
+    Storage2713.prototype.get = function (id) {
+      equal(id, "bar", "get 2713 called");
+      return {};
+    };
+
+    jio.get("bar")
+      .push(function (result) {
+        deepEqual(result, {
+          "title": "bar"
+        });
+      }).push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+
+  test("with prop ignore", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      property: {
         "title": ["ignore"]
       },
       sub_storage: {
@@ -337,13 +285,13 @@
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.put");
 
-  test("put with substorage put", function () {
+  test("substorage put called", function () {
     stop();
     expect(3);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      mapping_dict: {
+      property: {
         "title": ["equalSubProperty", "title"]
       },
       sub_storage: {
@@ -369,46 +317,13 @@
       });
   });
 
-  test("put with default values", function () {
+  test("with id equalSubProperty", function () {
     stop();
     expect(3);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      mapping_dict: {"title": ["equalValue", "foobar"]},
-      sub_storage: {
-        type: "mappingstorage2713"
-      }
-    });
-
-    Storage2713.prototype.put = function (id, param) {
-      equal(id, "bar", "put 2713 called");
-      deepEqual(param, {"title": "foobar"}, "put 2713 called");
-      return id;
-    };
-
-    jio.put("bar", {})
-      .push(function (result) {
-        equal(result, "bar");
-      })
-      .push(undefined, function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("put with id and prop mapped", function () {
-    stop();
-    expect(3);
-
-    var jio = jIO.createJIO({
-      type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
-      mapping_dict: {
-        "title": ["equalSubProperty", "otherTitle"]
-      },
+      id: ["equalSubProperty", "otherId"],
       sub_storage: {
         type: "mappingstorage2713"
       }
@@ -416,7 +331,7 @@
 
     Storage2713.prototype.post = function (doc) {
       deepEqual(doc,
-        {"otherId": "42", "otherTitle": "foo"}, "post 2713 called");
+        {"otherId": "42", "title": "foo"}, "post 2713 called");
       return "bar";
     };
 
@@ -441,14 +356,14 @@
       });
   });
 
-  test("put with id mapped", function () {
+  test("with id equalSubProperty and prop equalSubId", function () {
     stop();
     expect(3);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
-      mapping_dict: {
+      id: ["equalSubProperty", "otherId"],
+      property: {
         "title": ["equalSubId"]
       },
       sub_storage: {
@@ -475,31 +390,87 @@
       });
   });
 
-  test("put with no map_all_property", function () {
+  test("with prop equalSubId", function () {
     stop();
     expect(3);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      map_all_property: false,
-      mapping_dict: {
-        "title": ["equalSubProperty", "title"]
-      },
+      property: {"title": ["equalSubId"]},
       sub_storage: {
         type: "mappingstorage2713"
       }
     });
 
-    Storage2713.prototype.put = function (id, doc) {
-      deepEqual(doc,
-        {"title": "foo"}, "post 2713 called");
-      equal(id, "42", "put 2713 called");
+    Storage2713.prototype.put = function (id, param) {
+      equal(id, "2713", "put 2713 called");
+      deepEqual(param, {"foo": "bar"}, "put 2713 called");
       return id;
     };
 
-    jio.put("42", {"title": "foo", "smth": "bar", "smth2": "bar2"})
+    jio.put("bar", {"title": "2713", "foo": "bar"})
       .push(function (result) {
-        equal(result, "42");
+        equal(result, "bar");
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("with prop equalSubProperty", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      property: {"title": ["equalSubProperty", "subTitle"]},
+      sub_storage: {
+        type: "mappingstorage2713"
+      }
+    });
+
+    Storage2713.prototype.put = function (id, param) {
+      equal(id, "bar", "put 2713 called");
+      deepEqual(param, {"subTitle": "foo"}, "put 2713 called");
+      return id;
+    };
+
+    jio.put("bar", {"title": "foo"})
+      .push(function (result) {
+        equal(result, "bar");
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("with prop equalValues", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      property: {"title": ["equalValue", "foobar"]},
+      sub_storage: {
+        type: "mappingstorage2713"
+      }
+    });
+
+    Storage2713.prototype.put = function (id, param) {
+      equal(id, "bar", "put 2713 called");
+      deepEqual(param, {"title": "foobar"}, "put 2713 called");
+      return id;
+    };
+
+    jio.put("bar", {})
+      .push(function (result) {
+        equal(result, "bar");
       })
       .push(undefined, function (error) {
         ok(false, error);
@@ -514,7 +485,7 @@
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.remove");
 
-  test("remove with substorage remove", function () {
+  test("with substorage remove", function () {
     stop();
     expect(2);
 
@@ -542,13 +513,13 @@
       });
   });
 
-  test("remove with id mapped", function () {
+  test("with id mapped", function () {
     stop();
     expect(3);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
+      id: ["equalSubProperty", "otherId"],
       sub_storage: {
         type: "mappingstorage2713"
       }
@@ -584,44 +555,13 @@
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.post");
 
-  test("post with mapped property", function () {
+  test("with id equalSubProperty, no id in doc", function () {
     stop();
     expect(2);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      mapping_dict: {
-        "title": ["equalSubProperty", "otherTitle"]
-      },
-      sub_storage: {
-        type: "mappingstorage2713"
-      }
-    });
-
-    Storage2713.prototype.post = function (doc) {
-      deepEqual(doc, {"otherTitle": "foo"}, "remove 2713 called");
-      return "42";
-    };
-
-    jio.post({"title": "foo"})
-      .push(function (result) {
-        equal(result, "42");
-      })
-      .push(undefined, function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("post with id mapped, no id in doc", function () {
-    stop();
-    expect(2);
-
-    var jio = jIO.createJIO({
-      type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
+      id: ["equalSubProperty", "otherId"],
       sub_storage: {
         type: "mappingstorage2713"
       }
@@ -641,13 +581,13 @@
       });
   });
 
-  test("post with id mapped and in doc", function () {
+  test("with id equalSubProperty and id in doc", function () {
     stop();
     expect(2);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
+      id: ["equalSubProperty", "otherId"],
       sub_storage: {
         type: "mappingstorage2713"
       }
@@ -670,13 +610,13 @@
       });
   });
 
-  test("post with sub_id mapped and in doc", function () {
+  test("with equalSubId mapped and id in doc", function () {
     stop();
     expect(3);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      mapping_dict: {"otherId": ["equalSubId"]},
+      property: {"otherId": ["equalSubId"]},
       sub_storage: {
         type: "mappingstorage2713"
       }
@@ -704,7 +644,7 @@
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.putAttachment");
 
-  test("putAttachment use sub_storage one's", function () {
+  test("sub_storage putAttachment called", function () {
     stop();
     expect(4);
     var jio = jIO.createJIO({
@@ -734,13 +674,13 @@
       });
   });
 
-  test("putAttachment with UriTemplate", function () {
+  test("with UriTemplate", function () {
     stop();
     expect(4);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      attachment_mapping_dict: {
+      attachment: {
         "2713": {"put": {"uri_template": "www.2713.foo/{id}"}}
       },
       sub_storage: {
@@ -768,13 +708,13 @@
       });
   });
 
-  test("putAttachment with UriTemplate and id mapped", function () {
+  test("with UriTemplate and id equalSubProperty", function () {
     stop();
     expect(5);
     var jio = jIO.createJIO({
       type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
-      attachment_mapping_dict: {
+      id: ["equalSubProperty", "otherId"],
+      attachment: {
         "2713": {"put": {"uri_template": "www.2713.foo/{id}"}}
       },
       sub_storage: {
@@ -815,7 +755,7 @@
   // mappingStorage.getAttachment
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.getAttachment");
-  test("getAttachment use sub_storage one's", function () {
+  test("sub_storage getAttachment called", function () {
     stop();
     expect(3);
     var jio = jIO.createJIO({
@@ -843,13 +783,13 @@
       });
   });
 
-  test("getAttachment using UriTemplate", function () {
+  test("with UriTemplate", function () {
     stop();
     expect(3);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      attachment_mapping_dict: {
+      attachment: {
         "2713": {"get": {"uri_template": "www.2713/{id}/ok.com"}}
       },
       sub_storage: {
@@ -875,14 +815,14 @@
       });
   });
 
-  test("getAttachment with UriTemplate and id mapped", function () {
+  test("with UriTemplate and id mapped", function () {
     stop();
     expect(4);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
-      attachment_mapping_dict: {
+      id: ["equalSubProperty", "otherId"],
+      attachment: {
         "2713": {"get": {"uri_template": "www.2713.foo/{id}"}}
       },
       sub_storage: {
@@ -922,7 +862,7 @@
   // mappingStorage.removeAttachment
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.removeAttachment");
-  test("removeAttachment use sub_storage one's", function () {
+  test("sub_storage removeAttachment called", function () {
     stop();
     expect(3);
 
@@ -951,13 +891,13 @@
       });
   });
 
-  test("removeAttachment use UriTemplate", function () {
+  test("with use UriTemplate", function () {
     stop();
     expect(3);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      attachment_mapping_dict: {
+      attachment: {
         "2713": {"remove": {"uri_template": "www.2713/{id}.bar"}}
       },
       sub_storage: {
@@ -983,14 +923,14 @@
       });
   });
 
-  test("removeAttachment with UriTemplate and id mapped", function () {
+  test("with UriTemplate and id equalSubProperty", function () {
     stop();
     expect(4);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
-      attachment_mapping_dict: {
+      id: ["equalSubProperty", "otherId"],
+      attachment: {
         "2713": {"remove": {"uri_template": "www.2713.foo/{id}"}}
       },
       sub_storage: {
@@ -1030,7 +970,7 @@
   // mappingStorage.allAttachments
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.allAttachments");
-  test("allAttachments use sub_storage one's", function () {
+  test("sub_storage allAttachments called", function () {
     stop();
     expect(2);
 
@@ -1058,13 +998,13 @@
       });
   });
 
-  test("allAttachments use UriTemplate", function () {
+  test("with UriTemplate", function () {
     stop();
     expect(2);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      attachment_mapping_dict: {
+      attachment: {
         "2713": {"get": {"uri_template": "www.2713.bar"}}
       },
       sub_storage: {
@@ -1093,7 +1033,7 @@
   // mappingStorage.allDocs
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.buildQuery");
-  test("allDocs with complex query, with map_all_property", function () {
+  test("with complex query", function () {
     stop();
     expect(1);
 
@@ -1144,14 +1084,14 @@
       });
   });
 
-  test("allDocs with complex query, id and prop mapped", function () {
+  test("with complex query, id and prop equalSubProperty", function () {
     stop();
     expect(1);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
-      mapping_dict: {
+      id: ["equalSubProperty", "otherId"],
+      property: {
         "title": ["equalSubProperty", "otherTitle"],
         "smth": ["equalSubProperty", "otherSmth"]
       },
@@ -1221,14 +1161,14 @@
       });
   });
 
-  test("allDocs without option, id and prop mapped", function () {
+  test("without option, id and prop equalSubProperty", function () {
     stop();
     expect(1);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
-      mapping_dict: {
+      id: ["equalSubProperty", "otherId"],
+      property: {
         "title": ["equalSubProperty", "otherTitle"]
       },
       sub_storage: {
@@ -1273,14 +1213,14 @@
       });
   });
 
-  test("allDocs id and prop mapped and map_all_property", function () {
+  test("with id and prop equalSubProperty", function () {
     stop();
     expect(1);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
-      mapping_dict: {
+      id: ["equalSubProperty", "otherId"],
+      property: {
         "title": ["equalSubProperty", "otherTitle"]
       },
       sub_storage: {
@@ -1328,15 +1268,15 @@
       });
   });
 
-  test("allDocs id and prop mapped and query", function () {
+  test("with id and prop equalSubProperty and query", function () {
     stop();
     expect(1);
 
     var jio = jIO.createJIO({
       type: "mapping",
       query: {"query": 'otherId: "42"'},
-      map_id: ["equalSubProperty", "otherId"],
-      mapping_dict: {
+      id: ["equalSubProperty", "otherId"],
+      property: {
         "title": ["equalSubProperty", "otherTitle"]
       },
       sub_storage: {
@@ -1388,14 +1328,14 @@
   // mappingStorage.bulk
   /////////////////////////////////////////////////////////////////
   module("mappingstorage.bulk");
-  test("bulk with map_all_property", function () {
+  test("with id and prop equalSubProperty", function () {
     stop();
     expect(2);
 
     var jio = jIO.createJIO({
       type: "mapping",
-      map_id: ["equalSubProperty", "otherId"],
-      mapping_dict: {
+      id: ["equalSubProperty", "otherId"],
+      property: {
         "title": ["equalSubProperty", "otherTitle"]
       },
       sub_storage: {
@@ -1475,7 +1415,7 @@
   /////////////////////////////////////////////////////////////////
   module("mappingStorage.repair");
 
-  test("repair called substorage repair", function () {
+  test("substorage repair called", function () {
     stop();
     expect(2);
 
@@ -1484,7 +1424,7 @@
       sub_storage: {
         type: "mappingstorage2713"
       },
-      mapping_dict: {
+      property: {
         "title": ["equalSubProperty", "title"]
       }
     });
