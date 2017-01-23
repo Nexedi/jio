@@ -7,6 +7,9 @@
 
   function getSubIdEqualSubProperty(storage, value, key) {
     var query;
+    if (storage._no_sub_query_id) {
+      throw new jIO.util.jIOError('no sub query id active', 404);
+    }
     query = new SimpleQuery({
       key: key,
       value: value,
@@ -88,11 +91,16 @@
       }
     },
     "equalSubId": {
-      "mapToSubProperty": function () {
-        return false;
+      "mapToSubProperty": function (property, sub_doc, doc) {
+        sub_doc[property] = doc[property];
+        return property;
       },
       "mapToMainProperty": function (property, sub_doc, doc, args, sub_id) {
-        doc[property] = sub_id;
+        if (sub_id === undefined && sub_doc.hasOwnProperty(property)) {
+          doc[property] = sub_doc[property];
+        } else {
+          doc[property] = sub_id;
+        }
         return property;
       },
       "mapToSubId": function (storage, doc, id, args) {
@@ -161,6 +169,7 @@
     this._sub_storage = jIO.createJIO(spec.sub_storage);
     this._map_all_property = spec.map_all_property !== undefined ?
         spec.map_all_property : true;
+    this._no_sub_query_id = spec.no_sub_query_id;
     this._attachment_mapping_dict = spec.attachment || {};
     this._query = spec.query || {};
     this._map_id = spec.id || ["equalSubId"];
