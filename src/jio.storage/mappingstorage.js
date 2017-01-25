@@ -119,6 +119,23 @@
         doc[property] = sub_doc[property];
         return property;
       }
+    },
+    "switchPropertyValue": {
+      "mapToSubProperty": function (property, sub_doc, doc, args) {
+        sub_doc[args[0]] = args[1][doc[property]];
+        return args[0];
+      },
+      "mapToMainProperty": function (property, sub_doc, doc, args) {
+        var subvalue, value = sub_doc[args[0]];
+        for (subvalue in args[1]) {
+          if (args[1].hasOwnProperty(subvalue)) {
+            if (value === args[1][subvalue]) {
+              doc[property] = subvalue;
+              return property;
+            }
+          }
+        }
+      }
     }
   };
   /*jslint unparam: false*/

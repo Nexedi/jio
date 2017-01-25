@@ -280,6 +280,42 @@
       });
   });
 
+  test("with switchPropertyValue", function () {
+    stop();
+    expect(2);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      property: {
+        "title": ["switchPropertyValue", [
+          "subTitle",
+          {"mytitle": "title", "yourtitle": "othertitle"}
+        ]],
+        "subTitle": ["ignore"]
+      },
+      sub_storage: {
+        type: "mappingstorage2713"
+      }
+    });
+
+    Storage2713.prototype.get = function (id) {
+      equal(id, "bar", "get 2713 called");
+      return {"subTitle": "title"};
+    };
+
+    jio.get("bar")
+      .push(function (result) {
+        deepEqual(result, {
+          "title": "mytitle"
+        });
+      }).push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // mappingStorage.put 
   /////////////////////////////////////////////////////////////////
@@ -373,7 +409,7 @@
 
     Storage2713.prototype.put = function (id, doc) {
       deepEqual(doc,
-        {"otherId": "42"}, "post 2713 called");
+        {"otherId": "42", "title": "bar"}, "post 2713 called");
       equal(id, "bar");
       return "bar";
     };
@@ -404,7 +440,7 @@
 
     Storage2713.prototype.put = function (id, param) {
       equal(id, "2713", "put 2713 called");
-      deepEqual(param, {"foo": "bar"}, "put 2713 called");
+      deepEqual(param, {"foo": "bar", "title": "2713"}, "put 2713 called");
       return id;
     };
 
@@ -473,6 +509,39 @@
         equal(result, "bar");
       })
       .push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+  test("with switchPropertyValue", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      property: {
+        "title": ["switchPropertyValue", [
+          "subTitle",
+          {"mytitle": "title", "yourtitle": "othertitle"}
+        ]]
+      },
+      sub_storage: {
+        type: "mappingstorage2713"
+      }
+    });
+
+    Storage2713.prototype.put = function (id, doc) {
+      equal(id, "bar", "put 2713 called");
+      deepEqual(doc, {"subTitle": "title"}, "put 2713 called");
+      return id;
+    };
+
+    jio.put("bar", {"title": "mytitle"})
+      .push(function (result) {
+        equal(result, "bar");
+      }).push(undefined, function (error) {
         ok(false, error);
       })
       .always(function () {
@@ -610,7 +679,7 @@
       });
   });
 
-  test("with equalSubId mapped and id in doc", function () {
+  test("with equalSubId and id in doc", function () {
     stop();
     expect(3);
 
@@ -623,7 +692,7 @@
     });
 
     Storage2713.prototype.put = function (id, doc) {
-      deepEqual(doc, {"title": "foo"}, "put 2713 called");
+      deepEqual(doc, {"title": "foo", "otherId": "bar"}, "put 2713 called");
       equal(id, "bar", "put 2713 called");
       return "bar";
     };
