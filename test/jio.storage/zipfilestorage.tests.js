@@ -16,7 +16,7 @@
       cd zipfile ; zip -r - * | base64 -w 40)
       |sed 's#$#",#' | sed 's#^#"#' ; echo ']')
      zipfile contents:
-      /getid/
+      /get1/
       /id1/
       /id2/
       /id2/attachment1 -- "foo\nbaré\n"
@@ -868,6 +868,44 @@
       .then(function (result) {
         ok(result instanceof Blob, "Data is Blob");
         deepEqual(result.type, "application/zip", "Check mimetype");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // zipFileStorage.allDocs
+  /////////////////////////////////////////////////////////////////
+  module("zipFileStorage.allDocs", {
+    setup: function () {
+      this.jio = jIO.createJIO({
+        type: "zipfile",
+        file: zipfile
+      });
+    }
+  });
+
+  test("get all docs", function () {
+    var object_result = {
+      "data": {
+        "rows": [
+          {"id": "/", "value": {}},
+          {"id": "/get1/", "value": {}},
+          {"id": "/id1/", "value": {}},
+          {"id": "/id2/", "value": {}}
+        ],
+        "total_rows": 4
+      }
+    };
+    stop();
+    expect(1);
+    this.jio.allDocs()
+      .then(function (res) {
+        deepEqual(res, object_result);
       })
       .fail(function (error) {
         ok(false, error);

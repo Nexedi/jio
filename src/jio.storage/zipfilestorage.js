@@ -125,6 +125,26 @@
       });
   };
 
+  ZipFileStorage.prototype.hasCapacity = function (name) {
+    return (name === "list");
+  };
+
+  ZipFileStorage.prototype.buildQuery = function () {
+    return loadZip(this)
+      .push(function (zip) {
+        var dirname,
+          dir_list = [{id: '/', value: {}}];
+        for (dirname in zip.files) {
+          if (zip.files.hasOwnProperty(dirname)) {
+            if (zip.files[dirname].dir) {
+              dir_list.push({id: '/' + dirname, value: {}});
+            }
+          }
+        }
+        return dir_list;
+      });
+  };
+
   ZipFileStorage.prototype.allAttachments = function (id) {
     id = restrictDocumentId(id);
     return loadZip(this)
