@@ -72,7 +72,7 @@ update is executed.
 
    .. code-block:: javascript
 
-     jio_instance.put("myNameCard", {
+     jio_instance.put('myNameCard', {
        email: 'jb@td.com'
       }).then(function (response) {
        // response -> 'myNameCard'
@@ -84,7 +84,7 @@ update is executed.
 
    .. code-block:: javascript
 
-     jio_instance.put(myNameCard, {
+     jio_instance.put('myNameCard', {
        email: 'kyle@td.com',
      }).then(function (response) {
        // response -> 'myNameCard'
