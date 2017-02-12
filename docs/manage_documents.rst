@@ -199,11 +199,13 @@ The following example creates a new jIO in localStorage and then posts a documen
       description : 'Images Compilation'
     })
     .push(undefined, function(err) {
+        // pushes error handler with RSVP.Queue push method
+        // nothing to do with JIO itself
         return alert('Error posting the document metadata');
       });
 
       // post a thumbnail attachment
-    jio_instance.putAttachment('metadatda',
+    jio_instance.putAttachment('metadata',
       'thumbnail',
       new Blob([my_image], {type: 'image/jpeg'})
       ).push(undefined, function(err) {
@@ -211,13 +213,13 @@ The following example creates a new jIO in localStorage and then posts a documen
       });
 
       // post video attachment
-      jio_instance.putAttachment('metadatda',
+      jio_instance.putAttachment('metadata',
         'video',
         new Blob([my_video], {type: 'video/ogg'})
       ).push(undefined, function(err) {
-                return alert('Error attaching video');
-        });
-        alert('Video Stored');
+        return alert('Error attaching video'); 
+      });
+      alert('Video Stored');
 
 indexedDB Storage now contains:
 
