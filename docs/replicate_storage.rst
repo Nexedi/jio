@@ -68,11 +68,11 @@ update is executed.
     });
 
 
-#. 1) Create the namecard on your smartphone:
+  #. Create the namecard on your smartphone:
 
    .. code-block:: javascript
 
-     jio_instance.put("myNameCard", {
+     jio_instance.put('myNameCard', {
        email: 'jb@td.com'
       }).then(function (response) {
        // response -> 'myNameCard'
@@ -80,11 +80,11 @@ update is executed.
 
    This will create the document on your WebDAV and local storage
 
-#. 2) Someone else updates your shared namecard on WebDAV:
+  #. Someone else updates your shared namecard on WebDAV:
 
    .. code-block:: javascript
 
-     jio_instance.put(myNameCard, {
+     jio_instance.put('myNameCard', {
        email: 'kyle@td.com',
      }).then(function (response) {
        // response -> 'myNameCard'
@@ -93,7 +93,7 @@ update is executed.
    Your smartphone is offline, so now you will have one version on
    your smartphone and another version on WebDAV on your PC.
 
-#. 3) Later, your smartphone is online and you modify your email:
+  #. Later, your smartphone is online and you modify your email:
 
    .. code-block:: javascript
 
