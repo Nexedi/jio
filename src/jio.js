@@ -124,6 +124,9 @@
       i,
       value,
       result_list;
+    if (obj === undefined) {
+      return undefined;
+    }
     if (obj.constructor === Object) {
       key_list = Object.keys(obj).sort();
       result_list = [];
@@ -150,6 +153,9 @@
 
   // https://gist.github.com/davoclavo/4424731
   function dataURItoBlob(dataURI) {
+    if (dataURI === 'data:') {
+      return new Blob();
+    }
     // convert base64 to raw binary data held in a string
     var byteString = atob(dataURI.split(',')[1]),
     // separate out the mime component

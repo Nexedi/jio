@@ -1,0 +1,5 @@
+# purpose of placing this file is to allow this folder to
+# accessible for anonymous users inside testnode's apache
+# frontend. 
+# Without this file by automatic unit testing will not work
+Require all granted

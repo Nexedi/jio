@@ -1,6 +1,6 @@
 {
   "name": "jio",
-  "version": "v3.11.0",
+  "version": "v3.13.0",
   "license": "LGPLv3",
   "author": "Nexedi SA",
   "contributors": [
@@ -42,6 +42,8 @@
     "grunt-contrib-copy": "~0.4.1",
     "grunt-contrib-uglify": "0.2.x",
     "grunt-contrib-qunit": "~0.3.0",
+    "qunitjs": "~1.23.1",
+    "qunit-tap": "1.5.0",
     "grunt-contrib-watch": "~0.5.3",
     "grunt-jslint": "~1.0.0",
     "lz-string": "^1.4.4",

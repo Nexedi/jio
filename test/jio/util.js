@@ -20,6 +20,7 @@
           '"2006-01-02T15:04:05.000Z"');
     equal(str({ x: 5, y: 6, z: 7 }), '{"x":5,"y":6,"z":7}');
     equal(str({ z: 7, y: 6, x: 5 }), '{"x":5,"y":6,"z":7}');
+    equal(str({ z: "", y: undefined, x: 5 }), '{"x":5,"z":""}');
     equal(str(Object.create(null, { x: { value: 'x', enumerable: false },
                                     y: { value: 'y', enumerable: true } })),
           '{"y":"y"}');

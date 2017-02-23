@@ -41,7 +41,7 @@ each method, please refer to the documentation):
 
 ```javascript
 // create and store new document
-jio_instance.put({"title": "some title"})
+jio_instance.post({"title": "some title"})
   .then(function (new_id) {
     ...
   });
