@@ -233,6 +233,10 @@ module.exports = function (grunt) {
 //         options: {
 //           sourceMap: "jiodate.min.map"
 //         }
+      },
+      nodejs: {
+        src: "<%= concat.nodejs.dest %>",
+        dest: "dist/nodejs/<%= pkg.name %>-<%= pkg.version %>.min.js"
       }
     },
 
@@ -244,6 +248,12 @@ module.exports = function (grunt) {
         }, {
           src: '<%= uglify.jio.dest %>',
           dest: "dist/<%= pkg.name %>-latest.min.js"
+        }, {
+          src: '<%= uglify.nodejs.src %>',
+          dest: "dist/nodejs/<%= pkg.name %>-latest.js"
+        }, {
+          src: '<%= uglify.nodejs.dest %>',
+          dest: "dist/nodejs/<%= pkg.name %>-latest.min.js"
         }]
       }
     },
