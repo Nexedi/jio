@@ -205,6 +205,7 @@ module.exports = function (grunt) {
           'src/jio.storage/erp5storage.js',
           'src/jio.storage/querystorage.js',
           'src/jio.storage/localstorage.js',
+          'src/jio.storage/mappingstorage.js'
         ],
         dest: 'dist/nodejs/<%= pkg.name %>-<%= pkg.version %>.js'
 //         dest: 'jio.js'
