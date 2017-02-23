@@ -185,6 +185,29 @@ module.exports = function (grunt) {
         ],
         dest: 'dist/<%= pkg.name %>-<%= pkg.version %>.js'
 //         dest: 'jio.js'
+      },
+      nodejs: {
+        // duplicate files are ignored
+        src: [
+
+          // queries
+          'src/queries/parser-begin.js',
+          'src/queries/build/parser.js',
+          'src/queries/parser-end.js',
+          'src/queries/query.js',
+
+          'src/jio.date/*.js',
+
+          'src/jio.js',
+
+          'src/jio.storage/replicatestorage.js',
+          'src/jio.storage/uuidstorage.js',
+          'src/jio.storage/erp5storage.js',
+          'src/jio.storage/querystorage.js',
+          'src/jio.storage/localstorage.js',
+        ],
+        dest: 'dist/nodejs/<%= pkg.name %>-<%= pkg.version %>.js'
+//         dest: 'jio.js'
       }
     },
     uglify: {
