@@ -202,7 +202,9 @@ module.exports = function (grunt) {
 
           'src/jio.storage/replicatestorage.js',
           'src/jio.storage/uuidstorage.js',
+          'src/jio.storage/memorystorage.js',
           'src/jio.storage/erp5storage.js',
+          'src/jio.storage/documentstorage.js',
           'src/jio.storage/querystorage.js',
           'src/jio.storage/localstorage.js',
           'src/jio.storage/mappingstorage.js'
