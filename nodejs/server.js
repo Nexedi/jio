@@ -1,22 +1,42 @@
 // server.js
 // where your node app starts
+"use strict"
+global.URI = require("uri-js");
+global.RSVP = require('rsvp');
+global.UriTemplate = require("uritemplate");
+global.moment = require('moment');
+global.navigator = require('navigator');
+global.Rusha = require('rusha');
+global.FormData = require('formdata');
+global.atob = require('atob');
+global.FileReader = require("FileReader");
+global.Blob = require("Blob");
+global.localStorage = require('node-localstorage');
+global.btoa = require('btoa');
+global.XMLHttpRequest = require('w3c-xmlhttprequest').XMLHttpRequest
 
-URI = require("uri-js");
-RSVP = require('rsvp');
-UriTemplate = require("uritemplate");
-moment = require('moment');
-navigator = require('navigator');
-Rusha = require('rusha');
-FormData = require('formdata');
-atob = require('atob');
-FileReader = require("FileReader");
-Blob = require("Blob");
-localStorage = require('node-localstorage');
-
-window = global;
-sessionStorage = {};
+global.window = global;
+global.sessionStorage = {};
 
 var jIO = require('jio');
+var ClearRoadBillingPeriodRegistration = require("clearroad");
+
+var cr = new ClearRoadBillingPeriodRegistration();
+console.log("init");
+cr.post({
+    "reference" : "Q42",
+    "start_date" : "2017-02-01T00:00:00Z",
+    "stop_date" : "2017-03-01T00:00:00Z"
+  }).push(function (){
+      console.log("start sync...");
+      return cr.sync();
+  }).push(function (){
+      console.info("Sync done");
+  }, function (error) {
+      console.info("Error :");
+      console.warn(error.stack)
+      console.warn(error);
+  });
 
 
 // init project
