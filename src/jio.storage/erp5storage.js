@@ -152,17 +152,7 @@
   }
 
   function convertJSONToGet(json) {
-    var key,
-      result = json.data;
-    // Remove all ERP5 hateoas links / convert them into jIO ID
-    for (key in result) {
-      if (result.hasOwnProperty(key)) {
-        if (!result[key]) {
-          delete result[key];
-        }
-      }
-    }
-    return result;
+    return json.data;
   }
 
   ERP5Storage.prototype.get = function (id) {
