@@ -1,22 +1,22 @@
 // server.js
 // where your node app starts
 "use strict"
-global.URI = require("uri-js");
+global.URI = require("urijs");
 global.RSVP = require('rsvp');
 global.UriTemplate = require("uritemplate");
 global.moment = require('moment');
 global.navigator = require('navigator');
 global.Rusha = require('rusha');
-global.FormData = require('formdata');
+global.FormData = require('form-data');
 global.atob = require('atob');
-global.FileReader = require("FileReader");
-global.Blob = require("Blob");
+global.FileReader = require("html5").FileReader;
+global.Blob = require("html5").Blob;
 global.localStorage = require('node-localstorage');
 global.btoa = require('btoa');
-global.XMLHttpRequest = require('w3c-xmlhttprequest').XMLHttpRequest
-
+global.XMLHttpRequest = require('xhr2');
 global.window = global;
 global.sessionStorage = {};
+
 
 var jIO = require('jio');
 var ClearRoadBillingPeriodRegistration = require("clearroad");
@@ -54,3 +54,4 @@ app.get("/", function (request, response) {
 var listener = app.listen(3000, function () {
   console.log('Your app is listening on port ' + listener.address().port);
 });
+
