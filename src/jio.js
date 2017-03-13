@@ -52,6 +52,7 @@
           }
         }
       }
+      xhr.setRequestHeader("Accept", "*/*");
       xhr.addEventListener("load", function (e) {
         if (e.target.status >= 400) {
           return reject(e);
