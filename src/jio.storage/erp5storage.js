@@ -11,7 +11,7 @@
 
 /*jslint nomen: true, unparam: true */
 /*global jIO, UriTemplate, FormData, RSVP, URI, Blob,
-         SimpleQuery, ComplexQuery*/
+         SimpleQuery, ComplexQuery, btoa*/
 
 (function (jIO, UriTemplate, FormData, RSVP, URI, Blob,
            SimpleQuery, ComplexQuery) {
@@ -24,8 +24,9 @@
           "type": "GET",
           "url": storage._url,
           "xhrFields": {
-            withCredentials: true
-          }
+            withCredentials: storage._thisCredentials
+          },
+          "headers": storage._headers
         });
       })
       .push(function (event) {
@@ -50,8 +51,9 @@
                   view: options._view
                 }),
               "xhrFields": {
-                withCredentials: true
-              }
+                withCredentials: storage._thisCredentials
+              },
+              "headers": storage._headers
             });
           })
           .push(undefined, function (error) {
@@ -128,8 +130,8 @@
       });
   }
 
-  function extractPropertyFromForm(context, id) {
-    return context.getAttachment(id, "view")
+  function extractPropertyFromForm(storage, id) {
+    return storage.getAttachment(id, "view")
       .push(function (blob) {
         return jIO.util.readBlobAsText(blob);
       })
@@ -149,6 +151,13 @@
     }
     this._url = spec.url;
     this._default_view_reference = spec.default_view_reference;
+    this._headers = null;
+    this._thisCredentials = true;
+    if (spec.login !== undefined && spec.password !== undefined) {
+      this._headers = {"Authorization":  "Basic "
+                          + btoa(spec.login + ":" + spec.password)};
+      this._thisCredentials = false;
+    }
   }
 
   function convertJSONToGet(json) {
@@ -190,8 +199,9 @@
 //             "Content-Type": "application/json"
 //           },
           "xhrFields": {
-            withCredentials: true
-          }
+            withCredentials: storage._thisCredentials
+          },
+          "headers": storage._headers
         });
       })
       .push(function (response) {
@@ -213,7 +223,7 @@
   };
 
   ERP5Storage.prototype.post = function (data) {
-    var context = this,
+    var storage = this,
       new_id;
 
     return getSiteDocument(this)
@@ -226,15 +236,16 @@
           url: site_hal._actions.add.href,
           data: form_data,
           xhrFields: {
-            withCredentials: true
-          }
+            withCredentials: storage._thisCredentials
+          },
+          "headers": storage._headers
         });
       })
       .push(function (evt) {
         var location = evt.target.getResponseHeader("X-Location"),
           uri = new URI(location);
         new_id = uri.segment(2);
-        return context.put(new_id, data);
+        return storage.put(new_id, data);
       })
       .push(function () {
         return new_id;
@@ -242,9 +253,9 @@
   };
 
   ERP5Storage.prototype.put = function (id, data) {
-    var context = this;
+    var storage = this;
 
-    return extractPropertyFromForm(context, id)
+    return extractPropertyFromForm(storage, id)
       .push(function (result) {
         var key,
           json = result.form_data,
@@ -277,7 +288,7 @@
             403
           );
         }
-        return context.putAttachment(
+        return storage.putAttachment(
           id,
           result.action_href,
           new Blob([JSON.stringify(form_data)], {type: "application/json"})
@@ -286,10 +297,10 @@
   };
 
   ERP5Storage.prototype.allAttachments = function (id) {
-    var context = this;
+    var storage = this;
     return getDocumentAndHateoas(this, id)
       .push(function () {
-        if (context._default_view_reference === undefined) {
+        if (storage._default_view_reference === undefined) {
           return {
             links: {}
           };
@@ -302,6 +313,7 @@
   };
 
   ERP5Storage.prototype.getAttachment = function (id, action, options) {
+    var storage = this;
     if (options === undefined) {
       options = {};
     }
@@ -348,8 +360,9 @@
               "dataType": "blob",
               "url": action,
               "xhrFields": {
-                withCredentials: true
-              }
+                withCredentials: storage._thisCredentials
+              },
+              "headers": storage._headers
             };
           if (options.start !== undefined ||  options.end !== undefined) {
             start = options.start || 0;
@@ -369,7 +382,11 @@
               }
               range = "bytes=" + start + "-" + end;
             }
-            request_options.headers = {Range: range};
+            if (storage._headers === undefined) {
+              request_options.headers = {Range: range};
+            } else {
+              request_options.headers.Range = range;
+            }
           }
           return jIO.util.ajax(request_options);
         })
@@ -388,6 +405,7 @@
   };
 
   ERP5Storage.prototype.putAttachment = function (id, name, blob) {
+    var storage = this;
     // Assert we use a callable on a document from the ERP5 site
     if (name.indexOf(this._url) !== 0) {
       throw new jIO.util.jIOError("Can not store outside ERP5: " +
@@ -428,8 +446,9 @@
           "url": name,
           "data": data,
           "xhrFields": {
-            withCredentials: true
-          }
+            withCredentials: storage._thisCredentials
+          },
+          "headers": storage._headers
         });
       });
   };
@@ -478,6 +497,7 @@
 //                        jIO.Query.objectToSearchText(options.query) :
 //                        undefined);
 //     }
+    var storage = this;
     return getSiteDocument(this)
       .push(function (site_hal) {
         var query = options.query,
@@ -546,8 +566,9 @@
               local_roles: local_roles
             }),
           "xhrFields": {
-            withCredentials: true
-          }
+            withCredentials: storage._thisCredentials
+          },
+          "headers": storage._headers
         });
       })
       .push(function (response) {
