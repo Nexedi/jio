@@ -74,10 +74,8 @@
       if (param.data instanceof FormData) {
         xhr.setRequestHeader("Content-Type",
               "multipart\/form-data; boundary=" + param.data.getBoundary());
-        param.data.pipe(buffer, {end: false});
-        param.data.on("end", function () {
-          xhr.send(buffer.getContents());
-        });
+        param.data.pipe(buffer);
+        xhr.send(buffer.getContents());
       } else {
         xhr.send(param.data);
       }
