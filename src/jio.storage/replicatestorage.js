@@ -62,9 +62,12 @@
     });
 
     this._use_remote_post = spec.use_remote_post || false;
+    // Number of request we allow browser execution for attachments
     this._parallel_operation_attachment_amount =
       spec.parallel_operation_attachment_amount || 1;
-    // Number of request we allow to browser execution
+    // Number of request we allow browser execution for documents
+    this._parallel_operation_amount =
+      spec.parallel_operation_amount || 1;
 
     this._conflict_handling = spec.conflict_handling || 0;
     // 0: no resolution (ie, throw an Error)
@@ -787,7 +790,8 @@
         })
         .push(function (result_list) {
           var i,
-            sub_queue = new RSVP.Queue();
+            j = 0,
+            promise_list = [];
 
           function getResult(j) {
             return function (id) {
@@ -799,7 +803,10 @@
           }
 
           for (i = 0; i < result_list.length; i += 1) {
-            checkSignatureDifference(sub_queue, source, destination,
+            if (promise_list[j] === undefined) {
+              promise_list[j] = new RSVP.Queue();
+            }
+            checkSignatureDifference(promise_list[j], source, destination,
                                id_list[i].parameter_list[0],
                                conflict_force, conflict_revert,
                                conflict_ignore,
@@ -807,12 +814,15 @@
                                document_status_list[i].is_modification,
                                getResult(i), options);
           }
-          return sub_queue;
+          j = (j + 1) % options.operation_amount;
+          return RSVP.all(promise_list);
         });
     }
 
     function pushStorage(source, destination, options) {
-      var queue = new RSVP.Queue();
+      var queue = new RSVP.Queue(),
+        promise_list = [],
+        promise_list_deletion = [];
       if (!options.hasOwnProperty("use_post")) {
         options.use_post = false;
       }
@@ -834,7 +844,8 @@
             signature_dict = {},
             is_modification,
             is_creation,
-            key;
+            key,
+            j = 0;
           for (i = 0; i < result_list[0].data.total_rows; i += 1) {
             if (!skip_document_dict.hasOwnProperty(
                 result_list[0].data.rows[i].id
@@ -866,29 +877,47 @@
                     is_modification: is_modification
                   });
                 } else {
-                  checkSignatureDifference(queue, source, destination, key,
+                  if (promise_list[j] === undefined) {
+                    promise_list[j] = new RSVP.Queue();
+                  }
+                  checkSignatureDifference(promise_list[j], source, destination,
+                                           key,
                                            options.conflict_force,
                                            options.conflict_revert,
                                            options.conflict_ignore,
                                            is_creation, is_modification,
                                            source.get.bind(source),
                                            options);
+                  j = (j + 1) % options.operation_amount;
                 }
               }
             }
           }
+          queue
+            .push(function () {
+              return RSVP.all(promise_list);
+            });
           if (options.check_deletion === true) {
+            j = 0;
             for (key in signature_dict) {
               if (signature_dict.hasOwnProperty(key)) {
                 if (!local_dict.hasOwnProperty(key)) {
-                  checkLocalDeletion(queue, destination, key, source,
+                  if (promise_list_deletion[j] === undefined) {
+                    promise_list_deletion[j] = new RSVP.Queue();
+                  }
+                  checkLocalDeletion(promise_list_deletion[j], destination, key,
+                                     source,
                                      options.conflict_force,
                                      options.conflict_revert,
                                      options.conflict_ignore,
                                      options);
+                  j = (j + 1) % options.operation_amount;
                 }
               }
             }
+            queue.push(function () {
+              return RSVP.all(promise_list_deletion);
+            });
           }
           if ((options.use_bulk_get === true) && (document_list.length !== 0)) {
             checkBulkSignatureDifference(queue, source, destination,
@@ -953,7 +982,8 @@
                                 CONFLICT_CONTINUE),
               check_modification: context._check_local_modification,
               check_creation: context._check_local_creation,
-              check_deletion: context._check_local_deletion
+              check_deletion: context._check_local_deletion,
+              operation_amount: context._parallel_operation_amount
             });
         }
       })
@@ -984,7 +1014,8 @@
                                 CONFLICT_CONTINUE),
               check_modification: context._check_remote_modification,
               check_creation: context._check_remote_creation,
-              check_deletion: context._check_remote_deletion
+              check_deletion: context._check_remote_deletion,
+              operation_amount: context._parallel_operation_amount
             });
         }
       })
@@ -999,8 +1030,8 @@
           // has been also marked as synchronized.
           return context._signature_sub_storage.allDocs()
             .push(function (result) {
-              var i = 0,
-                j = 0,
+              var i,
+                j,
                 repair_document_list = [],
                 len = result.data.total_rows;
 
@@ -1011,23 +1042,15 @@
                   });
               }
 
-              while (i < len) {
-                while (j < context._parallel_operation_attachment_amount
-                    && i < len) {
-                  if (repair_document_list[j] === undefined) {
-                    repair_document_list[j] = new RSVP.Queue();
-                  }
-                  repairDocument(
-                    repair_document_list[j],
-                    result.data.rows[i].id
-                  );
-                  i += 1;
-                  j += 1;
+              for (i = 0; i < len; i += 1) {
+                j = i % context._parallel_operation_attachment_amount;
+                if (repair_document_list[j] === undefined) {
+                  repair_document_list[j] = new RSVP.Queue();
                 }
-                j = 0;
-              }
-              if (context._max_parallel_request < 2) {
-                return repair_document_list[0];
+                repairDocument(
+                  repair_document_list[j],
+                  result.data.rows[i].id
+                );
               }
               return RSVP.all(repair_document_list);
             });
