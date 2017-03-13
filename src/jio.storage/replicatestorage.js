@@ -62,6 +62,9 @@
     });
 
     this._use_remote_post = spec.use_remote_post || false;
+    this._parallel_operation_attachment_amount =
+      spec.parallel_operation_attachment_amount || 1;
+    // Number of request we allow to browser execution
 
     this._conflict_handling = spec.conflict_handling || 0;
     // 0: no resolution (ie, throw an Error)
@@ -996,20 +999,37 @@
           // has been also marked as synchronized.
           return context._signature_sub_storage.allDocs()
             .push(function (result) {
-              var i,
-                repair_document_queue = new RSVP.Queue();
+              var i = 0,
+                j = 0,
+                repair_document_list = [],
+                len = result.data.total_rows;
 
-              function repairDocument(id) {
-                repair_document_queue
+              function repairDocument(queue, id) {
+                queue
                   .push(function () {
                     return repairDocumentAttachment(id);
                   });
               }
 
-              for (i = 0; i < result.data.total_rows; i += 1) {
-                repairDocument(result.data.rows[i].id);
+              while (i < len) {
+                while (j < context._parallel_operation_attachment_amount
+                    && i < len) {
+                  if (repair_document_list[j] === undefined) {
+                    repair_document_list[j] = new RSVP.Queue();
+                  }
+                  repairDocument(
+                    repair_document_list[j],
+                    result.data.rows[i].id
+                  );
+                  i += 1;
+                  j += 1;
+                }
+                j = 0;
               }
-              return repair_document_queue;
+              if (context._max_parallel_request < 2) {
+                return repair_document_list[0];
+              }
+              return RSVP.all(repair_document_list);
             });
         }
       });
