@@ -712,7 +712,7 @@ ClearRoadTransactionDirectory.prototype.allDocs = function(){
 
 // Exports to node
 exports.ClearRoadAccountRegistration = ClearRoadAccountRegistration;
-expors.ClearRoadAccountRegistrationReport = ClearRoadAccountRegistrationReport;
+exports.ClearRoadAccountRegistrationReport = ClearRoadAccountRegistrationReport;
 exports.ClearRoadUsageData = ClearRoadUsageData;
 exports.ClearRoadUsageDataReport = ClearRoadUsageDataReport;
 exports.ClearRoadAccountDirectory = ClearRoadAccountDirectory;
