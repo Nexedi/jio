@@ -1,3 +1,5 @@
+
+
 function ClearRoadBillingPeriodRegistration() {
   if (!(this instanceof ClearRoadBillingPeriodRegistration)) {
       return new ClearRoadBillingPeriodRegistration();
@@ -38,7 +40,9 @@ function ClearRoadBillingPeriodRegistration() {
       sub_storage: {
         type: "erp5",
         url: "https://softinst69465.host.vifib.net/erp5/web_site_module/hateoas",
-        default_view_reference: "jio_view"
+        default_view_reference: "jio_view",
+        login: "testam",
+        password: "testam",
       }
     }
   });
