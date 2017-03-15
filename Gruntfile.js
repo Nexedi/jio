@@ -209,7 +209,7 @@ module.exports = function (grunt) {
           'src/jio.storage/localstorage.js',
           'src/jio.storage/mappingstorage.js'
         ],
-        dest: 'dist/nodejs/<%= pkg.name %>-<%= pkg.version %>.js'
+        dest: 'nodejs/lib/jio/<%= pkg.name %>-<%= pkg.version %>.js'
 //         dest: 'jio.js'
       }
     },
@@ -238,7 +238,7 @@ module.exports = function (grunt) {
       },
       nodejs: {
         src: "<%= concat.nodejs.dest %>",
-        dest: "dist/nodejs/<%= pkg.name %>-<%= pkg.version %>.min.js"
+        dest: "nodejs/lib/jio/<%= pkg.name %>-<%= pkg.version %>.min.js"
       }
     },
 
@@ -252,10 +252,10 @@ module.exports = function (grunt) {
           dest: "dist/<%= pkg.name %>-latest.min.js"
         }, {
           src: '<%= uglify.nodejs.src %>',
-          dest: "dist/nodejs/<%= pkg.name %>-latest.js"
+          dest: "nodejs/lib/jio/<%= pkg.name %>.js"
         }, {
           src: '<%= uglify.nodejs.dest %>',
-          dest: "dist/nodejs/<%= pkg.name %>-latest.min.js"
+          dest: "nodejs/lib/jio/<%= pkg.name %>.min.js"
         }]
       }
     },

@@ -14,6 +14,7 @@ global.Blob = require("html5").Blob;
 global.localStorage = require('node-localstorage');
 global.btoa = require('btoa');
 global.XMLHttpRequest = require('xhr2');
+global.StreamBuffers = require('stream-buffers');
 global.window = global;
 global.sessionStorage = {};
 
@@ -24,7 +25,7 @@ var ClearRoadBillingPeriodRegistration = require("clearroad");
 var cr = new ClearRoadBillingPeriodRegistration();
 console.log("init");
 cr.post({
-    "reference" : "Q42",
+    "reference" : "Q421",
     "start_date" : "2017-02-01T00:00:00Z",
     "stop_date" : "2017-03-01T00:00:00Z"
   }).push(function (){

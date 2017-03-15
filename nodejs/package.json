@@ -1,0 +1,45 @@
+{
+  "//1": "describes your app and its dependencies",
+  "//2": "https://docs.npmjs.com/files/package.json",
+  "//3": "updating this file will download and update your packages",
+
+  "name": "clearroad-nodejs",
+  "version": "0.0.1",
+  "description": "ClearRoad API on Node.js",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.14.1",
+    "stream-buffer": "latest",
+    "xhr2": "latest",
+    "rsvp": "git+https://lab.nexedi.com/nexedi/rsvp.js.git",
+    "uritemplate": "latest",
+    "moment": "file:lib/moment",
+    "navigator": "latest",
+    "rusha": "latest",
+    "form-data": "latest",
+    "atob": "latest",
+    "html5": "file:lib/html5",
+    "node-localstorage": "latest",
+    "btoa": "latest",
+    "xhr2": "latest",
+    "stream-buffers": "latest",
+    "clearroad": "file:lib/clearroad",
+    "jio": "file:lib/jio",
+    "urijs": "latest"
+  },
+  "engines": {
+    "node": "6.9.x"
+  },
+  "repository": {
+    "url": ""
+  },
+  "license": "",
+  "keywords": [
+    "node",
+    "jio",
+    "clearroad"
+  ]
+}
