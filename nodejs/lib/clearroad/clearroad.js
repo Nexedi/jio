@@ -9,6 +9,7 @@ function ClearRoadAccountRegistration(login, password) {
 
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: false,
     conflict_handling: 1,
     check_local_modification: false,
@@ -70,6 +71,7 @@ function ClearRoadAccountRegistrationReport(login, password, day_range) {
   }
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: true,
     conflict_handling: 1,
     query: {
@@ -121,6 +123,7 @@ function ClearRoadUsageData(login, password) {
 
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: false,
     conflict_handling: 1,
     check_local_modification: false,
@@ -182,6 +185,7 @@ function ClearRoadUsageDataReport(login, password, day_range) {
   }
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: true,
     conflict_handling: 1,
     query: {
@@ -233,6 +237,7 @@ function ClearRoadAccountDirectory(login, password) {
 
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: true,
     conflict_handling: 1,
     query: {
@@ -286,6 +291,7 @@ function ClearRoadAccountBalance(login, password, reference) {
     }
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: true,
     conflict_handling: 1,
     query: {
@@ -334,6 +340,7 @@ function ClearRoadEvent(login, password) {
 
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: false,
     conflict_handling: 1,
     check_local_modification: false,
@@ -395,6 +402,7 @@ function ClearRoadEventReport(login, password, day_range) {
   }
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: true,
     conflict_handling: 1,
     query: {
@@ -452,6 +460,7 @@ function ClearRoadEventDirectory(login, password, day_range) {
   }
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: true,
     conflict_handling: 1,
     query: {
@@ -501,6 +510,7 @@ function ClearRoadBillingPeriodRegistration(login, password) {
 
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: false,
     conflict_handling: 1,
     check_local_modification: false,
@@ -564,6 +574,7 @@ function ClearRoadBillingPeriodRegistrationReport(login, password, day_range) {
   }
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: true,
     conflict_handling: 1,
     query: {
@@ -614,6 +625,7 @@ function ClearRoadBillingPeriodDirectory(login, password) {
 
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: true,
     conflict_handling: 1,
     query: {
@@ -669,6 +681,7 @@ function ClearRoadTransactionDirectory(login, password, account) {
   }
   this.jio = jIO.createJIO({
     type: "replicate",
+    parallel_operation_amount: 100,
     use_remote_post: true,
     conflict_handling: 1,
     query: {
