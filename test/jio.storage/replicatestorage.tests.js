@@ -1,6 +1,6 @@
 /*jslint nomen: true*/
-/*global Blob*/
-(function (jIO, QUnit, Blob) {
+/*global Blob, console, RSVP*/
+(function (jIO, QUnit, Blob, RSVP) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -92,6 +92,8 @@
     deepEqual(jio.__storage._query_options, {});
     equal(jio.__storage._use_remote_post, false);
     equal(jio.__storage._conflict_handling, 0);
+    equal(jio.__storage._parallel_operation_attachment_amount, 1);
+    equal(jio.__storage._parallel_operation_amount, 1);
     equal(jio.__storage._check_local_creation, true);
     equal(jio.__storage._check_local_deletion, true);
     equal(jio.__storage._check_local_modification, true);
@@ -136,6 +138,8 @@
       query: {query: 'portal_type: "Foo"', limit: [0, 1234567890]},
       use_remote_post: true,
       conflict_handling: 3,
+      parallel_operation_attachment_amount: 2713,
+      parallel_operation_amount: 2711,
       check_local_creation: false,
       check_local_deletion: false,
       check_local_modification: false,
@@ -156,6 +160,8 @@
     );
     equal(jio.__storage._use_remote_post, true);
     equal(jio.__storage._conflict_handling, 3);
+    equal(jio.__storage._parallel_operation_attachment_amount, 2713);
+    equal(jio.__storage._parallel_operation_amount, 2711);
     equal(jio.__storage._check_local_creation, false);
     equal(jio.__storage._check_local_deletion, false);
     equal(jio.__storage._check_local_modification, false);
@@ -4328,6 +4334,93 @@
       });
   });
 
+  test("use 2 queue in parallel", function () {
+    stop();
+    expect(1);
+
+    var context = this,
+      start_sync = [],
+      sync_pause;
+
+    function Storage2711() {
+      this._sub_storage = jIO.createJIO({type: "memory"});
+      return this;
+    }
+
+    Storage2711.prototype.put = function (id, doc) {
+      this._sub_storage.put(id, doc);
+      return id;
+    };
+    Storage2711.prototype.get = function (id) {
+      var storage = this;
+      start_sync[id] = true;
+      return ((id === "0") ? RSVP.delay(500) : RSVP.delay(100))
+        .then(function () {
+          if (id === "2") {
+            sync_pause = start_sync.toString();
+          }
+          start_sync[id] = false;
+          return storage._sub_storage.get(id);
+        });
+    };
+    Storage2711.prototype.buildQuery = function () {
+      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    };
+
+    Storage2711.prototype.bulk = function () {
+      return this._sub_storage.bulk.apply(this._sub_storage, arguments);
+    };
+
+    Storage2711.prototype.hasCapacity = function () {
+      return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+    };
+
+    jIO.addStorage(
+      'parallel',
+      Storage2711
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      conflict_handling: 1,
+      check_local_creation: true,
+      check_local_modification: true,
+      parallel_operation_amount: 2,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "parallel"
+      }
+    });
+
+    return context.jio.put("0", {"title": "foo"})
+      .push(function () {
+        return context.jio.put("1", {"title": "foo1"});
+      })
+      .push(function () {
+        return context.jio.put("2", {"title": "foo2"});
+      })
+      .push(function () {
+        return context.jio.put("3", {"title": "foo3"});
+      })
+      .push(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        equal(sync_pause, "true,false,true", "rigth order");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // attachment replication
   /////////////////////////////////////////////////////////////////
@@ -7410,4 +7503,123 @@
       });
   });
 
-}(jIO, QUnit, Blob));
+  test("use 2 queue in parallel", function () {
+    stop();
+    expect(1);
+
+    var context = this,
+      start_sync = [],
+      sync_pause;
+
+    function Storage2713() {
+      this._sub_storage = jIO.createJIO({type: "memory"});
+      return this;
+    }
+
+    Storage2713.prototype.put = function (id, doc) {
+      this._sub_storage.put(id, doc);
+      return id;
+    };
+    Storage2713.prototype.get = function (id) {
+      console.log("get", id);
+      return this._sub_storage.get(id);
+    };
+    Storage2713.prototype.getAttachment = function (id) {
+      var storage = this,
+        argument_list = arguments;
+      start_sync[id] = true;
+      return ((id === "0") ? RSVP.delay(500) : RSVP.delay(100))
+        .then(function () {
+          if (id === "2") {
+            sync_pause = start_sync.toString();
+          }
+          start_sync[id] = false;
+          return storage._sub_storage.getAttachment.apply(
+            storage._sub_storage,
+            argument_list
+          );
+        });
+    };
+    Storage2713.prototype.putAttachment = function () {
+      return this._sub_storage.putAttachment.apply(this._sub_storage,
+        arguments);
+    };
+    Storage2713.prototype.removeAttachment = function () {
+      return this._sub_storage.removeAttachment.apply(this._sub_storage,
+        arguments);
+    };
+    Storage2713.prototype.allAttachments = function () {
+      return this._sub_storage.allAttachments.apply(this._sub_storage,
+        arguments);
+    };
+    Storage2713.prototype.buildQuery = function () {
+      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    };
+
+    Storage2713.prototype.bulk = function () {
+      return this._sub_storage.bulk.apply(this._sub_storage, arguments);
+    };
+
+    Storage2713.prototype.hasCapacity = function () {
+      return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+    };
+
+    jIO.addStorage(
+      'parallel_attachment',
+      Storage2713
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      conflict_handling: 1,
+      check_local_attachment_creation: true,
+      check_local_attachment_modification: true,
+      parallel_operation_attachment_amount: 2,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "parallel_attachment"
+      }
+    });
+
+    return context.jio.put("0", {"title": "foo"})
+      .push(function () {
+        return context.jio.putAttachment("0", "foo", new Blob(["0"]));
+      })
+      .push(function () {
+        return context.jio.put("1", {"title": "foo1"});
+      })
+      .push(function () {
+        return context.jio.putAttachment("1", "foo", new Blob(["1"]));
+      })
+      .push(function () {
+        return context.jio.put("2", {"title": "foo2"});
+      })
+      .push(function () {
+        return context.jio.putAttachment("2", "foo", new Blob(["2"]));
+      })
+      .push(function () {
+        return context.jio.put("3", {"title": "foo3"});
+      })
+      .push(function () {
+        return context.jio.putAttachment("3", "foo", new Blob(["3"]));
+      })
+      .push(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        equal(sync_pause, "true,false,true", "rigth order");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+}(jIO, QUnit, Blob, RSVP));

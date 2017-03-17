@@ -10,6 +10,11 @@
     };
   }
 
+  /* Safari does not define DOMError */
+  if (window.DOMError === undefined) {
+    window.DOMError = {};
+  }
+
   var util = {},
     jIO;
 
