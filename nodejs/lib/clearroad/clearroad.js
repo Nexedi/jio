@@ -19,7 +19,7 @@ function ClearRoadAccountRegistration(login, password) {
     check_remote_deletion: false,
     local_sub_storage: {
       type: "mapping",
-      map_id: ["equalSubProperty", "reference"],
+      id: ["equalSubProperty", "reference"],
       sub_storage: {
         type: "query",
         sub_storage: {
@@ -33,8 +33,8 @@ function ClearRoadAccountRegistration(login, password) {
     },
     remote_sub_storage: {
       type: "mapping",
-      map_id: ["equalSubProperty", "reference"],
-      mapping_dict: {"portal_type": ["equalValue", "Road Account Message"],
+      id: ["equalSubProperty", "reference"],
+      property: {"portal_type": ["equalValue", "Road Account Message"],
                     "parent_relative_url": ["equalValue", "road_account_message_module"]},
       sub_storage: {
         type: "erp5",
@@ -131,7 +131,7 @@ function ClearRoadUsageData(login, password) {
     check_remote_deletion: false,
     local_sub_storage: {
       type: "mapping",
-      map_id: ["equalSubProperty", "reference"],
+      id: ["equalSubProperty", "reference"],
       sub_storage: {
         type: "query",
         sub_storage: {
@@ -145,8 +145,8 @@ function ClearRoadUsageData(login, password) {
     },
     remote_sub_storage: {
       type: "mapping",
-      map_id: ["equalSubProperty", "reference"],
-      mapping_dict: {"portal_type": ["equalValue", "Road Message"],
+      id: ["equalSubProperty", "reference"],
+      property: {"portal_type": ["equalValue", "Road Message"],
                     "parent_relative_url": ["equalValue", "road_message_module"]},
       sub_storage: {
         type: "erp5",
@@ -344,7 +344,7 @@ function ClearRoadEvent(login, password) {
     check_remote_deletion: false,
     local_sub_storage: {
       type: "mapping",
-      map_id: ["equalSubProperty", "reference"],
+      id: ["equalSubProperty", "reference"],
       sub_storage: {
         type: "query",
         sub_storage: {
@@ -358,8 +358,8 @@ function ClearRoadEvent(login, password) {
     },
     remote_sub_storage: {
       type: "mapping",
-      map_id: ["equalSubProperty", "reference"],
-      mapping_dict: {"portal_type": ["equalValue", "Road Event Message"],
+      id: ["equalSubProperty", "reference"],
+      property: {"portal_type": ["equalValue", "Road Event Message"],
                     "parent_relative_url": ["equalValue", "road_event_message_module"]},
       sub_storage: {
         type: "erp5",
@@ -511,7 +511,7 @@ function ClearRoadBillingPeriodRegistration(login, password) {
     check_remote_deletion: false,
     local_sub_storage: {
       type: "mapping",
-      map_id: ["equalSubProperty", "reference"],
+      id: ["equalSubProperty", "reference"],
       sub_storage: {
         type: "query",
         sub_storage: {
@@ -525,9 +525,9 @@ function ClearRoadBillingPeriodRegistration(login, password) {
     },
     remote_sub_storage: {
       type: "mapping",
-      map_id: ["equalSubProperty", "reference"],
-      mapping_dict: {"portal_type": ["equalValue", "Billing Period Message"],
-                    "parent_relative_url": ["equalValue", "billing_period_message_module"]},
+      id: ["equalSubProperty", "reference"],
+      property: {"portal_type": ["equalValue", "Billing Period Message"],
+                 "parent_relative_url": ["equalValue", "billing_period_message_module"]},
       sub_storage: {
         type: "erp5",
         url: "https://softinst69465.host.vifib.net/erp5/web_site_module/hateoas",
