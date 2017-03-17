@@ -18,11 +18,10 @@ global.StreamBuffers = require('stream-buffers');
 global.window = global;
 global.sessionStorage = {};
 
-
 var jIO = require('jio');
-var ClearRoadBillingPeriodRegistration = require("clearroad");
-
-var cr = new ClearRoadBillingPeriodRegistration();
+var clearroad = require("clearroad");
+var i = 0;
+var cr = new clearroad.ClearRoadBillingPeriodRegistration("testam", "testam");
 console.log("init");
 cr.post({
     "reference" : "Q421",
@@ -33,11 +32,23 @@ cr.post({
       return cr.sync();
   }).push(function (){
       console.info("Sync done");
-  }, function (error) {
-      console.info("Error :");
-      console.warn(error.stack)
-      console.warn(error);
+  }).push(function() {
+    cr = new clearroad.ClearRoadBillingPeriodRegistrationReport("testam", "testam", 100);
+    return cr.sync();
+  }).push(function (){
+    console.log("sync done && loading result...")
+    return cr.allDocs()
+  }).push(function (result) {
+    console.log("browsing results : "+result.data.total_rows);
+    for (i = 0; i < result.data.total_rows; i += 1) {
+      console.log("Ref : "+result.data.rows[i].value.reference+", state : "+result.data.rows[i].value.state+", comment"+result.data.rows[i].value.comment);
+    }
+    console.log("Finished");
+  }).push(undefined, function (error) {
+    throw error;
   });
+
+
 
 
 // init project
