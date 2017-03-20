@@ -198,7 +198,7 @@ module.exports = function (grunt) {
 
           'src/jio.date/*.js',
 
-          'src/jio.js',
+          'src/jio-nodejs.js',
 
           'src/jio.storage/replicatestorage.js',
           'src/jio.storage/uuidstorage.js',

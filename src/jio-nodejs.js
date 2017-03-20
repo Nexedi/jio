@@ -1,5 +1,5 @@
 /*global window, RSVP, Blob, XMLHttpRequest, QueryFactory, Query, atob,
-  FileReader, ArrayBuffer, Uint8Array, navigator */
+  FileReader, ArrayBuffer, Uint8Array, navigator, FormData, StreamBuffers */
 (function (window, RSVP, Blob, QueryFactory, Query, atob,
            FileReader, ArrayBuffer, Uint8Array, navigator) {
   "use strict";
@@ -47,7 +47,7 @@
   function ajax(param) {
     var xhr = new XMLHttpRequest();
     return new RSVP.Promise(function (resolve, reject, notify) {
-      var k;
+      var k, buffer = new StreamBuffers.WritableStreamBuffer();
       xhr.open(param.type || "GET", param.url, true);
       xhr.responseType = param.dataType || "";
       if (typeof param.headers === 'object' && param.headers !== null) {
@@ -57,6 +57,7 @@
           }
         }
       }
+      xhr.setRequestHeader("Accept", "*/*");
       xhr.addEventListener("load", function (e) {
         if (e.target.status >= 400) {
           return reject(e);
@@ -75,7 +76,14 @@
       if (typeof param.beforeSend === 'function') {
         param.beforeSend(xhr);
       }
-      xhr.send(param.data);
+      if (param.data instanceof FormData) {
+        xhr.setRequestHeader("Content-Type",
+              "multipart\/form-data; boundary=" + param.data.getBoundary());
+        param.data.pipe(buffer);
+        xhr.send(buffer.getContents());
+      } else {
+        xhr.send(param.data);
+      }
     }, function () {
       xhr.abort();
     });
