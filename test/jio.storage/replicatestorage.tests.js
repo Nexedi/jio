@@ -7524,9 +7524,10 @@
       console.log("get", id);
       return this._sub_storage.get(id);
     };
-    Storage2713.prototype.getAttachment = function (id) {
+    Storage2713.prototype.getAttachment = function () {
       var storage = this,
-        argument_list = arguments;
+        argument_list = arguments,
+        id = argument_list[1];
       start_sync[id] = true;
       return ((id === "0") ? RSVP.delay(500) : RSVP.delay(100))
         .then(function () {
@@ -7586,27 +7587,18 @@
       }
     });
 
-    return context.jio.put("0", {"title": "foo"})
+    return context.jio.put("foo", {})
       .push(function () {
-        return context.jio.putAttachment("0", "foo", new Blob(["0"]));
+        return context.jio.putAttachment("foo", "0", new Blob(["0"]));
       })
       .push(function () {
-        return context.jio.put("1", {"title": "foo1"});
+        return context.jio.putAttachment("foo", "1", new Blob(["1"]));
       })
       .push(function () {
-        return context.jio.putAttachment("1", "foo", new Blob(["1"]));
+        return context.jio.putAttachment("foo", "2", new Blob(["2"]));
       })
       .push(function () {
-        return context.jio.put("2", {"title": "foo2"});
-      })
-      .push(function () {
-        return context.jio.putAttachment("2", "foo", new Blob(["2"]));
-      })
-      .push(function () {
-        return context.jio.put("3", {"title": "foo3"});
-      })
-      .push(function () {
-        return context.jio.putAttachment("3", "foo", new Blob(["3"]));
+        return context.jio.putAttachment("foo", "3", new Blob(["3"]));
       })
       .push(function () {
         return context.jio.repair();
