@@ -4421,6 +4421,89 @@
       });
   });
 
+  test("repair queue have the right finish timing", function () {
+    stop();
+    expect(1);
+
+    var context = this,
+      start_sync = [];
+
+    function Storage2719() {
+      this._sub_storage = jIO.createJIO({type: "memory"});
+      return this;
+    }
+
+    Storage2719.prototype.put = function (id, doc) {
+      this._sub_storage.put(id, doc);
+      return id;
+    };
+    Storage2719.prototype.get = function (id) {
+      var storage = this;
+      start_sync[id] = true;
+      return ((id === "0") ? RSVP.delay(500) : RSVP.delay(100))
+        .then(function () {
+          start_sync[id] = false;
+          return storage._sub_storage.get(id);
+        });
+    };
+    Storage2719.prototype.buildQuery = function () {
+      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    };
+
+    Storage2719.prototype.bulk = function () {
+      return this._sub_storage.bulk.apply(this._sub_storage, arguments);
+    };
+
+    Storage2719.prototype.hasCapacity = function () {
+      return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+    };
+
+    jIO.addStorage(
+      'parallel2',
+      Storage2719
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      conflict_handling: 1,
+      check_local_creation: true,
+      check_local_modification: true,
+      parallel_operation_amount: 10,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "parallel2"
+      }
+    });
+
+    return context.jio.put("0", {"title": "foo"})
+      .push(function () {
+        return context.jio.put("1", {"title": "foo1"});
+      })
+      .push(function () {
+        return context.jio.put("2", {"title": "foo2"});
+      })
+      .push(function () {
+        return context.jio.put("3", {"title": "foo3"});
+      })
+      .push(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        deepEqual(start_sync, [false, false, false, false], "sync finished");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // attachment replication
   /////////////////////////////////////////////////////////////////
@@ -7524,9 +7607,10 @@
       console.log("get", id);
       return this._sub_storage.get(id);
     };
-    Storage2713.prototype.getAttachment = function (id) {
+    Storage2713.prototype.getAttachment = function () {
       var storage = this,
-        argument_list = arguments;
+        argument_list = arguments,
+        id = argument_list[1];
       start_sync[id] = true;
       return ((id === "0") ? RSVP.delay(500) : RSVP.delay(100))
         .then(function () {
@@ -7586,27 +7670,18 @@
       }
     });
 
-    return context.jio.put("0", {"title": "foo"})
+    return context.jio.put("foo", {"title": "foo"})
       .push(function () {
-        return context.jio.putAttachment("0", "foo", new Blob(["0"]));
+        return context.jio.putAttachment("foo", "0", new Blob(["0"]));
       })
       .push(function () {
-        return context.jio.put("1", {"title": "foo1"});
+        return context.jio.putAttachment("foo", "1", new Blob(["1"]));
       })
       .push(function () {
-        return context.jio.putAttachment("1", "foo", new Blob(["1"]));
+        return context.jio.putAttachment("foo", "2", new Blob(["2"]));
       })
       .push(function () {
-        return context.jio.put("2", {"title": "foo2"});
-      })
-      .push(function () {
-        return context.jio.putAttachment("2", "foo", new Blob(["2"]));
-      })
-      .push(function () {
-        return context.jio.put("3", {"title": "foo3"});
-      })
-      .push(function () {
-        return context.jio.putAttachment("3", "foo", new Blob(["3"]));
+        return context.jio.putAttachment("foo", "3", new Blob(["3"]));
       })
       .push(function () {
         return context.jio.repair();
