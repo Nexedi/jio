@@ -1181,7 +1181,7 @@
         "smth": "bar"
       })
       .push(function () {
-        jio.put(
+        return jio.put(
           "2713",
           {
             "title": "bar",
