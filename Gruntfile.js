@@ -170,7 +170,7 @@ module.exports = function (grunt) {
 
           'src/jio.date/*.js',
 
-          'src/jio-nodejs.js',
+          'src/jio.js',
 
           'node_modules/rusha/rusha.js',
 
