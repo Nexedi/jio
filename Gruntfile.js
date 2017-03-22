@@ -200,7 +200,8 @@ module.exports = function (grunt) {
         // duplicate files are ignored
         src: [
           // all the require for nodejs
-          'src/include-nodejs.js',
+          'src/nodejs/include.js',
+          'src/nodejs/html5.js',
 
           // queries
           'src/queries/parser-begin.js',
@@ -297,7 +298,8 @@ module.exports = function (grunt) {
           '<%= qunit.files %>',
           'test/**/*.js',
           'examples/*',
-          'src/*node*.js'
+          'src/jio-nodejs.js',
+          'src/nodejs/*.js'
         ],
         tasks: ['default'],
         options: {

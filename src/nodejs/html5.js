@@ -1,22 +1,6 @@
 (function (env) {
   "use strict";
 
-  /*! html5.node.js Version 1.0.0
-
-      Copyright (c) 2017 Tristan Cavelier <t.cavelier@free.fr>
-      This program is free software. It comes without any warranty, to
-      the extent permitted by applicable law. You can redistribute it
-      and/or modify it under the terms of the Do What The Fuck You Want
-      To Public License, Version 2, as published by Sam Hocevar. See
-      http://www.wtfpl.net/ for more details. */
-
-  // provides:
-  //   _html5_weakmap
-  //   EventTarget
-  //   Blob
-  //   FileReader
-
-  // function include(path) { return eval(require("fs").readFileSync(path).toString()); }
   const process = require("process");
   env._html5_weakmap = new WeakMap();
 
@@ -78,6 +62,7 @@
     return new Blob([env._html5_weakmap.get(this).data.slice(start, end)], {type: contentType});
   };
   env.Blob = Blob;
+  global.Blob = Blob;
 
   function FileReader() { EventTarget.call(this); }
   FileReader.prototype = Object.create(EventTarget.prototype);
@@ -110,5 +95,6 @@
     });
   };
   env.FileReader = FileReader;
+  global.FileReader = FileReader;
 
 }(this));
