@@ -199,7 +199,7 @@ module.exports = function (grunt) {
       nodejs: {
         // duplicate files are ignored
         src: [
-          // require for nodejs
+          // all the require for nodejs
           'src/include-nodejs.js',
 
           // queries
@@ -211,7 +211,6 @@ module.exports = function (grunt) {
           'src/jio.date/*.js',
 
           'src/jio-nodejs.js',
-//          'src/jio.js',
 
           'src/jio.storage/replicatestorage.js',
           'src/jio.storage/uuidstorage.js',
@@ -222,8 +221,7 @@ module.exports = function (grunt) {
           'src/jio.storage/localstorage.js',
           'src/jio.storage/mappingstorage.js'
         ],
-        dest: 'nodejs/lib/jio/<%= pkg.name %>-<%= pkg.version %>.js'
-//         dest: 'jio.js'
+        dest: 'dist/nodejs/jio.js'
       }
     },
     uglify: {
@@ -248,10 +246,6 @@ module.exports = function (grunt) {
 //         options: {
 //           sourceMap: "jiodate.min.map"
 //         }
-      },
-      nodejs: {
-        src: "<%= concat.nodejs.dest %>",
-        dest: "nodejs/lib/jio/<%= pkg.name %>-<%= pkg.version %>.min.js"
       }
     },
 
@@ -263,15 +257,6 @@ module.exports = function (grunt) {
         }, {
           src: '<%= uglify.jio.dest %>',
           dest: "dist/<%= pkg.name %>-latest.min.js"
-        }, {
-          src: '<%= uglify.nodejs.src %>',
-          dest: "nodejs/lib/jio/<%= pkg.name %>.js"
-        }, {
-          src: '<%= uglify.nodejs.src %>',
-          dest: "nodejs/lib/jio/jio.js"
-        }, {
-          src: '<%= uglify.nodejs.dest %>',
-          dest: "nodejs/lib/jio/<%= pkg.name %>.min.js"
         }]
       }
     },
@@ -281,8 +266,9 @@ module.exports = function (grunt) {
       // grunt doesn't like requirejs
       files: ['test/tests.html', 'test/tests-nodejs.html']
     },
+    // test jio with nodejs
     qunitnode: {
-      all: [ "nodejs/lib/jio/jio.js",
+      all: [ "dist/nodejs/jio.js",
              "test/jio.storage/memorystorage.tests.js",
              "test/jio.storage/replicatestorage.tests.js",
              "test/jio.storage/uuidstorage.tests.js",
@@ -291,7 +277,10 @@ module.exports = function (grunt) {
              "test/jio.storage/localstorage.tests.js",
              "test/jio.storage/documentstorage.tests.js",
              "test/jio.storage/erp5storage.tests.js",
-           ]
+           ],
+      options : {
+        force: true
+      }
     },
 
     watch: {
