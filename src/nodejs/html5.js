@@ -62,7 +62,6 @@
     return new Blob([env._html5_weakmap.get(this).data.slice(start, end)], {type: contentType});
   };
   env.Blob = Blob;
-  global.Blob = Blob;
 
   function FileReader() { EventTarget.call(this); }
   FileReader.prototype = Object.create(EventTarget.prototype);
@@ -95,6 +94,5 @@
     });
   };
   env.FileReader = FileReader;
-  global.FileReader = FileReader;
 
-}(this));
+}(global));
