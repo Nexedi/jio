@@ -218,10 +218,12 @@
         queue
           .push(function () {
             if (argument_list.length > 0) {
-              var argument_array = argument_list.shift();
-              argument_array[0] = queue;
+              var argument_array = argument_list.shift(),
+                sub_queue = new RSVP.Queue();
+              argument_array[0] = sub_queue;
               function_used.apply(context, argument_array);
               pushAndExecute(queue);
+              return sub_queue;
             }
           });
       }
