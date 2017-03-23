@@ -274,7 +274,7 @@ module.exports = function (grunt) {
 
     qunit: {
       // grunt doesn't like requirejs
-      files: ['test/tests.html', 'test/tests-nodejs.html']
+      files: ['test/tests.html']
     },
     // test jio with nodejs
     qunitnode: {
