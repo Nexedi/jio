@@ -1,3 +1,4 @@
+/*global global, require */
 global.URI = require("urijs");
 global.RSVP = require('rsvp');
 global.UriTemplate = require("uritemplate");
@@ -6,14 +7,12 @@ global.navigator = require('navigator');
 global.Rusha = require('rusha');
 global.FormData = require('form-data');
 global.atob = require('atob');
-//global.FileReader = require("html5").FileReader;
-//global.Blob = require("html5").Blob;
 var LocalStorage = require('node-localstorage').LocalStorage;
 global.localStorage = new LocalStorage("jio");
 global.btoa = require('btoa');
 global.XMLHttpRequest = require('xhr2');
-var mockdoc = require("mockdoc");
-global.document = new mockdoc();
+var Mockdoc = require("mockdoc");
+global.document = new Mockdoc();
 global.sinon = require('sinon');
 global.StreamBuffers = require('stream-buffers');
 global.window = global;
@@ -83,7 +82,6 @@ global.HTMLCanvasElement = {};
     return new Blob([env._html5_weakmap.get(this).data.slice(start, end)], {type: contentType});
   };
   env.Blob = Blob;
-  global.Blob = Blob;
 
   function FileReader() { EventTarget.call(this); }
   FileReader.prototype = Object.create(EventTarget.prototype);
@@ -116,9 +114,8 @@ global.HTMLCanvasElement = {};
     });
   };
   env.FileReader = FileReader;
-  global.FileReader = FileReader;
 
-}(this));
+}(global));
 ;/**
  * Parse a text request to a json query object tree
  *
