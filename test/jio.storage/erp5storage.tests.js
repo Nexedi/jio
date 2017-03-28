@@ -490,7 +490,7 @@
     }, ""]);
 
     stop();
-    expect(11);
+    expect(12);
 
     this.jio.putAttachment(
       id,
@@ -502,6 +502,7 @@
         equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, submit_url);
         equal(server.requests[0].status, 204);
+        equal(server.requests[0].responseType, "blob");
         ok(server.requests[0].requestBody instanceof FormData);
 
         ok(context.spy.calledTwice, "FormData.append count " +
@@ -536,7 +537,7 @@
     }, ""]);
 
     stop();
-    expect(11);
+    expect(12);
 
     this.jio.putAttachment(
       id,
@@ -548,6 +549,7 @@
         equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, submit_url);
         equal(server.requests[0].status, 204);
+        equal(server.requests[0].responseType, "blob");
         ok(server.requests[0].requestBody instanceof FormData);
 
         ok(context.spy.calledTwice, "FormData.append count " +
@@ -586,7 +588,7 @@
     }, ""]);
 
     stop();
-    expect(12);
+    expect(13);
 
     this.jio.putAttachment(
       id,
@@ -598,6 +600,7 @@
         equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, submit_url);
         equal(server.requests[0].status, 204);
+        equal(server.requests[0].responseType, "blob");
         ok(server.requests[0].requestBody instanceof FormData);
 
         ok(context.spy.calledOnce, "FormData.append count " +
