@@ -55,11 +55,16 @@
         stringify(spec.remote_sub_storage) +
         stringify(this._query_options)
     );
-    this._signature_sub_storage = jIO.createJIO({
-      type: "document",
-      document_id: this._signature_hash,
-      sub_storage: spec.signature_storage || spec.local_sub_storage
-    });
+    if (spec.signature_storage !== undefined) {
+      spec.signature_storage.database = this._signature_hash;
+      this._signature_sub_storage = jIO.createJIO(spec.signature_storage);
+    } else {
+      this._signature_sub_storage = jIO.createJIO({
+        type: "document",
+        document_id: this._signature_hash,
+        sub_storage: spec.local_sub_storage
+      });
+    }
 
     this._use_remote_post = spec.use_remote_post || false;
     // Number of request we allow browser execution for attachments
@@ -983,9 +988,12 @@
     return new RSVP.Queue()
       .push(function () {
         // Ensure that the document storage is usable
-        return context._signature_sub_storage.__storage._sub_storage.get(
-          context._signature_hash
-        );
+        if (context._signature_sub_storage.__type === "document") {
+          return context._signature_sub_storage.__storage._sub_storage.get(
+            context._signature_hash
+          );
+        }
+        return;
       })
       .push(undefined, function (error) {
         if ((error instanceof jIO.util.jIOError) &&
