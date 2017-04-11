@@ -75,15 +75,17 @@ module.exports = function (grunt) {
           maxlen: 80,
           indent: 2,
           maxerr: 3,
+          node: true,
           nomen: true
         }
       },
       jio_nodejs_include: {
-        src: ['src/nodejs/include.js'],
+        src: ['src/nodejs/*.js'],
         directives: {
           maxlen: 80,
           indent: 2,
           maxerr: 3,
+          node: true,
           nomen: true
         }
       },
