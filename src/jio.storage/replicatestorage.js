@@ -50,19 +50,25 @@
     this._local_sub_storage = jIO.createJIO(spec.local_sub_storage);
     this._remote_sub_storage = jIO.createJIO(spec.remote_sub_storage);
 
-    this._signature_hash = "_replicate_" + generateHash(
-      stringify(spec.local_sub_storage) +
-        stringify(spec.remote_sub_storage) +
-        stringify(this._query_options)
-    );
-    this._signature_sub_storage = jIO.createJIO({
-      type: "query",
-      sub_storage: {
-        type: "document",
-        document_id: this._signature_hash,
-        sub_storage: spec.signature_storage || spec.local_sub_storage
-      }
-    });
+    if (spec.hasOwnProperty('signature_sub_storage')) {
+      this._signature_sub_storage = jIO.createJIO(spec.signature_sub_storage);
+      this._custom_signature_sub_storage = true;
+    } else {
+      this._signature_hash = "_replicate_" + generateHash(
+        stringify(spec.local_sub_storage) +
+          stringify(spec.remote_sub_storage) +
+          stringify(this._query_options)
+      );
+      this._signature_sub_storage = jIO.createJIO({
+        type: "query",
+        sub_storage: {
+          type: "document",
+          document_id: this._signature_hash,
+          sub_storage: spec.local_sub_storage
+        }
+      });
+      this._custom_signature_sub_storage = false;
+    }
 
     this._use_remote_post = spec.use_remote_post || false;
     // Number of request we allow browser execution for attachments
@@ -937,16 +943,18 @@
       argument_list = arguments,
       skip_document_dict = {};
 
-    // Do not sync the signature document
-    skip_document_dict[context._signature_hash] = null;
-
     return new RSVP.Queue()
       .push(function () {
         // Ensure that the document storage is usable
-        return context._signature_sub_storage.__storage._sub_storage
-                                             .__storage._sub_storage.get(
-            context._signature_hash
-          );
+        if (context._custom_signature_sub_storage === false) {
+          // Do not sync the signature document
+          skip_document_dict[context._signature_hash] = null;
+
+          return context._signature_sub_storage.__storage._sub_storage
+                                               .__storage._sub_storage.get(
+              context._signature_hash
+            );
+        }
       })
       .push(undefined, function (error) {
         if ((error instanceof jIO.util.jIOError) &&

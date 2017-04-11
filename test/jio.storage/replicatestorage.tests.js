@@ -74,6 +74,7 @@
     equal(jio.__storage._check_remote_attachment_deletion, false);
     equal(jio.__storage._check_remote_attachment_modification, false);
 
+    equal(jio.__storage._custom_signature_sub_storage, false);
     equal(jio.__storage._signature_hash,
           "_replicate_7209dfbcaff00f6637f939fdd71fa896793ed385");
 
@@ -109,9 +110,6 @@
       },
       remote_sub_storage: {
         type: "replicatestorage500"
-      },
-      signature_storage: {
-        type: "signaturestorage2713"
       },
       query: {query: 'portal_type: "Foo"', limit: [0, 1234567890]},
       use_remote_post: true,
@@ -153,6 +151,7 @@
     equal(jio.__storage._check_remote_attachment_deletion, true);
     equal(jio.__storage._check_remote_attachment_modification, true);
 
+    equal(jio.__storage._custom_signature_sub_storage, false);
     ok(jio.__storage._signature_sub_storage instanceof jio.constructor);
     equal(jio.__storage._signature_sub_storage.__type, "query");
 
@@ -173,7 +172,7 @@
     equal(jio.__storage._signature_sub_storage
              .__storage._sub_storage
              .__storage._sub_storage.__type,
-          "signaturestorage2713");
+          "replicatestorage200");
 
     equal(jio.__storage._signature_hash,
           "_replicate_11881e431308c0ec8c0e6430be98db380e1b92f8");
@@ -203,6 +202,36 @@
       }
     );
   });
+
+  test("signature storage database", function () {
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      signature_sub_storage: {
+        type: "memory"
+      },
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    equal(jio.__storage._custom_signature_sub_storage, true);
+    ok(jio.__storage._signature_sub_storage instanceof jio.constructor);
+    equal(jio.__storage._signature_sub_storage.__type, "memory");
+
+    ok(!jio.__storage.hasOwnProperty('_signature_hash'),
+       jio.__storage._signature_hash);
+  });
+
 
   /////////////////////////////////////////////////////////////////
   // replicateStorage.get
