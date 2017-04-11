@@ -39,8 +39,11 @@
     return rusha.digestFromString(content);
   }
 
-  function generateHashFromArrayBuffer(content) {
+  function generateHashFromArrayBuffer(content, context) {
     // XXX Improve performance by moving calculation to WebWorker
+    if (context._skip_attachment_hash) {
+      return "1";
+    }
     return rusha.digestFromArrayBuffer(content);
   }
 
@@ -145,6 +148,14 @@
     if (this._check_remote_attachment_deletion === undefined) {
       this._check_remote_attachment_deletion = false;
     }
+
+    this._skip_attachment_hash =
+      !this._check_remote_attachment_modification  &&
+      !this._check_local_attachment_modification &&
+      ((!this._check_local_attachment_creation &&
+      this._conflict_handling !== CONFLICT_KEEP_LOCAL) ||
+      (!this._check_remote_attachment_creation &&
+        this._conflict_handling !== CONFLICT_KEEP_REMOTE));
   }
 
   ReplicateStorage.prototype.remove = function (id) {
@@ -282,7 +293,8 @@
         })
         .push(function (evt) {
           return generateHashFromArrayBuffer(
-            evt.target.result
+            evt.target.result,
+            context
           );
         }, function (error) {
           if ((error instanceof jIO.util.jIOError) &&
@@ -400,7 +412,7 @@
         })
         .push(function (evt) {
           var array_buffer = evt.target.result,
-            local_hash = generateHashFromArrayBuffer(array_buffer);
+            local_hash = generateHashFromArrayBuffer(array_buffer, context);
 
           if (local_hash !== status_hash) {
             return checkAndPropagateAttachment(skip_attachment_dict,

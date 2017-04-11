@@ -4947,7 +4947,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
-            hash: "cd762363c1c11ecb48611583520bba111f0034d4"
+            hash: "1"
           });
         })
         .fail(function (error) {
@@ -5967,7 +5967,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
-          hash: "cd762363c1c11ecb48611583520bba111f0034d4"
+          hash: "1"
         });
       })
       .fail(function (error) {
@@ -6103,7 +6103,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
-          hash: "cd762363c1c11ecb48611583520bba111f0034d4"
+          hash: "1"
         });
       })
       .fail(function (error) {
@@ -8267,6 +8267,142 @@
       })
       .then(function () {
         return context.jio.repair();
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local creation same attachment, keep remote", function () {
+
+    stop();
+    expect(2);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]),
+      blob2 = new Blob([big_string + "a"]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      conflict_handling: 2,
+      check_local_attachment_creation: true,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage
+                      .putAttachment(id, "foo", blob);
+      })
+      .then(function () {
+        return context.jio.putAttachment(id, "foo", blob2);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.getAttachment(
+          id,
+          "foo",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(result, big_string);
+        return context.jio.__storage._signature_sub_storage
+                      .getAttachment(id, "foo", {format: "json"});
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "cd762363c1c11ecb48611583520bba111f0034d4"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote creation same attachment, keep local", function () {
+
+    stop();
+    expect(2);
+
+    var id,
+      context = this,
+      blob = new Blob([big_string]),
+      blob2 = new Blob([big_string + "a"]);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      conflict_handling: 1,
+      check_remote_attachment_creation: true,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage
+                      .putAttachment(id, "foo", blob2);
+      })
+      .then(function () {
+        return context.jio.putAttachment(id, "foo", blob);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "foo",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(result, big_string);
+        return context.jio.__storage._signature_sub_storage
+                      .getAttachment(id, "foo", {format: "json"});
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "cd762363c1c11ecb48611583520bba111f0034d4"
+        });
       })
       .fail(function (error) {
         ok(false, error);
