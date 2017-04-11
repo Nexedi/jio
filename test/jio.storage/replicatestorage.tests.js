@@ -4677,6 +4677,130 @@
     );
   });
 
+  test("local creation, same document id: keep remote", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      conflict_handling: 2,
+      check_local_modification: false,
+      check_local_deletion: false,
+      check_remote_modification: false,
+      check_remote_creation: false,
+      check_remote_deletion: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foobar"})
+      .then(function (result) {
+        id = result;
+        return context.jio.__storage._remote_sub_storage.put(
+          id,
+          {"title": "foo"}
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {"title": "foo"});
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote creation, same document id: keep local", function () {
+    stop();
+    expect(2);
+
+    var id,
+      context = this;
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      conflict_handling: 1,
+      check_local_creation: false,
+      check_local_modification: false,
+      check_local_deletion: false,
+      check_remote_modification: false,
+      check_remote_deletion: false,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return context.jio.__storage._remote_sub_storage.put(
+          id,
+          {"title": "foobar"}
+        );
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.__storage._signature_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
+        });
+      })
+      .then(function () {
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {"title": "foo"});
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // attachment replication
   /////////////////////////////////////////////////////////////////
