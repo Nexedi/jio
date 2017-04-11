@@ -175,7 +175,7 @@
     equal(jio.__storage._check_remote_attachment_deletion, true);
     equal(jio.__storage._check_remote_attachment_modification, true);
 
-    equal(jio.__storage._signature_sub_storage.__storage._sub_storage.__type,
+    equal(jio.__storage._signature_sub_storage.__type,
           "signaturestorage2713");
     equal(jio.__storage._signature_hash,
           "_replicate_11881e431308c0ec8c0e6430be98db380e1b92f8");
@@ -4647,6 +4647,34 @@
       .always(function () {
         start();
       });
+  });
+
+  test("signature storage database named as hash", function () {
+
+    var jio = jIO.createJIO({
+      type: "replicate",
+      signature_storage: {
+        type: "indexeddb"
+      },
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    equal(
+      "jio:_replicate_b9296354cdf1dbe0046de11f57a5a24f8f6a78a8",
+      jio.__storage._signature_sub_storage.__storage._database_name,
+      "database equal hash"
+    );
   });
 
   /////////////////////////////////////////////////////////////////
