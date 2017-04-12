@@ -288,7 +288,7 @@ module.exports = function (grunt) {
              "test/jio.storage/mappingstorage.tests.js",
              "test/jio.storage/localstorage.tests.js",
              "test/jio.storage/documentstorage.tests.js",
-             "test/jio.storage/erp5storage.tests.js",
+             "test/jio.storage/erp5storage.tests.js"
            ],
       options : {
         force: true
