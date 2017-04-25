@@ -172,56 +172,6 @@
       });
   };
 
-  ERP5Storage.prototype.bulk = function (request_list) {
-    var i,
-      storage = this,
-      bulk_list = [];
-
-
-    for (i = 0; i < request_list.length; i += 1) {
-      if (request_list[i].method !== "get") {
-        throw new Error("ERP5Storage: not supported " +
-                        request_list[i].method + " in bulk");
-      }
-      bulk_list.push({
-        relative_url: request_list[i].parameter_list[0],
-        view: storage._default_view_reference
-      });
-    }
-    return getSiteDocument(storage)
-      .push(function (site_hal) {
-        var form_data = new FormData();
-        form_data.append("bulk_list", JSON.stringify(bulk_list));
-        return jIO.util.ajax({
-          "type": "POST",
-          "url": site_hal._actions.bulk.href,
-          "data": form_data,
-//           "headers": {
-//             "Content-Type": "application/json"
-//           },
-          "xhrFields": {
-            withCredentials: true
-          }
-        });
-      })
-      .push(function (response) {
-        var result_list = [],
-          hateoas = JSON.parse(response.target.responseText);
-
-        function pushResult(json) {
-          return extractPropertyFromFormJSON(json)
-            .push(function (json2) {
-              return convertJSONToGet(json2);
-            });
-        }
-
-        for (i = 0; i < hateoas.result_list.length; i += 1) {
-          result_list.push(pushResult(hateoas.result_list[i]));
-        }
-        return RSVP.all(result_list);
-      });
-  };
-
   ERP5Storage.prototype.post = function (data) {
     var context = this,
       new_id;
@@ -448,7 +398,7 @@
   ERP5Storage.prototype.hasCapacity = function (name) {
     return ((name === "list") || (name === "query") ||
             (name === "select") || (name === "limit") ||
-            (name === "sort")) || (name === "bulk_get");
+            (name === "sort"));
   };
 
   function isSingleLocalRoles(parsed_query) {

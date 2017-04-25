@@ -822,44 +822,6 @@
         });
     }
 
-    function checkBulkSignatureDifference(queue, source, destination, id_list,
-                                          document_status_list, options,
-                                          conflict_force, conflict_revert,
-                                          conflict_ignore) {
-      queue
-        .push(function () {
-          return source.bulk(id_list);
-        })
-        .push(function (result_list) {
-          var i,
-            argument_list = [];
-
-          function getResult(j) {
-            return function (id) {
-              if (id !== id_list[j].parameter_list[0]) {
-                throw new Error("Does not access expected ID " + id);
-              }
-              return result_list[j];
-            };
-          }
-
-          for (i = 0; i < result_list.length; i += 1) {
-            argument_list[i] = [undefined, source, destination,
-                               id_list[i].parameter_list[0],
-                               conflict_force, conflict_revert,
-                               conflict_ignore,
-                               document_status_list[i].is_creation,
-                               document_status_list[i].is_modification,
-                               getResult(i), options];
-          }
-          return dispatchQueue(
-            checkSignatureDifference,
-            argument_list,
-            options.operation_amount
-          );
-        });
-    }
-
     function pushStorage(source, destination, signature_allDocs, options) {
       var argument_list = [],
         argument_list_deletion = [];
@@ -873,8 +835,6 @@
         .push(function (source_allDocs) {
           var i,
             local_dict = {},
-            document_list = [],
-            document_status_list = [],
             signature_dict = {},
             is_modification,
             is_creation,
@@ -902,26 +862,15 @@
               is_creation = !signature_dict.hasOwnProperty(key)
                 && options.check_creation;
               if (is_modification === true || is_creation === true) {
-                if (options.use_bulk_get === true) {
-                  document_list.push({
-                    method: "get",
-                    parameter_list: [key]
-                  });
-                  document_status_list.push({
-                    is_creation: is_creation,
-                    is_modification: is_modification
-                  });
-                } else {
-                  argument_list[i] = [undefined, source, destination,
-                                      key,
-                                      options.conflict_force,
-                                      options.conflict_revert,
-                                      options.conflict_ignore,
-                                      is_creation, is_modification,
-                                      source.get.bind(source),
-                                      options];
-                  i += 1;
-                }
+                argument_list[i] = [undefined, source, destination,
+                                    key,
+                                    options.conflict_force,
+                                    options.conflict_revert,
+                                    options.conflict_ignore,
+                                    is_creation, is_modification,
+                                    source.get.bind(source),
+                                    options];
+                i += 1;
               }
             }
           }
@@ -956,14 +905,6 @@
                 options.operation_amount
               );
             });
-          }
-          if ((options.use_bulk_get === true) && (document_list.length !== 0)) {
-            checkBulkSignatureDifference(queue, source, destination,
-                                         document_list, document_status_list,
-                                         options,
-                                         options.conflict_force,
-                                         options.conflict_revert,
-                                         options.conflict_ignore);
           }
           return queue;
         });
@@ -1049,24 +990,12 @@
         return signature_allDocs;
       })
       .push(function (signature_allDocs) {
-        // Autoactivate bulk if substorage implements it
-        // Keep it like this until the bulk API is stabilized
-        var use_bulk_get = false;
-        try {
-          use_bulk_get = context._remote_sub_storage.hasCapacity("bulk_get");
-        } catch (error) {
-          if (!((error instanceof jIO.util.jIOError) &&
-               (error.status_code === 501))) {
-            throw error;
-          }
-        }
         if (context._check_remote_modification ||
             context._check_remote_creation ||
             context._check_remote_deletion) {
           return pushStorage(context._remote_sub_storage,
                              context._local_sub_storage,
                              signature_allDocs, {
-              use_bulk_get: use_bulk_get,
               use_revert_post: context._use_remote_post,
               conflict_force: (context._conflict_handling ===
                                CONFLICT_KEEP_REMOTE),
