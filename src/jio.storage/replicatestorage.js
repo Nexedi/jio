@@ -860,9 +860,8 @@
         });
     }
 
-    function pushStorage(source, destination, options) {
-      var queue = new RSVP.Queue(),
-        argument_list = [],
+    function pushStorage(source, destination, signature_allDocs, options) {
+      var argument_list = [],
         argument_list_deletion = [];
       if (!options.hasOwnProperty("use_post")) {
         options.use_post = false;
@@ -870,14 +869,8 @@
       if (!options.hasOwnProperty("use_revert_post")) {
         options.use_revert_post = false;
       }
-      return queue
-        .push(function () {
-          return RSVP.all([
-            source.allDocs(context._query_options),
-            context._signature_sub_storage.allDocs()
-          ]);
-        })
-        .push(function (result_list) {
+      return source.allDocs(context._query_options)
+        .push(function (source_allDocs) {
           var i,
             local_dict = {},
             document_list = [],
@@ -885,19 +878,20 @@
             signature_dict = {},
             is_modification,
             is_creation,
-            key;
-          for (i = 0; i < result_list[0].data.total_rows; i += 1) {
+            key,
+            queue = new RSVP.Queue();
+          for (i = 0; i < source_allDocs.data.total_rows; i += 1) {
             if (!skip_document_dict.hasOwnProperty(
-                result_list[0].data.rows[i].id
+                source_allDocs.data.rows[i].id
               )) {
-              local_dict[result_list[0].data.rows[i].id] = i;
+              local_dict[source_allDocs.data.rows[i].id] = i;
             }
           }
-          for (i = 0; i < result_list[1].data.total_rows; i += 1) {
+          for (i = 0; i < signature_allDocs.data.total_rows; i += 1) {
             if (!skip_document_dict.hasOwnProperty(
-                result_list[1].data.rows[i].id
+                signature_allDocs.data.rows[i].id
               )) {
-              signature_dict[result_list[1].data.rows[i].id] = i;
+              signature_dict[signature_allDocs.data.rows[i].id] = i;
             }
           }
           i = 0;
@@ -971,6 +965,7 @@
                                          options.conflict_revert,
                                          options.conflict_ignore);
           }
+          return queue;
         });
     }
 
@@ -1019,9 +1014,21 @@
       .push(function () {
         if (context._check_local_modification ||
             context._check_local_creation ||
+            context._check_local_deletion ||
+            context._check_remote_modification ||
+            context._check_remote_creation ||
+            context._check_remote_deletion) {
+          return context._signature_sub_storage.allDocs();
+        }
+      })
+
+      .push(function (signature_allDocs) {
+        if (context._check_local_modification ||
+            context._check_local_creation ||
             context._check_local_deletion) {
           return pushStorage(context._local_sub_storage,
                              context._remote_sub_storage,
+                             signature_allDocs,
                              {
               use_post: context._use_remote_post,
               conflict_force: (context._conflict_handling ===
@@ -1034,10 +1041,14 @@
               check_creation: context._check_local_creation,
               check_deletion: context._check_local_deletion,
               operation_amount: context._parallel_operation_amount
+            })
+              .push(function () {
+              return signature_allDocs;
             });
         }
+        return signature_allDocs;
       })
-      .push(function () {
+      .push(function (signature_allDocs) {
         // Autoactivate bulk if substorage implements it
         // Keep it like this until the bulk API is stabilized
         var use_bulk_get = false;
@@ -1053,7 +1064,8 @@
             context._check_remote_creation ||
             context._check_remote_deletion) {
           return pushStorage(context._remote_sub_storage,
-                             context._local_sub_storage, {
+                             context._local_sub_storage,
+                             signature_allDocs, {
               use_bulk_get: use_bulk_get,
               use_revert_post: context._use_remote_post,
               conflict_force: (context._conflict_handling ===

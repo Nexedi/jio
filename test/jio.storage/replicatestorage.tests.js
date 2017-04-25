@@ -3874,7 +3874,7 @@
 
   test("substorages are repaired too", function () {
     stop();
-    expect(9);
+    expect(8);
 
     var context = this,
       first_call = true,
@@ -3943,7 +3943,7 @@
 
   test("sync all documents by default", function () {
     stop();
-    expect(5);
+    expect(4);
 
     var context = this;
 
@@ -3991,7 +3991,7 @@
 
   test("sync can be restricted to some documents", function () {
     stop();
-    expect(5);
+    expect(4);
 
     var context = this,
       query = {query: 'portal_type: "Foo"', limit: [0, 1234567890]};
