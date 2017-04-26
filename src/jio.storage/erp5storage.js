@@ -445,6 +445,7 @@
           "type": "POST",
           "url": name,
           "data": data,
+          "dataType": "blob",
           "xhrFields": {
             withCredentials: storage._thisCredentials
           },

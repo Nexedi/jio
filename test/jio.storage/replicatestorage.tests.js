@@ -4334,84 +4334,312 @@
       });
   });
 
-  test("use 2 queue in parallel", function () {
+  test("use 1 parallel operation", function () {
     stop();
-    expect(1);
+    expect(16);
 
     var context = this,
-      start_sync = [],
-      sync_pause;
+      order_number = 0,
+      expected_order_list = [
+        'start get 0',
+        'stop get 0',
+        'start put 0',
+        'stop put 0',
+        'start get 1',
+        'stop get 1',
+        'start put 1',
+        'stop put 1',
+        'start get 2',
+        'stop get 2',
+        'start put 2',
+        'stop put 2',
+        'start get 3',
+        'stop get 3',
+        'start put 3',
+        'stop put 3'
+      ];
 
-    function Storage2711() {
+    function assertExecutionOrder(text) {
+      equal(text, expected_order_list[order_number],
+            expected_order_list[order_number]);
+      order_number += 1;
+    }
+
+    function StorageOneParallelOperation() {
       this._sub_storage = jIO.createJIO({type: "memory"});
       return this;
     }
 
-    Storage2711.prototype.put = function (id, doc) {
-      this._sub_storage.put(id, doc);
-      return id;
-    };
-    Storage2711.prototype.get = function (id) {
+    StorageOneParallelOperation.prototype.put = function (id, doc) {
+      assertExecutionOrder('start put ' + id);
       var storage = this;
-      start_sync[id] = true;
-      return ((id === "0") ? RSVP.delay(500) : RSVP.delay(100))
-        .then(function () {
-          if (id === "2") {
-            sync_pause = start_sync.toString();
-          }
-          start_sync[id] = false;
-          return storage._sub_storage.get(id);
+      return storage._sub_storage.put(id, doc)
+        .push(function (result) {
+          assertExecutionOrder('stop put ' + id);
+          return result;
         });
     };
-    Storage2711.prototype.buildQuery = function () {
+
+    StorageOneParallelOperation.prototype.get = function (id) {
+      assertExecutionOrder('start get ' + id);
+      var storage = this;
+      return storage._sub_storage.get(id)
+        .push(undefined, function (error) {
+          assertExecutionOrder('stop get ' + id);
+          throw error;
+        });
+    };
+    StorageOneParallelOperation.prototype.buildQuery = function () {
       return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
     };
 
-    Storage2711.prototype.bulk = function () {
-      return this._sub_storage.bulk.apply(this._sub_storage, arguments);
-    };
-
-    Storage2711.prototype.hasCapacity = function () {
+    StorageOneParallelOperation.prototype.hasCapacity = function () {
       return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
     };
 
     jIO.addStorage(
-      'parallel',
-      Storage2711
+      'one_parallel',
+      StorageOneParallelOperation
     );
 
     this.jio = jIO.createJIO({
       type: "replicate",
-      conflict_handling: 1,
-      check_local_creation: true,
-      check_local_modification: true,
-      parallel_operation_amount: 2,
       local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "memory"
-        }
+        type: "memory"
       },
       remote_sub_storage: {
-        type: "parallel"
+        type: "one_parallel"
       }
     });
 
-    return context.jio.put("0", {"title": "foo"})
-      .push(function () {
-        return context.jio.put("1", {"title": "foo1"});
-      })
-      .push(function () {
-        return context.jio.put("2", {"title": "foo2"});
-      })
-      .push(function () {
-        return context.jio.put("3", {"title": "foo3"});
-      })
-      .push(function () {
+    return RSVP.all([
+      context.jio.put("0", {"title": "foo"}),
+      context.jio.put("1", {"title": "foo1"}),
+      context.jio.put("2", {"title": "foo2"}),
+      context.jio.put("3", {"title": "foo3"})
+    ])
+      .then(function () {
         return context.jio.repair();
       })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("use 2 parallel operations", function () {
+    stop();
+    expect(16);
+
+    var context = this,
+      order_number = 0,
+      expected_order_list = [
+        'start get 0',
+
+        'start get 1',
+        'stop get 1',
+        'start put 1',
+        'stop put 1',
+        'start get 2',
+        'stop get 2',
+        'start put 2',
+
+        'stop get 0',
+        'start put 0',
+        'stop put 0',
+        'start get 3',
+        'stop get 3',
+        'start put 3',
+        'stop put 3',
+
+        'stop put 2'
+      ],
+      defer0,
+      defer2;
+
+    function assertExecutionOrder(text) {
+      equal(text, expected_order_list[order_number],
+            expected_order_list[order_number]);
+      order_number += 1;
+    }
+
+    function StorageTwoParallelOperation() {
+      this._sub_storage = jIO.createJIO({type: "memory"});
+      return this;
+    }
+
+    StorageTwoParallelOperation.prototype.put = function (id, doc) {
+      var storage = this;
+      assertExecutionOrder('start put ' + id);
+      return new RSVP.Queue()
+        .push(function () {
+          if (id === "2") {
+            defer0.resolve();
+            defer2 = RSVP.defer();
+            return defer2.promise;
+          }
+        })
+        .push(function () {
+          return storage._sub_storage.put(id, doc);
+        })
+        .push(function (result) {
+          if (id === "3") {
+            defer2.resolve();
+          }
+          assertExecutionOrder('stop put ' + id);
+          return result;
+        });
+    };
+
+    StorageTwoParallelOperation.prototype.get = function (id) {
+      var storage = this;
+      assertExecutionOrder('start get ' + id);
+      return new RSVP.Queue()
+        .push(function () {
+          if (id === "0") {
+            defer0 = RSVP.defer();
+            return defer0.promise;
+          }
+        })
+        .push(function () {
+          return storage._sub_storage.get(id);
+        })
+        .push(undefined, function (error) {
+          assertExecutionOrder('stop get ' + id);
+          throw error;
+        });
+    };
+    StorageTwoParallelOperation.prototype.buildQuery = function () {
+      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    };
+
+    StorageTwoParallelOperation.prototype.hasCapacity = function () {
+      return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+    };
+
+    jIO.addStorage(
+      'two_parallel',
+      StorageTwoParallelOperation
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      parallel_operation_amount: 2,
+      local_sub_storage: {
+        type: "memory"
+      },
+      remote_sub_storage: {
+        type: "two_parallel"
+      }
+    });
+
+    return RSVP.all([
+      context.jio.put("0", {"title": "foo"}),
+      context.jio.put("1", {"title": "foo1"}),
+      context.jio.put("2", {"title": "foo2"}),
+      context.jio.put("3", {"title": "foo3"})
+    ])
       .then(function () {
-        equal(sync_pause, "true,false,true", "rigth order");
+        return context.jio.repair();
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+
+  test("use 4 parallel operations", function () {
+    stop();
+    expect(16);
+
+    var context = this,
+      order_number = 0,
+      expected_order_list = [
+        'start get 0',
+        'start get 1',
+        'start get 2',
+        'start get 3',
+        'stop get 0',
+        'stop get 1',
+        'stop get 2',
+        'stop get 3',
+        'start put 0',
+        'start put 1',
+        'start put 2',
+        'start put 3',
+        'stop put 0',
+        'stop put 1',
+        'stop put 2',
+        'stop put 3'
+      ];
+
+    function assertExecutionOrder(text) {
+      equal(text, expected_order_list[order_number],
+            expected_order_list[order_number]);
+      order_number += 1;
+    }
+
+    function StorageFourParallelOperation() {
+      this._sub_storage = jIO.createJIO({type: "memory"});
+      return this;
+    }
+
+    StorageFourParallelOperation.prototype.put = function (id, doc) {
+      assertExecutionOrder('start put ' + id);
+      var storage = this;
+      return storage._sub_storage.put(id, doc)
+        .push(function (result) {
+          assertExecutionOrder('stop put ' + id);
+          return result;
+        });
+    };
+
+    StorageFourParallelOperation.prototype.get = function (id) {
+      assertExecutionOrder('start get ' + id);
+      var storage = this;
+      return storage._sub_storage.get(id)
+        .push(undefined, function (error) {
+          assertExecutionOrder('stop get ' + id);
+          throw error;
+        });
+    };
+    StorageFourParallelOperation.prototype.buildQuery = function () {
+      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    };
+
+    StorageFourParallelOperation.prototype.hasCapacity = function () {
+      return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+    };
+
+    jIO.addStorage(
+      'four_parallel',
+      StorageFourParallelOperation
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      parallel_operation_amount: 4,
+      local_sub_storage: {
+        type: "memory"
+      },
+      remote_sub_storage: {
+        type: "four_parallel"
+      }
+    });
+
+    return RSVP.all([
+      context.jio.put("0", {"title": "foo"}),
+      context.jio.put("1", {"title": "foo1"}),
+      context.jio.put("2", {"title": "foo2"}),
+      context.jio.put("3", {"title": "foo3"})
+    ])
+      .then(function () {
+        return context.jio.repair();
       })
       .fail(function (error) {
         ok(false, error);
@@ -7503,116 +7731,514 @@
       });
   });
 
-  test("use 2 queue in parallel", function () {
+  test("use 1 parallel operation", function () {
     stop();
-    expect(1);
+    expect(40);
 
     var context = this,
-      start_sync = [],
-      sync_pause;
+      order_number = 0,
+      expected_order_list = [
+        'start get 0',
+        'stop get 0',
+        'start put 0',
+        'stop put 0',
+        'start get 1',
+        'stop get 1',
+        'start put 1',
+        'stop put 1',
+        'start getAttachment 00',
+        'stop getAttachment 00',
+        'start putAttachment 00',
+        'stop putAttachment 00',
+        'start getAttachment 01',
+        'stop getAttachment 01',
+        'start putAttachment 01',
+        'stop putAttachment 01',
+        'start getAttachment 02',
+        'stop getAttachment 02',
+        'start putAttachment 02',
+        'stop putAttachment 02',
+        'start getAttachment 03',
+        'stop getAttachment 03',
+        'start putAttachment 03',
+        'stop putAttachment 03',
+        'start getAttachment 10',
+        'stop getAttachment 10',
+        'start putAttachment 10',
+        'stop putAttachment 10',
+        'start getAttachment 11',
+        'stop getAttachment 11',
+        'start putAttachment 11',
+        'stop putAttachment 11',
+        'start getAttachment 12',
+        'stop getAttachment 12',
+        'start putAttachment 12',
+        'stop putAttachment 12',
+        'start getAttachment 13',
+        'stop getAttachment 13',
+        'start putAttachment 13',
+        'stop putAttachment 13'
+      ];
 
-    function Storage2713() {
+    function assertExecutionOrder(text) {
+      equal(text, expected_order_list[order_number],
+            expected_order_list[order_number]);
+      order_number += 1;
+    }
+
+    function StorageOneParallelOperation() {
       this._sub_storage = jIO.createJIO({type: "memory"});
       return this;
     }
 
-    Storage2713.prototype.put = function (id, doc) {
-      this._sub_storage.put(id, doc);
-      return id;
-    };
-    Storage2713.prototype.get = function (id) {
-      console.log("get", id);
-      return this._sub_storage.get(id);
-    };
-    Storage2713.prototype.getAttachment = function (id) {
-      var storage = this,
-        argument_list = arguments;
-      start_sync[id] = true;
-      return ((id === "0") ? RSVP.delay(500) : RSVP.delay(100))
-        .then(function () {
-          if (id === "2") {
-            sync_pause = start_sync.toString();
-          }
-          start_sync[id] = false;
-          return storage._sub_storage.getAttachment.apply(
-            storage._sub_storage,
-            argument_list
-          );
+    StorageOneParallelOperation.prototype.put = function (id, doc) {
+      assertExecutionOrder('start put ' + id);
+      var storage = this;
+      return storage._sub_storage.put(id, doc)
+        .push(function (result) {
+          assertExecutionOrder('stop put ' + id);
+          return result;
         });
     };
-    Storage2713.prototype.putAttachment = function () {
-      return this._sub_storage.putAttachment.apply(this._sub_storage,
-        arguments);
+
+    StorageOneParallelOperation.prototype.get = function (id) {
+      assertExecutionOrder('start get ' + id);
+      var storage = this;
+      return storage._sub_storage.get(id)
+        .push(undefined, function (error) {
+          assertExecutionOrder('stop get ' + id);
+          throw error;
+        });
     };
-    Storage2713.prototype.removeAttachment = function () {
-      return this._sub_storage.removeAttachment.apply(this._sub_storage,
-        arguments);
+
+    StorageOneParallelOperation.prototype.getAttachment = function (id, name) {
+      assertExecutionOrder('start getAttachment ' + name);
+      var storage = this;
+      return storage._sub_storage.getAttachment(id, name)
+        .push(undefined, function (error) {
+          assertExecutionOrder('stop getAttachment ' + name);
+          throw error;
+        });
     };
-    Storage2713.prototype.allAttachments = function () {
+
+    StorageOneParallelOperation.prototype.putAttachment = function (id, name,
+                                                                    blob) {
+      assertExecutionOrder('start putAttachment ' + name);
+      var storage = this;
+      return storage._sub_storage.putAttachment(id, name, blob)
+        .push(function (result) {
+          assertExecutionOrder('stop putAttachment ' + name);
+          return result;
+        });
+    };
+
+    StorageOneParallelOperation.prototype.buildQuery = function () {
+      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    };
+    StorageOneParallelOperation.prototype.allAttachments = function () {
       return this._sub_storage.allAttachments.apply(this._sub_storage,
         arguments);
     };
-    Storage2713.prototype.buildQuery = function () {
-      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
-    };
 
-    Storage2713.prototype.bulk = function () {
-      return this._sub_storage.bulk.apply(this._sub_storage, arguments);
-    };
-
-    Storage2713.prototype.hasCapacity = function () {
+    StorageOneParallelOperation.prototype.hasCapacity = function () {
       return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
     };
 
     jIO.addStorage(
-      'parallel_attachment',
-      Storage2713
+      'one_parallel_attachment',
+      StorageOneParallelOperation
     );
 
     this.jio = jIO.createJIO({
       type: "replicate",
-      conflict_handling: 1,
       check_local_attachment_creation: true,
-      check_local_attachment_modification: true,
-      parallel_operation_attachment_amount: 2,
       local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "memory"
-        }
+        type: "memory"
       },
       remote_sub_storage: {
-        type: "parallel_attachment"
+        type: "one_parallel_attachment"
       }
     });
 
-    return context.jio.put("0", {"title": "foo"})
-      .push(function () {
-        return context.jio.putAttachment("0", "foo", new Blob(["0"]));
-      })
-      .push(function () {
-        return context.jio.put("1", {"title": "foo1"});
-      })
-      .push(function () {
-        return context.jio.putAttachment("1", "foo", new Blob(["1"]));
-      })
-      .push(function () {
-        return context.jio.put("2", {"title": "foo2"});
-      })
-      .push(function () {
-        return context.jio.putAttachment("2", "foo", new Blob(["2"]));
-      })
-      .push(function () {
-        return context.jio.put("3", {"title": "foo3"});
-      })
-      .push(function () {
-        return context.jio.putAttachment("3", "foo", new Blob(["3"]));
-      })
-      .push(function () {
-        return context.jio.repair();
+    return RSVP.all([
+      context.jio.put("0", {}),
+      context.jio.put("1", {})
+    ])
+      .then(function () {
+        return RSVP.all([
+          context.jio.putAttachment("0", "00", new Blob(["0"])),
+          context.jio.putAttachment("0", "01", new Blob(["1"])),
+          context.jio.putAttachment("0", "02", new Blob(["2"])),
+          context.jio.putAttachment("0", "03", new Blob(["3"])),
+          context.jio.putAttachment("1", "10", new Blob(["0"])),
+          context.jio.putAttachment("1", "11", new Blob(["1"])),
+          context.jio.putAttachment("1", "12", new Blob(["2"])),
+          context.jio.putAttachment("1", "13", new Blob(["3"]))
+        ]);
       })
       .then(function () {
-        equal(sync_pause, "true,false,true", "rigth order");
+        return context.jio.repair();
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("use 2 parallel operation", function () {
+    stop();
+    expect(40);
+
+    var context = this,
+      order_number = 0,
+      expected_order_list = [
+        'start get 0',
+        'stop get 0',
+        'start put 0',
+        'stop put 0',
+        'start get 1',
+        'stop get 1',
+        'start put 1',
+        'stop put 1',
+
+        'start getAttachment 00',
+
+        'start getAttachment 01',
+        'stop getAttachment 01',
+        'start putAttachment 01',
+        'stop putAttachment 01',
+        'start getAttachment 02',
+        'stop getAttachment 02',
+        'start putAttachment 02',
+
+        'stop getAttachment 00',
+        'start putAttachment 00',
+        'stop putAttachment 00',
+        'start getAttachment 03',
+        'stop getAttachment 03',
+        'start putAttachment 03',
+        'stop putAttachment 03',
+
+        'stop putAttachment 02',
+
+        'start getAttachment 10',
+
+        'start getAttachment 11',
+        'stop getAttachment 11',
+        'start putAttachment 11',
+        'stop putAttachment 11',
+        'start getAttachment 12',
+        'stop getAttachment 12',
+        'start putAttachment 12',
+
+        'stop getAttachment 10',
+        'start putAttachment 10',
+        'stop putAttachment 10',
+        'start getAttachment 13',
+        'stop getAttachment 13',
+        'start putAttachment 13',
+        'stop putAttachment 13',
+
+        'stop putAttachment 12'
+      ],
+      defer0,
+      defer2;
+
+    function assertExecutionOrder(text) {
+      equal(text, expected_order_list[order_number],
+            expected_order_list[order_number]);
+      order_number += 1;
+    }
+
+    function StorageTwoParallelOperation() {
+      this._sub_storage = jIO.createJIO({type: "memory"});
+      return this;
+    }
+
+    StorageTwoParallelOperation.prototype.put = function (id, doc) {
+      assertExecutionOrder('start put ' + id);
+      var storage = this;
+      return storage._sub_storage.put(id, doc)
+        .push(function (result) {
+          assertExecutionOrder('stop put ' + id);
+          return result;
+        });
+    };
+
+    StorageTwoParallelOperation.prototype.get = function (id) {
+      assertExecutionOrder('start get ' + id);
+      var storage = this;
+      return storage._sub_storage.get(id)
+        .push(undefined, function (error) {
+          assertExecutionOrder('stop get ' + id);
+          throw error;
+        });
+    };
+
+
+    StorageTwoParallelOperation.prototype.getAttachment = function (id,
+                                                                     name) {
+      assertExecutionOrder('start getAttachment ' + name);
+      var storage = this;
+      return new RSVP.Queue()
+        .push(function () {
+          if (name[1] === "0") {
+            defer0 = RSVP.defer();
+            return defer0.promise;
+          }
+        })
+        .push(function () {
+          return storage._sub_storage.getAttachment(id, name);
+        })
+        .push(undefined, function (error) {
+          assertExecutionOrder('stop getAttachment ' + name);
+          throw error;
+        });
+    };
+
+    StorageTwoParallelOperation.prototype.putAttachment = function (id, name,
+                                                                     blob) {
+      assertExecutionOrder('start putAttachment ' + name);
+      var storage = this;
+      return new RSVP.Queue()
+        .push(function () {
+          if (name[1] === "2") {
+            defer0.resolve();
+            defer2 = RSVP.defer();
+            return defer2.promise;
+          }
+        })
+        .push(function () {
+          return storage._sub_storage.putAttachment(id, name, blob);
+        })
+        .push(function (result) {
+          if (name[1] === "3") {
+            defer2.resolve();
+          }
+          assertExecutionOrder('stop putAttachment ' + name);
+          return result;
+        });
+    };
+
+
+    StorageTwoParallelOperation.prototype.buildQuery = function () {
+      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    };
+    StorageTwoParallelOperation.prototype.allAttachments = function () {
+      return this._sub_storage.allAttachments.apply(this._sub_storage,
+        arguments);
+    };
+
+    StorageTwoParallelOperation.prototype.hasCapacity = function () {
+      return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+    };
+
+    jIO.addStorage(
+      'two_parallel_attachment',
+      StorageTwoParallelOperation
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_local_attachment_creation: true,
+      parallel_operation_attachment_amount: 2,
+      local_sub_storage: {
+        type: "memory"
+      },
+      remote_sub_storage: {
+        type: "two_parallel_attachment"
+      }
+    });
+
+    return RSVP.all([
+      context.jio.put("0", {}),
+      context.jio.put("1", {})
+    ])
+      .then(function () {
+        return RSVP.all([
+          context.jio.putAttachment("0", "00", new Blob(["0"])),
+          context.jio.putAttachment("0", "01", new Blob(["1"])),
+          context.jio.putAttachment("0", "02", new Blob(["2"])),
+          context.jio.putAttachment("0", "03", new Blob(["3"])),
+          context.jio.putAttachment("1", "10", new Blob(["0"])),
+          context.jio.putAttachment("1", "11", new Blob(["1"])),
+          context.jio.putAttachment("1", "12", new Blob(["2"])),
+          context.jio.putAttachment("1", "13", new Blob(["3"]))
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("use 4 parallel operation", function () {
+    stop();
+    expect(40);
+
+    var context = this,
+      order_number = 0,
+      expected_order_list = [
+        'start get 0',
+        'stop get 0',
+        'start put 0',
+        'stop put 0',
+        'start get 1',
+        'stop get 1',
+        'start put 1',
+        'stop put 1',
+
+        'start getAttachment 00',
+        'stop getAttachment 00',
+        'start putAttachment 00',
+
+        'start getAttachment 01',
+        'stop getAttachment 01',
+        'start putAttachment 01',
+
+        'start getAttachment 02',
+        'stop getAttachment 02',
+        'start putAttachment 02',
+
+        'start getAttachment 03',
+        'stop getAttachment 03',
+        'start putAttachment 03',
+
+        'stop putAttachment 00',
+        'stop putAttachment 01',
+        'stop putAttachment 02',
+        'stop putAttachment 03',
+
+        'start getAttachment 10',
+        'stop getAttachment 10',
+        'start putAttachment 10',
+
+        'start getAttachment 11',
+        'stop getAttachment 11',
+        'start putAttachment 11',
+
+        'start getAttachment 12',
+        'stop getAttachment 12',
+        'start putAttachment 12',
+
+        'start getAttachment 13',
+        'stop getAttachment 13',
+        'start putAttachment 13',
+
+        'stop putAttachment 10',
+        'stop putAttachment 11',
+        'stop putAttachment 12',
+        'stop putAttachment 13'
+
+      ];
+
+    function assertExecutionOrder(text) {
+      equal(text, expected_order_list[order_number],
+            expected_order_list[order_number]);
+      order_number += 1;
+    }
+
+    function StorageFourParallelOperation() {
+      this._sub_storage = jIO.createJIO({type: "memory"});
+      return this;
+    }
+
+    StorageFourParallelOperation.prototype.put = function (id, doc) {
+      assertExecutionOrder('start put ' + id);
+      var storage = this;
+      return storage._sub_storage.put(id, doc)
+        .push(function (result) {
+          assertExecutionOrder('stop put ' + id);
+          return result;
+        });
+    };
+
+    StorageFourParallelOperation.prototype.get = function (id) {
+      assertExecutionOrder('start get ' + id);
+      var storage = this;
+      return storage._sub_storage.get(id)
+        .push(undefined, function (error) {
+          assertExecutionOrder('stop get ' + id);
+          throw error;
+        });
+    };
+
+    StorageFourParallelOperation.prototype.getAttachment = function (id,
+                                                                     name) {
+      assertExecutionOrder('start getAttachment ' + name);
+      var storage = this;
+      return storage._sub_storage.getAttachment(id, name)
+        .push(undefined, function (error) {
+          assertExecutionOrder('stop getAttachment ' + name);
+          throw error;
+        });
+    };
+
+    StorageFourParallelOperation.prototype.putAttachment = function (id, name,
+                                                                     blob) {
+      assertExecutionOrder('start putAttachment ' + name);
+      var storage = this;
+      return storage._sub_storage.putAttachment(id, name, blob)
+        .push(function (result) {
+          assertExecutionOrder('stop putAttachment ' + name);
+          return result;
+        });
+    };
+
+    StorageFourParallelOperation.prototype.buildQuery = function () {
+      return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    };
+    StorageFourParallelOperation.prototype.allAttachments = function () {
+      return this._sub_storage.allAttachments.apply(this._sub_storage,
+        arguments);
+    };
+
+    StorageFourParallelOperation.prototype.hasCapacity = function () {
+      return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+    };
+
+    jIO.addStorage(
+      'four_parallel_attachment',
+      StorageFourParallelOperation
+    );
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_local_attachment_creation: true,
+      parallel_operation_attachment_amount: 4,
+      local_sub_storage: {
+        type: "memory"
+      },
+      remote_sub_storage: {
+        type: "four_parallel_attachment"
+      }
+    });
+
+    return RSVP.all([
+      context.jio.put("0", {}),
+      context.jio.put("1", {})
+    ])
+      .then(function () {
+        return RSVP.all([
+          context.jio.putAttachment("0", "00", new Blob(["0"])),
+          context.jio.putAttachment("0", "01", new Blob(["1"])),
+          context.jio.putAttachment("0", "02", new Blob(["2"])),
+          context.jio.putAttachment("0", "03", new Blob(["3"])),
+          context.jio.putAttachment("1", "10", new Blob(["0"])),
+          context.jio.putAttachment("1", "11", new Blob(["1"])),
+          context.jio.putAttachment("1", "12", new Blob(["2"])),
+          context.jio.putAttachment("1", "13", new Blob(["3"]))
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
       })
       .fail(function (error) {
         ok(false, error);

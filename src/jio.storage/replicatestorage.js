@@ -218,10 +218,12 @@
         queue
           .push(function () {
             if (argument_list.length > 0) {
-              var argument_array = argument_list.shift();
-              argument_array[0] = queue;
+              var argument_array = argument_list.shift(),
+                sub_queue = new RSVP.Queue();
+              argument_array[0] = sub_queue;
               function_used.apply(context, argument_array);
               pushAndExecute(queue);
+              return sub_queue;
             }
           });
       }
@@ -354,8 +356,8 @@
         });
     }
 
-    function checkAttachmentSignatureDifference(skip_attachment_dict,
-                                                queue, source,
+    function checkAttachmentSignatureDifference(queue, skip_attachment_dict,
+                                                source,
                                                 destination, id, name,
                                                 conflict_force,
                                                 conflict_revert,
@@ -405,8 +407,8 @@
         });
     }
 
-    function checkAttachmentLocalDeletion(skip_attachment_dict,
-                                queue, destination, id, name, source,
+    function checkAttachmentLocalDeletion(queue, skip_attachment_dict,
+                                destination, id, name, source,
                                 conflict_force, conflict_revert,
                                 conflict_ignore) {
       var status_hash;
@@ -427,7 +429,9 @@
 
     function pushDocumentAttachment(skip_attachment_dict, id, source,
                                     destination, options) {
-      var queue = new RSVP.Queue();
+      var queue = new RSVP.Queue(),
+        local_dict = {},
+        signature_dict = {};
 
       return queue
         .push(function () {
@@ -451,11 +455,10 @@
           ]);
         })
         .push(function (result_list) {
-          var local_dict = {},
-            signature_dict = {},
-            is_modification,
+          var is_modification,
             is_creation,
-            key;
+            key,
+            argument_list = [];
           for (key in result_list[0]) {
             if (result_list[0].hasOwnProperty(key)) {
               if (!skip_attachment_dict.hasOwnProperty(key)) {
@@ -478,30 +481,45 @@
               is_creation = !signature_dict.hasOwnProperty(key)
                 && options.check_creation;
               if (is_modification === true || is_creation === true) {
-                checkAttachmentSignatureDifference(skip_attachment_dict,
-                                                   queue, source,
-                                                   destination, id, key,
-                                                   options.conflict_force,
-                                                   options.conflict_revert,
-                                                   options.conflict_ignore,
-                                                   is_creation,
-                                                   is_modification);
+                argument_list.push([undefined,
+                                    skip_attachment_dict,
+                                    source,
+                                    destination, id, key,
+                                    options.conflict_force,
+                                    options.conflict_revert,
+                                    options.conflict_ignore,
+                                    is_creation,
+                                    is_modification]);
               }
             }
           }
+          return dispatchQueue(
+            checkAttachmentSignatureDifference,
+            argument_list,
+            context._parallel_operation_attachment_amount
+          );
+        })
+        .push(function () {
+          var key, argument_list = [];
           if (options.check_deletion === true) {
             for (key in signature_dict) {
               if (signature_dict.hasOwnProperty(key)) {
                 if (!local_dict.hasOwnProperty(key)) {
-                  checkAttachmentLocalDeletion(skip_attachment_dict,
-                                               queue, destination, id, key,
+                  argument_list.push([undefined,
+                                               skip_attachment_dict,
+                                               destination, id, key,
                                                source,
                                                options.conflict_force,
                                                options.conflict_revert,
-                                               options.conflict_ignore);
+                                               options.conflict_ignore]);
                 }
               }
             }
+            return dispatchQueue(
+              checkAttachmentLocalDeletion,
+              argument_list,
+              context._parallel_operation_attachment_amount
+            );
           }
         });
     }
@@ -1074,7 +1092,7 @@
               return dispatchQueue(
                 repairDocument,
                 argument_list,
-                context._parallel_operation_attachment_amount
+                context._parallel_operation_amount
               );
             });
         }

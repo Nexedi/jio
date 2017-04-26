@@ -11419,7 +11419,6 @@ return new Parser;
           "type": "POST",
           "url": name,
           "data": data,
-          "dataType": "blob",
           "xhrFields": {
             withCredentials: true
           }
