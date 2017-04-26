@@ -398,6 +398,34 @@
   };
 
   ERP5Storage.prototype.putAttachment = function (id, name, blob) {
+    if (name === "data") {
+      return getDocumentAndHateoas(this, id,
+                                   {"_view": "jio_data"})
+        .push(function (response) {
+          var result = JSON.parse(response.target.responseText);
+          // Remove all ERP5 hateoas links / convert them into jIO ID
+
+          // XXX Change default action to an jio urn with attachment name inside
+          // if Base_edit, do put URN
+          // if others, do post URN (ie, unique new attachment name)
+          // XXX Except this attachment name should be generated when
+          return extractPropertyFromFormJSON(result);
+        })
+        .push(function (result) {
+          var form_data = result.form_data,
+            data = new FormData();
+          data.append("field_my_file", blob);
+          data.append("form_id", form_data.form_id["default"]);
+          return jIO.util.ajax({
+            "type": "POST",
+            "url": result.action_href,
+            "data": data,
+            "xhrFields": {
+              withCredentials: true
+            }
+          });
+        });
+    }
     // Assert we use a callable on a document from the ERP5 site
     if (name.indexOf(this._url) !== 0) {
       throw new jIO.util.jIOError("Can not store outside ERP5: " +
