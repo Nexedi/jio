@@ -875,7 +875,6 @@
             signature_dict[signature_allDocs.data.rows[i].id] = i;
           }
         }
-        i = 0;
         for (key in local_dict) {
           if (local_dict.hasOwnProperty(key)) {
             is_modification = signature_dict.hasOwnProperty(key)
@@ -883,7 +882,7 @@
             is_creation = !signature_dict.hasOwnProperty(key)
               && options.check_creation;
             if (is_modification === true || is_creation === true) {
-              argument_list[i] = [undefined, context, skip_document_dict,
+              argument_list.push([undefined, context, skip_document_dict,
                                   source, destination,
                                   key,
                                   options.conflict_force,
@@ -891,8 +890,7 @@
                                   options.conflict_ignore,
                                   is_creation, is_modification,
                                   source.get.bind(source),
-                                  options];
-              i += 1;
+                                  options]);
             }
           }
         }
@@ -906,11 +904,10 @@
             );
           });
         if (options.check_deletion === true) {
-          i = 0;
           for (key in signature_dict) {
             if (signature_dict.hasOwnProperty(key)) {
               if (!local_dict.hasOwnProperty(key)) {
-                argument_list_deletion[i] = [undefined,
+                argument_list_deletion.push([undefined,
                                              context,
                                              skip_document_dict,
                                              destination, key,
@@ -918,8 +915,7 @@
                                              options.conflict_force,
                                              options.conflict_revert,
                                              options.conflict_ignore,
-                                             options];
-                i += 1;
+                                             options]);
               }
             }
           }
