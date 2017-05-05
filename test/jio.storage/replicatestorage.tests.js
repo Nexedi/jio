@@ -111,14 +111,25 @@
           "_replicate_7209dfbcaff00f6637f939fdd71fa896793ed385");
 
     ok(jio.__storage._signature_sub_storage instanceof jio.constructor);
-    equal(jio.__storage._signature_sub_storage.__type, "document");
+    equal(jio.__storage._signature_sub_storage.__type, "query");
 
-    equal(jio.__storage._signature_sub_storage.__storage._document_id,
+    ok(jio.__storage._signature_sub_storage
+          .__storage._sub_storage instanceof jio.constructor);
+    equal(jio.__storage._signature_sub_storage
+             .__storage._sub_storage.__type, "document");
+
+    equal(jio.__storage._signature_sub_storage
+             .__storage._sub_storage
+             .__storage._document_id,
           jio.__storage._signature_hash);
 
-    ok(jio.__storage._signature_sub_storage.__storage._sub_storage
+    ok(jio.__storage._signature_sub_storage
+          .__storage._sub_storage
+          .__storage._sub_storage
        instanceof jio.constructor);
-    equal(jio.__storage._signature_sub_storage.__storage._sub_storage.__type,
+    equal(jio.__storage._signature_sub_storage
+             .__storage._sub_storage
+             .__storage._sub_storage.__type,
           "replicatestorage200");
 
   });
@@ -175,8 +186,28 @@
     equal(jio.__storage._check_remote_attachment_deletion, true);
     equal(jio.__storage._check_remote_attachment_modification, true);
 
-    equal(jio.__storage._signature_sub_storage.__storage._sub_storage.__type,
+    ok(jio.__storage._signature_sub_storage instanceof jio.constructor);
+    equal(jio.__storage._signature_sub_storage.__type, "query");
+
+    ok(jio.__storage._signature_sub_storage
+          .__storage._sub_storage instanceof jio.constructor);
+    equal(jio.__storage._signature_sub_storage
+             .__storage._sub_storage.__type, "document");
+
+    equal(jio.__storage._signature_sub_storage
+             .__storage._sub_storage
+             .__storage._document_id,
+          jio.__storage._signature_hash);
+
+    ok(jio.__storage._signature_sub_storage
+          .__storage._sub_storage
+          .__storage._sub_storage
+       instanceof jio.constructor);
+    equal(jio.__storage._signature_sub_storage
+             .__storage._sub_storage
+             .__storage._sub_storage.__type,
           "signaturestorage2713");
+
     equal(jio.__storage._signature_hash,
           "_replicate_11881e431308c0ec8c0e6430be98db380e1b92f8");
   });

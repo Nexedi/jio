@@ -56,9 +56,12 @@
         stringify(this._query_options)
     );
     this._signature_sub_storage = jIO.createJIO({
-      type: "document",
-      document_id: this._signature_hash,
-      sub_storage: spec.signature_storage || spec.local_sub_storage
+      type: "query",
+      sub_storage: {
+        type: "document",
+        document_id: this._signature_hash,
+        sub_storage: spec.signature_storage || spec.local_sub_storage
+      }
     });
 
     this._use_remote_post = spec.use_remote_post || false;
@@ -805,31 +808,14 @@
                                     source, destination, id,
                                     conflict_force, conflict_revert,
                                     conflict_ignore,
-                                    is_creation, is_modification,
+                                    status_hash,
                                     getMethod, options) {
     queue
       .push(function () {
-        // Optimisation to save a get call to signature storage
-        if (is_creation === true) {
-          return RSVP.all([
-            getMethod(id),
-            {hash: null}
-          ]);
-        }
-        if (is_modification === true) {
-          return RSVP.all([
-            getMethod(id),
-            context._signature_sub_storage.get(id)
-          ]);
-        }
-        throw new jIO.util.jIOError("Unexpected call of"
-                                    + " checkSignatureDifference",
-                                    409);
+        return getMethod(id);
       })
-      .push(function (result_list) {
-        var doc = result_list[0],
-          local_hash = generateHash(stringify(doc)),
-          status_hash = result_list[1].hash;
+      .push(function (doc) {
+        var local_hash = generateHash(stringify(doc));
 
         if (local_hash !== status_hash) {
           return checkAndPropagate(context, skip_document_dict,
@@ -859,6 +845,7 @@
           signature_dict = {},
           is_modification,
           is_creation,
+          status_hash,
           key,
           queue = new RSVP.Queue();
         for (i = 0; i < source_allDocs.data.total_rows; i += 1) {
@@ -872,7 +859,8 @@
           if (!skip_document_dict.hasOwnProperty(
               signature_allDocs.data.rows[i].id
             )) {
-            signature_dict[signature_allDocs.data.rows[i].id] = i;
+            signature_dict[signature_allDocs.data.rows[i].id] =
+              signature_allDocs.data.rows[i].value.hash;
           }
         }
         for (key in local_dict) {
@@ -881,6 +869,13 @@
               && options.check_modification;
             is_creation = !signature_dict.hasOwnProperty(key)
               && options.check_creation;
+
+            if (is_creation === true) {
+              status_hash = null;
+            } else if (is_modification === true) {
+              status_hash = signature_dict[key];
+            }
+
             if (is_modification === true || is_creation === true) {
               argument_list.push([undefined, context, skip_document_dict,
                                   source, destination,
@@ -888,7 +883,7 @@
                                   options.conflict_force,
                                   options.conflict_revert,
                                   options.conflict_ignore,
-                                  is_creation, is_modification,
+                                  status_hash,
                                   source.get.bind(source),
                                   options]);
             }
@@ -949,17 +944,19 @@
     return new RSVP.Queue()
       .push(function () {
         // Ensure that the document storage is usable
-        return context._signature_sub_storage.__storage._sub_storage.get(
-          context._signature_hash
-        );
+        return context._signature_sub_storage.__storage._sub_storage
+                                             .__storage._sub_storage.get(
+            context._signature_hash
+          );
       })
       .push(undefined, function (error) {
         if ((error instanceof jIO.util.jIOError) &&
             (error.status_code === 404)) {
-          return context._signature_sub_storage.__storage._sub_storage.put(
-            context._signature_hash,
-            {}
-          );
+          return context._signature_sub_storage.__storage._sub_storage
+                                               .__storage._sub_storage.put(
+              context._signature_hash,
+              {}
+            );
         }
         throw error;
       })
@@ -989,7 +986,9 @@
             context._check_remote_modification ||
             context._check_remote_creation ||
             context._check_remote_deletion) {
-          return context._signature_sub_storage.allDocs();
+          return context._signature_sub_storage.allDocs({
+            select_list: ['hash']
+          });
         }
       })
 
