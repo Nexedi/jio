@@ -809,10 +809,10 @@
                                     conflict_force, conflict_revert,
                                     conflict_ignore,
                                     status_hash,
-                                    getMethod, options) {
+                                    options) {
     queue
       .push(function () {
-        return getMethod(id);
+        return source.get(id);
       })
       .push(function (doc) {
         var local_hash = generateHash(stringify(doc));
@@ -884,7 +884,6 @@
                                   options.conflict_revert,
                                   options.conflict_ignore,
                                   status_hash,
-                                  source.get.bind(source),
                                   options]);
             }
           }
