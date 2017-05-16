@@ -73,6 +73,7 @@
     equal(jio.__storage._check_remote_attachment_creation, false);
     equal(jio.__storage._check_remote_attachment_deletion, false);
     equal(jio.__storage._check_remote_attachment_modification, false);
+    equal(jio.__storage._signature_hash_key, undefined);
 
     equal(jio.__storage._custom_signature_sub_storage, false);
     equal(jio.__storage._signature_hash,
@@ -127,12 +128,14 @@
       check_local_attachment_modification: true,
       check_remote_attachment_creation: true,
       check_remote_attachment_deletion: true,
-      check_remote_attachment_modification: true
+      check_remote_attachment_modification: true,
+      signature_hash_key: 'bar'
     });
 
     deepEqual(
       jio.__storage._query_options,
-      {query: 'portal_type: "Foo"', limit: [0, 1234567890]}
+      {query: 'portal_type: "Foo"', limit: [0, 1234567890],
+        select_list: ['bar']}
     );
     equal(jio.__storage._use_remote_post, true);
     equal(jio.__storage._conflict_handling, 3);
@@ -150,6 +153,7 @@
     equal(jio.__storage._check_remote_attachment_creation, true);
     equal(jio.__storage._check_remote_attachment_deletion, true);
     equal(jio.__storage._check_remote_attachment_modification, true);
+    equal(jio.__storage._signature_hash_key, 'bar');
 
     equal(jio.__storage._custom_signature_sub_storage, false);
     ok(jio.__storage._signature_sub_storage instanceof jio.constructor);
@@ -175,7 +179,7 @@
           "replicatestorage200");
 
     equal(jio.__storage._signature_hash,
-          "_replicate_11881e431308c0ec8c0e6430be98db380e1b92f8");
+          "_replicate_291eaf37f6fa1ba6b6b115ab92b44cc88be0bb06");
   });
 
   test("reject unknow conflict resolution", function () {
