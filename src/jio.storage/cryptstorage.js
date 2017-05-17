@@ -105,12 +105,12 @@
       })
       .push(function (dataURL) {
         //string->arraybuffer
-        var strLen = dataURL.currentTarget.result.length,
+        var strLen = dataURL.target.result.length,
           buf = new ArrayBuffer(strLen),
           bufView = new Uint8Array(buf),
           i;
 
-        dataURL = dataURL.currentTarget.result;
+        dataURL = dataURL.target.result;
         for (i = 0; i < strLen; i += 1) {
           bufView[i] = dataURL.charCodeAt(i);
         }
@@ -147,7 +147,7 @@
           .push(function (coded) {
             var initializaton_vector;
 
-            coded = coded.currentTarget.result;
+            coded = coded.target.result;
             initializaton_vector = new Uint8Array(coded.slice(0, 12));
             return new RSVP.Queue()
               .push(function () {
