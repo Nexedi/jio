@@ -29,13 +29,13 @@
     "cloud"
   ],
   "dependencies": {
-    "rsvp": "git+https://lab.nexedi.com/nexedi/rsvp.js.git",
+    "rsvp": "git+https://lab.nexedi.com/romain/rsvp.js.git#wip",
     "uritemplate": "git+https://lab.nexedi.com/nexedi/uritemplate-js.git",
     "moment": "2.13.0",
     "rusha": "0.8.2"
   },
   "devDependencies": {
-    "renderjs": "git+https://lab.nexedi.com/nexedi/renderjs.git",
+    "renderjs": "git+https://lab.nexedi.com/romain/renderjs.git#wip",
     "grunt": "0.4.x",
     "grunt-cli": "~0.1.11",
     "grunt-contrib-concat": "0.3.x",
