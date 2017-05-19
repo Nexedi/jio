@@ -472,46 +472,32 @@
 
   function pushDocumentAttachment(context,
                                   skip_attachment_dict, id, source,
-                                  destination,
+                                  destination, signature_allAttachments,
                                   options) {
-    var queue = new RSVP.Queue(),
-      local_dict = {},
+    var local_dict = {},
       signature_dict = {};
-    return queue
-      .push(function () {
-        return RSVP.all([
-          source.allAttachments(id)
-            .push(undefined, function (error) {
-              if ((error instanceof jIO.util.jIOError) &&
-                  (error.status_code === 404)) {
-                return {};
-              }
-              throw error;
-            }),
-          context._signature_sub_storage.allAttachments(id)
-            .push(undefined, function (error) {
-              if ((error instanceof jIO.util.jIOError) &&
-                  (error.status_code === 404)) {
-                return {};
-              }
-              throw error;
-            })
-        ]);
+    return source.allAttachments(id)
+      .push(undefined, function (error) {
+        if ((error instanceof jIO.util.jIOError) &&
+            (error.status_code === 404)) {
+          return {};
+        }
+        throw error;
       })
-      .push(function (result_list) {
+      .push(function (source_allAttachments) {
         var is_modification,
           is_creation,
           key,
           argument_list = [];
-        for (key in result_list[0]) {
-          if (result_list[0].hasOwnProperty(key)) {
+        for (key in source_allAttachments) {
+          if (source_allAttachments.hasOwnProperty(key)) {
             if (!skip_attachment_dict.hasOwnProperty(key)) {
               local_dict[key] = null;
             }
           }
         }
-        for (key in result_list[1]) {
-          if (result_list[1].hasOwnProperty(key)) {
+        for (key in signature_allAttachments) {
+          if (signature_allAttachments.hasOwnProperty(key)) {
             if (!skip_attachment_dict.hasOwnProperty(key)) {
               signature_dict[key] = null;
             }
@@ -578,6 +564,24 @@
       .push(function () {
         if (context._check_local_attachment_modification ||
             context._check_local_attachment_creation ||
+            context._check_local_attachment_deletion ||
+            context._check_remote_attachment_modification ||
+            context._check_remote_attachment_creation ||
+            context._check_remote_attachment_deletion) {
+          return context._signature_sub_storage.allAttachments(id);
+        }
+        return {};
+      })
+      .push(undefined, function (error) {
+        if ((error instanceof jIO.util.jIOError) &&
+            (error.status_code === 404)) {
+          return {};
+        }
+        throw error;
+      })
+      .push(function (signature_allAttachments) {
+        if (context._check_local_attachment_modification ||
+            context._check_local_attachment_creation ||
             context._check_local_attachment_deletion) {
           return pushDocumentAttachment(
             context,
@@ -585,6 +589,7 @@
             id,
             context._local_sub_storage,
             context._remote_sub_storage,
+            signature_allAttachments,
             {
               conflict_force: (context._conflict_handling ===
                                CONFLICT_KEEP_LOCAL),
@@ -597,10 +602,14 @@
               check_creation: context._check_local_attachment_creation,
               check_deletion: context._check_local_attachment_deletion
             }
-          );
+          )
+            .push(function () {
+              return signature_allAttachments;
+            });
         }
+        return signature_allAttachments;
       })
-      .push(function () {
+      .push(function (signature_allAttachments) {
         if (context._check_remote_attachment_modification ||
             context._check_remote_attachment_creation ||
             context._check_remote_attachment_deletion) {
@@ -610,6 +619,7 @@
             id,
             context._remote_sub_storage,
             context._local_sub_storage,
+            signature_allAttachments,
             {
               use_revert_post: context._use_remote_post,
               conflict_force: (context._conflict_handling ===
