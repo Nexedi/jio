@@ -299,7 +299,7 @@
       });
   }
 
-  function checkAndPropagateAttachment(context, skip_document_dict,
+  function checkAndPropagateAttachment(context,
                                        skip_attachment_dict,
                                        status_hash, local_hash, blob,
                                        source, destination, id, name,
@@ -330,7 +330,7 @@
             // Deleted on both side, drop signature
             return context._signature_sub_storage.removeAttachment(id, name)
               .push(function () {
-                skip_attachment_dict[id] = null;
+                skip_attachment_dict[name] = null;
               });
           }
 
@@ -339,7 +339,7 @@
               hash: local_hash
             }))
             .push(function () {
-              skip_document_dict[id] = null;
+              skip_attachment_dict[name] = null;
             });
         }
 
@@ -396,7 +396,6 @@
   }
 
   function checkAttachmentSignatureDifference(queue, context,
-                                              skip_document_dict,
                                               skip_attachment_dict,
                                               source,
                                               destination, id, name,
@@ -439,7 +438,7 @@
           local_hash = generateHashFromArrayBuffer(array_buffer);
 
         if (local_hash !== status_hash) {
-          return checkAndPropagateAttachment(context, skip_document_dict,
+          return checkAndPropagateAttachment(context,
                                              skip_attachment_dict,
                                              status_hash, local_hash, blob,
                                              source, destination, id, name,
@@ -449,7 +448,7 @@
       });
   }
 
-  function checkAttachmentLocalDeletion(queue, context, skip_document_dict,
+  function checkAttachmentLocalDeletion(queue, context,
                               skip_attachment_dict,
                               destination, id, name, source,
                               conflict_force, conflict_revert,
@@ -462,7 +461,7 @@
       })
       .push(function (result) {
         status_hash = result.hash;
-        return checkAndPropagateAttachment(context, skip_document_dict,
+        return checkAndPropagateAttachment(context,
                                  skip_attachment_dict,
                                  status_hash, null, null,
                                  source, destination, id, name,
@@ -471,9 +470,10 @@
       });
   }
 
-  function pushDocumentAttachment(context, skip_document_dict,
+  function pushDocumentAttachment(context,
                                   skip_attachment_dict, id, source,
-                                  destination, options) {
+                                  destination,
+                                  options) {
     var queue = new RSVP.Queue(),
       local_dict = {},
       signature_dict = {};
@@ -527,7 +527,6 @@
             if (is_modification === true || is_creation === true) {
               argument_list.push([undefined,
                                   context,
-                                  skip_document_dict,
                                   skip_attachment_dict,
                                   source,
                                   destination, id, key,
@@ -554,7 +553,6 @@
               if (!local_dict.hasOwnProperty(key)) {
                 argument_list.push([undefined,
                                              context,
-                                             skip_document_dict,
                                              skip_attachment_dict,
                                              destination, id, key,
                                              source,
@@ -574,7 +572,7 @@
       });
   }
 
-  function repairDocumentAttachment(context, id, skip_document_dict) {
+  function repairDocumentAttachment(context, id) {
     var skip_attachment_dict = {};
     return new RSVP.Queue()
       .push(function () {
@@ -583,7 +581,6 @@
             context._check_local_attachment_deletion) {
           return pushDocumentAttachment(
             context,
-            skip_document_dict,
             skip_attachment_dict,
             id,
             context._local_sub_storage,
@@ -609,7 +606,6 @@
             context._check_remote_attachment_deletion) {
           return pushDocumentAttachment(
             context,
-            skip_document_dict,
             skip_attachment_dict,
             id,
             context._remote_sub_storage,
@@ -738,7 +734,7 @@
     // ie, replication should prevent losing user data
     // Synchronize attachments before, to ensure
     // all of them will be deleted too
-    return repairDocumentAttachment(context, id, skip_document_dict)
+    return repairDocumentAttachment(context, id)
       .push(function () {
         return destination.allAttachments(id);
       })
@@ -1046,9 +1042,9 @@
       });
   }
 
-  function repairDocument(queue, context, id, skip_document_dict) {
+  function repairDocument(queue, context, id) {
     queue.push(function () {
-      return repairDocumentAttachment(context, id, skip_document_dict);
+      return repairDocumentAttachment(context, id);
     });
   }
 
@@ -1184,8 +1180,7 @@
 
               for (i = 0; i < len; i += 1) {
                 local_argument_list.push(
-                  [undefined, context, result.data.rows[i].id,
-                    skip_document_dict]
+                  [undefined, context, result.data.rows[i].id]
                 );
               }
               return dispatchQueue(
