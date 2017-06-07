@@ -334,12 +334,22 @@
       this,
       doc
     ),
-      id = doc[this._property_for_sub_id];
+      id = doc[this._property_for_sub_id],
+      storage = this;
     if (this._property_for_sub_id && id !== undefined) {
       return this._sub_storage.put(id, sub_doc);
     }
     if (!this._id_mapped || doc[this._id_mapped] !== undefined) {
-      return this._sub_storage.post(sub_doc);
+      return getSubStorageId(storage, id, doc)
+        .push(function (sub_id) {
+          return storage._sub_storage.put(sub_id, sub_doc);
+        })
+        .push(undefined, function (error) {
+          if (error instanceof jIO.util.jIOError) {
+            return storage._sub_storage.post(sub_doc);
+          }
+          throw error;
+        });
     }
     throw new jIO.util.jIOError(
       "post is not supported with id mapped",
