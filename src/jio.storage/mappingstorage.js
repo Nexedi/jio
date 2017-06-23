@@ -347,6 +347,9 @@
         .push(function (sub_id) {
           return storage._sub_storage.put(sub_id, sub_doc);
         })
+        .push(function () {
+          return doc[storage._id_mapped];
+        })
         .push(undefined, function (error) {
           if (error instanceof jIO.util.jIOError) {
             return storage._sub_storage.post(sub_doc);
