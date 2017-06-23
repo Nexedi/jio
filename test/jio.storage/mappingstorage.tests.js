@@ -56,7 +56,7 @@
 
     deepEqual(
       jio.__storage._mapping_dict,
-      {"bar": ["equalSubProperty", "foo"]}
+      {"bar": ["equalSubProperty", "foo"], "otherId": ["keep"]}
     );
     deepEqual(jio.__storage._map_id, ["equalSubProperty", "otherId"]);
     equal(jio.__storage._query.query.key, "foo");
@@ -130,13 +130,14 @@
 
     Storage2713.prototype.get = function (id) {
       equal(id, "2713", "get 2713 called");
-      return {"title": "foo"};
+      return {"title": "foo", "otherId": "42"};
     };
 
     jio.get("42")
       .push(function (result) {
         deepEqual(result, {
-          "title": "foo"
+          "title": "foo",
+          "otherId": "42"
         });
       }).push(undefined, function (error) {
         ok(false, error);
@@ -169,13 +170,14 @@
 
     Storage2713.prototype.get = function (id) {
       equal(id, "2713", "get 2713 called");
-      return {"title": "foo"};
+      return {"title": "foo", "otherId": "42"};
     };
 
     jio.get("42")
       .push(function (result) {
         deepEqual(result, {
-          "title": "foo"
+          "title": "foo",
+          "otherId": "42"
         });
       }).push(undefined, function (error) {
         ok(false, error);
@@ -652,7 +654,7 @@
 
   test("with id equalSubProperty and id in doc", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var jio = jIO.createJIO({
       type: "mapping",
@@ -667,9 +669,18 @@
       return "42";
     };
 
+    Storage2713.prototype.put = function (id, doc) {
+      equal(id, "bar", "put 2713 called");
+      deepEqual(doc, {
+        "title": "foo",
+        "otherId": "bar"
+      }, "put 2713 called");
+      return "42";
+    };
+
     jio.post({"title": "foo", "otherId": "bar"})
       .push(function (result) {
-        equal(result, "42");
+        equal(result, "bar");
       })
       .push(undefined, function (error) {
         ok(false, error);
@@ -1205,7 +1216,8 @@
                   "id": "42",
                   "value": {
                     "title": "foo",
-                    "smth": "bar"
+                    "smth": "bar",
+                    "otherId": "42"
                   },
                   "doc": {}
                 },
@@ -1213,7 +1225,8 @@
                   "id": "2713",
                   "value": {
                     "title": "bar",
-                    "smth": "foo"
+                    "smth": "foo",
+                    "otherId": "2713"
                   },
                   "doc": {}
                 }
@@ -1266,7 +1279,9 @@
               "rows": [
                 {
                   "id": "42",
-                  "value": {},
+                  "value": {
+                    "otherId": "42"
+                  },
                   "doc": {}
                 }
               ],
@@ -1321,7 +1336,7 @@
               "rows": [
                 {
                   "id": "42",
-                  "value": {"title": "foo", "smth": "bar"},
+                  "value": {"title": "foo", "smth": "bar", "otherId": "42"},
                   "doc": {}
                 }
               ],
@@ -1377,7 +1392,10 @@
               "rows": [
                 {
                   "id": "42",
-                  "value": {"title": "foo"},
+                  "value": {
+                    "otherId": "42",
+                    "title": "foo"
+                  },
                   "doc": {}
                 }
               ],
@@ -1463,9 +1481,11 @@
           result,
           [{
             "title": "bar",
+            "otherId": "foo",
             "bar": "foo"
           }, {
             "title": "foo",
+            "otherId": "bar",
             "foo": "bar"
           }],
           "bulk test"
