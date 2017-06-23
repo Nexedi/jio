@@ -167,6 +167,9 @@
         }
       }
     }
+    if (storage._map_id[0] === "equalSubProperty") {
+      storage._mapping_dict[storage._map_id[1]] = ["keep"];
+    }
     if (storage._query.query !== undefined) {
       query_list.push(QueryFactory.create(storage._query.query));
     }
