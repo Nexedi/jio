@@ -493,7 +493,10 @@
       })
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document");
+        equal(
+          error.message,
+          "IndexedDB: cannot find object 'inexistent' in the 'metadata' store"
+        );
         equal(error.status_code, 404);
       })
       .fail(function (error) {
@@ -679,7 +682,10 @@
       })
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document");
+        equal(
+          error.message,
+          "IndexedDB: cannot find object 'inexistent' in the 'metadata' store"
+        );
         equal(error.status_code, 404);
       })
       .fail(function (error) {

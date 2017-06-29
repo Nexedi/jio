@@ -209,14 +209,18 @@
       });
   };
 
-  function handleGet(request, resolve, reject) {
+  function handleGet(store, id, resolve, reject) {
+    var request = store.get(id);
     request.onerror = reject;
     request.onsuccess = function () {
       if (request.result) {
         resolve(request.result);
       } else {
-        // XXX How to get ID
-        reject(new jIO.util.jIOError("Cannot find document", 404));
+        reject(new jIO.util.jIOError(
+          "IndexedDB: cannot find object '" + id + "' in the '" +
+            store.name + "' store",
+          404
+        ));
       }
     };
   }
@@ -227,7 +231,8 @@
         return new RSVP.Promise(function (resolve, reject) {
           var transaction = openTransaction(db, ["metadata"], "readonly");
           handleGet(
-            transaction.objectStore("metadata").get(id),
+            transaction.objectStore("metadata"),
+            id,
             resolve,
             reject
           );
@@ -260,7 +265,8 @@
             );
           }
           handleGet(
-            transaction.objectStore("metadata").get(id),
+            transaction.objectStore("metadata"),
+            id,
             getAttachments,
             reject
           );
@@ -388,7 +394,8 @@
                   result_list.push(result);
                 }
                 i += 1;
-                handleGet(store.get(buildKeyPath([id, name, i])),
+                handleGet(store,
+                  buildKeyPath([id, name, i]),
                   (i <= end_index) ? getPart(i) : resolver,
                   reject
                   );
@@ -397,8 +404,8 @@
             getPart(start_index - 1)();
           }
         // XXX Should raise if key is not good
-          handleGet(transaction.objectStore("attachment")
-                         .get(buildKeyPath([id, name])),
+          handleGet(transaction.objectStore("attachment"),
+            buildKeyPath([id, name]),
             getBlob,
             reject
             );
