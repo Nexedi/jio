@@ -10,6 +10,12 @@
     if (storage._no_sub_query_id) {
       throw new jIO.util.jIOError('no sub query id active', 404);
     }
+    if (value === undefined) {
+      throw new jIO.util.jIOError(
+        'can not find document with ' + key + ' : undefined',
+        404
+      );
+    }
     query = new SimpleQuery({
       key: key,
       value: value,
@@ -30,13 +36,13 @@
       "limit": storage._query.limit
     })
       .push(function (data) {
-        if (data.data.rows.length === 0) {
+        if (data.data.total_rows === 0) {
           throw new jIO.util.jIOError(
-            "Can not find id",
+            "Can not find document with (" + key + ", " + value + ")",
             404
           );
         }
-        if (data.data.rows.length > 1) {
+        if (data.data.total_rows > 1) {
           throw new TypeError("id must be unique field: " + key
             + ", result:" + data.data.rows.toString());
         }
@@ -62,9 +68,6 @@
           if (storage._property_for_sub_id &&
               doc.hasOwnProperty(storage._property_for_sub_id)) {
             return doc[storage._property_for_sub_id];
-          }
-          if (doc.hasOwnProperty(args)) {
-            return doc[args];
           }
         }
         return getSubIdEqualSubProperty(storage, id, storage._map_id[1]);
@@ -342,7 +345,7 @@
     if (this._property_for_sub_id && id !== undefined) {
       return this._sub_storage.put(id, sub_doc);
     }
-    if (!this._id_mapped || doc[this._id_mapped] !== undefined) {
+    if (this._id_mapped && doc[this._id_mapped] !== undefined) {
       return getSubStorageId(storage, id, doc)
         .push(function (sub_id) {
           return storage._sub_storage.put(sub_id, sub_doc);
