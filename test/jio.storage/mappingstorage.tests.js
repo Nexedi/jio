@@ -654,7 +654,7 @@
 
   test("with id equalSubProperty and id in doc", function () {
     stop();
-    expect(3);
+    expect(2);
 
     var jio = jIO.createJIO({
       type: "mapping",
@@ -664,9 +664,14 @@
       }
     });
 
+    Storage2713.prototype.buildQuery = function (options) {
+      equal(options.query, 'otherId:  "bar"', "allDoc 2713 called");
+      return [];
+    };
+
     Storage2713.prototype.post = function (doc) {
       deepEqual(doc, {"title": "foo", "otherId": "bar"}, "post 2713 called");
-      return "42";
+      return "bar";
     };
 
     Storage2713.prototype.put = function (id, doc) {
@@ -675,7 +680,7 @@
         "title": "foo",
         "otherId": "bar"
       }, "put 2713 called");
-      return "42";
+      return "bar";
     };
 
     jio.post({"title": "foo", "otherId": "bar"})
