@@ -10,11 +10,14 @@
     if (storage._no_sub_query_id) {
       throw new jIO.util.jIOError('no sub query id active', 404);
     }
-    if (value === undefined) {
+    if (!value) {
       throw new jIO.util.jIOError(
         'can not find document with ' + key + ' : undefined',
         404
       );
+    }
+    if (storage._mapping_id_memory_dict[value]) {
+      return storage._mapping_id_memory_dict[value];
     }
     query = new SimpleQuery({
       key: key,
@@ -46,6 +49,7 @@
           throw new TypeError("id must be unique field: " + key
             + ", result:" + data.data.rows.toString());
         }
+        storage._mapping_id_memory_dict[value] = data.data.rows[0].id;
         return data.data.rows[0].id;
       });
   }
@@ -202,6 +206,7 @@
       this._query.query = QueryFactory.create(this._query.query);
     }
     this._default_mapping = {};
+    this._mapping_id_memory_dict = {};
 
     initializeQueryAndDefaultMapping(this);
   }
