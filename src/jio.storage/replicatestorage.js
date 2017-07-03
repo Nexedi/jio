@@ -928,6 +928,7 @@
   }
 
   function pushStorage(context, skip_document_dict,
+                       skip_deleted_document_dict,
                        cache, source_key, destination_key,
                        source, destination, signature_allDocs, options) {
     var argument_list = [],
@@ -1022,10 +1023,10 @@
               options.operation_amount
             );
           });
-        if (options.check_deletion === true) {
-          for (key in signature_dict) {
-            if (signature_dict.hasOwnProperty(key)) {
-              if (!local_dict.hasOwnProperty(key)) {
+        for (key in signature_dict) {
+          if (signature_dict.hasOwnProperty(key)) {
+            if (!local_dict.hasOwnProperty(key)) {
+              if (options.check_deletion === true) {
                 argument_list_deletion.push([undefined,
                                              context,
                                              skip_document_dict,
@@ -1036,9 +1037,13 @@
                                              options.conflict_revert,
                                              options.conflict_ignore,
                                              options]);
+              } else {
+                skip_deleted_document_dict[key] = null;
               }
             }
           }
+        }
+        if (argument_list_deletion.length !== 0) {
           queue.push(function () {
             return dispatchQueue(
               context,
@@ -1062,6 +1067,7 @@
     var context = this,
       argument_list = arguments,
       skip_document_dict = {},
+      skip_deleted_document_dict = {},
       cache = {};
 
     return new RSVP.Queue()
@@ -1125,6 +1131,7 @@
             context._check_local_creation ||
             context._check_local_deletion) {
           return pushStorage(context, skip_document_dict,
+                             skip_deleted_document_dict,
                              cache, 'local', 'remote',
                              context._local_sub_storage,
                              context._remote_sub_storage,
@@ -1154,6 +1161,7 @@
             context._check_remote_creation ||
             context._check_remote_deletion) {
           return pushStorage(context, skip_document_dict,
+                             skip_deleted_document_dict,
                              cache, 'remote', 'local',
                              context._remote_sub_storage,
                              context._local_sub_storage,
@@ -1186,12 +1194,19 @@
             .push(function (result) {
               var i,
                 local_argument_list = [],
+                id,
                 len = result.data.total_rows;
 
               for (i = 0; i < len; i += 1) {
-                local_argument_list.push(
-                  [undefined, context, result.data.rows[i].id]
-                );
+                id = result.data.rows[i].id;
+                // Do not synchronize attachment if one version of the document
+                // is deleted but not pushed to the other storage
+                if (!skip_deleted_document_dict.hasOwnProperty(id) ||
+                    skip_document_dict.hasOwnProperty(id)) {
+                  local_argument_list.push(
+                    [undefined, context, id]
+                  );
+                }
               }
               return dispatchQueue(
                 context,

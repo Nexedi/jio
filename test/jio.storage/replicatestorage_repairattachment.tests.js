@@ -3649,5 +3649,343 @@
       });
   });
 
+  test("attachment skipped when local document deletion skipped", function () {
+    stop();
+    expect(18);
+
+    var id,
+      context = this,
+      blob = new Blob(['a']),
+      blob2 = new Blob(['b']);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_local_deletion: false,
+      check_local_attachment_modification: true,
+      check_local_attachment_creation: true,
+      check_local_attachment_deletion: true,
+      check_remote_attachment_modification: true,
+      check_remote_attachment_creation: true,
+      check_remote_attachment_deletion: true,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return RSVP.all([
+          context.jio.putAttachment(id, "foo", blob),
+          context.jio.putAttachment(id, "foomod", blob),
+          context.jio.putAttachment(id, "foodel", blob)
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.remove(id),
+          context.jio.__storage._remote_sub_storage
+                               .putAttachment(id, "foomod", blob2),
+          context.jio.__storage._remote_sub_storage
+                               .putAttachment(id, "foocre", blob),
+          context.jio.__storage._remote_sub_storage
+                               .removeAttachment(id, "foodel")
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+
+      .then(function () {
+        ok(true, 'second repair success');
+
+        // local document still deleted
+        return context.jio.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 404);
+        equal(error.message, "Cannot find document: " + id);
+
+        // document signature untouched
+        return context.jio.__storage._signature_sub_storage
+                      .get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"});
+
+        // remote document untouched
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {"title": "foo"});
+
+        // frozen attachment untouched
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "foo",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(result, "a");
+        // frozen attachment signature not created
+        return context.jio.__storage._signature_sub_storage
+                      .getAttachment(id, "foo", {format: "json"});
+      })
+      .then(function (result) {
+        deepEqual(result, {hash: "86f7e437faa5a7fce15d1ddcb9eaeaea377667b8"});
+
+        // created attachment untouched
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "foocre",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(result, "a");
+        // created attachment signature not created
+        return context.jio.__storage._signature_sub_storage
+                      .getAttachment(id, "foocre", {format: "json"});
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 404);
+        var error_message = "Cannot find attachment: " +
+          "_replicate_b9296354cdf1dbe0046de11f57a5a24f8f6a78a8 , " +
+          "jio_attachment/";
+        equal(
+          error.message.substring(0, error_message.length),
+          error_message
+        );
+
+        // modified attachment untouched
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "foomod",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(result, "b");
+        // modified attachment signature not created
+        return context.jio.__storage._signature_sub_storage
+                      .getAttachment(id, "foomod", {format: "json"});
+      })
+      .then(function (result) {
+        deepEqual(result, {hash: "86f7e437faa5a7fce15d1ddcb9eaeaea377667b8"});
+
+        // deleted attachment untouched
+        return context.jio.__storage._remote_sub_storage.getAttachment(
+          id,
+          "foodel",
+          {format: "text"}
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 404);
+        var error_message = "Cannot find attachment: " +
+          id + " , foodel";
+        equal(
+          error.message.substring(0, error_message.length),
+          error_message
+        );
+        // deleted attachment signature untouched
+        return context.jio.__storage._signature_sub_storage
+                      .getAttachment(id, "foodel", {format: "json"});
+      })
+      .then(function (result) {
+        deepEqual(result, {hash: "86f7e437faa5a7fce15d1ddcb9eaeaea377667b8"});
+      })
+
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("attachment skipped when remot document deletion skipped", function () {
+    stop();
+    expect(18);
+
+    var id,
+      context = this,
+      blob = new Blob(['a']),
+      blob2 = new Blob(['b']);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      check_remote_deletion: false,
+      check_local_attachment_modification: true,
+      check_local_attachment_creation: true,
+      check_local_attachment_deletion: true,
+      check_remote_attachment_modification: true,
+      check_remote_attachment_creation: true,
+      check_remote_attachment_deletion: true,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+
+    context.jio.post({"title": "foo"})
+      .then(function (result) {
+        id = result;
+        return RSVP.all([
+          context.jio.putAttachment(id, "foo", blob),
+          context.jio.putAttachment(id, "foomod", blob),
+          context.jio.putAttachment(id, "foodel", blob)
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.__storage._remote_sub_storage.remove(id),
+          context.jio.putAttachment(id, "foomod", blob2),
+          context.jio.putAttachment(id, "foocre", blob),
+          context.jio.removeAttachment(id, "foodel")
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+
+      .then(function () {
+        ok(true, 'second repair success');
+
+        // remote document still deleted
+        return context.jio.__storage._remote_sub_storage.get(id);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 404);
+        equal(error.message, "Cannot find document: " + id);
+
+        // document signature untouched
+        return context.jio.__storage._signature_sub_storage
+                      .get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"});
+
+        // local document untouched
+        return context.jio.get(id);
+      })
+      .then(function (result) {
+        deepEqual(result, {"title": "foo"});
+
+        // frozen attachment untouched
+        return context.jio.getAttachment(
+          id,
+          "foo",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(result, "a");
+        // frozen attachment signature not created
+        return context.jio.__storage._signature_sub_storage
+                      .getAttachment(id, "foo", {format: "json"});
+      })
+      .then(function (result) {
+        deepEqual(result, {hash: "86f7e437faa5a7fce15d1ddcb9eaeaea377667b8"});
+
+        // created attachment untouched
+        return context.jio.getAttachment(
+          id,
+          "foocre",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(result, "a");
+        // created attachment signature not created
+        return context.jio.__storage._signature_sub_storage
+                      .getAttachment(id, "foocre", {format: "json"});
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 404);
+        var error_message = "Cannot find attachment: " +
+          "_replicate_b9296354cdf1dbe0046de11f57a5a24f8f6a78a8 , " +
+          "jio_attachment/";
+        equal(
+          error.message.substring(0, error_message.length),
+          error_message
+        );
+
+        // modified attachment untouched
+        return context.jio.getAttachment(
+          id,
+          "foomod",
+          {format: "text"}
+        );
+      })
+      .then(function (result) {
+        equal(result, "b");
+        // modified attachment signature not created
+        return context.jio.__storage._signature_sub_storage
+                      .getAttachment(id, "foomod", {format: "json"});
+      })
+      .then(function (result) {
+        deepEqual(result, {hash: "86f7e437faa5a7fce15d1ddcb9eaeaea377667b8"});
+
+        // deleted attachment untouched
+        return context.jio.getAttachment(
+          id,
+          "foodel",
+          {format: "text"}
+        );
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 404);
+        var error_message = "Cannot find attachment: " +
+          id + " , foodel";
+        equal(
+          error.message.substring(0, error_message.length),
+          error_message
+        );
+        // deleted attachment signature untouched
+        return context.jio.__storage._signature_sub_storage
+                      .getAttachment(id, "foodel", {format: "json"});
+      })
+      .then(function (result) {
+        deepEqual(result, {hash: "86f7e437faa5a7fce15d1ddcb9eaeaea377667b8"});
+      })
+
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
 
 }(jIO, QUnit, Blob, RSVP));
