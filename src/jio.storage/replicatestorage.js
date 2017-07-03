@@ -717,6 +717,13 @@
     } else {
       result
         .push(function () {
+          // Drop signature if the destination document was empty
+          // but a signature exists
+          if (options.create_new_document === true) {
+            return context._signature_sub_storage.remove(id);
+          }
+        })
+        .push(function () {
           return destination.put(id, doc);
         })
         .push(function () {
@@ -829,7 +836,11 @@
           return propagateModification(context, source, destination, doc,
                                        local_hash, id, skip_document_dict,
                                        {use_post: ((options.use_post) &&
-                                                   (remote_hash === null))});
+                                                   (remote_hash === null)),
+                                        create_new_document:
+                                          ((remote_hash === null) &&
+                                           (status_hash !== null))
+                                        });
         }
 
         // Conflict cases
@@ -852,7 +863,9 @@
             id,
             skip_document_dict,
             {use_post: ((options.use_revert_post) &&
-                        (local_hash === null))}
+                        (local_hash === null)),
+              create_new_document: ((local_hash === null) &&
+                                    (status_hash !== null))}
           );
         }
 
@@ -861,7 +874,9 @@
           // Copy remote modification remotely
           return propagateModification(context, source, destination, doc,
                                        local_hash, id, skip_document_dict,
-                                       {use_post: options.use_post});
+                                       {use_post: options.use_post,
+                                        create_new_document:
+                                          (status_hash !== null)});
         }
         doc = doc || local_hash;
         remote_doc = remote_doc || remote_hash;
