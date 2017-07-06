@@ -640,6 +640,7 @@
 
   function propagateModification(context, source, destination, doc, hash, id,
                                  skip_document_dict,
+                                 skip_deleted_document_dict,
                                  options) {
     var result = new RSVP.Queue(),
       post_id,
@@ -720,6 +721,7 @@
           // Drop signature if the destination document was empty
           // but a signature exists
           if (options.create_new_document === true) {
+            delete skip_deleted_document_dict[id];
             return context._signature_sub_storage.remove(id);
           }
         })
@@ -746,7 +748,8 @@
       });
   }
 
-  function propagateDeletion(context, destination, id, skip_document_dict) {
+  function propagateDeletion(context, destination, id, skip_document_dict,
+                             skip_deleted_document_dict) {
     // Do not delete a document if it has an attachment
     // ie, replication should prevent losing user data
     // Synchronize attachments before, to ensure
@@ -771,10 +774,13 @@
       })
       .push(function () {
         skip_document_dict[id] = null;
+        // No need to sync attachment twice on this document
+        skip_deleted_document_dict[id] = null;
       });
   }
 
   function checkAndPropagate(context, skip_document_dict,
+                             skip_deleted_document_dict,
                              cache, destination_key,
                              status_hash, local_hash, doc,
                              source, destination, id,
@@ -831,10 +837,12 @@
           if (local_hash === null) {
             // Deleted locally
             return propagateDeletion(context, destination, id,
-                                     skip_document_dict);
+                                     skip_document_dict,
+                                     skip_deleted_document_dict);
           }
           return propagateModification(context, source, destination, doc,
                                        local_hash, id, skip_document_dict,
+                                       skip_deleted_document_dict,
                                        {use_post: ((options.use_post) &&
                                                    (remote_hash === null)),
                                         create_new_document:
@@ -852,7 +860,8 @@
           // Automatically resolve conflict or force revert
           if (remote_hash === null) {
             // Deleted remotely
-            return propagateDeletion(context, source, id, skip_document_dict);
+            return propagateDeletion(context, source, id, skip_document_dict,
+                                     skip_deleted_document_dict);
           }
           return propagateModification(
             context,
@@ -862,6 +871,7 @@
             remote_hash,
             id,
             skip_document_dict,
+            skip_deleted_document_dict,
             {use_post: ((options.use_revert_post) &&
                         (local_hash === null)),
               create_new_document: ((local_hash === null) &&
@@ -874,6 +884,7 @@
           // Copy remote modification remotely
           return propagateModification(context, source, destination, doc,
                                        local_hash, id, skip_document_dict,
+                                       skip_deleted_document_dict,
                                        {use_post: options.use_post,
                                         create_new_document:
                                           (status_hash !== null)});
@@ -888,6 +899,7 @@
   }
 
   function checkLocalDeletion(queue, context, skip_document_dict,
+                              skip_deleted_document_dict,
                               cache, destination_key,
                               destination, id, source,
                               conflict_force, conflict_revert,
@@ -900,6 +912,7 @@
       .push(function (result) {
         status_hash = result.hash;
         return checkAndPropagate(context, skip_document_dict,
+                                 skip_deleted_document_dict,
                                  cache, destination_key,
                                  status_hash, null, null,
                                  source, destination, id,
@@ -910,6 +923,7 @@
   }
 
   function checkSignatureDifference(queue, context, skip_document_dict,
+                                    skip_deleted_document_dict,
                                     cache, destination_key,
                                     source, destination, id,
                                     conflict_force, conflict_revert,
@@ -932,6 +946,7 @@
 
         if (local_hash !== status_hash) {
           return checkAndPropagate(context, skip_document_dict,
+                                   skip_deleted_document_dict,
                                    cache, destination_key,
                                    status_hash, local_hash, doc,
                                    source, destination, id,
@@ -1018,6 +1033,7 @@
 
             if (is_modification === true || is_creation === true) {
               argument_list.push([undefined, context, skip_document_dict,
+                                  skip_deleted_document_dict,
                                   cache, destination_key,
                                   source, destination,
                                   key,
@@ -1045,6 +1061,7 @@
                 argument_list_deletion.push([undefined,
                                              context,
                                              skip_document_dict,
+                                             skip_deleted_document_dict,
                                              cache, destination_key,
                                              destination, key,
                                              source,
@@ -1216,8 +1233,7 @@
                 id = result.data.rows[i].id;
                 // Do not synchronize attachment if one version of the document
                 // is deleted but not pushed to the other storage
-                if (!skip_deleted_document_dict.hasOwnProperty(id) ||
-                    skip_document_dict.hasOwnProperty(id)) {
+                if (!skip_deleted_document_dict.hasOwnProperty(id)) {
                   local_argument_list.push(
                     [undefined, context, id]
                   );
