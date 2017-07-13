@@ -71,6 +71,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -232,6 +233,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -343,6 +345,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -379,6 +382,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: false,
           hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
         });
       })
@@ -522,6 +526,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -587,6 +592,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            from_local: true,
             hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
           });
         })
@@ -653,6 +659,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            from_local: true,
             hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
           });
         })
@@ -718,6 +725,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            from_local: true,
             hash: "a0a1b37cee3709101b752c56e59b9d66cce09961"
           });
         })
@@ -783,6 +791,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: false,
           hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
         });
       })
@@ -848,6 +857,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            from_local: false,
             hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
           });
         })
@@ -914,6 +924,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            from_local: false,
             hash: "45efa2292d54cc4ce1f726ea197bc0b9721fc1dc"
           });
         })
@@ -981,6 +992,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            from_local: false,
             hash: "6799f3ea80e325b89f19589282a343c376c1f1af"
           });
         })
@@ -1155,6 +1167,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1194,6 +1207,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1236,6 +1250,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "9819187e39531fdc9bcfd40dbc6a7d3c78fe8dab"
         });
       })
@@ -1296,6 +1311,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "9819187e39531fdc9bcfd40dbc6a7d3c78fe8dab"
         });
       })
@@ -1363,6 +1379,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1408,6 +1425,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: false,
           hash: "4b1dde0f80ac38514771a9d25b5278e38f560e0f"
         });
       })
@@ -1478,6 +1496,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1524,6 +1543,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1575,6 +1595,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "6f700e813022233a785692585484c21cb5a412fd"
         });
       })
@@ -1645,6 +1666,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: false,
           hash: "7bea6f87fd1dda14e340e5b14836cc8578fd615f"
         });
       })
@@ -1715,6 +1737,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1768,6 +1791,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
         });
       })
@@ -1883,6 +1907,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -1945,6 +1970,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -2057,6 +2083,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -2117,6 +2144,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -2221,6 +2249,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: false,
           hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
         });
       })
@@ -2368,6 +2397,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: false,
           hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
         });
       })
@@ -2438,6 +2468,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })
@@ -2483,6 +2514,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
         });
       })
@@ -2592,6 +2624,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
         });
       })
@@ -2703,6 +2736,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
         });
       })
@@ -2774,6 +2808,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
         });
       })
@@ -2884,6 +2919,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "8ed3a474128b6e0c0c7d3dd51b1a06ebfbf6722f"
         });
       })
@@ -3112,6 +3148,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
         });
       })

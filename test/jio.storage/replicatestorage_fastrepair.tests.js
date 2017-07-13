@@ -141,6 +141,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -260,6 +261,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -386,6 +388,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -424,6 +427,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: false,
           hash: "bar dynetag"
         });
       })
@@ -493,6 +497,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -567,6 +572,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -642,6 +648,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            from_local: true,
             hash: "foo dynetag"
           });
         })
@@ -719,6 +726,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            from_local: true,
             hash: "foo dynetag"
           });
         })
@@ -795,6 +803,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            from_local: true,
             hash: "foo dynetag"
           });
         })
@@ -870,6 +879,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: false,
           hash: "bar dynetag"
         });
       })
@@ -945,6 +955,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            from_local: false,
             hash: "bar dynetag"
           });
         })
@@ -1021,6 +1032,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            from_local: false,
             hash: "bar dynetag"
           });
         })
@@ -1099,6 +1111,7 @@
         })
         .then(function (result) {
           deepEqual(result, {
+            from_local: false,
             hash: "bar dynetag"
           });
         })
@@ -1296,6 +1309,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -1336,6 +1350,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -1379,6 +1394,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo2 dynetag"
         });
       })
@@ -1454,6 +1470,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo2 dynetag"
         });
       })
@@ -1536,6 +1553,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -1582,6 +1600,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: false,
           hash: "foo3 dynetag"
         });
       })
@@ -1667,6 +1686,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -1719,6 +1739,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -1789,6 +1810,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo4 dynetag"
         });
       })
@@ -1880,6 +1902,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: false,
           hash: "foo5 dynetag"
         });
       })
@@ -1971,6 +1994,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -2032,6 +2056,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo99 dynetag"
         });
       })
@@ -2161,6 +2186,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -2171,7 +2197,7 @@
 
   test("local document deletion with attachment", function () {
     stop();
-    expect(7);
+    expect(10);
 
     var id,
       context = this,
@@ -2206,26 +2232,26 @@
       .then(function () {
         return context.jio.__storage._remote_sub_storage.get(id);
       })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo",
-          foo_etag: "foo etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage
-                      .getAttachment(id, 'foo', {format: 'text'});
-      })
-      .then(function (result) {
-        equal(result, big_string);
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id);
       })
-      .then(function (result) {
-        deepEqual(result, {
-          hash: "foo dynetag"
-        });
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(
+          error.message.indexOf(
+            "Cannot find attachment: " +
+              "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+              "jio_document/"
+          ),
+          0,
+          error.message
+        );
+        equal(error.status_code, 404);
       })
       .always(function () {
         start();
@@ -2350,6 +2376,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -2360,7 +2387,7 @@
 
   test("remote document deletion with attachment", function () {
     stop();
-    expect(7);
+    expect(10);
 
     var id,
       context = this,
@@ -2394,25 +2421,26 @@
       .then(function () {
         return context.jio.get(id);
       })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo",
-          foo_etag: "foo etag"
-        });
-      })
-      .then(function () {
-        return context.jio.getAttachment(id, 'foo', {format: 'text'});
-      })
-      .then(function (result) {
-        equal(result, big_string);
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id);
       })
-      .then(function (result) {
-        deepEqual(result, {
-          hash: "foo dynetag"
-        });
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(
+          error.message.indexOf(
+            "Cannot find attachment: " +
+              "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+              "jio_document/"
+          ),
+          0,
+          error.message
+        );
+        equal(error.status_code, 404);
       })
       .always(function () {
         start();
@@ -2522,6 +2550,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: false,
           hash: "foo99 dynetag"
         });
       })
@@ -2710,6 +2739,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: false,
           hash: "foo99 dynetag"
         });
       })
@@ -2800,6 +2830,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
@@ -2846,6 +2877,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo99 dynetag"
         });
       })
@@ -2972,6 +3004,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo99 dynetag"
         });
       })
@@ -3099,6 +3132,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo99 dynetag"
         });
       })
@@ -3185,6 +3219,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo99 dynetag"
         });
       })
@@ -3312,6 +3347,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo99 dynetag"
         });
       })
@@ -3582,6 +3618,7 @@
       })
       .then(function (result) {
         deepEqual(result, {
+          from_local: true,
           hash: "foo dynetag"
         });
       })
