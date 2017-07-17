@@ -42,7 +42,7 @@
 
     element = {
       opml_title: getElementsByTagName('title'),
-      create_date: getElementsByTagName('dateCreated'),
+      created_date: getElementsByTagName('dateCreated'),
       modified_date: getElementsByTagName('dateModified'),
       owner_name: getElementsByTagName('ownerName'),
       owner_email: getElementsByTagName('ownerEmail'),
