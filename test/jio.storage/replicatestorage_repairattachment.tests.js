@@ -21,10 +21,10 @@
     this._sub_storage = jIO.createJIO(spec.sub_storage);
     return this;
   }
-  jIO.addStorage('signaturestorageallattachments', StorageEmptyAllAttachments);
+  jIO.addStorage('signaturestorageemptyallattachments',
+                 StorageEmptyAllAttachments);
   StorageEmptyAllAttachments.prototype.allAttachments = function () {
-    return this._sub_storage.allAttachments.apply(this._sub_storage,
-                                                  arguments);
+    return {};
   };
   StorageEmptyAllAttachments.prototype.getAttachment = function () {
     return this._sub_storage.getAttachment.apply(this._sub_storage,
@@ -652,7 +652,7 @@
         local_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "signaturestorageallattachments",
+            type: "signaturestorageemptyallattachments",
             sub_storage: {
               type: "memory"
             }
@@ -662,6 +662,15 @@
           type: "uuid",
           sub_storage: {
             type: "memory"
+          }
+        },
+        signature_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "query",
+            sub_storage: {
+              type: "memory"
+            }
           }
         }
       });
@@ -738,7 +747,7 @@
         remote_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "signaturestorageallattachments",
+            type: "signaturestorageemptyallattachments",
             sub_storage: {
               type: "memory"
             }
@@ -888,7 +897,7 @@
         local_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "signaturestorageallattachments",
+            type: "signaturestorageemptyallattachments",
             sub_storage: {
               type: "memory"
             }
@@ -898,6 +907,15 @@
           type: "uuid",
           sub_storage: {
             type: "memory"
+          }
+        },
+        signature_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "query",
+            sub_storage: {
+              type: "memory"
+            }
           }
         }
       });
@@ -974,7 +992,7 @@
         remote_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "signaturestorageallattachments",
+            type: "signaturestorageemptyallattachments",
             sub_storage: {
               type: "memory"
             }
