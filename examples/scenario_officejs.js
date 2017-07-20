@@ -12,7 +12,7 @@
     module = QUnit.module,
     ATTACHMENT = 'data',
     i,
-    name_list = ['get', 'post', 'put', 'remove', 'buildQuery',
+    name_list = ['get', 'post', 'put', 'buildQuery',
                   'putAttachment', 'getAttachment', 'allAttachments'];
 
   ///////////////////////////////////////////////////////
@@ -150,6 +150,8 @@
         check_remote_attachment_creation: true,
         check_remote_attachment_deletion: true,
         check_local_deletion: false,
+        parallel_operation_amount: 10,
+        parallel_operation_attachment_amount: 10,
         local_sub_storage: {
           type: "query",
           sub_storage: {
