@@ -415,7 +415,7 @@
       return new RegExp("^" + stringEscapeRegexpCharacters(string) + "$");
     }
     return new RegExp("^" + stringEscapeRegexpCharacters(string)
-      .replace(regexp_percent, '.*')
+      .replace(regexp_percent, '[\\s\\S]*')
       .replace(regexp_underscore, '.') + "$");
   }
 

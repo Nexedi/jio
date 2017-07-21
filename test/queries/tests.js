@@ -313,4 +313,48 @@
 
   });
 
+  test('Docs with space, tab, and newline', function () {
+    var doc_list = [
+      {"identifier": "a"},
+      {"identifier": "a "}
+    ];
+    stop();
+    expect(3);
+    jIO.QueryFactory.create('identifier: "%a%"').exec(
+      doc_list
+    ).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": "a"},
+        {"identifier": "a "}
+      ], 'Document with space is matched');
+
+      doc_list = [
+        {"identifier": "a"},
+        {"identifier": "a \t"}
+      ];
+
+      return jIO.QueryFactory.create('identifier: "%a%"').
+        exec(doc_list);
+    }).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": "a"},
+        {"identifier": "a \t"}
+      ], 'Document with tab is matched');
+
+      doc_list = [
+        {"identifier": "a"},
+        {"identifier": "a\n"},
+        {"identifier": "\na\nb\nc\n"}
+      ];
+
+      return jIO.QueryFactory.create('identifier: "%a%"').
+        exec(doc_list);
+    }).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": "a"},
+        {"identifier": "a\n"},
+        {"identifier": "\na\nb\nc\n"}
+      ], 'Documents with newlines are matched');
+    }).always(start);
+  });
 }));
