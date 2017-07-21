@@ -1,8 +1,8 @@
 /*jslint indent:2, maxlen: 80, nomen: true */
 /*global jIO, RSVP, UriTemplate, SimpleQuery, ComplexQuery, QueryFactory,
-  Query*/
+  Query, FormData*/
 (function (jIO, RSVP, UriTemplate, SimpleQuery, ComplexQuery, QueryFactory,
-  Query) {
+  Query, FormData) {
   "use strict";
 
   function getSubIdEqualSubProperty(storage, value, key) {
@@ -207,6 +207,7 @@
     }
     this._default_mapping = {};
     this._mapping_id_memory_dict = {};
+    this._attachment_list = spec.attachment_list || [];
 
     initializeQueryAndDefaultMapping(this);
   }
@@ -316,12 +317,20 @@
     return getSubStorageId(storage, argument_list[0])
       .push(function (sub_id) {
         argument_list[0] = sub_id;
+        var old_id = argument_list[1];
         argument_list[1] = getAttachmentId(
           storage,
-          sub_id,
+          argument_list[0],
           argument_list[1],
           method
         );
+        if (storage._attachment_list.length > 0
+            && storage._attachment_list.indexOf(old_id) < 0) {
+          if (method === "get") {
+            throw new jIO.util.jIOError("unhautorized attachment", 404);
+          }
+          return;
+        }
         return storage._sub_storage[method + "Attachment"].apply(
           storage._sub_storage,
           argument_list
@@ -400,15 +409,40 @@
       });
   };
 
-  MappingStorage.prototype.putAttachment = function (id, attachment_id) {
+  MappingStorage.prototype.getAttachment = function () {
+    return handleAttachment(this, arguments, "get");
+  };
+
+  MappingStorage.prototype.putAttachment = function (id, attachment_id, blob) {
+    var storage = this,
+      mapping_dict = storage._attachment_mapping_dict;
+    // THIS IS REALLY BAD, FIND AN OTHER WAY IN FUTURE
+    if (mapping_dict !== undefined
+        && mapping_dict[attachment_id] !== undefined
+        && mapping_dict[attachment_id].put !== undefined
+        && mapping_dict[attachment_id].put.erp5_put_template !== undefined) {
+      return getSubStorageId(storage, id)
+        .push(function (sub_id) {
+          var url = UriTemplate.parse(
+            mapping_dict[attachment_id].put.erp5_put_template
+          ).expand({id: sub_id}),
+            data = new FormData();
+          data.append("field_my_file", blob);
+          data.append("form_id", "File_view");
+          return jIO.util.ajax({
+            "type": "POST",
+            "url": url,
+            "data": data,
+            "xhrFields": {
+              withCredentials: true
+            }
+          });
+        });
+    }
     return handleAttachment(this, arguments, "put", id)
       .push(function () {
         return attachment_id;
       });
-  };
-
-  MappingStorage.prototype.getAttachment = function () {
-    return handleAttachment(this, arguments, "get");
   };
 
   MappingStorage.prototype.removeAttachment = function (id, attachment_id) {
@@ -428,7 +462,8 @@
       .push(function (result) {
         var attachment_id,
           attachments = {},
-          mapping_dict = {};
+          mapping_dict = {},
+          i;
         for (attachment_id in storage._attachment_mapping_dict) {
           if (storage._attachment_mapping_dict.hasOwnProperty(attachment_id)) {
             mapping_dict[getAttachmentId(storage, sub_id, attachment_id, "get")]
@@ -437,11 +472,19 @@
         }
         for (attachment_id in result) {
           if (result.hasOwnProperty(attachment_id)) {
-            if (mapping_dict.hasOwnProperty(attachment_id)) {
-              attachments[mapping_dict[attachment_id]] = {};
-            } else {
-              attachments[attachment_id] = {};
+            if (!(storage._attachment_list.length > 0
+                && storage._attachment_list.indexOf(attachment_id) < 0)) {
+              if (mapping_dict.hasOwnProperty(attachment_id)) {
+                attachments[mapping_dict[attachment_id]] = {};
+              } else {
+                attachments[attachment_id] = {};
+              }
             }
+          }
+        }
+        for (i = 0; i < storage._attachment_list.length; i += 1) {
+          if (!attachments.hasOwnProperty(storage._attachment_list[i])) {
+            attachments[storage._attachment_list[i]] = {};
           }
         }
         return attachments;
@@ -598,4 +641,5 @@
   };
 
   jIO.addStorage('mapping', MappingStorage);
-}(jIO, RSVP, UriTemplate, SimpleQuery, ComplexQuery, QueryFactory, Query));
+}(jIO, RSVP, UriTemplate, SimpleQuery, ComplexQuery, QueryFactory, Query,
+  FormData));
