@@ -152,6 +152,9 @@
       .push(function (response) {
         var element,
           item;
+        if (!response.target.responseText) {
+          throw new jIO.util.jIOError("Cannot find document", 404);
+        }
         element =  new DOMParser().parseFromString(
           response.target.responseText,
           "text/xml"

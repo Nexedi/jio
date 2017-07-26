@@ -14,15 +14,15 @@
 
   function getOpmlOutlineAsDict(outline) {
     var outline_dict = {
-      title: outline.getAttribute('title') || '',
-      htmlurl: outline.getAttribute('htmlUrl') || '',
-      xmlurl: outline.getAttribute('xmlUrl') || '',
-      url: outline.getAttribute('url') || '',
-      text: outline.getAttribute('text') || '',
-      type: outline.getAttribute('type') || '',
-      version: outline.getAttribute('version') || '',
-      created: outline.getAttribute('created') || '',
-      category: outline.getAttribute('category') || ''
+      title: outline.getAttribute('title') || dummy.textContent,
+      htmlurl: outline.getAttribute('htmlUrl') || dummy.textContent,
+      xmlurl: outline.getAttribute('xmlUrl') || dummy.textContent,
+      url: outline.getAttribute('url') || dummy.textContent,
+      text: outline.getAttribute('text') || dummy.textContent,
+      type: outline.getAttribute('type') || dummy.textContent,
+      version: outline.getAttribute('version') || dummy.textContent,
+      created: outline.getAttribute('created') || dummy.textContent,
+      category: outline.getAttribute('category') || dummy.textContent
     };
     return outline_dict;
   }
@@ -122,6 +122,9 @@
       .push(function (response) {
         var element,
           result;
+        if (!response.target.responseText) {
+          throw new jIO.util.jIOError("Cannot find document", 404);
+        }
         element =  new DOMParser().parseFromString(
           response.target.responseText,
           "text/xml"
