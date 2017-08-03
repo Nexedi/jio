@@ -717,7 +717,8 @@
       matchMethod = null,
       operator = this.operator,
       value = null,
-      key = this.key;
+      key = this.key,
+      k;
 
     if (!(regexp_comparaison.test(operator))) {
       // `operator` is not correct, we have to change it to "like" or "="
@@ -734,6 +735,22 @@
 
     if (this._key_schema.key_set && this._key_schema.key_set[key] !== undefined) {
       key = this._key_schema.key_set[key];
+    }
+
+    // match with all the fields if key is empty
+    if (key === '') {
+      matchMethod = this.like;
+      value = '%' + this.value + '%';
+      for (k in item) {
+        if (item.hasOwnProperty(k)) {
+          if (k !== '__id') {
+            if (matchMethod(item[k], value) === true) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
     }
 
     if (typeof key === 'object') {
