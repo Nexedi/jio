@@ -90,7 +90,7 @@ case 5: case 8: case 11: case 14: case 16:
  this.$ = $$[$0]; 
 break;
 case 6:
- this.$ = mkComplexQuery('OR', [$$[$0-1], $$[$0]]); 
+ this.$ = mkComplexQuery('AND', [$$[$0-1], $$[$0]]); 
 break;
 case 7:
  this.$ = mkComplexQuery('OR', [$$[$0-2], $$[$0]]); 

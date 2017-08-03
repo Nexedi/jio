@@ -45,7 +45,7 @@ end
 
 search_text
     : and_expression                { $$ = $1; }
-    | and_expression search_text    { $$ = mkComplexQuery('OR', [$1, $2]); }
+    | and_expression search_text    { $$ = mkComplexQuery('AND', [$1, $2]); }
     | and_expression OR search_text { $$ = mkComplexQuery('OR', [$1, $3]); }
     ;
 
