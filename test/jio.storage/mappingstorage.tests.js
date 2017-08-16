@@ -1416,6 +1416,59 @@
       });
   });
 
+  test("with extended_search", function () {
+    stop();
+    expect(1);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "query",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      }
+    });
+
+    jio.put("42",
+      {
+        "title": "foo",
+        "smth": "bar"
+      })
+      .push(function () {
+        return jio.allDocs({
+          query: "foo",
+          select_list: ["title"]
+        });
+      })
+      .push(function (result) {
+        deepEqual(result,
+          {
+            "data": {
+              "rows": [
+                {
+                  "id": "42",
+                  "value": {
+                    "title": "foo"
+                  },
+                  "doc": {}
+                }
+              ],
+              "total_rows": 1
+            }
+          }, "allDocs check");
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // mappingStorage.bulk
   /////////////////////////////////////////////////////////////////

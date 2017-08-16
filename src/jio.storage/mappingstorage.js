@@ -550,7 +550,7 @@
         return one_query;
       }
       key = mapToMainProperty(storage, one_query.key, {}, {});
-      if (key) {
+      if (key !== undefined) {
         one_query.key = key;
         return one_query;
       }
