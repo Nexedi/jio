@@ -440,7 +440,42 @@
       });
   });
 
-// Asterisk wildcard is not supported yet.
+  // Test queries which have components with key and without it.
+  // Default operator used if not present is AND.
+  test('Mixed query', function () {
+    var doc_list = [
+      {"identifier": "a", "value": "test1", "time": "2016"},
+      {"identifier": "b", "value": "test2", "time": "2017"},
+      {"identifier": "c", "value": "test3", "time": "2017"}
+    ];
+    stop();
+    expect(2);
+    jIO.QueryFactory.create('test2 time:%2017%').exec(doc_list).
+      then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "b", "value": "test2", "time": "2017"}
+        ], 'Document with test2 in any column and 2017 in time is matched');
+
+        doc_list = [
+          {"identifier": "a", "value": "test post 1", "time": "2016"},
+          {"identifier": "b", "value": "test post 2", "time": "2017"},
+          {"identifier": "c", "value": "test post 3", "time": "2018"}
+        ];
+
+        return jIO.QueryFactory.create('value:"%test post 2%" OR c OR ' +
+          '2016').exec(doc_list).
+          then(function (doc_list) {
+            deepEqual(doc_list, [
+              {"identifier": "a", "value": "test post 1", "time": "2016"},
+              {"identifier": "b", "value": "test post 2", "time": "2017"},
+              {"identifier": "c", "value": "test post 3", "time": "2018"}
+            ], 'Documents with "test post 2" in value or "c" or "2016" ' +
+              'anywhere are matched');
+          }).always(start);
+      });
+  });
+
+  // Asterisk wildcard is not supported yet.
 /*  test('Full text query with asterisk', function () {
     var doc_list = [
       {"identifier": "abc"},
