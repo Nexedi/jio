@@ -12,13 +12,8 @@
     module = QUnit.module,
     ATTACHMENT = 'data',
     i,
-<<<<<<< HEAD
-    name_list = ['get', 'post', 'put', 'buildQuery',
-=======
     name_list = ['get', 'post', 'put', 'remove', 'buildQuery',
->>>>>>> 7ed9424... Scenario: init officejs scenario
                   'putAttachment', 'getAttachment', 'allAttachments'];
-
   ///////////////////////////////////////////////////////
   // Fake Storage
   ///////////////////////////////////////////////////////
@@ -154,11 +149,8 @@
         check_remote_attachment_creation: true,
         check_remote_attachment_deletion: true,
         check_local_deletion: false,
-<<<<<<< HEAD
         parallel_operation_amount: 10,
         parallel_operation_attachment_amount: 10,
-=======
->>>>>>> 7ed9424... Scenario: init officejs scenario
         local_sub_storage: {
           type: "query",
           sub_storage: {

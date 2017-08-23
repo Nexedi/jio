@@ -1,5 +1,6 @@
-/*jslint nomen: true*/
-(function (jIO) {
+/*jslint indent:2,maxlen:80,nomen:true*/
+/*global  jIO, RSVP*/
+(function (jIO, RSVP) {
   "use strict";
 
   /**
@@ -88,4 +89,4 @@
 
   jIO.addStorage('saferepair', SafeRepairStorage);
 
-}(jIO));
+}(jIO, RSVP));
