@@ -39,7 +39,7 @@
       throw new jIO.util.jIOError("id " + id + " is forbidden (no begin /)",
                                   400);
     }
-    if (id.lastIndexOf("/") !== (id.length - 1)) {
+    if (id.lastIndexOf("/") === (id.length - 1)) {
       throw new jIO.util.jIOError("id " + id + " is forbidden (no end /)",
                                   400);
     }
@@ -84,14 +84,19 @@
   }
 
   WEBHTTPStorage.prototype.get = function (id) {
-    var context = this,
-      element;
+    var context = this;
     id = restrictDocumentId(id);
 
-    element = getJsonDocument(context, id);
-    if (element !== undefined) {
-      return element.doc;
-    }
+    return getJsonDocument(context, id)
+      .push(function (element) {
+        return element.doc;
+      }, function (error) {
+        if ((error.target !== undefined) &&
+            (error.target.status === 404)) {
+          throw new jIO.util.jIOError("Cannot find document", 404);
+        }
+        throw error;
+      });
   };
 
   WEBHTTPStorage.prototype.hasCapacity = function (capacity) {
