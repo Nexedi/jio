@@ -277,6 +277,7 @@
   ///////////////////////////
   // DAV storage
   ///////////////////////////
+/*
   test('Test DAV Storage scenario', function () {
     stop();
     expect(14);
@@ -298,10 +299,11 @@
         });
       });
   });
-
+*/
   ///////////////////////////
   // Dropbox storage
   ///////////////////////////
+/*
   test('Test Dropbox Storage scenario', function () {
     stop();
     expect(14);
@@ -323,7 +325,7 @@
         });
       });
   });
-
+*/
   ///////////////////////////
   // Qiniu storage
   ///////////////////////////
