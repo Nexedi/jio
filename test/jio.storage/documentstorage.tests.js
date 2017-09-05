@@ -236,6 +236,46 @@
       });
   });
 
+  test("with special utf-8 char", function () {
+    stop();
+    expect(5);
+
+    Storage200.prototype.putAttachment = function (id, name, blob) {
+      equal(blob.type, "application/json", "Blob type is OK");
+      equal(id, "foo", "putAttachment 200 called");
+      equal(
+        name,
+        "jio_document/Zm9vw6kKYmFy5rWL6K+V5Zub8J+YiA==.json",
+        "putAttachment 200 called"
+      );
+
+      return jIO.util.readBlobAsText(blob)
+        .then(function (result) {
+          deepEqual(JSON.parse(result.target.result),
+                    {"title": "fooé\nbar测试四😈"},
+                    "JSON is in blob");
+          return id;
+        });
+    };
+    var jio = jIO.createJIO({
+      type: "document",
+      document_id: "foo",
+      sub_storage: {
+        type: "documentstorage200"
+      }
+    });
+
+    jio.put("fooé\nbar测试四😈", {"title": "fooé\nbar测试四😈"})
+      .then(function (result) {
+        equal(result, "fooé\nbar测试四😈");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
   /////////////////////////////////////////////////////////////////
   // documentStorage.remove
   /////////////////////////////////////////////////////////////////
