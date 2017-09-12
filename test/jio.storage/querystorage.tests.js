@@ -400,7 +400,8 @@
           (capacity === "sort") ||
           (capacity === "select") ||
           (capacity === "limit") ||
-          (capacity === "query")) {
+          (capacity === "query") ||
+          (capacity === "schema")) {
         return true;
       }
       throw new Error("Unexpected " + capacity + " capacity check");
@@ -410,7 +411,8 @@
         sort_on: [["title", "ascending"]],
         limit: [5],
         select_list: ["title", "id"],
-        query: 'title: "two"'
+        query: 'title: "two"',
+        schema: {'title': 'string'}
       },
                 "buildQuery called");
       return "taboulet";
@@ -429,7 +431,8 @@
       sort_on: [["title", "ascending"]],
       limit: [5],
       select_list: ["title", "id"],
-      query: 'title: "two"'
+      query: 'title: "two"',
+      schema: {'title': 'string'}
     })
       .then(function (result) {
         deepEqual(result, {
