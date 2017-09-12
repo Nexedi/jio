@@ -44,8 +44,8 @@
    * @param  {String} [way="ascending"] 'ascending' or 'descending'
    * @return {Function} The sort function
    */
-  function sortFunction(key, way) {
-    var result;
+  function sortFunction(key, way, key_schema) {
+    var result, cast_to;
     if (way === 'descending') {
       result = 1;
     } else if (way === 'ascending') {
@@ -53,6 +53,29 @@
     } else {
       throw new TypeError("Query.sortFunction(): " +
                           "Argument 2 must be 'ascending' or 'descending'");
+    }
+    if (key_schema !== undefined &&
+        key_schema.key_set !== undefined &&
+        key_schema.key_set[key] !== undefined &&
+        key_schema.key_set[key].cast_to !== undefined) {
+      if (typeof key_schema.key_set[key].cast_to === "string") {
+        cast_to = key_schema.cast_lookup[key_schema.key_set[key].cast_to];
+      } else {
+        cast_to = key_schema.key_set[key].cast_to;
+      }
+      return function (a, b) {
+        var f_a = cast_to(a[key]), f_b = cast_to(b[key]);
+        if (typeof f_b.cmp === 'function') {
+          return result * f_b.cmp(f_a);
+        }
+        if (f_a > f_b) {
+          return -result;
+        }
+        if (f_a < f_b) {
+          return result;
+        }
+        return 0;
+      };
     }
     return function (a, b) {
       // this comparison is 5 times faster than json comparison
@@ -85,7 +108,7 @@
    * @param  {Array} list The item list to sort
    * @return {Array} The filtered list
    */
-  function sortOn(sort_on_option, list) {
+  function sortOn(sort_on_option, list, key_schema) {
     var sort_index;
     if (!Array.isArray(sort_on_option)) {
       throw new TypeError("jioquery.sortOn(): " +
@@ -95,7 +118,8 @@
          sort_index -= 1) {
       list.sort(sortFunction(
         sort_on_option[sort_index][0],
-        sort_on_option[sort_index][1]
+        sort_on_option[sort_index][1],
+        key_schema
       ));
     }
     return list;
@@ -156,6 +180,36 @@
       }
     }
     return list;
+  }
+
+  function setupKeySchema(context, schema) {
+    var property;
+    // Init key_schema if needed
+    if (context._key_schema === undefined) {
+      context._key_schema = {};
+    }
+    if (context._key_schema.set_key === undefined) {
+      context._key_schema.key_set = {};
+    }
+    if (context._key_schema.cast_lookup === undefined) {
+      context._key_schema.cast_lookup = {};
+    }
+    function dateType(str) {
+      return window.jiodate.JIODate(new Date(str).toISOString());
+    }
+    for (property in schema) {
+      if (schema.hasOwnProperty(property)) {
+        if (schema[property].type === 'string') {
+          if (schema[property].format === 'date-time') {
+            context._key_schema.key_set[property] = {
+              read_from: property,
+              cast_to: 'dateType'
+            };
+            context._key_schema.cast_lookup.dateType = dateType;
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -231,6 +285,9 @@
     }
     var context = this,
       i;
+    if (option.schema) {
+      setupKeySchema(context, option.schema);
+    }
     for (i = item_list.length - 1; i >= 0; i -= 1) {
       if (!context.match(item_list[i])) {
         item_list.splice(i, 1);
@@ -238,7 +295,7 @@
     }
 
     if (option.sort_on) {
-      sortOn(option.sort_on, item_list);
+      sortOn(option.sort_on, item_list, this._key_schema);
     }
 
     if (option.limit) {
