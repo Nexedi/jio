@@ -438,7 +438,8 @@
              context.hasCapacity("select")) &&
             ((options.include_docs === undefined) ||
              context.hasCapacity("include")) &&
-            ((options.limit === undefined) || context.hasCapacity("limit"))) {
+            ((options.limit === undefined) || context.hasCapacity("limit")) &&
+            (options.schema === undefined || context.hasCapacity("schema"))) {
           return context.buildQuery(options);
         }
       })
