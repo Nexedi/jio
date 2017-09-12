@@ -826,7 +826,7 @@
         });
     });
 
-  test("sort with schema", function () {
+  test("manual query used if substorage does not handle schema", function () {
     stop();
     expect(4);
 
@@ -852,8 +852,7 @@
     StorageSchemaCapacity.prototype.hasCapacity = function (capacity) {
       if ((capacity === "list") ||
           (capacity === "select") ||
-          (capacity === "limit") ||
-          (capacity === "schema")) {
+          (capacity === "limit")) {
         return true;
       }
       return false;
