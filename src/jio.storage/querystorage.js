@@ -1,5 +1,5 @@
 /*jslint nomen: true*/
-/*global RSVP*/
+/*global RSVP, jIO*/
 (function (jIO, RSVP) {
   "use strict";
 
@@ -47,7 +47,8 @@
     var this_storage_capacity_list = ["limit",
                                       "sort",
                                       "select",
-                                      "query"];
+                                      "query",
+                                      "schema"];
 
     if (this_storage_capacity_list.indexOf(name) !== -1) {
       return true;
@@ -75,11 +76,14 @@
             ((options.select_list === undefined) ||
              (substorage.hasCapacity("select"))) &&
             ((options.limit === undefined) ||
-             (substorage.hasCapacity("limit")))) {
+             (substorage.hasCapacity("limit"))) &&
+            ((options.schema === undefined) ||
+             (substorage.hasCapacity("schema")))) {
           sub_options.query = options.query;
           sub_options.sort_on = options.sort_on;
           sub_options.select_list = options.select_list;
           sub_options.limit = options.limit;
+          sub_options.schema = options.schema;
         }
       } catch (error) {
         if ((error instanceof jIO.util.jIOError) &&
