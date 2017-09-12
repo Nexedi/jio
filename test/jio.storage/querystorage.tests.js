@@ -823,6 +823,104 @@
         });
     });
 
+  test("sort with schema", function () {
+    stop();
+    expect(4);
+
+    function StorageSchemaCapacity() {
+      return this;
+    }
+    StorageSchemaCapacity.prototype.get = function (id) {
+      var doc = {
+        title: id,
+        id: "ID " + id,
+        "another": "property"
+      };
+      if (id === "foo") {
+        equal(id, "foo", "Get foo");
+        doc.modification_date = "Fri, 08 Sep 2017 07:46:27 +0000";
+      } else {
+        equal(id, "bar", "Get bar");
+        doc.modification_date = "Thu, 07 Sep 2017 18:59:23 +0000";
+      }
+      return doc;
+    };
+
+    StorageSchemaCapacity.prototype.hasCapacity = function (capacity) {
+      if ((capacity === "list") ||
+          (capacity === "select") ||
+          (capacity === "limit") ||
+          (capacity === "schema")) {
+        return true;
+      }
+      return false;
+    };
+    StorageSchemaCapacity.prototype.buildQuery = function (options) {
+      deepEqual(options, {}, "No query parameter");
+      var result2 = [{
+        id: "foo",
+        value: {}
+      }, {
+        id: "bar",
+        value: {}
+      }];
+      return result2;
+    };
+
+    jIO.addStorage(
+      'querystoragenoschemacapacity',
+      StorageSchemaCapacity
+    );
+
+    var jio = jIO.createJIO({
+      type: "query",
+      property_type: {'modification_date': 'Date'},
+      sub_storage: {
+        type: "querystoragenoschemacapacity"
+      }
+    });
+
+    jio.allDocs({
+      sort_on: [["modification_date", "descending"]],
+      limit: [0, 5],
+      select_list: ['modification_date'],
+      schema: {
+        "modification_date": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [
+              {
+                id: "foo",
+                doc: {},
+                value: {
+                  modification_date: "Fri, 08 Sep 2017 07:46:27 +0000"
+                }
+              }, {
+                id: "bar",
+                doc: {},
+                value: {
+                  modification_date: "Thu, 07 Sep 2017 18:59:23 +0000"
+                }
+              }
+            ],
+            total_rows: 2
+          }
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // queryStorage.repair
   /////////////////////////////////////////////////////////////////
