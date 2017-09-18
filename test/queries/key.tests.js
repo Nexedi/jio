@@ -578,7 +578,6 @@
       return [
         {'identifier': 'àéîöùç'},
         {'identifier': 'âèî ôùc'},
-        {'identifier': 'ÀÉÎÖÙÇ'},
         {'identifier': 'b'}
       ];
     }, keys = {
