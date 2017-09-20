@@ -475,6 +475,36 @@
       });
   });
 
+  test('Case insensitive queries', function () {
+    var doc_list = [
+      {"identifier": "a", "value": "Test Post", "time": "2016"},
+      {"identifier": "b", "value": "test post", "time": "2017"},
+      {"identifier": "c", "value": "test3", "time": "2018"}
+    ];
+    stop();
+    expect(2);
+    jIO.QueryFactory.create('test post').exec(doc_list).
+      then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "a", "value": "Test Post", "time": "2016"},
+          {"identifier": "b", "value": "test post", "time": "2017"}
+        ], 'Documunts with the value irrespective of case are matched');
+
+        doc_list = [
+          {"identifier": "a", "value": "Test Post", "time": "2016"},
+          {"identifier": "b", "value": "test post", "time": "2017"},
+          {"identifier": "c", "value": "test3", "time": "2018"}
+        ];
+
+        return jIO.QueryFactory.create('value:"test post"').exec(doc_list).
+          then(function (doc_list) {
+            deepEqual(doc_list, [
+              {"identifier": "b", "value": "test post", "time": "2017"}
+            ], 'If value is in quotes, only match if exactly same');
+          }).always(start);
+      });
+  });
+
   // Asterisk wildcard is not supported yet.
 /*  test('Full text query with asterisk', function () {
     var doc_list = [

@@ -416,7 +416,7 @@
     }
     return new RegExp("^" + stringEscapeRegexpCharacters(string)
       .replace(regexp_percent, '[\\s\\S]*')
-      .replace(regexp_underscore, '.') + "$");
+      .replace(regexp_underscore, '.') + "$", "i");
   }
 
   /**
