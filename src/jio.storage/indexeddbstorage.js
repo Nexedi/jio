@@ -385,7 +385,9 @@
               end_index -= 1;
             }
             function resolver(result) {
-              result_list.push(result);
+              if (result.blob !== undefined) {
+                result_list.push(result);
+              }
               resolve(result_list);
             }
             function getPart(i) {
