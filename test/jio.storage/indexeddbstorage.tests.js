@@ -1623,5 +1623,31 @@
       });
   });
 
+  test("empty attachment", function () {
+    var context = this,
+      blob = new Blob([]);
+    stop();
+    expect(1);
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put("foo", {"title": "bar"});
+      })
+      .then(function () {
+        return context.jio.putAttachment("foo", "empty", blob);
+      })
+      .then(function () {
+        return context.jio.getAttachment("foo", "empty");
+      })
+      .then(function (attachment) {
+        deepEqual(attachment, blob, "check attachment empty");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 }(jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
   IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange));

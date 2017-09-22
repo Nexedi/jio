@@ -472,6 +472,9 @@
                                             handled_size + UNITE));
           handled_size += UNITE;
         }
+        if (total_size === 0) {
+          blob_part.push(blob);
+        }
 
         // Remove previous attachment
         transaction = openTransaction(db, ["attachment", "blob"], "readwrite");
