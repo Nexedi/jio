@@ -68,8 +68,8 @@
         'ended_at': data.results.ended_at || null,
         'user': user_id};
       result.push(temp);
-      jio._cache.put('/' + user_id + path, temp)
-      jio._cache.putAttachment('/', '', JSON.stringify(data.results))
+      jio._cache.put('/' + user_id + path, temp);
+      jio._cache.putAttachment('/', '', JSON.stringify(data.results));
       if (data._metadata.next === undefined) {
         return result;
       }
@@ -80,9 +80,11 @@
         'xhrFields': {withCredentials: true}
       }).push(function (response) {
         if (response.target.status >= 400) {
-          throw new jIO.util.jIOError(response.target.responseText ?
-            JSON.parse(response.target.responseText) : {},
-            response.target.status);
+          throw new jIO.util.jIOError(
+            response.target.responseText ?
+                JSON.parse(response.target.responseText) : {},
+            response.target.status
+          );
         }
         return [JSON.parse(response.target.responseText), returned[1]];
       }).push(treatNext);
@@ -146,14 +148,14 @@
     if (!checkEndpointAsId(id)) {
       throw new jIO.util.jIOError('Invalid id.', 400);
     }
-    return jio._cache.get(id).push(function(res) {
+    return this._cache.get(id).push(function (res) {
       return res;
-    }, function(error) {
+    }, function () {
       _queryAutomaticAPI(id, {}, this);
     });
   };
 
-  AutomaticAPIStorage.prototype.put = function (id) {
+  AutomaticAPIStorage.prototype.put = function () {
     return;
   };
 
@@ -161,15 +163,15 @@
     return;
   };
 
-  AutomaticAPIStorage.prototype.remove = function (id) {
+  AutomaticAPIStorage.prototype.remove = function () {
     return;
   };
 
-  AutomaticAPIStorage.prototype.putAttachment = function (id, name) {
+  AutomaticAPIStorage.prototype.putAttachment = function () {
     return;
   };
 
-  AutomaticAPIStorage.prototype.removeAttachment = function (id, name) {
+  AutomaticAPIStorage.prototype.removeAttachment = function () {
     return;
   };
 
