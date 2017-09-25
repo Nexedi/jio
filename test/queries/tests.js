@@ -154,7 +154,8 @@
           .exec(doc_list);
       })
       .then(function (doc_list) {
-        deepEqual(doc_list, [], 'No document should be kept');
+        deepEqual(doc_list, [{"identifier": "测试一", "title": "标题"}
+          ], 'Full text query matched document should be returned');
       })
       .fail(function (error) {
         ok(false, error);
@@ -357,4 +358,103 @@
       ], 'Documents with newlines are matched');
     }).always(start);
   });
+
+  test('Default operator for complex query', function () {
+    var doc_list = [
+      {"identifier": "a", "value": "test1", "time": "2016"},
+      {"identifier": "a", "value": "test", "time": "2016"},
+      {"identifier": "c", "value": "test1", "time": "2017"}
+    ];
+    stop();
+    expect(1);
+    jIO.QueryFactory.create('identifier:%a% value:"%test1%" time:%2016%')
+      .exec(doc_list)
+      .then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "a", "value": "test1", "time": "2016"}],
+            'Document which matches all the fields is matched');
+      }).always(start);
+  });
+
+  test('Full text query with single word', function () {
+    var doc_list = [
+      {"identifier": "a", "value": "test", "time": "2016"},
+      {"identifier": "b", "value": "test 1", "time": "2017"},
+      {"identifier": "c", "value": "test 2016", "time": "2017"}
+    ];
+    stop();
+    expect(2);
+    jIO.QueryFactory.create('test').exec(doc_list).
+      then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "a", "value": "test", "time": "2016"},
+          {"identifier": "b", "value": "test 1", "time": "2017"},
+          {"identifier": "c", "value": "test 2016", "time": "2017"}
+        ], 'Documents which have test in any column are matched');
+
+        doc_list = [
+          {"identifier": "a", "value": "test", "time": "2016"},
+          {"identifier": "b", "value": "test 1", "time": "2017"},
+          {"identifier": "c", "value": "test 2016", "time": "2017"}
+        ];
+
+        return jIO.QueryFactory.create('2016').exec(doc_list).
+          then(function (doc_list) {
+            deepEqual(doc_list, [
+              {"identifier": "a", "value": "test", "time": "2016"},
+              {"identifier": "c", "value": "test 2016", "time": "2017"}
+            ], 'Documents which have 2016 in any column are matched');
+          }).always(start);
+      });
+  });
+
+  test('Full text query with multiple words', function () {
+    var doc_list = [
+      {"identifier": "a", "value": "test post", "time": "2016"},
+      {"identifier": "b", "value": "test post 1", "time": "2017"},
+      {"identifier": "c", "value": "test post 2016", "time": "2017"}
+    ];
+    stop();
+    expect(2);
+    jIO.QueryFactory.create('test post').exec(doc_list).
+      then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "a", "value": "test post", "time": "2016"},
+          {"identifier": "b", "value": "test post 1", "time": "2017"},
+          {"identifier": "c", "value": "test post 2016", "time": "2017"}
+        ], 'Documents which have test post in any column are matched');
+
+        doc_list = [
+          {"identifier": "a", "value": "test post", "time": "2016"},
+          {"identifier": "b", "value": "test post 1", "time": "2017"},
+          {"identifier": "c", "value": "test post 2016", "time": "2017"}
+        ];
+
+        return jIO.QueryFactory.create('test post 2016').exec(doc_list).
+          then(function (doc_list) {
+            deepEqual(doc_list, [
+              {"identifier": "a", "value": "test post", "time": "2016"},
+              {"identifier": "c", "value": "test post 2016", "time": "2017"}
+            ], 'Documents which have test post 2016 in any column are matched');
+          }).always(start);
+      });
+  });
+
+// Asterisk wildcard is not supported yet.
+/*  test('Full text query with asterisk', function () {
+    var doc_list = [
+      {"identifier": "abc"},
+      {"identifier": "ab"}
+    ];
+    stop();
+    expect(1);
+    jIO.QueryFactory.create('a*').exec(doc_list).
+      then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "abc"},
+          {"identifier": "ab"}
+        ], 'Documents which satisfy the asterisk wildcard should be returned')
+          .always(start);
+      });
+  });*/
 }));
