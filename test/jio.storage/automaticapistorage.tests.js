@@ -14,14 +14,6 @@
     tokens = ["sample_token1", "sample_token2"];
 
   /////////////////////////////////////////////////////////////////
-  // Custom test substorage definition
-  /////////////////////////////////////////////////////////////////
-  function Storage200() {
-    return this;
-  }
-  jIO.addStorage('querystorage200', Storage200);
-
-  /////////////////////////////////////////////////////////////////
   // AutomaticAPIStorage constructor
   /////////////////////////////////////////////////////////////////
   module("AutomaticAPIStorage.constructor");
@@ -138,13 +130,25 @@
       "Content-Encoding": "gzip",
       "Content-Type": "application/json"
     }, '{"_metadata":{"count":1,"next":null,"previous":null},' +
-      '"results":[{}]}' ]);
+      '"results":[{"id": "V_example"}]}' ]);
+    url = "https://api.automatic.com/users/me/";
+    this.server.respondWith("GET", url, [200, {
+      "Content-Encoding": "gzip",
+      "Content-Type": "application/json"
+    }, '{"id": "0"}' ]);
     stop();
     expect(1);
 
-    this.jio.get("/0/vehicle/")
+    this.jio.get("/all/vehicle/")
       .then(function (result) {
-        deepEqual(result, [{}], "Check list type");
+        deepEqual(result, [{
+          'path': '/vehicle/V_example/',
+          'reference': '/0/vehicle/V_example/',
+          'type': 'vehicle',
+          'started_at': null,
+          'ended_at': null,
+          'user': '0'
+        }], "Check list type");
       })
       .fail(function (error) {
         ok(false, error);
@@ -162,12 +166,24 @@
       'Content-Type': 'application/json'
     }, '{"id":"T_randomtrip",' +
       '"url":"https://api.automatic.com/trip/T_randomtrip/"}']);
+    url = "https://api.automatic.com/users/me/";
+    this.server.respondWith("GET", url, [200, {
+      "Content-Encoding": "gzip",
+      "Content-Type": "application/json"
+    }, '{"id": "0"}' ]);
     stop();
     expect(1);
 
     this.jio.get("/0/trip/T_randomtrip")
       .then(function (result) {
-        deepEqual(result, {}, "Check single element type");
+        deepEqual(result, {
+          'path': '/trip/T_randomtrip/',
+          'reference': '/0/trip/T_randomtrip/',
+          'type': 'trip',
+          'started_at': null,
+          'ended_at': null,
+          'user': '0'
+        }, "Check single element type");
       })
       .fail(function (error) {
         ok(false, error);
@@ -180,165 +196,87 @@
   /////////////////////////////////////////////////////////////////
   // AutomaticAPIStorage.buildQuery
   /////////////////////////////////////////////////////////////////
-  module("queryStorage.buildQuery");
+  module("queryStorage.buildQuery", {
+    setup: function () {
 
-  test("substorage should have 'list' capacity", function () {
-    stop();
-    expect(3);
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
 
-    var jio = jIO.createJIO({
-      type: "query",
-      sub_storage: {
-        type: "querystorage200"
-      }
-    });
-
-    jio.allDocs({
-      include_docs: true,
-      query: 'title: "two"'
-    })
-      .then(function () {
-        ok(false);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.status_code, 501);
-        equal(error.message,
-              "Capacity 'list' is not implemented on 'querystorage200'");
-      })
-      .always(function () {
-        start();
+      this.jio = jIO.createJIO({
+        type: "automaticapi",
+        access_token: tokens
       });
-  });
-
-  test("no manual query if substorage handle everything", function () {
-    stop();
-    expect(2);
-
-    function StorageAllDocsNoGet() {
-      return this;
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
     }
-    StorageAllDocsNoGet.prototype.get = function () {
-      throw new Error("Unexpected get call");
-    };
-    StorageAllDocsNoGet.prototype.hasCapacity = function (capacity) {
-      if ((capacity === "list") ||
-          (capacity === "sort") ||
-          (capacity === "select") ||
-          (capacity === "limit") ||
-          (capacity === "query")) {
-        return true;
-      }
-      throw new Error("Unexpected " + capacity + " capacity check");
-    };
-    StorageAllDocsNoGet.prototype.buildQuery = function (options) {
-      deepEqual(options, {
-        sort_on: [["title", "ascending"]],
-        limit: [5],
-        select_list: ["title", "id"],
-        query: 'title: "two"'
-      },
-                "buildQuery called");
-      return "taboulet";
-    };
-
-    jIO.addStorage('querystoragealldocsnoget', StorageAllDocsNoGet);
-
-    var jio = jIO.createJIO({
-      type: "query",
-      sub_storage: {
-        type: "querystoragealldocsnoget"
-      }
-    });
-
-    jio.allDocs({
-      sort_on: [["title", "ascending"]],
-      limit: [5],
-      select_list: ["title", "id"],
-      query: 'title: "two"'
-    })
-      .then(function (result) {
-        deepEqual(result, {
-          data: {
-            rows: "taboulet",
-            total_rows: 8
-          }
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
   });
 
-  test("manual query used if substorage does not handle sort", function () {
+  test("query started_at, ended_at taken into account", function () {
+    var url = "https://api.automatic.com/trip/";
+    this.server.respondWith("GET", url, [200, {
+      'Content-Encoding': 'gzip',
+      'Content-Type': 'application/json'
+    }, '{"_metadata":{"count":1,"next":null,"previous":null},' +
+      '"results":[{"id": "T_example", "started_at": "2017-06-17T16:45:41Z"' +
+      ', "ended_at": "2017-06-17T16:46:38Z"}]}']);
+    url = "https://api.automatic.com/users/me/";
+    this.server.respondWith("GET", url, [200, {
+      "Content-Encoding": "gzip",
+      "Content-Type": "application/json"
+    }, '{"id": "0"}' ]);
     stop();
     expect(4);
 
-    function StorageNoSortCapacity() {
-      return this;
-    }
-    StorageNoSortCapacity.prototype.get = function (id) {
-      if (id === "foo") {
-        equal(id, "foo", "Get foo");
-      } else {
-        equal(id, "bar", "Get bar");
-      }
-      return {title: id, id: "ID " + id,
-              "another": "property"};
-    };
-    StorageNoSortCapacity.prototype.hasCapacity = function (capacity) {
-      if ((capacity === "list") ||
-          (capacity === "select") ||
-          (capacity === "limit") ||
-          (capacity === "query")) {
-        return true;
-      }
-      return false;
-    };
-    StorageNoSortCapacity.prototype.buildQuery = function (options) {
-      deepEqual(options, {}, "No query parameter");
-      var result2 = [{
-        id: "foo",
-        value: {}
-      }, {
-        id: "bar",
-        value: {}
-      }];
-      return result2;
-    };
-
-    jIO.addStorage('querystoragenosortcapacity', StorageNoSortCapacity);
-
-    var jio = jIO.createJIO({
-      type: "query",
-      sub_storage: {
-        type: "querystoragenosortcapacity"
-      }
-    });
-
-    jio.allDocs({
-      sort_on: [["title", "ascending"]],
-      limit: [0, 5],
-      select_list: ["title", "id"],
-      query: 'title: "foo"'
-    })
+    this.jio.buildQuery('started_at > "2017-06-17T18:45:41Z"')
       .then(function (result) {
-        deepEqual(result, {
-          data: {
-            rows: [{
-              id: "foo",
-              doc: {},
-              value: {
-                title: "foo",
-                id: "ID foo"
-              }
-            }],
-            total_rows: 1
-          }
-        });
+        deepEqual(result, [], "Check no result");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+    this.jio.buildQuery('started_at > "2017-06-17T14:45:41Z"')
+      .then(function (result) {
+        deepEqual(result, [{
+          'path': '/trip/T_example/',
+          'reference': '/0/trip/T_example/',
+          'type': 'trip',
+          'started_at': "2017-06-17T16:45:41Z",
+          'ended_at': "2017-06-17T16:46:38Z",
+          'user': '0'
+        }], "Check trip is returned in result");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+    this.jio.buildQuery('ended_at > "2017-06-17T18:45:41Z"')
+      .then(function (result) {
+        deepEqual(result, [], "Check no result");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+    this.jio.buildQuery('ended_at < "2017-06-17T18:45:41Z"')
+      .then(function (result) {
+        deepEqual(result, [{
+          'path': '/trip/T_example/',
+          'reference': '/0/trip/T_example/',
+          'type': 'trip',
+          'started_at': "2017-06-17T16:45:41Z",
+          'ended_at': "2017-06-17T16:46:38Z",
+          'user': '0'
+        }], "Check trip is returned in result");
       })
       .fail(function (error) {
         ok(false, error);
@@ -348,305 +286,5 @@
       });
   });
 
-  test("manual query used if substorage does not handle select", function () {
-    stop();
-    expect(4);
-
-    function StorageNoSelectCapacity() {
-      return this;
-    }
-    StorageNoSelectCapacity.prototype.get = function (id) {
-      if (id === "foo") {
-        equal(id, "foo", "Get foo");
-      } else {
-        equal(id, "bar", "Get bar");
-      }
-      return {title: id, id: "ID " + id,
-              "another": "property"};
-    };
-    StorageNoSelectCapacity.prototype.hasCapacity = function (capacity) {
-      if ((capacity === "list") ||
-          (capacity === "sort") ||
-          (capacity === "limit") ||
-          (capacity === "query")) {
-        return true;
-      }
-      return false;
-    };
-    StorageNoSelectCapacity.prototype.buildQuery = function (options) {
-      deepEqual(options, {}, "No query parameter");
-      var result2 = [{
-        id: "foo",
-        value: {}
-      }, {
-        id: "bar",
-        value: {}
-      }];
-      return result2;
-    };
-
-    jIO.addStorage('querystoragenoselectcapacity', StorageNoSelectCapacity);
-
-    var jio = jIO.createJIO({
-      type: "query",
-      sub_storage: {
-        type: "querystoragenoselectcapacity"
-      }
-    });
-
-    jio.allDocs({
-      sort_on: [["title", "ascending"]],
-      limit: [0, 5],
-      select_list: ["title", "id"],
-      query: 'title: "foo"'
-    })
-      .then(function (result) {
-        deepEqual(result, {
-          data: {
-            rows: [{
-              id: "foo",
-              doc: {},
-              value: {
-                title: "foo",
-                id: "ID foo"
-              }
-            }],
-            total_rows: 1
-          }
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("manual query used if substorage does not handle limit", function () {
-    stop();
-    expect(4);
-
-    function StorageNoLimitCapacity() {
-      return this;
-    }
-    StorageNoLimitCapacity.prototype.get = function (id) {
-      if (id === "foo") {
-        equal(id, "foo", "Get foo");
-      } else {
-        equal(id, "bar", "Get bar");
-      }
-      return {title: id, id: "ID " + id,
-              "another": "property"};
-    };
-    StorageNoLimitCapacity.prototype.hasCapacity = function (capacity) {
-      if ((capacity === "list") ||
-          (capacity === "select") ||
-          (capacity === "sort") ||
-          (capacity === "query")) {
-        return true;
-      }
-      return false;
-    };
-    StorageNoLimitCapacity.prototype.buildQuery = function (options) {
-      deepEqual(options, {}, "No query parameter");
-      var result2 = [{
-        id: "foo",
-        value: {}
-      }, {
-        id: "bar",
-        value: {}
-      }];
-      return result2;
-    };
-
-    jIO.addStorage('querystoragenolimitcapacity', StorageNoLimitCapacity);
-
-    var jio = jIO.createJIO({
-      type: "query",
-      sub_storage: {
-        type: "querystoragenolimitcapacity"
-      }
-    });
-
-    jio.allDocs({
-      sort_on: [["title", "ascending"]],
-      limit: [0, 5],
-      select_list: ["title", "id"],
-      query: 'title: "foo"'
-    })
-      .then(function (result) {
-        deepEqual(result, {
-          data: {
-            rows: [{
-              id: "foo",
-              doc: {},
-              value: {
-                title: "foo",
-                id: "ID foo"
-              }
-            }],
-            total_rows: 1
-          }
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("manual query used if substorage does not handle query", function () {
-    stop();
-    expect(4);
-
-    function StorageNoQueryCapacity() {
-      return this;
-    }
-    StorageNoQueryCapacity.prototype.get = function (id) {
-      if (id === "foo") {
-        equal(id, "foo", "Get foo");
-      } else {
-        equal(id, "bar", "Get bar");
-      }
-      return {title: id, id: "ID " + id,
-              "another": "property"};
-    };
-    StorageNoQueryCapacity.prototype.hasCapacity = function (capacity) {
-      if ((capacity === "list") ||
-          (capacity === "select") ||
-          (capacity === "limit") ||
-          (capacity === "sort")) {
-        return true;
-      }
-      return false;
-    };
-    StorageNoQueryCapacity.prototype.buildQuery = function (options) {
-      deepEqual(options, {}, "No query parameter");
-      var result2 = [{
-        id: "foo",
-        value: {}
-      }, {
-        id: "bar",
-        value: {}
-      }];
-      return result2;
-    };
-
-    jIO.addStorage('querystoragenoquerycapacity', StorageNoQueryCapacity);
-
-    var jio = jIO.createJIO({
-      type: "query",
-      sub_storage: {
-        type: "querystoragenoquerycapacity"
-      }
-    });
-
-    jio.allDocs({
-      sort_on: [["title", "ascending"]],
-      limit: [0, 5],
-      select_list: ["title", "id"],
-      query: 'title: "foo"'
-    })
-      .then(function (result) {
-        deepEqual(result, {
-          data: {
-            rows: [{
-              id: "foo",
-              doc: {},
-              value: {
-                title: "foo",
-                id: "ID foo"
-              }
-            }],
-            total_rows: 1
-          }
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("does not fetch doc one by one if substorage handle include_docs",
-       function () {
-      stop();
-      expect(2);
-
-      function StorageIncludeDocsCapacity() {
-        return this;
-      }
-      StorageIncludeDocsCapacity.prototype.hasCapacity = function (capacity) {
-        if ((capacity === "list") ||
-            (capacity === "include")) {
-          return true;
-        }
-        return false;
-      };
-      StorageIncludeDocsCapacity.prototype.buildQuery = function (options) {
-        deepEqual(options, {include_docs: true}, "Include docs parameter");
-        var result2 = [{
-          id: "foo",
-          value: {},
-          doc: {
-            title: "foo",
-            id: "ID foo",
-            another: "property"
-          }
-        }, {
-          id: "bar",
-          value: {},
-          doc: {
-            title: "bar",
-            id: "ID bar",
-            another: "property"
-          }
-        }];
-        return result2;
-      };
-
-      jIO.addStorage('querystorageincludedocscapacity',
-                     StorageIncludeDocsCapacity);
-
-      var jio = jIO.createJIO({
-        type: "query",
-        sub_storage: {
-          type: "querystorageincludedocscapacity"
-        }
-      });
-
-      jio.allDocs({
-        sort_on: [["title", "ascending"]],
-        limit: [0, 5],
-        select_list: ["title", "id"],
-        query: 'title: "foo"'
-      })
-        .then(function (result) {
-          deepEqual(result, {
-            data: {
-              rows: [{
-                id: "foo",
-                doc: {},
-                value: {
-                  title: "foo",
-                  id: "ID foo"
-                }
-              }],
-              total_rows: 1
-            }
-          });
-        })
-        .fail(function (error) {
-          ok(false, error);
-        })
-        .always(function () {
-          start();
-        });
-    });
 
 }(jIO, QUnit, Blob, sinon));
