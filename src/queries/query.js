@@ -416,7 +416,7 @@
     }
     return new RegExp("^" + stringEscapeRegexpCharacters(string)
       .replace(regexp_percent, '[\\s\\S]*')
-      .replace(regexp_underscore, '.') + "$");
+      .replace(regexp_underscore, '.') + "$", "i");
   }
 
   /**
@@ -743,7 +743,7 @@
       value = '%' + this.value + '%';
       for (k in item) {
         if (item.hasOwnProperty(k)) {
-          if (k !== '__id') {
+          if (k !== '__id' && item[k]) {
             if (matchMethod(item[k], value) === true) {
               return true;
             }

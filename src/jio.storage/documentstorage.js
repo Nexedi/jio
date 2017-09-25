@@ -1,8 +1,7 @@
 /*jslint nomen: true*/
-/*global Blob, atob, btoa, RSVP*/
-(function (jIO, Blob, atob, btoa, RSVP) {
+/*global Blob, RSVP, unescape, escape*/
+(function (jIO, Blob, RSVP, unescape, escape) {
   "use strict";
-
   /**
    * The jIO DocumentStorage extension
    *
@@ -18,7 +17,13 @@
   var DOCUMENT_EXTENSION = ".json",
     DOCUMENT_REGEXP = new RegExp("^jio_document/([\\w=]+)" +
                                  DOCUMENT_EXTENSION + "$"),
-    ATTACHMENT_REGEXP = new RegExp("^jio_attachment/([\\w=]+)/([\\w=]+)$");
+    ATTACHMENT_REGEXP = new RegExp("^jio_attachment/([\\w=]+)/([\\w=]+)$"),
+    btoa = function (str) {
+      return window.btoa(unescape(encodeURIComponent(str)));
+    },
+    atob = function (str) {
+      return decodeURIComponent(escape(window.atob(str)));
+    };
 
   function getSubAttachmentIdFromParam(id, name) {
     if (name === undefined) {
@@ -225,4 +230,4 @@
 
   jIO.addStorage('document', DocumentStorage);
 
-}(jIO, Blob, atob, btoa, RSVP));
+}(jIO, Blob, RSVP, unescape, escape));
