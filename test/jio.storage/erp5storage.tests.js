@@ -993,6 +993,7 @@
     ok(this.jio.hasCapacity("query"));
     ok(this.jio.hasCapacity("select"));
     ok(this.jio.hasCapacity("limit"));
+    ok(this.jio.hasCapacity("schema"));
   });
 
   /////////////////////////////////////////////////////////////////

@@ -398,7 +398,7 @@
   ERP5Storage.prototype.hasCapacity = function (name) {
     return ((name === "list") || (name === "query") ||
             (name === "select") || (name === "limit") ||
-            (name === "sort"));
+            (name === "sort") || (name === "schema"));
   };
 
   function isSingleLocalRoles(parsed_query) {
