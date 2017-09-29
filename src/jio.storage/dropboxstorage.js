@@ -157,7 +157,7 @@
       type: "POST",
       url: REMOVE_URL,
       headers: {
-        "Authorization": "Bearer " + that._access_token,
+        "Authorization": "Bearer " + this._access_token,
         "Content-Type": "application/json"
       },
       data: JSON.stringify({"path": id})
@@ -224,7 +224,8 @@
           "path": id + name,
           "mode": "overwrite",
           "autorename": true,
-          "mute": false})
+          "mute": false
+        })
       },
       data: blob
     });
