@@ -13796,7 +13796,1085 @@ return new Parser;
   jIO.addStorage('websql', WebSQLStorage);
 
 }(jIO, RSVP, Blob, openDatabase));
-;/*jslint nomen: true */
+;/*jslint indent:2, maxlen: 80, nomen: true */
+/*global jIO, RSVP, UriTemplate, SimpleQuery, ComplexQuery, QueryFactory,
+  Query, FormData*/
+(function (jIO, RSVP, UriTemplate, SimpleQuery, ComplexQuery, QueryFactory,
+  Query, FormData) {
+  "use strict";
+
+  function getSubIdEqualSubProperty(storage, value, key) {
+    var query;
+    if (storage._no_sub_query_id) {
+      throw new jIO.util.jIOError('no sub query id active', 404);
+    }
+    if (!value) {
+      throw new jIO.util.jIOError(
+        'can not find document with ' + key + ' : undefined',
+        404
+      );
+    }
+    if (storage._mapping_id_memory_dict[value]) {
+      return storage._mapping_id_memory_dict[value];
+    }
+    query = new SimpleQuery({
+      key: key,
+      value: value,
+      type: "simple"
+    });
+    if (storage._query.query !== undefined) {
+      query = new ComplexQuery({
+        operator: "AND",
+        query_list: [query, storage._query.query],
+        type: "complex"
+      });
+    }
+    query = Query.objectToSearchText(query);
+    return storage._sub_storage.allDocs({
+      "query": query,
+      "sort_on": storage._query.sort_on,
+      "select_list": storage._query.select_list,
+      "limit": storage._query.limit
+    })
+      .push(function (data) {
+        if (data.data.total_rows === 0) {
+          throw new jIO.util.jIOError(
+            "Can not find document with (" + key + ", " + value + ")",
+            404
+          );
+        }
+        if (data.data.total_rows > 1) {
+          throw new TypeError("id must be unique field: " + key
+            + ", result:" + data.data.rows.toString());
+        }
+        storage._mapping_id_memory_dict[value] = data.data.rows[0].id;
+        return data.data.rows[0].id;
+      });
+  }
+
+  /*jslint unparam: true*/
+  var mapping_function = {
+    "equalSubProperty": {
+      "mapToSubProperty": function (property, sub_doc, doc, args, id) {
+        sub_doc[args] = doc[property];
+        return args;
+      },
+      "mapToMainProperty": function (property, sub_doc, doc, args, sub_id) {
+        if (sub_doc.hasOwnProperty(args)) {
+          doc[property] = sub_doc[args];
+        }
+        return args;
+      },
+      "mapToSubId": function (storage, doc, id, args) {
+        if (doc !== undefined) {
+          if (storage._property_for_sub_id &&
+              doc.hasOwnProperty(storage._property_for_sub_id)) {
+            return doc[storage._property_for_sub_id];
+          }
+        }
+        return getSubIdEqualSubProperty(storage, id, storage._map_id[1]);
+      },
+      "mapToId": function (storage, sub_doc, sub_id, args) {
+        return sub_doc[args];
+      }
+    },
+    "equalValue": {
+      "mapToSubProperty": function (property, sub_doc, doc, args) {
+        sub_doc[property] = args;
+        return property;
+      },
+      "mapToMainProperty": function (property) {
+        return property;
+      }
+    },
+    "ignore": {
+      "mapToSubProperty": function () {
+        return false;
+      },
+      "mapToMainProperty": function (property) {
+        return property;
+      }
+    },
+    "equalSubId": {
+      "mapToSubProperty": function (property, sub_doc, doc) {
+        sub_doc[property] = doc[property];
+        return property;
+      },
+      "mapToMainProperty": function (property, sub_doc, doc, args, sub_id) {
+        if (sub_id === undefined && sub_doc.hasOwnProperty(property)) {
+          doc[property] = sub_doc[property];
+        } else {
+          doc[property] = sub_id;
+        }
+        return property;
+      },
+      "mapToSubId": function (storage, doc, id, args) {
+        return id;
+      },
+      "mapToId": function (storage, sub_doc, sub_id) {
+        return sub_id;
+      }
+    },
+    "keep": {
+      "mapToSubProperty": function (property, sub_doc, doc) {
+        sub_doc[property] = doc[property];
+        return property;
+      },
+      "mapToMainProperty": function (property, sub_doc, doc) {
+        doc[property] = sub_doc[property];
+        return property;
+      }
+    },
+    "switchPropertyValue": {
+      "mapToSubProperty": function (property, sub_doc, doc, args) {
+        sub_doc[args[0]] = args[1][doc[property]];
+        return args[0];
+      },
+      "mapToMainProperty": function (property, sub_doc, doc, args) {
+        var subvalue, value = sub_doc[args[0]];
+        for (subvalue in args[1]) {
+          if (args[1].hasOwnProperty(subvalue)) {
+            if (value === args[1][subvalue]) {
+              doc[property] = subvalue;
+              return property;
+            }
+          }
+        }
+      }
+    }
+  };
+  /*jslint unparam: false*/
+
+  function initializeQueryAndDefaultMapping(storage) {
+    var property, query_list = [];
+    for (property in storage._mapping_dict) {
+      if (storage._mapping_dict.hasOwnProperty(property)) {
+        if (storage._mapping_dict[property][0] === "equalValue") {
+          if (storage._mapping_dict[property][1] === undefined) {
+            throw new jIO.util.jIOError("equalValue has not parameter", 400);
+          }
+          storage._default_mapping[property] =
+            storage._mapping_dict[property][1];
+          query_list.push(new SimpleQuery({
+            key: property,
+            value: storage._mapping_dict[property][1],
+            type: "simple"
+          }));
+        }
+        if (storage._mapping_dict[property][0] === "equalSubId") {
+          if (storage._property_for_sub_id !== undefined) {
+            throw new jIO.util.jIOError(
+              "equalSubId can be defined one time",
+              400
+            );
+          }
+          storage._property_for_sub_id = property;
+        }
+      }
+    }
+    if (storage._map_id[0] === "equalSubProperty") {
+      storage._mapping_dict[storage._map_id[1]] = ["keep"];
+    }
+    if (storage._query.query !== undefined) {
+      query_list.push(QueryFactory.create(storage._query.query));
+    }
+    if (query_list.length > 1) {
+      storage._query.query = new ComplexQuery({
+        type: "complex",
+        query_list: query_list,
+        operator: "AND"
+      });
+    } else if (query_list.length === 1) {
+      storage._query.query = query_list[0];
+    }
+  }
+
+  function MappingStorage(spec) {
+    this._mapping_dict = spec.property || {};
+    this._sub_storage = jIO.createJIO(spec.sub_storage);
+    this._map_all_property = spec.map_all_property !== undefined ?
+        spec.map_all_property : true;
+    this._no_sub_query_id = spec.no_sub_query_id;
+    this._attachment_mapping_dict = spec.attachment || {};
+    this._query = spec.query || {};
+    this._map_id = spec.id || ["equalSubId"];
+    this._id_mapped = (spec.id !== undefined) ? spec.id[1] : false;
+
+    if (this._query.query !== undefined) {
+      this._query.query = QueryFactory.create(this._query.query);
+    }
+    this._default_mapping = {};
+    this._mapping_id_memory_dict = {};
+    this._attachment_list = spec.attachment_list || [];
+
+    initializeQueryAndDefaultMapping(this);
+  }
+
+  function getAttachmentId(storage, sub_id, attachment_id, method) {
+    var mapping_dict = storage._attachment_mapping_dict;
+    if (mapping_dict !== undefined
+        && mapping_dict[attachment_id] !== undefined
+        && mapping_dict[attachment_id][method] !== undefined
+        && mapping_dict[attachment_id][method].uri_template !== undefined) {
+      return UriTemplate.parse(
+        mapping_dict[attachment_id][method].uri_template
+      ).expand({id: sub_id});
+    }
+    return attachment_id;
+  }
+
+  function getSubStorageId(storage, id, doc) {
+    return new RSVP.Queue()
+      .push(function () {
+        var map_info = storage._map_id || ["equalSubId"];
+        if (storage._property_for_sub_id && doc !== undefined &&
+            doc.hasOwnProperty(storage._property_for_sub_id)) {
+          return doc[storage._property_for_sub_id];
+        }
+        return mapping_function[map_info[0]].mapToSubId(
+          storage,
+          doc,
+          id,
+          map_info[1]
+        );
+      });
+  }
+
+  function mapToSubProperty(storage, property, sub_doc, doc, id) {
+    var mapping_info = storage._mapping_dict[property] || ["keep"];
+    return mapping_function[mapping_info[0]].mapToSubProperty(
+      property,
+      sub_doc,
+      doc,
+      mapping_info[1],
+      id
+    );
+  }
+
+  function mapToMainProperty(storage, property, sub_doc, doc, sub_id) {
+    var mapping_info = storage._mapping_dict[property] || ["keep"];
+    return mapping_function[mapping_info[0]].mapToMainProperty(
+      property,
+      sub_doc,
+      doc,
+      mapping_info[1],
+      sub_id
+    );
+  }
+
+  function mapToMainDocument(storage, sub_doc, sub_id) {
+    var doc = {},
+      property,
+      property_list = [storage._id_mapped];
+    for (property in storage._mapping_dict) {
+      if (storage._mapping_dict.hasOwnProperty(property)) {
+        property_list.push(mapToMainProperty(
+          storage,
+          property,
+          sub_doc,
+          doc,
+          sub_id
+        ));
+      }
+    }
+    if (storage._map_all_property) {
+      for (property in sub_doc) {
+        if (sub_doc.hasOwnProperty(property)) {
+          if (property_list.indexOf(property) < 0) {
+            doc[property] = sub_doc[property];
+          }
+        }
+      }
+    }
+    if (storage._map_for_sub_storage_id !== undefined) {
+      doc[storage._map_for_sub_storage_id] = sub_id;
+    }
+    return doc;
+  }
+
+  function mapToSubstorageDocument(storage, doc, id) {
+    var sub_doc = {}, property;
+
+    for (property in doc) {
+      if (doc.hasOwnProperty(property)) {
+        mapToSubProperty(storage, property, sub_doc, doc, id);
+      }
+    }
+    for (property in storage._default_mapping) {
+      if (storage._default_mapping.hasOwnProperty(property)) {
+        sub_doc[property] = storage._default_mapping[property];
+      }
+    }
+    if (storage._map_id[0] === "equalSubProperty" && id !== undefined) {
+      sub_doc[storage._map_id[1]] = id;
+    }
+    return sub_doc;
+  }
+
+  function handleAttachment(storage, argument_list, method) {
+    return getSubStorageId(storage, argument_list[0])
+      .push(function (sub_id) {
+        argument_list[0] = sub_id;
+        var old_id = argument_list[1];
+        argument_list[1] = getAttachmentId(
+          storage,
+          argument_list[0],
+          argument_list[1],
+          method
+        );
+        if (storage._attachment_list.length > 0
+            && storage._attachment_list.indexOf(old_id) < 0) {
+          if (method === "get") {
+            throw new jIO.util.jIOError("unhautorized attachment", 404);
+          }
+          return;
+        }
+        return storage._sub_storage[method + "Attachment"].apply(
+          storage._sub_storage,
+          argument_list
+        );
+      });
+  }
+
+  MappingStorage.prototype.get = function (id) {
+    var storage = this;
+    return getSubStorageId(this, id)
+      .push(function (sub_id) {
+        return storage._sub_storage.get(sub_id)
+          .push(function (sub_doc) {
+            return mapToMainDocument(storage, sub_doc, sub_id);
+          });
+      });
+  };
+
+  MappingStorage.prototype.post = function (doc) {
+    var sub_doc = mapToSubstorageDocument(
+      this,
+      doc
+    ),
+      id = doc[this._property_for_sub_id],
+      storage = this;
+    if (this._property_for_sub_id && id !== undefined) {
+      return this._sub_storage.put(id, sub_doc);
+    }
+    if (this._id_mapped && doc[this._id_mapped] !== undefined) {
+      return getSubStorageId(storage, id, doc)
+        .push(function (sub_id) {
+          return storage._sub_storage.put(sub_id, sub_doc);
+        })
+        .push(function () {
+          return doc[storage._id_mapped];
+        })
+        .push(undefined, function (error) {
+          if (error instanceof jIO.util.jIOError) {
+            return storage._sub_storage.post(sub_doc);
+          }
+          throw error;
+        });
+    }
+    throw new jIO.util.jIOError(
+      "post is not supported with id mapped",
+      400
+    );
+  };
+
+  MappingStorage.prototype.put = function (id, doc) {
+    var storage = this,
+      sub_doc = mapToSubstorageDocument(this, doc, id);
+    return getSubStorageId(this, id, doc)
+      .push(function (sub_id) {
+        return storage._sub_storage.put(sub_id, sub_doc);
+      })
+      .push(undefined, function (error) {
+        if (error instanceof jIO.util.jIOError && error.status_code === 404) {
+          return storage._sub_storage.post(sub_doc);
+        }
+        throw error;
+      })
+      .push(function () {
+        return id;
+      });
+  };
+
+  MappingStorage.prototype.remove = function (id) {
+    var storage = this;
+    return getSubStorageId(this, id)
+      .push(function (sub_id) {
+        return storage._sub_storage.remove(sub_id);
+      })
+      .push(function () {
+        return id;
+      });
+  };
+
+  MappingStorage.prototype.getAttachment = function () {
+    return handleAttachment(this, arguments, "get");
+  };
+
+  MappingStorage.prototype.putAttachment = function (id, attachment_id, blob) {
+    var storage = this,
+      mapping_dict = storage._attachment_mapping_dict;
+    // THIS IS REALLY BAD, FIND AN OTHER WAY IN FUTURE
+    if (mapping_dict !== undefined
+        && mapping_dict[attachment_id] !== undefined
+        && mapping_dict[attachment_id].put !== undefined
+        && mapping_dict[attachment_id].put.erp5_put_template !== undefined) {
+      return getSubStorageId(storage, id)
+        .push(function (sub_id) {
+          var url = UriTemplate.parse(
+            mapping_dict[attachment_id].put.erp5_put_template
+          ).expand({id: sub_id}),
+            data = new FormData();
+          data.append("field_my_file", blob);
+          data.append("form_id", "File_view");
+          return jIO.util.ajax({
+            "type": "POST",
+            "url": url,
+            "data": data,
+            "xhrFields": {
+              withCredentials: true
+            }
+          });
+        });
+    }
+    return handleAttachment(this, arguments, "put", id)
+      .push(function () {
+        return attachment_id;
+      });
+  };
+
+  MappingStorage.prototype.removeAttachment = function (id, attachment_id) {
+    return handleAttachment(this, arguments, "remove", id)
+      .push(function () {
+        return attachment_id;
+      });
+  };
+
+  MappingStorage.prototype.allAttachments = function (id) {
+    var storage = this, sub_id;
+    return getSubStorageId(storage, id)
+      .push(function (sub_id_result) {
+        sub_id = sub_id_result;
+        return storage._sub_storage.allAttachments(sub_id);
+      })
+      .push(function (result) {
+        var attachment_id,
+          attachments = {},
+          mapping_dict = {},
+          i;
+        for (attachment_id in storage._attachment_mapping_dict) {
+          if (storage._attachment_mapping_dict.hasOwnProperty(attachment_id)) {
+            mapping_dict[getAttachmentId(storage, sub_id, attachment_id, "get")]
+              = attachment_id;
+          }
+        }
+        for (attachment_id in result) {
+          if (result.hasOwnProperty(attachment_id)) {
+            if (!(storage._attachment_list.length > 0
+                && storage._attachment_list.indexOf(attachment_id) < 0)) {
+              if (mapping_dict.hasOwnProperty(attachment_id)) {
+                attachments[mapping_dict[attachment_id]] = {};
+              } else {
+                attachments[attachment_id] = {};
+              }
+            }
+          }
+        }
+        for (i = 0; i < storage._attachment_list.length; i += 1) {
+          if (!attachments.hasOwnProperty(storage._attachment_list[i])) {
+            attachments[storage._attachment_list[i]] = {};
+          }
+        }
+        return attachments;
+      });
+  };
+
+  MappingStorage.prototype.hasCapacity = function (name) {
+    return this._sub_storage.hasCapacity(name);
+  };
+
+  MappingStorage.prototype.repair = function () {
+    return this._sub_storage.repair.apply(this._sub_storage, arguments);
+  };
+
+  MappingStorage.prototype.bulk = function (id_list) {
+    var storage = this;
+
+    function mapId(parameter) {
+      return getSubStorageId(storage, parameter.parameter_list[0])
+        .push(function (id) {
+          return {"method": parameter.method, "parameter_list": [id]};
+        });
+    }
+
+    return new RSVP.Queue()
+      .push(function () {
+        var promise_list = id_list.map(mapId);
+        return RSVP.all(promise_list);
+      })
+      .push(function (id_list_mapped) {
+        return storage._sub_storage.bulk(id_list_mapped);
+      })
+      .push(function (result) {
+        var mapped_result = [], i;
+        for (i = 0; i < result.length; i += 1) {
+          mapped_result.push(mapToMainDocument(
+            storage,
+            result[i]
+          ));
+        }
+        return mapped_result;
+      });
+  };
+
+  MappingStorage.prototype.buildQuery = function (option) {
+    var storage = this,
+      i,
+      query,
+      property,
+      select_list = [],
+      sort_on = [];
+
+    function mapQuery(one_query) {
+      var j, query_list = [], key, sub_query;
+      if (one_query.type === "complex") {
+        for (j = 0; j < one_query.query_list.length; j += 1) {
+          sub_query = mapQuery(one_query.query_list[j]);
+          if (sub_query) {
+            query_list.push(sub_query);
+          }
+        }
+        one_query.query_list = query_list;
+        return one_query;
+      }
+      key = mapToMainProperty(storage, one_query.key, {}, {});
+      if (key !== undefined) {
+        one_query.key = key;
+        return one_query;
+      }
+      return false;
+    }
+
+    if (option.sort_on !== undefined) {
+      for (i = 0; i < option.sort_on.length; i += 1) {
+        property = mapToMainProperty(this, option.sort_on[i][0], {}, {});
+        if (property && sort_on.indexOf(property) < 0) {
+          sort_on.push([property, option.sort_on[i][1]]);
+        }
+      }
+    }
+    if (this._query.sort_on !== undefined) {
+      for (i = 0; i < this._query.sort_on.length; i += 1) {
+        property = mapToMainProperty(this, this._query.sort_on[i], {}, {});
+        if (sort_on.indexOf(property) < 0) {
+          sort_on.push([property, option.sort_on[i][1]]);
+        }
+      }
+    }
+    if (option.select_list !== undefined) {
+      for (i = 0; i < option.select_list.length; i += 1) {
+        property = mapToMainProperty(this, option.select_list[i], {}, {});
+        if (property && select_list.indexOf(property) < 0) {
+          select_list.push(property);
+        }
+      }
+    }
+    if (this._query.select_list !== undefined) {
+      for (i = 0; i < this._query.select_list; i += 1) {
+        property = this._query.select_list[i];
+        if (select_list.indexOf(property) < 0) {
+          select_list.push(property);
+        }
+      }
+    }
+    if (this._id_mapped) {
+      // modify here for future way to map id
+      select_list.push(this._id_mapped);
+    }
+    if (option.query !== undefined) {
+      query = mapQuery(QueryFactory.create(option.query));
+    }
+
+    if (this._query.query !== undefined) {
+      if (query === undefined) {
+        query = this._query.query;
+      }
+      query = new ComplexQuery({
+        operator: "AND",
+        query_list: [query, this._query.query],
+        type: "complex"
+      });
+    }
+
+    if (query !== undefined) {
+      query = Query.objectToSearchText(query);
+    }
+    return this._sub_storage.allDocs(
+      {
+        query: query,
+        select_list: select_list,
+        sort_on: sort_on,
+        limit: option.limit
+      }
+    )
+      .push(function (result) {
+        var sub_doc, map_info = storage._map_id || ["equalSubId"];
+        for (i = 0; i < result.data.total_rows; i += 1) {
+          sub_doc = result.data.rows[i].value;
+          result.data.rows[i].id =
+            mapping_function[map_info[0]].mapToId(
+              storage,
+              sub_doc,
+              result.data.rows[i].id,
+              map_info[1]
+            );
+          result.data.rows[i].value =
+            mapToMainDocument(
+              storage,
+              sub_doc
+            );
+        }
+        return result.data.rows;
+      });
+  };
+
+  jIO.addStorage('mapping', MappingStorage);
+}(jIO, RSVP, UriTemplate, SimpleQuery, ComplexQuery, QueryFactory, Query,
+  FormData));;/*
+ * Copyright 2017, ClearRoad Inc.
+ * 
+ * Authors: Aurélien Vermylen
+ */
+/**
+ * JIO Automatic API Storage. Type = "automaticapi".
+ * Automatic "handler" storage.
+ */
+/*global URI, Blob, jIO, RSVP, UriTemplate*/
+/*jslint nomen: true*/
+
+(function (jIO, RSVP, UriTemplate, URI, Blob) {
+  'use strict';
+  // Some Automatic API related constants.
+  var AUTOMATIC_BASE_PROTOCOL = 'https',
+    AUTOMATIC_BASE_DOMAIN = 'api.automatic.com',
+    AUTOMATIC_BASE_URI = AUTOMATIC_BASE_PROTOCOL + '://'
+                         + AUTOMATIC_BASE_DOMAIN,
+    /*AUTOMATIC_VALID_ENDPOINTS = ['/trip/', '/trip/{id}/', '/user/',
+      '/user/{id}/', '/user/{user_id}/device/',
+      '/user/{user_id}/device/{device_id}/', '/vehicle/{id}/', '/vehicle/',
+      '/vehicle/{vehicle_id}/mil/'],*/
+    AUTOMATIC_VALID_ENDPOINT_REGEXES = [/^\/trip(\/T_\w*|)\/$/,
+      /^\/user\/me(\/device(\/\w*|)|)\/$/,
+      /^\/vehicle(\/C_\w*(\/mil|)|)\/$/],
+    AUTOMATIC_VALID_ENDPOINTID_REGEXES = [/^\/trip\/T_\w*\/$/,
+      /^\/user\/me\/device\/\w*\/$/,
+      /^\/vehicle\/C_\w*\/$/],
+    automatic_template = UriTemplate.parse(AUTOMATIC_BASE_URI +
+      '{/endpoint*}');
+
+  // Check validity of endpoint.
+  function checkEndpoint(endpoint) {
+    var i;
+    for (i = 0; i < AUTOMATIC_VALID_ENDPOINT_REGEXES.length; i += 1) {
+      if (AUTOMATIC_VALID_ENDPOINT_REGEXES[i].test(endpoint)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Check that ids match a valid Automatic API id
+  function checkEndpointAsId(endpoint) {
+    var i;
+    for (i = 0; i < AUTOMATIC_VALID_ENDPOINTID_REGEXES.length; i += 1) {
+      if (AUTOMATIC_VALID_ENDPOINTID_REGEXES[i].test(endpoint)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function _queryAutomaticAPI(endpoint, filters, jio) {
+    var result = [],
+      type = endpoint.split('/')[1],
+      promises,
+      usr = filters.user || 'all',
+      isId = checkEndpointAsId(endpoint),
+      user_dict = {},
+      i;
+    // Remove 'user' filter which should not be put in Automatic request.
+    delete filters.user;
+    // Check endpoint validity.
+    if (!checkEndpoint(endpoint)) {
+      throw new jIO.util.jIOError('Wrong Automatic API query. (usually ' +
+        'caused by wrong "id" or "type")', 400);
+    }
+    // Promise chain to handle multi-part response ("_metadata"->"next" parts).
+    function treatNext(returned) {
+      var data,
+        user_id,
+        next;
+      // If the returned value was an error, return it (-> quite nasty design 
+      // to have to return errors, but this is in order for all RSVP.all() to
+      // continue till the end.
+      if (returned instanceof jIO.util.jIOError) {
+        return returned;
+      }
+      data = returned[0];
+      user_id = user_dict[returned[1]];
+      data = [data];
+      if (!isId) {
+        if (data[0]._metadata === undefined) {
+          return new jIO.util.jIOError('Malformed Automatic API result.', 500);
+        }
+        next = data[0]._metadata.next;
+        data = data[0].results;
+      }
+      return RSVP.Queue().push(function () {
+        return RSVP.all(data.map(function (dat) {
+          var path, temp;
+          path = URI(dat.url).path();
+          temp = {
+            'path': path,
+            'reference': '/' + user_id + path,
+            'id': '/' + user_id + path,
+            'type': type,
+            'started_at': dat.started_at || null,
+            'ended_at': dat.ended_at || null,
+            'user': user_id
+          };
+          result.push(temp);
+          return jio._cache.put('/' + user_id + path, temp).push(function () {
+            return jio._cache.putAttachment('/' + user_id + path, 'data',
+              new Blob([JSON.stringify(dat)], {type:
+                'text/plain'}));
+          });
+        }));
+      }).push(function () {
+        if (next === undefined || next === null) {
+          return true;
+        }
+        return RSVP.Queue().push(function () {
+          return jIO.util.ajax({
+            'type': 'GET',
+            'url': next,
+            'headers': {'Authorization': 'Bearer ' + returned[1]}
+            //'xhrFields': {withCredentials: true}
+          });
+        }).push(function (response) {
+          return [JSON.parse(response.target.responseText), returned[1]];
+        }, function (response) {
+          return new jIO.util.jIOError(
+            response.target.responseText,
+            response.target.status
+          );
+        }).push(treatNext);
+      }, function (error) {
+        return error;
+      });
+    }
+    // Start of the promise chain per token.
+    promises = jio._access_tokens.map(function (token) {
+      return new RSVP.Queue().push(function () {
+        return jIO.util.ajax({
+          'type': 'GET',
+          'url': automatic_template.expand({endpoint: ['user', 'me', '']}),
+          'headers': {'Authorization': 'Bearer ' + token}
+          //'xhrFields': {withCredentials: true}
+        });
+      }).push(function (respusr) {
+        user_dict[token] = JSON.parse(respusr.target.responseText).id;
+        if (usr === 'all' || usr === user_dict[token]) {
+          return jIO.util.ajax({
+            'type': 'GET',
+            'url': URI(automatic_template.expand({endpoint:
+              endpoint.split('/').splice(1)})).search(filters).toString(),
+            'headers': {'Authorization': 'Bearer ' + token}
+            //'xhrFields': {withCredentials: true}
+          });
+        }
+        return new jIO.util.jIOError('Ignored.', 200);
+      }).push(function (response) {
+        if (response instanceof jIO.util.jIOError) {
+          return response;
+        }
+        return [JSON.parse(response.target.responseText), token];
+      }, function (response) {
+        return new jIO.util.jIOError(
+          response.target.responseText,
+          response.target.status
+        );
+      }).push(treatNext);
+    });
+    return new RSVP.Queue().push(function () {
+      return RSVP.all(promises);
+    }).push(function (trueOrErrorArray) {
+      // If we queried an id, return results should be length 1
+      if (isId && (usr !== 'all')) {
+        if (result.length === 1) {
+          return result[0];
+        }
+        if (result.length > 1) {
+          throw new jIO.util.jIOError('Automatic API returned more' +
+            ' than one result for id endpoint', 500);
+        }
+        // Result is empty, so we throw the correct token error.
+        i = jio._access_tokens.map(function (token) {
+          if (user_dict[token] === usr) {
+            return true;
+          }
+          return false;
+        }).indexOf(true);
+        if (i < trueOrErrorArray.length && i > -1 &&
+            trueOrErrorArray[i] instanceof jIO.util.jIOError) {
+          throw trueOrErrorArray[i];
+        }
+        // If we didn't find the error in the promise returns, we don't have
+        // a token for user usr.
+        throw new jIO.util.jIOError('No valid token for user: ' + usr, 400);
+      }
+      // Otherwise return results and errors and let caller handle.
+      return result;
+    });
+  }
+  /**
+   * The Automatic API Storage extension
+   *
+   * @class AutomaticAPIStorage
+   * @constructor
+   */
+  function AutomaticAPIStorage(spec) {
+    var i;
+    if (typeof spec.access_tokens !== 'object' || !spec.access_tokens) {
+      throw new TypeError('Access Tokens must be a non-empty array.');
+    }
+    for (i = 0; i < spec.access_tokens.length; i += 1) {
+      if (typeof spec.access_tokens[i] !== 'string' || !spec.access_tokens[i]) {
+        throw new jIO.util.jIOError('Access Tokens must be' +
+          ' an array of non-empty strings.', 400);
+      }
+    }
+
+    this._access_tokens = spec.access_tokens;
+    this._cache = jIO.createJIO({type: 'memory'});
+  }
+
+  AutomaticAPIStorage.prototype.get = function (id) {
+    var self = this,
+      endpoint = id.split('/'),
+      usr;
+    usr = endpoint.splice(1, 1)[0];
+    endpoint = endpoint.join('/');
+    if (id.indexOf('/') !== 0) {
+      throw new jIO.util.jIOError('id ' + id +
+        ' is forbidden (not starting with /)', 400);
+    }
+    if (id.lastIndexOf("/") !== (id.length - 1)) {
+      throw new jIO.util.jIOError('id ' + id +
+        ' is forbidden (not ending with /)', 400);
+    }
+    if (!checkEndpointAsId(endpoint)) {
+      throw new jIO.util.jIOError('Invalid id.', 400);
+    }
+    if (usr === 'all') {
+      throw new jIO.util.jIOError('Invalid id.', 400);
+    }
+    return this._cache.get(id).push(function (res) {
+      return res;
+    }, function () {
+      return _queryAutomaticAPI(endpoint, {'user': usr}, self)
+        .push(function (res) {
+          return res;
+        }, function (err) {
+          throw new jIO.util.jIOError('Cannot find document: ' + id +
+            ', Error: ' + err.message, 404);
+        });
+    });
+  };
+
+  AutomaticAPIStorage.prototype.put = function () {
+    return;
+  };
+
+  AutomaticAPIStorage.prototype.post = function () {
+    return;
+  };
+
+  AutomaticAPIStorage.prototype.remove = function () {
+    return;
+  };
+
+  AutomaticAPIStorage.prototype.getAttachment = function (id, name, options) {
+    var self = this,
+      endpoint = id.split('/'),
+      usr;
+    usr = endpoint.splice(1, 1)[0];
+    endpoint = endpoint.join('/');
+    if (id.indexOf('/') !== 0) {
+      throw new jIO.util.jIOError('id ' + id +
+        ' is forbidden (not starting with /)', 400);
+    }
+    if (id.lastIndexOf("/") !== (id.length - 1)) {
+      throw new jIO.util.jIOError('id ' + id +
+        ' is forbidden (not ending with /)', 400);
+    }
+    if (!checkEndpointAsId(endpoint)) {
+      throw new jIO.util.jIOError('Invalid id.', 400);
+    }
+    if (usr === 'all') {
+      throw new jIO.util.jIOError('Invalid id.', 400);
+    }
+    return this._cache.get(id).push(function () {
+      return self._cache.getAttachment(id, name, options);
+    }, function () {
+      return self.get(id)
+        .push(function () {
+          return self._cache.getAttachment(id, name, options);
+        });
+    });
+  };
+
+  AutomaticAPIStorage.prototype.putAttachment = function () {
+    return;
+  };
+
+  AutomaticAPIStorage.prototype.removeAttachment = function () {
+    return;
+  };
+
+  AutomaticAPIStorage.prototype.allAttachments = function (id) {
+    var endpoint = id.split('/'),
+      usr;
+    usr = endpoint.splice(1, 1)[0];
+    endpoint = endpoint.join('/');
+    if (id.indexOf('/') !== 0) {
+      throw new jIO.util.jIOError('id ' + id +
+        ' is forbidden (not starting with /)', 400);
+    }
+    if (id.lastIndexOf("/") !== (id.length - 1)) {
+      throw new jIO.util.jIOError('id ' + id +
+        ' is forbidden (not ending with /)', 400);
+    }
+    if (!checkEndpointAsId(endpoint)) {
+      throw new jIO.util.jIOError('Invalid id.', 400);
+    }
+    if (usr === 'all') {
+      throw new jIO.util.jIOError('Invalid id.', 400);
+    }
+    return {data: null};
+  };
+
+  AutomaticAPIStorage.prototype.repair = function () {
+    return;
+  };
+
+  AutomaticAPIStorage.prototype.hasCapacity = function (name) {
+    return ((name === 'list') || (name === 'query'));
+  };
+
+  AutomaticAPIStorage.prototype.buildQuery = function (options) {
+    var parsed_query = jIO.QueryFactory.create(options.query),
+      key_list,
+      automatic_filters = {},
+      simplequery_type_value,
+      intercept_keys = ['started_at', 'ended_at', 'user', 'vehicle'],
+      intercept_accepted_operators = [['>', '>=', '<', '<='],
+        ['>', '>=', '<', '<='], ['='], ['=']],
+      temp_operator_index,
+      temp_key,
+      automatic_endpoint,
+      i,
+      j;
+
+    // remove query from the options
+    delete options.query;
+    // XXX: check if there is no built-in method to seek in queries for
+    // specific keys...
+    function extractKeysFromQuery(quer) {
+      var keys_list = [],
+        i;
+      if (quer.type === 'complex') {
+        for (i = 0; i < quer.query_list.length; i += 1) {
+          keys_list = keys_list.concat(
+            extractKeysFromQuery(quer.query_list[i])
+          );
+        }
+      } else if (quer.type === 'simple') {
+        keys_list.push(quer.key);
+      }
+      return keys_list;
+    }
+
+    function findSimpleQueryForKey(key, quer) {
+      var temp,
+        result = [],
+        i;
+      if (quer.type === 'complex') {
+        for (i = 0; i < quer.query_list.length; i += 1) {
+          temp = findSimpleQueryForKey(key, quer.query_list[i]);
+          if (temp !== undefined) {
+            result = result.concat(temp);
+          }
+        }
+      } else if (quer.type === 'simple' && quer.key === key) {
+        result.push([quer.operator, quer.value]);
+      }
+      return result;
+    }
+
+    key_list = extractKeysFromQuery(parsed_query);
+
+    // main loop that forms the filters to pass on to the HTTP call.
+    for (i = 0; i < intercept_keys.length; i += 1) {
+      if (key_list.indexOf(intercept_keys[i]) > -1) {
+        simplequery_type_value = findSimpleQueryForKey(intercept_keys[i],
+          parsed_query);
+        for (j = 0; j < simplequery_type_value.length; j += 1) {
+          temp_operator_index = intercept_accepted_operators[i].indexOf(
+            simplequery_type_value[j][0]
+          );
+          if (temp_operator_index > -1) {
+            if (i < 2) {
+              temp_key = intercept_keys[i] +
+                (temp_operator_index < 2 ? '__gte' : '__lte');
+              automatic_filters[temp_key] = (new Date(
+                simplequery_type_value[j][1]
+              ).getTime() / 1000).toString();
+            } else {
+              temp_key = intercept_keys[i];
+              automatic_filters[temp_key] = simplequery_type_value[j][1];
+            }
+          }
+        }
+      }
+    }
+    // Remove the 'type = value' query part: XXX -> add id retrieval!
+    simplequery_type_value = findSimpleQueryForKey('type', parsed_query);
+    if (simplequery_type_value.length === 0) {
+      throw new jIO.util.jIOError('AutomaticAPIStorage Query must' +
+        ' always contain "type".', 400);
+    }
+    if (simplequery_type_value.length > 1) {
+      throw new jIO.util.jIOError('AutomaticAPIStorage Query must' +
+        ' contain "type" constraint only once.', 400);
+    }
+    if (simplequery_type_value[0][0] !== '=') {
+      throw new jIO.util.jIOError('AutomaticAPIStorage Query must' +
+        ' contain "type" constraint with "=" operator.', 400);
+    }
+    automatic_endpoint = '/' + simplequery_type_value[0][1] + '/';
+    return _queryAutomaticAPI(automatic_endpoint, automatic_filters, this)
+      .push(function (results) {
+        if (!(results instanceof Array)) {
+          results = [results];
+        }
+        return parsed_query.exec(results, options);
+      });
+  };
+
+  jIO.addStorage('automaticapi', AutomaticAPIStorage);
+
+}(jIO, RSVP, UriTemplate, URI, Blob));;/*jslint nomen: true */
 /*global RSVP, UriTemplate*/
 (function (jIO, RSVP, UriTemplate) {
   "use strict";
