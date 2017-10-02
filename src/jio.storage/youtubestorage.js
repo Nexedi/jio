@@ -1,24 +1,17 @@
 /**
  * Youtube (Data) Storage. Type = "youtube".
  */
-/*global jIO, RSVP, UriTemplate, JSON*/
+/*global jIO, RSVP, UriTemplate, JSON */
 /*jslint nomen: true*/
 (function (jIO, RSVP, UriTemplate, JSON) {
   "use strict";
 
   var GET_URL = "https://www.googleapis.com/youtube/v3/videos?" +
-    "part=snippet,statistics,contentDetails{&id}{&key}";
-  var GET_TEMPLATE = UriTemplate.parse(GET_URL);
-  var ALLDOCS_URL = "https://www.googleapis.com/youtube/v3/search?" +
-    "part=snippet{&pageToken}&q={search}&type=video&maxResults=10{&key}";
-  var ALLDOCS_TEMPLATE = UriTemplate.parse(ALLDOCS_URL);
-
-  function handleError(error, id) {
-    if (error.target && error.target.status === 404) {
-      throw new jIO.util.jIOError("Cannot find document: " + id, 404);
-    }
-    throw error;
-  }
+      "part=snippet,statistics,contentDetails{&id}{&key}",
+    GET_TEMPLATE = UriTemplate.parse(GET_URL),
+    ALLDOCS_URL = "https://www.googleapis.com/youtube/v3/search?" +
+      "part=snippet{&pageToken}&q={search}&type=video&maxResults=10{&key}",
+    ALLDOCS_TEMPLATE = UriTemplate.parse(ALLDOCS_URL);
 
   /**
    * The JIO Youtube Storage extension
@@ -50,7 +43,13 @@
       })
       .push(function (evt) {
         return JSON.parse(evt.target.response || evt.target.responseText);
-      }, handleError);
+      })
+      .push(undefined, function (error) {
+        if (error.target && error.target.status === 404) {
+          throw new jIO.util.jIOError("Cannot find document: " + id, 404);
+        }
+        throw error;
+      });
   };
 
   YoutubeStorage.prototype.buildQuery = function (options) {
@@ -74,8 +73,10 @@
         }
         obj.items.nextPageToken = obj.nextPageToken;
         return obj.items;
-
-      }, handleError);
+      })
+      .push(undefined, function (error) {
+        throw error;
+      });
   };
 
   YoutubeStorage.prototype.hasCapacity = function (name) {
@@ -84,4 +85,4 @@
 
   jIO.addStorage('youtube', YoutubeStorage);
 
-} (jIO, RSVP, UriTemplate, JSON));
+}(jIO, RSVP, UriTemplate, JSON));
