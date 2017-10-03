@@ -211,13 +211,13 @@
     this.jio.get("/usertest/trip/T_randomtrip/")
       .then(function (result) {
         deepEqual(result, {
-          'path': '/trip/T_randomtrip/',
+          'automatic_path': '/trip/T_randomtrip/',
           'reference': '/usertest/trip/T_randomtrip/',
           'id': '/usertest/trip/T_randomtrip/',
           'type': 'trip',
           'started_at': null,
           'ended_at': null,
-          'user': 'usertest'
+          'automatic_user': 'usertest'
         }, "Check single element type");
       })
       .fail(function (error) {
@@ -513,13 +513,13 @@
     })
       .then(function (result) {
         deepEqual(result, [{
-          'path': '/trip/T_example/',
+          'automatic_path': '/trip/T_example/',
           'reference': '/0/trip/T_example/',
           'id': '/0/trip/T_example/',
           'type': 'trip',
           'started_at': "2017-06-17T16:45:41Z",
           'ended_at': "2017-06-17T16:46:38Z",
-          'user': '0'
+          'automatic_user': '0'
         }], "Check trip is returned in result");
       })
       .fail(function (error) {
@@ -551,13 +551,13 @@
     })
       .then(function (result) {
         deepEqual(result, [{
-          'path': '/trip/T_example/',
+          'automatic_path': '/trip/T_example/',
           'reference': '/0/trip/T_example/',
           'id': '/0/trip/T_example/',
           'type': 'trip',
           'started_at': "2017-06-17T16:45:41Z",
           'ended_at': "2017-06-17T16:46:38Z",
-          'user': '0'
+          'automatic_user': '0'
         }], "Check trip is returned in result");
       })
       .fail(function (error) {
@@ -602,13 +602,13 @@
     })
       .then(function (result) {
         deepEqual(result, [{
-          'path': '/vehicle/V_example/',
+          'automatic_path': '/vehicle/V_example/',
           'reference': '/0/vehicle/V_example/',
           'id': '/0/vehicle/V_example/',
           'type': 'vehicle',
           'started_at': null,
           'ended_at': null,
-          'user': '0'
+          'automatic_user': '0'
         }], "Check vehicle list is returned");
       })
       .fail(function (error) {
@@ -658,21 +658,21 @@
     })
       .then(function (result) {
         deepEqual(result, [{
-          'path': '/vehicle/V_example/',
+          'automatic_path': '/vehicle/V_example/',
           'reference': '/0/vehicle/V_example/',
           'id': '/0/vehicle/V_example/',
           'type': 'vehicle',
           'started_at': null,
           'ended_at': null,
-          'user': '0'
+          'automatic_user': '0'
         }, {
-          'path': '/vehicle/V_example2/',
+          'automatic_path': '/vehicle/V_example2/',
           'reference': '/0/vehicle/V_example2/',
           'id': '/0/vehicle/V_example2/',
           'type': 'vehicle',
           'started_at': null,
           'ended_at': null,
-          'user': '0'
+          'automatic_user': '0'
         }], "Check vehicle list is returned");
       })
       .fail(function (error) {

@@ -93,13 +93,13 @@
           var path, temp;
           path = URI(dat.url).path();
           temp = {
-            'path': path,
+            'automatic_path': path,
             'reference': '/' + user_id + path,
             'id': '/' + user_id + path,
             'type': type,
             'started_at': dat.started_at || null,
             'ended_at': dat.ended_at || null,
-            'user': user_id
+            'automatic_user': user_id
           };
           result.push(temp);
           return jio._cache.put('/' + user_id + path, temp).push(function () {
@@ -250,16 +250,26 @@
     });
   };
 
-  AutomaticAPIStorage.prototype.put = function () {
-    return;
+  AutomaticAPIStorage.prototype.put = function (id, doc) {
+    var self = this;
+    return new RSVP.Queue().push(function () {
+      return self._cache.get(id);
+    }).push(function () {
+      return self._cache.put(id, doc);
+    });
   };
 
   AutomaticAPIStorage.prototype.post = function () {
     return;
   };
 
-  AutomaticAPIStorage.prototype.remove = function () {
-    return;
+  AutomaticAPIStorage.prototype.remove = function (id) {
+    var self = this;
+    return new RSVP.Queue().push(function () {
+      return self._cache.get(id);
+    }).push(function () {
+      return self._cache.remove(id);
+    });
   };
 
   AutomaticAPIStorage.prototype.getAttachment = function (id, name, options) {
@@ -292,8 +302,13 @@
     });
   };
 
-  AutomaticAPIStorage.prototype.putAttachment = function () {
-    return;
+  AutomaticAPIStorage.prototype.putAttachment = function (id, name, blob) {
+    var self = this;
+    return new RSVP.Queue().push(function () {
+      return self._cache.get(id);
+    }).push(function () {
+      return self._cache.putAttachment(id, name, blob);
+    });
   };
 
   AutomaticAPIStorage.prototype.removeAttachment = function () {
