@@ -14539,8 +14539,8 @@ return new Parser;
             'reference': '/' + user_id + path,
             'id': '/' + user_id + path,
             'type': type,
-            'started_at': dat.started_at || null,
-            'ended_at': dat.ended_at || null,
+            'start_date': dat.started_at || null,
+            'stop_date': dat.ended_at || null,
             'automatic_user': user_id
           };
           result.push(temp);
@@ -14698,6 +14698,8 @@ return new Parser;
       return self._cache.get(id);
     }).push(function () {
       return self._cache.put(id, doc);
+    }, function () {
+      return;
     });
   };
 
@@ -14705,13 +14707,9 @@ return new Parser;
     return;
   };
 
-  AutomaticAPIStorage.prototype.remove = function (id) {
-    var self = this;
-    return new RSVP.Queue().push(function () {
-      return self._cache.get(id);
-    }).push(function () {
-      return self._cache.remove(id);
-    });
+  AutomaticAPIStorage.prototype.remove = function () {
+    // Must do nothing to be able to use with use_remote_post!
+    return;
   };
 
   AutomaticAPIStorage.prototype.getAttachment = function (id, name, options) {
@@ -14750,6 +14748,8 @@ return new Parser;
       return self._cache.get(id);
     }).push(function () {
       return self._cache.putAttachment(id, name, blob);
+    }, function () {
+      return;
     });
   };
 
@@ -14788,11 +14788,15 @@ return new Parser;
   };
 
   AutomaticAPIStorage.prototype.buildQuery = function (options) {
-    var parsed_query = jIO.QueryFactory.create(options.query),
+    var parsed_query = jIO.QueryFactory.create(options.query ||
+      'type:="trip"'),
       key_list,
       automatic_filters = {},
       simplequery_type_value,
-      intercept_keys = ['started_at', 'ended_at', 'user', 'vehicle'],
+      intercept_keys = ['start_date', 'stop_date', 'automatic_user',
+        'vehicle'],
+      intercept_keys_automatic_name = ['started_at', 'ended_at', 'user',
+        'vehicle'],
       intercept_accepted_operators = [['>', '>=', '<', '<='],
         ['>', '>=', '<', '<='], ['='], ['=']],
       temp_operator_index,
@@ -14801,8 +14805,6 @@ return new Parser;
       i,
       j;
 
-    // remove query from the options
-    delete options.query;
     // XXX: check if there is no built-in method to seek in queries for
     // specific keys...
     function extractKeysFromQuery(quer) {
@@ -14850,7 +14852,7 @@ return new Parser;
           );
           if (temp_operator_index > -1) {
             if (i < 2) {
-              temp_key = intercept_keys[i] +
+              temp_key = intercept_keys_automatic_name[i] +
                 (temp_operator_index < 2 ? '__gte' : '__lte');
               automatic_filters[temp_key] = (new Date(
                 simplequery_type_value[j][1]

@@ -215,8 +215,8 @@
           'reference': '/usertest/trip/T_randomtrip/',
           'id': '/usertest/trip/T_randomtrip/',
           'type': 'trip',
-          'started_at': null,
-          'ended_at': null,
+          'start_date': null,
+          'stop_date': null,
           'automatic_user': 'usertest'
         }, "Check single element type");
       })
@@ -469,7 +469,7 @@
     }
   });
 
-  test("query started_at, ended_at taken into account", function () {
+  test("query start_date, stop_date taken into account", function () {
     var url;
     this.server.respond(function (xhr) {
       if (xhr.url.indexOf('https://api.automatic.com/trip/') === -1) {
@@ -481,7 +481,8 @@
           '{"_metadata":{"count":1,"next":null,"previous":null},' +
           '"results":[{"id": "T_example", "started_at": "2017-06-17T16:45:41Z"'
           + ', "ended_at": "2017-06-17T16:46:38Z"' +
-          ', "url": "https://api.automatic.com/trip/T_example/"}]}');
+          ', "url": "https://api.automatic.com/trip/T_example/",' +
+          '"type": "trip"}]}');
         return;
       }
       xhr.respond(200, { "Content-Type": "application/json" },
@@ -497,7 +498,7 @@
     expect(4);
 
     this.jio.buildQuery({
-      query: 'started_at:>"2017-06-17T18:45:41Z" AND type:="trip"'
+      query: 'start_date:>"2017-06-17T18:45:41Z" AND type:="trip"'
     })
       .then(function (result) {
         deepEqual(result, [], "Check no result");
@@ -509,7 +510,7 @@
         start();
       });
     this.jio.buildQuery({
-      query: 'started_at:>"2017-06-17T14:45:41Z" AND type:="trip"'
+      query: 'start_date:>"2017-06-17T14:45:41Z" AND type:="trip"'
     })
       .then(function (result) {
         deepEqual(result, [{
@@ -517,8 +518,8 @@
           'reference': '/0/trip/T_example/',
           'id': '/0/trip/T_example/',
           'type': 'trip',
-          'started_at': "2017-06-17T16:45:41Z",
-          'ended_at': "2017-06-17T16:46:38Z",
+          'start_date': "2017-06-17T16:45:41Z",
+          'stop_date': "2017-06-17T16:46:38Z",
           'automatic_user': '0'
         }], "Check trip is returned in result");
       })
@@ -532,7 +533,7 @@
         start();
       });
     this.jio.buildQuery({
-      query: 'ended_at:>"2017-06-17T18:45:41Z" AND type:="trip"'
+      query: 'stop_date:>"2017-06-17T18:45:41Z" AND type:="trip"'
     })
       .then(function (result) {
         deepEqual(result, [], "Check no result");
@@ -547,7 +548,7 @@
         start();
       });
     this.jio.buildQuery({
-      query: 'ended_at:<"2017-06-17T18:45:41Z" AND type:="trip"'
+      query: 'stop_date:<"2017-06-17T18:45:41Z" AND type:="trip"'
     })
       .then(function (result) {
         deepEqual(result, [{
@@ -555,8 +556,8 @@
           'reference': '/0/trip/T_example/',
           'id': '/0/trip/T_example/',
           'type': 'trip',
-          'started_at': "2017-06-17T16:45:41Z",
-          'ended_at': "2017-06-17T16:46:38Z",
+          'start_date': "2017-06-17T16:45:41Z",
+          'stop_date': "2017-06-17T16:46:38Z",
           'automatic_user': '0'
         }], "Check trip is returned in result");
       })
@@ -606,8 +607,8 @@
           'reference': '/0/vehicle/V_example/',
           'id': '/0/vehicle/V_example/',
           'type': 'vehicle',
-          'started_at': null,
-          'ended_at': null,
+          'start_date': null,
+          'stop_date': null,
           'automatic_user': '0'
         }], "Check vehicle list is returned");
       })
@@ -662,16 +663,16 @@
           'reference': '/0/vehicle/V_example/',
           'id': '/0/vehicle/V_example/',
           'type': 'vehicle',
-          'started_at': null,
-          'ended_at': null,
+          'start_date': null,
+          'stop_date': null,
           'automatic_user': '0'
         }, {
           'automatic_path': '/vehicle/V_example2/',
           'reference': '/0/vehicle/V_example2/',
           'id': '/0/vehicle/V_example2/',
           'type': 'vehicle',
-          'started_at': null,
-          'ended_at': null,
+          'start_date': null,
+          'stop_date': null,
           'automatic_user': '0'
         }], "Check vehicle list is returned");
       })
