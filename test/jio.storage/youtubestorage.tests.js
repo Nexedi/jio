@@ -1,6 +1,6 @@
 /*jslint nomen: true */
-/*global Blob, sinon, JSON*/
-(function (jIO, QUnit, sinon, JSON) {
+/*global Blob, sinon, JSON, Query, SimpleQuery, ComplexQuery*/
+(function (jIO, QUnit, sinon, JSON, Query, SimpleQuery, ComplexQuery) {
   "use strict";
 
   var test = QUnit.test,
@@ -42,6 +42,9 @@
   function getItem(id) {
     return {"id": id, "value": {}};
   }
+  function setQuery(key, value) {
+    return new SimpleQuery({"key": key, "value": value, "type": "simple"});
+  }
   function getResponse(item, has_token) {
     var obj = {"data": {"rows": [], "total_rows": 1}};
     obj.data.rows.push(item);
@@ -50,7 +53,6 @@
     }
     return obj;
   }
-
   function error404Tester(fun, encl, blob) {
     stop();
     expect(3);
@@ -153,6 +155,23 @@
       delete this.server;
     }
   });
+  test("allDocs without query", function () {
+    stop();
+    expect(3);
+
+    this.jio.allDocs()
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "query parameter is required");
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
 
   test("get all docs", function () {
     var object_result_1 = getResponse(getItem("0B4kh3jbjOf5LamRlVCYXM")),
@@ -163,7 +182,7 @@
     stop();
     expect(7);
 
-    this.jio.allDocs()
+    this.jio.allDocs({"query": Query.objectToSearchText(setQuery("q", ""))})
       .then(function (res) {
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "GET");
@@ -195,8 +214,9 @@
 
     object_result_2 = getResponse(getItem("0B4kh3jbjOf5LamRlX21MZ", true));
 
-    context.jio.allDocs()
+    context.jio.allDocs({"query": Query.objectToSearchText(setQuery("q", ""))})
       .then(function (res) {
+        var query;
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "GET");
         equal(server.requests[0].url, listUrl(""));
@@ -205,8 +225,18 @@
         equal(server.requests[0].responseText, getSample());
         deepEqual(res, object_result_2);
 
+        // build complex query with query and token
+        query = Query.objectToSearchText(new ComplexQuery({
+          "operator": "AND",
+          "type": "complex",
+          "query_list": [
+            setQuery("q", ""),
+            setQuery("token", token)
+          ]
+        }));
+
         object_result_2 = getResponse(getItem("0B4kh3jbjOf5LamRlVCYXM"));
-        return context.jio.allDocs({"token": token});
+        return context.jio.allDocs({"query": query});
       })
       .then(function (res) {
         equal(server.requests.length, 2);
@@ -225,4 +255,4 @@
       });
   });
 
-}(jIO, QUnit, sinon, JSON));
+}(jIO, QUnit, sinon, JSON, Query, SimpleQuery, ComplexQuery));
