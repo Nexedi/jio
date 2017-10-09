@@ -54,7 +54,7 @@
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
       equal(e.message,
-         "SimpleQuery().create(): key_schema is not of type 'object'",
+         "Query().create(): key_schema is not of type 'object'",
          'wrong exception message');
     }
 
@@ -64,7 +64,7 @@
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
       equal(e.message,
-         "SimpleQuery().create(): key_schema has no 'key_set' property",
+         "Query().create(): key_schema has no 'key_set' property",
          'wrong exception message');
     }
 
@@ -76,7 +76,7 @@
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
       equal(e.message,
-         "SimpleQuery().create(): key_schema has unknown property 'foobar'",
+         "Query().create(): key_schema has unknown property 'foobar'",
          'wrong exception message');
     }
 
