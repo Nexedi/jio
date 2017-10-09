@@ -505,6 +505,78 @@
       });
   });
 
+  test('Query & sort_on option', function () {
+    var doc_list = [
+      {
+        idendifier: 'a',
+        date: "Fri, 08 Sep 2017 07:46:27 +0000"
+      },
+      {
+        identifier: 'c',
+        date: "Wed, 06 Sep 2017 00:27:13 +0000"
+      },
+      {
+        identifier: 'b',
+        date: "Thu, 07 Sep 2017 18:59:23 +0000"
+      }
+    ];
+    stop();
+    expect(2);
+    jIO.QueryFactory.create("").exec(
+      doc_list,
+      {sort_on: [['date', 'descending']]}
+    ).
+      then(function (list) {
+        var key_schema =
+          {
+            key_set: {
+              date: {
+                read_from: 'date',
+                cast_to: 'dateType'
+              }
+            },
+            cast_lookup: {
+              dateType: function (str) {
+                return window.jiodate.JIODate(new Date(str).toISOString());
+              }
+            }
+          };
+        deepEqual(list, [
+          {
+            identifier: 'c',
+            date: "Wed, 06 Sep 2017 00:27:13 +0000"
+          },
+          {
+            identifier: 'b',
+            date: "Thu, 07 Sep 2017 18:59:23 +0000"
+          },
+          {
+            idendifier: 'a',
+            date: "Fri, 08 Sep 2017 07:46:27 +0000"
+          }
+        ], 'Document list is sorted');
+        return jIO.QueryFactory.create("", key_schema).exec(
+          doc_list,
+          {sort_on: [['date', 'ascending']]}
+        );
+      })
+      .then(function (list) {
+        deepEqual(list, [
+          {
+            identifier: 'c',
+            date: "Wed, 06 Sep 2017 00:27:13 +0000"
+          },
+          {
+            identifier: 'b',
+            date: "Thu, 07 Sep 2017 18:59:23 +0000"
+          },
+          {
+            idendifier: 'a',
+            date: "Fri, 08 Sep 2017 07:46:27 +0000"
+          }
+        ], 'Document list is sorted with key_schema');
+      }).always(start);
+  });
   // Asterisk wildcard is not supported yet.
 /*  test('Full text query with asterisk', function () {
     var doc_list = [
