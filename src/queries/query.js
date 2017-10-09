@@ -158,6 +158,35 @@
     return list;
   }
 
+  function checkKeySchema(key_schema) {
+    var prop;
+
+    if (key_schema !== undefined) {
+      if (typeof key_schema !== 'object') {
+        throw new TypeError("Query().create(): " +
+                            "key_schema is not of type 'object'");
+      }
+      // key_set is mandatory
+      if (key_schema.key_set === undefined) {
+        throw new TypeError("Query().create(): " +
+                            "key_schema has no 'key_set' property");
+      }
+      for (prop in key_schema) {
+        if (key_schema.hasOwnProperty(prop)) {
+          switch (prop) {
+          case 'key_set':
+          case 'cast_lookup':
+          case 'match_lookup':
+            break;
+          default:
+            throw new TypeError("Query().create(): " +
+                               "key_schema has unknown property '" + prop + "'");
+          }
+        }
+      }
+    }
+  }
+
   /**
    * The query to use to filter a list of objects.
    * This is an abstract class.
@@ -165,7 +194,10 @@
    * @class Query
    * @constructor
    */
-  function Query() {
+  function Query(key_schema) {
+
+    checkKeySchema(key_schema);
+    this._key_schema = key_schema || {};
 
     /**
      * Called before parsing the query. Must be overridden!
@@ -609,35 +641,6 @@
     throw new TypeError("This object is not a query");
   }
 
-  function checkKeySchema(key_schema) {
-    var prop;
-
-    if (key_schema !== undefined) {
-      if (typeof key_schema !== 'object') {
-        throw new TypeError("SimpleQuery().create(): " +
-                            "key_schema is not of type 'object'");
-      }
-      // key_set is mandatory
-      if (key_schema.key_set === undefined) {
-        throw new TypeError("SimpleQuery().create(): " +
-                            "key_schema has no 'key_set' property");
-      }
-      for (prop in key_schema) {
-        if (key_schema.hasOwnProperty(prop)) {
-          switch (prop) {
-          case 'key_set':
-          case 'cast_lookup':
-          case 'match_lookup':
-            break;
-          default:
-            throw new TypeError("SimpleQuery().create(): " +
-                               "key_schema has unknown property '" + prop + "'");
-          }
-        }
-      }
-    }
-  }
-
   /**
    * The SimpleQuery inherits from Query, and compares one metadata value
    *
@@ -649,11 +652,7 @@
    * @param  {String} spec.value The value of the metadata to compare
    */
   function SimpleQuery(spec, key_schema) {
-    Query.call(this);
-
-    checkKeySchema(key_schema);
-
-    this._key_schema = key_schema || {};
+    Query.call(this, key_schema);
 
     /**
      * Operator to use to compare object values
