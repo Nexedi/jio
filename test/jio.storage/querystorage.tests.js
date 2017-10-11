@@ -24,7 +24,7 @@
   // queryStorage.constructor
   /////////////////////////////////////////////////////////////////
   module("queryStorage.constructor");
-  test("create substorage", function () {
+  test("accept parameters", function () {
     var jio = jIO.createJIO({
       type: "query",
       schema: {'date': {type: 'string', format: 'date-time'}},
@@ -43,6 +43,27 @@
     }, 'check key_schema');
     ok(typeof jio.__storage._key_schema.cast_lookup.dateType === 'function');
 
+  });
+
+  test("failed on wrond schema", function () {
+    throws(
+      function () {
+        jIO.createJIO({
+          type: "query",
+          schema: {'date': {type: 'couscous'}},
+          sub_storage: {
+            type: "querystorage200"
+          }
+        });
+      },
+      function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 400);
+        equal(error.message,
+              "Wrong schema for property: date");
+        return true;
+      }
+    );
   });
 
   /////////////////////////////////////////////////////////////////
