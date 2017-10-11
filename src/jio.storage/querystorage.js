@@ -20,6 +20,11 @@
           if (storage._key_schema.cast_lookup.dateType === undefined) {
             storage._key_schema.cast_lookup.dateType = dateType;
           }
+        } else {
+          throw new jIO.util.jIOError(
+            "Wrong schema for property: " + property,
+            400
+          );
         }
       }
     }
