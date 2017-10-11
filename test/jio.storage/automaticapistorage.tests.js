@@ -620,6 +620,46 @@
       });
   });
 
+  test("fail nicely when nothing is returned", function () {
+    var url;
+    this.server.respond(function (xhr) {
+      if (xhr.url.indexOf('https://api.automatic.com/vehicle/') === -1) {
+        return;
+      }
+      if (xhr.requestHeaders.Authorization &&
+          xhr.requestHeaders.Authorization === 'Bearer sample_token1') {
+        xhr.respond(200, { "Content-Type": "application/json" },
+          '{"_metadata":{"count":1,"next":null,"previous":null},' +
+          '"results":[{"id": "V_example", ' +
+          ' "url": "https://api.automatic.com/vehicle/V_example/"}]}');
+        return;
+      }
+      xhr.respond(200, { "Content-Type": "application/json" },
+        '{"_metadata":{"count":0,"next":null,"previous":null},' +
+        '"results":[]}');
+    });
+    url = "https://api.automatic.com/user/me/";
+    this.server.respondWith("GET", url, [404, {
+      "Content-Encoding": "gzip",
+      "Content-Type": "application/json"
+    }, '{"detail": "Object not found", "error": "err_object_not_found"}' ]);
+    stop();
+    expect(1);
+
+    this.jio.buildQuery({
+      query: 'type:="vehicle"'
+    })
+      .then(function (result) {
+        deepEqual(result, [], "Check nothing is returned");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("get list of something, check that next url works", function () {
     var url;
     this.server.respond(function (xhr) {
