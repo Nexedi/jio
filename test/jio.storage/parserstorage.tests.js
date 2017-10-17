@@ -24,6 +24,8 @@
     var txt = '<?xml version="1.0" encoding="UTF-8" ?>' +
       '<rss version="2.0">' +
       '<channel>' +
+      // Add a text element to ensure xml parser handle it
+      ' ' +
       '<title>RSS Example</title>' +
       '<description>This is an example of an RSS feed</description>' +
       '<link>http://www.domain.com/link.htm</link>' +
@@ -64,6 +66,8 @@
       '<opml version="1.0">' +
       '<head>' +
       '<title>feedOnFeeds.xml</title>' +
+      // Add a text element to ensure xml parser handle it
+      ' ' +
       '<dateCreated>Thu, 12 Sep 2003 23:35:52 GMT</dateCreated>' +
       '<dateModified>Fri, 12 Sep 2003 23:45:37 GMT</dateModified>' +
       '<ownerName>SomeUser</ownerName>' +

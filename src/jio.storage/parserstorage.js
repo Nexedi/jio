@@ -1,6 +1,6 @@
 /*jslint nomen: true*/
-/*global jIO, DOMParser */
-(function (jIO, DOMParser) {
+/*global jIO, DOMParser, Node */
+(function (jIO, DOMParser, Node) {
   "use strict";
 
   /////////////////////////////////////////////////////////////
@@ -19,7 +19,9 @@
 
     for (i = channel_element.childNodes.length - 1; i >= 0; i -= 1) {
       tag_element = channel_element.childNodes[i];
-      result[tag_element.tagName] = tag_element.textContent;
+      if (tag_element.nodeType === Node.ELEMENT_NODE) {
+        result[tag_element.tagName] = tag_element.textContent;
+      }
     }
     return result;
   };
@@ -94,7 +96,8 @@
 
     for (i = element.childNodes.length - 1; i >= 0; i -= 1) {
       tag_element = element.childNodes[i];
-      if (tag_element.tagName !== 'item') {
+      if ((tag_element.nodeType === Node.ELEMENT_NODE) &&
+          (tag_element.tagName !== 'item')) {
         result[tag_element.tagName] = tag_element.textContent;
 
         for (j = tag_element.attributes.length - 1; j >= 0; j -= 1) {
@@ -200,4 +203,4 @@
 
   jIO.addStorage('parser', ParserStorage);
 
-}(jIO, DOMParser));
+}(jIO, DOMParser, Node));
