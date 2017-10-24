@@ -14459,15 +14459,13 @@ return new Parser;
     AUTOMATIC_BASE_DOMAIN = 'api.automatic.com',
     AUTOMATIC_BASE_URI = AUTOMATIC_BASE_PROTOCOL + '://'
                          + AUTOMATIC_BASE_DOMAIN,
-    /*AUTOMATIC_VALID_ENDPOINTS = ['/trip/', '/trip/{id}/', '/user/',
-      '/user/{id}/', '/user/{user_id}/device/',
-      '/user/{user_id}/device/{device_id}/', '/vehicle/{id}/', '/vehicle/',
-      '/vehicle/{vehicle_id}/mil/'],*/
     AUTOMATIC_VALID_ENDPOINT_REGEXES = [/^\/trip(\/T_\w*|)\/$/,
       /^\/user\/me(\/device(\/\w*|)|)\/$/,
+      /^\/user\/U_\w*(\/device(\/\w*|)|)\/$/,
       /^\/vehicle(\/C_\w*(\/mil|)|)\/$/],
     AUTOMATIC_VALID_ENDPOINTID_REGEXES = [/^\/trip\/T_\w*\/$/,
       /^\/user\/me\/device\/\w*\/$/,
+      /^\/user\/U_\w*\/device\/\w*\/$/,
       /^\/vehicle\/C_\w*\/$/],
     automatic_template = UriTemplate.parse(AUTOMATIC_BASE_URI +
       '{/endpoint*}');
@@ -14508,6 +14506,11 @@ return new Parser;
     if (!checkEndpoint(endpoint)) {
       throw new jIO.util.jIOError('Wrong Automatic API query. (usually ' +
         'caused by wrong "id" or "type")', 400);
+    }
+    // Handle /user/me/device/ endpoint, which would be put as user, but
+    // is actually a device query.
+    if (endpoint === '/user/me/device/') {
+      type = 'device';
     }
     // Promise chain to handle multi-part response ("_metadata"->"next" parts).
     function treatNext(returned) {
@@ -14584,8 +14587,14 @@ return new Parser;
           //'xhrFields': {withCredentials: true}
         });
       }).push(function (respdev) {
-        device_dict[token] =
-          JSON.parse(respdev.target.responseText).results[0].id;
+        var temp = JSON.parse(respdev.target.responseText);
+        if (temp.results.length === 0) {
+          return new jIO.util.jIOError(
+            'No device associated to this account yet.',
+            200
+          );
+        }
+        device_dict[token] = temp.results[0].id;
         if (dev === 'all' || dev === device_dict[token]) {
           return jIO.util.ajax({
             'type': 'GET',
@@ -14795,7 +14804,7 @@ return new Parser;
       key_list,
       automatic_filters = {},
       simplequery_type_value,
-      intercept_keys = ['start_date', 'stop_date', 'automatic_device',
+      intercept_keys = ['start_date', 'stop_date', 'device',
         'vehicle'],
       intercept_keys_automatic_name = ['started_at', 'ended_at', 'device',
         'vehicle'],
@@ -14882,6 +14891,9 @@ return new Parser;
         ' contain "type" constraint with "=" operator.', 400);
     }
     automatic_endpoint = '/' + simplequery_type_value[0][1] + '/';
+    if (automatic_endpoint === '/device/') {
+      automatic_endpoint = '/user/me/device/';
+    }
     return _queryAutomaticAPI(automatic_endpoint, automatic_filters, this)
       .push(function (results) {
         if (!(results instanceof Array)) {
