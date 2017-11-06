@@ -30,6 +30,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-connect');
   grunt.loadNpmTasks('grunt-open');
+  grunt.loadNpmTasks('grunt-qunitnode');
 
   // Project configuration.
   grunt.initConfig({
@@ -68,6 +69,26 @@ module.exports = function (grunt) {
           nomen: true
         }
       },
+      jio_nodejs: {
+        src: ['src/jio-nodejs.js'],
+        directives: {
+          maxlen: 80,
+          indent: 2,
+          maxerr: 3,
+          node: true,
+          nomen: true
+        }
+      },
+      jio_nodejs_include: {
+        src: ['src/nodejs/include.js'],
+        directives: {
+          maxlen: 80,
+          indent: 2,
+          maxerr: 3,
+          node: true,
+          nomen: true
+        }
+      },
       jio_storages: {
         src: ['src/jio.storage/*.js'],
         directives: {
@@ -93,7 +114,7 @@ module.exports = function (grunt) {
           predef: [
             'jIO'
           ]
-        },
+        }
       },
       tests: {
         src: ['test/**/*.js'],
@@ -106,7 +127,7 @@ module.exports = function (grunt) {
             'QUnit',
             'jIO'
           ]
-        },
+        }
       },
       queries: {
         src: ['src/queries/*.js'],
@@ -136,8 +157,8 @@ module.exports = function (grunt) {
             'QUnit',
             'jIO'
           ]
-        },
-      },
+        }
+      }
     },
     concat: {
       options: {
@@ -187,6 +208,34 @@ module.exports = function (grunt) {
         ],
         dest: 'dist/<%= pkg.name %>-<%= pkg.version %>.js'
 //         dest: 'jio.js'
+      },
+      nodejs: {
+        // duplicate files are ignored
+        src: [
+          // all the require for nodejs
+          'src/nodejs/include.js',
+          'src/nodejs/html5.js',
+
+          // queries
+          'src/queries/parser-begin.js',
+          'src/queries/build/parser.js',
+          'src/queries/parser-end.js',
+          'src/queries/query.js',
+
+          'src/jio.date/*.js',
+
+          'src/jio-nodejs.js',
+
+          'src/jio.storage/replicatestorage.js',
+          'src/jio.storage/uuidstorage.js',
+          'src/jio.storage/memorystorage.js',
+          'src/jio.storage/erp5storage.js',
+          'src/jio.storage/documentstorage.js',
+          'src/jio.storage/querystorage.js',
+          'src/jio.storage/localstorage.js',
+          'src/jio.storage/mappingstorage.js'
+        ],
+        dest: 'dist/nodejs/jio.js'
       }
     },
     uglify: {
@@ -231,6 +280,22 @@ module.exports = function (grunt) {
       // grunt doesn't like requirejs
       files: ['test/tests.html']
     },
+    // test jio with nodejs
+    qunitnode: {
+      all: [ "dist/nodejs/jio.js",
+             "test/jio.storage/memorystorage.tests.js",
+             "test/jio.storage/replicatestorage.tests.js",
+             "test/jio.storage/uuidstorage.tests.js",
+             "test/jio.storage/querystorage.tests.js",
+             "test/jio.storage/mappingstorage.tests.js",
+             "test/jio.storage/localstorage.tests.js",
+             "test/jio.storage/documentstorage.tests.js",
+             "test/jio.storage/erp5storage.tests.js"
+           ],
+      options : {
+        force: true
+      }
+    },
 
     watch: {
       src: {
@@ -245,7 +310,9 @@ module.exports = function (grunt) {
           '<%= concat.jio.src %>',
           '<%= qunit.files %>',
           'test/**/*.js',
-          'examples/*'
+          'examples/*',
+          'src/jio-nodejs.js',
+          'src/nodejs/*.js'
         ],
         tasks: ['default'],
         options: {

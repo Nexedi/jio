@@ -1,0 +1,20 @@
+/*global global, require */
+global.URI = require("urijs");
+global.RSVP = require('rsvp');
+global.UriTemplate = require("uritemplate");
+global.moment = require('moment');
+global.navigator = require('navigator');
+global.Rusha = require('rusha');
+global.FormData = require('form-data');
+global.atob = require('atob');
+var LocalStorage = require('node-localstorage').LocalStorage;
+global.localStorage = new LocalStorage("jio");
+global.btoa = require('btoa');
+global.XMLHttpRequest = require('xhr2');
+var Mockdoc = require("mockdoc");
+global.document = new Mockdoc();
+global.sinon = require('sinon');
+global.StreamBuffers = require('stream-buffers');
+global.window = global;
+global.sessionStorage = {};
+global.HTMLCanvasElement = {};
