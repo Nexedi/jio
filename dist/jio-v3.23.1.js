@@ -7605,8 +7605,8 @@ return new Parser;
       i,
       value,
       result_list;
-    if (obj === undefined) {
-      return undefined;
+    if (obj === undefined || obj === null) {
+      return 'null';
     }
     if (obj.constructor === Object) {
       key_list = Object.keys(obj).sort();
@@ -14496,12 +14496,12 @@ return new Parser;
     var result = [],
       type = endpoint.split('/')[1],
       promises,
-      dev = filters.device || 'all',
+      usr = filters.user || 'all',
       isId = checkEndpointAsId(endpoint),
-      device_dict = {},
+      user_dict = {},
       i;
-    // Remove 'device' filter which should not be put in Automatic request.
-    delete filters.device;
+    // Remove 'user' filter which should not be put in Automatic request.
+    delete filters.user;
     // Check endpoint validity.
     if (!checkEndpoint(endpoint)) {
       throw new jIO.util.jIOError('Wrong Automatic API query. (usually ' +
@@ -14515,7 +14515,7 @@ return new Parser;
     // Promise chain to handle multi-part response ("_metadata"->"next" parts).
     function treatNext(returned) {
       var data,
-        device_id,
+        user_id,
         next;
       // If the returned value was an error, return it (-> quite nasty design 
       // to have to return errors, but this is in order for all RSVP.all() to
@@ -14524,7 +14524,7 @@ return new Parser;
         return returned;
       }
       data = returned[0];
-      device_id = device_dict[returned[1]];
+      user_id = user_dict[returned[1]];
       data = [data];
       if (!isId) {
         if (data[0]._metadata === undefined) {
@@ -14539,16 +14539,16 @@ return new Parser;
           path = URI(dat.url).path();
           temp = {
             'automatic_path': path,
-            'reference': '/' + device_id + path,
-            'id': '/' + device_id + path,
+            'reference': '/' + user_id + path,
+            'id': '/' + user_id + path,
             'type': type,
             'start_date': dat.started_at || null,
             'stop_date': dat.ended_at || null,
-            'automatic_device': device_id
+            'automatic_user': user_id
           };
           result.push(temp);
-          return jio._cache.put('/' + device_id + path, temp).push(function () {
-            return jio._cache.putAttachment('/' + device_id + path, 'data',
+          return jio._cache.put('/' + user_id + path, temp).push(function () {
+            return jio._cache.putAttachment('/' + user_id + path, 'data',
               new Blob([JSON.stringify(dat)], {type:
                 'text/plain'}));
           });
@@ -14581,21 +14581,20 @@ return new Parser;
       return new RSVP.Queue().push(function () {
         return jIO.util.ajax({
           'type': 'GET',
-          'url': automatic_template.expand({endpoint: ['user', 'me', 'device',
-            '']}),
+          'url': automatic_template.expand({endpoint: ['user', 'me', '']}),
           'headers': {'Authorization': 'Bearer ' + token}
           //'xhrFields': {withCredentials: true}
         });
-      }).push(function (respdev) {
-        var temp = JSON.parse(respdev.target.responseText);
-        if (temp.results.length === 0) {
+      }).push(function (respusr) {
+        var temp = JSON.parse(respusr.target.responseText);
+        if (temp.id === undefined) {
           return new jIO.util.jIOError(
-            'No device associated to this account yet.',
-            200
+            'Could not find user information',
+            400
           );
         }
-        device_dict[token] = temp.results[0].id;
-        if (dev === 'all' || dev === device_dict[token]) {
+        user_dict[token] = temp.id;
+        if (usr === 'all' || usr === user_dict[token]) {
           return jIO.util.ajax({
             'type': 'GET',
             'url': URI(automatic_template.expand({endpoint:
@@ -14621,7 +14620,7 @@ return new Parser;
       return RSVP.all(promises);
     }).push(function (trueOrErrorArray) {
       // If we queried an id, return results should be length 1
-      if (isId && (dev !== 'all')) {
+      if (isId && (usr !== 'all')) {
         if (result.length === 1) {
           return result[0];
         }
@@ -14631,7 +14630,7 @@ return new Parser;
         }
         // Result is empty, so we throw the correct token error.
         i = jio._access_tokens.map(function (token) {
-          if (device_dict[token] === dev) {
+          if (user_dict[token] === usr) {
             return true;
           }
           return false;
@@ -14641,8 +14640,8 @@ return new Parser;
           throw trueOrErrorArray[i];
         }
         // If we didn't find the error in the promise returns, we don't have
-        // a token for device dev.
-        throw new jIO.util.jIOError('No valid token for device: ' + dev, 400);
+        // a token for user usr.
+        throw new jIO.util.jIOError('No valid token for user: ' + usr, 400);
       }
       // Otherwise return results and errors and let caller handle.
       return result;
@@ -14673,8 +14672,8 @@ return new Parser;
   AutomaticAPIStorage.prototype.get = function (id) {
     var self = this,
       endpoint = id.split('/'),
-      dev;
-    dev = endpoint.splice(1, 1)[0];
+      usr;
+    usr = endpoint.splice(1, 1)[0];
     endpoint = endpoint.join('/');
     if (id.indexOf('/') !== 0) {
       throw new jIO.util.jIOError('id ' + id +
@@ -14687,13 +14686,13 @@ return new Parser;
     if (!checkEndpointAsId(endpoint)) {
       throw new jIO.util.jIOError('Invalid id.', 400);
     }
-    if (dev === 'all') {
+    if (usr === 'all') {
       throw new jIO.util.jIOError('Invalid id.', 400);
     }
     return this._cache.get(id).push(function (res) {
       return res;
     }, function () {
-      return _queryAutomaticAPI(endpoint, {'device': dev}, self)
+      return _queryAutomaticAPI(endpoint, {'user': usr}, self)
         .push(function (res) {
           return res;
         }, function (err) {
@@ -14726,8 +14725,8 @@ return new Parser;
   AutomaticAPIStorage.prototype.getAttachment = function (id, name, options) {
     var self = this,
       endpoint = id.split('/'),
-      dev;
-    dev = endpoint.splice(1, 1)[0];
+      usr;
+    usr = endpoint.splice(1, 1)[0];
     endpoint = endpoint.join('/');
     if (id.indexOf('/') !== 0) {
       throw new jIO.util.jIOError('id ' + id +
@@ -14740,7 +14739,7 @@ return new Parser;
     if (!checkEndpointAsId(endpoint)) {
       throw new jIO.util.jIOError('Invalid id.', 400);
     }
-    if (dev === 'all') {
+    if (usr === 'all') {
       throw new jIO.util.jIOError('Invalid id.', 400);
     }
     return this._cache.get(id).push(function () {
@@ -14770,8 +14769,8 @@ return new Parser;
 
   AutomaticAPIStorage.prototype.allAttachments = function (id) {
     var endpoint = id.split('/'),
-      dev;
-    dev = endpoint.splice(1, 1)[0];
+      usr;
+    usr = endpoint.splice(1, 1)[0];
     endpoint = endpoint.join('/');
     if (id.indexOf('/') !== 0) {
       throw new jIO.util.jIOError('id ' + id +
@@ -14784,7 +14783,7 @@ return new Parser;
     if (!checkEndpointAsId(endpoint)) {
       throw new jIO.util.jIOError('Invalid id.', 400);
     }
-    if (dev === 'all') {
+    if (usr === 'all') {
       throw new jIO.util.jIOError('Invalid id.', 400);
     }
     return {data: null};
@@ -14804,9 +14803,9 @@ return new Parser;
       key_list,
       automatic_filters = {},
       simplequery_type_value,
-      intercept_keys = ['start_date', 'stop_date', 'device',
+      intercept_keys = ['start_date', 'stop_date', 'user',
         'vehicle'],
-      intercept_keys_automatic_name = ['started_at', 'ended_at', 'device',
+      intercept_keys_automatic_name = ['started_at', 'ended_at', 'user',
         'vehicle'],
       intercept_accepted_operators = [['>', '>=', '<', '<='],
         ['>', '>=', '<', '<='], ['='], ['=']],

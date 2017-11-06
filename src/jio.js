@@ -129,8 +129,8 @@
       i,
       value,
       result_list;
-    if (obj === undefined) {
-      return undefined;
+    if (obj === undefined || obj === null) {
+      return 'null';
     }
     if (obj.constructor === Object) {
       key_list = Object.keys(obj).sort();

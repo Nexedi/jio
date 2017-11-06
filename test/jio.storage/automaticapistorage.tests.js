@@ -85,14 +85,13 @@
   });
 
   test("get inexistent document", function () {
-    var url = "https://api.automatic.com/user/me/device/";
+    var url = "https://api.automatic.com/user/me/";
     this.server.respondWith("GET", url, [200, {
       "Content-Encoding": "gzip",
       "Content-Type": "application/json"
-    }, '{"_metadata": {"count": 1, "next": null, "previous": null},' +
-      '"results": [{"id": "devicetest",' +
-      '"url": "https://api.automatic.com/user/usertest/' +
-      'device/devicetest/", "version": 5}]}']);
+    }, '{"id": "usertest",' +
+      '"url": "https://api.automatic.com/user/usertest/"' +
+      ', "version": 5}']);
     url = "https://api.automatic.com/trip/T_inexistent/";
     this.server.respondWith("GET", url, [404, {
       "Content-Encoding": "gzip",
@@ -101,11 +100,11 @@
     stop();
     expect(3);
 
-    this.jio.get("/devicetest/trip/T_inexistent/")
+    this.jio.get("/usertest/trip/T_inexistent/")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, 'Cannot find document:' +
-          ' /devicetest/trip/T_inexistent/, Error: ' +
+          ' /usertest/trip/T_inexistent/, Error: ' +
           '{"error": "err_object_not_found"}');
         equal(error.status_code, 404);
       })
@@ -163,24 +162,23 @@
     this.server.respondWith("GET", url, [401, {
       "Content-Type": "application/json"
     }, '{"error":"err_unauthorized","detail":"Invalid token."}\n']);
-    url = "https://api.automatic.com/user/me/device/";
+    url = "https://api.automatic.com/user/me/";
     this.server.respondWith("GET", url, [200, {
       "Content-Encoding": "gzip",
       "Content-Type": "application/json"
-    }, '{"_metadata": {"count": 1, "next": null, "previous": null},' +
-      '"results": [{"id": "devicetest2",' +
-      '"url": "https://api.automatic.com/user/usertest/' +
-      'device/devicetest2/", "version": 5}]}' ]);
+    }, '{"id": "usertest2",' +
+      '"url": "https://api.automatic.com/user/usertest2/"' +
+      ', "version": 5}' ]);
 
     stop();
     expect(3);
 
-    this.jio.get("/devicetest/trip/T_whatever/")
+    this.jio.get("/usertest/trip/T_whatever/")
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message,
-          "Cannot find document: /devicetest/trip/T_whatever/"
-          + ", Error: No valid token for device: devicetest");
+          "Cannot find document: /usertest/trip/T_whatever/"
+          + ", Error: No valid token for user: usertest");
         equal(error.status_code, 404);
       })
       .fail(function (error) {
@@ -207,27 +205,26 @@
       xhr.respond(404, { "Content-Type": "application/json" },
         '{"error":"err_unauthorized","detail":"Invalid token."}\n');
     });
-    url = "https://api.automatic.com/user/me/device/";
+    url = "https://api.automatic.com/user/me/";
     this.server.respondWith("GET", url, [200, {
       "Content-Encoding": "gzip",
       "Content-Type": "application/json"
-    }, '{"_metadata": {"count": 1, "next": null, "previous": null},' +
-      '"results": [{"id": "devicetest",' +
-      '"url": "https://api.automatic.com/user/usertest/' +
-      'device/devicetest/", "version": 5}]}' ]);
+    }, '{"id": "usertest",' +
+      '"url": "https://api.automatic.com/user/usertest/"' +
+      ', "version": 5}' ]);
     stop();
     expect(1);
 
-    this.jio.get("/devicetest/trip/T_randomtrip/")
+    this.jio.get("/usertest/trip/T_randomtrip/")
       .then(function (result) {
         deepEqual(result, {
           'automatic_path': '/trip/T_randomtrip/',
-          'reference': '/devicetest/trip/T_randomtrip/',
-          'id': '/devicetest/trip/T_randomtrip/',
+          'reference': '/usertest/trip/T_randomtrip/',
+          'id': '/usertest/trip/T_randomtrip/',
           'type': 'trip',
           'start_date': null,
           'stop_date': null,
-          'automatic_device': 'devicetest'
+          'automatic_user': 'usertest'
         }, "Check single element type");
       })
       .fail(function (error) {
@@ -296,14 +293,13 @@
   });
 
   test("get inexistent document's attachment", function () {
-    var url = "https://api.automatic.com/user/me/device/";
+    var url = "https://api.automatic.com/user/me/";
     this.server.respondWith("GET", url, [200, {
       "Content-Encoding": "gzip",
       "Content-Type": "application/json"
-    }, '{"_metadata": {"count": 1, "next": null, "previous": null},' +
-      '"results": [{"id": "devicetest",' +
-      '"url": "https://api.automatic.com/user/usertest/' +
-      'device/devicetest/", "version": 5}]}' ]);
+    }, '{"id": "usertest",' +
+      '"url": "https://api.automatic.com/user/usertest/"' +
+      ', "version": 5}' ]);
     url = "https://api.automatic.com/trip/T_inexistent/";
     this.server.respondWith("GET", url, [404, {
       "Content-Encoding": "gzip",
@@ -312,11 +308,11 @@
     stop();
     expect(3);
 
-    this.jio.getAttachment("/devicetest/trip/T_inexistent/", 'whatever')
+    this.jio.getAttachment("/usertest/trip/T_inexistent/", 'whatever')
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, 'Cannot find document:' +
-          ' /devicetest/trip/T_inexistent/, Error: ' +
+          ' /usertest/trip/T_inexistent/, Error: ' +
           '{"error": "err_object_not_found"}');
         equal(error.status_code, 404);
       })
@@ -374,24 +370,23 @@
     this.server.respondWith("GET", url, [401, {
       "Content-Type": "application/json"
     }, '{"error":"err_unauthorized","detail":"Invalid token."}\n']);
-    url = "https://api.automatic.com/user/me/device/";
+    url = "https://api.automatic.com/user/me/";
     this.server.respondWith("GET", url, [200, {
       "Content-Encoding": "gzip",
       "Content-Type": "application/json"
-    }, '{"_metadata": {"count": 1, "next": null, "previous": null},' +
-      '"results": [{"id": "devicetest2",' +
-      '"url": "https://api.automatic.com/user/usertest/' +
-      'device/devicetest2/", "version": 5}]}' ]);
+    }, '{"id": "usertest2",' +
+      '"url": "https://api.automatic.com/user/usertest2/"' +
+      ', "version": 5}' ]);
 
     stop();
     expect(3);
 
-    this.jio.getAttachment("/devicetest/trip/T_whatever/", 'whatever')
+    this.jio.getAttachment("/usertest/trip/T_whatever/", 'whatever')
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message,
-          "Cannot find document: /devicetest/trip/T_whatever/"
-          + ", Error: No valid token for device: devicetest");
+          "Cannot find document: /usertest/trip/T_whatever/"
+          + ", Error: No valid token for user: usertest");
         equal(error.status_code, 404);
       })
       .fail(function (error) {
@@ -418,18 +413,17 @@
       xhr.respond(404, { "Content-Type": "application/json" },
         '{"error":"err_unauthorized","detail":"Invalid token."}\n');
     });
-    url = "https://api.automatic.com/user/me/device/";
+    url = "https://api.automatic.com/user/me/";
     this.server.respondWith("GET", url, [200, {
       "Content-Encoding": "gzip",
       "Content-Type": "application/json"
-    }, '{"_metadata": {"count": 1, "next": null, "previous": null},' +
-      '"results": [{"id": "devicetest",' +
-      '"url": "https://api.automatic.com/user/usertest/' +
-      'device/devicetest/", "version": 5}]}' ]);
+    }, '{"id": "usertest",' +
+      '"url": "https://api.automatic.com/user/usertest/"' +
+      ', "version": 5}' ]);
     stop();
     expect(1);
 
-    this.jio.getAttachment("/devicetest/trip/T_randomtrip/", 'data', {format:
+    this.jio.getAttachment("/usertest/trip/T_randomtrip/", 'data', {format:
       'text'}).then(function (result) {
       deepEqual(result, '{"id":"T_randomtrip",' +
         '"url":"https://api.automatic.com/trip/T_randomtrip/"}',
@@ -459,7 +453,7 @@
     stop();
     expect(1);
 
-    this.jio.allAttachments('/devicetest/trip/T_trip/').then(function (result) {
+    this.jio.allAttachments('/usertest/trip/T_trip/').then(function (result) {
       deepEqual(result, {data: null});
     }).fail(function (error) {
       ok(false, error);
@@ -509,14 +503,13 @@
         '{"_metadata":{"count":0,"next":null,"previous":null},' +
         '"results":[]}');
     });
-    url = "https://api.automatic.com/user/me/device/";
+    url = "https://api.automatic.com/user/me/";
     this.server.respondWith("GET", url, [200, {
       "Content-Encoding": "gzip",
       "Content-Type": "application/json"
-    }, '{"_metadata": {"count": 1, "next": null, "previous": null},' +
-      '"results": [{"id": "0",' +
-      '"url": "https://api.automatic.com/user/usertest/' +
-      'device/0/", "version": 5}]}' ]);
+    }, '{"id": "0",' +
+      '"url": "https://api.automatic.com/user/0/"' +
+      ', "version": 5}' ]);
     stop();
     expect(4);
 
@@ -543,7 +536,7 @@
           'type': 'trip',
           'start_date': "2017-06-17T16:45:41Z",
           'stop_date': "2017-06-17T16:46:38Z",
-          'automatic_device': '0'
+          'automatic_user': '0'
         }], "Check trip is returned in result");
       })
       .fail(function (error) {
@@ -581,7 +574,7 @@
           'type': 'trip',
           'start_date': "2017-06-17T16:45:41Z",
           'stop_date': "2017-06-17T16:46:38Z",
-          'automatic_device': '0'
+          'automatic_user': '0'
         }], "Check trip is returned in result");
       })
       .fail(function (error) {
@@ -613,14 +606,13 @@
         '{"_metadata":{"count":0,"next":null,"previous":null},' +
         '"results":[]}');
     });
-    url = "https://api.automatic.com/user/me/device/";
+    url = "https://api.automatic.com/user/me/";
     this.server.respondWith("GET", url, [200, {
       "Content-Encoding": "gzip",
       "Content-Type": "application/json"
-    }, '{"_metadata": {"count": 1, "next": null, "previous": null},' +
-      '"results": [{"id": "0",' +
-      '"url": "https://api.automatic.com/user/usertest/' +
-      'device/0/", "version": 5}]}' ]);
+    }, '{"id": "0",' +
+      '"url": "https://api.automatic.com/user/0/"' +
+      ', "version": 5}' ]);
     stop();
     expect(1);
 
@@ -635,7 +627,7 @@
           'type': 'vehicle',
           'start_date': null,
           'stop_date': null,
-          'automatic_device': '0'
+          'automatic_user': '0'
         }], "Check vehicle list is returned");
       })
       .fail(function (error) {
@@ -664,7 +656,7 @@
         '{"_metadata":{"count":0,"next":null,"previous":null},' +
         '"results":[]}');
     });
-    url = "https://api.automatic.com/user/me/device/";
+    url = "https://api.automatic.com/user/me/";
     this.server.respondWith("GET", url, [404, {
       "Content-Encoding": "gzip",
       "Content-Type": "application/json"
@@ -705,14 +697,13 @@
         '{"_metadata":{"count":0,"next":null,"previous":null},' +
         '"results":[]}');
     });
-    url = "https://api.automatic.com/user/me/device/";
+    url = "https://api.automatic.com/user/me/";
     this.server.respondWith("GET", url, [200, {
       "Content-Encoding": "gzip",
       "Content-Type": "application/json"
-    }, '{"_metadata": {"count": 1, "next": null, "previous": null},' +
-      '"results": [{"id": "0",' +
-      '"url": "https://api.automatic.com/user/usertest/' +
-      'device/0/", "version": 5}]}' ]);
+    }, '{"id": "0",' +
+      '"url": "https://api.automatic.com/user/0/"' +
+      ', "version": 5}' ]);
     url = "https://api.automatic.com/specific/nexturl/";
     this.server.respondWith("GET", url, [200, {
       "Content-Encoding": "gzip",
@@ -734,7 +725,7 @@
           'type': 'vehicle',
           'start_date': null,
           'stop_date': null,
-          'automatic_device': '0'
+          'automatic_user': '0'
         }, {
           'automatic_path': '/vehicle/V_example2/',
           'reference': '/0/vehicle/V_example2/',
@@ -742,7 +733,7 @@
           'type': 'vehicle',
           'start_date': null,
           'stop_date': null,
-          'automatic_device': '0'
+          'automatic_user': '0'
         }], "Check vehicle list is returned");
       })
       .fail(function (error) {
