@@ -24,9 +24,9 @@
           "type": "GET",
           "url": storage._url,
           "xhrFields": {
-            withCredentials: this._withCredentials
+            withCredentials: storage._withCredentials
           },
-          "headers": this._headers
+          "headers": storage._headers
         });
       })
       .push(function (event) {
@@ -51,9 +51,9 @@
                   view: options._view
                 }),
               "xhrFields": {
-                withCredentials: this._withCredentials
+                withCredentials: storage._withCredentials
               },
-              "headers": this._headers
+              "headers": storage._headers
             });
           })
           .push(undefined, function (error) {
@@ -195,9 +195,9 @@
           url: site_hal._actions.add.href,
           data: form_data,
           xhrFields: {
-            withCredentials: this._withCredentials
+            withCredentials: context._withCredentials
           },
-          "headers": this._headers
+          "headers": context._headers
         });
       })
       .push(function (evt) {
@@ -272,6 +272,7 @@
   };
 
   ERP5Storage.prototype.getAttachment = function (id, action, options) {
+    var context = this;
     if (options === undefined) {
       options = {};
     }
@@ -319,7 +320,7 @@
               "dataType": "blob",
               "url": action,
               "xhrFields": {
-                withCredentials: this._withCredentials
+                withCredentials: context._withCredentials
               }
             };
           if (options.start !== undefined ||  options.end !== undefined) {
@@ -341,9 +342,9 @@
               range = "bytes=" + start + "-" + end;
             }
             request_options.headers = {Range: range};
-            for (k in this._headers) {
-              if (this._headers.hasOwnProperty(k)) {
-                request_options.headers[k] = this._headers[k];
+            for (k in context._headers) {
+              if (context._headers.hasOwnProperty(k)) {
+                request_options.headers[k] = context._headers[k];
               }
             }
           }
@@ -364,6 +365,7 @@
   };
 
   ERP5Storage.prototype.putAttachment = function (id, name, blob) {
+    var context = this;
     // Assert we use a callable on a document from the ERP5 site
     if (name.indexOf(this._url) !== 0) {
       throw new jIO.util.jIOError("Can not store outside ERP5: " +
@@ -405,9 +407,9 @@
           "data": data,
           "dataType": "blob",
           "xhrFields": {
-            withCredentials: this._withCredentials
+            withCredentials: context._withCredentials
           },
-          "headers": this._headers
+          "headers": context._headers
         });
       });
   };
@@ -456,6 +458,7 @@
 //                        jIO.Query.objectToSearchText(options.query) :
 //                        undefined);
 //     }
+    var context = this;
     return getSiteDocument(this)
       .push(function (site_hal) {
         var query = options.query,
@@ -524,9 +527,9 @@
               local_roles: local_roles
             }),
           "xhrFields": {
-            withCredentials: this._withCredentials
+            withCredentials: context._withCredentials
           },
-          "headers": this._headers
+          "headers": context._headers
         });
       })
       .push(function (response) {
