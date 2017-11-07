@@ -233,6 +233,7 @@ module.exports = function (grunt) {
           'src/jio.storage/documentstorage.js',
           'src/jio.storage/querystorage.js',
           'src/jio.storage/localstorage.js',
+          'src/jio.storage/automaticapistorage.js',
           'src/jio.storage/mappingstorage.js'
         ],
         dest: 'dist/nodejs/jio.js'
