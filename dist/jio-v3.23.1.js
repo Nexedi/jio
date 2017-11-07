@@ -11368,7 +11368,7 @@ return new Parser;
 
 /*jslint nomen: true, unparam: true */
 /*global jIO, UriTemplate, FormData, RSVP, URI, Blob,
-         SimpleQuery, ComplexQuery*/
+         SimpleQuery, ComplexQuery, btoa*/
 
 (function (jIO, UriTemplate, FormData, RSVP, URI, Blob,
            SimpleQuery, ComplexQuery) {
@@ -11381,8 +11381,9 @@ return new Parser;
           "type": "GET",
           "url": storage._url,
           "xhrFields": {
-            withCredentials: true
-          }
+            withCredentials: this._withCredentials
+          },
+          "headers": this._headers
         });
       })
       .push(function (event) {
@@ -11407,8 +11408,9 @@ return new Parser;
                   view: options._view
                 }),
               "xhrFields": {
-                withCredentials: true
-              }
+                withCredentials: this._withCredentials
+              },
+              "headers": this._headers
             });
           })
           .push(undefined, function (error) {
@@ -11506,6 +11508,13 @@ return new Parser;
     }
     this._url = spec.url;
     this._default_view_reference = spec.default_view_reference;
+    this._headers = {};
+    this._withCredentials = true;
+    if (spec.login !== undefined && spec.password !== undefined) {
+      this._headers = {"Authorization":  "Basic "
+                          + btoa(spec.login + ":" + spec.password)};
+      this._withCredentials = false;
+    }
   }
 
   function convertJSONToGet(json) {
@@ -11543,8 +11552,9 @@ return new Parser;
           url: site_hal._actions.add.href,
           data: form_data,
           xhrFields: {
-            withCredentials: true
-          }
+            withCredentials: this._withCredentials
+          },
+          "headers": this._headers
         });
       })
       .push(function (evt) {
@@ -11658,6 +11668,7 @@ return new Parser;
       return new RSVP.Queue()
         .push(function () {
           var start,
+            k,
             end,
             range,
             request_options = {
@@ -11665,7 +11676,7 @@ return new Parser;
               "dataType": "blob",
               "url": action,
               "xhrFields": {
-                withCredentials: true
+                withCredentials: this._withCredentials
               }
             };
           if (options.start !== undefined ||  options.end !== undefined) {
@@ -11687,6 +11698,11 @@ return new Parser;
               range = "bytes=" + start + "-" + end;
             }
             request_options.headers = {Range: range};
+            for (k in this._headers) {
+              if (this._headers.hasOwnProperty(k)) {
+                request_options.headers[k] = this._headers[k];
+              }
+            }
           }
           return jIO.util.ajax(request_options);
         })
@@ -11746,8 +11762,9 @@ return new Parser;
           "data": data,
           "dataType": "blob",
           "xhrFields": {
-            withCredentials: true
-          }
+            withCredentials: this._withCredentials
+          },
+          "headers": this._headers
         });
       });
   };
@@ -11864,8 +11881,9 @@ return new Parser;
               local_roles: local_roles
             }),
           "xhrFields": {
-            withCredentials: true
-          }
+            withCredentials: this._withCredentials
+          },
+          "headers": this._headers
         });
       })
       .push(function (response) {
