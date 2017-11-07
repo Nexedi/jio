@@ -1,5 +1,5 @@
 /*jslint nomen: true*/
-/*global Blob*/
+/*global Blob, jiodate*/
 (function (jIO, QUnit, Blob) {
   "use strict";
   var test = QUnit.test,
@@ -24,9 +24,10 @@
   // queryStorage.constructor
   /////////////////////////////////////////////////////////////////
   module("queryStorage.constructor");
-  test("create substorage", function () {
+  test("accept parameters", function () {
     var jio = jIO.createJIO({
       type: "query",
+      schema: {'date': {type: 'string', format: 'date-time'}},
       sub_storage: {
         type: "querystorage200"
       }
@@ -34,7 +35,35 @@
 
     ok(jio.__storage._sub_storage instanceof jio.constructor);
     equal(jio.__storage._sub_storage.__type, "querystorage200");
+    deepEqual(jio.__storage._key_schema.key_set, {
+      "date": {
+        "cast_to": "dateType",
+        "read_from": "date"
+      }
+    }, 'check key_schema');
+    ok(typeof jio.__storage._key_schema.cast_lookup.dateType === 'function');
 
+  });
+
+  test("failed on wrond schema", function () {
+    throws(
+      function () {
+        jIO.createJIO({
+          type: "query",
+          schema: {'date': {type: 'couscous'}},
+          sub_storage: {
+            type: "querystorage200"
+          }
+        });
+      },
+      function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 400);
+        equal(error.message,
+              "Wrong schema for property: date");
+        return true;
+      }
+    );
   });
 
   /////////////////////////////////////////////////////////////////
@@ -823,6 +852,99 @@
         });
     });
 
+  test("manual query used and use schema", function () {
+    stop();
+    expect(4);
+
+    function StorageSchemaCapacity() {
+      return this;
+    }
+    StorageSchemaCapacity.prototype.get = function (id) {
+      var doc = {
+        title: id,
+        id: "ID " + id,
+        "another": "property"
+      };
+      if (id === "foo") {
+        equal(id, "foo", "Get foo");
+        doc.modification_date = "Fri, 08 Sep 2017 07:46:27 +0000";
+      } else {
+        equal(id, "bar", "Get bar");
+        doc.modification_date = "Thu, 07 Sep 2017 18:59:23 +0000";
+      }
+      return doc;
+    };
+
+    StorageSchemaCapacity.prototype.hasCapacity = function (capacity) {
+      if ((capacity === "list")) {
+        return true;
+      }
+      return false;
+    };
+    StorageSchemaCapacity.prototype.buildQuery = function (options) {
+      deepEqual(options, {}, "No query parameter");
+      var result2 = [{
+        id: "foo",
+        value: {}
+      }, {
+        id: "bar",
+        value: {}
+      }];
+      return result2;
+    };
+
+    jIO.addStorage(
+      'querystoragenoschemacapacity',
+      StorageSchemaCapacity
+    );
+
+    var jio = jIO.createJIO({
+      type: "query",
+      schema: {
+        "modification_date": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      sub_storage: {
+        type: "querystoragenoschemacapacity"
+      }
+    });
+
+    jio.allDocs({
+      sort_on: [["modification_date", "descending"]],
+      limit: [0, 5],
+      select_list: ['modification_date']
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [
+              {
+                id: "foo",
+                doc: {},
+                value: {
+                  modification_date: "Fri, 08 Sep 2017 07:46:27 +0000"
+                }
+              }, {
+                id: "bar",
+                doc: {},
+                value: {
+                  modification_date: "Thu, 07 Sep 2017 18:59:23 +0000"
+                }
+              }
+            ],
+            total_rows: 2
+          }
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
   /////////////////////////////////////////////////////////////////
   // queryStorage.repair
   /////////////////////////////////////////////////////////////////

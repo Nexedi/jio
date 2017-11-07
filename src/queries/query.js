@@ -44,8 +44,8 @@
    * @param  {String} [way="ascending"] 'ascending' or 'descending'
    * @return {Function} The sort function
    */
-  function sortFunction(key, way) {
-    var result;
+  function sortFunction(key, way, key_schema) {
+    var result, cast_to;
     if (way === 'descending') {
       result = 1;
     } else if (way === 'ascending') {
@@ -53,6 +53,29 @@
     } else {
       throw new TypeError("Query.sortFunction(): " +
                           "Argument 2 must be 'ascending' or 'descending'");
+    }
+    if (key_schema !== undefined &&
+        key_schema.key_set !== undefined &&
+        key_schema.key_set[key] !== undefined &&
+        key_schema.key_set[key].cast_to !== undefined) {
+      if (typeof key_schema.key_set[key].cast_to === "string") {
+        cast_to = key_schema.cast_lookup[key_schema.key_set[key].cast_to];
+      } else {
+        cast_to = key_schema.key_set[key].cast_to;
+      }
+      return function (a, b) {
+        var f_a = cast_to(a[key]), f_b = cast_to(b[key]);
+        if (typeof f_b.cmp === 'function') {
+          return result * f_b.cmp(f_a);
+        }
+        if (f_a > f_b) {
+          return -result;
+        }
+        if (f_a < f_b) {
+          return result;
+        }
+        return 0;
+      };
     }
     return function (a, b) {
       // this comparison is 5 times faster than json comparison
@@ -78,6 +101,7 @@
     };
   }
 
+
   /**
    * Sort a list of items, according to keys and directions.
    *
@@ -85,7 +109,7 @@
    * @param  {Array} list The item list to sort
    * @return {Array} The filtered list
    */
-  function sortOn(sort_on_option, list) {
+  function sortOn(sort_on_option, list, key_schema) {
     var sort_index;
     if (!Array.isArray(sort_on_option)) {
       throw new TypeError("jioquery.sortOn(): " +
@@ -95,7 +119,8 @@
          sort_index -= 1) {
       list.sort(sortFunction(
         sort_on_option[sort_index][0],
-        sort_on_option[sort_index][1]
+        sort_on_option[sort_index][1],
+        key_schema
       ));
     }
     return list;
@@ -158,6 +183,35 @@
     return list;
   }
 
+  function checkKeySchema(key_schema) {
+    var prop;
+
+    if (key_schema !== undefined) {
+      if (typeof key_schema !== 'object') {
+        throw new TypeError("Query().create(): " +
+                            "key_schema is not of type 'object'");
+      }
+      // key_set is mandatory
+      if (key_schema.key_set === undefined) {
+        throw new TypeError("Query().create(): " +
+                            "key_schema has no 'key_set' property");
+      }
+      for (prop in key_schema) {
+        if (key_schema.hasOwnProperty(prop)) {
+          switch (prop) {
+          case 'key_set':
+          case 'cast_lookup':
+          case 'match_lookup':
+            break;
+          default:
+            throw new TypeError("Query().create(): " +
+                               "key_schema has unknown property '" + prop + "'");
+          }
+        }
+      }
+    }
+  }
+
   /**
    * The query to use to filter a list of objects.
    * This is an abstract class.
@@ -165,7 +219,10 @@
    * @class Query
    * @constructor
    */
-  function Query() {
+  function Query(key_schema) {
+
+    checkKeySchema(key_schema);
+    this._key_schema = key_schema || {};
 
     /**
      * Called before parsing the query. Must be overridden!
@@ -238,7 +295,7 @@
     }
 
     if (option.sort_on) {
-      sortOn(option.sort_on, item_list);
+      sortOn(option.sort_on, item_list, this._key_schema);
     }
 
     if (option.limit) {
@@ -577,7 +634,7 @@
    */
   QueryFactory.create = function (object, key_schema) {
     if (object === "") {
-      return new Query();
+      return new Query(key_schema);
     }
     if (typeof object === "string") {
       object = parseStringToObject(object);
@@ -609,35 +666,6 @@
     throw new TypeError("This object is not a query");
   }
 
-  function checkKeySchema(key_schema) {
-    var prop;
-
-    if (key_schema !== undefined) {
-      if (typeof key_schema !== 'object') {
-        throw new TypeError("SimpleQuery().create(): " +
-                            "key_schema is not of type 'object'");
-      }
-      // key_set is mandatory
-      if (key_schema.key_set === undefined) {
-        throw new TypeError("SimpleQuery().create(): " +
-                            "key_schema has no 'key_set' property");
-      }
-      for (prop in key_schema) {
-        if (key_schema.hasOwnProperty(prop)) {
-          switch (prop) {
-          case 'key_set':
-          case 'cast_lookup':
-          case 'match_lookup':
-            break;
-          default:
-            throw new TypeError("SimpleQuery().create(): " +
-                               "key_schema has unknown property '" + prop + "'");
-          }
-        }
-      }
-    }
-  }
-
   /**
    * The SimpleQuery inherits from Query, and compares one metadata value
    *
@@ -649,11 +677,7 @@
    * @param  {String} spec.value The value of the metadata to compare
    */
   function SimpleQuery(spec, key_schema) {
-    Query.call(this);
-
-    checkKeySchema(key_schema);
-
-    this._key_schema = key_schema || {};
+    Query.call(this, key_schema);
 
     /**
      * Operator to use to compare object values

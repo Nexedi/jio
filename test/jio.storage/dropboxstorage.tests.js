@@ -10,7 +10,6 @@
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
     module = QUnit.module,
-    throws = QUnit.throws,
     token = "sample_token";
 
   /////////////////////////////////////////////////////////////////
@@ -21,31 +20,10 @@
   test("create storage", function () {
     var jio = jIO.createJIO({
       type: "dropbox",
-      access_token: token,
-      root : "sandbox"
+      access_token: token
     });
     equal(jio.__type, "dropbox");
     deepEqual(jio.__storage._access_token, token);
-    deepEqual(jio.__storage._root, "sandbox");
-  });
-
-  test("reject invalid root", function () {
-
-    throws(
-      function () {
-        jIO.createJIO({
-          type: "dropbox",
-          access_token: token,
-          root : "foobar"
-        });
-      },
-      function (error) {
-        ok(error instanceof TypeError);
-        equal(error.message,
-              "root must be 'dropbox' or 'sandbox'");
-        return true;
-      }
-    );
   });
 
   /////////////////////////////////////////////////////////////////
@@ -60,8 +38,7 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token,
-        root : "dropbox"
+        access_token: token
       });
     },
     teardown: function () {
@@ -71,8 +48,7 @@
   });
 
   test("put document", function () {
-    var url = "https://api.dropboxapi.com/1/fileops/create_folder?access_token="
-      + token + "&root=dropbox&path=%2Fput1%2F",
+    var url = "https://api.dropboxapi.com/2/files/create_folder_v2",
       server = this.server;
     this.server.respondWith("POST", url, [201, {
       "Content-Type": "text/xml"
@@ -87,10 +63,48 @@
         equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, url);
         equal(server.requests[0].status, 201);
-        equal(server.requests[0].requestBody, undefined);
+        deepEqual(JSON.parse(server.requests[0].requestBody), {
+          "path": "/put1",
+          "autorename": false
+        });
         equal(server.requests[0].responseText, "");
         deepEqual(server.requests[0].requestHeaders, {
-          "Content-Type": "text/plain;charset=utf-8"
+          "Authorization": "Bearer sample_token",
+          "Content-Type": "application/json;charset=utf-8"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("put sub document", function () {
+    var url = "https://api.dropboxapi.com/2/files/create_folder_v2",
+      server = this.server;
+    this.server.respondWith("POST", url, [201, {
+      "Content-Type": "text/xml"
+    }, ""]);
+
+    stop();
+    expect(7);
+
+    this.jio.put("/put1/put2/", {})
+      .then(function () {
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, url);
+        equal(server.requests[0].status, 201);
+        deepEqual(JSON.parse(server.requests[0].requestBody), {
+          "path": "/put1/put2",
+          "autorename": false
+        });
+        equal(server.requests[0].responseText, "");
+        deepEqual(server.requests[0].requestHeaders, {
+          "Authorization": "Bearer sample_token",
+          "Content-Type": "application/json;charset=utf-8"
         });
       })
       .fail(function (error) {
@@ -102,17 +116,18 @@
   });
 
   test("don't throw error when putting existing directory", function () {
-    var url = "https://api.dropboxapi.com/1/fileops/create_folder?access_token="
-      + token + "&root=dropbox&path=%2Fexisting%2F",
+    var url = "https://api.dropboxapi.com/2/files/create_folder_v2",
       server = this.server;
-    this.server.respondWith("POST", url, [405, {
-      "Content-Type": "text/xml"
-    }, "POST" + url + "(Forbidden)"]);
+    this.server.respondWith("POST", url, [409, {
+      "Content-Type": "application/json"
+    }, JSON.stringify(
+      {error: {'.tag': 'path', 'path': {'.tag': 'conflict'}}}
+    )]);
     stop();
     expect(1);
     this.jio.put("/existing/", {})
       .then(function () {
-        equal(server.requests[0].status, 405);
+        equal(server.requests[0].status, 409);
       })
       .fail(function (error) {
         ok(false, error);
@@ -188,8 +203,7 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token,
-        root : "dropbox"
+        access_token: token
       });
     },
     teardown: function () {
@@ -197,9 +211,9 @@
       delete this.server;
     }
   });
+
   test("remove document", function () {
-    var url_delete = "https://api.dropboxapi.com/1/fileops/delete/?" +
-      "access_token=" + token + "&root=dropbox&path=%2Fremove1%2F",
+    var url_delete = "https://api.dropboxapi.com/2/files/delete_v2",
       server = this.server;
     this.server.respondWith("POST", url_delete, [204, {
       "Content-Type": "text/xml"
@@ -213,10 +227,13 @@
         equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, url_delete);
         equal(server.requests[0].status, 204);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, '');
+        deepEqual(JSON.parse(server.requests[0].requestBody), {
+          "path": "/remove1"
+        });
+        equal(server.requests[0].responseText, "");
         deepEqual(server.requests[0].requestHeaders, {
-          "Content-Type": "text/plain;charset=utf-8"
+          "Authorization": "Bearer sample_token",
+          "Content-Type": "application/json;charset=utf-8"
         });
       })
       .fail(function (error) {
@@ -275,8 +292,7 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token,
-        root : "dropbox"
+        access_token: token
       });
     },
     teardown: function () {
@@ -322,6 +338,13 @@
   });
 
   test("get inexistent document", function () {
+    var url = "https://api.dropboxapi.com/2/files/get_metadata";
+    this.server.respondWith("POST", url, [409, {
+      "Content-Type": "application/json"
+    }, JSON.stringify(
+      {error: {'.tag': 'path', 'path': {'.tag': 'not_found'}}}
+    )]);
+
     stop();
     expect(3);
 
@@ -340,18 +363,25 @@
   });
 
   test("get directory", function () {
-    var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
-      "/id1/?access_token=" + token;
-    this.server.respondWith("GET", url, [200, {
-      "Content-Type": "text/xml"
-    }, '{"is_dir": true, "contents": []}'
+    var url = "https://api.dropboxapi.com/2/files/get_metadata",
+      server = this.server;
+    this.server.respondWith("POST", url, [200, {
+      "Content-Type": "application/json"
+    }, '{".tag": "folder"}'
                                         ]);
     stop();
-    expect(1);
+    expect(3);
 
     this.jio.get("/id1/")
       .then(function (result) {
         deepEqual(result, {}, "Check document");
+        deepEqual(JSON.parse(server.requests[0].requestBody), {
+          "path": "/id1"
+        });
+        deepEqual(server.requests[0].requestHeaders, {
+          "Authorization": "Bearer sample_token",
+          "Content-Type": "application/json;charset=utf-8"
+        });
       })
       .fail(function (error) {
         ok(false, error);
@@ -362,11 +392,10 @@
   });
 
   test("get file", function () {
-    var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
-      "/id1/?access_token=" + token;
-    this.server.respondWith("GET", url, [200, {
-      "Content-Type": "text/xml"
-    }, '{"is_dir": false, "contents": []}'
+    var url = "https://api.dropboxapi.com/2/files/get_metadata";
+    this.server.respondWith("POST", url, [200, {
+      "Content-Type": "application/json"
+    }, '{".tag": "file"}'
                                         ]);
     stop();
     expect(3);
@@ -397,8 +426,7 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token,
-        root : "dropbox"
+        access_token: token
       });
     },
     teardown: function () {
@@ -444,12 +472,14 @@
   });
 
   test("get file", function () {
-    var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
-      "/id1/?access_token=" + token;
-    this.server.respondWith("GET", url, [200, {
-      "Content-Type": "text/xml"
-    }, '{"is_dir": false, "contents": []}'
-                                        ]);
+    var url = "https://api.dropboxapi.com/2/files/list_folder";
+
+    this.server.respondWith("POST", url, [409, {
+      "Content-Type": "application/json"
+    }, JSON.stringify(
+      {error: {'.tag': 'path', 'path': {'.tag': 'not_folder'}}}
+    )]);
+
     stop();
     expect(3);
 
@@ -468,6 +498,14 @@
   });
 
   test("get inexistent document", function () {
+    var url = "https://api.dropboxapi.com/2/files/list_folder";
+
+    this.server.respondWith("POST", url, [409, {
+      "Content-Type": "application/json"
+    }, JSON.stringify(
+      {error: {'.tag': 'path', 'path': {'.tag': 'not_found'}}}
+    )]);
+
     stop();
     expect(3);
 
@@ -486,18 +524,30 @@
   });
 
   test("get document without attachment", function () {
-    var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
-      "/id1/?access_token=" + token;
-    this.server.respondWith("GET", url, [200, {
-      "Content-Type": "text/xml"
-    }, '{"is_dir": true, "contents": []}'
+    var url = "https://api.dropboxapi.com/2/files/list_folder",
+      server = this.server;
+    this.server.respondWith("POST", url, [200, {
+      "Content-Type": "application/json"
+    }, '{"entries": [], "has_more": false}'
                                         ]);
     stop();
-    expect(1);
+    expect(3);
 
     this.jio.allAttachments("/id1/")
       .then(function (result) {
         deepEqual(result, {}, "Check document");
+        deepEqual(JSON.parse(server.requests[0].requestBody), {
+          "include_deleted": false,
+          "include_has_explicit_shared_members": false,
+          "include_media_info": false,
+          "include_mounted_folders": true,
+          "path": "/id1",
+          "recursive": false
+        });
+        deepEqual(server.requests[0].requestHeaders, {
+          "Authorization": "Bearer sample_token",
+          "Content-Type": "application/json;charset=utf-8"
+        });
       })
       .fail(function (error) {
         ok(false, error);
@@ -508,28 +558,26 @@
   });
 
   test("get document with attachment", function () {
-    var url = "https://api.dropboxapi.com/1/metadata/dropbox" +
-      "/id1/?access_token=" + token;
-    this.server.respondWith("GET", url, [200, {
-      "Content-Type": "text/xml"
-    }, '{"is_dir": true, "path": "/id1", ' +
-                                         '"contents": ' +
-                                         '[{"rev": "143bb45509", ' +
-                                         '"thumb_exists": false, ' +
-                                         '"path": "/id1/attachment1", ' +
-                                         '"is_dir": false, "bytes": 151}, ' +
-                                         '{"rev": "153bb45509", ' +
-                                         '"thumb_exists": false, ' +
-                                         '"path": "/id1/attachment2", ' +
-                                         '"is_dir": false, "bytes": 11}, ' +
-                                         '{"rev": "173bb45509", ' +
-                                         '"thumb_exists": false, ' +
-                                         '"path": "/id1/fold1", ' +
-                                         '"is_dir": true, "bytes": 0}], ' +
-                                         '"icon": "folder"}'
-                                        ]);
+    var url = "https://api.dropboxapi.com/2/files/list_folder",
+      server = this.server;
+    this.server.respondWith("POST", url, [200, {
+      "Content-Type": "application/json"
+    }, JSON.stringify({
+      "entries": [{
+        ".tag": "file",
+        "name": "attachment1"
+      }, {
+        ".tag": "file",
+        "name": "attachment2"
+      }, {
+        ".tag": "folder",
+        "name": "fold1"
+      }],
+      "has_more": false
+    })]);
+
     stop();
-    expect(1);
+    expect(3);
 
     this.jio.allAttachments("/id1/")
       .then(function (result) {
@@ -537,6 +585,92 @@
           attachment1: {},
           attachment2: {}
         }, "Check document");
+        deepEqual(JSON.parse(server.requests[0].requestBody), {
+          "include_deleted": false,
+          "include_has_explicit_shared_members": false,
+          "include_media_info": false,
+          "include_mounted_folders": true,
+          "path": "/id1",
+          "recursive": false
+        });
+        deepEqual(server.requests[0].requestHeaders, {
+          "Authorization": "Bearer sample_token",
+          "Content-Type": "application/json;charset=utf-8"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get document with attachment and pagination", function () {
+    var url = "https://api.dropboxapi.com/2/files/list_folder",
+      paginate_url = "https://api.dropboxapi.com/2/files/list_folder/continue",
+      server = this.server,
+      cursor = "foocursor";
+
+    this.server.respondWith("POST", url, [200, {
+      "Content-Type": "application/json"
+    }, JSON.stringify({
+      "entries": [{
+        ".tag": "file",
+        "name": "attachment1"
+      }, {
+        ".tag": "folder",
+        "name": "fold1"
+      }],
+      "has_more": true,
+      "cursor": cursor
+    })]);
+
+    this.server.respondWith("POST", paginate_url, [200, {
+      "Content-Type": "application/json"
+    }, JSON.stringify({
+      "entries": [{
+        ".tag": "file",
+        "name": "attachment2"
+      }, {
+        ".tag": "folder",
+        "name": "fold2"
+      }],
+      "has_more": false
+    })]);
+
+    stop();
+    expect(7);
+
+    this.jio.allAttachments("/id1/")
+      .then(function (result) {
+        deepEqual(result, {
+          attachment1: {},
+          attachment2: {}
+        }, "Check document");
+
+        deepEqual(server.requests[0].url, url);
+        deepEqual(JSON.parse(server.requests[0].requestBody), {
+          "include_deleted": false,
+          "include_has_explicit_shared_members": false,
+          "include_media_info": false,
+          "include_mounted_folders": true,
+          "path": "/id1",
+          "recursive": false
+        });
+        deepEqual(server.requests[0].requestHeaders, {
+          "Authorization": "Bearer sample_token",
+          "Content-Type": "application/json;charset=utf-8"
+        });
+
+        deepEqual(server.requests[1].url, paginate_url);
+        deepEqual(JSON.parse(server.requests[1].requestBody), {
+          "cursor": cursor
+        });
+        deepEqual(server.requests[1].requestHeaders, {
+          "Authorization": "Bearer sample_token",
+          "Content-Type": "application/json;charset=utf-8"
+        });
       })
       .fail(function (error) {
         ok(false, error);
@@ -558,8 +692,7 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token,
-        root : "dropbox"
+        access_token: token
       });
     },
     teardown: function () {
@@ -635,13 +768,11 @@
   });
 
   test("putAttachment document", function () {
-    var blob = new Blob(["foo"]),
-      url_put_att = "https://content.dropboxapi.com/1/files_put/dropbox"
-        + "/putAttachment1/"
-        + "attachment1?access_token=" + token,
+    var blob = new Blob(["foo"], {"type": "xapplication/foo"}),
+      url_put_att = "https://content.dropboxapi.com/2/files/upload",
       server = this.server;
 
-    this.server.respondWith("PUT", url_put_att, [204, {
+    this.server.respondWith("POST", url_put_att, [204, {
       "Content-Type": "text/xml"
     }, ""]);
 
@@ -656,12 +787,16 @@
       .then(function () {
         equal(server.requests.length, 1);
 
-        equal(server.requests[0].method, "PUT");
+        equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, url_put_att);
         equal(server.requests[0].status, 204);
         equal(server.requests[0].responseText, "");
         deepEqual(server.requests[0].requestHeaders, {
-          "Content-Type": "text/plain;charset=utf-8"
+          "Authorization": "Bearer sample_token",
+          "Content-Type": "application/octet-stream;charset=utf-8",
+          "Dropbox-API-Arg": '{"path":"/putAttachment1/attachment1",' +
+                            '"mode":"overwrite",' +
+                            '"autorename":false,"mute":false}'
         });
         equal(server.requests[0].requestBody, blob);
       })
@@ -685,8 +820,7 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token,
-        root : "dropbox"
+        access_token: token
       });
     },
     teardown: function () {
@@ -759,9 +893,7 @@
   });
 
   test("removeAttachment document", function () {
-    var url_delete = "https://api.dropboxapi.com/1/fileops/delete/" +
-      "?access_token=" + token + "&root=dropbox" +
-      "&path=%2FremoveAttachment1%2Fattachment1",
+    var url_delete = "https://api.dropboxapi.com/2/files/delete_v2",
       server = this.server;
 
     this.server.respondWith("POST", url_delete, [204, {
@@ -781,10 +913,13 @@
         equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, url_delete);
         equal(server.requests[0].status, 204);
-        equal(server.requests[0].requestBody, undefined);
+        deepEqual(JSON.parse(server.requests[0].requestBody), {
+          "path": "/removeAttachment1/attachment1"
+        });
         equal(server.requests[0].responseText, "");
         deepEqual(server.requests[0].requestHeaders, {
-          "Content-Type": "text/plain;charset=utf-8"
+          "Authorization": "Bearer sample_token",
+          "Content-Type": "application/json;charset=utf-8"
         });
       })
       .fail(function (error) {
@@ -796,6 +931,13 @@
   });
 
   test("remove inexistent attachment", function () {
+    var url_delete = "https://api.dropboxapi.com/2/files/delete_v2";
+    this.server.respondWith("POST", url_delete, [409, {
+      "Content-Type": "application/json"
+    }, JSON.stringify(
+      {error: {'.tag': 'path_lookup', 'path_lookup': {'.tag': 'not_found'}}}
+    )]);
+
     stop();
     expect(3);
 
@@ -829,8 +971,7 @@
 
       this.jio = jIO.createJIO({
         type: "dropbox",
-        access_token: token,
-        root : "dropbox"
+        access_token: token
       });
     },
     teardown: function () {
@@ -903,15 +1044,14 @@
   });
 
   test("getAttachment document", function () {
-    var url = "https://content.dropboxapi.com/1/files/dropbox/" +
-        "%2FgetAttachment1%2Fattachment1?access_token=" + token,
+    var url = "https://content.dropboxapi.com/2/files/download",
       server = this.server;
-    this.server.respondWith("GET", url, [200, {
-      "Content-Type": "text/plain"
+    this.server.respondWith("POST", url, [200, {
+      "Content-Type": "text/xplain"
     }, "foo\nbaré"]);
 
     stop();
-    expect(9);
+    expect(10);
 
     this.jio.getAttachment(
       "/getAttachment1/",
@@ -919,14 +1059,19 @@
     )
       .then(function (result) {
         equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, url);
         equal(server.requests[0].status, 200);
         equal(server.requests[0].requestBody, undefined);
         equal(server.requests[0].responseText, "foo\nbaré");
+        deepEqual(server.requests[0].requestHeaders, {
+          "Authorization": "Bearer sample_token",
+          "Content-Type": "text/plain;charset=utf-8",
+          "Dropbox-API-Arg": '{"path":"/getAttachment1/attachment1"}'
+        });
 
         ok(result instanceof Blob, "Data is Blob");
-        deepEqual(result.type, "text/plain", "Check mimetype");
+        deepEqual(result.type, "text/xplain", "Check mimetype");
         return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
@@ -942,6 +1087,14 @@
   });
 
   test("get inexistent attachment", function () {
+    var url = "https://content.dropboxapi.com/2/files/download";
+
+    this.server.respondWith("POST", url, [409, {
+      "Content-Type": "application/json"
+    }, JSON.stringify(
+      {error: {'.tag': 'path', 'path': {'.tag': 'not_found'}}}
+    )]);
+
     stop();
     expect(3);
 
