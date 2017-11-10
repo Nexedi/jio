@@ -18,7 +18,7 @@
   // Facebook Storage constructor
   /////////////////////////////////////////////////////////////////
 
-  module("Facebook Drive Storage.constructor");
+  module("FacebookStorage.constructor");
 
   test("create storage", function () {
     var jio = jIO.createJIO({
@@ -75,7 +75,7 @@
   /////////////////////////////////////////////////////////////////
   // Facebook Storage.get
   /////////////////////////////////////////////////////////////////
-  module("Facebook Storage.get", {
+  module("FacebookStorage.get", {
     setup: function () {
 
       this.server = sinon.fakeServer.create();
@@ -128,7 +128,7 @@
   /////////////////////////////////////////////////////////////////
   // Facebook Storage.allDocs
   /////////////////////////////////////////////////////////////////
-  module("Facebook Storage.allDocs", {
+  module("FacebookStorage.allDocs", {
     setup: function () {
 
       this.server = sinon.fakeServer.create();
@@ -544,73 +544,74 @@
       .always(function () {
         start();
       });
-
-    test("get all posts with limit", function () {
-      var url1 = 'https://graph.facebook.com/v2.9/sample_user_id/feed?fields' +
-          '=&limit=5&since=&access_token=' +
-          'sample_token',
-        url2 = 'https://graph.facebook.com/v2.9/sample_user_id/feed?fields' +
-          '=&limit=5&since=&access_token=' +
-          'sample_token&__paging_token=sample_paging_token',
-        body1 = '{"data": [{"created_time": "2016", "id": "1", ' +
-          '"message": "Test 1"}, {"created_time": "2016", "id": "2", ' +
-          '"message": "Test 2"}, {"created_time": "2016", "id": "3", ' +
-          '"message": "Test 3"}, {"created_time": "2016", "id": "4", ' +
-          '"message": "Test 4"}, {"created_time": "2016", "id": "5", ' +
-          '"message": "Test 5"}, {"created_time": "2016", "id": "6", ' +
-          '"message": "Test 6"}, {"created_time": "2016", "id": "7", ' +
-          '"message": "Test 7"}], "paging": {"next":"' + url2 + '", ' +
-          '"previous": null}}',
-        body2 = '{"data": [], "paging": {"next": null, "previous": null}}',
-        server = this.server,
-        return_object = {"data": {
-          "rows": [
-            {
-              "id": "3",
-              "value": {}
-            },
-            {
-              "id": "4",
-              "value":  {}
-            },
-            {
-              "id": "5",
-              "value":  {}
-            }
-          ],
-          "total_rows": 3
-        }
-          };
-      this.server.respondWith("GET", url1, [200, {
-        "Content-Type": "text/xml"
-      }, body1
-                                           ]);
-      this.server.respondWith("GET", url2, [200, {
-        "Content-Type": "text/xml"
-      }, body2
-                                           ]);
-      stop();
-      expect(10);
-
-      this.jio.allDocs({'limit': [2, 5]})
-        .then(function (result) {
-          equal(server.requests.length, 2);
-          equal(server.requests[0].method, "GET");
-          equal(server.requests[1].method, "GET");
-          equal(server.requests[0].url, url1);
-          equal(server.requests[1].url, url2);
-          equal(server.requests[0].status, 200);
-          equal(server.requests[1].status, 200);
-          equal(server.requests[0].responseText, body1);
-          equal(server.requests[1].responseText, body2);
-          deepEqual(result, return_object);
-        })
-        .fail(function (error) {
-          ok(false, error);
-        })
-        .always(function () {
-          start();
-        });
-    });
   });
+
+  test("get all posts with limit", function () {
+    var url1 = 'https://graph.facebook.com/v2.9/sample_user_id/feed?fields' +
+        '=&limit=5&since=&access_token=' +
+        'sample_token',
+      url2 = 'https://graph.facebook.com/v2.9/sample_user_id/feed?fields' +
+        '=&limit=5&since=&access_token=' +
+        'sample_token&__paging_token=sample_paging_token',
+      body1 = '{"data": [{"created_time": "2016", "id": "1", ' +
+        '"message": "Test 1"}, {"created_time": "2016", "id": "2", ' +
+        '"message": "Test 2"}, {"created_time": "2016", "id": "3", ' +
+        '"message": "Test 3"}, {"created_time": "2016", "id": "4", ' +
+        '"message": "Test 4"}, {"created_time": "2016", "id": "5", ' +
+        '"message": "Test 5"}, {"created_time": "2016", "id": "6", ' +
+        '"message": "Test 6"}, {"created_time": "2016", "id": "7", ' +
+        '"message": "Test 7"}], "paging": {"next":"' + url2 + '", ' +
+        '"previous": null}}',
+      body2 = '{"data": [], "paging": {"next": null, "previous": null}}',
+      server = this.server,
+      return_object = {"data": {
+        "rows": [
+          {
+            "id": "3",
+            "value": {}
+          },
+          {
+            "id": "4",
+            "value":  {}
+          },
+          {
+            "id": "5",
+            "value":  {}
+          }
+        ],
+        "total_rows": 3
+      }
+        };
+    this.server.respondWith("GET", url1, [200, {
+      "Content-Type": "text/xml"
+    }, body1
+                                         ]);
+    this.server.respondWith("GET", url2, [200, {
+      "Content-Type": "text/xml"
+    }, body2
+                                         ]);
+    stop();
+    expect(10);
+
+    this.jio.allDocs({'limit': [2, 5]})
+      .then(function (result) {
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[0].url, url1);
+        equal(server.requests[1].url, url2);
+        equal(server.requests[0].status, 200);
+        equal(server.requests[1].status, 200);
+        equal(server.requests[0].responseText, body1);
+        equal(server.requests[1].responseText, body2);
+        deepEqual(result, return_object);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 }(jIO, QUnit, sinon));
