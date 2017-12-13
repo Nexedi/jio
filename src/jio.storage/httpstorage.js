@@ -9,6 +9,8 @@
     } else {
       this._catch_error = false;
     }
+    // If timeout not set, use 0 for no timeout value
+    this._timeout = spec.timeout || 0;
   }
 
   HttpStorage.prototype.get = function (id) {
@@ -17,7 +19,8 @@
       .push(function () {
         return jIO.util.ajax({
           type: 'HEAD',
-          url: id
+          url: id,
+          timeout: context._timeout
         });
       })
       .push(undefined, function (error) {
@@ -67,7 +70,8 @@
         return jIO.util.ajax({
           type: 'GET',
           url: id,
-          dataType: "blob"
+          dataType: "blob",
+          timeout: context._timeout
         });
       })
       .push(undefined, function (error) {
