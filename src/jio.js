@@ -72,6 +72,12 @@
           }
         }
       }
+      if (param.timeout !== undefined && param.timeout !== 0) {
+        xhr.timeout = param.timeout;
+        xhr.ontimeout = function (e) {
+          return reject(e);
+        };
+      }
       if (typeof param.beforeSend === 'function') {
         param.beforeSend(xhr);
       }
