@@ -24,6 +24,7 @@
 
     equal(jio.__type, "http");
     deepEqual(jio.__storage._catch_error, false);
+    deepEqual(jio.__storage._timeout, 0);
   });
 
   test("Storage store catch_error", function () {
@@ -34,8 +35,18 @@
 
     equal(jio.__type, "http");
     deepEqual(jio.__storage._catch_error, true);
+    deepEqual(jio.__storage._timeout, 0);
   });
 
+  test("Storage with timeout", function () {
+    var jio = jIO.createJIO({
+      type: "http",
+      timeout: 1000
+    });
+
+    equal(jio.__type, "http");
+    deepEqual(jio.__storage._timeout, 1000);
+  });
   /////////////////////////////////////////////////////////////////
   // httpStorage.get
   /////////////////////////////////////////////////////////////////
@@ -327,6 +338,82 @@
       })
       .fail(function (error) {
         ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // httpStorage timeout set
+  /////////////////////////////////////////////////////////////////
+  module("httpStorage.timeout", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "http",
+        timeout: 1000
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("get document with timeout set", function () {
+    var id = domain + "/id1/";
+    this.server.respondWith("HEAD", id, [200, {
+      "Content-Type": "text/xml-foo"
+    }, '']);
+    stop();
+    expect(1);
+
+    this.jio.get(id)
+      .then(function (result) {
+        deepEqual(result, {
+          "Content-Type": "text/xml-foo",
+          "Status": 200
+        }, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // httpStorage request timeout
+  /////////////////////////////////////////////////////////////////
+  module("httpStorage.requesttimeout", {
+    setup: function () {
+
+      this.jio = jIO.createJIO({
+        type: "http",
+        timeout: 1
+      });
+    }
+  });
+
+  test("get document will timeout", function () {
+    var id = domain + "/id1/";
+    stop();
+    expect(3);
+
+    this.jio.get(id)
+      .then(function (result) {
+        ok(false, result);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Gateway Timeout");
+        equal(error.status_code, 504);
       })
       .always(function () {
         start();
