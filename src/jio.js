@@ -132,6 +132,9 @@
     if (obj === undefined) {
       return undefined;
     }
+    if (obj === null) {
+      return 'null';
+    }
     if (obj.constructor === Object) {
       key_list = Object.keys(obj).sort();
       result_list = [];
