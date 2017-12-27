@@ -24,6 +24,8 @@
     equal(str(Object.create(null, { x: { value: 'x', enumerable: false },
                                     y: { value: 'y', enumerable: true } })),
           '{"y":"y"}');
+    equal(str({y: "y", testnull: null}),
+          '{"testnull":null,"y":"y"}');
 
   });
 
