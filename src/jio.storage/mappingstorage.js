@@ -208,6 +208,7 @@
     this._default_mapping = {};
     this._mapping_id_memory_dict = {};
     this._attachment_list = spec.attachment_list || [];
+    this._caching_dict = {id: {}};
 
     initializeQueryAndDefaultMapping(this);
   }
@@ -226,6 +227,12 @@
   }
 
   function getSubStorageId(storage, id, doc) {
+    if (storage._caching_dict.id.hasOwnProperty(id)) {
+      return new RSVP.Queue()
+        .push(function () {
+          return storage._caching_dict.id[id];
+        });
+    }
     return new RSVP.Queue()
       .push(function () {
         var map_info = storage._map_id || ["equalSubId"];
@@ -239,6 +246,10 @@
           id,
           map_info[1]
         );
+      })
+      .push(function (sub_id) {
+        storage._caching_dict.id[id] = sub_id;
+        return sub_id;
       });
   }
 
