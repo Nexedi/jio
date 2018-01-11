@@ -17,8 +17,8 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*global jiodate*/
-(function (jIO, jiodate) {
+/*global jiodate, SimpleQuery*/
+(function (jIO, jiodate, SimpleQuery) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -479,9 +479,13 @@
       {"identifier": "a", "value": "test post", "time": "2016"},
       {"identifier": "b", "value": "test post 1", "time": "2017"},
       {"identifier": "c", "value": "test post 2016", "time": "2017"}
-    ];
+    ], lala;
     stop();
-    expect(2);
+    expect(3);
+    lala = jIO.QueryFactory.create('test post');
+    ok(lala instanceof SimpleQuery, lala);
+    /*global console */
+    console.log(lala);
     jIO.QueryFactory.create('test post').exec(doc_list).
       then(function (doc_list) {
         deepEqual(doc_list, [
@@ -710,4 +714,4 @@
       }).always(start);
   });
 
-}(jIO, jiodate));
+}(jIO, jiodate, SimpleQuery));
