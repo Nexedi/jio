@@ -18,8 +18,8 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, exports, require, module, jIO, window, test, ok,
-  deepEqual, stop, start, expect */
+/*global define, exports, require, module, jIO, SimpleQuery, window, test, ok,
+  deepEqual, ok, stop, start, expect */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -448,9 +448,13 @@
       {"identifier": "a", "value": "test post", "time": "2016"},
       {"identifier": "b", "value": "test post 1", "time": "2017"},
       {"identifier": "c", "value": "test post 2016", "time": "2017"}
-    ];
+    ], lala;
     stop();
-    expect(2);
+    expect(3);
+    lala = jIO.QueryFactory.create('test post');
+    ok(lala instanceof SimpleQuery, lala);
+    /*global console */
+    console.log(lala);
     jIO.QueryFactory.create('test post').exec(doc_list).
       then(function (doc_list) {
         deepEqual(doc_list, [
