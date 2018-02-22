@@ -193,7 +193,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 501);
         equal(error.message,
-              "Capacity 'foo' is not implemented on 'uuidstorage200'");
+              "Capacity 'foo' is not implemented on 'cloudoostorage200'");
         return true;
       }
     );
@@ -323,6 +323,37 @@
   // CryptStorage.getAttachment
   /////////////////////////////////////////////////////////////////
   module("cloudooStorage.getAttachment");
+  test("getAttachment called substorage getAttachment", function () {
+    stop();
+    expect(3);
+
+    var jio = jIO.createJIO({
+      type: "cloudoo",
+      url: cloudoo_url,
+      sub_storage: {
+        type: "cloudoostorage200"
+      }
+    }),
+      blob = new Blob([""]);
+
+    Storage200.prototype.getAttachment = function (id, name) {
+      equal(id, "bar", "getAttachment 200 called");
+      equal(name, "foo", "getAttachment 200 called");
+      return blob;
+    };
+
+    jio.getAttachment("bar", "foo")
+      .then(function (result) {
+        equal(result, blob);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("getAttachment called substorage getAttachment", function () {
     stop();
     expect(3);
