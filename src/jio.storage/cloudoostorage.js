@@ -61,7 +61,7 @@
       })
       .push(function (result) {
         var data = (new DOMParser().parseFromString(
-          result.currentTarget.response,
+          result.target.responseText,
           "application/xml"
         )),
           content = data.getElementsByTagName('string')[0].textContent;
@@ -105,7 +105,7 @@
             return convert(storage, blob, info_doc.format, format);
           })
           .push(function (blob) {
-            return storage.putAttachment(id, attachment_id + '?' + format)
+            return storage.putAttachment(id, attachment_id + '?' + format, blob)
               .push(function () {
                 info_doc.convert_dict[format] = true;
                 return storage.put(
@@ -147,7 +147,7 @@
         return RSVP.all(promise_list);
       })
       .push(function () {
-        doc_info.convert_list = {};
+        doc_info.convert_dict = {};
         return doc_info;
       });
   }
@@ -205,12 +205,15 @@
   CloudooStorage.prototype.putAttachment = function (id, attachment_id) {
     var storage = this;
     return this._sub_storage.putAttachment.apply(this._sub_storage, arguments)
-      .push(function () {
+      .push(function (result) {
         var att_id_list = attachment_id.split('?');
         if (att_id_list.length === 1) {
           return removeConvertedAttachment(storage, id, attachment_id)
             .push(function (doc_info) {
               return storage.put(getInfoDocId(id, attachment_id), doc_info);
+            })
+            .push(function () {
+              return result;
             });
         }
       });
