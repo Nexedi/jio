@@ -1,6 +1,6 @@
 /*jslint nomen: true*/
-/*global jIO, Blob*/
-(function (jIO, Blob) {
+/*global jIO, Blob, sinon*/
+(function (jIO, Blob, sinon) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -11,7 +11,7 @@
     equal = QUnit.equal,
     throws = QUnit.throws,
     module = QUnit.module,
-    cloudoo_url = 'https://softinst77579.host.vifib.net/';
+    cloudoo_url = 'https://www.cloudooo.com/';
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -258,7 +258,7 @@
   module("cloudooStorage.removeAttachment");
   test("removeAttachment called substorage removeAttachment", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var jio = jIO.createJIO({
       type: "cloudoo",
@@ -268,6 +268,19 @@
       }
     });
 
+    Storage200.prototype.get = function (id) {
+      if (id !== "bar") {
+        throw new jIO.util.jIOError('not found', 404);
+      }
+      return {};
+    };
+
+    Storage200.prototype.remove = function (id) {
+      equal(id, 'cloudoo/bar/foo', "remove 200 called");
+      return id;
+    };
+
+
     Storage200.prototype.removeAttachment = function (id, name) {
       equal(id, "bar", "removeAttachment 200 called");
       equal(name, "foo", "removeAttachment 200 called");
@@ -276,7 +289,7 @@
 
     jio.removeAttachment("bar", "foo")
       .then(function (result) {
-        equal(result, "Removed");
+        equal(result, "cloudoo/bar/foo");
       })
       .fail(function (error) {
         ok(false, error);
@@ -322,19 +335,31 @@
   /////////////////////////////////////////////////////////////////
   // CryptStorage.getAttachment
   /////////////////////////////////////////////////////////////////
-  module("cloudooStorage.getAttachment");
+  module("cloudooStorage.getAttachment", {
+
+    setup: function () {
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "cloudoo",
+        url: cloudoo_url,
+        sub_storage: {
+          type: "cloudoostorage200"
+        }
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
   test("getAttachment called substorage getAttachment", function () {
     stop();
     expect(3);
 
-    var jio = jIO.createJIO({
-      type: "cloudoo",
-      url: cloudoo_url,
-      sub_storage: {
-        type: "cloudoostorage200"
-      }
-    }),
-      blob = new Blob([""]);
+    var blob = new Blob([""]);
 
     Storage200.prototype.getAttachment = function (id, name) {
       equal(id, "bar", "getAttachment 200 called");
@@ -342,7 +367,7 @@
       return blob;
     };
 
-    jio.getAttachment("bar", "foo")
+    this.jio.getAttachment("bar", "foo")
       .then(function (result) {
         equal(result, blob);
       })
@@ -354,28 +379,71 @@
       });
   });
 
-  test("getAttachment called substorage getAttachment", function () {
+  test("getAttachment convert from docy to docx", function () {
     stop();
-    expect(3);
+    expect(10);
 
-    var jio = jIO.createJIO({
-      type: "cloudoo",
-      url: cloudoo_url,
-      sub_storage: {
-        type: "cloudoostorage200"
-      }
-    }),
-      blob = new Blob([""]);
+    var blob = new Blob(["documentauformatdocy"]),
+      server = this.server,
+      blob_convert = new Blob(["documentauformatdocx"], {type: "docx"});
+
+    this.server.respondWith("POST", cloudoo_url, [200, {
+      "Content-Type": "text/xml"
+    }, '<?xml version="1.0" encoding="UTF-8"?>' +
+      '<string>ZG9jdW1lbnRhdWZvcm1hdGRvY3g=</string>']);
 
     Storage200.prototype.getAttachment = function (id, name) {
       equal(id, "bar", "getAttachment 200 called");
-      equal(name, "foo", "getAttachment 200 called");
+      if (name === "data?docx") {
+        throw new jIO.util.jIOError("can't find", 404);
+      }
       return blob;
     };
 
-    jio.getAttachment("bar", "foo")
+    Storage200.prototype.putAttachment = function (id, att_id, blob) {
+      equal(id, "bar", "putAttachment 200 called");
+      equal(att_id, "data?docx", "putAttachment 200 called");
+      deepEqual(blob, blob_convert, "putAttachment 200 called");
+    };
+
+    Storage200.prototype.get = function (id) {
+      if (id === "cloudoo/bar/data") {
+        throw new jIO.util.jIOError("can't find", 404);
+      }
+      if (id === "bar") {
+        return {content_type: "application/x-asc-text"};
+      }
+      equal(id, "", "get 200 called");
+      return {};
+    };
+
+    Storage200.prototype.put = function (id, doc) {
+      equal(id, "cloudoo/bar/data", "put 200 called");
+      deepEqual(doc, {
+        "attachment_id": "data",
+        "convert_dict": {
+          "docx": true
+        },
+        "doc_id": "bar",
+        "format": "docy",
+        "portal_type": "Conversion Info"
+      }, "put doc 200 called");
+      return id;
+    };
+
+    this.jio.getAttachment("bar", "data?docx")
       .then(function (result) {
-        equal(result, blob);
+        equal(server.requests.length, 1);
+        equal(
+          server.requests[0].requestBody,
+          '<?xml version="1.0" encoding="UTF-8"?><methodCall>' +
+            '<methodName>convertFile</methodName><params><param><value>' +
+            '<string>ZG9jdW1lbnRhdWZvcm1hdGRvY3k=</string></value></param>' +
+            '<param><value><string>docy</string></value></param>' +
+            '<param><value><string>docx' +
+            '</string></value></param></params></methodCall>'
+        );
+        deepEqual(result, blob_convert, "check result");
       })
       .fail(function (error) {
         ok(false, error);
@@ -390,7 +458,7 @@
   module("cloudooStorage.putAttachment");
   test("putAttachment called substorage putAttachment", function () {
     stop();
-    expect(4);
+    expect(6);
 
     var jio = jIO.createJIO({
       type: "cloudoo",
@@ -401,12 +469,31 @@
     }),
       blob = new Blob([""]);
 
+    Storage200.prototype.get = function (id) {
+      if (id !== 'bar') {
+        throw new jIO.util.jIOError("can't find", 404);
+      }
+      return {};
+    };
+
     Storage200.prototype.putAttachment = function (id, name, blob2) {
       equal(id, "bar", "putAttachment 200 called");
       equal(name, "foo", "putAttachment 200 called");
       deepEqual(blob2, blob,
                 "putAttachment 200 called");
       return "OK";
+    };
+
+    Storage200.prototype.put = function (id, doc) {
+      equal(id, "cloudoo/bar/foo", "put id 200 called");
+      deepEqual(doc, {
+        "attachment_id": "foo",
+        "convert_dict": {},
+        "doc_id": "bar",
+        "format": undefined,
+        "portal_type": "Conversion Info"
+      }, "put doc 200 called");
+      return id;
     };
 
     jio.putAttachment("bar", "foo", blob)
@@ -421,4 +508,4 @@
       });
   });
 
-}(jIO, Blob));
+}(jIO, Blob, sinon));
