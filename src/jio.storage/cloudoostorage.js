@@ -1,13 +1,26 @@
 /*jslint nomen: true*/
-/*global jIO, RSVP, Blob, Uint8Array, DOMParser*/
-(function (jIO, Uint8Array, Blob, RSVP, DOMParser) {
+/*global jIO, RSVP, Blob, Uint8Array, DOMParser, XMLSerializer*/
+(function (jIO, Uint8Array, Blob, RSVP, DOMParser, XMLSerializer) {
   "use strict";
 
   var content_type_dict = {
     "application/x-asc-text": "docy",
     "application/x-asc-presentation": "",
     "application/x-asc-spreadsheet": ""
-  };
+  },
+    parser = new DOMParser(),
+    serializer = new XMLSerializer();
+
+  function newXml() {
+    return parser.parseFromString(
+      '<?xml version="1.0" encoding="UTF-8"?><methodCall>' +
+        '<methodName>convertFile</methodName><params>' +
+        '<param><value><string></string></value></param>' +
+        '<param><value><string></string></value></param>' +
+        '<param><value><string></string></value></param></params></methodCall>',
+      'text/xml'
+    );
+  }
 
   function b64toBlob(b64Data, contentType, sliceSize) {
     contentType = contentType || '';
@@ -47,28 +60,27 @@
       .push(function (result) {
         // WIP: use something cleaner
         var file = result.target.result.split('base64,')[1],
-          xml = '<?xml version="1.0" encoding="UTF-8"?><methodCall>' +
-            '<methodName>convertFile</methodName><params>' +
-            '<param><value><string>' + file + '</string></value></param>' +
-            '<param><value><string>' + from + '</string></value></param>' +
-            '<param><value><string>' + to +
-            '</string></value></param></params></methodCall>';
+          xml = newXml(),
+          string_list = xml.getElementsByTagName('string');
+        string_list[0].textContent = file;
+        string_list[1].textContent = from;
+        string_list[2].textContent = to;
         return jIO.util.ajax({
           type: 'POST',
           url: storage._url,
-          data: xml
+          data: serializer.serializeToString(xml)
         });
       })
       .push(function (result) {
-        var data = (new DOMParser().parseFromString(
+        var data = parser.parseFromString(
           result.target.responseText,
           "application/xml"
-        )),
-          content = data.getElementsByTagName('string')[0].textContent;
-        if (content !== undefined) {
-          return b64toBlob(content, to);
+        ),
+          content = data.getElementsByTagName('string');
+        if (content.length > 0) {
+          return b64toBlob(content[0].textContent, to);
         }
-        throw new jIO.util.jIOError('conversion failed', 400);
+        throw new jIO.util.jIOError('conversion failed', 404);
       });
   }
 
@@ -275,4 +287,4 @@
 
   jIO.addStorage('cloudoo', CloudooStorage);
 
-}(jIO, Uint8Array, Blob, RSVP, DOMParser));
+}(jIO, Uint8Array, Blob, RSVP, DOMParser, XMLSerializer));

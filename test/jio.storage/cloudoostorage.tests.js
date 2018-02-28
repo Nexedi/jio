@@ -381,7 +381,7 @@
 
   test("getAttachment convert from docy to docx", function () {
     stop();
-    expect(10);
+    expect(12);
 
     var blob = new Blob(["documentauformatdocy"]),
       server = this.server,
@@ -434,6 +434,8 @@
     this.jio.getAttachment("bar", "data?docx")
       .then(function (result) {
         equal(server.requests.length, 1);
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, cloudoo_url);
         equal(
           server.requests[0].requestBody,
           '<?xml version="1.0" encoding="UTF-8"?><methodCall>' +
@@ -447,6 +449,59 @@
       })
       .fail(function (error) {
         ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("getAttachment convert from docy to docx failed", function () {
+    stop();
+    expect(4);
+
+    var blob = new Blob(["documentauformatdocy"]);
+
+    this.server.respondWith("POST", cloudoo_url, [200, {
+      "Content-Type": "text/xml"
+    }, '<?xml version="1.0" encoding="UTF-8"?>']);
+
+    Storage200.prototype.getAttachment = function (id, name) {
+      equal(id, "bar", "getAttachment 200 called");
+      if (name === "data?docx") {
+        throw new jIO.util.jIOError("can't find", 404);
+      }
+      return blob;
+    };
+
+    Storage200.prototype.get = function (id) {
+      if (id === "cloudoo/bar/data") {
+        throw new jIO.util.jIOError("can't find", 404);
+      }
+      if (id === "bar") {
+        return {content_type: "application/x-asc-text"};
+      }
+      equal(id, "", "get 200 called");
+      return {};
+    };
+
+    Storage200.prototype.put = function (id, doc) {
+      equal(id, "cloudoo/bar/data", "put 200 called");
+      deepEqual(doc, {
+        "attachment_id": "data",
+        "convert_dict": {
+          "docx": false
+        },
+        "doc_id": "bar",
+        "format": "docy",
+        "portal_type": "Conversion Info"
+      }, "put doc 200 called");
+      return id;
+    };
+
+    this.jio.getAttachment("bar", "data?docx")
+      .fail(function (error) {
+        equal(error.message, "conversion failed", "check conversion failed");
+        equal(error.status_code, 404, "check error status code");
       })
       .always(function () {
         start();
