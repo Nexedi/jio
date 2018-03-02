@@ -84,7 +84,7 @@
   }
 
   function getOrCreateInfoDoc(storage, id, attachment_id) {
-    return storage.get(getInfoDocId(id, attachment_id))
+    return storage._sub_storage.get(getInfoDocId(id, attachment_id))
       .push(undefined, function (error) {
         if (error instanceof jIO.util.jIOError && error.status_code === 404) {
           return storage.get(id)
@@ -106,20 +106,24 @@
       });
   }
 
-  function convertAttachment(storage, id, attachment_id, format) {
+  function convertFromBaseFormat(storage, id, attachment_id, format) {
     var info_doc;
     return getOrCreateInfoDoc(storage, id, attachment_id)
       .push(function (doc) {
         info_doc = doc;
-        return storage.getAttachment(id, attachment_id)
+        return storage._sub_storage.getAttachment(id, attachment_id)
           .push(function (blob) {
             return convert(storage, blob, info_doc.format, format);
           })
           .push(function (blob) {
-            return storage.putAttachment(id, attachment_id + '?' + format, blob)
+            return storage._sub_storage.putAttachment(
+              id,
+              attachment_id + '?' + format,
+              blob
+            )
               .push(function () {
                 info_doc.convert_dict[format] = true;
-                return storage.put(
+                return storage._sub_storage.put(
                   getInfoDocId(id, attachment_id),
                   info_doc
                 );
@@ -129,7 +133,7 @@
               });
           }, undefined, function (error) {
             info_doc.convert_dict[format] = false;
-            return storage.put(
+            return storage._sub_storage.put(
               getInfoDocId(id, attachment_id),
               info_doc
             )
@@ -137,6 +141,25 @@
                 throw error;
               });
           });
+      });
+  }
+
+  function convertToBaseFormat(storage, id, attachment_id, format, blob) {
+    var info_doc;
+    return getOrCreateInfoDoc(storage, id, attachment_id)
+      .push(function (doc) {
+        info_doc = doc;
+        return convert(storage, blob, format, info_doc.format);
+      })
+      .push(function (blob) {
+        return storage._sub_storage.putAttachment(id, attachment_id, blob);
+      })
+      .push(function () {
+        info_doc.convert_dict[format] = true;
+        return storage._sub_storage.put(
+          getInfoDocId(id, attachment_id),
+          info_doc
+        );
       });
   }
 
@@ -150,7 +173,10 @@
           if (doc.convert_list.hasOwnProperty(format)) {
             if (doc.convert_list[format]) {
               promise_list.push(
-                storage.removeAttachment(id, attachment_id + '?' + format)
+                storage._sub_storage.removeAttachment(
+                  id,
+                  attachment_id + '?' + format
+                )
               );
             }
           }
@@ -203,7 +229,7 @@
         if (error instanceof jIO.util.jIOError &&
             error.status_code === 404 &&
             att_id_list.length > 1) {
-          return convertAttachment(
+          return convertFromBaseFormat(
             storage,
             id,
             att_id_list[0],
@@ -213,7 +239,7 @@
         throw error;
       });
   };
-  CloudooStorage.prototype.putAttachment = function (id, attachment_id) {
+  CloudooStorage.prototype.putAttachment = function (id, attachment_id, blob) {
     var storage = this;
     return this._sub_storage.putAttachment.apply(this._sub_storage, arguments)
       .push(function (result) {
@@ -221,11 +247,23 @@
         if (att_id_list.length === 1) {
           return removeConvertedAttachment(storage, id, attachment_id)
             .push(function (doc_info) {
-              return storage.put(getInfoDocId(id, attachment_id), doc_info);
+              return storage._sub_storage.put(
+                getInfoDocId(id, attachment_id),
+                doc_info
+              );
             })
             .push(function () {
               return result;
             });
+        }
+        if (att_id_list.length === 2) {
+          return convertToBaseFormat(
+            storage,
+            id,
+            att_id_list[0],
+            att_id_list[1],
+            blob
+          );
         }
       });
   };
@@ -240,7 +278,9 @@
         if (att_id_list.length === 1) {
           return removeConvertedAttachment(storage, id, attachment_id)
             .push(function () {
-              return storage.remove(getInfoDocId(id, attachment_id));
+              return storage._sub_storage.remove(
+                getInfoDocId(id, attachment_id)
+              );
             });
         }
       });
@@ -264,7 +304,7 @@
           for (format in value.convert_dict) {
             if (value.convert_dict.hasOwnProperty(format) &&
                 value.convert_dict[format] === false) {
-              promise_list.push(convertAttachment(
+              promise_list.push(convertFromBaseFormat(
                 storage,
                 value.doc_id,
                 value.attachment_id,
