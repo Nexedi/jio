@@ -72,13 +72,12 @@
         });
       })
       .push(function (result) {
-        var data = parser.parseFromString(
+        var data_list = parser.parseFromString(
           result.target.responseText,
           "application/xml"
-        ),
-          content = data.getElementsByTagName('string');
-        if (content.length > 0) {
-          return b64toBlob(content[0].textContent, to);
+        ).getElementsByTagName('string');
+        if (data_list.length) {
+          return b64toBlob(data_list[0].textContent, to);
         }
         throw new jIO.util.jIOError('conversion failed', 404);
       });
@@ -253,18 +252,18 @@
     var storage = this;
     return this._sub_storage.repair.apply(this._sub_storage, arguments)
       .push(function () {
-        return storage.allDocs({
+        return storage._sub_storage.allDocs({
           query: 'portal_type: "Conversion Info"',
-          select_list: ['convert_list', 'doc_id', 'attachment_id']
+          select_list: ['convert_dict', 'doc_id', 'attachment_id']
         });
       })
       .push(function (result) {
         var i, promise_list = [], format, value;
         for (i = 0; i < result.data.total_rows; i += 1) {
           value = result.data.rows[i].value;
-          for (format in value.convert_list) {
-            if (value.convert_list.hasOwnProperty(format) &&
-                value.convert_list[format] === false) {
+          for (format in value.convert_dict) {
+            if (value.convert_dict.hasOwnProperty(format) &&
+                value.convert_dict[format] === false) {
               promise_list.push(convertAttachment(
                 storage,
                 value.doc_id,

@@ -22,7 +22,7 @@
   jIO.addStorage('cloudoostorage200', Storage200);
 
   /////////////////////////////////////////////////////////////////
-  // CryptStorage.constructor
+  // CloudooStorage.constructor
   /////////////////////////////////////////////////////////////////
 
   module("cloudooStorage.constructor");
@@ -39,7 +39,7 @@
     equal(jio.__storage._sub_storage.__type, "cloudoostorage200");
   });
   /////////////////////////////////////////////////////////////////
-  // CryptStorage.get
+  // CloudooStorage.get
   /////////////////////////////////////////////////////////////////
   module("cloudooStorage.get");
   test("get called substorage get", function () {
@@ -73,7 +73,7 @@
       });
   });
   /////////////////////////////////////////////////////////////////
-  // CryptStorage.post
+  // CloudooStorage.post
   /////////////////////////////////////////////////////////////////
   module("cloudooStorage.post");
   test("post called substorage post", function () {
@@ -105,7 +105,7 @@
       });
   });
   /////////////////////////////////////////////////////////////////
-  // CryptStorage.put
+  // CloudooStorage.put
   /////////////////////////////////////////////////////////////////
   module("cloudooStorage.put");
   test("put called substorage put", function () {
@@ -138,7 +138,7 @@
       });
   });
   /////////////////////////////////////////////////////////////////
-  // CryptStorage.remove
+  // CloudooStorage.remove
   /////////////////////////////////////////////////////////////////
   module("cloudooStorage.remove");
   test("remove called substorage remove", function () {
@@ -170,7 +170,7 @@
       });
   });
   /////////////////////////////////////////////////////////////////
-  // CryptStorage.hasCapacity
+  // CloudooStorage.hasCapacity
   /////////////////////////////////////////////////////////////////
   module("cloudooStorage.hasCapacity");
   test("hasCapacity return substorage value", function () {
@@ -199,7 +199,7 @@
     );
   });
   /////////////////////////////////////////////////////////////////
-  // CryptStorage.buildQuery
+  // CloudooStorage.buildQuery
   /////////////////////////////////////////////////////////////////
   module("cloudooStorage.buildQuery");
 
@@ -253,7 +253,7 @@
       });
   });
   /////////////////////////////////////////////////////////////////
-  // CryptStorage.removeAttachment
+  // CloudooStorage.removeAttachment
   /////////////////////////////////////////////////////////////////
   module("cloudooStorage.removeAttachment");
   test("removeAttachment called substorage removeAttachment", function () {
@@ -299,7 +299,7 @@
       });
   });
   /////////////////////////////////////////////////////////////////
-  // CryptStorage.allAttachments
+  // CloudooStorage.allAttachments
   /////////////////////////////////////////////////////////////////
   module("cloudooStorage.allAttachments");
   test("allAttachments called substorage allAttachments", function () {
@@ -333,7 +333,7 @@
       });
   });
   /////////////////////////////////////////////////////////////////
-  // CryptStorage.getAttachment
+  // CloudooStorage.getAttachment
   /////////////////////////////////////////////////////////////////
   module("cloudooStorage.getAttachment", {
 
@@ -508,7 +508,7 @@
       });
   });
   /////////////////////////////////////////////////////////////////
-  // CryptStorage.putAttachment
+  // CloudooStorage.putAttachment
   /////////////////////////////////////////////////////////////////
   module("cloudooStorage.putAttachment");
   test("putAttachment called substorage putAttachment", function () {
@@ -554,6 +554,136 @@
     jio.putAttachment("bar", "foo", blob)
       .then(function (result) {
         equal(result, "OK");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // CloudooStorage.repair
+  /////////////////////////////////////////////////////////////////
+
+  module("cloudooStorage.repair", {
+
+    setup: function () {
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "cloudoo",
+        url: cloudoo_url,
+        sub_storage: {
+          type: "cloudoostorage200"
+        }
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("repair convert attachment", function () {
+    stop();
+    expect(14);
+
+    var blob = new Blob(["documentauformatdocy"]),
+      server = this.server,
+      blob_convert = new Blob(["documentauformatdocx"], {type: "docx"});
+
+    this.server.respondWith("POST", cloudoo_url, [200, {
+      "Content-Type": "text/xml"
+    }, '<?xml version="1.0" encoding="UTF-8"?>' +
+      '<string>ZG9jdW1lbnRhdWZvcm1hdGRvY3g=</string>']);
+
+    Storage200.prototype.repair = function () {
+      return "OK";
+    };
+
+    Storage200.prototype.hasCapacity = function () {
+      return true;
+    };
+
+    Storage200.prototype.get = function (id) {
+      equal(id, 'cloudoo/bar/data', 'check get 200 called');
+      return {
+        "attachment_id": "data",
+        "convert_dict": {
+          "docx": false
+        },
+        "doc_id": "bar",
+        "format": "docy",
+        "portal_type": "Conversion Info"
+      };
+    };
+
+    Storage200.prototype.put = function (id, doc) {
+      equal(id, "cloudoo/bar/data", "check put 200 called");
+      deepEqual(doc, {
+        "attachment_id": "data",
+        "convert_dict": {
+          "docx": true
+        },
+        "doc_id": "bar",
+        "format": "docy",
+        "portal_type": "Conversion Info"
+      }, "check put 200 called");
+    };
+
+    Storage200.prototype.getAttachment = function (id, att_id) {
+      equal(id, 'bar', "check getAttachment 200 called");
+      equal(att_id, 'data', "check getAttachment 200 called");
+      return blob;
+    };
+
+    Storage200.prototype.putAttachment = function (id, att_id, result) {
+      equal(id, 'bar', 'check putAttachment 200 called');
+      equal(att_id, 'data?docx', "check puttAttachment 200 called");
+      deepEqual(result, blob_convert, "check putAttachment 200 called");
+      return "OK";
+    };
+
+    Storage200.prototype.buildQuery = function (options) {
+      equal(
+        options.query,
+        'portal_type: "Conversion Info"',
+        "check buildQuery 200 called"
+      );
+      deepEqual(
+        options.select_list,
+        ['convert_dict', 'doc_id', 'attachment_id'],
+        'check buildQuery 200 called'
+      );
+      return [{
+        id: "bar",
+        value: {
+          'convert_dict': {'docx': false},
+          'doc_id': 'bar',
+          'attachment_id': 'data'
+        },
+        doc: {}
+      }];
+    };
+
+    this.jio.repair()
+      .then(function () {
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, cloudoo_url);
+        equal(
+          server.requests[0].requestBody,
+          '<?xml version="1.0" encoding="UTF-8"?><methodCall>' +
+            '<methodName>convertFile</methodName><params><param><value>' +
+            '<string>ZG9jdW1lbnRhdWZvcm1hdGRvY3k=</string></value></param>' +
+            '<param><value><string>docy</string></value></param>' +
+            '<param><value><string>docx' +
+            '</string></value></param></params></methodCall>'
+        );
       })
       .fail(function (error) {
         ok(false, error);
