@@ -31,7 +31,7 @@
   "dependencies": {
     "rsvp": "git+https://lab.nexedi.com/nexedi/rsvp.js.git",
     "uritemplate": "git+https://lab.nexedi.com/nexedi/uritemplate-js.git",
-    "moment": "2.13.0",
+    "moment": "2.21.0",
     "rusha": "0.8.2"
   },
   "devDependencies": {
