@@ -79,6 +79,77 @@
     }
     return result_list;
   };
+  /////////////////////////////////////////////////////////////
+  // ATOM Parser
+  /////////////////////////////////////////////////////////////
+  function ATOMParser(txt) {
+    this._dom_parser = new DOMParser().parseFromString(txt, 'text/xml');
+  }
+  ATOMParser.prototype.parseElement = function (element) {
+    var tag_element,
+      i,
+      j,
+      attribute,
+      result = {};
+
+    for (i = element.childNodes.length - 1; i >= 0; i -= 1) {
+      tag_element = element.childNodes[i];
+      if ((tag_element.nodeType === Node.ELEMENT_NODE) &&
+          (tag_element.tagName !== 'entry')) {
+        result[tag_element.tagName] = tag_element.textContent;
+
+        for (j = tag_element.attributes.length - 1; j >= 0; j -= 1) {
+          attribute = tag_element.attributes[j];
+          if (attribute.value) {
+            result[tag_element.tagName + '_' + attribute.name] =
+              attribute.value;
+            if (tag_element.tagName === 'link' &&
+                result[tag_element.tagName + '_href']) {
+              result.link = result.link_href;
+            }
+          }
+        }
+      }
+    }
+    if (result.link && result.link.startsWith('/')) {
+      result.link = 'http://' +
+        result.id.split(',')[0].substring('tag:'.length) + result.link;
+    }
+    return result;
+  };
+  ATOMParser.prototype.getDocumentList = function (include, id) {
+    var result_list,
+      item_list = this._dom_parser.querySelectorAll("feed > entry"),
+      i;
+
+    if ((id === '/0') || (id === undefined)) {
+      result_list = [{
+        id: '/0',
+        value: {}
+      }];
+      if (include) {
+        result_list[0].doc = this.parseElement(
+          this._dom_parser.querySelector("feed")
+        );
+      }
+    } else {
+      result_list = [];
+    }
+
+    for (i = 0; i < item_list.length; i += 1) {
+      if ((id === '/0/' + i) || (id === undefined)) {
+        result_list.push({
+          id: '/0/' + i,
+          value: {}
+        });
+        if (include) {
+          result_list[result_list.length - 1].doc =
+            this.parseElement(item_list[i]);
+        }
+      }
+    }
+    return result_list;
+  };
 
   /////////////////////////////////////////////////////////////
   // RSS Parser
@@ -151,7 +222,8 @@
   /////////////////////////////////////////////////////////////
   var parser_dict = {
     'rss': RSSParser,
-    'opml': OPMLParser
+    'opml': OPMLParser,
+    'atom': ATOMParser
   };
 
   function getParser(storage) {
