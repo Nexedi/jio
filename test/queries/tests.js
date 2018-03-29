@@ -594,4 +594,30 @@
           .always(start);
       });
   });*/
+
+  test('Multiple sort_on options', function () {
+    var i,
+      len = 1000,
+      doc_list = [];
+    for (i = 0; i < len; i += 1) {
+      doc_list.push({s: 'b', i: i});
+    }
+
+    stop();
+    expect(1);
+    jIO.QueryFactory.create("").exec(
+      doc_list,
+      {
+        sort_on: [['s', 'ascending'], ['i', 'ascending']],
+        limit: [0, 2]
+      }
+    )
+      .then(function (list) {
+        deepEqual(list, [
+          {s: 'b', i: 0},
+          {s: 'b', i: 1}
+        ], 'Document list is sorted');
+      }).always(start);
+  });
+
 }));
