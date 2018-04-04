@@ -232,6 +232,64 @@
     RSVP.all(promise).then(noop).always(start);
   });
 
+  test('Test key schema + jio query with sort on', function () {
+    var docList = function () {
+      return [
+        {'identifier': '10', 'number': '10'},
+        {'identifier': '2', 'number': '2'},
+        {'identifier': '19', 'number': '19'},
+        {'identifier': '100', 'number': '100'}
+      ];
+    }, test_key_schema = {
+      cast_lookup: {
+        intType: function (value) {
+          if (typeof value === 'string') {
+            return parseInt(value, 10);
+          }
+          return value;
+        }
+      },
+      key_set: {
+        number: {
+          read_from: 'number',
+          cast_to: 'intType'
+        }
+      }
+    }, promise = [];
+
+    stop();
+
+    promise.push(
+      jIO.QueryFactory.create({
+        type: 'complex',
+        operator: 'OR',
+        query_list: [{
+          type: 'simple',
+          key: 'number',
+          operator: '<',
+          value: '19'
+        }, {
+          type: 'simple',
+          key: 'number',
+          operator: '=',
+          value: '19'
+        }]
+      }, test_key_schema).
+        exec(
+          docList(),
+          {sort_on: [['number', 'ascending']]}
+        ).
+        then(function (dl) {
+          deepEqual(dl, [
+            {'identifier': '2', 'number': '2'},
+            {'identifier': '10', 'number': '10'},
+            {'identifier': '19', 'number': '19'}
+          ], 'Key schema should be propagated from complex to simple queries');
+        })
+    );
+
+    RSVP.all(promise).then(noop).always(start);
+  });
 
   test('Key Schema with translation lookup', function () {
     var docList = function () {

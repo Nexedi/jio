@@ -507,7 +507,7 @@
    * @param  {String} spec.value The value of the metadata to compare
    */
   function ComplexQuery(spec, key_schema) {
-    Query.call(this);
+    Query.call(this, key_schema);
 
     /**
      * Logical operator to use to compare object values
