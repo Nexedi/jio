@@ -179,7 +179,7 @@
       return jIO.util.readBlobAsDataURL(blob);
     })
       .push(function (strBlob) {
-        argument_list[index + 2].push(strBlob.currentTarget.result);
+        argument_list[index + 2].push(strBlob.target.result);
         return;
       });
   }

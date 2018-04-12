@@ -601,7 +601,8 @@
         then(function (dl) {
           deepEqual(dl, [
             {'identifier': 'àéîöùç'},
-            {'identifier': 'âèî ôùc'}
+            {'identifier': 'âèî ôùc'},
+            {'identifier': 'ÀÉÎÖÙÇ'}
           ], 'It should be possible to query regardless of accents');
         })
     );

@@ -40,6 +40,7 @@
    * @param  {String} [param.dataType=""] The data type to retrieve
    * @param  {String} param.url The url
    * @param  {Any} [param.data] The data to send
+   * @param  {Number} param.timeout The request timeout value
    * @param  {Function} [param.beforeSend] A function called just before the
    *    send request. The first parameter of this function is the XHR object.
    * @return {Promise} The promise
@@ -71,6 +72,12 @@
             xhr[k] = param.xhrFields[k];
           }
         }
+      }
+      if (param.timeout !== undefined && param.timeout !== 0) {
+        xhr.timeout = param.timeout;
+        xhr.ontimeout = function () {
+          return reject(new jIO.util.jIOError("Gateway Timeout", 504));
+        };
       }
       if (typeof param.beforeSend === 'function') {
         param.beforeSend(xhr);
@@ -131,6 +138,9 @@
       result_list;
     if (obj === undefined) {
       return undefined;
+    }
+    if (obj === null) {
+      return 'null';
     }
     if (obj.constructor === Object) {
       key_list = Object.keys(obj).sort();

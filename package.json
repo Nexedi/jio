@@ -1,6 +1,6 @@
 {
   "name": "jio",
-  "version": "v3.16.0",
+  "version": "v3.27.0",
   "license": "LGPLv3",
   "author": "Nexedi SA",
   "contributors": [
@@ -29,9 +29,8 @@
     "cloud"
   ],
   "dependencies": {
-    "rsvp": "git+https://lab.nexedi.com/nexedi/rsvp.js.git",
+    "rsvp": "git+https://lab.nexedi.com/romain/rsvp.js.git#wip",
     "uritemplate": "git+https://lab.nexedi.com/nexedi/uritemplate-js.git",
-    "moment": "2.13.0",
     "rusha": "0.8.2",
     "urijs": "^1.18.9",
     "xhr2": "^0.1.4",
@@ -43,9 +42,11 @@
     "stream-buffers": "^3.0.1",
     "mockdoc": "^0.0.2",
     "sinon": "~2.1.0"
+    "moment": "2.21.0",
+    "rusha": "0.8.2"
   },
   "devDependencies": {
-    "renderjs": "git+https://lab.nexedi.com/nexedi/renderjs.git",
+    "renderjs": "git+https://lab.nexedi.com/romain/renderjs.git#wip",
     "grunt": "0.4.x",
     "grunt-cli": "~0.1.11",
     "grunt-contrib-concat": "0.3.x",

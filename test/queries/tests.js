@@ -1,6 +1,6 @@
 /*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, exports, require, module, jIO, window, test, ok,
-  deepEqual, stop, start, expect */
+/*global define, exports, require, module, jIO, SimpleQuery, window, test, ok,
+  deepEqual, ok, stop, start, expect */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {
@@ -154,7 +154,8 @@
           .exec(doc_list);
       })
       .then(function (doc_list) {
-        deepEqual(doc_list, [], 'No document should be kept');
+        deepEqual(doc_list, [{"identifier": "测试一", "title": "标题"}
+          ], 'Full text query matched document should be returned');
       })
       .fail(function (error) {
         ok(false, error);
@@ -311,6 +312,316 @@
       "create(create(\"NOT(a:=b OR c:% AND d:<2)\")).toString();"
     );
 
+  });
+
+  test('Docs with space, tab, and newline', function () {
+    var doc_list = [
+      {"identifier": "a"},
+      {"identifier": "a "}
+    ];
+    stop();
+    expect(3);
+    jIO.QueryFactory.create('identifier: "%a%"').exec(
+      doc_list
+    ).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": "a"},
+        {"identifier": "a "}
+      ], 'Document with space is matched');
+
+      doc_list = [
+        {"identifier": "a"},
+        {"identifier": "a \t"}
+      ];
+
+      return jIO.QueryFactory.create('identifier: "%a%"').
+        exec(doc_list);
+    }).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": "a"},
+        {"identifier": "a \t"}
+      ], 'Document with tab is matched');
+
+      doc_list = [
+        {"identifier": "a"},
+        {"identifier": "a\n"},
+        {"identifier": "\na\nb\nc\n"}
+      ];
+
+      return jIO.QueryFactory.create('identifier: "%a%"').
+        exec(doc_list);
+    }).then(function (doc_list) {
+      deepEqual(doc_list, [
+        {"identifier": "a"},
+        {"identifier": "a\n"},
+        {"identifier": "\na\nb\nc\n"}
+      ], 'Documents with newlines are matched');
+    }).always(start);
+  });
+
+  test('Default operator for complex query', function () {
+    var doc_list = [
+      {"identifier": "a", "value": "test1", "time": "2016"},
+      {"identifier": "a", "value": "test", "time": "2016"},
+      {"identifier": "c", "value": "test1", "time": "2017"}
+    ];
+    stop();
+    expect(1);
+    jIO.QueryFactory.create('identifier:%a% value:"%test1%" time:%2016%')
+      .exec(doc_list)
+      .then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "a", "value": "test1", "time": "2016"}],
+            'Document which matches all the fields is matched');
+      }).always(start);
+  });
+
+  test('Full text query with single word', function () {
+    var doc_list = [
+      {"identifier": "a", "value": "test", "time": "2016"},
+      {"identifier": "b", "value": "test 1", "time": "2017"},
+      {"identifier": "c", "value": "test 2016", "time": "2017"}
+    ];
+    stop();
+    expect(2);
+    jIO.QueryFactory.create('test').exec(doc_list).
+      then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "a", "value": "test", "time": "2016"},
+          {"identifier": "b", "value": "test 1", "time": "2017"},
+          {"identifier": "c", "value": "test 2016", "time": "2017"}
+        ], 'Documents which have test in any column are matched');
+
+        doc_list = [
+          {"identifier": "a", "value": "test", "time": "2016"},
+          {"identifier": "b", "value": "test 1", "time": "2017"},
+          {"identifier": "c", "value": "test 2016", "time": "2017"}
+        ];
+
+        return jIO.QueryFactory.create('2016').exec(doc_list).
+          then(function (doc_list) {
+            deepEqual(doc_list, [
+              {"identifier": "a", "value": "test", "time": "2016"},
+              {"identifier": "c", "value": "test 2016", "time": "2017"}
+            ], 'Documents which have 2016 in any column are matched');
+          }).always(start);
+      });
+  });
+
+  test('Full text query with multiple words', function () {
+    var doc_list = [
+      {"identifier": "a", "value": "test post", "time": "2016"},
+      {"identifier": "b", "value": "test post 1", "time": "2017"},
+      {"identifier": "c", "value": "test post 2016", "time": "2017"}
+    ], lala;
+    stop();
+    expect(3);
+    lala = jIO.QueryFactory.create('test post');
+    ok(lala instanceof SimpleQuery, lala);
+    /*global console */
+    console.log(lala);
+    jIO.QueryFactory.create('test post').exec(doc_list).
+      then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "a", "value": "test post", "time": "2016"},
+          {"identifier": "b", "value": "test post 1", "time": "2017"},
+          {"identifier": "c", "value": "test post 2016", "time": "2017"}
+        ], 'Documents which have test post in any column are matched');
+
+        doc_list = [
+          {"identifier": "a", "value": "test post", "time": "2016"},
+          {"identifier": "b", "value": "test post 1", "time": "2017"},
+          {"identifier": "c", "value": "test post 2016", "time": "2017"}
+        ];
+
+        return jIO.QueryFactory.create('test post 2016').exec(doc_list).
+          then(function (doc_list) {
+            deepEqual(doc_list, [
+              {"identifier": "a", "value": "test post", "time": "2016"},
+              {"identifier": "c", "value": "test post 2016", "time": "2017"}
+            ], 'Documents which have test post 2016 in any column are matched');
+          }).always(start);
+      });
+  });
+
+  // Test queries which have components with key and without it.
+  // Default operator used if not present is AND.
+  test('Mixed query', function () {
+    var doc_list = [
+      {"identifier": "a", "value": "test1", "time": "2016"},
+      {"identifier": "b", "value": "test2", "time": "2017"},
+      {"identifier": "c", "value": "test3", "time": "2017"}
+    ];
+    stop();
+    expect(2);
+    jIO.QueryFactory.create('test2 time:%2017%').exec(doc_list).
+      then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "b", "value": "test2", "time": "2017"}
+        ], 'Document with test2 in any column and 2017 in time is matched');
+
+        doc_list = [
+          {"identifier": "a", "value": "test post 1", "time": "2016"},
+          {"identifier": "b", "value": "test post 2", "time": "2017"},
+          {"identifier": "c", "value": "test post 3", "time": "2018"}
+        ];
+
+        return jIO.QueryFactory.create('value:"%test post 2%" OR c OR ' +
+          '2016').exec(doc_list).
+          then(function (doc_list) {
+            deepEqual(doc_list, [
+              {"identifier": "a", "value": "test post 1", "time": "2016"},
+              {"identifier": "b", "value": "test post 2", "time": "2017"},
+              {"identifier": "c", "value": "test post 3", "time": "2018"}
+            ], 'Documents with "test post 2" in value or "c" or "2016" ' +
+              'anywhere are matched');
+          }).always(start);
+      });
+  });
+
+  test('Case insensitive queries', function () {
+    var doc_list = [
+      {"identifier": "a", "value": "Test Post", "time": "2016"},
+      {"identifier": "b", "value": "test post", "time": "2017"},
+      {"identifier": "c", "value": "test3", "time": "2018"}
+    ];
+    stop();
+    expect(2);
+    jIO.QueryFactory.create('test post').exec(doc_list).
+      then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "a", "value": "Test Post", "time": "2016"},
+          {"identifier": "b", "value": "test post", "time": "2017"}
+        ], 'Documunts with the value irrespective of case are matched');
+
+        doc_list = [
+          {"identifier": "a", "value": "Test Post", "time": "2016"},
+          {"identifier": "b", "value": "test post", "time": "2017"},
+          {"identifier": "c", "value": "test3", "time": "2018"}
+        ];
+
+        return jIO.QueryFactory.create('value:"test post"').exec(doc_list).
+          then(function (doc_list) {
+            deepEqual(doc_list, [
+              {"identifier": "b", "value": "test post", "time": "2017"}
+            ], 'If value is in quotes, only match if exactly same');
+          }).always(start);
+      });
+  });
+
+  test('Query & sort_on option', function () {
+    var doc_list = [
+      {
+        idendifier: 'a',
+        date: "Fri, 08 Sep 2017 07:46:27 +0000"
+      },
+      {
+        identifier: 'c',
+        date: "Wed, 06 Sep 2017 00:27:13 +0000"
+      },
+      {
+        identifier: 'b',
+        date: "Thu, 07 Sep 2017 18:59:23 +0000"
+      }
+    ];
+    stop();
+    expect(2);
+    jIO.QueryFactory.create("").exec(
+      doc_list,
+      {sort_on: [['date', 'descending']]}
+    ).
+      then(function (list) {
+        var key_schema =
+          {
+            key_set: {
+              date: {
+                read_from: 'date',
+                cast_to: 'dateType'
+              }
+            },
+            cast_lookup: {
+              dateType: function (str) {
+                return window.jiodate.JIODate(new Date(str).toISOString());
+              }
+            }
+          };
+        deepEqual(list, [
+          {
+            identifier: 'c',
+            date: "Wed, 06 Sep 2017 00:27:13 +0000"
+          },
+          {
+            identifier: 'b',
+            date: "Thu, 07 Sep 2017 18:59:23 +0000"
+          },
+          {
+            idendifier: 'a',
+            date: "Fri, 08 Sep 2017 07:46:27 +0000"
+          }
+        ], 'Document list is sorted');
+        return jIO.QueryFactory.create("", key_schema).exec(
+          doc_list,
+          {sort_on: [['date', 'ascending']]}
+        );
+      })
+      .then(function (list) {
+        deepEqual(list, [
+          {
+            identifier: 'c',
+            date: "Wed, 06 Sep 2017 00:27:13 +0000"
+          },
+          {
+            identifier: 'b',
+            date: "Thu, 07 Sep 2017 18:59:23 +0000"
+          },
+          {
+            idendifier: 'a',
+            date: "Fri, 08 Sep 2017 07:46:27 +0000"
+          }
+        ], 'Document list is sorted with key_schema');
+      }).always(start);
+  });
+  // Asterisk wildcard is not supported yet.
+/*  test('Full text query with asterisk', function () {
+    var doc_list = [
+      {"identifier": "abc"},
+      {"identifier": "ab"}
+    ];
+    stop();
+    expect(1);
+    jIO.QueryFactory.create('a*').exec(doc_list).
+      then(function (doc_list) {
+        deepEqual(doc_list, [
+          {"identifier": "abc"},
+          {"identifier": "ab"}
+        ], 'Documents which satisfy the asterisk wildcard should be returned')
+          .always(start);
+      });
+  });*/
+
+  test('Multiple sort_on options', function () {
+    var i,
+      len = 1000,
+      doc_list = [];
+    for (i = 0; i < len; i += 1) {
+      doc_list.push({s: 'b', i: i});
+    }
+
+    stop();
+    expect(1);
+    jIO.QueryFactory.create("").exec(
+      doc_list,
+      {
+        sort_on: [['s', 'ascending'], ['i', 'ascending']],
+        limit: [0, 2]
+      }
+    )
+      .then(function (list) {
+        deepEqual(list, [
+          {s: 'b', i: 0},
+          {s: 'b', i: 1}
+        ], 'Document list is sorted');
+      }).always(start);
   });
 
 }));

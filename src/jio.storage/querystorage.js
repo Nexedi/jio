@@ -1,7 +1,34 @@
 /*jslint nomen: true*/
-/*global RSVP*/
-(function (jIO, RSVP) {
+/*global RSVP, jiodate*/
+(function (jIO, RSVP, jiodate) {
   "use strict";
+
+  function dateType(str) {
+    return jiodate.JIODate(new Date(str).toISOString());
+  }
+
+  function initKeySchema(storage, spec) {
+    var property;
+    for (property in spec.schema) {
+      if (spec.schema.hasOwnProperty(property)) {
+        if (spec.schema[property].type === "string" &&
+            spec.schema[property].format === "date-time") {
+          storage._key_schema.key_set[property] = {
+            read_from: property,
+            cast_to: "dateType"
+          };
+          if (storage._key_schema.cast_lookup.dateType === undefined) {
+            storage._key_schema.cast_lookup.dateType = dateType;
+          }
+        } else {
+          throw new jIO.util.jIOError(
+            "Wrong schema for property: " + property,
+            400
+          );
+        }
+      }
+    }
+  }
 
   /**
    * The jIO QueryStorage extension
@@ -11,7 +38,8 @@
    */
   function QueryStorage(spec) {
     this._sub_storage = jIO.createJIO(spec.sub_storage);
-    this._key_schema = spec.key_schema;
+    this._key_schema = {key_set: {}, cast_lookup: {}};
+    initKeySchema(this, spec);
   }
 
   QueryStorage.prototype.get = function () {
@@ -211,4 +239,4 @@
 
   jIO.addStorage('query', QueryStorage);
 
-}(jIO, RSVP));
+}(jIO, RSVP, jiodate));

@@ -493,7 +493,10 @@
       })
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document");
+        equal(
+          error.message,
+          "IndexedDB: cannot find object 'inexistent' in the 'metadata' store"
+        );
         equal(error.status_code, 404);
       })
       .fail(function (error) {
@@ -679,7 +682,10 @@
       })
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document");
+        equal(
+          error.message,
+          "IndexedDB: cannot find object 'inexistent' in the 'metadata' store"
+        );
         equal(error.status_code, 404);
       })
       .fail(function (error) {
@@ -1351,6 +1357,33 @@
       });
   });
 
+  test("retrieve empty blob", function () {
+    var context = this,
+      attachment = "attachment",
+      blob = new Blob();
+    stop();
+    expect(1);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put("foo", {"title": "bar"});
+      })
+      .then(function () {
+        return context.jio.putAttachment("foo", attachment, blob);
+      })
+      .then(function () {
+        return context.jio.getAttachment("foo", attachment);
+      })
+      .then(function (result) {
+        deepEqual(result, blob, "check empty blob");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
   /////////////////////////////////////////////////////////////////
   // indexeddbStorage.removeAttachment
   /////////////////////////////////////////////////////////////////

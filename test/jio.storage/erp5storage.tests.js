@@ -13,9 +13,8 @@
     domain = "https://example.org",
     traverse_template = domain + "?mode=traverse{&relative_url,view}",
     search_template = domain + "?mode=search{&query,select_list*,limit*," +
-      "sort_on*,local_roles*}",
+      "sort_on*,local_roles*,selection_domain*}",
     add_url = domain + "lets?add=somedocument",
-    bulk_url = domain + "lets?run=bulk",
     root_hateoas = JSON.stringify({
       "_links": {
         traverse: {
@@ -30,9 +29,6 @@
       "_actions": {
         add: {
           href: add_url
-        },
-        bulk: {
-          href: bulk_url
         }
       }
     });
@@ -1179,6 +1175,7 @@
       });
   });
 
+  // Local roles tests
   test("extract simple single local_roles", function () {
     var search_url = domain + "?mode=search&" +
                      "select_list=destination&select_list=source&limit=5" +
@@ -1413,6 +1410,219 @@
       select_list: ["destination", "source"],
       query: 'portal_type:"Person" AND (local_roles:"Assignee" OR ' +
              'local_roles:"Assignor")'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [],
+            total_rows: 0
+          }
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, search_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  // Selection Domain tests
+  test("extract simple single domain", function () {
+    var search_url = domain + "?mode=search&" +
+                     "select_list=destination&select_list=source&limit=5" +
+                     "&selection_domain=%7B%22region%22%3A%22foo%2Fbar%22%7D",
+      search_hateoas = JSON.stringify({
+        "_embedded": {
+          "contents": []
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, search_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.allDocs({
+      limit: [5],
+      select_list: ["destination", "source"],
+      query: 'selection_domain_region:"foo/bar"'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [],
+            total_rows: 0
+          }
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, search_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("extract complex AND single domains", function () {
+    var search_url = domain + "?mode=search&" +
+                     "query=%28%20portal_type%3A%20%20%22Person%22%20%29&" +
+                     "select_list=destination&select_list=source&limit=5&" +
+                     "selection_domain=%7B%22group%22%3A%22bar%2Ffoo%22%7D",
+      search_hateoas = JSON.stringify({
+        "_embedded": {
+          "contents": []
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, search_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.allDocs({
+      limit: [5],
+      select_list: ["destination", "source"],
+      query: 'portal_type:"Person" AND selection_domain_group:"bar/foo"'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [],
+            total_rows: 0
+          }
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, search_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("extract complex OR single domains", function () {
+    var search_url = domain + "?mode=search&" +
+                     "query=portal_type%3A%22Person%22%20OR%20" +
+                     "selection_domain_group%3A%22bar%2Ffoo%22&" +
+                     "select_list=destination&select_list=source&limit=5",
+      search_hateoas = JSON.stringify({
+        "_embedded": {
+          "contents": []
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, search_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.allDocs({
+      limit: [5],
+      select_list: ["destination", "source"],
+      query: 'portal_type:"Person" OR selection_domain_group:"bar/foo"'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [],
+            total_rows: 0
+          }
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, search_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("extract sub multiple domains", function () {
+    var search_url = domain + "?mode=search&" +
+                     "query=%28%20portal_type%3A%20%20%22Person%22%20AND%20" +
+                     "title%3A%20%20%22atitle%22%20%29&" +
+                     "select_list=destination&select_list=source&limit=5&" +
+                     "local_roles=Assignee&" +
+                     "selection_domain=%7B%22group%22%3A%22bar%2Ffoo%22%2C" +
+                     "%22region%22%3A%22foo%2Fbar%22%7D",
+      search_hateoas = JSON.stringify({
+        "_embedded": {
+          "contents": []
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, search_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.allDocs({
+      limit: [5],
+      select_list: ["destination", "source"],
+      query: 'portal_type:"Person" AND selection_domain_group:"bar/foo" AND ' +
+             'selection_domain_region:"foo/bar" AND ' +
+             'local_roles:"Assignee" AND title:"atitle"'
     })
       .then(function (result) {
         deepEqual(result, {
@@ -1955,204 +2165,6 @@
         equal(context.spy.getCall(5).args[0], "field_your_reference",
               "Sixth append call");
         equal(context.spy.getCall(5).args[1], "bar2", "Sixth append call");
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  /////////////////////////////////////////////////////////////////
-  // erp5Storage.bulk
-  /////////////////////////////////////////////////////////////////
-  module("erp5Storage.bulk", {
-    setup: function () {
-
-      this.server = sinon.fakeServer.create();
-      this.server.autoRespond = true;
-      this.server.autoRespondAfter = 5;
-
-      this.spy = sinon.spy(FormData.prototype, "append");
-
-      this.jio = jIO.createJIO({
-        type: "erp5",
-        url: domain,
-        default_view_reference: "bar_view"
-      });
-    },
-    teardown: function () {
-      this.server.restore();
-      delete this.server;
-      this.spy.restore();
-      delete this.spy;
-    }
-  });
-
-  test("bulk get ERP5 document list", function () {
-    var id = "person_module/20150119_azerty",
-      id2 = "person_module/20150219_azerty",
-      context = this,
-      document_hateoas = JSON.stringify({
-        // Kept property
-        "title": "foo",
-        // Remove all _ properties
-        "_bar": "john doo",
-        "_links": {
-          type: {
-            name: "Person"
-          },
-          parent: {
-            href: "urn:jio:get:bar_module"
-          }
-        },
-        "_embedded": {
-          "_view": {
-            form_id: {
-              key: "form_id",
-              "default": "Base_view"
-            },
-            my_title: {
-              key: "field_my_title",
-              "default": "foo",
-              editable: true,
-              type: "StringField"
-            },
-            my_id: {
-              key: "field_my_id",
-              "default": "",
-              editable: true,
-              type: "StringField"
-            },
-            my_title_non_editable: {
-              key: "field_my_title_non_editable",
-              "default": "foo",
-              editable: false,
-              type: "StringField"
-            },
-            my_start_date: {
-              key: "field_my_start_date",
-              "default": "foo",
-              editable: true,
-              type: "DateTimeField"
-            },
-            your_reference: {
-              key: "field_your_reference",
-              "default": "bar",
-              editable: true,
-              type: "StringField"
-            },
-            your_reference_non_editable: {
-              key: "field_your_reference_non_editable",
-              "default": "bar",
-              editable: false,
-              type: "StringField"
-            },
-            sort_index: {
-              key: "field_sort_index",
-              "default": "foobar",
-              editable: true,
-              type: "StringField"
-            },
-            "_actions": {
-              put: {
-                href: "one erp5 url"
-              }
-            }
-          }
-        }
-      }),
-      document_hateoas2 = JSON.stringify({
-        // Kept property
-        "title": "foo2",
-        // Remove all _ properties
-        "_bar": "john doo2",
-        "_links": {
-          type: {
-            name: "Person"
-          }
-        },
-        "_embedded": {
-          "_view": {
-            form_id: {
-              key: "form_id",
-              "default": "Base_view"
-            },
-            "_actions": {
-              put: {
-                href: "one erp5 url"
-              }
-            }
-          }
-        }
-      }),
-      bulk_hateoas = JSON.parse(root_hateoas),
-      server = this.server;
-
-    bulk_hateoas.result_list = [
-      JSON.parse(document_hateoas),
-      JSON.parse(document_hateoas2)
-    ];
-    bulk_hateoas = JSON.stringify(bulk_hateoas);
-
-    this.server.respondWith("GET", domain, [200, {
-      "Content-Type": "application/hal+json"
-    }, root_hateoas]);
-    this.server.respondWith("POST", bulk_url, [200, {
-      "Content-Type": "application/hal+json"
-    }, bulk_hateoas]);
-
-    stop();
-    expect(15);
-
-    this.jio.bulk([{
-      method: "get",
-      parameter_list: [id]
-    }, {
-      method: "get",
-      parameter_list: [id2]
-    }])
-      .then(function (result_list) {
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, domain);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-
-        equal(server.requests[1].method, "POST");
-        equal(server.requests[1].url, bulk_url);
-        // XXX Check form data
-        ok(server.requests[1].requestBody instanceof FormData);
-
-        ok(context.spy.calledOnce, "FormData.append count " +
-           context.spy.callCount);
-        equal(context.spy.firstCall.args[0], "bulk_list", "First append call");
-        equal(context.spy.firstCall.args[1],
-              JSON.stringify([{
-            relative_url: "person_module/20150119_azerty",
-            view: "bar_view"
-          }, {
-            relative_url: "person_module/20150219_azerty",
-            view: "bar_view"
-          }]),
-              "First append call");
-
-        equal(server.requests[1].withCredentials, true);
-
-        var result = result_list[0],
-          result2 = result_list[1];
-        equal(result_list.length, 2);
-        deepEqual(result, {
-          portal_type: "Person",
-          parent_relative_url: "bar_module",
-          reference: "bar",
-          reference_non_editable: "bar",
-          title: "foo"
-        }, "Check document");
-        deepEqual(result2, {
-          portal_type: "Person"
-        }, "Check document2");
       })
       .fail(function (error) {
         ok(false, error);

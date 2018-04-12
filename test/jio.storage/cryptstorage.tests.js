@@ -458,7 +458,7 @@
       .push(function (coded) {
         var iv;
 
-        coded = coded.currentTarget.result;
+        coded = coded.target.result;
         iv = new Uint8Array(coded.slice(0, 12));
         return crypto.subtle.decrypt({name : "AES-GCM", iv : iv},
                                      decryptKey, coded.slice(12));
