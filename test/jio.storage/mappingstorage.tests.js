@@ -56,7 +56,7 @@
 
     deepEqual(
       jio.__storage._mapping_dict,
-      {"bar": ["equalSubProperty", "foo"]}
+      {"bar": ["equalSubProperty", "foo"], "otherId": ["keep"]}
     );
     deepEqual(jio.__storage._map_id, ["equalSubProperty", "otherId"]);
     equal(jio.__storage._query.query.key, "foo");
@@ -130,13 +130,14 @@
 
     Storage2713.prototype.get = function (id) {
       equal(id, "2713", "get 2713 called");
-      return {"title": "foo"};
+      return {"title": "foo", "otherId": "42"};
     };
 
     jio.get("42")
       .push(function (result) {
         deepEqual(result, {
-          "title": "foo"
+          "title": "foo",
+          "otherId": "42"
         });
       }).push(undefined, function (error) {
         ok(false, error);
@@ -169,13 +170,14 @@
 
     Storage2713.prototype.get = function (id) {
       equal(id, "2713", "get 2713 called");
-      return {"title": "foo"};
+      return {"title": "foo", "otherId": "42"};
     };
 
     jio.get("42")
       .push(function (result) {
         deepEqual(result, {
-          "title": "foo"
+          "title": "foo",
+          "otherId": "42"
         });
       }).push(undefined, function (error) {
         ok(false, error);
@@ -662,14 +664,28 @@
       }
     });
 
+    Storage2713.prototype.buildQuery = function (options) {
+      equal(options.query, 'otherId:  "bar"', "allDoc 2713 called");
+      return [];
+    };
+
     Storage2713.prototype.post = function (doc) {
       deepEqual(doc, {"title": "foo", "otherId": "bar"}, "post 2713 called");
-      return "42";
+      return "bar";
+    };
+
+    Storage2713.prototype.put = function (id, doc) {
+      equal(id, "bar", "put 2713 called");
+      deepEqual(doc, {
+        "title": "foo",
+        "otherId": "bar"
+      }, "put 2713 called");
+      return "bar";
     };
 
     jio.post({"title": "foo", "otherId": "bar"})
       .push(function (result) {
-        equal(result, "42");
+        equal(result, "bar");
       })
       .push(undefined, function (error) {
         ok(false, error);
@@ -1181,7 +1197,7 @@
         "smth": "bar"
       })
       .push(function () {
-        jio.put(
+        return jio.put(
           "2713",
           {
             "title": "bar",
@@ -1205,7 +1221,8 @@
                   "id": "42",
                   "value": {
                     "title": "foo",
-                    "smth": "bar"
+                    "smth": "bar",
+                    "otherId": "42"
                   },
                   "doc": {}
                 },
@@ -1213,7 +1230,8 @@
                   "id": "2713",
                   "value": {
                     "title": "bar",
-                    "smth": "foo"
+                    "smth": "foo",
+                    "otherId": "2713"
                   },
                   "doc": {}
                 }
@@ -1266,7 +1284,9 @@
               "rows": [
                 {
                   "id": "42",
-                  "value": {},
+                  "value": {
+                    "otherId": "42"
+                  },
                   "doc": {}
                 }
               ],
@@ -1321,7 +1341,7 @@
               "rows": [
                 {
                   "id": "42",
-                  "value": {"title": "foo", "smth": "bar"},
+                  "value": {"title": "foo", "smth": "bar", "otherId": "42"},
                   "doc": {}
                 }
               ],
@@ -1377,7 +1397,63 @@
               "rows": [
                 {
                   "id": "42",
-                  "value": {"title": "foo"},
+                  "value": {
+                    "otherId": "42",
+                    "title": "foo"
+                  },
+                  "doc": {}
+                }
+              ],
+              "total_rows": 1
+            }
+          }, "allDocs check");
+      })
+      .push(undefined, function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("with extended_search", function () {
+    stop();
+    expect(1);
+
+    var jio = jIO.createJIO({
+      type: "mapping",
+      sub_storage: {
+        type: "query",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      }
+    });
+
+    jio.put("42",
+      {
+        "title": "foo",
+        "smth": "bar"
+      })
+      .push(function () {
+        return jio.allDocs({
+          query: "foo",
+          select_list: ["title"]
+        });
+      })
+      .push(function (result) {
+        deepEqual(result,
+          {
+            "data": {
+              "rows": [
+                {
+                  "id": "42",
+                  "value": {
+                    "title": "foo"
+                  },
                   "doc": {}
                 }
               ],
@@ -1463,9 +1539,11 @@
           result,
           [{
             "title": "bar",
+            "otherId": "foo",
             "bar": "foo"
           }, {
             "title": "foo",
+            "otherId": "bar",
             "foo": "bar"
           }],
           "bulk test"
