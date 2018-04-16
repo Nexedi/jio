@@ -41,9 +41,8 @@
     "btoa": "^1.1.2",
     "stream-buffers": "^3.0.1",
     "mockdoc": "^0.0.2",
-    "sinon": "~2.1.0"
-    "moment": "2.21.0",
-    "rusha": "0.8.2"
+    "sinon": "~2.1.0",
+    "moment": "2.21.0"
   },
   "devDependencies": {
     "renderjs": "git+https://lab.nexedi.com/romain/renderjs.git#wip",
