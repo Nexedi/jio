@@ -18,3 +18,6 @@ RenderJS source code is hosted on Gitlab at [https://lab.nexedi.com/nexedi/jio](
 
 ### jIO Test
 You can run tests after installing and building jIO by opening the */test/* folder
+
+### Node.js
+This branch contains the port of jIO to nodejs. To run unit tests : grunt qunitnode
