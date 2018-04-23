@@ -36,12 +36,12 @@
 
   test("create substorage", function () {
     var jio = jIO.createJIO({
-      type: "cryptall",
+      type: "crypt",
       key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
 
-    equal(jio.__type, "cryptall");
+    equal(jio.__type, "crypt");
     equal(jio.__storage._sub_storage.__type, "cryptstorage200");
   });
 
@@ -54,7 +54,7 @@
     expect(2);
 
     var jio = jIO.createJIO({
-      type: "cryptall",
+      type: "crypt",
       key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
@@ -87,7 +87,7 @@
     expect(2);
 
     var jio = jIO.createJIO({
-      type: "cryptall",
+      type: "crypt",
       key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
@@ -120,7 +120,7 @@
     expect(2);
 
     var jio = jIO.createJIO({
-      type: "cryptall",
+      type: "crypt",
       key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
@@ -151,7 +151,7 @@
     expect(2);
 
     var jio = jIO.createJIO({
-      type: "cryptall",
+      type: "crypt",
       key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
@@ -179,7 +179,7 @@
   module("CryptStorage.hasCapacity");
   test("hasCapacity return substorage value", function () {
     var jio = jIO.createJIO({
-      type: "cryptall",
+      type: "crypt",
       key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
@@ -209,7 +209,7 @@
     expect(2);
 
     var jio = jIO.createJIO({
-      type: "cryptall",
+      type: "crypt",
       key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
@@ -242,7 +242,7 @@
     expect(3);
 
     var jio = jIO.createJIO({
-      type: "cryptall",
+      type: "crypt",
       key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
@@ -276,7 +276,7 @@
     expect(2);
 
     var jio = jIO.createJIO({
-      type: "cryptall",
+      type: "crypt",
       key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
@@ -306,7 +306,7 @@
   module("CryptStorage.getAttachment", {
     setup: function () {
       this.jio = jIO.createJIO({
-        type: "cryptall",
+        type: "crypt",
         key: userkey,
         sub_storage: {type : "cryptstorage200"}
       });
@@ -445,14 +445,14 @@
   module("CryptStorage.putAttachment", {
     setup: function () {
       this.jio = jIO.createJIO({
-        type: "cryptall",
+        type: "crypt",
         key: userkey,
         sub_storage: {type : "cryptstorage200"}
       });
     }
   });
 
-   function decodeAES(blob) {
+  function decodeAES(blob) {
     var decryptKey;
 
     return new RSVP.Queue()

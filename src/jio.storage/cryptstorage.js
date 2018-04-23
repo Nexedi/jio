@@ -24,7 +24,7 @@
     })
     .push(function (json_key) {
       var jio = jIO.createJIO({
-        type: "cryptall",
+        type: "crypt",
         key: json_key,
         sub_storage: {storage_definition}
       });
@@ -37,7 +37,7 @@
   /**
    * The JIO Cryptography Storage extension
    *
-   * @class CryptStorage_all
+   * @class CryptStorage
    * @constructor
    */
 
@@ -101,10 +101,12 @@
     return buf;
   }
 
+
+
   //function for JIO.js substorage
   //API for using String Key form user
 
-  function CryptStorage_all(spec) {
+  function CryptStorage(spec) {
     this._key = spec.key;
     this._userkey = true;
     this._sub_storage = jIO.createJIO(spec.sub_storage);
@@ -151,37 +153,38 @@
       });
   }
 
-  CryptStorage_all.prototype.get = function () {
+  CryptStorage.prototype.get = function () {
     return this._sub_storage.get.apply(this._sub_storage,
                                        arguments);
   };
 
-  CryptStorage_all.prototype.post = function () {
+  CryptStorage.prototype.post = function () {
     return this._sub_storage.post.apply(this._sub_storage,
                                         arguments);
   };
 
-  CryptStorage_all.prototype.put = function () {
+  CryptStorage.prototype.put = function () {
     return this._sub_storage.put.apply(this._sub_storage,
                                        arguments);
   };
 
-  CryptStorage_all.prototype.remove = function () {
+  CryptStorage.prototype.remove = function () {
     return this._sub_storage.remove.apply(this._sub_storage,
                                           arguments);
   };
 
-  CryptStorage_all.prototype.hasCapacity = function () {
+  CryptStorage.prototype.hasCapacity = function () {
     return this._sub_storage.hasCapacity.apply(this._sub_storage,
                                                arguments);
   };
 
-  CryptStorage_all.prototype.buildQuery = function () {
+  CryptStorage.prototype.buildQuery = function () {
     return this._sub_storage.buildQuery.apply(this._sub_storage,
                                               arguments);
   };
 
-  CryptStorage_all.prototype.putAttachment = function (id, name, blob) {
+
+  CryptStorage.prototype.putAttachment = function (id, name, blob) {
     var initializaton_vector = crypto.getRandomValues(new Uint8Array(12)),
       that = this;
 
@@ -219,8 +222,8 @@
         return that._sub_storage.putAttachment(id, name, blob);
       });
   };
-  
-  CryptStorage_all.prototype.getAttachment = function (id, name) {
+
+  CryptStorage.prototype.getAttachment = function (id, name) {
     var that = this;
 
     return that._sub_storage.getAttachment(id, name)
@@ -265,17 +268,17 @@
           });
       });
   };
-  
-  CryptStorage_all.prototype.removeAttachment = function () {
+
+  CryptStorage.prototype.removeAttachment = function () {
     return this._sub_storage.removeAttachment.apply(this._sub_storage,
                                                     arguments);
   };
 
-  CryptStorage_all.prototype.allAttachments = function () {
+  CryptStorage.prototype.allAttachments = function () {
     return this._sub_storage.allAttachments.apply(this._sub_storage,
                                                   arguments);
   };
 
-  jIO.addStorage('cryptall', CryptStorage_all);
+  jIO.addStorage('crypt', CryptStorage);
 
 }(jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer));
