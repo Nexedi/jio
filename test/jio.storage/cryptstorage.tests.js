@@ -11,9 +11,15 @@
     equal = QUnit.equal,
     throws = QUnit.throws,
     module = QUnit.module,
-    key = {"alg": "A256GCM", "ext": true,
-           "k": "seeaLzpu8dHG07bO2ANH2GywbTqs_zrs4Vq8zmtYeE4",
-           "key_ops": ["encrypt", "decrypt"], "kty": "oct"};
+    userkey = "password",
+    key_generated_by_password = {
+      "alg": "A256GCM",
+      "ext": true,
+      "k": "wBHHU4Es8IqMCnH03Jxhc1ZTQN7hzo6GkCNnbA_0kjI",
+      "key_ops": ["encrypt", "decrypt"],
+      "kty": "oct"
+    };
+
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -30,12 +36,12 @@
 
   test("create substorage", function () {
     var jio = jIO.createJIO({
-      type: "crypt",
-      key: key,
+      type: "cryptall",
+      key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
 
-    equal(jio.__type, "crypt");
+    equal(jio.__type, "cryptall");
     equal(jio.__storage._sub_storage.__type, "cryptstorage200");
   });
 
@@ -48,8 +54,8 @@
     expect(2);
 
     var jio = jIO.createJIO({
-      type: "crypt",
-      key: key,
+      type: "cryptall",
+      key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
 
@@ -81,8 +87,8 @@
     expect(2);
 
     var jio = jIO.createJIO({
-      type: "crypt",
-      key: key,
+      type: "cryptall",
+      key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
 
@@ -114,8 +120,8 @@
     expect(2);
 
     var jio = jIO.createJIO({
-      type: "crypt",
-      key: key,
+      type: "cryptall",
+      key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
 
@@ -145,8 +151,8 @@
     expect(2);
 
     var jio = jIO.createJIO({
-      type: "crypt",
-      key: key,
+      type: "cryptall",
+      key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
 
@@ -173,8 +179,8 @@
   module("CryptStorage.hasCapacity");
   test("hasCapacity return substorage value", function () {
     var jio = jIO.createJIO({
-      type: "crypt",
-      key: key,
+      type: "cryptall",
+      key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
 
@@ -203,8 +209,8 @@
     expect(2);
 
     var jio = jIO.createJIO({
-      type: "crypt",
-      key: key,
+      type: "cryptall",
+      key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
 
@@ -236,8 +242,8 @@
     expect(3);
 
     var jio = jIO.createJIO({
-      type: "crypt",
-      key: key,
+      type: "cryptall",
+      key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
 
@@ -270,8 +276,8 @@
     expect(2);
 
     var jio = jIO.createJIO({
-      type: "crypt",
-      key: key,
+      type: "cryptall",
+      key: userkey,
       sub_storage: {type : "cryptstorage200"}
     });
 
@@ -300,8 +306,8 @@
   module("CryptStorage.getAttachment", {
     setup: function () {
       this.jio = jIO.createJIO({
-        type: "crypt",
-        key: key,
+        type: "cryptall",
+        key: userkey,
         sub_storage: {type : "cryptstorage200"}
       });
     }
@@ -336,7 +342,9 @@
   test("return substorage getattachment if decrypt fails", function () {
     var id = "/",
       attachment = "stringattachment",
-      blob = new Blob(['foo'], {type: 'application/x-jio-aes-gcm-encryption'});
+      blob = new Blob(['foo'], {
+        type: 'application/x-jio-aes-gcm-encryption'
+      });
 
     Storage200.prototype.getAttachment = function (arg1, arg2) {
       equal(arg1, id, "getAttachment 200 called");
@@ -362,8 +370,9 @@
   test("return substorage getattachment if not data url", function () {
     var id = "/",
       attachment = "stringattachment",
-      blob = new Blob(['foo'],
-                       {type: 'application/x-jio-aes-gcm-encryption'});
+      blob = new Blob(['foo'], {
+        type: 'application/x-jio-aes-gcm-encryption'
+      });
 
     Storage200.prototype.getAttachment = function (arg1, arg2) {
       equal(arg1, id, "getAttachment 200 called");
@@ -390,12 +399,14 @@
     var id = "/",
       attachment = "stringattachment",
       value = "azertyuio\npàç_è-('é&",
-      tocheck = "data:application/x-jio-aes-gcm-encryption;base64" +
-        ",+p/Ho+KgGHZC2zDLMbQQS2tXcsy0g+Ho41VZnlPEkXdmG9zm36c8iLCkv" +
-        "lanyWCN510NK4hj1EgWQ6WrLS5pCmA/yeAWh+HyfPkYKDRHVBl6+Hxd53I" +
-        "TmiWQ6Vix2jaIQg==",
+      tocheck = "data:application/x-jio-aes-gcm-encryption" +
+        ";base64,2lHQ9xpJJ9qd81DxZEyd1LICtaV3XD+I2d5cp137L4NQC" +
+        "vdkasBaFkPUE5XiY88g5z0oN9dcDASfChmvgqrkDExKS+zVglvVVs" +
+        "CyECYorZ5fwgMCWAL5vUNCCaqhFVFyng==",
 
-      blob =  jIO.util.dataURItoBlob(tocheck);
+
+
+      blob = jIO.util.dataURItoBlob(tocheck);
 
 
     Storage200.prototype.getAttachment = function (arg1, arg2) {
@@ -412,7 +423,7 @@
         ok(result !== blob, "Does not return substorage result");
         ok(result instanceof Blob, "Data is Blob");
         deepEqual(result.type, "text/plain;charset=utf-8",
-                  "Check mimetype");
+          "Check mimetype");
 
         return jIO.util.readBlobAsText(result);
       })
@@ -427,26 +438,27 @@
       });
   });
 
+
   /////////////////////////////////////////////////////////////////
   // CryptStorage.putAttachment
   /////////////////////////////////////////////////////////////////
   module("CryptStorage.putAttachment", {
     setup: function () {
       this.jio = jIO.createJIO({
-        type: "crypt",
-        key: key,
+        type: "cryptall",
+        key: userkey,
         sub_storage: {type : "cryptstorage200"}
       });
     }
   });
 
-  function decodeAES(blob) {
+   function decodeAES(blob) {
     var decryptKey;
 
     return new RSVP.Queue()
       .push(function () {
-        return crypto.subtle.importKey("jwk", key,
-                                       "AES-GCM", false, ["decrypt"]);
+        return crypto.subtle.importKey("jwk", key_generated_by_password,
+          "AES-GCM", false, ["encrypt", "decrypt"]);
       })
       .push(function (res) {
         decryptKey = res;
@@ -460,11 +472,13 @@
 
         coded = coded.target.result;
         iv = new Uint8Array(coded.slice(0, 12));
-        return crypto.subtle.decrypt({name : "AES-GCM", iv : iv},
-                                     decryptKey, coded.slice(12));
+        return crypto.subtle.decrypt({
+          name: "AES-GCM",
+          iv: iv
+        },
+          decryptKey, coded.slice(12));
       })
       .push(function (arr) {
-
         arr = String.fromCharCode.apply(null, new Uint8Array(arr));
         equal(
           arr,
@@ -479,8 +493,9 @@
     var id = "/",
       attachment = "stringattachment",
       value = "azertyuio\npàç_è-('é&",
-      blob = new Blob([value],
-                      {type: 'text/foo'});
+      blob = new Blob([value], {
+        type: 'text/foo'
+      });
 
     Storage200.prototype.putAttachment = function (arg1, arg2, arg3) {
       equal(arg1, id, "putAttachment 200 called");
@@ -488,9 +503,10 @@
       ok(true, arg3 !== blob, "putAttachment 200 called");
       ok(arg3 instanceof Blob, "Data is Blob");
       equal(arg3.type, "application/x-jio-aes-gcm-encryption",
-            "Check mimetype");
+        "Check mimetype");
       return decodeAES(arg3);
     };
+
 
     stop();
     expect(7);
