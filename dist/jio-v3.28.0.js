@@ -11440,12 +11440,15 @@ return new Parser;
       })
       .push(function (evt) {
         if (evt.target.response instanceof Blob) {
-          return evt.target.response;
+         //create a new blob with type AES-GCM to decrypt back
+          var cryptblob = new Blob([evt.target.response],
+              {type: "application/x-jio-aes-gcm-encryption"});
+          return cryptblob;
         }
         return new Blob(
           [evt.target.responseText],
-          {"type": evt.target.getResponseHeader('Content-Type') ||
-            "application/octet-stream"}
+          {"type": "application/x-jio-aes-gcm-encryption"}
+          // evt.target.getResponseHeader('Content-Type') ||
         );
       }, function (error) {
         if (error.target !== undefined && error.target.status === 409) {
@@ -14408,14 +14411,7 @@ return new Parser;
         }, key, {
           "name": "AES-GCM",
           "length": 256
-        }, true, ["encrypt", "decrypt"]);
-      })
-      .push(function (res) {
-        return crypto.subtle.exportKey("jwk", res);
-      })
-      .push(function (res) {
-        return crypto.subtle.importKey("jwk", res,
-          "AES-GCM", false, ["encrypt", "decrypt"]);
+        }, false, ["encrypt", "decrypt"]);
       })
       .push(function (res) {
         that._key = res;

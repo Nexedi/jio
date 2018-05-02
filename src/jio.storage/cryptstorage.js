@@ -137,14 +137,7 @@
         }, key, {
           "name": "AES-GCM",
           "length": 256
-        }, true, ["encrypt", "decrypt"]);
-      })
-      .push(function (res) {
-        return crypto.subtle.exportKey("jwk", res);
-      })
-      .push(function (res) {
-        return crypto.subtle.importKey("jwk", res,
-          "AES-GCM", false, ["encrypt", "decrypt"]);
+        }, false, ["encrypt", "decrypt"]);
       })
       .push(function (res) {
         that._key = res;
