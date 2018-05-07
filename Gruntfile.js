@@ -75,6 +75,7 @@ module.exports = function (grunt) {
           indent: 2,
           maxerr: 3,
           predef: [
+            'DataView',
             'define',
             'exports',
             'require',

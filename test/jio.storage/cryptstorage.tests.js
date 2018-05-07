@@ -11,9 +11,15 @@
     equal = QUnit.equal,
     throws = QUnit.throws,
     module = QUnit.module,
-    key = {"alg": "A256GCM", "ext": true,
-           "k": "seeaLzpu8dHG07bO2ANH2GywbTqs_zrs4Vq8zmtYeE4",
-           "key_ops": ["encrypt", "decrypt"], "kty": "oct"};
+    key = "password",
+    key_generated_by_password = {
+      "alg": "A256GCM",
+      "ext": true,
+      "k": "wBHHU4Es8IqMCnH03Jxhc1ZTQN7hzo6GkCNnbA_0kjI",
+      "key_ops": ["encrypt", "decrypt"],
+      "kty": "oct"
+    };
+
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -362,8 +368,7 @@
   test("return substorage getattachment if not data url", function () {
     var id = "/",
       attachment = "stringattachment",
-      blob = new Blob(['foo'],
-                       {type: 'application/x-jio-aes-gcm-encryption'});
+      blob = new Blob(['foo'], {type: 'application/x-jio-aes-gcm-encryption'});
 
     Storage200.prototype.getAttachment = function (arg1, arg2) {
       equal(arg1, id, "getAttachment 200 called");
@@ -390,10 +395,12 @@
     var id = "/",
       attachment = "stringattachment",
       value = "azertyuio\npàç_è-('é&",
-      tocheck = "data:application/x-jio-aes-gcm-encryption;base64" +
-        ",+p/Ho+KgGHZC2zDLMbQQS2tXcsy0g+Ho41VZnlPEkXdmG9zm36c8iLCkv" +
-        "lanyWCN510NK4hj1EgWQ6WrLS5pCmA/yeAWh+HyfPkYKDRHVBl6+Hxd53I" +
-        "TmiWQ6Vix2jaIQg==",
+      tocheck = "data:application/x-jio-aes-gcm-encryption" +
+        ";base64,2lHQ9xpJJ9qd81DxZEyd1LICtaV3XD+I2d5cp137L4NQC" +
+        "vdkasBaFkPUE5XiY88g5z0oN9dcDASfChmvgqrkDExKS+zVglvVVs" +
+        "CyECYorZ5fwgMCWAL5vUNCCaqhFVFyng==",
+
+
 
       blob =  jIO.util.dataURItoBlob(tocheck);
 
@@ -427,6 +434,7 @@
       });
   });
 
+
   /////////////////////////////////////////////////////////////////
   // CryptStorage.putAttachment
   /////////////////////////////////////////////////////////////////
@@ -445,7 +453,7 @@
 
     return new RSVP.Queue()
       .push(function () {
-        return crypto.subtle.importKey("jwk", key,
+        return crypto.subtle.importKey("jwk", key_generated_by_password,
                                        "AES-GCM", false, ["decrypt"]);
       })
       .push(function (res) {
@@ -460,11 +468,10 @@
 
         coded = coded.target.result;
         iv = new Uint8Array(coded.slice(0, 12));
-        return crypto.subtle.decrypt({name : "AES-GCM", iv : iv},
+        return crypto.subtle.decrypt({name: "AES-GCM", iv: iv},
                                      decryptKey, coded.slice(12));
       })
       .push(function (arr) {
-
         arr = String.fromCharCode.apply(null, new Uint8Array(arr));
         equal(
           arr,
@@ -491,6 +498,7 @@
             "Check mimetype");
       return decodeAES(arg3);
     };
+
 
     stop();
     expect(7);
