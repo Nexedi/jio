@@ -12,13 +12,6 @@
     module = QUnit.module,
     throws = QUnit.throws;
 
-  /////////////////////////////////////////////////////////////////
-  // Custom test substorage definition
-  /////////////////////////////////////////////////////////////////
-  function Storage200() {
-    return this;
-  }
-  jIO.addStorage('indexeddb', Storage200);
 
   /////////////////////////////////////////////////////////////////
   // bryanStorage.constructor
@@ -28,34 +21,14 @@
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     });
 
     ok(jio.__storage._sub_storage instanceof jio.constructor);
-    equal(jio.__storage._sub_storage.__type, "indexeddb");
+    equal(jio.__storage._sub_storage.__type, "memory");
   });
 
-  test("failed on wrong schema", function () {
-    throws(
-      function () {
-        jIO.createJIO({
-          type: "bryan",
-          schema: {'date': {type: 'couscous'}},
-          sub_storage: {
-            type: "indexeddb"
-          }
-        });
-      },
-      function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.status_code, 400);
-        equal(error.message,
-              "Wrong schema for property: date");
-        return true;
-      }
-    );
-  });
 
   /////////////////////////////////////////////////////////////////
   // bryanStorage.get
@@ -65,26 +38,19 @@
     stop();
     expect(2);
 
-    // create storage of type "bryan" with indexeddb as substorage
+    // create storage of type "bryan" with memory as substorage
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     });
-
-
-    Storage200.prototype.get = function (id) {
-      equal(id, "bar", "get 200 called");
-      return {title: "foo"};
-    };
-
-    // jio.get uses the Storage200 .get() implementation defined immediately 
-    // above
+    jio.put("bar", {"title": "foo"});
     jio.get("bar")
       .then(function (result) {
         deepEqual(result, {
-          "title": "foo"
+          "title": "foo",
+          "_revision": 0
         }, "Check document");
       })
       .fail(function (error) {
@@ -93,7 +59,171 @@
       .always(function () {
         start();
       });
+
+    jio.get("bar")
+      .then(function (result) {
+        deepEqual(result, {
+          "title": "foo",
+          "_revision": 0
+        }, "Check document");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      });
+      //.always(function () {
+      //  start();
+      //});
   });
+
+  /////////////////////////////////////////////////////////////////
+  // _revision parameter initialization
+  /////////////////////////////////////////////////////////////////
+  module("bryanStorage initialize _revision");
+  test("verifying _revision updates correctly", function () {
+    stop();
+    expect(2);
+
+    // create storage of type "bryan" with memory as substorage
+    var jio = jIO.createJIO({
+      type: "bryan",
+      sub_storage: {
+        type: "memory"
+      }
+    });
+    jio.put("bar", {"title": "foo"})
+      .push(function (result) {
+        equal(result, "bar");
+        return jio.get("bar");
+      })
+      .push(function (result) {
+        deepEqual(result, {
+          "title": "foo",
+          "_revision": 0
+        }, "Check document");
+      })
+      .fail(function (error) {ok(false, error); })
+      .always(function () {start(); });
+  });
+
+
+  /////////////////////////////////////////////////////////////////
+  // _revision parameter updating with put
+  /////////////////////////////////////////////////////////////////
+  module("bryanStorage _revision with put");
+  test("verifying _revision updates correctly", function () {
+    stop();
+    expect(1);
+
+    // create storage of type "bryan" with memory as substorage
+    var jio = jIO.createJIO({
+      type: "bryan",
+      sub_storage: {type: "memory"}
+    });
+    jio.put("bar", {"title": "foo"})
+      .push(function () {return jio.put("bar", {"title2": "foo2"}); })
+      .push(function () {return jio.put("bar", {"title3": "foo3"}); })
+      .push(function () {return jio.get("bar"); })
+      .push(function (result) {
+        deepEqual(result, {
+          "title3": "foo3",
+          "_revision": 2
+        }, "Check document after initialization");
+      })
+      .fail(function (error) {ok(false, error); })
+      .always(function () {start(); });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // _revision parameter updating with putAttachment
+  /////////////////////////////////////////////////////////////////
+  module("bryanStorage _revision with putAttachment");
+  test("verifying _revision updates correctly after putAttachment",
+    function () {
+      stop();
+      expect(1);
+
+      // Create storage of type "bryan" with memory as substorage
+      var jio = jIO.createJIO({
+        type: "bryan",
+        sub_storage: {type: "memory"}
+      });
+
+      jio.put("bar", {"title": "foo"})
+
+        // Put two unique attachments in the document
+        .push(function () {
+          return jio.putAttachment(
+            "bar",
+            "blob",
+            new Blob(["text data"], {type: "text/plain"})
+          );
+        })
+        .push(function () {
+          return jio.putAttachment(
+            "bar",
+            "blob2",
+            new Blob(["more text data"], {type: "text/plain"})
+          );
+        })
+
+        // Get metadata for document
+        .push(function () {return jio.get("bar"); })
+
+        // Verify "_revision" is incremented twice
+        .push(function (result) {
+          deepEqual(result, {
+            "title": "foo",
+            "_revision": 2
+          }, "Check document after 2 revisions");
+        })
+        .fail(function (error) {ok(false, error); })
+        .always(function () {start(); });
+    }
+    );
+
+  /////////////////////////////////////////////////////////////////
+  // _revision parameter updating with removeAttachment
+  /////////////////////////////////////////////////////////////////
+  module("bryanStorage _revision with removeAttachment");
+  test("verifying _revision updates correctly after removeAttachment",
+    function () {
+      stop();
+      expect(1);
+
+      // create storage of type "bryan" with memory as substorage
+      var jio = jIO.createJIO({
+        type: "bryan",
+        sub_storage: {type: "memory"}
+      });
+
+      jio.put("bar", {"title": "foo"})
+        .push(function () {
+          return jio.putAttachment(
+            "bar",
+            "blob",
+            new Blob(["text data"], {type: "text/plain"})
+          );
+        })
+        .push(function () {
+          return jio.putAttachment(
+            "bar",
+            "blob2",
+            new Blob(["more text data"], {type: "text/plain"})
+          );
+        })
+        .push(function () {return jio.removeAttachment("bar", "blob"); })
+        .push(function () {return jio.removeAttachment("bar", "blob2"); })
+        .push(function () {return jio.get("bar"); })
+        .push(function (result) {
+          deepEqual(result, {
+            "title": "foo",
+            "_revision": 4
+          }, "Check document after 4 revisions");
+        })
+        .fail(function (error) {ok(false, error); })
+        .always(function () {start(); });
+    }
+    );
 
   /////////////////////////////////////////////////////////////////
   // bryanStorage.allAttachments
@@ -106,17 +236,12 @@
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     });
 
-    Storage200.prototype.allAttachments = function (id) {
-      equal(id, "bar", "allAttachments, 200 called");
-      return {attachmentname: {}};
-    };
-
     jio.allAttachments("bar")
-      .then(function (result) {
+      .push(function (result) {
         deepEqual(result, {
           attachmentname: {}
         }, "Check document");
@@ -129,6 +254,7 @@
       });
   });
 
+
   /////////////////////////////////////////////////////////////////
   // bryanStorage.post
   /////////////////////////////////////////////////////////////////
@@ -140,17 +266,12 @@
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     });
 
-    Storage200.prototype.post = function (param) {
-      deepEqual(param, {"title": "foo"}, "post 200 called");
-      return "youhou";
-    };
-
     jio.post({"title": "foo"})
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "youhou");
       })
       .fail(function (error) {
@@ -160,6 +281,7 @@
         start();
       });
   });
+
 
   /////////////////////////////////////////////////////////////////
   // bryanStorage.put
@@ -172,18 +294,13 @@
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     });
-    Storage200.prototype.put = function (id, param) {
-      equal(id, "bar", "put 200 called");
-      deepEqual(param, {"title": "foo"}, "put 200 called");
-      return id;
-    };
 
     // If .put does not give the appropriate return, fail assertion
     jio.put("bar", {"title": "foo"})
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "bar");
       })
       .fail(function (error) {
@@ -193,6 +310,7 @@
         start();
       });
   });
+
 
   /////////////////////////////////////////////////////////////////
   // bryanStorage.remove
@@ -205,16 +323,12 @@
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     });
-    Storage200.prototype.remove = function (id) {
-      deepEqual(id, "bar", "remove 200 called");
-      return id;
-    };
 
     jio.remove("bar")
-      .then(function (result) {
+      .push(function (result) {
         equal(result, "bar");
       })
       .fail(function (error) {
@@ -236,16 +350,10 @@
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     }),
       blob = new Blob([""]);
-
-    Storage200.prototype.getAttachment = function (id, name) {
-      equal(id, "bar", "getAttachment 200 called");
-      equal(name, "foo", "getAttachment 200 called");
-      return blob;
-    };
 
     jio.getAttachment("bar", "foo")
       .then(function (result) {
@@ -270,18 +378,10 @@
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     }),
       blob = new Blob([""]);
-
-    Storage200.prototype.putAttachment = function (id, name, blob2) {
-      equal(id, "bar", "putAttachment 200 called");
-      equal(name, "foo", "putAttachment 200 called");
-      deepEqual(blob2, blob,
-                "putAttachment 200 called");
-      return "OK";
-    };
 
     jio.putAttachment("bar", "foo", blob)
       .then(function (result) {
@@ -306,15 +406,9 @@
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     });
-
-    Storage200.prototype.removeAttachment = function (id, name) {
-      equal(id, "bar", "removeAttachment 200 called");
-      equal(name, "foo", "removeAttachment 200 called");
-      return "Removed";
-    };
 
     jio.removeAttachment("bar", "foo")
       .then(function (result) {
@@ -336,7 +430,7 @@
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     });
 
@@ -358,7 +452,7 @@
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     });
 
@@ -370,7 +464,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 501);
         equal(error.message,
-              "Capacity 'list' is not implemented on 'indexeddb'");
+              "Capacity 'list' is not implemented on 'memory'");
         return true;
       }
     );
@@ -388,7 +482,7 @@
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     });
 
@@ -403,7 +497,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 501);
         equal(error.message,
-              "Capacity 'list' is not implemented on 'indexeddb'");
+              "Capacity 'list' is not implemented on 'memory'");
       })
       .always(function () {
         start();
@@ -952,15 +1046,10 @@
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "indexeddb"
+        type: "memory"
       }
     }),
       expected_options = {foo: "bar"};
-
-    Storage200.prototype.repair = function (options) {
-      deepEqual(options, expected_options, "repair 200 called");
-      return "OK";
-    };
 
     jio.repair(expected_options)
       .then(function (result) {
