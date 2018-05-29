@@ -9,8 +9,7 @@
     expect = QUnit.expect,
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
-    module = QUnit.module,
-    throws = QUnit.throws;
+    module = QUnit.module;
 
 
   /////////////////////////////////////////////////////////////////
@@ -226,6 +225,32 @@
     );
 
   /////////////////////////////////////////////////////////////////
+  // _revision parameter updating with RSVP all
+  /////////////////////////////////////////////////////////////////
+  module("bryanStorage _revision with RSVP all");
+  test("verifying _revision updates correctly when puts are done in parallel",
+    function () {
+      stop();
+      expect(1);
+
+      // create storage of type "bryan" with memory as substorage
+      var jio = jIO.createJIO({
+        type: "bryan",
+        sub_storage: {type: "memory"}
+      });
+
+      jio.put("bar", {"title": "foo"});
+      RSVP.all(
+        jio.put("bar", {"title2": "foo2"}),
+        jio.put("bar", {"title3": "foo3"})
+      )
+        .push(function () {return jio.get("bar"); })
+        .push(function (result) {equal(result._revision, 3, "parallel exec"); })
+        .fail(function (error) {ok(false, error); })
+        .always(function () {start(); });
+    });
+
+  /////////////////////////////////////////////////////////////////
   // bryanStorage.allAttachments
   /////////////////////////////////////////////////////////////////
   module("bryanStorage.allAttachments");
@@ -423,637 +448,96 @@
   });
 
   /////////////////////////////////////////////////////////////////
-  // bryanStorage.hasCapacity
+  // bryanStorage revision history
   /////////////////////////////////////////////////////////////////
-  module("bryanStorage.hasCapacity");
-  test("hasCapacity is false by default", function () {
-    var jio = jIO.createJIO({
-      type: "bryan",
-      sub_storage: {
-        type: "memory"
-      }
-    });
-
-    throws(
-      function () {
-        jio.hasCapacity("foo");
-      },
-      function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.status_code, 501);
-        equal(error.message,
-              "Capacity 'foo' is not implemented on 'bryan'");
-        return true;
-      }
-    );
-  });
-
-  test("hasCapacity list return substorage value", function () {
-    var jio = jIO.createJIO({
-      type: "bryan",
-      sub_storage: {
-        type: "memory"
-      }
-    });
-
-    throws(
-      function () {
-        jio.hasCapacity("list");
-      },
-      function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.status_code, 501);
-        equal(error.message,
-              "Capacity 'list' is not implemented on 'memory'");
-        return true;
-      }
-    );
-  });
-
-  /////////////////////////////////////////////////////////////////
-  // bryanStorage.buildbryan
-  /////////////////////////////////////////////////////////////////
-  module("bryanStorage.buildbryan");
-
-  test("substorage should have 'list' capacity", function () {
+  module("bryanStorage revision history");
+  test("put and get the correct version", function () {
     stop();
-    expect(3);
-
+    expect(1);
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "memory"
+        type: "indexeddb",
+        database: "db_test1"
       }
     });
-
-    jio.allDocs({
-      include_docs: true,
-      bryan: 'title: "two"'
+    jio.put("doc1", {
+      "title": "rev0",
+      "subtitle": "subrev0"
     })
-      .then(function () {
-        ok(false);
+      .push(function () {return jio.get("doc1"); })
+      .push(function (result) {
+        deepEqual(result, {
+          "title": "rev0",
+          "subtitle": "subrev0",
+          "_revision": 0,
+          "id": "doc1"
+        }, "Retrieve document correctly");
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.status_code, 501);
-        equal(error.message,
-              "Capacity 'list' is not implemented on 'memory'");
+        ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("no manual bryan if substorage handle everything", function () {
+  module("bryanStorage revision history multiple edits");
+  test("modify first version but save both", function () {
     stop();
     expect(2);
-
-    function StorageAllDocsNoGet() {
-      return this;
-    }
-    StorageAllDocsNoGet.prototype.get = function () {
-      throw new Error("Unexpected get call");
-    };
-    StorageAllDocsNoGet.prototype.hasCapacity = function (capacity) {
-      if ((capacity === "list") ||
-          (capacity === "sort") ||
-          (capacity === "select") ||
-          (capacity === "limit") ||
-          (capacity === "bryan")) {
-        return true;
-      }
-      throw new Error("Unexpected " + capacity + " capacity check");
-    };
-    StorageAllDocsNoGet.prototype.buildbryan = function (options) {
-      deepEqual(options, {
-        sort_on: [["title", "ascending"]],
-        limit: [5],
-        select_list: ["title", "id"],
-        bryan: 'title: "two"'
-      },
-                "buildbryan called");
-      return "taboulet";
-    };
-
-    jIO.addStorage('bryanStoragealldocsnoget', StorageAllDocsNoGet);
-
     var jio = jIO.createJIO({
       type: "bryan",
       sub_storage: {
-        type: "bryanStoragealldocsnoget"
+        type: "indexeddb",
+        database: "db_test2"
       }
     });
-
-    jio.allDocs({
-      sort_on: [["title", "ascending"]],
-      limit: [5],
-      select_list: ["title", "id"],
-      bryan: 'title: "two"'
+    jio.put("other_doc", {
+      "attr": "version0",
+      "subattr": "subversion0"
     })
-      .then(function (result) {
+      .push(function () {
+        return jio.put("other_doc", {
+          "attr": "version1",
+          "subattr": "subversion1"
+        });
+      })
+      .push(function () {
+        return jio.put("main_doc", {
+          "title": "rev0",
+          "subtitle": "subrev0"
+        });
+      })
+      .push(function () {
+        return jio.put("main_doc", {
+          "title": "rev1",
+          "subtitle": "subrev1"
+        });
+      })
+      .push(function () {
+        return jio.put("main_doc", {
+          "title": "rev2",
+          "subtitle": "subrev2"
+        });
+      })
+      .push(function () {return jio.get("main_doc"); })
+      .push(function (result) {
         deepEqual(result, {
-          data: {
-            rows: "taboulet",
-            total_rows: 8
-          }
-        });
+          "title": "rev2",
+          "subtitle": "subrev2",
+          "_revision": 2,
+          "id": "main_doc"
+        }, "Retrieve main document correctly");
       })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("manual bryan used if substorage does not handle sort", function () {
-    stop();
-    expect(4);
-
-    function StorageNoSortCapacity() {
-      return this;
-    }
-    StorageNoSortCapacity.prototype.get = function (id) {
-      if (id === "foo") {
-        equal(id, "foo", "Get foo");
-      } else {
-        equal(id, "bar", "Get bar");
-      }
-      return {title: id, id: "ID " + id,
-              "another": "property"};
-    };
-    StorageNoSortCapacity.prototype.hasCapacity = function (capacity) {
-      if ((capacity === "list") ||
-          (capacity === "select") ||
-          (capacity === "limit") ||
-          (capacity === "bryan")) {
-        return true;
-      }
-      return false;
-    };
-    StorageNoSortCapacity.prototype.buildbryan = function (options) {
-      deepEqual(options, {}, "No bryan parameter");
-      var result2 = [{
-        id: "foo",
-        value: {}
-      }, {
-        id: "bar",
-        value: {}
-      }];
-      return result2;
-    };
-
-    jIO.addStorage('bryanStoragenosortcapacity', StorageNoSortCapacity);
-
-    var jio = jIO.createJIO({
-      type: "bryan",
-      sub_storage: {
-        type: "bryanStoragenosortcapacity"
-      }
-    });
-
-    jio.allDocs({
-      sort_on: [["title", "ascending"]],
-      limit: [0, 5],
-      select_list: ["title", "id"],
-      bryan: 'title: "foo"'
-    })
-      .then(function (result) {
+      .push(function () {return jio.get("other_doc"); })
+      .push(function (result) {
         deepEqual(result, {
-          data: {
-            rows: [{
-              id: "foo",
-              doc: {},
-              value: {
-                title: "foo",
-                id: "ID foo"
-              }
-            }],
-            total_rows: 1
-          }
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("manual bryan used if substorage does not handle select", function () {
-    stop();
-    expect(4);
-
-    function StorageNoSelectCapacity() {
-      return this;
-    }
-    StorageNoSelectCapacity.prototype.get = function (id) {
-      if (id === "foo") {
-        equal(id, "foo", "Get foo");
-      } else {
-        equal(id, "bar", "Get bar");
-      }
-      return {title: id, id: "ID " + id,
-              "another": "property"};
-    };
-    StorageNoSelectCapacity.prototype.hasCapacity = function (capacity) {
-      if ((capacity === "list") ||
-          (capacity === "sort") ||
-          (capacity === "limit") ||
-          (capacity === "bryan")) {
-        return true;
-      }
-      return false;
-    };
-    StorageNoSelectCapacity.prototype.buildbryan = function (options) {
-      deepEqual(options, {}, "No bryan parameter");
-      var result2 = [{
-        id: "foo",
-        value: {}
-      }, {
-        id: "bar",
-        value: {}
-      }];
-      return result2;
-    };
-
-    jIO.addStorage('bryanStoragenoselectcapacity', StorageNoSelectCapacity);
-
-    var jio = jIO.createJIO({
-      type: "bryan",
-      sub_storage: {
-        type: "bryanStoragenoselectcapacity"
-      }
-    });
-
-    jio.allDocs({
-      sort_on: [["title", "ascending"]],
-      limit: [0, 5],
-      select_list: ["title", "id"],
-      bryan: 'title: "foo"'
-    })
-      .then(function (result) {
-        deepEqual(result, {
-          data: {
-            rows: [{
-              id: "foo",
-              doc: {},
-              value: {
-                title: "foo",
-                id: "ID foo"
-              }
-            }],
-            total_rows: 1
-          }
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("manual bryan used if substorage does not handle limit", function () {
-    stop();
-    expect(4);
-
-    function StorageNoLimitCapacity() {
-      return this;
-    }
-    StorageNoLimitCapacity.prototype.get = function (id) {
-      if (id === "foo") {
-        equal(id, "foo", "Get foo");
-      } else {
-        equal(id, "bar", "Get bar");
-      }
-      return {title: id, id: "ID " + id,
-              "another": "property"};
-    };
-    StorageNoLimitCapacity.prototype.hasCapacity = function (capacity) {
-      if ((capacity === "list") ||
-          (capacity === "select") ||
-          (capacity === "sort") ||
-          (capacity === "bryan")) {
-        return true;
-      }
-      return false;
-    };
-    StorageNoLimitCapacity.prototype.buildbryan = function (options) {
-      deepEqual(options, {}, "No bryan parameter");
-      var result2 = [{
-        id: "foo",
-        value: {}
-      }, {
-        id: "bar",
-        value: {}
-      }];
-      return result2;
-    };
-
-    jIO.addStorage('bryanStoragenolimitcapacity', StorageNoLimitCapacity);
-
-    var jio = jIO.createJIO({
-      type: "bryan",
-      sub_storage: {
-        type: "bryanStoragenolimitcapacity"
-      }
-    });
-
-    jio.allDocs({
-      sort_on: [["title", "ascending"]],
-      limit: [0, 5],
-      select_list: ["title", "id"],
-      bryan: 'title: "foo"'
-    })
-      .then(function (result) {
-        deepEqual(result, {
-          data: {
-            rows: [{
-              id: "foo",
-              doc: {},
-              value: {
-                title: "foo",
-                id: "ID foo"
-              }
-            }],
-            total_rows: 1
-          }
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("manual bryan used if substorage does not handle bryan", function () {
-    stop();
-    expect(4);
-
-    function StorageNobryanCapacity() {
-      return this;
-    }
-    StorageNobryanCapacity.prototype.get = function (id) {
-      if (id === "foo") {
-        equal(id, "foo", "Get foo");
-      } else {
-        equal(id, "bar", "Get bar");
-      }
-      return {title: id, id: "ID " + id,
-              "another": "property"};
-    };
-    StorageNobryanCapacity.prototype.hasCapacity = function (capacity) {
-      if ((capacity === "list") ||
-          (capacity === "select") ||
-          (capacity === "limit") ||
-          (capacity === "sort")) {
-        return true;
-      }
-      return false;
-    };
-    StorageNobryanCapacity.prototype.buildbryan = function (options) {
-      deepEqual(options, {}, "No bryan parameter");
-      var result2 = [{
-        id: "foo",
-        value: {}
-      }, {
-        id: "bar",
-        value: {}
-      }];
-      return result2;
-    };
-
-    jIO.addStorage('bryanStoragenobryancapacity', StorageNobryanCapacity);
-
-    var jio = jIO.createJIO({
-      type: "bryan",
-      sub_storage: {
-        type: "bryanStoragenobryancapacity"
-      }
-    });
-
-    jio.allDocs({
-      sort_on: [["title", "ascending"]],
-      limit: [0, 5],
-      select_list: ["title", "id"],
-      bryan: 'title: "foo"'
-    })
-      .then(function (result) {
-        deepEqual(result, {
-          data: {
-            rows: [{
-              id: "foo",
-              doc: {},
-              value: {
-                title: "foo",
-                id: "ID foo"
-              }
-            }],
-            total_rows: 1
-          }
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("does not fetch doc one by one if substorage handle include_docs",
-       function () {
-      stop();
-      expect(2);
-
-      function StorageIncludeDocsCapacity() {
-        return this;
-      }
-      StorageIncludeDocsCapacity.prototype.hasCapacity = function (capacity) {
-        if ((capacity === "list") ||
-            (capacity === "include")) {
-          return true;
-        }
-        return false;
-      };
-      StorageIncludeDocsCapacity.prototype.buildbryan = function (options) {
-        deepEqual(options, {include_docs: true}, "Include docs parameter");
-        var result2 = [{
-          id: "foo",
-          value: {},
-          doc: {
-            title: "foo",
-            id: "ID foo",
-            another: "property"
-          }
-        }, {
-          id: "bar",
-          value: {},
-          doc: {
-            title: "bar",
-            id: "ID bar",
-            another: "property"
-          }
-        }];
-        return result2;
-      };
-
-      jIO.addStorage('bryanStorageincludedocscapacity',
-                     StorageIncludeDocsCapacity);
-
-      var jio = jIO.createJIO({
-        type: "bryan",
-        sub_storage: {
-          type: "bryanStorageincludedocscapacity"
-        }
-      });
-
-      jio.allDocs({
-        sort_on: [["title", "ascending"]],
-        limit: [0, 5],
-        select_list: ["title", "id"],
-        bryan: 'title: "foo"'
-      })
-        .then(function (result) {
-          deepEqual(result, {
-            data: {
-              rows: [{
-                id: "foo",
-                doc: {},
-                value: {
-                  title: "foo",
-                  id: "ID foo"
-                }
-              }],
-              total_rows: 1
-            }
-          });
-        })
-        .fail(function (error) {
-          ok(false, error);
-        })
-        .always(function () {
-          start();
-        });
-    });
-
-  test("manual bryan used and use schema", function () {
-    stop();
-    expect(4);
-
-    function StorageSchemaCapacity() {
-      return this;
-    }
-    StorageSchemaCapacity.prototype.get = function (id) {
-      var doc = {
-        title: id,
-        id: "ID " + id,
-        "another": "property"
-      };
-      if (id === "foo") {
-        equal(id, "foo", "Get foo");
-        doc.modification_date = "Fri, 08 Sep 2017 07:46:27 +0000";
-      } else {
-        equal(id, "bar", "Get bar");
-        doc.modification_date = "Thu, 07 Sep 2017 18:59:23 +0000";
-      }
-      return doc;
-    };
-
-    StorageSchemaCapacity.prototype.hasCapacity = function (capacity) {
-      if ((capacity === "list")) {
-        return true;
-      }
-      return false;
-    };
-    StorageSchemaCapacity.prototype.buildbryan = function (options) {
-      deepEqual(options, {}, "No bryan parameter");
-      var result2 = [{
-        id: "foo",
-        value: {}
-      }, {
-        id: "bar",
-        value: {}
-      }];
-      return result2;
-    };
-
-    jIO.addStorage(
-      'bryanStoragenoschemacapacity',
-      StorageSchemaCapacity
-    );
-
-    var jio = jIO.createJIO({
-      type: "bryan",
-      schema: {
-        "modification_date": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      sub_storage: {
-        type: "bryanStoragenoschemacapacity"
-      }
-    });
-
-    jio.allDocs({
-      sort_on: [["modification_date", "descending"]],
-      limit: [0, 5],
-      select_list: ['modification_date']
-    })
-      .then(function (result) {
-        deepEqual(result, {
-          data: {
-            rows: [
-              {
-                id: "foo",
-                doc: {},
-                value: {
-                  modification_date: "Fri, 08 Sep 2017 07:46:27 +0000"
-                }
-              }, {
-                id: "bar",
-                doc: {},
-                value: {
-                  modification_date: "Thu, 07 Sep 2017 18:59:23 +0000"
-                }
-              }
-            ],
-            total_rows: 2
-          }
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-  /////////////////////////////////////////////////////////////////
-  // bryanStorage.repair
-  /////////////////////////////////////////////////////////////////
-  module("bryanStorage.repair");
-  test("repair called substorage repair", function () {
-    stop();
-    expect(2);
-
-    var jio = jIO.createJIO({
-      type: "bryan",
-      sub_storage: {
-        type: "memory"
-      }
-    }),
-      expected_options = {foo: "bar"};
-
-    jio.repair(expected_options)
-      .then(function (result) {
-        equal(result, "OK");
+          "attr": "version1",
+          "subattr": "subversion1",
+          "_revision": 1,
+          "id": "other_doc"
+        }, "Retrieve other document correctly");
       })
       .fail(function (error) {
         ok(false, error);
@@ -1064,3 +548,5 @@
   });
 
 }(jIO, QUnit, Blob));
+
+
