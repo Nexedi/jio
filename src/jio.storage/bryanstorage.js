@@ -18,7 +18,6 @@
         sub_storage: spec.sub_storage
       }
     });
-
   }
 
   BryanStorage.prototype.get = function (id_in) {
@@ -28,7 +27,7 @@
         sort_on: [['_revision', 'descending']]
         //include_docs: true
       };
-    return this._sub_storage.allDocs(options)
+    return this.allDocs(options)
         // Return query results if there are any, else throw error
         .push(function (query_results) {
         var docs = query_results.data.rows;
@@ -69,6 +68,10 @@
           return storage.post(new_metadata);
         }
       );
+  };
+
+  BryanStorage.prototype.allDocs = function () {
+    return this._sub_storage.allDocs.apply(this._sub_storage, arguments);
   };
 
   BryanStorage.prototype.allAttachments = function () {
