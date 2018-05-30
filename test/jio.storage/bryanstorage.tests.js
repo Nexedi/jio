@@ -52,7 +52,6 @@
         type: "bryan",
         sub_storage: {
           type: "memory"
-          //database: "newdb4"
         }
       });
     jio.put("doc1", {
@@ -84,23 +83,22 @@
       type: "bryan",
       sub_storage: {
         type: "memory"
-        //database: "otherdb8"
       }
     });
-    jio.put("other_doc", {
-      "attr": "version0",
-      "subattr": "subversion0"
+    jio.put("main_doc", {
+      "title": "rev0",
+      "subtitle": "subrev0"
     })
+      .push(function () {
+        return jio.put("other_doc", {
+          "attr": "version0",
+          "subattr": "subversion0"
+        });
+      })
       .push(function () {
         return jio.put("other_doc", {
           "attr": "version1",
           "subattr": "subversion1"
-        });
-      })
-      .push(function () {
-        return jio.put("main_doc", {
-          "title": "rev0",
-          "subtitle": "subrev0"
         });
       })
       .push(function () {
@@ -133,8 +131,9 @@
           "_doc_id": "other_doc"
         }, "Retrieve other document correctly");
       })
+
       .push(function () {
-        return jio.allDocs({
+        return jio.buildQuery({
           query: '(_doc_id: "main_doc") AND (_revision: 0)',
           sort_on: [['_revision', 'descending']]
         });
@@ -143,7 +142,7 @@
         equal(result.length, 1, "Correct number of results returned");
       })
       .push(function () {
-        return jio.allDocs({
+        return jio.buildQuery({
           query: '(_doc_id: "main_doc") AND (_revision: 1)'
         });
       })
@@ -151,7 +150,7 @@
         equal(result.length, 1, "Correct number of results returned");
       })
       .push(function () {
-        return jio.allDocs({
+        return jio.buildQuery({
           query: '(_doc_id: "other_doc") AND (_revision: 0)'
         });
       })
@@ -159,7 +158,7 @@
         equal(result.length, 1, "Correct number of results returned");
       })
       .push(function () {
-        return jio.allDocs({
+        return jio.buildQuery({
           query: ''
         });
       })
@@ -167,6 +166,7 @@
         equal(result.length, 5, "Correct number of results returned");
       })
       .fail(function (error) {
+        //console.log(error);
         ok(false, error);
       })
       .always(function () {

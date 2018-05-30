@@ -11,6 +11,7 @@
    */
   function BryanStorage(spec) {
     //this._sub_storage = jIO.createJIO(spec.sub_storage);
+
     this._sub_storage = jIO.createJIO({
       type: "query",
       sub_storage: {
@@ -27,7 +28,7 @@
         sort_on: [['_revision', 'descending']]
         //include_docs: true
       };
-    return this.allDocs(options)
+    return substorage.allDocs(options)
         // Return query results if there are any, else throw error
         .push(function (query_results) {
         var docs = query_results.data.rows;
@@ -70,8 +71,9 @@
       );
   };
 
-  BryanStorage.prototype.allDocs = function () {
-    return this._sub_storage.allDocs.apply(this._sub_storage, arguments);
+  BryanStorage.prototype.allDocs = function (options) {
+    //console.log(options);
+    return this._sub_storage.allDocs.apply(this._sub_storage, options);
   };
 
   BryanStorage.prototype.allAttachments = function () {
@@ -134,8 +136,8 @@
   BryanStorage.prototype.repair = function () {
     return this._sub_storage.repair.apply(this._sub_storage, arguments);
   };
-  BryanStorage.prototype.hasCapacity = function (name) {
-    return this._sub_storage.removeAttachment.apply(this._sub_storage, name);
+  BryanStorage.prototype.hasCapacity = function () {
+    return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
   };
   BryanStorage.prototype.buildQuery = function () {
     return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
