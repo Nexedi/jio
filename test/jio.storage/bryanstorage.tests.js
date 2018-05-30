@@ -13,23 +13,6 @@
 
 
   /////////////////////////////////////////////////////////////////
-  // bryanStorage.constructor
-  /////////////////////////////////////////////////////////////////
-  module("bryanStorage.constructor");
-  test("accept parameters", function () {
-    var jio = jIO.createJIO({
-      type: "bryan",
-      sub_storage: {
-        type: "memory"
-      }
-    });
-
-    ok(jio.__storage._sub_storage instanceof jio.constructor);
-    equal(jio.__storage._sub_storage.__type, "memory");
-  });
-
-
-  /////////////////////////////////////////////////////////////////
   // _revision parameter updating with RSVP all
   /////////////////////////////////////////////////////////////////
   /**
