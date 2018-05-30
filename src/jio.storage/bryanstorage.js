@@ -10,54 +10,46 @@
    * @constructor
    */
   function BryanStorage(spec) {
-    this._sub_storage = jIO.createJIO(spec.sub_storage);
+    //this._sub_storage = jIO.createJIO(spec.sub_storage);
+    this._sub_storage = jIO.createJIO({
+      type: "query",
+      sub_storage: {
+        type: "uuid",
+        sub_storage: spec.sub_storage
+      }
+    });
+
   }
 
   BryanStorage.prototype.get = function (id_in) {
-    var options = {
-      //query: 'id: "' + id_in + '"',
-      //sort_on: [['_revision', 'descending']],
-      //id: "tmp",
-      include_docs: true
-    };
+    var substorage = this._sub_storage,
+      options = {
+        query: '(_doc_id: "' + id_in + '")',// AND (include_docs: true)',
+        sort_on: [['_revision', 'descending']]
+        //include_docs: true
+      };
     return this._sub_storage.allDocs(options)
-
-      // Return document with most recent revision
-      .push(function (results) {
-        //<0 => a < b
-        var sorted_results = results.data.rows.sort(function (a, b) {
-          if (b.doc.id !== id_in || !b) {return -1; }
-          if (a.doc.id !== id_in || !a) {return 1; }
-          return b.doc._revision - a.doc._revision;
-        });
-        if (sorted_results.length > 0 && sorted_results[0].doc.id === id_in) {
-          return sorted_results[0].doc;
+        // Return query results if there are any, else throw error
+        .push(function (query_results) {
+        var docs = query_results.data.rows;
+        if (docs.length > 0) {
+          return substorage.get(docs[0].id);
         }
-        return [];
+        throw new jIO.util.jIOError(
+          "bryanstorage: cannot find object '" + id_in + "'",
+          404
+        );
       });
   };
 
-
-  // Not implemented for IndexedDB
   BryanStorage.prototype.post = function (metadata) {
-
-    function S4() {
-      return ('0000' + Math.floor(
-        Math.random() * 0x10000 // 65536
-      ).toString(16)).slice(-4);
-    }
-    var id = S4() + S4() + "-" +
-        S4() + "-" +
-        S4() + "-" +
-        S4() + "-" +
-        S4() + S4() + S4();
-
-    return this._sub_storage.put(id, metadata);
+    // Uses UuidStorage post
+    return this._sub_storage.post(metadata);
   };
 
   BryanStorage.prototype.put = function (id, new_metadata) {
     var storage = this;
-    new_metadata.id = id;
+    new_metadata._doc_id = id;
     return storage.get(id)
       .push(
         function (metadata) {

@@ -455,12 +455,12 @@
     stop();
     expect(1);
     var jio = jIO.createJIO({
-      type: "bryan",
-      sub_storage: {
-        type: "indexeddb",
-        database: "db_test1"
-      }
-    });
+        type: "bryan",
+        sub_storage: {
+          type: "indexeddb",
+          database: "newdb4"
+        }
+      });
     jio.put("doc1", {
       "title": "rev0",
       "subtitle": "subrev0"
@@ -471,7 +471,7 @@
           "title": "rev0",
           "subtitle": "subrev0",
           "_revision": 0,
-          "id": "doc1"
+          "_doc_id": "doc1"
         }, "Retrieve document correctly");
       })
       .fail(function (error) {
@@ -490,7 +490,7 @@
       type: "bryan",
       sub_storage: {
         type: "indexeddb",
-        database: "db_test2"
+        database: "otherdb5"
       }
     });
     jio.put("other_doc", {
@@ -527,7 +527,7 @@
           "title": "rev2",
           "subtitle": "subrev2",
           "_revision": 2,
-          "id": "main_doc"
+          "_doc_id": "main_doc"
         }, "Retrieve main document correctly");
       })
       .push(function () {return jio.get("other_doc"); })
@@ -536,7 +536,7 @@
           "attr": "version1",
           "subattr": "subversion1",
           "_revision": 1,
-          "id": "other_doc"
+          "_doc_id": "other_doc"
         }, "Retrieve other document correctly");
       })
       .fail(function (error) {
