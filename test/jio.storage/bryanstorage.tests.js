@@ -47,11 +47,28 @@
   module("bryanStorage.revision_history");
   test("put and get the correct version", function () {
     stop();
-    expect(1);
-    var jio = jIO.createJIO({
+    expect(4);
+    var dbname = "testingdb4",
+      jio = jIO.createJIO({
         type: "bryan",
         sub_storage: {
-          type: "memory"
+          type: "uuid",
+          sub_storage: {
+            //type: "memory"
+            type: "indexeddb",
+            database: dbname
+          }
+        }
+      }),
+      not_bryan = jIO.createJIO({
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            //type: "memory"
+            type: "indexeddb",
+            database: dbname
+          }
         }
       });
     jio.put("doc1", {
@@ -62,12 +79,81 @@
       .push(function (result) {
         deepEqual(result, {
           "title": "rev0",
+          "subtitle": "subrev0"
+        }, "Retrieve first edition of document correctly");
+      })
+      .push(function () {
+        return jio.put("doc1", {
+          "title": "rev1",
+          "subtitle": "subrev1"
+        });
+      })
+      .push(function () {
+        return jio.put("doc1", {
+          "title": "rev2",
+          "subtitle": "subrev2"
+        });
+      })
+      .push(function () {
+        return jio.get("doc1");
+      })
+      .push(function (result) {
+        deepEqual(result, {
+          "title": "rev2",
+          "subtitle": "subrev2"
+        }, "Retrieve second edition of document correctly");
+      })
+      .push(function () {
+        var options = {
+          //query: ""//title: rev2"
+        };
+        //
+        //
+        return jio.buildQuery(options);
+        //return jio.allDocs(options);
+        //
+        //
+      })
+      .push(function (results) {
+        console.log("query results: ", results);
+        equal(results.data.rows.length, 1, "Query only returns latest version");
+        if (results.data.rows.length > 0) {
+          return jio.get(results.data.rows[0].id);
+        }
+      })
+      .push(function (result) {
+        deepEqual(result, {
+          "title": "rev2",
+          "subtitle": "subrev2"
+        }, "Retrieve queried document correctly");
+      })
+
+      // When not_bryan queries the storage, all documents are returned.
+      .push(function () {
+        var options = {
+          query: "",
+          sort_on: [["_revision", "ascending"]]
+        };
+        return jio.allDocs(options);
+      })
+      .push(function (results) {
+        equal(results.length, 2, "should get all 2 revisions.");
+        if (results.length > 0) {
+          return not_bryan.get(results[0].id);
+        }
+      })
+      .push(function (results) {
+        deepEqual(results, {
+          "title": "rev0",
           "subtitle": "subrev0",
+          "_doc_id": "doc1",
           "_revision": 0,
-          "_doc_id": "doc1"
-        }, "Retrieve document correctly");
+          "_deprecated": true
+        },
+          "Get the earliest copy of the doc with all metadata.");
       })
       .fail(function (error) {
+        console.log(error);
         ok(false, error);
       })
       .always(function () {
@@ -78,13 +164,24 @@
   module("bryanStorage.revision_history_multiple_edits");
   test("modify first version but save both", function () {
     stop();
-    expect(6);
+    expect(7);
     var jio = jIO.createJIO({
-      type: "bryan",
-      sub_storage: {
-        type: "memory"
-      }
-    });
+        type: "bryan",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "indexeddb",
+            database: "testdb1"
+          }
+        }
+      }),
+      not_bryan = jIO.createJIO({
+        type: "uuid",
+        sub_storage: {
+          type: "indexeddb",
+          database: "testdb1"
+        }
+      });
     jio.put("main_doc", {
       "title": "rev0",
       "subtitle": "subrev0"
@@ -113,49 +210,67 @@
           "subtitle": "subrev2"
         });
       })
+      .push(function () {
+        return jio.put("main_doc", {
+          "title": "rev3",
+          "subtitle": "subrev3"
+        });
+      })
       .push(function () {return jio.get("main_doc"); })
       .push(function (result) {
         deepEqual(result, {
-          "title": "rev2",
-          "subtitle": "subrev2",
-          "_revision": 2,
-          "_doc_id": "main_doc"
+          "title": "rev3",
+          "subtitle": "subrev3"
         }, "Retrieve main document correctly");
       })
       .push(function () {return jio.get("other_doc"); })
       .push(function (result) {
         deepEqual(result, {
           "attr": "version1",
-          "subattr": "subversion1",
-          "_revision": 1,
-          "_doc_id": "other_doc"
+          "subattr": "subversion1"
         }, "Retrieve other document correctly");
       })
-
       .push(function () {
         return jio.buildQuery({
-          query: '(_doc_id: "main_doc") AND (_revision: 0)',
-          sort_on: [['_revision', 'descending']]
+          query: ""
         });
       })
       .push(function (result) {
-        equal(result.length, 1, "Correct number of results returned");
+        //console.log(result);
+        equal(result.length, 2, "Empty query returns only non-deprecated docs");
       })
       .push(function () {
         return jio.buildQuery({
-          query: '(_doc_id: "main_doc") AND (_revision: 1)'
+          query: 'attr: "version1"'
         });
       })
       .push(function (result) {
-        equal(result.length, 1, "Correct number of results returned");
+        //console.log("res:", result);
+        if (result.length > 0) {
+          return jio.get(result[0].id);
+        }
+      })
+      .push(function (result) {
+        deepEqual(result, {
+          "attr": "version1",
+          "subattr": "subversion1"
+        }, "Retrieve other document correctly");
       })
       .push(function () {
         return jio.buildQuery({
-          query: '(_doc_id: "other_doc") AND (_revision: 0)'
+          query: '(_doc_id: "other_doc")'
         });
       })
       .push(function (result) {
-        equal(result.length, 1, "Correct number of results returned");
+        equal(result.length, 0, "Correct number of results returned");
+      })
+      .push(function () {
+        return jio.buildQuery({
+          query: '(_revision: 0)'
+        });
+      })
+      .push(function (result) {
+        equal(result.length, 0, "Correct number of results returned");
       })
       .push(function () {
         return jio.buildQuery({
@@ -163,7 +278,52 @@
         });
       })
       .push(function (result) {
-        equal(result.length, 5, "Correct number of results returned");
+        equal(result.length, 2, "Correct number of results returned");
+      })
+
+      // When not_bryan queries the storage, all documents are returned.
+      .push(function () {
+        var options = {
+          query: "_doc_id: main_doc",
+          sort_on: [["_revision", "ascending"]]
+        };
+        return not_bryan.buildQuery(options);
+      })
+      .push(function (results) {
+        equal(results.length, 3, "should get all 3 deprecated versions.");
+        return not_bryan.get(results[0].id);
+      })
+      .push(function (results) {
+        deepEqual(results, {
+          "title": "rev0",
+          "subtitle": "subrev0",
+          "_doc_id": "main_doc",
+          "_revision": 0,
+          "_deprecated": true
+        },
+          "Get the earliest copy of the doc with all metadata.");
+      })
+
+      // When not_bryan queries the storage, all documents are returned.
+      .push(function () {
+        var options = {
+          query: "_doc_id: main_doc",
+          sort_on: [["_revision", "ascending"]]
+        };
+        return not_bryan.buildQuery(options);
+      })
+      .push(function (results) {
+        return not_bryan.get(results[1].id);
+      })
+      .push(function (results) {
+        deepEqual(results, {
+          "title": "rev1",
+          "subtitle": "subrev1",
+          "_doc_id": "main_doc",
+          "_revision": 1,
+          "_deprecated": true
+        },
+          "Get the earliest copy of the doc with all metadata.");
       })
       .fail(function (error) {
         //console.log(error);
@@ -175,5 +335,3 @@
   });
 
 }(jIO, QUnit));
-
-

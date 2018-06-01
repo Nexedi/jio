@@ -3,6 +3,9 @@
 (function (jIO) {
   "use strict";
 
+  // Metadata keys included for internal revisioning, but not shown to user
+  //var _revision_metadata = ["_revision", "_doc_id"];
+
   /**
    * The jIO BryanStorage extension
    *
@@ -10,36 +13,15 @@
    * @constructor
    */
   function BryanStorage(spec) {
-    //this._sub_storage = jIO.createJIO(spec.sub_storage);
 
     this._sub_storage = jIO.createJIO({
       type: "query",
-      sub_storage: {
-        type: "uuid",
-        sub_storage: spec.sub_storage
-      }
+      sub_storage: spec.sub_storage
     });
   }
 
   BryanStorage.prototype.get = function (id_in) {
-    var substorage = this._sub_storage,
-      options = {
-        query: '(_doc_id: "' + id_in + '")',// AND (include_docs: true)',
-        sort_on: [['_revision', 'descending']]
-        //include_docs: true
-      };
-    return substorage.allDocs(options)
-        // Return query results if there are any, else throw error
-        .push(function (query_results) {
-        var docs = query_results.data.rows;
-        if (docs.length > 0) {
-          return substorage.get(docs[0].id);
-        }
-        throw new jIO.util.jIOError(
-          "bryanstorage: cannot find object '" + id_in + "'",
-          404
-        );
-      });
+    return this._sub_storage.get(id_in);
   };
 
   BryanStorage.prototype.post = function (metadata) {
@@ -48,32 +30,52 @@
   };
 
   BryanStorage.prototype.put = function (id, new_metadata) {
-    var storage = this;
-    new_metadata._doc_id = id;
-    return storage.get(id)
-      .push(
-        function (metadata) {
+    var storage = this,
+      substorage = this._sub_storage,
+      previous_data;
 
-          // Increments existing "_revision" attribute
-          if (metadata.hasOwnProperty('_revision')) {
-            new_metadata._revision = metadata._revision + 1;
-          } else {
-            new_metadata._revision = 0;
-          }
-          //return storage.post.apply(substorage, new_metadata);
-          return storage.post(new_metadata);
-        },
-        function () {
-          // Creates new attribute "_revision" = 0
-          new_metadata._revision = 0;
-          return storage.post(new_metadata);
+    return this._sub_storage.get(id)
+      .push(function (latest_data) {
+
+        // Prepare to post the current doc as a deprecated version
+        previous_data = latest_data;
+        previous_data._deprecated = true;
+        previous_data._doc_id = id;
+
+        // Get most recent deprecated version's _revision attribute
+        var options = {
+          query: '(_doc_id: "' + id + '")',
+          sort_on: [['_revision', 'descending']],
+          limit: [0, 1]
+        };
+        return substorage.buildQuery(options);
+      })
+      .push(function (query_results) {
+        if (query_results.length > 0) {
+          var doc_id = query_results[0];
+          return this._sub_storage.get(doc_id);
         }
-      );
-  };
-
-  BryanStorage.prototype.allDocs = function (options) {
-    //console.log(options);
-    return this._sub_storage.allDocs.apply(this._sub_storage, options);
+        throw new jIO.util.jIOError(
+          "bryanstorage: query returned no results.'",
+          404
+        );
+      })
+      .push(function (doc) {
+        previous_data._revision = doc._revision + 1;
+        return storage.post(previous_data);
+      },
+        function () {
+          // If the query turned up no results, 
+          // there was exactly 1 version previously.
+          if (previous_data !== undefined) {
+            previous_data._revision = 0;
+            return storage.post(previous_data);
+          }
+        })
+      // No matter what happened, need to put new document in
+      .push(function () {
+        return substorage.put(id, new_metadata);
+      });
   };
 
   BryanStorage.prototype.allAttachments = function () {
@@ -139,8 +141,27 @@
   BryanStorage.prototype.hasCapacity = function () {
     return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
   };
-  BryanStorage.prototype.buildQuery = function () {
-    return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+  BryanStorage.prototype.allDocs = function (options) {
+    if (options === undefined) {
+      options = {};
+    }
+    console.log("options", options);
+    /**
+    if (options === undefined) {
+      options = {query: ""};
+    }
+    options.query = '(' + options.query + ') AND NOT (_deprecated = true)';
+    console.log("query string: ", options.query);
+    **/
+    return this._sub_storage.allDocs.apply(this._sub_storage, options);
+    //return this._sub_storage.buildQuery.apply(this._sub_storage, options);
+  };
+  BryanStorage.prototype.buildQuery = function (options) {
+    if (options === undefined) {
+      options = {};
+    }
+    console.log("options", options);
+    return this._sub_storage.buildQuery.apply(this._sub_storage, options);
   };
 
   jIO.addStorage('bryan', BryanStorage);
