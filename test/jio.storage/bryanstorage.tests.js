@@ -25,7 +25,12 @@
       // create storage of type "bryan" with memory as substorage
       var jio = jIO.createJIO({
         type: "bryan",
-        sub_storage: {type: "memory"}
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        }
       });
 
       jio.put("bar", {"title": "foo"});
@@ -54,12 +59,12 @@
         sub_storage: {
           type: "uuid",
           sub_storage: {
-            //type: "memory"
-            type: "indexeddb",
-            database: dbname
+            type: "memory"
+            //type: "indexeddb",
+            //database: dbname
           }
         }
-      }),
+      });/**,
       not_bryan = jIO.createJIO({
         type: "uuid",
         sub_storage: {
@@ -71,10 +76,12 @@
           }
         }
       });
+      **/
     jio.put("doc1", {
       "title": "rev0",
       "subtitle": "subrev0"
     })
+    /**
       .push(function () {return jio.get("doc1"); })
       .push(function (result) {
         deepEqual(result, {
@@ -103,14 +110,15 @@
           "subtitle": "subrev2"
         }, "Retrieve second edition of document correctly");
       })
+      **/
       .push(function () {
         var options = {
-          //query: ""//title: rev2"
+          query: "title: rev0"
         };
         //
         //
-        return jio.buildQuery(options);
-        //return jio.allDocs(options);
+        //return jio.buildQuery(options);
+        return jio.allDocs(options);
         //
         //
       })
@@ -127,7 +135,7 @@
           "subtitle": "subrev2"
         }, "Retrieve queried document correctly");
       })
-
+      /**
       // When not_bryan queries the storage, all documents are returned.
       .push(function () {
         var options = {
@@ -152,6 +160,7 @@
         },
           "Get the earliest copy of the doc with all metadata.");
       })
+      **/
       .fail(function (error) {
         console.log(error);
         ok(false, error);
@@ -231,7 +240,7 @@
         }, "Retrieve other document correctly");
       })
       .push(function () {
-        return jio.buildQuery({
+        return jio.allDocs({
           query: ""
         });
       })
@@ -240,7 +249,7 @@
         equal(result.length, 2, "Empty query returns only non-deprecated docs");
       })
       .push(function () {
-        return jio.buildQuery({
+        return jio.allDocs({
           query: 'attr: "version1"'
         });
       })
@@ -257,7 +266,7 @@
         }, "Retrieve other document correctly");
       })
       .push(function () {
-        return jio.buildQuery({
+        return jio.allDocs({
           query: '(_doc_id: "other_doc")'
         });
       })
@@ -265,7 +274,7 @@
         equal(result.length, 0, "Correct number of results returned");
       })
       .push(function () {
-        return jio.buildQuery({
+        return jio.allDocs({
           query: '(_revision: 0)'
         });
       })
@@ -273,7 +282,7 @@
         equal(result.length, 0, "Correct number of results returned");
       })
       .push(function () {
-        return jio.buildQuery({
+        return jio.allDocs({
           query: ''
         });
       })
@@ -287,7 +296,7 @@
           query: "_doc_id: main_doc",
           sort_on: [["_revision", "ascending"]]
         };
-        return not_bryan.buildQuery(options);
+        return not_bryan.allDocs(options);
       })
       .push(function (results) {
         equal(results.length, 3, "should get all 3 deprecated versions.");
@@ -310,7 +319,7 @@
           query: "_doc_id: main_doc",
           sort_on: [["_revision", "ascending"]]
         };
-        return not_bryan.buildQuery(options);
+        return not_bryan.allDocs(options);
       })
       .push(function (results) {
         return not_bryan.get(results[1].id);

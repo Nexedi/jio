@@ -48,7 +48,9 @@
           sort_on: [['_revision', 'descending']],
           limit: [0, 1]
         };
-        return substorage.buildQuery(options);
+        //return substorage.buildQuery(options);
+        return substorage.allDocs(options);
+
       })
       .push(function (query_results) {
         if (query_results.length > 0) {
@@ -141,21 +143,21 @@
   BryanStorage.prototype.hasCapacity = function () {
     return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
   };
+  /**
   BryanStorage.prototype.allDocs = function (options) {
     if (options === undefined) {
       options = {};
     }
     console.log("options", options);
-    /**
     if (options === undefined) {
       options = {query: ""};
     }
     options.query = '(' + options.query + ') AND NOT (_deprecated = true)';
     console.log("query string: ", options.query);
-    **/
     return this._sub_storage.allDocs.apply(this._sub_storage, options);
     //return this._sub_storage.buildQuery.apply(this._sub_storage, options);
   };
+  **/
   BryanStorage.prototype.buildQuery = function (options) {
     if (options === undefined) {
       options = {};
