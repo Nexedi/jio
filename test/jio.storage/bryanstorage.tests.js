@@ -11,11 +11,10 @@
     equal = QUnit.equal,
     module = QUnit.module;
 
-
+  /**
   /////////////////////////////////////////////////////////////////
   // _revision parameter updating with RSVP all
   /////////////////////////////////////////////////////////////////
-  /**
   module("bryanStorage _revision with RSVP all");
   test("verifying _revision updates correctly when puts are done in parallel",
     function () {
@@ -34,11 +33,13 @@
       });
 
       jio.put("bar", {"title": "foo"});
-      RSVP.all(
+      RSVP.all([
         jio.put("bar", {"title2": "foo2"}),
         jio.put("bar", {"title3": "foo3"})
-      )
-        .push(function () {return jio.get("bar"); })
+        ]
+      );
+        //.push(function () {return jio.get("bar"); })
+      jio.get("bar")
         .push(function (result) {equal(result._revision, 3, "parallel exec"); })
         .fail(function (error) {ok(false, error); })
         .always(function () {start(); });
@@ -53,18 +54,18 @@
   test("put and get the correct version", function () {
     stop();
     expect(4);
-    var dbname = "testingdb4",
+    var dbname = "freshdb0",
       jio = jIO.createJIO({
         type: "bryan",
         sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "memory"
-            //type: "indexeddb",
-            //database: dbname
+            //type: "memory"
+            type: "indexeddb",
+            database: dbname
           }
         }
-      });/**,
+      }),
       not_bryan = jIO.createJIO({
         type: "uuid",
         sub_storage: {
@@ -76,12 +77,12 @@
           }
         }
       });
-      **/
+
     jio.put("doc1", {
       "title": "rev0",
       "subtitle": "subrev0"
     })
-    /**
+
       .push(function () {return jio.get("doc1"); })
       .push(function (result) {
         deepEqual(result, {
@@ -110,17 +111,10 @@
           "subtitle": "subrev2"
         }, "Retrieve second edition of document correctly");
       })
-      **/
+
       .push(function () {
-        var options = {
-          query: "title: rev0"
-        };
-        //
-        //
-        //return jio.buildQuery(options);
+        var options = {query: "title: rev0"};
         return jio.allDocs(options);
-        //
-        //
       })
       .push(function (results) {
         console.log("query results: ", results);
@@ -135,7 +129,7 @@
           "subtitle": "subrev2"
         }, "Retrieve queried document correctly");
       })
-      /**
+
       // When not_bryan queries the storage, all documents are returned.
       .push(function () {
         var options = {
@@ -160,7 +154,7 @@
         },
           "Get the earliest copy of the doc with all metadata.");
       })
-      **/
+
       .fail(function (error) {
         console.log(error);
         ok(false, error);

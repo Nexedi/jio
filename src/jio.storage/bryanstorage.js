@@ -158,12 +158,15 @@
     //return this._sub_storage.buildQuery.apply(this._sub_storage, options);
   };
   **/
-  BryanStorage.prototype.buildQuery = function (options) {
+  BryanStorage.prototype.buildQuery = function () {
+    /**
     if (options === undefined) {
       options = {};
     }
-    console.log("options", options);
-    return this._sub_storage.buildQuery.apply(this._sub_storage, options);
+    options.query = '(' + options.query + ') AND NOT (_deprecated = true)';
+    **/
+    console.log("options", arguments);
+    return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
   };
 
   jIO.addStorage('bryan', BryanStorage);
