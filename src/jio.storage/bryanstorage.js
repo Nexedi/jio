@@ -25,58 +25,20 @@
   };
 
   BryanStorage.prototype.post = function (metadata) {
-    // Uses UuidStorage post
     return this._sub_storage.post(metadata);
   };
 
-  BryanStorage.prototype.put = function (id, new_metadata) {
-    var storage = this,
-      substorage = this._sub_storage,
-      previous_data;
+  BryanStorage.prototype.put = function (id, metadata) {
+    var storage = this;
 
-    return this._sub_storage.get(id)
-      .push(function (latest_data) {
-
-        // Prepare to post the current doc as a deprecated version
-        previous_data = latest_data;
-        previous_data._deprecated = "true";
-        previous_data._doc_id = id;
-
-        // Get most recent deprecated version's _revision attribute
-        var options = {
-          query: '(_doc_id: "' + id + '")',
-          sort_on: [['_revision', 'descending']],
-          limit: [0, 1]
-        };
-        //return substorage.buildQuery(options);
-        return substorage.allDocs(options);
-
-      })
-      .push(function (query_results) {
-        if (query_results.data.rows.length > 0) {
-          var doc_id = query_results.data.rows[0].id;
-          return substorage.get(doc_id);
-        }
-        throw new jIO.util.jIOError(
-          "bryanstorage: query returned no results.'",
-          404
-        );
-      })
-      .push(function (doc) {
-        previous_data._revision = doc._revision + 1;
-        return storage.post(previous_data);
-      },
-        function () {
-          // If the query turned up no results, 
-          // there was exactly 1 version previously.
-          if (previous_data !== undefined) {
-            previous_data._revision = 0;
-            return storage.post(previous_data);
-          }
-        })
-      // No matter what happened, need to put new document in
+    return this._sub_storage.put(id, metadata)
       .push(function () {
-        return substorage.put(id, new_metadata);
+
+        // Also push a metadata document recording the posting time
+        metadata._deprecated = "true";
+        metadata._doc_id = id;
+        metadata._timestamp = Date.now();
+        return storage.post(metadata);
       });
   };
 
@@ -151,6 +113,7 @@
     if (options.query !== "") {
       options.query = "(" + options.query + ") AND ";
     }
+
     options.query = options.query + 'NOT (_deprecated: "true")';
     return this._sub_storage.buildQuery(options);
   };
