@@ -15,11 +15,12 @@
   /////////////////////////////////////////////////////////////////
   // _revision parameter updating with RSVP all
   /////////////////////////////////////////////////////////////////
-  module("bryanStorage revision with RSVP all");
+
+  module("bryanStorage.revision_with_RSVP_all");
   test("verifying updates correctly when puts are done in parallel",
     function () {
       stop();
-      expect(3);
+      expect(7);
 
       // create storage of type "bryan" with memory as substorage
       var dbname = "rsvp_db_" + Date.now(),
@@ -52,35 +53,72 @@
             jio.put("bar", {"title": "foo1"}),
             jio.put("bar", {"title": "foo2"}),
             jio.put("bar", {"title": "foo3"}),
-            jio.put("bar", {"title": "foo4"})
+            jio.put("bar", {"title": "foo4"}),
+            jio.put("barbar", {"title": "attr0"}),
+            jio.put("barbar", {"title": "attr1"}),
+            jio.put("barbar", {"title": "attr2"}),
+            jio.put("barbar", {"title": "attr3"})
           ]);
         })
         .push(function () {return jio.get("bar"); })
         .push(function (result) {
-          deepEqual(result, {
-            "title": "foo4"
-          });
+          ok(result.title !== "foo0", "Title should have changed from foo0");
         })
         .push(function () {
           return not_bryan.allDocs({
             query: "",
-            sort_on: [["_timestamp", "ascending"]]
+            sort_on: [["timestamp", "ascending"]]
           });
         })
         .push(function (results) {
           equal(results.data.rows.length,
-            6,
-            "Storage contains all 5 revisions plus the most recent one.");
-          return not_bryan.get(results.data.rows[1].id);
+            9,
+            "All nine versions exist in storage");
+          return not_bryan.get(results.data.rows[0].id);
+        })
+        .push(function (results) {
+          deepEqual(results, {
+            doc_id: "bar",
+            doc: {
+              title: "foo0"
+            },
+            timestamp: results.timestamp,
+            op: "put"
+          }, "The first item in the log is pushing bar's title to 'foo0'");
+          return jio.remove("bar");
+        })
+        .push(function () {
+          return jio.get("bar");
+        })
+        .push(function () {
+          return jio.get("barbar");
+        }, function (error) {
+          deepEqual(
+            error.message,
+            "bryanstorage: cannot find object 'bar' (removed)",
+            "Appropriate error is sent explaining object has been removed"
+          );
+          return jio.get("barbar");
+        })
+        .push(function (result) {
+          ok(result.title !== undefined, "barbar exists and has proper form");
+          return not_bryan.allDocs({
+            query: "",
+            sort_on: [["op", "descending"]]
+          });
+        })
+        .push(function (results) {
+          equal(results.data.rows.length,
+            10,
+            "Remove operation is recorded");
+          return not_bryan.get(results.data.rows[0].id);
         })
         .push(function (result) {
           deepEqual(result, {
-            title: "foo0",
-            _doc_id: "bar",
-            _timestamp: result._timestamp,
-            _deprecated: "true"
-          },
-            "Query returns the first edition of the document");
+            doc_id: "bar",
+            timestamp: result.timestamp,
+            op: "remove"
+          });
         })
         .fail(function (error) {
           //console.log(error);
@@ -91,308 +129,83 @@
 
 
   /////////////////////////////////////////////////////////////////
-  // bryanStorage revision history
+  // bryanStorage.querying_from_bryanstorage
   /////////////////////////////////////////////////////////////////
 
-  module("bryanStorage.revision_history");
-  test("put and get the correct version", function () {
-    stop();
-    expect(7);
-    var dbname = "rev_hist_db" + Date.now(),
-      jio = jIO.createJIO({
+  module("bryanStorage.querying_from_bryanstorage");
+  test("verifying the correct results are returned from bryanStorage.allDocs",
+    function () {
+      stop();
+      expect(1);
+
+      // create storage of type "bryan" with memory as substorage
+      var jio = jIO.createJIO({
         type: "bryan",
         sub_storage: {
           type: "uuid",
           sub_storage: {
-            //type: "memory"
-            type: "indexeddb",
-            database: dbname
-          }
-        }
-      }),
-      not_bryan = jIO.createJIO({
-        type: "uuid",
-        sub_storage: {
-          type: "query",
-          sub_storage: {
-            //type: "memory"
-            type: "indexeddb",
-            database: dbname
-          }
-        }
-      }),
-      query_input =
-        {
-          query: 'NOT (_deprecated: "true")',
-          sort_on: [['_timestamp', 'descending']]
-        },
-      query_input2 =
-        {
-          query: 'title: "rev1"',
-          sort_on: [['_timestamp', 'descending']]
-        };
-
-    jio.put("doc1", {
-      "title": "rev0",
-      "subtitle": "subrev0"
-    })
-      .push(function () {
-        return jio.put("doc1", {
-          "title": "rev1",
-          "subtitle": "subrev1"
-        });
-      })
-      .push(function () {
-        return jio.put("doc1", {
-          "title": "rev2",
-          "subtitle": "subrev2"
-        });
-      })
-      .push(function () {
-        return jio.put("doc1", {
-          "title": "rev3",
-          "subtitle": "subrev3"
-        });
-      })
-      .push(function () {return jio.get("doc1"); })
-      .push(function (result) {
-        deepEqual(result, {
-          "title": "rev3",
-          "subtitle": "subrev3"
-        }, "Retrieve first edition of document correctly");
-      })
-      .push(function () {
-        return not_bryan.allDocs(query_input);
-      })
-      .push(function (results) {
-        equal(results.data.rows.length, 1, "Only 1 version isn't _deprecated");
-        return jio.get(results.data.rows[0].id);
-      })
-      .push(function (result) {
-        deepEqual(result, {
-          "title": "rev3",
-          "subtitle": "subrev3"
-        }, "Retrieve most recent edition by querying NOT _deprecated");
-      })
-      .push(function () {
-        return not_bryan.allDocs(query_input2);
-      })
-      .push(function (results) {
-        equal(results.data.rows.length, 1, "Only one version is titled 'rev1'");
-        return jio.get(results.data.rows[0].id);
-      })
-      .push(function (result) {
-        deepEqual(result, {
-          "title": "rev1",
-          "subtitle": "subrev1",
-          "_deprecated": "true",
-          "_timestamp": result._timestamp,
-          "_doc_id": "doc1"
-        },
-          "Retrieve 1st edit by querying for title: 'rev1' with other storage");
-      })
-      .push(function () {
-        return jio.allDocs({query: ''});
-      })
-      .push(function (results) {
-        equal(results.data.rows.length,
-          1,
-          "bryanstorage only sees latest version");
-        return jio.get(results.data.rows[0].id);
-      })
-
-      .push(function (result) {
-        deepEqual(result, {
-          "title": "rev3",
-          "subtitle": "subrev3"
-        }, "Retrieve latest version correctly with bryanstorage");
-      })
-      .fail(function (error) {
-        //console.log(error);
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-
-  /////////////////////////////////////////////////////////////////
-  // bryanStorage.revision_history_multiple_edits
-  /////////////////////////////////////////////////////////////////
-
-  module("bryanStorage.revision_history_multiple_edits");
-  test("modify first version but save both", function () {
-    stop();
-    expect(10);
-    var dbname = "rev_hist_mult_db" + Date.now(),
-      jio = jIO.createJIO({
-        type: "bryan",
-        sub_storage: {
-          type: "uuid",
-          sub_storage: {
-            type: "indexeddb",
-            database: dbname
-          }
-        }
-      }),
-      not_bryan = jIO.createJIO({
-        type: "query",
-        sub_storage: {
-          type: "uuid",
-          sub_storage: {
-            type: "indexeddb",
-            database: dbname
+            type: "memory"
           }
         }
       });
-    jio.put("main_doc", {
-      "title": "rev0",
-      "subtitle": "subrev0"
-    })
-      .push(function () {
-        return jio.put("other_doc", {
-          "attr": "version0",
-          "subattr": "subversion0"
-        });
-      })
-      .push(function () {
-        return jio.put("other_doc", {
-          "attr": "version1",
-          "subattr": "subversion1"
-        });
-      })
-      .push(function () {
-        return jio.put("main_doc", {
-          "title": "rev1",
-          "subtitle": "subrev1"
-        });
-      })
-      .push(function () {
-        return jio.put("main_doc", {
-          "title": "rev2",
-          "subtitle": "subrev2"
-        });
-      })
-      .push(function () {
-        return jio.put("main_doc", {
-          "title": "rev3",
-          "subtitle": "subrev3"
-        });
-      })
-      .push(function () {return jio.get("main_doc"); })
-      .push(function (result) {
-        deepEqual(result, {
-          "title": "rev3",
-          "subtitle": "subrev3"
-        }, "Retrieve main document correctly");
-      })
-      .push(function () {return jio.get("other_doc"); })
-      .push(function (result) {
-        deepEqual(result, {
-          "attr": "version1",
-          "subattr": "subversion1"
-        }, "Retrieve other document correctly");
-      })
-      .push(function () {
-        return jio.allDocs({
-          query: ""
-        });
-      })
-      .push(function (result) {
-        equal(result.data.rows.length,
-          2,
-          "Empty query returns only non-deprecated docs");
-      })
-      .push(function () {
-        return jio.allDocs({
-          query: 'attr: "version1"'
-        });
-      })
-      .push(function (result) {
-        equal(result.data.rows.length,
-          1,
-          "No deprecated results are returned.");
-        if (result.data.rows.length > 0) {
-          return jio.get(result.data.rows[0].id);
-        }
-      })
-      .push(function (result) {
-        deepEqual(result, {
-          "attr": "version1",
-          "subattr": "subversion1"
-        }, "Only get most recent edit");
-      })
-      .push(function () {
-        return jio.allDocs({
-          query: '(_doc_id: "other_doc")'
-        });
-      })
-      .push(function (result) {
-        equal(result.data.rows.length, 0, "Correct number of results returned");
-      })
-      .push(function () {
-        return jio.allDocs({
-          query: ''
-        });
-      })
-      .push(function (result) {
-        equal(result.data.rows.length, 2, "Correct number of results returned");
-      })
+      jio.put("bar", {"title": "foo0"})
+        .push(function () {
+          return RSVP.all([
+            jio.put("bar", {"title": "foo1"}),
+            jio.put("bar", {"title": "foo2"}),
+            jio.put("bar", {"title": "foo3"}),
+            jio.put("barbar", {"title": "attr0"}),
+            jio.put("barbar", {"title": "attr1"}),
+            jio.put("barbar", {"title": "attr2"})
+          ]);
+        })
+        // Make two final puts so we know what to expect as the current state of
+        // each document.
+        .push(function () {
+          return jio.put("bar", {"title": "foo4"});
+        })
+        .push(function () {
+          return jio.put("barbar", {"title": "attr3"});
+        })
 
-      // When not_bryan queries the storage, all documents are returned.
-      .push(function () {
-        var options = {
-          query: "_doc_id: main_doc",
-          sort_on: [["_timestamp", "ascending"]]
-        };
-        return not_bryan.allDocs(options);
-      })
-      .push(function (results) {
-        equal(results.data.rows.length,
-          4,
-          "should get all 3 deprecated versions plus one copy of the latest.");
-        return not_bryan.get(results.data.rows[0].id);
-      })
-      .push(function (results) {
-        deepEqual(results, {
-          "title": "rev0",
-          "subtitle": "subrev0",
-          "_doc_id": "main_doc",
-          "_timestamp": results._timestamp,
-          "_deprecated": "true"
+        // Queries should only include information about the final two versions
+        .push(function () {
+          return jio.allDocs({
+            query: "",
+            sort_on: [["title", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          equal(results.data.rows.length,
+            2,
+            "Empty query yields two results since there are two unique docs");
+          return jio.get(results.data.rows[0].id);
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            title: "attr3"
+          }, "Retrieve the first title in the correct format (no metadata)");
         },
-          "Get the earliest copy of the doc with all metadata.");
-      })
+          function () {
+            return ok(false, "Couldn't find document in storage");
+          })
 
-      // When not_bryan queries the storage, all documents are returned.
-      .push(function () {
-        var options = {
-          query: "_doc_id: main_doc",
-          sort_on: [["_timestamp", "ascending"]]
-        };
-        return not_bryan.allDocs(options);
-      })
-      .push(function (results) {
-        return not_bryan.get(results.data.rows[1].id);
-      })
-      .push(function (results) {
-        deepEqual(results, {
-          "title": "rev1",
-          "subtitle": "subrev1",
-          "_doc_id": "main_doc",
-          "_timestamp": results._timestamp,
-          "_deprecated": "true"
-        },
-          "Get the earliest copy of the doc with all metadata.");
-      })
-      .fail(function (error) {
-        //console.log(error);
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
+        // Querying for a specific id
+        .push(function () {
+          return jio.allDocs({
+            query: "id: bar"
+          });
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            title: "foo4"
+          }, "Retrieve correct document in correct format (no metadata)");
+        })
 
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
 }(jIO, QUnit));

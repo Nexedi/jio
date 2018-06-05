@@ -3,8 +3,13 @@
 (function (jIO) {
   "use strict";
 
-  // Metadata keys included for internal revisioning, but not shown to user
-  //var _revision_metadata = ["_revision", "_doc_id"];
+  var unique_timestamp = function () {
+    // Used to distinguish between operations done within the same millisecond
+    var uuid = ('0000' + Math.floor(Math.random() * 0x10000)
+      .toString(16)).slice(-4),
+      timestamp = Date.now().toString();
+    return timestamp + "-" + uuid;
+  };
 
   /**
    * The jIO BryanStorage extension
@@ -21,33 +26,68 @@
   }
 
   BryanStorage.prototype.get = function (id_in) {
-    return this._sub_storage.get(id_in);
+
+    // Query to get the last edit made to this document
+    var substorage = this._sub_storage,
+      options = {
+        query: "doc_id: " + id_in,
+        sort_on: [["timestamp", "descending"]],
+        limit: [0, 1]
+      };
+    return substorage.allDocs(options)
+      .push(function (results) {
+        if (results.data.rows.length > 0) {
+          return substorage.get(results.data.rows[0].id);
+        }
+        throw new jIO.util.jIOError(
+          "bryanstorage: cannot find object '" + id_in + "'",
+          404
+        );
+      })
+      .push(function (result) {
+        // If last edit was a remove, throw a 'not found' error
+        if (result.op === "remove") {
+          throw new jIO.util.jIOError(
+            "bryanstorage: cannot find object '" + id_in + "' (removed)",
+            404
+          );
+        }
+        // If last edit was a put, return the document data
+        if (result.op === "put") {
+          return result.doc;
+        }
+      });
   };
 
   BryanStorage.prototype.post = function (metadata) {
     return this._sub_storage.post(metadata);
   };
 
-  BryanStorage.prototype.put = function (id, metadata) {
-    var storage = this;
+  BryanStorage.prototype.put = function (id, data) {
+    var timestamp = unique_timestamp(),
+      metadata = {
+        // XXX: remove this attribute once query can sort_on id
+        timestamp: timestamp,
+        doc_id: id,
+        doc: data,
+        op: "put"
+      };
+    return this._sub_storage.put(timestamp, metadata);
+  };
 
-    return this._sub_storage.put(id, metadata)
-      .push(function () {
-
-        // Also push a metadata document recording the posting time
-        metadata._deprecated = "true";
-        metadata._doc_id = id;
-        metadata._timestamp = Date.now();
-        return storage.post(metadata);
-      });
+  BryanStorage.prototype.remove = function (id) {
+    var timestamp = unique_timestamp(),
+      metadata = {
+        // XXX: remove this attribute once query can sort_on id
+        timestamp: timestamp,
+        doc_id: id,
+        op: "remove"
+      };
+    return this._sub_storage.put(timestamp, metadata);
   };
 
   BryanStorage.prototype.allAttachments = function () {
     return this._sub_storage.allAttachments.apply(this._sub_storage, arguments);
-  };
-
-  BryanStorage.prototype.remove = function () {
-    return this._sub_storage.remove.apply(this._sub_storage, arguments);
   };
   BryanStorage.prototype.getAttachment = function () {
     return this._sub_storage.getAttachment.apply(this._sub_storage, arguments);
@@ -107,14 +147,6 @@
   };
 
   BryanStorage.prototype.buildQuery = function (options) {
-    if (options === undefined) {
-      options = {query: ""};
-    }
-    if (options.query !== "") {
-      options.query = "(" + options.query + ") AND ";
-    }
-
-    options.query = options.query + 'NOT (_deprecated: "true")';
     return this._sub_storage.buildQuery(options);
   };
 
