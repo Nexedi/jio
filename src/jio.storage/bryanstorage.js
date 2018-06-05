@@ -39,7 +39,7 @@
 
         // Prepare to post the current doc as a deprecated version
         previous_data = latest_data;
-        previous_data._deprecated = true;
+        previous_data._deprecated = "true";
         previous_data._doc_id = id;
 
         // Get most recent deprecated version's _revision attribute
@@ -53,9 +53,9 @@
 
       })
       .push(function (query_results) {
-        if (query_results.length > 0) {
-          var doc_id = query_results[0];
-          return this._sub_storage.get(doc_id);
+        if (query_results.data.rows.length > 0) {
+          var doc_id = query_results.data.rows[0].id;
+          return substorage.get(doc_id);
         }
         throw new jIO.util.jIOError(
           "bryanstorage: query returned no results.'",
@@ -143,30 +143,16 @@
   BryanStorage.prototype.hasCapacity = function () {
     return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
   };
-  /**
-  BryanStorage.prototype.allDocs = function (options) {
-    if (options === undefined) {
-      options = {};
-    }
-    console.log("options", options);
+
+  BryanStorage.prototype.buildQuery = function (options) {
     if (options === undefined) {
       options = {query: ""};
     }
-    options.query = '(' + options.query + ') AND NOT (_deprecated = true)';
-    console.log("query string: ", options.query);
-    return this._sub_storage.allDocs.apply(this._sub_storage, options);
-    //return this._sub_storage.buildQuery.apply(this._sub_storage, options);
-  };
-  **/
-  BryanStorage.prototype.buildQuery = function () {
-    /**
-    if (options === undefined) {
-      options = {};
+    if (options.query !== "") {
+      options.query = "(" + options.query + ") AND ";
     }
-    options.query = '(' + options.query + ') AND NOT (_deprecated = true)';
-    **/
-    console.log("options", arguments);
-    return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+    options.query = options.query + 'NOT (_deprecated: "true")';
+    return this._sub_storage.buildQuery(options);
   };
 
   jIO.addStorage('bryan', BryanStorage);
