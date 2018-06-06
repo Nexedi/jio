@@ -44,7 +44,10 @@
           404
         );
       })
+
+      // Decide return based on last edit type
       .push(function (result) {
+
         // If last edit was a remove, throw a 'not found' error
         if (result.op === "remove") {
           throw new jIO.util.jIOError(
@@ -52,6 +55,7 @@
             404
           );
         }
+
         // If last edit was a put, return the document data
         if (result.op === "put") {
           return result.doc;
@@ -147,7 +151,71 @@
   };
 
   BryanStorage.prototype.buildQuery = function (options) {
-    return this._sub_storage.buildQuery(options);
+    if (options.sort_on === undefined) {
+      options.sort_on = [];
+    }
+    if (options.limit === undefined) {
+      options.limit = [0, -1];
+    }
+    options.sort_on.push(["timestamp", "descending"]);
+    var meta_options = {
+      // XXX: I don't believe it's currently possible to query on sub-attributes
+      // so for now, we just use the inputted query, which obviously will fail
+      query: options.query,
+
+      // XXX: same here, we cannot sort correctly because we cannot access
+      // attributes of doc
+      sort_on: options.sort_on
+    },
+      substorage = this._sub_storage,
+      max_num_docs = options.limit[1],
+      first_doc = options.limit[0];
+
+    return this._sub_storage.allDocs(meta_options)
+      .push(function (results) {
+        var promises = results.data.rows.map(function (data) {
+          return substorage.get(data.id);
+        });
+        return RSVP.all(promises);
+      })
+      .push(function (results_array) {
+        var clean_data = [],
+          ind,
+          seen_docs = [],
+          current_doc,
+          counter = 0;
+        if (max_num_docs === -1) {
+          max_num_docs = results_array.length;
+        }
+        for (ind = 0; ind < results_array.length; ind += 1) {
+          current_doc = results_array[ind];
+
+          // If the latest version of this document has not yet been 
+          // included in query result
+          if (seen_docs[current_doc.doc_id] !== true) {
+
+            // If the latest edit was a put operation, add it to query 
+            // results
+            if (current_doc.op === "put") {
+              if (counter >= first_doc) {
+                clean_data.push({
+                  doc: {},
+                  value: {},
+                  id: current_doc.doc_id
+                });
+                if (clean_data.length === max_num_docs) {
+                  return clean_data;
+                }
+              }
+              counter += 1;
+            }
+            // Mark document as read so no older edits are considered
+            seen_docs[current_doc.doc_id] = true;
+          }
+        }
+        // In passing results back to allDocs, formatting of query is handled
+        return clean_data;
+      });
   };
 
   jIO.addStorage('bryan', BryanStorage);
