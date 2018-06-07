@@ -391,7 +391,7 @@
   test("Testing retrieval of older revisions of documents with multiple users",
     function () {
       stop();
-      expect(34);
+      expect(35);
 
       // create storage of type "bryan" with memory as substorage
       var dbname = "multi_user_db" + Date.now(),
