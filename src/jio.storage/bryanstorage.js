@@ -26,21 +26,44 @@
       type: "query",
       sub_storage: spec.sub_storage
     });
+    this._lastseen = undefined;
   }
 
-  BryanStorage.prototype.get = function (id_in, revision_steps) {
+  BryanStorage.prototype.get = function (id_in, revision) {
+
     // Default behavior, get() returns the most recent revision
-    if (revision_steps === undefined) {
-      revision_steps = 0;
+    if (revision === undefined) {
+      revision = {
+        steps: 0,
+        path: "absolute"
+      };
+    }
+
+    // Default type of traversal is absolute:
+    // "absolute" -- step backward in chronological order of changes to document
+    // "consistent" -- step backward in chronological order of only edits the
+    //    most recent version is based on.  Other branches of edits are ignored
+    if (revision.path === undefined) {
+      revision.path = "absolute";
     }
 
     // Query to get the last edit made to this document
-    var substorage = this._sub_storage,
+    var storage = this,
+      substorage = this._sub_storage,
       options = {
         query: "doc_id: " + id_in,
-        sort_on: [["timestamp", "descending"]],
-        limit: [revision_steps, 1]
+        sort_on: [["timestamp", "descending"]]
       };
+
+    // In "absolute" path, .get returns the revision.steps-most-recent revision
+    if (revision.path === "absolute") {
+      options.limit = [revision.steps, 1];
+
+    // In "consistent path, .get returns the most recent revision and looks 
+    // deeper into history with the result's .lastseen attribute
+    } else if (revision.path === "consistent") {
+      options.limit = [0, 1];
+    }
     return substorage.allDocs(options)
       .push(function (results) {
         if (results.data.rows.length > 0) {
@@ -52,20 +75,62 @@
         );
       })
 
-      // Decide return based on last edit type
       .push(function (result) {
 
+        // Function used to chain together substorage.get's for "consistent"
+        // traversal
+        function recurse_get(result) {
+          if (result.lastseen === undefined) {
+            throw new jIO.util.jIOError(
+              "bryanstorage: cannot find object '" +
+                id_in +
+                "' (end of history)",
+              404
+            );
+          }
+          return substorage.get(result.lastseen);
+        }
+
         // If last edit was a remove, throw a 'not found' error
-        if (result.op === "remove") {
+        if (result.op === "remove" && revision.path === "absolute") {
           throw new jIO.util.jIOError(
             "bryanstorage: cannot find object '" + id_in + "' (removed)",
             404
           );
         }
 
-        // If last edit was a put, return the document data
         if (result.op === "put") {
-          return result.doc;
+
+          // The query for "absolute" traversal returns exactly the document
+          // requested
+          if (revision.path === "absolute" || revision.steps === 0) {
+            storage._lastseen = result.timestamp;
+            return result.doc;
+          }
+          if (revision.path === "consistent") {
+
+
+            // Chain together promises to access history of document
+            var promise = substorage.get(result.lastseen);
+            while (revision.steps > 1) {
+              promise = promise.push(recurse_get);
+              revision.steps -= 1;
+            }
+
+            // Once at desired depth, update storage._lastseen and return doc
+            return promise.push(function (result) {
+              storage._lastseen = result.timestamp;
+              if (result.op === "remove") {
+                throw new jIO.util.jIOError(
+                  "bryanstorage: cannot find object '" +
+                    result.doc_id +
+                    "' (removed)",
+                  404
+                );
+              }
+              return result.doc;
+            });
+          }
         }
       });
   };
@@ -81,8 +146,11 @@
         timestamp: timestamp,
         doc_id: id,
         doc: data,
-        op: "put"
+        op: "put",
+        lastseen: this._lastseen
       };
+    this._lastseen = timestamp;
+    //console.log(metadata.doc.k, timestamp, metadata.lastseen);
     return this._sub_storage.put(timestamp, metadata);
   };
 
@@ -92,8 +160,10 @@
         // XXX: remove this attribute once query can sort_on id
         timestamp: timestamp,
         doc_id: id,
-        op: "remove"
+        op: "remove",
+        lastseen: this._lastseen
       };
+    this._lastseen = timestamp;
     return this._sub_storage.put(timestamp, metadata);
   };
 
