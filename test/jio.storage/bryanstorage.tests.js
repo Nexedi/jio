@@ -278,4 +278,106 @@
         })
         .always(function () {start(); });
     });
+
+  /////////////////////////////////////////////////////////////////
+  // Accessing older revisions
+  /////////////////////////////////////////////////////////////////
+
+  module("bryanStorage.accessing_older_revisions");
+  test("Testing proper retrieval of older revisions of documents",
+    function () {
+      stop();
+      expect(8);
+
+      // create storage of type "bryan" with memory as substorage
+      var jio = jIO.createJIO({
+        type: "bryan",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      });
+
+      jio.put("doc", {
+        "k0": "v0"
+      })
+        .push(function () {
+          return jio.put("doc", {"k1": "v1"});
+        })
+        .push(function () {
+          return jio.put("doc", {"k2": "v2"});
+        })
+        .push(function () {
+          return jio.remove("doc");
+        })
+        .push(function () {
+          return jio.put("doc", {"k3": "v3"});
+        })
+        .push(function () {
+          return jio.put("doc", {"k4": "v4"});
+        })
+        .push(function () {
+          return jio.get("doc");
+        })
+        .push(function (result) {
+          deepEqual(result,
+            {"k4": "v4"},
+            "By default, .get returns latest revision");
+          return jio.get("doc", 0);
+        })
+        .push(function (result) {
+          deepEqual(result,
+            {"k4": "v4"},
+            ".get returns latest revision with second input = 0");
+          return jio.get("doc", 1);
+        })
+        .push(function (result) {
+          deepEqual(result,
+            {"k3": "v3"},
+            "Walk back one revision with second input = 1");
+          return jio.get("doc", 2);
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            deepEqual(error.status_code,
+              404,
+              "Current state of document is 'removed'.");
+            return jio.get("doc", 3);
+          })
+        .push(function (result) {
+          deepEqual(result,
+            {"k2": "v2"},
+            "Walk back three revisions with second input = 3");
+          return jio.get("doc", 4);
+        })
+        .push(function (result) {
+          deepEqual(result,
+            {"k1": "v1"},
+            "Walk back four revisions with second input = 4");
+          return jio.get("doc", 5);
+        })
+        .push(function (result) {
+          deepEqual(result,
+            {"k0": "v0"},
+            "Walk back five revisions with second input = 5");
+          return jio.get("doc", 6);
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            deepEqual(error.status_code,
+              404,
+              "There are only 5 previous states of this document");
+          })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
 }(jIO, QUnit));

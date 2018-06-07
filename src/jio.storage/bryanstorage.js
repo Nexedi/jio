@@ -3,8 +3,11 @@
 (function (jIO) {
   "use strict";
 
+  // Used to distinguish between operations done within the same millisecond
   var unique_timestamp = function () {
-    // Used to distinguish between operations done within the same millisecond
+
+    // XXX: replace this with UUIDStorage function call to S4() when it becomes
+    // publicly accessible
     var uuid = ('0000' + Math.floor(Math.random() * 0x10000)
       .toString(16)).slice(-4),
       timestamp = Date.now().toString();
@@ -25,14 +28,18 @@
     });
   }
 
-  BryanStorage.prototype.get = function (id_in) {
+  BryanStorage.prototype.get = function (id_in, revision_steps) {
+    // Default behavior, get() returns the most recent revision
+    if (revision_steps === undefined) {
+      revision_steps = 0;
+    }
 
     // Query to get the last edit made to this document
     var substorage = this._sub_storage,
       options = {
         query: "doc_id: " + id_in,
         sort_on: [["timestamp", "descending"]],
-        limit: [0, 1]
+        limit: [revision_steps, 1]
       };
     return substorage.allDocs(options)
       .push(function (results) {
