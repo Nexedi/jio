@@ -84,7 +84,8 @@
             },
             timestamp: results.timestamp,
             op: "put",
-            lastseen: undefined
+            lastseen: undefined,
+            leaf: true
           }, "The first item in the log is pushing bar's title to 'foo0'");
           return jio.remove("bar");
         })
@@ -119,7 +120,8 @@
             doc_id: "bar",
             timestamp: result.timestamp,
             op: "remove",
-            lastseen: result.lastseen
+            lastseen: result.lastseen,
+            leaf: true
           });
         })
         .fail(function (error) {
@@ -391,7 +393,7 @@
   test("Testing retrieval of older revisions of documents with multiple users",
     function () {
       stop();
-      expect(35);
+      expect(51);
 
       // create storage of type "bryan" with memory as substorage
       var dbname = "multi_user_db" + Date.now(),
@@ -493,8 +495,10 @@
 
         // Test all lastseens are the same
         .push(function () {
-          equal(jio1._lastseen, jio2._lastseen, "All users see same revision");
-          equal(jio1._lastseen, jio3._lastseen, "All users see same revision");
+          // These are all undefined outside the storage definition, so these
+          // tests are meaningless
+          //equal(jio1._lastseen, jio2._lastseen, "All users see same version");
+          //equal(jio1._lastseen, jio3._lastseen, "All users see same version");
 
           //
           // Test consistent history of user 1
@@ -682,6 +686,10 @@
               404,
               "There are only 3 previous states of this document");
           })
+        // Reset jio3._lastseen to be at v0.1.3.3.3
+        .push(function () {
+          return jio3.get("doc");
+        })
 
         //
         // Test absolute history of user 1
@@ -875,6 +883,241 @@
               "There are only 3 previous states of this document");
           })
 
+        //
+        // Tests on checking out an older revision and making a new edit branch
+        //
+        .push(function () {
+          return jio1.get("doc", {
+            path: "absolute",
+            steps: 1
+          });
+        })
+        .push(function () {
+          return jio1.put("doc", {
+            "k": "v0.1.2.2.2.1"
+          });
+        })
+        .push(function () {
+          return jio1.get("doc", {
+            path: "consistent",
+            steps: 1
+          });
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.2.2.2"
+          }, "The new document is added to the correct edit branch"
+            );
+          return jio1.get("doc", {
+            path: "consistent",
+            steps: 2
+          });
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            deepEqual(error.status_code,
+              404,
+              "This document was removed at this time");
+            return jio1.get("doc", {
+              path: "consistent",
+              steps: 3
+            });
+          })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.2"
+          }, "The new document is added to the correct edit branch"
+            );
+          return jio1.get("doc", {
+            path: "consistent",
+            steps: 4
+          });
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1"
+          }, "This edit branch also leads back to the original version"
+            );
+          return jio1.get("doc", {
+            path: "consistent",
+            steps: 5
+          });
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            deepEqual(error.status_code,
+              404,
+              "There are no revisions before the original document");
+          })
+        .push(function () {
+          return jio3.put("doc", {
+            "k": "v0.1.3.3.3.3"
+          });
+        })
+
+        // All three users have the same latest revision
+        .push(function () {
+          return jio1.get("doc");
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.3.3.3.3"
+          }, "User one accesses latest revision correctly"
+            );
+          return jio2.get("doc");
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.3.3.3.3"
+          }, "User two accesses latest revision correctly"
+            );
+          return jio3.get("doc");
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.3.3.3.3"
+          }, "User three accesses latest revision correctly"
+            );
+          return jio2.get("doc", {
+            path: "consistent",
+            steps: 1
+          });
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.3.3.3"
+          }, "User 2 accesses the 1st edit in consistent traversal."
+            );
+        })
+
+        //
+        // Testing .getting on leaf nodes
+        //
+        .push(function () {
+          return jio1.get("doc", {
+            path: "leaves"
+          });
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.3.3.3.3"
+          }, "First result is the most-recently-added leaf"
+            );
+          return jio2.get("doc", {
+            path: "leaves",
+            steps: 1
+          });
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.2.2.2.1"
+          }, "Second result is the 2nd most-recently-added leaf"
+            );
+          return jio3.get("doc", {
+            path: "leaves",
+            steps: 2,
+            db: "jio3"
+          });
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.3.3.1"
+          }, "Third result is the 3rd most-recently-added leaf"
+            );
+
+        //
+        // Editing document revisions stemming from the latest leaf nodes seen
+        //
+          return jio1.put("doc", {
+            "k": "v0.1.3.3.3.3.1"
+          });
+        })
+        .push(function () {
+          return jio3.remove("doc"); // removing v0.1.3.3.1
+        })
+
+        // Check that jio1 sees latest non-removed revision
+        .push(function () {
+          return jio1.get("doc");
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            deepEqual(error.status_code,
+              404,
+              "The most recent edit was a remove, so throw error");
+          })
+        .push(function () {
+          // jio2 lastseen should point to "v0.1.2.2.2.1"
+          return jio2.put("doc", {
+            "k": "v0.1.2.2.2.1.2"
+          });
+        })
+        .push(function () {
+          return jio1.get("doc", {
+            path: "leaves",
+            steps: 0
+          });
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.2.2.2.1.2"
+          }, "Accessing the first leaf node at this time"
+            );
+          return jio1.get("doc", {
+            path: "leaves",
+            steps: 1
+          });
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.3.3.3.3.1"
+          }, "Accessing the second leaf node at this time"
+            );
+          return jio1.get("doc", {
+            path: "leaves",
+            steps: 2
+          });
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            deepEqual(error.status_code,
+              404,
+              "There are only two non-removed leaves");
+
+            // jio1 should still have lastseen at v0.1.3.3.3.3.1
+            return jio1.put("doc", {
+              "k": "v0.1.3.3.3.3.1.1"
+            });
+          })
+        .push(function () {
+          return jio1.get("doc", {
+            path: "consistent",
+            steps: 1
+          });
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.3.3.3.3.1"
+          }, "If a .get fails, that should not reset ._lastseen parameter"
+            );
+          return jio1.get("doc", {
+            path: "consistent",
+            steps: 2
+          });
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k": "v0.1.3.3.3.3"
+          }, "History of 0.1.2.2.2 has been constructed correctly.");
+        })
         .fail(function (error) {
           //console.log(error);
           ok(false, error);

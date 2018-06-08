@@ -27,6 +27,7 @@
       sub_storage: spec.sub_storage
     });
     this._lastseen = undefined;
+    this.param = true;
   }
 
   BryanStorage.prototype.get = function (id_in, revision) {
@@ -47,6 +48,14 @@
       revision.path = "absolute";
     }
 
+    if (revision.steps === undefined) {
+      revision.steps = 0;
+    }
+
+    if (revision.steps === 0) {
+      revision.path = "absolute";
+    }
+
     // Query to get the last edit made to this document
     var storage = this,
       substorage = this._sub_storage,
@@ -54,6 +63,72 @@
         query: "doc_id: " + id_in,
         sort_on: [["timestamp", "descending"]]
       };
+
+    if (revision.path === "leaves") {
+      return substorage.allDocs({
+        query: "leaf: true",
+        sort_on: [["timestamp", "descending"]]
+      })
+        .push(function (results) {
+          var promises = results.data.rows.map(function (res) {
+            return substorage.get(res.id);
+          });
+          return RSVP.all(promises);
+        })
+        .push(function (documents) {
+          var not_leaves = {},
+            leaves = [],
+            ind,
+            doc_data,
+            fix_leaves = [];
+          function update_leaf_state(data) {
+            var new_data = data;
+            new_data.leaf = false;
+            return substorage.put(data.timestamp, new_data);
+          }
+
+          // Loop through documents and push only leaf versions to leaves array
+          for (ind = 0; ind < documents.length; ind += 1) {
+            doc_data = documents[ind];
+            not_leaves[doc_data.lastseen] = true;
+            if (not_leaves[doc_data.timestamp] === true) {
+              fix_leaves.push(update_leaf_state);
+            } else {
+              if (doc_data.op === "put") {
+
+                // XXX: For cheaper evaluation, break out of the loop once
+                // leaves.length == revision.steps, and only fix the leaves in
+                // fix_leaves at that point.
+                // However, since we already spent time to retrieve all leaves,
+                // it may be better to go ahead and clean up all mislabelled
+                // leaves right now, so the next call to get.leaves is cheaper
+                leaves.push(doc_data.doc);
+
+                // revision.steps is guaranteed to be >= 1 in this branch
+                // 
+                if (leaves.length - 1 === revision.steps) {
+                  storage._lastseen = doc_data.timestamp;
+                }
+              }
+            }
+          }
+
+          // Fix all mislabelled leaves and then return the array of leaves
+          return RSVP.all(fix_leaves)
+
+            //XXX: Not sure why I can't use a .push here instead of .then
+            .then(function () {
+              if (leaves.length - 1 >= revision.steps) {
+                return leaves[revision.steps];
+              }
+              throw new jIO.util.jIOError(
+                "bryanstorage: there are fewer than " +
+                  revision.steps + " leaf revisions for '" + id_in + "'",
+                404
+              );
+            });
+        });
+    }
 
     // In "absolute" path, .get returns the revision.steps-most-recent revision
     if (revision.path === "absolute") {
@@ -147,7 +222,8 @@
         doc_id: id,
         doc: data,
         op: "put",
-        lastseen: this._lastseen
+        lastseen: this._lastseen,
+        leaf: true
       };
     this._lastseen = timestamp;
     //console.log(metadata.doc.k, timestamp, metadata.lastseen);
@@ -161,9 +237,11 @@
         timestamp: timestamp,
         doc_id: id,
         op: "remove",
-        lastseen: this._lastseen
+        lastseen: this._lastseen,
+        leaf: true
       };
     this._lastseen = timestamp;
+    //console.log("removed", timestamp, metadata.lastseen);
     return this._sub_storage.put(timestamp, metadata);
   };
 
