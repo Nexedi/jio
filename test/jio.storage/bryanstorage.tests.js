@@ -83,9 +83,7 @@
               title: "foo0"
             },
             timestamp: results.timestamp,
-            op: "put",
-            lastseen: undefined,
-            leaf: true
+            op: "put"
           }, "The first item in the log is pushing bar's title to 'foo0'");
           return jio.remove("bar");
         })
@@ -119,9 +117,7 @@
           deepEqual(result, {
             doc_id: "bar",
             timestamp: result.timestamp,
-            op: "remove",
-            lastseen: result.lastseen,
-            leaf: true
+            op: "remove"
           });
         })
         .fail(function (error) {
@@ -291,7 +287,7 @@
   test("Testing proper retrieval of older revisions of documents",
     function () {
       stop();
-      expect(8);
+      expect(12);
 
       // create storage of type "bryan" with memory as substorage
       var jio = jIO.createJIO({
@@ -303,12 +299,46 @@
           }
         }
       });
-
-      jio.put("doc", {
-        "k0": "v0"
-      })
+      jio.get("doc")
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            deepEqual(error.status_code,
+              404,
+              "Document does not exist yet.");
+          })
+        .push(function () {
+          return jio.put("doc", {
+            "k0": "v0"
+          });
+        })
+        .push(function () {
+          return jio.get("doc", 0);
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k0": "v0"
+          });
+        })
         .push(function () {
           return jio.put("doc", {"k1": "v1"});
+        })
+        .push(function () {
+          return jio.get("doc", 0);
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k1": "v1"
+          });
+        })
+        .push(function () {
+          return jio.get("doc", 1);
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "k0": "v0"
+          });
         })
         .push(function () {
           return jio.put("doc", {"k2": "v2"});
@@ -329,19 +359,19 @@
           deepEqual(result,
             {"k4": "v4"},
             "By default, .get returns latest revision");
-          return jio.get("doc", {steps: 0});
+          return jio.get("doc", 0);
         })
         .push(function (result) {
           deepEqual(result,
             {"k4": "v4"},
             ".get returns latest revision with second input = 0");
-          return jio.get("doc", {steps: 1});
+          return jio.get("doc", 1);
         })
         .push(function (result) {
           deepEqual(result,
             {"k3": "v3"},
             "Walk back one revision with second input = 1");
-          return jio.get("doc", {steps: 2});
+          return jio.get("doc", 2);
         })
         .push(function () {
           ok(false, "This query should have thrown a 404 error");
@@ -350,25 +380,25 @@
             deepEqual(error.status_code,
               404,
               "Current state of document is 'removed'.");
-            return jio.get("doc", {steps: 3});
+            return jio.get("doc", 3);
           })
         .push(function (result) {
           deepEqual(result,
             {"k2": "v2"},
             "Walk back three revisions with second input = 3");
-          return jio.get("doc", {steps: 4});
+          return jio.get("doc", 4);
         })
         .push(function (result) {
           deepEqual(result,
             {"k1": "v1"},
             "Walk back four revisions with second input = 4");
-          return jio.get("doc", {steps: 5});
+          return jio.get("doc", 5);
         })
         .push(function (result) {
           deepEqual(result,
             {"k0": "v0"},
             "Walk back five revisions with second input = 5");
-          return jio.get("doc", {steps: 6});
+          return jio.get("doc", 6);
         })
         .push(function () {
           ok(false, "This query should have thrown a 404 error");
@@ -386,38 +416,18 @@
     });
 
   /////////////////////////////////////////////////////////////////
-  // Accessing older revisions with multiple users
+  // Accessing older revisions with two users
   /////////////////////////////////////////////////////////////////
 
-  module("bryanStorage.accessing_older_revisions_multiple_users");
-  test("Testing retrieval of older revisions of documents with multiple users",
+  module("bryanStorage.querying_old_revisions");
+  test("Testing retrieval of older revisions via allDocs calls",
     function () {
       stop();
-      expect(51);
+      expect(47);
 
       // create storage of type "bryan" with memory as substorage
-      var dbname = "multi_user_db" + Date.now(),
-        jio1 = jIO.createJIO({
-          type: "bryan",
-          sub_storage: {
-            type: "uuid",
-            sub_storage: {
-              type: "indexeddb",
-              database: dbname
-            }
-          }
-        }),
-        jio2 = jIO.createJIO({
-          type: "bryan",
-          sub_storage: {
-            type: "uuid",
-            sub_storage: {
-              type: "indexeddb",
-              database: dbname
-            }
-          }
-        }),
-        jio3 = jIO.createJIO({
+      var dbname = "db-" + Date.now(),
+        jio = jIO.createJIO({
           type: "bryan",
           sub_storage: {
             type: "uuid",
@@ -427,696 +437,239 @@
             }
           }
         });
-
-      jio1.put("doc", {
-        "k": "v0.1"
+      jio.put("doc", {
+        "k": "v0"
       })
         .push(function () {
-          return jio2.get("doc");
-        })
-        .push(function () {
-          return jio3.get("doc");
-        })
-        .push(function () {
-          return jio2.put("doc", {
-            "k": "v0.1.2"
+          return jio.put("doc", {
+            "k": "v1"
           });
         })
         .push(function () {
-          return jio3.put("doc", {
-            "k": "v0.1.3"
-          });
-        })
-        /**
-        .push(function () {
-          return jio2.put("doc", {
-            "k": "v0.1.2.2"
-          });
-        })
-        **/
-        .push(function () {
-          return jio2.remove("doc");
-        })
-        .push(function () {
-          return jio3.put("doc", {
-            "k": "v0.1.3.3"
+          return jio.put("doc", {
+            "k": "v2"
           });
         })
         .push(function () {
-          return jio1.get("doc");
-        })
-        .push(function () {
-          return jio1.put("doc", {
-            "k": "v0.1.3.3.1"
+          return jio.put("doc", {
+            "k": "v3"
           });
         })
         .push(function () {
-          return jio2.put("doc", {
-            "k": "v0.1.2.2.2"
+          return jio.allDocs({
+            query: "",
+            revision_limit: [0, 1]
           });
         })
-        .push(function () {
-          return jio3.put("doc", {
-            "k": "v0.1.3.3.3"
-          });
-        })
-        .push(function () {
-          return jio1.get("doc");
-        })
-        // jio2 has a different version than 1 & 3 as its latest revision
-        /**
-        .push(function () {
-          return jio2.get("doc");
-        })
-        **/
-        .push(function () {
-          return jio3.get("doc");
-        })
-
-        // Test all lastseens are the same
-        .push(function () {
-          // These are all undefined outside the storage definition, so these
-          // tests are meaningless
-          //equal(jio1._lastseen, jio2._lastseen, "All users see same version");
-          //equal(jio1._lastseen, jio3._lastseen, "All users see same version");
-
-          //
-          // Test consistent history of user 1
-          //
-          return jio1.get("doc", {
-            path: "consistent",
-            steps: 0
-          });
+        .push(function (results) {
+          deepEqual(results.data.rows.length,
+            1,
+            "Only one query returned with options.revision_limit == [0,1]");
+          return jio.get(results.data.rows[0].id);
         })
         .push(function (result) {
           deepEqual(result, {
-            "k": "v0.1.3.3.3"
-          }, "Get of depth 0 returns latest version"
-            );
-
-          return jio1.get("doc", {
-            path: "consistent",
-            steps: 1
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3"
-          }, "Get of consistent depth 1 returns correct version"
-            );
-
-          return jio1.get("doc", {
-            path: "consistent",
-            steps: 2
-          });
-        })
-
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3"
-          }, "Get of consistent depth 2 returns correct version"
-            );
-
-          return jio1.get("doc", {
-            path: "consistent",
-            steps: 3
-          });
-        })
-
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1"
-          }, "Get of consistent depth 3 returns correct version"
-            );
-
-          return jio1.get("doc", {
-            path: "consistent",
-            steps: 4
+            "k": "v3"
           });
         })
         .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "There are only 3 previous states of this document: " + error);
-          })
+          return jio.allDocs({
+            query: "",
+            revision_limit: [1, 1]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows.length,
+            1,
+            "Only one query returned with options.revision_limit == [1,1]");
+          deepEqual(results.data.rows[0].doc, {
+            "k": "v2"
+          });
+          return jio.allDocs({
+            query: "",
+            revision_limit: [2, 1]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows.length,
+            1,
+            "Only one query returned with options.revision_limit == [2,1]");
+          deepEqual(results.data.rows[0].doc, {
+            "k": "v1"
+          });
+          return jio.allDocs({
+            query: "",
+            revision_limit: [3, 1]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows.length,
+            1,
+            "Only one query returned with options.revision_limit == [3,1]");
+          deepEqual(results.data.rows[0].doc, {
+            "k": "v0"
+          });
+          return jio.allDocs({
+            query: "",
+            revision_limit: [4, 1]
+          });
+        })
+        .push(function (results) {
+          equal(results.data.rows.length, 0, "Past all previous revisions");
+        })
         .push(function () {
-
-          //
-          // Test consistent history of user 2 (Is the same as 1 & 3 even though
-          // User 2 has not explicitly called .get since the latest changes
-          // were made)
-          //
-          return jio2.get("doc", {
-            path: "consistent",
-            steps: 0
+          return jio.allDocs({
+            revision_limit: [0, 2]
           });
         })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.3"
-          }, "Get of depth 0 returns latest version"
-            );
-
-          return jio2.get("doc", {
-            path: "consistent",
-            steps: 1
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3"
-          }, "Get of depth 0 returns latest version"
-            );
-
-          return jio2.get("doc", {
-            path: "consistent",
-            steps: 2
-          });
-        })
-
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3"
-          }, "Get of consistent depth 2 returns correct version"
-            );
-
-          return jio2.get("doc", {
-            path: "consistent",
-            steps: 3
-          });
-        })
-
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1"
-          }, "Get of consistent depth 3 returns correct version"
-            );
-
-          return jio2.get("doc", {
-            path: "consistent",
-            steps: 4
+        .push(function (results) {
+          equal(results.data.rows.length, 2);
+          deepEqual(results.data.rows[0].doc, {
+            "k": "v3"
+          }, "Only retrieve two most recent revions");
+          deepEqual(results.data.rows[1].doc, {
+            "k": "v2"
           });
         })
         .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "There are only 3 previous states of this document: " + error);
-          })
+          return jio.remove("doc");
+        })
         .push(function () {
-
-          //
-          // Test consistent history of user 3 (Should be same as user 1)
-          //
-          return jio3.get("doc", {
-            path: "consistent",
-            steps: 0
+          return jio.allDocs({
+            query: "",
+            revision_limit: [0, 1]
           });
         })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.3"
-          }, "User 2 consistent history is same as user 1"
-            );
-          return jio3.get("doc", {
-            path: "consistent",
-            steps: 1
+        .push(function (results) {
+          equal(results.data.rows.length, 0,
+            "Query does not return removed doc");
+        })
+        .push(function () {
+          return jio.allDocs({
+            query: "",
+            revision_limit: [1, 3]
           });
         })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3"
-          }, "User 2 consistent history is same as user 1"
-            );
-          return jio3.get("doc", {
-            path: "consistent",
-            steps: 2
-          });
+        .push(function (results) {
+          equal(results.data.rows.length, 3);
+          deepEqual(results.data.rows[0].doc, {
+            "k": "v3"
+          }, "1st, 2nd, and 3rd versions removed from current are retrieved");
+          deepEqual(results.data.rows[1].doc, {
+            "k": "v2"
+          }, "1st, 2nd, and 3rd versions removed from current are retrieved");
+          deepEqual(results.data.rows[2].doc, {
+            "k": "v1"
+          }, "1st, 2nd, and 3rd versions removed from current are retrieved");
         })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3"
-          }, "User 2 consistent history is same as user 1"
-            );
-          return jio3.get("doc", {
-            path: "consistent",
-            steps: 3
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1"
-          }, "User 2 consistent history is same as user 1"
-            );
-          return jio3.get("doc", {
-            path: "consistent",
-            steps: 4
+        .push(function () {
+          return jio.put("doc2", {
+            "k2": "w0"
           });
         })
         .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "There are only 3 previous states of this document");
-          })
-        // Reset jio3._lastseen to be at v0.1.3.3.3
+          return jio.allDocs({
+            revision_limit: [1, 3]
+          });
+        })
+        .push(function (results) {
+          equal(results.data.rows.length, 3);
+          deepEqual(results.data.rows[0].doc, {
+            "k": "v3"
+          }, "Does not retrieve new document outside queried revision range");
+          deepEqual(results.data.rows[1].doc, {
+            "k": "v2"
+          }, "Does not retrieve new document outside queried revision range");
+          deepEqual(results.data.rows[2].doc, {
+            "k": "v1"
+          }, "Does not retrieve new document outside queried revision range");
+        })
         .push(function () {
-          return jio3.get("doc");
+          return jio.allDocs({
+            revision_limit: [0, 2]
+          });
         })
-
-        //
-        // Test absolute history of user 1
-        //
+        .push(function (results) {
+          equal(results.data.rows.length, 2);
+          deepEqual(results.data.rows[0].doc, {
+            "k2": "w0"
+          }, "Retrieves all documents with versions in queried revision range");
+          deepEqual(results.data.rows[1].doc, {
+            "k": "v3"
+          }, "Retrieves all documents with versions in queried revision range");
+        })
         .push(function () {
-          return jio1.get("doc", {
-            path: "absolute",
-            steps: 0
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.3"
-          }, "Get of absolute depth 0 returns latest version"
-            );
-          return jio1.get("doc", {
-            path: "absolute",
-            steps: 1
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.2.2.2"
-          }, "Get of absolute depth 1 returns correct version"
-            );
-          return jio1.get("doc", {
-            path: "absolute",
-            steps: 2
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.1"
-          }, "Get of absolute depth 2 returns correct version"
-            );
-          return jio1.get("doc", {
-            path: "absolute",
-            steps: 3
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3"
-          }, "Get of absolute depth 3 returns correct version"
-            );
-          return jio1.get("doc", {
-            path: "absolute",
-            steps: 4
+          return jio.put("doc2", {
+            "k2": "w1"
           });
         })
         .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "Document has been removed at this point");
-            return jio1.get("doc", {
-              path: "absolute",
-              steps: 5
-            });
-          })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3"
-          }, "Get of absolute depth 5 returns correct version"
-            );
-          return jio1.get("doc", {
-            path: "absolute",
-            steps: 6
-          });
+          return jio.allDocs();
         })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.2"
-          }, "Get of absolute depth 6 returns correct version"
-            );
-          return jio1.get("doc", {
-            path: "absolute",
-            steps: 7
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1"
-          });
-          return jio1.get("doc", {
-            path: "absolute",
-            steps: 8
+        .push(function (results) {
+          equal(results.data.rows.length, 1,
+            "There is only one non-removed doc");
+          equal(results.data.rows[0].rev, 0);
+          deepEqual(results.data.rows[0].doc, {
+            "k2": "w1"
           });
         })
         .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "There are only 3 previous states of this document");
-          })
-
-        //
-        // Test absolute history of user 2
-        //
+          return jio.remove("doc2");
+        })
         .push(function () {
-          return jio2.get("doc", {
-            path: "absolute",
-            steps: 0
+          return jio.allDocs({
+            revision_limit: [0, 4]
           });
         })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.3"
+        .push(function (results) {
+          equal(results.data.rows.length, 5);
+          equal(results.data.rows[0].rev, 1, "Rev parameter is correct");
+          equal(results.data.rows[1].rev, 2, "Rev parameter is correct");
+          equal(results.data.rows[2].rev, 1, "Rev parameter is correct");
+          equal(results.data.rows[3].rev, 2, "Rev parameter is correct");
+          equal(results.data.rows[4].rev, 3, "Rev parameter is correct");
+          deepEqual(results.data.rows[0].doc, {
+            "k2": "w1"
           });
-          return jio2.get("doc", {
-            path: "absolute",
-            steps: 1
+          deepEqual(results.data.rows[1].doc, {
+            "k2": "w0"
           });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.2.2.2"
+          deepEqual(results.data.rows[2].doc, {
+            "k": "v3"
           });
-          return jio2.get("doc", {
-            path: "absolute",
-            steps: 2
+          deepEqual(results.data.rows[3].doc, {
+            "k": "v2"
           });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.1"
-          });
-          return jio2.get("doc", {
-            path: "absolute",
-            steps: 3
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3"
-          });
-          return jio2.get("doc", {
-            path: "absolute",
-            steps: 4
+          deepEqual(results.data.rows[4].doc, {
+            "k": "v1"
           });
         })
         .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "Document has been removed at this point");
-            return jio2.get("doc", {
-              path: "absolute",
-              steps: 5
-            });
-          })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3"
-          });
-          return jio2.get("doc", {
-            path: "absolute",
-            steps: 6
+          return jio.allDocs({
+            limit: [1, 4],
+            revision_limit: [0, 4]
           });
         })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.2"
-          });
-          return jio2.get("doc", {
-            path: "absolute",
-            steps: 7
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1"
-          });
-          return jio2.get("doc", {
-            path: "absolute",
-            steps: 8
-          });
-        })
-        .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "There are only 3 previous states of this document");
-          })
-
-        //
-        // Tests on checking out an older revision and making a new edit branch
-        //
-        .push(function () {
-          return jio1.get("doc", {
-            path: "absolute",
-            steps: 1
-          });
-        })
-        .push(function () {
-          return jio1.put("doc", {
-            "k": "v0.1.2.2.2.1"
-          });
-        })
-        .push(function () {
-          return jio1.get("doc", {
-            path: "consistent",
-            steps: 1
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.2.2.2"
-          }, "The new document is added to the correct edit branch"
-            );
-          return jio1.get("doc", {
-            path: "consistent",
-            steps: 2
-          });
-        })
-        .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "This document was removed at this time");
-            return jio1.get("doc", {
-              path: "consistent",
-              steps: 3
-            });
-          })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.2"
-          }, "The new document is added to the correct edit branch"
-            );
-          return jio1.get("doc", {
-            path: "consistent",
-            steps: 4
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1"
-          }, "This edit branch also leads back to the original version"
-            );
-          return jio1.get("doc", {
-            path: "consistent",
-            steps: 5
-          });
-        })
-        .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "There are no revisions before the original document");
-          })
-        .push(function () {
-          return jio3.put("doc", {
-            "k": "v0.1.3.3.3.3"
-          });
-        })
-
-        // All three users have the same latest revision
-        .push(function () {
-          return jio1.get("doc");
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.3.3"
-          }, "User one accesses latest revision correctly"
-            );
-          return jio2.get("doc");
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.3.3"
-          }, "User two accesses latest revision correctly"
-            );
-          return jio3.get("doc");
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.3.3"
-          }, "User three accesses latest revision correctly"
-            );
-          return jio2.get("doc", {
-            path: "consistent",
-            steps: 1
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.3"
-          }, "User 2 accesses the 1st edit in consistent traversal."
-            );
-        })
-
-        //
-        // Testing .getting on leaf nodes
-        //
-        .push(function () {
-          return jio1.get("doc", {
-            path: "leaves"
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.3.3"
-          }, "First result is the most-recently-added leaf"
-            );
-          return jio2.get("doc", {
-            path: "leaves",
-            steps: 1
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.2.2.2.1"
-          }, "Second result is the 2nd most-recently-added leaf"
-            );
-          return jio3.get("doc", {
-            path: "leaves",
-            steps: 2,
-            db: "jio3"
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.1"
-          }, "Third result is the 3rd most-recently-added leaf"
-            );
-
-        //
-        // Editing document revisions stemming from the latest leaf nodes seen
-        //
-          return jio1.put("doc", {
-            "k": "v0.1.3.3.3.3.1"
-          });
-        })
-        .push(function () {
-          return jio3.remove("doc"); // removing v0.1.3.3.1
-        })
-
-        // Check that jio1 sees latest non-removed revision
-        .push(function () {
-          return jio1.get("doc");
-        })
-        .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "The most recent edit was a remove, so throw error");
-          })
-        .push(function () {
-          // jio2 lastseen should point to "v0.1.2.2.2.1"
-          return jio2.put("doc", {
-            "k": "v0.1.2.2.2.1.2"
-          });
-        })
-        .push(function () {
-          return jio1.get("doc", {
-            path: "leaves",
-            steps: 0
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.2.2.2.1.2"
-          }, "Accessing the first leaf node at this time"
-            );
-          return jio1.get("doc", {
-            path: "leaves",
-            steps: 1
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.3.3.1"
-          }, "Accessing the second leaf node at this time"
-            );
-          return jio1.get("doc", {
-            path: "leaves",
-            steps: 2
-          });
-        })
-        .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "There are only two non-removed leaves");
-
-            // jio1 should still have lastseen at v0.1.3.3.3.3.1
-            return jio1.put("doc", {
-              "k": "v0.1.3.3.3.3.1.1"
-            });
-          })
-        .push(function () {
-          return jio1.get("doc", {
-            path: "consistent",
-            steps: 1
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.3.3.1"
-          }, "If a .get fails, that should not reset ._lastseen parameter"
-            );
-          return jio1.get("doc", {
-            path: "consistent",
-            steps: 2
-          });
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k": "v0.1.3.3.3.3"
-          }, "History of 0.1.2.2.2 has been constructed correctly.");
+        .push(function (results) {
+          equal(results.data.rows.length, 4,
+            "Correct number of results with options.limit set");
+          equal(results.data.rows[0].rev, 2, "Rev parameter is correct");
+          equal(results.data.rows[1].rev, 1, "Rev parameter is correct");
+          equal(results.data.rows[2].rev, 2, "Rev parameter is correct");
+          equal(results.data.rows[3].rev, 3, "Rev parameter is correct");
+          deepEqual(results.data.rows[0].doc, {
+            "k2": "w0"
+          }, "Correct results with options.limit set");
+          deepEqual(results.data.rows[1].doc, {
+            "k": "v3"
+          }, "Correct results with options.limit set");
+          deepEqual(results.data.rows[2].doc, {
+            "k": "v2"
+          }, "Correct results with options.limit set");
+          deepEqual(results.data.rows[3].doc, {
+            "k": "v1"
+          }, "Correct results with options.limit set");
         })
         .fail(function (error) {
           //console.log(error);

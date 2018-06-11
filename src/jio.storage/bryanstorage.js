@@ -26,119 +26,22 @@
       type: "query",
       sub_storage: spec.sub_storage
     });
-    this._lastseen = undefined;
-    this.param = true;
   }
 
-  BryanStorage.prototype.get = function (id_in, revision) {
+  BryanStorage.prototype.get = function (id_in, steps) {
 
-    // Default behavior, get() returns the most recent revision
-    if (revision === undefined) {
-      revision = {
-        steps: 0,
-        path: "absolute"
-      };
-    }
-
-    // Default type of traversal is absolute:
-    // "absolute" -- step backward in chronological order of changes to document
-    // "consistent" -- step backward in chronological order of only edits the
-    //    most recent version is based on.  Other branches of edits are ignored
-    if (revision.path === undefined) {
-      revision.path = "absolute";
-    }
-
-    if (revision.steps === undefined) {
-      revision.steps = 0;
-    }
-
-    if (revision.steps === 0) {
-      revision.path = "absolute";
+    if (steps === undefined) {
+      steps = 0;
     }
 
     // Query to get the last edit made to this document
-    var storage = this,
-      substorage = this._sub_storage,
+    var substorage = this._sub_storage,
       options = {
         query: "doc_id: " + id_in,
-        sort_on: [["timestamp", "descending"]]
+        sort_on: [["timestamp", "descending"]],
+        limit: [steps, 1]
       };
 
-    if (revision.path === "leaves") {
-      return substorage.allDocs({
-        query: "leaf: true",
-        sort_on: [["timestamp", "descending"]]
-      })
-        .push(function (results) {
-          var promises = results.data.rows.map(function (res) {
-            return substorage.get(res.id);
-          });
-          return RSVP.all(promises);
-        })
-        .push(function (documents) {
-          var not_leaves = {},
-            leaves = [],
-            ind,
-            doc_data,
-            fix_leaves = [];
-          function update_leaf_state(data) {
-            var new_data = data;
-            new_data.leaf = false;
-            return substorage.put(data.timestamp, new_data);
-          }
-
-          // Loop through documents and push only leaf versions to leaves array
-          for (ind = 0; ind < documents.length; ind += 1) {
-            doc_data = documents[ind];
-            not_leaves[doc_data.lastseen] = true;
-            if (not_leaves[doc_data.timestamp] === true) {
-              fix_leaves.push(update_leaf_state);
-            } else {
-              if (doc_data.op === "put") {
-
-                // XXX: For cheaper evaluation, break out of the loop once
-                // leaves.length == revision.steps, and only fix the leaves in
-                // fix_leaves at that point.
-                // However, since we already spent time to retrieve all leaves,
-                // it may be better to go ahead and clean up all mislabelled
-                // leaves right now, so the next call to get.leaves is cheaper
-                leaves.push(doc_data.doc);
-
-                // revision.steps is guaranteed to be >= 1 in this branch
-                // 
-                if (leaves.length - 1 === revision.steps) {
-                  storage._lastseen = doc_data.timestamp;
-                }
-              }
-            }
-          }
-
-          // Fix all mislabelled leaves and then return the array of leaves
-          return RSVP.all(fix_leaves)
-
-            //XXX: Not sure why I can't use a .push here instead of .then
-            .then(function () {
-              if (leaves.length - 1 >= revision.steps) {
-                return leaves[revision.steps];
-              }
-              throw new jIO.util.jIOError(
-                "bryanstorage: there are fewer than " +
-                  revision.steps + " leaf revisions for '" + id_in + "'",
-                404
-              );
-            });
-        });
-    }
-
-    // In "absolute" path, .get returns the revision.steps-most-recent revision
-    if (revision.path === "absolute") {
-      options.limit = [revision.steps, 1];
-
-    // In "consistent path, .get returns the most recent revision and looks 
-    // deeper into history with the result's .lastseen attribute
-    } else if (revision.path === "consistent") {
-      options.limit = [0, 1];
-    }
     return substorage.allDocs(options)
       .push(function (results) {
         if (results.data.rows.length > 0) {
@@ -151,62 +54,13 @@
       })
 
       .push(function (result) {
-
-        // Function used to chain together substorage.get's for "consistent"
-        // traversal
-        function recurse_get(result) {
-          if (result.lastseen === undefined) {
-            throw new jIO.util.jIOError(
-              "bryanstorage: cannot find object '" +
-                id_in +
-                "' (end of history)",
-              404
-            );
-          }
-          return substorage.get(result.lastseen);
-        }
-
-        // If last edit was a remove, throw a 'not found' error
-        if (result.op === "remove" && revision.path === "absolute") {
-          throw new jIO.util.jIOError(
-            "bryanstorage: cannot find object '" + id_in + "' (removed)",
-            404
-          );
-        }
-
         if (result.op === "put") {
-
-          // The query for "absolute" traversal returns exactly the document
-          // requested
-          if (revision.path === "absolute" || revision.steps === 0) {
-            storage._lastseen = result.timestamp;
-            return result.doc;
-          }
-          if (revision.path === "consistent") {
-
-
-            // Chain together promises to access history of document
-            var promise = substorage.get(result.lastseen);
-            while (revision.steps > 1) {
-              promise = promise.push(recurse_get);
-              revision.steps -= 1;
-            }
-
-            // Once at desired depth, update storage._lastseen and return doc
-            return promise.push(function (result) {
-              storage._lastseen = result.timestamp;
-              if (result.op === "remove") {
-                throw new jIO.util.jIOError(
-                  "bryanstorage: cannot find object '" +
-                    result.doc_id +
-                    "' (removed)",
-                  404
-                );
-              }
-              return result.doc;
-            });
-          }
+          return result.doc;
         }
+        throw new jIO.util.jIOError(
+          "bryanstorage: cannot find object '" + id_in + "' (removed)",
+          404
+        );
       });
   };
 
@@ -221,12 +75,9 @@
         timestamp: timestamp,
         doc_id: id,
         doc: data,
-        op: "put",
-        lastseen: this._lastseen,
-        leaf: true
+        op: "put"
       };
     this._lastseen = timestamp;
-    //console.log(metadata.doc.k, timestamp, metadata.lastseen);
     return this._sub_storage.put(timestamp, metadata);
   };
 
@@ -236,12 +87,8 @@
         // XXX: remove this attribute once query can sort_on id
         timestamp: timestamp,
         doc_id: id,
-        op: "remove",
-        lastseen: this._lastseen,
-        leaf: true
+        op: "remove"
       };
-    this._lastseen = timestamp;
-    //console.log("removed", timestamp, metadata.lastseen);
     return this._sub_storage.put(timestamp, metadata);
   };
 
@@ -297,7 +144,6 @@
       });
   };
 
-  // Not implemented for IndexedDB
   BryanStorage.prototype.repair = function () {
     return this._sub_storage.repair.apply(this._sub_storage, arguments);
   };
@@ -306,13 +152,22 @@
   };
 
   BryanStorage.prototype.buildQuery = function (options) {
+    if (options === undefined) {
+      options = {};
+    }
     if (options.sort_on === undefined) {
       options.sort_on = [];
     }
+    options.sort_on.push(["timestamp", "descending"]);
     if (options.limit === undefined) {
       options.limit = [0, -1];
     }
-    options.sort_on.push(["timestamp", "descending"]);
+
+    // Default behavior is to return only the latest revision of each document
+    if (options.revision_limit === undefined) {
+      options.revision_limit = [0, 1];
+    }
+
     var meta_options = {
       // XXX: I don't believe it's currently possible to query on sub-attributes
       // so for now, we just use the inputted query, which obviously will fail
@@ -327,36 +182,52 @@
       first_doc = options.limit[0];
 
     return this._sub_storage.allDocs(meta_options)
+
+      // Get all documents found in query
       .push(function (results) {
         var promises = results.data.rows.map(function (data) {
           return substorage.get(data.id);
         });
         return RSVP.all(promises);
       })
+
       .push(function (results_array) {
         var clean_data = [],
           ind,
-          seen_docs = [],
+          seen_docs = {},
           current_doc,
           counter = 0;
+
+        // Default behavior is to not limit the number of documents returned
         if (max_num_docs === -1) {
           max_num_docs = results_array.length;
         }
         for (ind = 0; ind < results_array.length; ind += 1) {
           current_doc = results_array[ind];
 
+          // Initialize count of revisions
+          if (!seen_docs.hasOwnProperty(current_doc.doc_id)) {
+            seen_docs[current_doc.doc_id] = 0;
+          }
+
           // If the latest version of this document has not yet been 
           // included in query result
-          if (seen_docs[current_doc.doc_id] !== true) {
+          if (options.revision_limit[0] <= seen_docs[current_doc.doc_id] &&
+              seen_docs[current_doc.doc_id] < options.revision_limit[0] +
+              options.revision_limit[1]) {
 
-            // If the latest edit was a put operation, add it to query 
+            // If the latest edit was a put operation, add it to query
             // results
             if (current_doc.op === "put") {
               if (counter >= first_doc) {
+
+                // Note the rev attribute added to the output data.  
+                // This guarantees that `this.get(id, rev) === doc`
                 clean_data.push({
-                  doc: {},
+                  doc: current_doc.doc,
                   value: {},
-                  id: current_doc.doc_id
+                  id: current_doc.doc_id,
+                  rev: seen_docs[current_doc.doc_id]
                 });
                 if (clean_data.length === max_num_docs) {
                   return clean_data;
@@ -364,9 +235,9 @@
               }
               counter += 1;
             }
-            // Mark document as read so no older edits are considered
-            seen_docs[current_doc.doc_id] = true;
           }
+          // Keep track of how many times this doc_id has been seen
+          seen_docs[current_doc.doc_id] += 1;
         }
         // In passing results back to allDocs, formatting of query is handled
         return clean_data;
