@@ -28,18 +28,15 @@
     });
   }
 
-  BryanStorage.prototype.get = function (id_in, steps) {
+  BryanStorage.prototype.get = function (id_in) {
 
-    if (steps === undefined) {
-      steps = 0;
-    }
 
     // Query to get the last edit made to this document
     var substorage = this._sub_storage,
       options = {
         query: "doc_id: " + id_in,
         sort_on: [["timestamp", "descending"]],
-        limit: [steps, 1]
+        limit: [0, 1]
       };
 
     return substorage.allDocs(options)
@@ -52,7 +49,6 @@
           404
         );
       })
-
       .push(function (result) {
         if (result.op === "put") {
           return result.doc;
@@ -61,6 +57,48 @@
           "bryanstorage: cannot find object '" + id_in + "' (removed)",
           404
         );
+
+      // If no documents returned in first query, check if the id is encoding
+      // revision information
+      }, function () {
+        var steps,
+          steps_loc = id_in.lastIndexOf("_-");
+        // If revision signature is not in id_in, than return 404, since id
+        // is not found
+        if (steps_loc === -1) {
+          throw new jIO.util.jIOError(
+            "bryanstorage: cannot find object '" + id_in + "'",
+            404
+          );
+        }
+
+        // If revision signature is found, query storage based on this
+        steps = Number(id_in.slice(steps_loc + 2));
+        id_in = id_in.slice(0, steps_loc);
+        options = {
+          query: "doc_id: " + id_in,
+          sort_on: [["timestamp", "descending"]],
+          limit: [steps, 1]
+        };
+        return substorage.allDocs(options)
+          .push(function (results) {
+            if (results.data.rows.length > 0) {
+              return substorage.get(results.data.rows[0].id);
+            }
+            throw new jIO.util.jIOError(
+              "bryanstorage: cannot find object '" + id_in + "'",
+              404
+            );
+          })
+          .push(function (result) {
+            if (result.op === "put") {
+              return result.doc;
+            }
+            throw new jIO.util.jIOError(
+              "bryanstorage: cannot find object '" + id_in + "' (removed)",
+              404
+            );
+          });
       });
   };
 
@@ -77,7 +115,6 @@
         doc: data,
         op: "put"
       };
-    this._lastseen = timestamp;
     return this._sub_storage.put(timestamp, metadata);
   };
 
@@ -152,34 +189,49 @@
   };
 
   BryanStorage.prototype.buildQuery = function (options) {
+
     if (options === undefined) {
       options = {};
     }
-    if (options.sort_on === undefined) {
-      options.sort_on = [];
+    if (options.query === undefined) {
+      options.query = "";
     }
-    options.sort_on.push(["timestamp", "descending"]);
-    if (options.limit === undefined) {
-      options.limit = [0, -1];
-    }
-
-    // Default behavior is to return only the latest revision of each document
-    if (options.revision_limit === undefined) {
-      options.revision_limit = [0, 1];
-    }
-
+    options.query = jIO.QueryFactory.create(options.query);
     var meta_options = {
-      // XXX: I don't believe it's currently possible to query on sub-attributes
-      // so for now, we just use the inputted query, which obviously will fail
-      query: options.query,
+        // XXX: I don't believe it's currently possible to query on 
+        // sub-attributes so for now, we just use the inputted query, which 
+        // obviously will fail
+        query: "",
 
-      // XXX: same here, we cannot sort correctly because we cannot access
-      // attributes of doc
-      sort_on: options.sort_on
-    },
+        // XXX: same here, we cannot sort correctly because we cannot access
+        // attributes of doc
+        sort_on: [["timestamp", "descending"]]
+      },
       substorage = this._sub_storage,
-      max_num_docs = options.limit[1],
-      first_doc = options.limit[0];
+
+    // Check if query involved _REVISION.  If not, we will later place a 
+    // (*) AND (_REVISION: =0) as the default handling of revisions
+      rev_query = false,
+      query_obj = options.query,
+      query_stack = [],
+      ind;
+
+    if (query_obj.hasOwnProperty("query_list")) {
+      query_stack.push(query_obj);
+    } else {
+      rev_query = (query_obj.key === "_REVISION");
+    }
+    while (query_stack.length > 0 && (!rev_query)) {
+      query_obj = query_stack.pop();
+      for (ind = 0; ind < query_obj.query_list.length; ind += 1) {
+        if (query_obj.query_list[ind].hasOwnProperty("query_list")) {
+          query_stack.push(query_obj.query_list[ind]);
+        } else if (query_obj.query_list[ind].key === "_REVISION") {
+          rev_query = true;
+          break;
+        }
+      }
+    }
 
     return this._sub_storage.allDocs(meta_options)
 
@@ -191,56 +243,66 @@
         return RSVP.all(promises);
       })
 
-      .push(function (results_array) {
-        var clean_data = [],
-          ind,
-          seen_docs = {},
-          current_doc,
-          counter = 0;
-
-        // Default behavior is to not limit the number of documents returned
-        if (max_num_docs === -1) {
-          max_num_docs = results_array.length;
-        }
-        for (ind = 0; ind < results_array.length; ind += 1) {
-          current_doc = results_array[ind];
-
-          // Initialize count of revisions
-          if (!seen_docs.hasOwnProperty(current_doc.doc_id)) {
-            seen_docs[current_doc.doc_id] = 0;
+      .push(function (results) {
+        // Label all documents with their current revision status
+        var doc,
+          revision_tracker = {},
+          promises;
+        for (ind = 0; ind < results.length; ind += 1) {
+          doc = results[ind];
+          if (revision_tracker.hasOwnProperty(doc.doc_id)) {
+            revision_tracker[doc.doc_id] += 1;
+          } else {
+            revision_tracker[doc.doc_id] = 0;
           }
-
-          // If the latest version of this document has not yet been 
-          // included in query result
-          if (options.revision_limit[0] <= seen_docs[current_doc.doc_id] &&
-              seen_docs[current_doc.doc_id] < options.revision_limit[0] +
-              options.revision_limit[1]) {
-
-            // If the latest edit was a put operation, add it to query
-            // results
-            if (current_doc.op === "put") {
-              if (counter >= first_doc) {
-
-                // Note the rev attribute added to the output data.  
-                // This guarantees that `this.get(id, rev) === doc`
-                clean_data.push({
-                  doc: current_doc.doc,
-                  value: {},
-                  id: current_doc.doc_id,
-                  rev: seen_docs[current_doc.doc_id]
-                });
-                if (clean_data.length === max_num_docs) {
-                  return clean_data;
-                }
-              }
-              counter += 1;
-            }
-          }
-          // Keep track of how many times this doc_id has been seen
-          seen_docs[current_doc.doc_id] += 1;
+          doc._REVISION = revision_tracker[doc.doc_id];
         }
-        // In passing results back to allDocs, formatting of query is handled
-        return clean_data;
+
+        // There must be a faster way
+        promises = results.map(function (data) {
+          return substorage.put(data.timestamp, data);
+        });
+        return RSVP.all(promises);
+      })
+      .push(function () {
+        var latest_rev_query;
+        latest_rev_query = jIO.QueryFactory.create(
+          "(_REVISION: >= 0) AND (NOT op: remove)"
+        );
+        if (rev_query) {
+          latest_rev_query.query_list[0] = options.query;
+        } else {
+          latest_rev_query.query_list[0] = jIO.QueryFactory.create(
+            "(_REVISION: =0)"
+          );
+          if (options.query.type === "simple" ||
+              options.query.type === "complex") {
+            latest_rev_query.query_list.push(options.query);
+          }
+        }
+        // Build a query for final push
+        options.query = latest_rev_query;
+        if (options.sort_on === undefined) {
+          options.sort_on = [];
+        }
+        options.sort_on.push(["timestamp", "descending"]);
+        return substorage.allDocs(options);
+      })
+      .push(function (results) {
+        var promises = results.data.rows.map(function (data) {
+          return substorage.get(data.id);
+        });
+        return RSVP.all(promises);
+      })
+      .push(function (results) {
+        return results
+          .map(function (current_doc) {
+            return {
+              doc: current_doc.doc,
+              value: {},
+              id: current_doc.doc_id
+            };
+          });
       });
   };
 

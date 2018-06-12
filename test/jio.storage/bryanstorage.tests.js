@@ -287,7 +287,7 @@
   test("Testing proper retrieval of older revisions of documents",
     function () {
       stop();
-      expect(12);
+      expect(18);
 
       // create storage of type "bryan" with memory as substorage
       var jio = jIO.createJIO({
@@ -314,7 +314,7 @@
           });
         })
         .push(function () {
-          return jio.get("doc", 0);
+          return jio.get("doc_-0");
         })
         .push(function (result) {
           deepEqual(result, {
@@ -325,7 +325,7 @@
           return jio.put("doc", {"k1": "v1"});
         })
         .push(function () {
-          return jio.get("doc", 0);
+          return jio.get("doc_-0");
         })
         .push(function (result) {
           deepEqual(result, {
@@ -333,7 +333,7 @@
           });
         })
         .push(function () {
-          return jio.get("doc", 1);
+          return jio.get("doc_-1");
         })
         .push(function (result) {
           deepEqual(result, {
@@ -359,19 +359,19 @@
           deepEqual(result,
             {"k4": "v4"},
             "By default, .get returns latest revision");
-          return jio.get("doc", 0);
+          return jio.get("doc");
         })
         .push(function (result) {
           deepEqual(result,
             {"k4": "v4"},
             ".get returns latest revision with second input = 0");
-          return jio.get("doc", 1);
+          return jio.get("doc_-1");
         })
         .push(function (result) {
           deepEqual(result,
             {"k3": "v3"},
             "Walk back one revision with second input = 1");
-          return jio.get("doc", 2);
+          return jio.get("doc_-2");
         })
         .push(function () {
           ok(false, "This query should have thrown a 404 error");
@@ -380,25 +380,25 @@
             deepEqual(error.status_code,
               404,
               "Current state of document is 'removed'.");
-            return jio.get("doc", 3);
+            return jio.get("doc_-3");
           })
         .push(function (result) {
           deepEqual(result,
             {"k2": "v2"},
             "Walk back three revisions with second input = 3");
-          return jio.get("doc", 4);
+          return jio.get("doc_-4");
         })
         .push(function (result) {
           deepEqual(result,
             {"k1": "v1"},
             "Walk back four revisions with second input = 4");
-          return jio.get("doc", 5);
+          return jio.get("doc_-5");
         })
         .push(function (result) {
           deepEqual(result,
             {"k0": "v0"},
             "Walk back five revisions with second input = 5");
-          return jio.get("doc", 6);
+          return jio.get("doc_-6");
         })
         .push(function () {
           ok(false, "This query should have thrown a 404 error");
@@ -408,6 +408,65 @@
               404,
               "There are only 5 previous states of this document");
           })
+
+        // Adding documents with problematic doc_id's
+        .push(function () {
+          return jio.put("doc_-name", {
+            "key": "val0"
+          });
+        })
+        .push(function () {
+          return jio.put("document_-0", {
+            "key": "and val0"
+          });
+        })
+        .push(function () {
+          return jio.put("doc_-name", {
+            "key": "val1"
+          });
+        })
+
+        .push(function () {
+          return jio.get("doc_-name");
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "key": "val1"
+          });
+          return jio.get("doc_-name_-0");
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "key": "val1"
+          });
+          return jio.get("doc_-name_-1");
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "key": "val0"
+          });
+          return jio.get("document_-0");
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "key": "and val0"
+          });
+          return jio.get("document_-0_-0");
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            "key": "and val0"
+          });
+          return jio.get("document_-0_-1");
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            deepEqual(error.status_code,
+              404,
+              "Document does not have this many revisions.");
+          })
         .fail(function (error) {
           //console.log(error);
           ok(false, error);
@@ -416,27 +475,25 @@
     });
 
   /////////////////////////////////////////////////////////////////
-  // Accessing older revisions with two users
+  // Querying older revisions
   /////////////////////////////////////////////////////////////////
 
   module("bryanStorage.querying_old_revisions");
   test("Testing retrieval of older revisions via allDocs calls",
     function () {
       stop();
-      expect(47);
+      expect(37);
 
       // create storage of type "bryan" with memory as substorage
-      var dbname = "db-" + Date.now(),
-        jio = jIO.createJIO({
-          type: "bryan",
+      var jio = jIO.createJIO({
+        type: "bryan",
+        sub_storage: {
+          type: "uuid",
           sub_storage: {
-            type: "uuid",
-            sub_storage: {
-              type: "indexeddb",
-              database: dbname
-            }
+            type: "memory"
           }
-        });
+        }
+      });
       jio.put("doc", {
         "k": "v0"
       })
@@ -457,8 +514,7 @@
         })
         .push(function () {
           return jio.allDocs({
-            query: "",
-            revision_limit: [0, 1]
+            query: "_REVISION : 0"
           });
         })
         .push(function (results) {
@@ -474,8 +530,7 @@
         })
         .push(function () {
           return jio.allDocs({
-            query: "",
-            revision_limit: [1, 1]
+            query: "_REVISION : =1"
           });
         })
         .push(function (results) {
@@ -486,8 +541,7 @@
             "k": "v2"
           });
           return jio.allDocs({
-            query: "",
-            revision_limit: [2, 1]
+            query: "_REVISION : =2"
           });
         })
         .push(function (results) {
@@ -498,8 +552,7 @@
             "k": "v1"
           });
           return jio.allDocs({
-            query: "",
-            revision_limit: [3, 1]
+            query: "_REVISION : =3"
           });
         })
         .push(function (results) {
@@ -510,8 +563,7 @@
             "k": "v0"
           });
           return jio.allDocs({
-            query: "",
-            revision_limit: [4, 1]
+            query: "_REVISION : =4"
           });
         })
         .push(function (results) {
@@ -519,7 +571,7 @@
         })
         .push(function () {
           return jio.allDocs({
-            revision_limit: [0, 2]
+            query: "_REVISION: <= 1"
           });
         })
         .push(function (results) {
@@ -536,7 +588,7 @@
         })
         .push(function () {
           return jio.allDocs({
-            query: "",
+            query: "NOT (_REVISION: >= 1)",
             revision_limit: [0, 1]
           });
         })
@@ -546,8 +598,7 @@
         })
         .push(function () {
           return jio.allDocs({
-            query: "",
-            revision_limit: [1, 3]
+            query: "(_REVISION: >= 1) AND (_REVISION: <= 3)"
           });
         })
         .push(function (results) {
@@ -569,7 +620,7 @@
         })
         .push(function () {
           return jio.allDocs({
-            revision_limit: [1, 3]
+            query: "(_REVISION: >0) AND (_REVISION: <= 3)"
           });
         })
         .push(function (results) {
@@ -586,7 +637,7 @@
         })
         .push(function () {
           return jio.allDocs({
-            revision_limit: [0, 2]
+            query: "(_REVISION: = 0) OR (_REVISION: = 1)"
           });
         })
         .push(function (results) {
@@ -609,7 +660,6 @@
         .push(function (results) {
           equal(results.data.rows.length, 1,
             "There is only one non-removed doc");
-          equal(results.data.rows[0].rev, 0);
           deepEqual(results.data.rows[0].doc, {
             "k2": "w1"
           });
@@ -619,16 +669,13 @@
         })
         .push(function () {
           return jio.allDocs({
-            revision_limit: [0, 4]
+            query:
+              "_REVISION: 0 OR _REVISION: 1 OR " +
+              "(_REVISION: >= 2 AND _REVISION: <= 3)"
           });
         })
         .push(function (results) {
           equal(results.data.rows.length, 5);
-          equal(results.data.rows[0].rev, 1, "Rev parameter is correct");
-          equal(results.data.rows[1].rev, 2, "Rev parameter is correct");
-          equal(results.data.rows[2].rev, 1, "Rev parameter is correct");
-          equal(results.data.rows[3].rev, 2, "Rev parameter is correct");
-          equal(results.data.rows[4].rev, 3, "Rev parameter is correct");
           deepEqual(results.data.rows[0].doc, {
             "k2": "w1"
           });
@@ -647,17 +694,13 @@
         })
         .push(function () {
           return jio.allDocs({
-            limit: [1, 4],
-            revision_limit: [0, 4]
+            query: "_REVISION: <= 3",
+            limit: [1, 4]
           });
         })
         .push(function (results) {
           equal(results.data.rows.length, 4,
-            "Correct number of results with options.limit set");
-          equal(results.data.rows[0].rev, 2, "Rev parameter is correct");
-          equal(results.data.rows[1].rev, 1, "Rev parameter is correct");
-          equal(results.data.rows[2].rev, 2, "Rev parameter is correct");
-          equal(results.data.rows[3].rev, 3, "Rev parameter is correct");
+            "Correct number of results with optins.limit set");
           deepEqual(results.data.rows[0].doc, {
             "k2": "w0"
           }, "Correct results with options.limit set");
