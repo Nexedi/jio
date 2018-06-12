@@ -183,7 +183,8 @@ module.exports = function (grunt) {
           'src/jio.storage/cryptstorage.js',
           'src/jio.storage/websqlstorage.js',
           'src/jio.storage/fbstorage.js',
-          'src/jio.storage/bryanstorage.js'
+          'src/jio.storage/historystorage.js',
+          'src/jio.storage/revisionstorage.js'
         ],
         dest: 'dist/<%= pkg.name %>-<%= pkg.version %>.js'
 //         dest: 'jio.js'
