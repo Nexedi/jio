@@ -131,7 +131,7 @@
   /////////////////////////////////////////////////////////////////
   // historyStorage.querying_from_historystorage
   /////////////////////////////////////////////////////////////////
-
+/**
   module("HistoryStorage.querying_from_historystorage");
   test("verifying the correct results are returned from historyStorage.allDocs",
     function () {
@@ -278,6 +278,7 @@
         })
         .always(function () {start(); });
     });
+**/
 
   /////////////////////////////////////////////////////////////////
   // Accessing older revisions
