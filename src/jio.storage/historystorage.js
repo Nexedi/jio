@@ -3,6 +3,9 @@
 (function (jIO) {
   "use strict";
 
+  //local mod/frozen remote
+  //local del/remote mod
+
   // Used to distinguish between operations done within the same millisecond
   var unique_timestamp = function () {
 
@@ -30,11 +33,13 @@
 
   HistoryStorage.prototype.get = function (id_in) {
 
-
     // Query to get the last edit made to this document
     var substorage = this._sub_storage,
+      metadata_query = function (id) {
+        return "doc_id: " + id + " AND ((op: put) OR (op: remove))";
+      },
       options = {
-        query: "doc_id: " + id_in,
+        query: metadata_query(id_in),
         sort_on: [["timestamp", "descending"]],
         limit: [0, 1]
       };
@@ -45,7 +50,7 @@
           return substorage.get(results.data.rows[0].id);
         }
         throw new jIO.util.jIOError(
-          "HistoryStorage: cannot find object '" + id_in + "'",
+          "HistoryStorage: cannot find object '" + id_in + "' (0)",
           404
         );
       })
@@ -67,7 +72,7 @@
         // is not found
         if (steps_loc === -1) {
           throw new jIO.util.jIOError(
-            "HistoryStorage: cannot find object '" + id_in + "'",
+            "HistoryStorage: cannot find object '" + id_in + "' (1)",
             404
           );
         }
@@ -76,7 +81,7 @@
         steps = Number(id_in.slice(steps_loc + 2));
         id_in = id_in.slice(0, steps_loc);
         options = {
-          query: "doc_id: " + id_in,
+          query: metadata_query(id_in),
           sort_on: [["timestamp", "descending"]],
           limit: [steps, 1]
         };
@@ -86,7 +91,7 @@
               return substorage.get(results.data.rows[0].id);
             }
             throw new jIO.util.jIOError(
-              "HistoryStorage: cannot find object '" + id_in + "'",
+              "HistoryStorage: cannot find object '" + id_in + "' (2)",
               404
             );
           })
@@ -95,7 +100,8 @@
               return result.doc;
             }
             throw new jIO.util.jIOError(
-              "HistoryStorage: cannot find object '" + id_in + "' (removed)",
+              "HistoryStorage: cannot find object '" + id_in +
+                "' (removed) (1)",
               404
             );
           });
@@ -129,18 +135,143 @@
     return this._sub_storage.put(timestamp, metadata);
   };
 
-  HistoryStorage.prototype.allAttachments = function () {
-    return this._sub_storage.allAttachments.apply(this._sub_storage, arguments);
+  HistoryStorage.prototype.allAttachments = function (id) {
+    var substorage = this._sub_storage,
+      options = {
+        query: "(doc_id: " + id + ") AND " +
+          "((op: putAttachment) OR (op: removeAttachment))",
+        sort_on: [["timestamp", "descending"]]
+      };
+    return this._sub_storage.allDocs(options)
+      .push(function (results) {
+        var promises = results.data.rows.map(function (data) {
+            return substorage.get(data.id);
+          });
+        return RSVP.all(promises);
+      })
+      .push(function (results) {
+        var seen = {},
+          attachments = {},
+          ind,
+          doc;
+        for (ind = 0; ind < results.length; ind += 1) {
+          doc = results[ind];
+          if (!seen.hasOwnProperty(doc.name)) {
+            if (doc.op === "putAttachment") {
+              attachments[doc.name] = {};
+            }
+            seen[doc.name] = {};
+          }
+        }
+        return attachments;
+      });
   };
-  HistoryStorage.prototype.getAttachment = function () {
-    return this._sub_storage.getAttachment.apply(this._sub_storage, arguments);
+
+  HistoryStorage.prototype.putAttachment = function (id, name, blob) {
+    var timestamp = unique_timestamp(),
+      metadata = {
+        // XXX: remove this attribute once query can sort_on id
+        timestamp: timestamp,
+        doc_id: id,
+        name: name,
+        op: "putAttachment"
+      },
+      substorage = this._sub_storage;
+    return this._sub_storage.put(timestamp, metadata)
+      .push(function () {
+        return substorage.putAttachment(timestamp, name, blob);
+      });
   };
-  HistoryStorage.prototype.putAttachment = function () {
-    return this._sub_storage.putAttachment.apply(this._sub_storage, arguments);
+
+  HistoryStorage.prototype.getAttachment = function (id, name) {
+
+    // Query to get the last edit made to this document
+    var substorage = this._sub_storage,
+      metadata_query = function (id) {
+        return "(doc_id: " + id +
+          ") AND (name: " + name +
+          ") AND ((op: putAttachment) OR (op: removeAttachment))";
+      },
+      options = {
+        query: metadata_query(id),
+        sort_on: [["timestamp", "descending"]],
+        limit: [0, 1]
+      };
+    return substorage.allDocs(options)
+      .push(function (results) {
+        if (results.data.rows.length > 0) {
+          return substorage.get(results.data.rows[0].id);
+        }
+        throw new jIO.util.jIOError(
+          "HistoryStorage: cannot find object '" + id + "' (0)",
+          404
+        );
+      })
+      .push(function (result) {
+        if (result.op === "putAttachment") {
+          return substorage.getAttachment(result.timestamp, result.name);
+          //return result.blob;
+        }
+        throw new jIO.util.jIOError(
+          "HistoryStorage: cannot find object '" + id + "' (removed)",
+          404
+        );
+
+      // If no documents returned in first query, check if the id is encoding
+      // revision information
+      }, function () {
+        var steps,
+          steps_loc = id.lastIndexOf("_-");
+        // If revision signature is not in id_in, than return 404, since id
+        // is not found
+        if (steps_loc === -1) {
+          throw new jIO.util.jIOError(
+            "HistoryStorage: cannot find object '" + id + "' (1)",
+            404
+          );
+        }
+
+        // If revision signature is found, query storage based on this
+        steps = Number(id.slice(steps_loc + 2));
+        id = id.slice(0, steps_loc);
+        options = {
+          query: metadata_query(id),
+          sort_on: [["timestamp", "descending"]],
+          limit: [steps, 1]
+        };
+        return substorage.allDocs(options)
+          .push(function (results) {
+            if (results.data.rows.length > 0) {
+              return substorage.get(results.data.rows[0].id);
+            }
+            throw new jIO.util.jIOError(
+              "HistoryStorage: cannot find object '" + id + "' (2)",
+              404
+            );
+          })
+          .push(function (result) {
+            if (result.op === "putAttachment") {
+              return substorage.getAttachment(result.timestamp, result.name);
+              //return result.blob;
+            }
+            throw new jIO.util.jIOError(
+              "HistoryStorage: cannot find object '" + id + "' (removed) (1)",
+              404
+            );
+          });
+      });
   };
-  HistoryStorage.prototype.removeAttachment = function () {
-    return this._sub_storage.removeAttachment
-      .apply(this._sub_storage, arguments);
+
+  HistoryStorage.prototype.removeAttachment = function (id, name) {
+    var timestamp = unique_timestamp(),
+      metadata = {
+        // XXX: remove this attribute once query can sort_on id
+        timestamp: timestamp,
+        doc_id: id,
+        name: name,
+        op: "removeAttachment"
+      };
+    return this._sub_storage.put(timestamp, metadata);
   };
   HistoryStorage.prototype.repair = function () {
     return this._sub_storage.repair.apply(this._sub_storage, arguments);
@@ -150,7 +281,9 @@
   };
 
   HistoryStorage.prototype.buildQuery = function (options) {
-
+    if (options.message === "give all docs") {
+      return this._sub_storage.allDocs(options.opts);
+    }
     if (options === undefined) {
       options = {};
     }
@@ -160,16 +293,20 @@
     if (options.sort_on === undefined) {
       options.sort_on = [];
     }
+    if (options.select_list === undefined) {
+      options.select_list = [];
+    }
     options.sort_on.push(["timestamp", "descending"]);
     options.query = jIO.QueryFactory.create(options.query);
     var meta_options = {
         // XXX: I don't believe it's currently possible to query on 
         // sub-attributes so for now, we just use the inputted query, which 
         // obviously will fail
-        query: "",
+        //query: "",//(op: put) OR (op: remove)",
 
         // XXX: same here, we cannot sort correctly because we cannot access
         // attributes of doc
+        query: "(op: remove) OR (op: put)",
         sort_on: options.sort_on
       },
       substorage = this._sub_storage,
@@ -201,49 +338,61 @@
 
       // Get all documents found in query
       .push(function (results) {
+
         var promises = results.data.rows.map(function (data) {
           return substorage.get(data.id);
         });
         return RSVP.all(promises);
       })
-
       .push(function (results) {
+
         // Label all documents with their current revision status
-        var doc,
+        var docum,
           revision_tracker = {},
-          latest_rev_query;
+          latest_rev_query,
+          results_reduced;
         for (ind = 0; ind < results.length; ind += 1) {
-          doc = results[ind];
-          if (revision_tracker.hasOwnProperty(doc.doc_id)) {
-            revision_tracker[doc.doc_id] += 1;
+          docum = results[ind];
+          if (revision_tracker.hasOwnProperty(docum.doc_id)) {
+            revision_tracker[docum.doc_id] += 1;
           } else {
-            revision_tracker[doc.doc_id] = 0;
+            revision_tracker[docum.doc_id] = 0;
           }
-          doc._REVISION = revision_tracker[doc.doc_id];
+          if (docum.op === "remove") {
+            docum.doc = {};
+          }
+          results[ind].doc._REVISION = revision_tracker[docum.doc_id];
+          results[ind].doc.op = docum.op;
         }
 
         // Create a new query to only get non-removed revisions and abide by
         // whatever the inputted query says
         latest_rev_query = jIO.QueryFactory.create(
-          "(_REVISION: >= 0) AND (NOT op: remove)"
+          "(_REVISION: >= 0) AND (op: put)"
         );
         if (rev_query) {
           latest_rev_query.query_list[0] = options.query;
         } else {
           latest_rev_query.query_list[0] = jIO.QueryFactory.create(
-            "(_REVISION: =0)"
+            "(_REVISION: = 0)"
           );
           if (options.query.type === "simple" ||
               options.query.type === "complex") {
             latest_rev_query.query_list.push(options.query);
           }
         }
-
-        return results
+        //return results
+        results_reduced = results
           // Only return results which match latest_rev_query
-          .filter(function (doc) {
-            return latest_rev_query.match(doc);
-          })
+          .filter(function (docum) {
+            var filtered_res = latest_rev_query.match(docum.doc);
+
+            // Remove extra metadata used in revision query
+            delete docum.doc.op;
+            delete docum.doc._REVISION;
+            return filtered_res;
+          });
+        return results_reduced
 
           // Only return the correct range of valid results specified by
           // options.limit
@@ -257,9 +406,18 @@
 
           // Format results to be expected output of allDocs
           .map(function (current_doc) {
+            var val = {},
+              ind,
+              key;
+            for (ind = 0; ind < options.select_list.length; ind += 1) {
+              key = options.select_list[ind];
+              if (current_doc.doc.hasOwnProperty(key)) {
+                val[key] = current_doc.doc[key];
+              }
+            }
             return {
               doc: current_doc.doc,
-              value: {},
+              value: val,
               id: current_doc.doc_id
             };
           });

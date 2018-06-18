@@ -135,6 +135,7 @@
         },
         count: {}
       };
+
       this.jio = jIO.createJIO({
         type: "replicate",
         query: {
@@ -153,7 +154,7 @@
         parallel_operation_amount: 10,
         parallel_operation_attachment_amount: 10,
         local_sub_storage: {
-          type: "query",
+          type: "history",
           sub_storage: {
             type: "uuid",
             sub_storage: {
@@ -213,7 +214,6 @@
       doc_id = 'foo_module/1',
       doc = {title: doc_id, portal_type: "Foo", modification_date: 'a'},
       blob = new Blob(['a']);
-
     putFullDoc(this.jio.__storage._remote_sub_storage, doc_id, doc, blob)
       .then(function () {
         return test.jio.repair();
@@ -279,7 +279,6 @@
   test("remote document modification: copy", function () {
     expect(2);
     stop();
-
     var test = this,
       doc_id = 'foo_module/1',
       doc = {title: doc_id, portal_type: "Foo", modification_date: 'a'},
@@ -367,7 +366,6 @@
       doc_id = 'abc',
       doc = {title: doc_id, portal_type: "Foo", modification_date: 'a'},
       blob = new Blob(['a']);
-
     putFullDoc(this.jio, doc_id, doc, blob)
       .then(function () {
         resetCount(test.remote_mock_options.count);
