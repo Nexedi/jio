@@ -1,6 +1,6 @@
 /*jslint nomen: true*/
-/*global Blob, jiodate*/
-(function (jIO, QUnit) {
+/*global Blob*/
+(function (jIO, RSVP, Blob, QUnit) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -37,11 +37,14 @@
         jio = jIO.createJIO({
           type: "history",
           sub_storage: {
-            type: "uuid",
+            type: "query",
             sub_storage: {
-              //type: "memory"
-              type: "indexeddb",
-              database: dbname
+              type: "uuid",
+              sub_storage: {
+                //type: "memory"
+                type: "indexeddb",
+                database: dbname
+              }
             }
           }
         }),
@@ -297,17 +300,20 @@
   test("Testing proper adding/removing attachments",
     function () {
       stop();
-      expect(9);
+      expect(26);
 
       // create storage of type "history" with memory as substorage
-      var jio = jIO.createJIO({
+      var dbname = "db_" + Date.now(),
+        jio = jIO.createJIO({
           type: "history",
           sub_storage: {
-            type: "uuid",
+            type: "query",
             sub_storage: {
-              type: "memory"
-              //type: "indexeddb",
-              //database: dbname
+              type: "uuid",
+              sub_storage: {
+                type: "indexeddb",
+                database: dbname
+              }
             }
           }
         }),
@@ -316,17 +322,20 @@
           sub_storage: {
             type: "uuid",
             sub_storage: {
-              type: "memory"
-              //type: "indexeddb",
-              //database: dbname
+              type: "indexeddb",
+              database: dbname
             }
           }
         }),
 
         blob1 = new Blob(['a']),
         blob2 = new Blob(['b']),
+        blob3 = new Blob(['ccc']),
         other_blob = new Blob(['1']);
       jio.put("doc", {title: "foo0"})
+        .push(function () {
+          return jio.put("doc2", {key: "val"});
+        })
         .push(function () {
           return jio.putAttachment("doc", "attached", blob1);
         })
@@ -342,7 +351,7 @@
         .push(function (result) {
           deepEqual(result, {
             title: "foo0"
-          }, "Get does not return any attachment information");
+          }, "Get does not return any attachment/revision information");
           return jio.getAttachment("doc", "attached");
         })
         .push(function (result) {
@@ -355,26 +364,40 @@
         .push(function (result) {
           deepEqual(result,
             blob2,
-            "Return the attachment information with getAttachment"
+            "Return the attachment information with getAttachment for " +
+              "current revision"
             );
           return jio.getAttachment("doc", "attached_-1");
+        }, function (error) {
+          ok(false, error);
         })
         .push(function (result) {
           deepEqual(result,
             blob1,
-            "Return the attachment information with getAttachment"
+            "Return the attachment information with getAttachment for " +
+              "previous revision"
             );
           return jio.getAttachment("doc", "attached_-2");
+        }, function (error) {
+          ok(false, error);
         })
         .push(function () {
           ok(false, "This query should have thrown a 404 error");
         },
           function (error) {
+            ok(error instanceof jIO.util.jIOError, "Correct type of error");
             deepEqual(error.status_code,
               404,
               "Error if you try to go back more revisions than what exists");
-            return jio.allAttachments("doc");
+            return jio.getAttachment("doc", "other_attached");
           })
+        .push(function (result) {
+          deepEqual(result,
+            other_blob,
+            "Other document successfully queried"
+            );
+          return jio.allAttachments("doc");
+        })
         .push(function (results) {
           deepEqual(results, {
             "attached": {},
@@ -388,13 +411,14 @@
         .push(function (result) {
           deepEqual(result, {
             title: "foo0"
-          }, "Get does not return any attachment information");
+          }, "Get does not return any attachment information (9)");
           return jio.getAttachment("doc", "attached");
         })
         .push(function () {
           ok(false, "This query should have thrown a 404 error");
         },
           function (error) {
+            ok(error instanceof jIO.util.jIOError, "Correct type of error");
             deepEqual(error.status_code,
               404,
               "Removed attachments cannot be queried");
@@ -404,18 +428,99 @@
           deepEqual(results, {
             "other_attached": {}
           }, "allAttachments works as expected with a removed attachment");
+          return jio.putAttachment("doc", "attached", blob3);
         })
+        .push(function () {
+          return not_history.allDocs();
+        })
+        .push(function (results) {
+          var promises = results.data.rows.map(function (data) {
+            return not_history.get(data.id);
+          });
+          return RSVP.all(promises);
+        })
+        .push(function (results) {
+          deepEqual(results, [
+            {timestamp: results[0].timestamp,
+              doc_id: "doc", doc: results[0].doc, op: "put"},
+            {timestamp: results[1].timestamp,
+              doc_id: "doc2", doc: results[1].doc, op: "put"},
+            {timestamp: results[2].timestamp,
+              doc_id: "doc", name: "attached", op: "putAttachment"},
+            {timestamp: results[3].timestamp,
+              doc_id: "doc", name: "attached", op: "putAttachment"},
+            {timestamp: results[4].timestamp,
+              doc_id: "doc", name: "other_attached", op: "putAttachment"},
+            {timestamp: results[5].timestamp,
+              doc_id: "doc", name: "attached", op: "removeAttachment"},
+            {timestamp: results[6].timestamp,
+              doc_id: "doc", name: "attached", op: "putAttachment"}
+          ], "Other storage can access all document revisions."
+            );
+        })
+        .push(function () {
+          return jio.getAttachment("doc", "attached");
+        })
+        .push(function (result) {
+          deepEqual(result,
+            blob3,
+            "Return the attachment information with getAttachment"
+            );
+          return jio.getAttachment("doc", "attached_-0");
+        })
+        .push(function (result) {
+          deepEqual(result,
+            blob3,
+            "Return the attachment information with getAttachment"
+            );
+          return jio.getAttachment("doc", "attached_-1");
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            ok(error instanceof jIO.util.jIOError, "Correct type of error");
+            deepEqual(error.status_code,
+              404,
+              "Error if you try to go back to a removed attachment state");
+            return jio.getAttachment("doc", "attached_-2");
+          })
+        .push(function (result) {
+          deepEqual(result,
+            blob2,
+            "Return the attachment information with getAttachment (17)"
+            );
+          return jio.getAttachment("doc", "attached_-3");
+        })
+        .push(function (result) {
+          deepEqual(result,
+            blob1,
+            "Return the attachment information with getAttachment"
+            );
+          return jio.getAttachment("doc", "attached_-4");
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            ok(error instanceof jIO.util.jIOError, "Correct type of error");
+            deepEqual(error.status_code,
+              404,
+              "Error if you try to go back more revisions than what exists");
+          })
         .push(function () {
           return jio.allDocs();
         })
         .push(function (results) {
-          equal(results.data.rows.length, 1, "Only one document in storage");
-          return jio.get(results.data.rows[0].id);
+          equal(results.data.rows.length,
+            2,
+            "Two documents in accessible storage");
+          return jio.get(results.data.rows[1].id);
         })
         .push(function (result) {
           deepEqual(result, {
             "title": "foo0"
-          });
+          }, "Get second document accessible from jio storage");
 
           return not_history.allDocs();
         })
@@ -424,6 +529,22 @@
             return not_history.get(d.id);
           }));
         })
+        .push(function (results) {
+          equal(results.length, 7, "Seven document revisions in storage (24)");
+          return jio.remove("doc");
+        })
+        .push(function () {
+          return jio.getAttachment("doc", "attached");
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            ok(error instanceof jIO.util.jIOError, "Correct type of error");
+            deepEqual(error.status_code,
+              404,
+              "Cannot get the attachment of a removed document");
+          })
         .fail(function (error) {
           //console.log(error);
           ok(false, error);
@@ -446,9 +567,12 @@
       var jio = jIO.createJIO({
         type: "history",
         sub_storage: {
-          type: "uuid",
+          type: "query",
           sub_storage: {
-            type: "memory"
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
           }
         }
       });
@@ -627,6 +751,7 @@
         .always(function () {start(); });
     });
 
+
   /////////////////////////////////////////////////////////////////
   // Querying older revisions
   /////////////////////////////////////////////////////////////////
@@ -641,9 +766,12 @@
       var jio = jIO.createJIO({
         type: "history",
         sub_storage: {
-          type: "uuid",
+          type: "query",
           sub_storage: {
-            type: "memory"
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
           }
         }
       });
@@ -854,7 +982,7 @@
         })
         .push(function (results) {
           equal(results.data.rows.length, 4,
-            "Correct number of results with optins.limit set");
+            "Correct number of results with options.limit set");
           deepEqual(results.data.rows[0].doc, {
             "k2": "w0"
           }, "Correct results with options.limit set");
@@ -907,9 +1035,12 @@
       var jio = jIO.createJIO({
         type: "history",
         sub_storage: {
-          type: "uuid",
+          type: "query",
           sub_storage: {
-            type: "memory"
+            type: "uuid",
+            sub_storage: {
+              type: "memory"
+            }
           }
         }
       }),
@@ -960,4 +1091,4 @@
         .always(function () {start(); });
     });
 
-}(jIO, QUnit));
+}(jIO, RSVP, Blob, QUnit));
