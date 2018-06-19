@@ -179,6 +179,8 @@
     // XXX: Do we need to be able to retrieve older revisions with 
     // allAttachments?
 
+    // XXX: If document is removed, should this throw a 404?
+
     var substorage = this._sub_storage,
       query_obj,
       options;

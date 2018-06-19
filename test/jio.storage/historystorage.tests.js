@@ -22,124 +22,6 @@
       });
   }
 
-  /////////////////////////////////////////////////////////////////
-  // _revision parameter updating with RSVP all
-  /////////////////////////////////////////////////////////////////
-
-  module("HistoryStorage.revision_with_RSVP_all");
-  test("verifying updates correctly when puts are done in parallel",
-    function () {
-      stop();
-      expect(7);
-
-      // create storage of type "history" with memory as substorage
-      var dbname = "rsvp_db_" + Date.now(),
-        jio = jIO.createJIO({
-          type: "history",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "uuid",
-              sub_storage: {
-                //type: "memory"
-                type: "indexeddb",
-                database: dbname
-              }
-            }
-          }
-        }),
-        not_history = jIO.createJIO({
-          type: "query",
-          sub_storage: {
-            type: "uuid",
-            sub_storage: {
-              //type: "memory"
-              type: "indexeddb",
-              database: dbname
-            }
-          }
-        });
-
-      jio.put("bar", {"title": "foo0"})
-        .push(function () {
-          return RSVP.all([
-            jio.put("bar", {"title": "foo1"}),
-            jio.put("bar", {"title": "foo2"}),
-            jio.put("bar", {"title": "foo3"}),
-            jio.put("bar", {"title": "foo4"}),
-            jio.put("barbar", {"title": "attr0"}),
-            jio.put("barbar", {"title": "attr1"}),
-            jio.put("barbar", {"title": "attr2"}),
-            jio.put("barbar", {"title": "attr3"})
-          ]);
-        })
-        .push(function () {return jio.get("bar"); })
-        .push(function (result) {
-          ok(result.title !== "foo0", "Title should have changed from foo0");
-        })
-        .push(function () {
-          return not_history.allDocs({
-            query: "",
-            sort_on: [["timestamp", "ascending"]]
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length,
-            9,
-            "All nine versions exist in storage");
-          return not_history.get(results.data.rows[0].id);
-        })
-        .push(function (results) {
-          deepEqual(results, {
-            doc_id: "bar",
-            doc: {
-              title: "foo0"
-            },
-            timestamp: results.timestamp,
-            op: "put"
-          }, "The first item in the log is pushing bar's title to 'foo0'");
-          return jio.remove("bar");
-        })
-        .push(function () {
-          return jio.get("bar");
-        })
-        .push(function () {
-          return jio.get("barbar");
-        }, function (error) {
-          deepEqual(
-            error.message,
-            "HistoryStorage: cannot find object 'bar' (removed)",
-            "Appropriate error is sent explaining object has been removed"
-          );
-          return jio.get("barbar");
-        })
-        .push(function (result) {
-          ok(result.title !== undefined, "barbar exists and has proper form");
-          return not_history.allDocs({
-            query: "",
-            sort_on: [["op", "descending"]]
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length,
-            10,
-            "Remove operation is recorded");
-          return not_history.get(results.data.rows[0].id);
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            doc_id: "bar",
-            timestamp: result.timestamp,
-            op: "remove"
-          });
-        })
-        .fail(function (error) {
-          //console.log(error);
-          ok(false, error);
-        })
-        .always(function () {start(); });
-    });
-
 
   /////////////////////////////////////////////////////////////////
   // historyStorage.querying_from_historystorage
@@ -557,7 +439,7 @@
   // Accessing older revisions
   /////////////////////////////////////////////////////////////////
 
-  module("HistoryStorage.accessing_older_revisions");
+  module("HistoryStorage.getting_and_putting");
   test("Testing proper retrieval of older revisions of documents",
     function () {
       stop();
@@ -752,11 +634,125 @@
     });
 
 
+  test("verifying updates correctly when puts are done in parallel",
+    function () {
+      stop();
+      expect(7);
+
+      // create storage of type "history" with memory as substorage
+      var dbname = "rsvp_db_" + Date.now(),
+        jio = jIO.createJIO({
+          type: "history",
+          sub_storage: {
+            type: "query",
+            sub_storage: {
+              type: "uuid",
+              sub_storage: {
+                //type: "memory"
+                type: "indexeddb",
+                database: dbname
+              }
+            }
+          }
+        }),
+        not_history = jIO.createJIO({
+          type: "query",
+          sub_storage: {
+            type: "uuid",
+            sub_storage: {
+              //type: "memory"
+              type: "indexeddb",
+              database: dbname
+            }
+          }
+        });
+
+      jio.put("bar", {"title": "foo0"})
+        .push(function () {
+          return RSVP.all([
+            jio.put("bar", {"title": "foo1"}),
+            jio.put("bar", {"title": "foo2"}),
+            jio.put("bar", {"title": "foo3"}),
+            jio.put("bar", {"title": "foo4"}),
+            jio.put("barbar", {"title": "attr0"}),
+            jio.put("barbar", {"title": "attr1"}),
+            jio.put("barbar", {"title": "attr2"}),
+            jio.put("barbar", {"title": "attr3"})
+          ]);
+        })
+        .push(function () {return jio.get("bar"); })
+        .push(function (result) {
+          ok(result.title !== "foo0", "Title should have changed from foo0");
+        })
+        .push(function () {
+          return not_history.allDocs({
+            query: "",
+            sort_on: [["timestamp", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          equal(results.data.rows.length,
+            9,
+            "All nine versions exist in storage");
+          return not_history.get(results.data.rows[0].id);
+        })
+        .push(function (results) {
+          deepEqual(results, {
+            doc_id: "bar",
+            doc: {
+              title: "foo0"
+            },
+            timestamp: results.timestamp,
+            op: "put"
+          }, "The first item in the log is pushing bar's title to 'foo0'");
+          return jio.remove("bar");
+        })
+        .push(function () {
+          return jio.get("bar");
+        })
+        .push(function () {
+          return jio.get("barbar");
+        }, function (error) {
+          deepEqual(
+            error.message,
+            "HistoryStorage: cannot find object 'bar' (removed)",
+            "Appropriate error is sent explaining object has been removed"
+          );
+          return jio.get("barbar");
+        })
+        .push(function (result) {
+          ok(result.title !== undefined, "barbar exists and has proper form");
+          return not_history.allDocs({
+            query: "",
+            sort_on: [["op", "descending"]]
+          });
+        })
+        .push(function (results) {
+          equal(results.data.rows.length,
+            10,
+            "Remove operation is recorded");
+          return not_history.get(results.data.rows[0].id);
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            doc_id: "bar",
+            timestamp: result.timestamp,
+            op: "remove"
+          });
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
+
   /////////////////////////////////////////////////////////////////
   // Querying older revisions
   /////////////////////////////////////////////////////////////////
 
-  module("HistoryStorage.querying_old_revisions");
+  module("HistoryStorage.allDocs");
   test("Testing retrieval of older revisions via allDocs calls",
     function () {
       stop();
@@ -1025,8 +1021,8 @@
   // Complex Queries
   /////////////////////////////////////////////////////////////////
 
-  module("HistoryStorage.complex_queries");
-  test("Testing retrieval of older revisions via allDocs calls",
+  //module("HistoryStorage.complex_queries");
+  test("More complex queries with select_list option",
     function () {
       stop();
       expect(3);
