@@ -24,182 +24,20 @@
 
 
   /////////////////////////////////////////////////////////////////
-  // historyStorage.querying_from_historystorage
-  /////////////////////////////////////////////////////////////////
-/**
-  module("HistoryStorage.querying_from_historystorage");
-  test("verifying the correct results are returned from historyStorage.allDocs",
-    function () {
-      stop();
-      expect(10);
-
-      // create storage of type "history" with memory as substorage
-      var jio = jIO.createJIO({
-        type: "history",
-        sub_storage: {
-          type: "uuid",
-          sub_storage: {
-            type: "memory"
-          }
-        }
-      });
-      jio.put("bar", {"title": "foo0"})
-        .push(function () {
-          return RSVP.all([
-            jio.remove("bar"),
-            jio.put("bar", {"title": "foo1"}),
-            jio.put("bar", {"title": "foo2"}),
-            jio.put("bar", {"title": "foo3"}),
-            jio.put("barbar", {"title": "attr0"}),
-            jio.put("barbar", {"title": "attr1"}),
-            jio.put("barbar", {"title": "attr2"}),
-            jio.put("barbarbar", {"title": "val0"}),
-            jio.put("barbarbarbar", {"title": "prop0"})
-          ]);
-        })
-        // Make two final puts so we know what to expect as the current state of
-        // each document.
-        .push(function () {
-          return jio.put("barbar", {"title": "attr3"});
-        })
-        .push(function () {
-          return jio.put("bar", {"title": "foo4"});
-        })
-
-        // Queries should only include information about the final two versions
-        .push(function () {
-          return jio.allDocs({
-            query: "",
-            sort_on: [["title", "ascending"]]
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length,
-            4,
-            "Empty query yields four results since there are four unique docs");
-          return jio.get(results.data.rows[0].id);
-        },
-          function (error) {
-            return ok(false, "Query failed: " + error);
-          })
-        .push(function (result) {
-          deepEqual(result, {
-            title: "attr3"
-          },
-            "NOT IMPLEMENTED: Retrieve correct sort order with no metadata");
-        },
-          function () {
-            return ok(false, "Couldn't find document in storage");
-          })
-
-        // Querying with a limit
-        .push(function () {
-          return jio.allDocs({
-            query: "",
-            sort_on: [["title", "ascending"]],
-            limit: [0, 1]
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length,
-            1,
-            "Since limit [0,1] was supplied, only 1st document is returned");
-          return jio.get(results.data.rows[0].id);
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            title: "attr3"
-          },
-            "NOT IMPLEMENTED: retrieving documents in specified sort_on order");
-        })
-
-        // Querying with a more complicated limit
-        .push(function () {
-          return jio.allDocs({
-            query: "",
-            sort_on: [["title", "ascending"]],
-            limit: [2, 2]
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length,
-            2,
-            "Retrieving the correct documents when options.limit is specified");
-
-          deepEqual(results.data.rows[0].id,
-            "barbarbarbar",
-            "NOT IMPLEMENTED: retrieving documents in specified sort_on order");
-
-          deepEqual(results.data.rows[1].id,
-            "barbarbar",
-            "NOT IMPLEMENTED: retrieving documents in specified sort_on order");
-
-          return jio.get(results.data.rows[0].id);
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            title: "property0"
-          },
-            "NOT IMPLEMENTED: retrieving documents in specified sort_on order");
-        })
-
-        // Querying for a specific id
-        .push(function () {
-          return jio.allDocs({
-            query: "id: bar"
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length,
-            1,
-            "NOT IMPLEMENTED: query involving specific document attributes");
-          return jio.get(results.data.rows[0].id);
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            title: "foo4"
-          },
-            "NOT IMPLEMENTED: query involving specific document attributes");
-        },
-          function () {
-            ok(false,
-              "NOT IMPLEMENTED: query involving specific document attributes"
-              );
-          })
-
-        .fail(function (error) {
-          //console.log(error);
-          ok(false, error);
-        })
-        .always(function () {start(); });
-    });
-**/
-  /////////////////////////////////////////////////////////////////
   // Attachments
   /////////////////////////////////////////////////////////////////
 
-  module("HistoryStorage.attachments");
-  test("Testing proper adding/removing attachments",
-    function () {
-      stop();
-      expect(26);
-
+  module("HistoryStorage.attachments", {
+    setup: function () {
       // create storage of type "history" with memory as substorage
-      var dbname = "db_" + Date.now(),
-        jio = jIO.createJIO({
-          type: "history",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "uuid",
-              sub_storage: {
-                type: "indexeddb",
-                database: dbname
-              }
-            }
-          }
-        }),
-        not_history = jIO.createJIO({
+      var dbname = "db_" + Date.now();
+      this.blob1 = new Blob(['a']);
+      this.blob2 = new Blob(['b']);
+      this.blob3 = new Blob(['ccc']);
+      this.other_blob = new Blob(['1']);
+      this.jio = jIO.createJIO({
+        type: "history",
+        sub_storage: {
           type: "query",
           sub_storage: {
             type: "uuid",
@@ -208,24 +46,42 @@
               database: dbname
             }
           }
-        }),
+        }
+      });
+      this.not_history = jIO.createJIO({
+        type: "query",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "indexeddb",
+            database: dbname
+          }
+        }
+      });
+    }
+  });
+  test("Testing proper adding/removing attachments",
+    function () {
+      stop();
+      expect(7);
+      var jio = this.jio,
+        timestamps = this.jio.__storage._timestamps,
+        blob2 = this.blob2,
+        blob1 = this.blob1,
+        other_blob = this.other_blob;
 
-        blob1 = new Blob(['a']),
-        blob2 = new Blob(['b']),
-        blob3 = new Blob(['ccc']),
-        other_blob = new Blob(['1']);
       jio.put("doc", {title: "foo0"})
         .push(function () {
           return jio.put("doc2", {key: "val"});
         })
         .push(function () {
-          return jio.putAttachment("doc", "attached", blob1);
+          return jio.putAttachment("doc", "attacheddata", blob1);
         })
         .push(function () {
-          return jio.putAttachment("doc", "attached", blob2);
+          return jio.putAttachment("doc", "attacheddata", blob2);
         })
         .push(function () {
-          return jio.putAttachment("doc", "other_attached", other_blob);
+          return jio.putAttachment("doc", "other_attacheddata", other_blob);
         })
         .push(function () {
           return jio.get("doc");
@@ -234,14 +90,17 @@
           deepEqual(result, {
             title: "foo0"
           }, "Get does not return any attachment/revision information");
-          return jio.getAttachment("doc", "attached");
+          return jio.getAttachment("doc", "attacheddata");
         })
         .push(function (result) {
           deepEqual(result,
             blob2,
             "Return the attachment information with getAttachment"
             );
-          return jio.getAttachment("doc", "attached_-0");
+          return jio.getAttachment(
+            timestamps.doc.attacheddata[1],
+            "attacheddata"
+          );
         })
         .push(function (result) {
           deepEqual(result,
@@ -249,8 +108,12 @@
             "Return the attachment information with getAttachment for " +
               "current revision"
             );
-          return jio.getAttachment("doc", "attached_-1");
+          return jio.getAttachment(
+            timestamps.doc.attacheddata[0],
+            "attacheddata"
+          );
         }, function (error) {
+          //console.log(error);
           ok(false, error);
         })
         .push(function (result) {
@@ -259,7 +122,7 @@
             "Return the attachment information with getAttachment for " +
               "previous revision"
             );
-          return jio.getAttachment("doc", "attached_-2");
+          return jio.getAttachment(timestamps.doc[0], "attached");
         }, function (error) {
           ok(false, error);
         })
@@ -270,22 +133,56 @@
             ok(error instanceof jIO.util.jIOError, "Correct type of error");
             deepEqual(error.status_code,
               404,
-              "Error if you try to go back more revisions than what exists");
-            return jio.getAttachment("doc", "other_attached");
+              "Error if you try to go back to a nonexistent timestamp");
+            return jio.getAttachment("doc", "other_attacheddata");
           })
         .push(function (result) {
           deepEqual(result,
             other_blob,
             "Other document successfully queried"
             );
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
+
+  test("Correctness of allAttachments method",
+    function () {
+      stop();
+      expect(11);
+      var jio = this.jio,
+        not_history = this.not_history,
+        blob1 = this.blob1,
+        blob2 = this.blob2,
+        blob3 = this.blob3,
+        other_blob = this.other_blob;
+
+      jio.put("doc", {title: "foo0"})
+        .push(function () {
+          return jio.put("doc2", {key: "val"});
+        })
+        .push(function () {
+          return jio.putAttachment("doc", "attacheddata", blob1);
+        })
+        .push(function () {
+          return jio.putAttachment("doc", "attacheddata", blob2);
+        })
+        .push(function () {
+          return jio.putAttachment("doc", "other_attacheddata", other_blob);
+        })
+        .push(function () {
           return jio.allAttachments("doc");
         })
         .push(function (results) {
           deepEqual(results, {
-            "attached": {},
-            "other_attached": {}
+            "attacheddata": blob2,
+            "other_attacheddata": other_blob
           }, "allAttachments works as expected.");
-          return jio.removeAttachment("doc", "attached");
+          return jio.removeAttachment("doc", "attacheddata");
         })
         .push(function () {
           return jio.get("doc");
@@ -293,8 +190,8 @@
         .push(function (result) {
           deepEqual(result, {
             title: "foo0"
-          }, "Get does not return any attachment information (9)");
-          return jio.getAttachment("doc", "attached");
+          }, "Get does not return any attachment information");
+          return jio.getAttachment("doc", "attacheddata");
         })
         .push(function () {
           ok(false, "This query should have thrown a 404 error");
@@ -303,14 +200,14 @@
             ok(error instanceof jIO.util.jIOError, "Correct type of error");
             deepEqual(error.status_code,
               404,
-              "Removed attachments cannot be queried");
+              "Removed attachments cannot be queried (4)");
             return jio.allAttachments("doc");
           })
         .push(function (results) {
           deepEqual(results, {
-            "other_attached": {}
+            "other_attacheddata": blob2
           }, "allAttachments works as expected with a removed attachment");
-          return jio.putAttachment("doc", "attached", blob3);
+          return jio.putAttachment("doc", "attacheddata", blob3);
         })
         .push(function () {
           return not_history.allDocs();
@@ -328,68 +225,18 @@
             {timestamp: results[1].timestamp,
               doc_id: "doc2", doc: results[1].doc, op: "put"},
             {timestamp: results[2].timestamp,
-              doc_id: "doc", name: "attached", op: "putAttachment"},
+              doc_id: "doc", name: "attacheddata", op: "putAttachment"},
             {timestamp: results[3].timestamp,
-              doc_id: "doc", name: "attached", op: "putAttachment"},
+              doc_id: "doc", name: "attacheddata", op: "putAttachment"},
             {timestamp: results[4].timestamp,
-              doc_id: "doc", name: "other_attached", op: "putAttachment"},
+              doc_id: "doc", name: "other_attacheddata", op: "putAttachment"},
             {timestamp: results[5].timestamp,
-              doc_id: "doc", name: "attached", op: "removeAttachment"},
+              doc_id: "doc", name: "attacheddata", op: "removeAttachment"},
             {timestamp: results[6].timestamp,
-              doc_id: "doc", name: "attached", op: "putAttachment"}
+              doc_id: "doc", name: "attacheddata", op: "putAttachment"}
           ], "Other storage can access all document revisions."
             );
         })
-        .push(function () {
-          return jio.getAttachment("doc", "attached");
-        })
-        .push(function (result) {
-          deepEqual(result,
-            blob3,
-            "Return the attachment information with getAttachment"
-            );
-          return jio.getAttachment("doc", "attached_-0");
-        })
-        .push(function (result) {
-          deepEqual(result,
-            blob3,
-            "Return the attachment information with getAttachment"
-            );
-          return jio.getAttachment("doc", "attached_-1");
-        })
-        .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            ok(error instanceof jIO.util.jIOError, "Correct type of error");
-            deepEqual(error.status_code,
-              404,
-              "Error if you try to go back to a removed attachment state");
-            return jio.getAttachment("doc", "attached_-2");
-          })
-        .push(function (result) {
-          deepEqual(result,
-            blob2,
-            "Return the attachment information with getAttachment (17)"
-            );
-          return jio.getAttachment("doc", "attached_-3");
-        })
-        .push(function (result) {
-          deepEqual(result,
-            blob1,
-            "Return the attachment information with getAttachment"
-            );
-          return jio.getAttachment("doc", "attached_-4");
-        })
-        .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            ok(error instanceof jIO.util.jIOError, "Correct type of error");
-            deepEqual(error.status_code,
-              404,
-              "Error if you try to go back more revisions than what exists");
-          })
         .push(function () {
           return jio.allDocs();
         })
@@ -412,11 +259,11 @@
           }));
         })
         .push(function (results) {
-          equal(results.length, 7, "Seven document revisions in storage (24)");
+          equal(results.length, 7, "Seven document revisions in storage (17)");
           return jio.remove("doc");
         })
         .push(function () {
-          return jio.getAttachment("doc", "attached");
+          return jio.getAttachment("doc", "attacheddata");
         })
         .push(function () {
           ok(false, "This query should have thrown a 404 error");
@@ -436,196 +283,101 @@
 
 
   /////////////////////////////////////////////////////////////////
-  // Accessing older revisions
+  // Querying older revisions
   /////////////////////////////////////////////////////////////////
 
-  module("HistoryStorage.getting_and_putting");
-  test("Testing proper retrieval of older revisions of documents",
-    function () {
-      stop();
-      expect(18);
-
+  module("HistoryStorage.get", {
+    setup: function () {
       // create storage of type "history" with memory as substorage
-      var jio = jIO.createJIO({
+      var dbname = "db_" + Date.now();
+      this.jio = jIO.createJIO({
         type: "history",
         sub_storage: {
           type: "query",
           sub_storage: {
             type: "uuid",
             sub_storage: {
-              type: "memory"
+              type: "indexeddb",
+              database: dbname
             }
           }
         }
       });
-      jio.get("doc")
-        .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "Document does not exist yet.");
-          })
-        .push(function () {
-          return jio.put("doc", {
-            "k0": "v0"
-          });
-        })
-        .push(function () {
-          return jio.get("doc_-0");
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k0": "v0"
-          });
-        })
-        .push(function () {
-          return jio.put("doc", {"k1": "v1"});
-        })
-        .push(function () {
-          return jio.get("doc_-0");
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k1": "v1"
-          });
-        })
-        .push(function () {
-          return jio.get("doc_-1");
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "k0": "v0"
-          });
-        })
-        .push(function () {
-          return jio.put("doc", {"k2": "v2"});
-        })
-        .push(function () {
-          return jio.remove("doc");
-        })
-        .push(function () {
-          return jio.put("doc", {"k3": "v3"});
-        })
-        .push(function () {
-          return jio.put("doc", {"k4": "v4"});
-        })
-        .push(function () {
-          return jio.get("doc");
-        })
-        .push(function (result) {
-          deepEqual(result,
-            {"k4": "v4"},
-            "By default, .get returns latest revision");
-          return jio.get("doc");
-        })
-        .push(function (result) {
-          deepEqual(result,
-            {"k4": "v4"},
-            ".get returns latest revision with second input = 0");
-          return jio.get("doc_-1");
-        })
-        .push(function (result) {
-          deepEqual(result,
-            {"k3": "v3"},
-            "Walk back one revision with second input = 1");
-          return jio.get("doc_-2");
-        })
-        .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "Current state of document is 'removed'.");
-            return jio.get("doc_-3");
-          })
-        .push(function (result) {
-          deepEqual(result,
-            {"k2": "v2"},
-            "Walk back three revisions with second input = 3");
-          return jio.get("doc_-4");
-        })
-        .push(function (result) {
-          deepEqual(result,
-            {"k1": "v1"},
-            "Walk back four revisions with second input = 4");
-          return jio.get("doc_-5");
-        })
-        .push(function (result) {
-          deepEqual(result,
-            {"k0": "v0"},
-            "Walk back five revisions with second input = 5");
-          return jio.get("doc_-6");
-        })
-        .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "There are only 5 previous states of this document");
-          })
+      this.not_history = jIO.createJIO({
+        type: "query",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "indexeddb",
+            database: dbname
+          }
+        }
+      });
+    }
+  });
 
-        // Adding documents with problematic doc_id's
-        .push(function () {
-          return jio.put("doc_-name", {
-            "key": "val0"
-          });
-        })
-        .push(function () {
-          return jio.put("document_-0", {
-            "key": "and val0"
-          });
-        })
-        .push(function () {
-          return jio.put("doc_-name", {
-            "key": "val1"
-          });
-        })
+  test("Handling bad input",
+    function () {
+      stop();
+      expect(2);
+      var jio = this.jio,
+        BADINPUT_ERRCODE = 422;
 
+      jio.put("doc", {
+        "_timestamp": 3,
+        "other_attr": "other_val"
+      })
         .push(function () {
-          return jio.get("doc_-name");
+          ok(false, "This statement should not be reached");
+        }, function (error) {
+          ok(error instanceof jIO.util.jIOError, "Correct type of error");
+          deepEqual(error.status_code,
+            BADINPUT_ERRCODE,
+            "Can't save a document with a reserved keyword"
+            );
         })
-        .push(function (result) {
-          deepEqual(result, {
-            "key": "val1"
-          });
-          return jio.get("doc_-name_-0");
+        .fail(function (error) {
+            //console.log(error);
+          ok(false, error);
         })
-        .push(function (result) {
-          deepEqual(result, {
-            "key": "val1"
-          });
-          return jio.get("doc_-name_-1");
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "key": "val0"
-          });
-          return jio.get("document_-0");
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "key": "and val0"
-          });
-          return jio.get("document_-0_-0");
-        })
-        .push(function (result) {
-          deepEqual(result, {
-            "key": "and val0"
-          });
-          return jio.get("document_-0_-1");
-        })
+        .always(function () {start(); });
+    });
+
+  test("Creating a document with put and retrieving it with get",
+    function () {
+      stop();
+      expect(4);
+      var jio = this.jio,
+        not_history = this.not_history,
+        timestamps = jio.__storage._timestamps;
+      jio.put("doc", {title: "version0"})
         .push(function () {
-          ok(false, "This query should have thrown a 404 error");
-        },
-          function (error) {
-            deepEqual(error.status_code,
-              404,
-              "Document does not have this many revisions.");
-          })
+          ok(timestamps.hasOwnProperty("doc"),
+            "jio._timestamps is updated with new document.");
+          equal(timestamps.doc.length,
+            1,
+            "One revision is logged in jio._timestamps"
+            );
+          return jio.get(timestamps.doc[0]);
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            title: "version0"
+          }, "Get document from history storage");
+          return not_history.get(
+            timestamps.doc[0]
+          );
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            timestamp: timestamps.doc[0],
+            op: "put",
+            doc_id: "doc",
+            doc: {
+              title: "version0"
+            }
+          }, "Get document from non-history storage");
+        })
         .fail(function (error) {
           //console.log(error);
           ok(false, error);
@@ -633,39 +385,88 @@
         .always(function () {start(); });
     });
 
+  test("Retrieving older revisions with get",
+    function () {
+      stop();
+      expect(7);
+      var jio = this.jio,
+        timestamps = this.jio.__storage._timestamps;
+
+      return jio.put("doc", {title: "t0", subtitle: "s0"})
+        .push(function () {
+          return jio.put("doc", {title: "t1", subtitle: "s1"});
+        })
+        .push(function () {
+          return jio.put("doc", {title: "t2", subtitle: "s2"});
+        })
+        .push(function () {
+          jio.remove("doc");
+        })
+        .push(function () {
+          return jio.put("doc", {title: "t3", subtitle: "s3"});
+        })
+        .push(function () {
+          return jio.get("doc");
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            title: "t3",
+            subtitle: "s3"
+          }, "Get returns latest revision");
+          return jio.get(timestamps.doc[0]);
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            title: "t0",
+            subtitle: "s0"
+          }, "Get returns first version");
+          return jio.get(timestamps.doc[1]);
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            title: "t1",
+            subtitle: "s1"
+          }, "Get returns second version");
+          return jio.get(timestamps.doc[2]);
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            title: "t2",
+            subtitle: "s2"
+          }, "Get returns third version");
+          return jio.get(timestamps.doc[3]);
+        })
+        .push(function () {
+          ok(false, "This should have thrown a 404 error");
+          return jio.get(timestamps.doc[4]);
+        },
+          function (error) {
+            ok(error instanceof jIO.util.jIOError, "Correct type of error");
+            deepEqual(error.status_code,
+              404,
+              "Error if you try to go back more revisions than what exists");
+            return jio.get(timestamps.doc[4]);
+          })
+        .push(function (result) {
+          deepEqual(result, {
+            title: "t3",
+            subtitle: "s3"
+          }, "Get returns latest version");
+        })
+
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
 
   test("verifying updates correctly when puts are done in parallel",
     function () {
       stop();
-      expect(7);
-
-      // create storage of type "history" with memory as substorage
-      var dbname = "rsvp_db_" + Date.now(),
-        jio = jIO.createJIO({
-          type: "history",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "uuid",
-              sub_storage: {
-                //type: "memory"
-                type: "indexeddb",
-                database: dbname
-              }
-            }
-          }
-        }),
-        not_history = jIO.createJIO({
-          type: "query",
-          sub_storage: {
-            type: "uuid",
-            sub_storage: {
-              //type: "memory"
-              type: "indexeddb",
-              database: dbname
-            }
-          }
-        });
+      expect(8);
+      var jio = this.jio,
+        not_history = this.not_history;
 
       jio.put("bar", {"title": "foo0"})
         .push(function () {
@@ -713,11 +514,8 @@
         .push(function () {
           return jio.get("barbar");
         }, function (error) {
-          deepEqual(
-            error.message,
-            "HistoryStorage: cannot find object 'bar' (removed)",
-            "Appropriate error is sent explaining object has been removed"
-          );
+          ok(error instanceof jIO.util.jIOError, "Correct type of error");
+          equal(error.status_code, 404, "Correct error status code returned");
           return jio.get("barbar");
         })
         .push(function (result) {
@@ -747,268 +545,95 @@
         .always(function () {start(); });
     });
 
-
   /////////////////////////////////////////////////////////////////
   // Querying older revisions
   /////////////////////////////////////////////////////////////////
 
-  module("HistoryStorage.allDocs");
-  test("Testing retrieval of older revisions via allDocs calls",
-    function () {
-      stop();
-      expect(42);
-
+  module("HistoryStorage.allDocs", {
+    setup: function () {
       // create storage of type "history" with memory as substorage
-      var jio = jIO.createJIO({
+      var dbname = "db_" + Date.now();
+      this.jio = jIO.createJIO({
         type: "history",
         sub_storage: {
           type: "query",
           sub_storage: {
             type: "uuid",
             sub_storage: {
-              type: "memory"
+              type: "indexeddb",
+              database: dbname
             }
           }
         }
       });
-      jio.put("doc", {
-        "k": "v0"
-      })
+      this.not_history = jIO.createJIO({
+        type: "query",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "indexeddb",
+            database: dbname
+          }
+        }
+      });
+    }
+  });
+  test("Putting a document and retrieving it with allDocs",
+    function () {
+      stop();
+      expect(7);
+      var jio = this.jio,
+        not_history = this.not_history;
+      jio.put("doc", {title: "version0"})
         .push(function () {
-          return jio.put("doc", {
-            "k": "v1"
-          });
-        })
-        .push(function () {
-          return jio.put("doc", {
-            "k": "v2"
-          });
-        })
-        .push(function () {
-          return jio.put("doc", {
-            "k": "v3"
-          });
-        })
-        .push(function () {
-          return jio.allDocs({
-            query: "_REVISION : 0"
-          });
+          return RSVP.all([
+            jio.allDocs(),
+            jio.allDocs({query: "title: version0"}),
+            jio.allDocs({limit: [0, 1]}),
+            jio.allDocs({})
+          ]);
         })
         .push(function (results) {
-          deepEqual(results.data.rows.length,
+          var ind = 0;
+          for (ind = 0; ind < results.length - 1; ind += 1) {
+            deepEqual(results[ind],
+              results[ind + 1],
+              "Each query returns exactly the same correct output"
+              );
+          }
+          return results[0];
+        })
+        .push(function (results) {
+          equal(results.data.rows.length,
             1,
-            "Only one query returned with options.revision_limit == [0,1]");
-          return jio.get(results.data.rows[0].id);
+            "Exactly one result returned");
+          deepEqual(results.data.rows[0], {
+            doc: {},
+            value: {},
+            id: "doc"
+          },
+            "Correct document format is returned."
+            );
+          return not_history.allDocs();
+        })
+        .push(function (results) {
+          equal(results.data.rows.length,
+            1,
+            "Exactly one result returned");
+          return not_history.get(results.data.rows[0].id);
         })
         .push(function (result) {
           deepEqual(result, {
-            "k": "v3"
-          }, "One correct result.");
-        })
-        .push(function () {
-          return jio.allDocs({
-            query: "_REVISION : =1"
-          });
-        })
-        .push(function (results) {
-          deepEqual(results.data.rows.length,
-            1,
-            "Only one query returned with options.revision_limit == [1,1]");
-          deepEqual(results.data.rows[0].doc, {
-            "k": "v2"
-          }, "One correct result.");
-          return jio.allDocs({
-            query: "_REVISION : =2"
-          });
-        })
-        .push(function (results) {
-          deepEqual(results.data.rows.length,
-            1,
-            "Only one query returned with options.revision_limit == [2,1]");
-          deepEqual(results.data.rows[0].doc, {
-            "k": "v1"
-          });
-          return jio.allDocs({
-            query: "_REVISION : =3"
-          });
-        })
-        .push(function (results) {
-          deepEqual(results.data.rows.length,
-            1,
-            "Only one query returned with options.revision_limit == [3,1]");
-          deepEqual(results.data.rows[0].doc, {
-            "k": "v0"
-          });
-          return jio.allDocs({
-            query: "_REVISION : =4"
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length, 0, "Past all previous revisions");
-        })
-        .push(function () {
-          return jio.allDocs({
-            query: "_REVISION: <= 1"
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length, 2,
-            "Only retrieve two most recent revions");
-          deepEqual(results.data.rows[0].doc, {
-            "k": "v3"
-          }, "First retrieved revision is correct");
-          deepEqual(results.data.rows[1].doc, {
-            "k": "v2"
-          }, "Second retrieved revision is correct");
-        })
-        .push(function () {
-          return jio.remove("doc");
-        })
-        .push(function () {
-          return jio.allDocs({
-            query: "NOT (_REVISION: >= 1)",
-            revision_limit: [0, 1]
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length, 0,
-            "Query does not return removed doc");
-        })
-        .push(function () {
-          return jio.allDocs({
-            query: "(_REVISION: >= 1) AND (_REVISION: <= 3)"
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length, 3);
-          deepEqual(results.data.rows[0].doc, {
-            "k": "v3"
-          }, "1st, 2nd, and 3rd versions removed from current are retrieved");
-          deepEqual(results.data.rows[1].doc, {
-            "k": "v2"
-          }, "1st, 2nd, and 3rd versions removed from current are retrieved");
-          deepEqual(results.data.rows[2].doc, {
-            "k": "v1"
-          }, "1st, 2nd, and 3rd versions removed from current are retrieved");
-        })
-        .push(function () {
-          return jio.put("doc2", {
-            "k2": "w0"
-          });
-        })
-        .push(function () {
-          return jio.allDocs({
-            query: "(_REVISION: >0) AND (_REVISION: <= 3)"
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length, 3);
-          deepEqual(results.data.rows[0].doc, {
-            "k": "v3"
-          }, "Does not retrieve new document outside queried revision range");
-          deepEqual(results.data.rows[1].doc, {
-            "k": "v2"
-          }, "Does not retrieve new document outside queried revision range");
-          deepEqual(results.data.rows[2].doc, {
-            "k": "v1"
-          }, "Does not retrieve new document outside queried revision range");
-        })
-        .push(function () {
-          return jio.allDocs({
-            query: "(_REVISION: = 0) OR (_REVISION: = 1)"
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length, 2);
-          deepEqual(results.data.rows[0].doc, {
-            "k2": "w0"
-          }, "Retrieves all documents with versions in queried revision range");
-          deepEqual(results.data.rows[1].doc, {
-            "k": "v3"
-          }, "Retrieves all documents with versions in queried revision range");
-        })
-        .push(function () {
-          return jio.put("doc2", {
-            "k2": "w1"
-          });
-        })
-        .push(function () {
-          return jio.allDocs();
-        })
-        .push(function (results) {
-          equal(results.data.rows.length, 1,
-            "There is only one non-removed doc.");
-          deepEqual(results.data.rows[0].doc, {
-            "k2": "w1"
-          }, "Returned the one correct document.");
-        })
-        .push(function () {
-          return jio.remove("doc2");
-        })
-        .push(function () {
-          return jio.allDocs({
-            query:
-              "_REVISION: 0 OR _REVISION: 1 OR " +
-              "(_REVISION: >= 2 AND _REVISION: <= 3)"
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length, 5);
-          deepEqual(results.data.rows[0].doc, {
-            "k2": "w1"
-          });
-          deepEqual(results.data.rows[1].doc, {
-            "k2": "w0"
-          });
-          deepEqual(results.data.rows[2].doc, {
-            "k": "v3"
-          });
-          deepEqual(results.data.rows[3].doc, {
-            "k": "v2"
-          });
-          deepEqual(results.data.rows[4].doc, {
-            "k": "v1"
-          });
-        })
-        .push(function () {
-          return jio.allDocs({
-            query: "_REVISION: <= 3",
-            limit: [1, 4]
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length, 4,
-            "Correct number of results with options.limit set");
-          deepEqual(results.data.rows[0].doc, {
-            "k2": "w0"
-          }, "Correct results with options.limit set");
-          deepEqual(results.data.rows[1].doc, {
-            "k": "v3"
-          }, "Correct results with options.limit set");
-          deepEqual(results.data.rows[2].doc, {
-            "k": "v2"
-          }, "Correct results with options.limit set");
-          deepEqual(results.data.rows[3].doc, {
-            "k": "v1"
-          }, "Correct results with options.limit set");
-
-          return jio.allDocs({
-            query: "_REVISION: = 1",
-            select_list: ["k"]
-          });
-        })
-        .push(function (results) {
-          equal(results.data.rows.length, 2);
-          deepEqual(results.data.rows[0].doc, {
-            "k2": "w1"
-          });
-          deepEqual(results.data.rows[0].value, {});
-          deepEqual(results.data.rows[1].doc, {
-            "k": "v3"
-          });
-          deepEqual(results.data.rows[1].value, {
-            "k": "v3"
-          });
+            timestamp: jio.__storage._timestamps.doc[0],
+            doc_id: "doc",
+            doc: {
+              title: "version0"
+            },
+            op: "put"
+          },
+            "When a different type of storage queries historystorage, all " +
+            "metadata is returned correctly"
+            );
         })
         .fail(function (error) {
           //console.log(error);
@@ -1017,68 +642,323 @@
         .always(function () {start(); });
     });
 
-  /////////////////////////////////////////////////////////////////
-  // Complex Queries
-  /////////////////////////////////////////////////////////////////
 
-  //module("HistoryStorage.complex_queries");
-  test("More complex queries with select_list option",
+  test("Putting a document, revising it, and retrieving revisions with allDocs",
     function () {
       stop();
-      expect(3);
-
-      // create storage of type "history" with memory as substorage
-      var jio = jIO.createJIO({
-        type: "history",
-        sub_storage: {
-          type: "query",
-          sub_storage: {
-            type: "uuid",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      }),
-        doc = {
-          "modification_date": "a",
-          "portal_type": "Foo",
-          "title": "foo_module/1"
-        },
-        blob = new Blob(['a']);
-      putFullDoc(jio, "foo_module/1", doc, "data", blob)
+      expect(13);
+      var context = this,
+        timestamps;
+      context.jio.put("doc", {
+        title: "version0",
+        subtitle: "subvers0"
+      })
         .push(function () {
-          return jio.get("foo_module/1");
+          return context.jio.put("doc", {
+            title: "version1",
+            subtitle: "subvers1"
+          });
         })
-        .push(function (result) {
-          deepEqual(result, {
-            "modification_date": "a",
-            "portal_type": "Foo",
-            "title": "foo_module/1"
-          }, "Can retrieve a document after attachment placed."
+        .push(function () {
+          timestamps = context.jio.__storage._timestamps.doc;
+          return context.jio.put("doc", {
+            title: "version2",
+            subtitle: "subvers2"
+          });
+        })
+        .push(function () {
+
+          return RSVP.all([
+            context.jio.allDocs({select_list: ["title", "subtitle"]}),
+            context.jio.allDocs({
+              query: "",
+              select_list: ["title", "subtitle"]
+            }),
+            context.jio.allDocs({
+              query: "title: version2",
+              select_list: ["title", "subtitle"]
+            }),
+            context.jio.allDocs({
+              query: "NOT (title: version1)",
+              select_list: ["title", "subtitle"]
+            }),
+            context.jio.allDocs({
+              query: "(NOT (subtitle: subvers1)) AND (NOT (title: version0))",
+              select_list: ["title", "subtitle"]
+            }),
+            context.jio.allDocs({
+              limit: [0, 1],
+              sort_on: [["title", "ascending"]],
+              select_list: ["title", "subtitle"]
+            })
+          ]);
+        })
+        .push(function (results) {
+          var ind = 0;
+          for (ind = 0; ind < results.length - 1; ind += 1) {
+            deepEqual(results[ind],
+              results[ind + 1],
+              "Each query returns exactly the same correct output"
+              );
+          }
+          return results[0];
+        })
+        .push(function (results) {
+          equal(results.data.rows.length,
+            1,
+            "Exactly one result returned");
+          deepEqual(results.data.rows[0], {
+            value: {
+              title: "version2",
+              subtitle: "subvers2"
+            },
+            doc: {},
+            id: "doc"
+          },
+            "Correct document format is returned."
             );
         })
         .push(function () {
-          return jio.allDocs({
-            query: "portal_type: Foo",
-            select_list: ["modification_date", "__id", "__id"],
-            sort_on: [["modification_date", "descending"],
-              ["timestamp", "descending"],
-              ["timestamp", "descending"]
+          return RSVP.all([
+            context.jio.allDocs({
+              query: "_timestamp: " + timestamps[1],
+              select_list: ["title", "subtitle"]
+            }),
+            context.jio.allDocs({
+              query: "_timestamp: =" + timestamps[1],
+              select_list: ["title", "subtitle"]
+            }),
+            context.jio.allDocs({
+              query: "_timestamp: >" + timestamps[0] + " AND title: version1",
+              select_list: ["title", "subtitle"]
+            }),
+            context.jio.allDocs({
+              query: "_timestamp: > " + timestamps[0] + " AND _timestamp: < " +
+                timestamps[2],
+              select_list: ["title", "subtitle"]
+            })
+          ]);
+        })
+        .push(function (results) {
+          equal(results[0].data.rows.length,
+            1,
+            "Querying a specific timestamp retrieves one document");
+          var ind = 0;
+          for (ind = 0; ind < results.length - 1; ind += 1) {
+            deepEqual(results[ind],
+              results[ind + 1],
+              "Each query returns exactly the same correct output"
+              );
+          }
+          return results[0];
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows[0], {
+            id: "doc",
+            value: {
+              title: "version1",
+              subtitle: "subvers1"
+            },
+            doc: {}
+          });
+
+          return context.not_history.allDocs({
+            sort_on: [["title", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          return RSVP.all(results.data.rows.map(function (d) {
+            return context.not_history.get(d.id);
+          }));
+        })
+        .push(function (results) {
+          deepEqual(results, [
+            {
+              timestamp: timestamps[0],
+              op: "put",
+              doc_id: "doc",
+              doc: {
+                title: "version0",
+                subtitle: "subvers0"
+              }
+            },
+            {
+              timestamp: timestamps[1],
+              op: "put",
+              doc_id: "doc",
+              doc: {
+                title: "version1",
+                subtitle: "subvers1"
+              }
+            },
+            {
+              timestamp: timestamps[2],
+              op: "put",
+              doc_id: "doc",
+              doc: {
+                title: "version2",
+                subtitle: "subvers2"
+              }
+            }
+          ],
+            "A different storage type can retrieve all versions as expected.");
+        })
+        .fail(function (error) {
+            //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
+
+  test(
+    "Putting and removing documents, latest revisions and no removed documents",
+    function () {
+      stop();
+      expect(5);
+      var history = this.jio,
+        timestamps = this.jio.__storage._timestamps;
+
+      history.put("doc_a", {
+        title_a: "rev0",
+        subtitle_a: "subrev0"
+      })
+        .push(function () {
+          return history.put("doc_a", {
+            title_a: "rev1",
+            subtitle_a: "subrev1"
+          });
+        })
+        .push(function () {
+          return history.put("doc_b", {
+            title_b: "rev0",
+            subtitle_b: "subrev0"
+          });
+        })
+        .push(function () {
+          return history.remove("doc_b");
+        })
+        .push(function () {
+          return history.put("doc_c", {
+            title_c: "rev0",
+            subtitle_c: "subrev0"
+          });
+        })
+        .push(function () {
+          return history.put("doc_c", {
+            title_c: "rev1",
+            subtitle_c: "subrev1"
+          });
+        })
+        .push(function () {
+          return history.allDocs({sort_on: [["timestamp", "descending"]]});
+        })
+        .push(function (results) {
+          equal(results.data.rows.length,
+            2,
+            "Only two non-removed unique documents exist."
+            );
+          deepEqual(results.data.rows, [
+            {
+              id: "doc_c",
+              value: {},
+              doc: {}
+            },
+            {
+              id: "doc_a",
+              value: {},
+              doc: {}
+            }
+          ],
+            "Empty query returns latest revisions (and no removed documents)");
+          equal(timestamps.doc_a.length,
+            2,
+            "Correct number of revisions logged in doc_a");
+          equal(timestamps.doc_b.length,
+            2,
+            "Correct number of revisions logged in doc_b");
+          equal(timestamps.doc_c.length,
+            2,
+            "Correct number of revisions logged in doc_c");
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    }
+  );
+
+    /////////////////////////////////////////////////////////////////
+    // Complex Queries
+    /////////////////////////////////////////////////////////////////
+
+  test("More complex query with different options (without revision queries)",
+    function () {
+      stop();
+      expect(2);
+      var history = this.jio,
+        docs = [
+          {
+            "date": 1,
+            "type": "foo",
+            "title": "doc"
+          },
+          {
+            "date": 2,
+            "type": "bar",
+            "title": "second_doc"
+          },
+          {
+            "date": 2,
+            "type": "barbar",
+            "title": "third_doc"
+          }
+        ],
+        blobs = [
+          new Blob(['a']),
+          new Blob(['bcd']),
+          new Blob(['eeee'])
+        ];
+      history.put("doc", {})
+        .push(function () {
+          return putFullDoc(history, "doc", docs[0], "data", blobs[0]);
+        })
+        .push(function () {
+          return putFullDoc(history, "second_doc", docs[1], "data", blobs[1]);
+        })
+        .push(function () {
+          return putFullDoc(history, "third_doc", docs[2], "data", blobs[2]);
+        })
+        .push(function () {
+          return history.allDocs({
+            query: "(date: <= 2)",
+            select_list: ["date", "non-existent-key"],
+            sort_on: [["date", "ascending"],
+              ["non-existent-key", "ascending"]
               ]
           });
         })
         .push(function (results) {
-          equal(results.data.rows.length, 1);
-          deepEqual(results.data.rows[0], {
-            doc: {
-              "modification_date": "a",
-              "portal_type": "Foo",
-              "title": "foo_module/1"
+          equal(results.data.rows.length, 3);
+          deepEqual(results.data.rows, [
+            {
+              doc: {},
+              id: "doc",
+              value: {date: 1}
             },
-            id: "foo_module/1",
-            value: {modification_date: "a"}
-          });
+            {
+              doc: {},
+              id: "third_doc",
+              value: {date: 2}
+            },
+            {
+              doc: {},
+              id: "second_doc",
+              value: {date: 2}
+            }
+          ],
+            "Query gives correct results in correct order");
         })
         .fail(function (error) {
           //console.log(error);
@@ -1087,4 +967,250 @@
         .always(function () {start(); });
     });
 
+  /////////////////////////////////////////////////////////////////
+  // Complex Queries with Revision Querying
+  /////////////////////////////////////////////////////////////////
+
+  test("More complex query with different options (with revision queries)",
+    function () {
+      stop();
+      expect(3);
+      var jio = this.jio,
+        not_history = this.not_history,
+        timestamps = this.jio.__storage._timestamps,
+        docs = [
+          {
+            "date": 1,
+            "type": "foo",
+            "title": "doc"
+          },
+          {
+            "date": 2,
+            "type": "bar",
+            "title": "second_doc"
+          }
+        ],
+        blobs = [
+          new Blob(['a']),
+          new Blob(['bcd']),
+          new Blob(['a2']),
+          new Blob(['bcd2']),
+          new Blob(['a3'])
+        ];
+      jio.put("doc", {})
+        .push(function () {
+          return putFullDoc(jio, "doc", docs[0], "data", blobs[0]);
+        })
+        .push(function () {
+          return putFullDoc(jio, "second_doc", docs[1], "data", blobs[1]);
+        })
+        .push(function () {
+          docs[0].date = 4;
+          docs[0].type = "foo2";
+          docs[1].date = 4;
+          docs[1].type = "bar2";
+        })
+        .push(function () {
+          return putFullDoc(jio, "doc", docs[0], "data", blobs[2]);
+        })
+        .push(function () {
+          return jio.remove("second_doc");
+        })
+        .push(function () {
+          return putFullDoc(jio, "second_doc", docs[1], "data", blobs[3]);
+        })
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "descending"]],
+            select_list: ["op", "doc_id", "timestamp"]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              doc: {},
+              id: timestamps.second_doc.data[1],
+              value: {
+                "op": "putAttachment",
+                "doc_id": "second_doc",
+                "timestamp": timestamps.second_doc.data[1]
+              }
+            },
+            {
+              doc: {},
+              id: timestamps.second_doc[2],
+              value: {
+                "op": "put",
+                "doc_id": "second_doc",
+                "timestamp": timestamps.second_doc[2]
+              }
+            },
+            {
+              doc: {},
+              id: timestamps.second_doc[1],
+              value: {
+                "op": "remove",
+                "doc_id": "second_doc",
+                "timestamp": timestamps.second_doc[1]
+              }
+            },
+            {
+              doc: {},
+              id: timestamps.doc.data[1],
+              value: {
+                "op": "putAttachment",
+                "doc_id": "doc",
+                "timestamp": timestamps.doc.data[1]
+              }
+            },
+            {
+              doc: {},
+              id: timestamps.doc[2],
+              value: {
+                "op": "put",
+                "doc_id": "doc",
+                "timestamp": timestamps.doc[2]
+              }
+            },
+            {
+              doc: {},
+              id: timestamps.second_doc.data[0],
+              value: {
+                "op": "putAttachment",
+                "doc_id": "second_doc",
+                "timestamp": timestamps.second_doc.data[0]
+              }
+            },
+            {
+              doc: {},
+              id: timestamps.second_doc[0],
+              value: {
+                "op": "put",
+                "doc_id": "second_doc",
+                "timestamp": timestamps.second_doc[0]
+              }
+            },
+            {
+              doc: {},
+              id: timestamps.doc.data[0],
+              value: {
+                "op": "putAttachment",
+                "doc_id": "doc",
+                "timestamp": timestamps.doc.data[0]
+              }
+            },
+            {
+              doc: {},
+              id: timestamps.doc[1],
+              value: {
+                "op": "put",
+                "doc_id": "doc",
+                "timestamp": timestamps.doc[1]
+              }
+            },
+            {
+              doc: {},
+              id: timestamps.doc[0],
+              value: {
+                "op": "put",
+                "doc_id": "doc",
+                "timestamp": timestamps.doc[0]
+              }
+            }
+          ], "All operations are logged correctly");
+          var promises = results.data.rows
+            .filter(function (doc) {
+              return (doc.value.op === "put");
+            })
+            .map(function (data) {
+              return not_history.get(data.id);
+            });
+          return RSVP.all(promises)
+            .then(function (results) {
+              return results.map(function (docum) {
+                return docum.doc;
+              });
+            });
+        })
+        .push(function (results) {
+          deepEqual(results,
+            [
+              {
+                "date": 4,
+                "type": "bar2",
+                "title": "second_doc"
+              },
+              {
+                "date": 4,
+                "type": "foo2",
+                "title": "doc"
+              },
+              {
+                "date": 2,
+                "type": "bar",
+                "title": "second_doc"
+              },
+              {
+                "date": 1,
+                "type": "foo",
+                "title": "doc"
+              },
+              {}
+            ], "All versions of documents are stored correctly");
+        })
+        .push(function () {
+          return jio.allDocs({
+            query: "(_timestamp: >= " + timestamps.second_doc[0] +
+              " OR _timestamp: <= " + timestamps.doc[1] +
+              ") AND NOT (date: = 2)",
+            select_list: ["date", "non-existent-key", "type", "title"],
+            sort_on: [["date", "descending"],
+              ["non-existent-key", "ascending"],
+              ["_timestamp", "ascending"]
+              ]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              doc: {},
+              id: "doc",
+              value: {
+                date: 4,
+                title: "doc",
+                type: "foo2"
+              }
+            },
+            {
+              doc: {},
+              id: "second_doc",
+              value: {
+                date: 4,
+                title: "second_doc",
+                type: "bar2"
+              }
+            },
+            {
+              doc: {},
+              id: "doc",
+              value: {
+                date: 1,
+                title: "doc",
+                type: "foo"
+              }
+            },
+            {
+              doc: {},
+              id: "doc",
+              value: {}
+            }
+          ],
+            "Query gives correct results in correct order");
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
 }(jIO, RSVP, Blob, QUnit));
