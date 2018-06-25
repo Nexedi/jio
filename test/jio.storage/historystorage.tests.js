@@ -60,6 +60,7 @@
       });
     }
   });
+
   test("Testing proper adding/removing attachments",
     function () {
       stop();
@@ -171,7 +172,6 @@
         })
         .always(function () {start(); });
     });
-
 
   test("Correctness of allAttachments method",
     function () {
@@ -304,59 +304,6 @@
         .always(function () {start(); });
     });
 
-  test("Correctness of allAttachments method",
-    function () {
-      stop();
-      expect(4);
-      var jio = this.jio,
-        timestamps = jio.__storage._timestamps,
-        blob1 = this.blob1,
-        blob2 = this.blob2,
-        other_blob1 = this.other_blob,
-        other_blob2 = new Blob(['asdf']);
-
-      putFullDoc(jio, "doc", {}, "data", blob1)
-        .push(function () {
-          return jio.putAttachment("doc", "data", blob2);
-        })
-        .push(function () {
-          return jio.putAttachment("doc", "other_data", other_blob1);
-        })
-        .push(function () {
-          return jio.putAttachment("doc", "other_data", other_blob2);
-        })
-        .push(function () {
-          return jio.getAttachment(timestamps.doc.data[0], "data");
-        })
-        .push(function (result) {
-          deepEqual(result, blob1, "Get old version of first attachment");
-          return jio.getAttachment(timestamps.doc.data[1], "data");
-        })
-        .push(function (result) {
-          deepEqual(result, blob2, "Get current version of first attachment");
-          return jio.getAttachment(timestamps.doc.other_data[0], "other_data");
-        })
-        .push(function (result) {
-          deepEqual(
-            result,
-            other_blob1,
-            "Get old version of second attachment"
-          );
-          return jio.getAttachment(timestamps.doc.other_data[1], "other_data");
-        })
-        .push(function (result) {
-          deepEqual(
-            result,
-            other_blob2,
-            "Get current version of second attachment"
-          );
-        })
-        .fail(function (error) {
-          //console.log(error);
-          ok(false, error);
-        })
-        .always(function () {start(); });
-    });
 
   /////////////////////////////////////////////////////////////////
   // Querying older revisions
@@ -395,7 +342,7 @@
   test("Handling bad input",
     function () {
       stop();
-      expect(4);
+      expect(6);
       var jio = this.jio,
         BADINPUT_ERRCODE = 422;
 
@@ -425,6 +372,18 @@
           deepEqual(error.status_code,
             BADINPUT_ERRCODE,
             "Can't save a document with a reserved keyword"
+            );
+        })
+        .push(function () {
+          return jio.put("1234567891123-ab7d", {});
+        })
+        .push(function () {
+          ok(false, "This statement should not be reached");
+        }, function (error) {
+          ok(error instanceof jIO.util.jIOError, "Correct type of error");
+          deepEqual(error.status_code,
+            BADINPUT_ERRCODE,
+            "Can't save a document with a timestamp-formatted id"
             );
         })
         .fail(function (error) {

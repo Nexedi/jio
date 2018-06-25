@@ -13,7 +13,14 @@
       //timestamp = Date.now().toString();
       timestamp = time.toString();
     return timestamp + "-" + uuid;
-  };
+  },
+    looks_like_timestamp = function (id) {
+      //1529928772623-02e6
+      //A timestamp is of the form 
+      //"[13 digit number]-[4 numbers/lowercase letters]"
+      var re = /^[0-9]{13}-[a-z0-9]{4}$/;
+      return re.test(id);
+    };
 
 
   /**
@@ -90,8 +97,7 @@
             if (error.status_code === 400 &&
                 error instanceof jIO.util.jIOError) {
               throw new jIO.util.jIOError(
-                "HistoryStorage: cannot find object '" + id_in +
-                  "'",
+                "HistoryStorage: cannot find object '" + id_in + "'",
                 404
               );
             }
@@ -109,6 +115,12 @@
     if (data.hasOwnProperty("_doc_id")) {
       throw new jIO.util.jIOError(
         "Document cannot have metadata attribute '_doc_id'",
+        422
+      );
+    }
+    if (looks_like_timestamp(id)) {
+      throw new jIO.util.jIOError(
+        "Document cannot have id of the same form as a timestamp",
         422
       );
     }
