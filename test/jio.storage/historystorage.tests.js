@@ -173,6 +173,41 @@
         .always(function () {start(); });
     });
 
+
+  test("Ordering of put and remove attachments is correct",
+    function () {
+      stop();
+      expect(1);
+      var jio = this.jio,
+        blob1 = this.blob1,
+        blob2 = this.blob2;
+
+      jio.put("doc", {title: "foo0"})
+        .push(function () {
+          return jio.putAttachment("doc", "data", blob1);
+        })
+        .push(function () {
+          return jio.removeAttachment("doc", "data");
+        })
+        .push(function () {
+          return jio.putAttachment("doc", "data", blob2);
+        })
+        .push(function () {
+          return jio.getAttachment("doc", "data");
+        })
+        .push(function (result) {
+          deepEqual(result,
+            blob2,
+            "removeAttachment happens before putAttachment"
+            );
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
   test("Correctness of allAttachments method",
     function () {
       stop();
@@ -723,7 +758,6 @@
           });
         })
         .push(function () {
-
           return RSVP.all([
             jio.allDocs({select_list: ["title", "subtitle"]}),
             jio.allDocs({
@@ -775,6 +809,8 @@
             );
         })
         .push(function () {
+          // These are all equivalent queries in that they should return the
+          // same documents in the correct order
           return RSVP.all([
             jio.allDocs({
               query: "_timestamp: " + timestamps.doc[1],
