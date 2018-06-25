@@ -702,22 +702,22 @@
   test("Putting a document, revising it, and retrieving revisions with allDocs",
     function () {
       stop();
-      expect(13);
-      var context = this,
-        timestamps;
-      context.jio.put("doc", {
+      expect(14);
+      var jio = this.jio,
+        not_history = this.not_history,
+        timestamps = this.jio.__storage._timestamps;
+      jio.put("doc", {
         title: "version0",
         subtitle: "subvers0"
       })
         .push(function () {
-          return context.jio.put("doc", {
+          return jio.put("doc", {
             title: "version1",
             subtitle: "subvers1"
           });
         })
         .push(function () {
-          timestamps = context.jio.__storage._timestamps.doc;
-          return context.jio.put("doc", {
+          return jio.put("doc", {
             title: "version2",
             subtitle: "subvers2"
           });
@@ -725,24 +725,24 @@
         .push(function () {
 
           return RSVP.all([
-            context.jio.allDocs({select_list: ["title", "subtitle"]}),
-            context.jio.allDocs({
+            jio.allDocs({select_list: ["title", "subtitle"]}),
+            jio.allDocs({
               query: "",
               select_list: ["title", "subtitle"]
             }),
-            context.jio.allDocs({
+            jio.allDocs({
               query: "title: version2",
               select_list: ["title", "subtitle"]
             }),
-            context.jio.allDocs({
+            jio.allDocs({
               query: "NOT (title: version1)",
               select_list: ["title", "subtitle"]
             }),
-            context.jio.allDocs({
+            jio.allDocs({
               query: "(NOT (subtitle: subvers1)) AND (NOT (title: version0))",
               select_list: ["title", "subtitle"]
             }),
-            context.jio.allDocs({
+            jio.allDocs({
               limit: [0, 1],
               sort_on: [["title", "ascending"]],
               select_list: ["title", "subtitle"]
@@ -776,21 +776,22 @@
         })
         .push(function () {
           return RSVP.all([
-            context.jio.allDocs({
-              query: "_timestamp: " + timestamps[1],
+            jio.allDocs({
+              query: "_timestamp: " + timestamps.doc[1],
               select_list: ["title", "subtitle"]
             }),
-            context.jio.allDocs({
-              query: "_timestamp: =" + timestamps[1],
+            jio.allDocs({
+              query: "_timestamp: =" + timestamps.doc[1],
               select_list: ["title", "subtitle"]
             }),
-            context.jio.allDocs({
-              query: "_timestamp: >" + timestamps[0] + " AND title: version1",
+            jio.allDocs({
+              query: "_timestamp: >" + timestamps.doc[0] +
+                " AND title: version1",
               select_list: ["title", "subtitle"]
             }),
-            context.jio.allDocs({
-              query: "_timestamp: > " + timestamps[0] + " AND _timestamp: < " +
-                timestamps[2],
+            jio.allDocs({
+              query: "_timestamp: > " + timestamps.doc[0] +
+                " AND _timestamp: < " + timestamps.doc[2],
               select_list: ["title", "subtitle"]
             })
           ]);
@@ -817,20 +818,36 @@
             },
             doc: {}
           });
+          return jio.allDocs({
+            query: "_timestamp: " + timestamps.doc[0],
+            select_list: ["title", "subtitle"]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              value: {
+                title: "version0",
+                subtitle: "subvers0"
+              },
+              doc: {},
+              id: "doc"
+            }
+          ], "Query requesting one timestamp works.");
 
-          return context.not_history.allDocs({
+          return not_history.allDocs({
             sort_on: [["title", "ascending"]]
           });
         })
         .push(function (results) {
           return RSVP.all(results.data.rows.map(function (d) {
-            return context.not_history.get(d.id);
+            return not_history.get(d.id);
           }));
         })
         .push(function (results) {
           deepEqual(results, [
             {
-              timestamp: timestamps[0],
+              timestamp: timestamps.doc[0],
               op: "put",
               doc_id: "doc",
               doc: {
@@ -839,7 +856,7 @@
               }
             },
             {
-              timestamp: timestamps[1],
+              timestamp: timestamps.doc[1],
               op: "put",
               doc_id: "doc",
               doc: {
@@ -848,7 +865,7 @@
               }
             },
             {
-              timestamp: timestamps[2],
+              timestamp: timestamps.doc[2],
               op: "put",
               doc_id: "doc",
               doc: {
