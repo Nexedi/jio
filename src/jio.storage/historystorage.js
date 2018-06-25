@@ -4,13 +4,14 @@
   "use strict";
 
   // Used to distinguish between operations done within the same millisecond
-  var unique_timestamp = function () {
+  var unique_timestamp = function (time) {
 
     // XXX: replace this with UUIDStorage function call to S4() when it becomes
     // publicly accessible
     var uuid = ('0000' + Math.floor(Math.random() * 0x10000)
       .toString(16)).slice(-4),
-      timestamp = Date.now().toString();
+      //timestamp = Date.now().toString();
+      timestamp = time.toString();
     return timestamp + "-" + uuid;
   };
 
@@ -99,15 +100,19 @@
   };
 
   HistoryStorage.prototype.put = function (id, data) {
-
     if (data.hasOwnProperty("_timestamp")) {
       throw new jIO.util.jIOError(
         "Document cannot have metadata attribute '_timestamp'",
         422
       );
     }
-
-    var timestamp = unique_timestamp(),
+    if (data.hasOwnProperty("_doc_id")) {
+      throw new jIO.util.jIOError(
+        "Document cannot have metadata attribute '_doc_id'",
+        422
+      );
+    }
+    var timestamp = unique_timestamp(Date.now()),
       metadata = {
         // XXX: remove this attribute once query can sort_on id
         timestamp: timestamp,
@@ -124,7 +129,7 @@
   };
 
   HistoryStorage.prototype.remove = function (id) {
-    var timestamp = unique_timestamp(),
+    var timestamp = unique_timestamp(Date.now() - 1),
       metadata = {
         // XXX: remove this attribute once query can sort_on id
         timestamp: timestamp,
@@ -186,7 +191,7 @@
   };
 
   HistoryStorage.prototype.putAttachment = function (id, name, blob) {
-    var timestamp = unique_timestamp(),
+    var timestamp = unique_timestamp(Date.now()),
       metadata = {
         // XXX: remove this attribute once query can sort_on id
         timestamp: timestamp,
@@ -268,26 +273,7 @@
               throw error;
             });
         }
-        return substorage.get(id)
-          .push(function (result) {
-            if (result.op === "putAttachment") {
-              return substorage.getAttachment(id, result.name);
-            }
-            throw new jIO.util.jIOError(
-              "HistoryStorage: cannot find object '" + id + "' (removed)",
-              404
-            );
-          },
-            function (error) {
-              if (error.status_code === 404 &&
-                  error instanceof jIO.util.jIOError) {
-                throw new jIO.util.jIOError(
-                  "HistoryStorage: cannot find object '" + id + "'",
-                  404
-                );
-              }
-              throw error;
-            })
+        return substorage.getAttachment(id, name)
           .push(undefined, function (error) {
             if (error.status_code === 404 &&
                 error instanceof jIO.util.jIOError) {
@@ -302,7 +288,7 @@
   };
 
   HistoryStorage.prototype.removeAttachment = function (id, name) {
-    var timestamp = unique_timestamp(),
+    var timestamp = unique_timestamp(Date.now()),
       metadata = {
         // XXX: remove this attribute once query can sort_on id
         timestamp: timestamp,

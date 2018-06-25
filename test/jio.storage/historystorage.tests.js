@@ -63,12 +63,13 @@
   test("Testing proper adding/removing attachments",
     function () {
       stop();
-      expect(7);
+      expect(9);
       var jio = this.jio,
         timestamps = this.jio.__storage._timestamps,
         blob2 = this.blob2,
         blob1 = this.blob1,
-        other_blob = this.other_blob;
+        other_blob = this.other_blob,
+        otherother_blob = new Blob(['abcabc']);
 
       jio.put("doc", {title: "foo0"})
         .push(function () {
@@ -82,6 +83,16 @@
         })
         .push(function () {
           return jio.putAttachment("doc", "other_attacheddata", other_blob);
+        })
+        .push(function () {
+          return jio.putAttachment(
+            "doc",
+            "otherother_attacheddata",
+            otherother_blob
+          );
+        })
+        .push(function () {
+          return jio.removeAttachment("doc", "otherother_attacheddata");
         })
         .push(function () {
           return jio.get("doc");
@@ -142,6 +153,18 @@
             "Other document successfully queried"
             );
         })
+        .push(function () {
+          return jio.getAttachment("doc", "otherother_attacheddata");
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            ok(error instanceof jIO.util.jIOError, "Correct type of error");
+            deepEqual(error.status_code,
+              404,
+              "Error if you try to get a removed attachment");
+          })
         .fail(function (error) {
           //console.log(error);
           ok(false, error);
@@ -372,7 +395,7 @@
   test("Handling bad input",
     function () {
       stop();
-      expect(2);
+      expect(4);
       var jio = this.jio,
         BADINPUT_ERRCODE = 422;
 
@@ -389,8 +412,23 @@
             "Can't save a document with a reserved keyword"
             );
         })
+        .push(function () {
+          return jio.put("doc", {
+            "_doc_id": 3,
+            "other_attr": "other_val"
+          });
+        })
+        .push(function () {
+          ok(false, "This statement should not be reached");
+        }, function (error) {
+          ok(error instanceof jIO.util.jIOError, "Correct type of error");
+          deepEqual(error.status_code,
+            BADINPUT_ERRCODE,
+            "Can't save a document with a reserved keyword"
+            );
+        })
         .fail(function (error) {
-            //console.log(error);
+          //console.log(error);
           ok(false, error);
         })
         .always(function () {start(); });
@@ -467,6 +505,8 @@
             subtitle: "s3"
           }, "Get returns latest revision");
           return jio.get(timestamps.doc[0]);
+        }, function (err) {
+          ok(false, err);
         })
         .push(function (result) {
           deepEqual(result, {
@@ -481,6 +521,8 @@
             subtitle: "s1"
           }, "Get returns second version");
           return jio.get(timestamps.doc[2]);
+        }, function (err) {
+          ok(false, err);
         })
         .push(function (result) {
           deepEqual(result, {
@@ -488,6 +530,8 @@
             subtitle: "s2"
           }, "Get returns third version");
           return jio.get(timestamps.doc[3]);
+        }, function (err) {
+          ok(false, err);
         })
         .push(function () {
           ok(false, "This should have thrown a 404 error");
