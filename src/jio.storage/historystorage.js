@@ -44,6 +44,7 @@
    */
   function HistoryStorage(spec) {
     this._sub_storage = jIO.createJIO(spec.sub_storage);
+    this._include_revisions = spec.include_revisions;
   }
 
   HistoryStorage.prototype.get = function (id_in) {
@@ -358,7 +359,7 @@
     // Query for all edits putting or removing documents (and nothing about
     // attachments)
     meta_options = {
-      query: "(op: remove) OR (op: put)",
+      query: "",//(op: remove) OR (op: put)",
       sort_on: options.sort_on
     };
     return this._sub_storage.allDocs(meta_options)
@@ -376,44 +377,115 @@
           query_matches,
           docs_to_query,
           i;
-        // If !rev_query, then by default only consider latest revisions of 
-        // documents
-        results = results.filter(function (docum) {
-          if (rev_query) {
-            return docum.op === "put";
-          }
-          if (!seen.hasOwnProperty(docum.doc_id)) {
-            seen[docum.doc_id] = {};
-            return docum.op === "put";
-          }
-          return false;
-        });
 
-        // If any documents have property _doc_id, __doc_id, etc, then set
-        // doc_id_name to the first string which is not a property of any
-        // of the documents
+
         doc_id_name = "_doc_id";
         timestamp_name = "_timestamp";
         for (i = 0; i < results.length; i += 1) {
-          while (results[i].doc.hasOwnProperty(doc_id_name)) {
-            doc_id_name = "_" + doc_id_name;
-          }
-          while (results[i].doc.hasOwnProperty(timestamp_name)) {
-            timestamp_name = "_" + timestamp_name;
+          if (results[i].op === "put") {
+            while (results[i].doc.hasOwnProperty(doc_id_name)) {
+              doc_id_name = "_" + doc_id_name;
+            }
+            while (results[i].doc.hasOwnProperty(timestamp_name)) {
+              timestamp_name = "_" + timestamp_name;
+            }
           }
         }
 
-        docs_to_query = results.map(function (docum) {
-          // If it's a "remove" operation then it has no doc property
-          if (!docum.hasOwnProperty("doc")) {
-            docum.doc = {};
-          }
-          docum.doc[doc_id_name] = docum.doc_id;
-          docum.doc[timestamp_name] = docum.timestamp;
-          return docum.doc;
-        });
+        if (rev_query) {
+          // Only query on documents which are puts are putAttachments
+          results = results.map(function (docum, ind) {
+            var data_key;
+            if (docum.op === "put") {
+              return docum;
+            }
+            if (docum.op === "putAttachment") {
+              docum.doc = {};
+              for (i = ind + 1; i < results.length; i += 1) {
+                if (results[i].doc_id === docum.doc_id) {
+                  if (results[i].op === "put") {
+                    for (data_key in results[i].doc) {
+                      if (results[i].doc.hasOwnProperty(data_key)) {
+                        docum.doc[data_key] = results[i].doc[data_key];
+                      }
+                    }
+                    return docum;
+                  }
+                  if (results[i].doc_id === "remove") {
+                    //console.log("not returning putAttachment at ",
+                    //  docum.timestamp,
+                    //  " because it was attached to a removed document");
+                    return false;
+                  }
+                }
+              }
+            }
+            return false;
+          });
+        } else {
+          results = results.map(function (docum, ind) {
+            var data_key;
+            if (docum.op === "put") {
+              if (!seen.hasOwnProperty(docum.doc_id)) {
+                seen[docum.doc_id] = {};
+                //console.log("returning put at ", docum.timestamp,
+                //  " because it is most recent edit to " + docum.doc_id);
+                return docum;
+              }
+              //console.log("not returning put at ", docum.timestamp,
+              //  " because it was edited later");
+            } else if (docum.op === "remove") {
+              seen[docum.doc_id] = {};
+            } else if (docum.op === "putAttachment") {
+              if (!seen.hasOwnProperty(docum.doc_id)) {
+                seen[docum.doc_id] = {};
+                docum.doc = {};
+                for (i = ind + 1; i < results.length; i += 1) {
+                  if (results[i].doc_id === docum.doc_id) {
+                    if (results[i].op === "put") {
+                      for (data_key in results[i].doc) {
+                        if (results[i].doc.hasOwnProperty(data_key)) {
+                          docum.doc[data_key] = results[i].doc[data_key];
+                        }
+                      }
+                      /**console.log("returning putAttachment at ",
+                        docum.timestamp,
+                          " because it is most recent edit to attachment " +
+                          docum.name + " of document " + docum.doc_id);
+                      **/
+                      return docum;
+                    }
+                    if (results[i].doc_id === "remove") {
+                      /**console.log("not returning putAttachment at ",
+                        docum.timestamp,
+                        " because it was attached to a removed document");
+                      **/
+                      return false;
+                    }
+                  }
+                }
+              }
+            } else if (docum.op === "removeAttachment") {
+              seen[docum.doc_id] = {};
+            }
+            return false;
+          });
+        }
+        docs_to_query = results
+          .filter(function (docum) {
+            return docum;
+          })
+          .map(function (docum) {
+            docum.doc[timestamp_name] = docum.timestamp;
+            docum.doc[doc_id_name] = docum.doc_id;
+            return docum.doc;
+          });
+
         options.select_list.push(doc_id_name);
         options.select_list.push(timestamp_name);
+        options.sort_on[options.sort_on.length - 1] = [
+          timestamp_name, "descending"
+        ];
         query_matches = options.query.exec(docs_to_query, options);
         return query_matches;
       })
