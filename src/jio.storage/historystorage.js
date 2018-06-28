@@ -15,13 +15,6 @@
     return timestamp + "-" + uuid;
   }
 
-  function isTimestamp(id) {
-    //A timestamp is of the form 
-    //"[13 digit number]-[4 numbers/lowercase letters]"
-    var re = /^[0-9]{13}-[a-z0-9]{4}$/;
-    return re.test(id);
-  }
-
   function throwCantFindError(id) {
     throw new jIO.util.jIOError(
       "HistoryStorage: cannot find object '" + id + "'",
@@ -44,24 +37,27 @@
    */
   function HistoryStorage(spec) {
     this._sub_storage = jIO.createJIO(spec.sub_storage);
-    this._include_revisions = spec.include_revisions;
+    if (spec.hasOwnProperty("include_revisions")) {
+      this._include_revisions = spec.include_revisions;
+    } else {
+      this._include_revisions = false;
+    }
   }
 
   HistoryStorage.prototype.get = function (id_in) {
 
-    if (isTimestamp(id_in)) {
-
+    if (this._include_revisions) {
       // Try to treat id_in as a timestamp instead of a name
       return this._sub_storage.get(id_in)
         .push(function (result) {
           if (result.op === "put") {
             return result.doc;
           }
-          throwCantFindError(id_in);
+          throwRemovedError(id_in);
         }, function (error) {
           if (error.status_code === 404 &&
               error instanceof jIO.util.jIOError) {
-            throwRemovedError(id_in);
+            throwCantFindError(id_in);
           }
           throw error;
         });
@@ -92,7 +88,7 @@
       };
     return substorage.allDocs(options)
       .push(function (results) {
-        if (results.data.rows.length > 0) {
+        if (results.data.total_rows > 0) {
           if (results.data.rows[0].value.op === "put") {
             return substorage.get(results.data.rows[0].id)
               .push(function (result) {
@@ -107,12 +103,6 @@
 
   HistoryStorage.prototype.put = function (id, data) {
 
-    if (isTimestamp(id)) {
-      throw new jIO.util.jIOError(
-        "Document cannot have id of the same form as a timestamp",
-        422
-      );
-    }
     var timestamp = generateUniqueTimestamp(Date.now()),
       metadata = {
         // XXX: remove this attribute once query can sort_on id
@@ -145,7 +135,7 @@
       query_doc_id,
       options_remcheck;
 
-    if (isTimestamp(id)) {
+    if (this._include_revisions) {
       query_doc_id = new SimpleQuery({
         operator: "<=",
         key: "timestamp",
@@ -253,7 +243,7 @@
 
   HistoryStorage.prototype.getAttachment = function (id, name) {
 
-    if (isTimestamp(id)) {
+    if (this._include_revisions) {
       return this._sub_storage.getAttachment(id, name)
         .push(undefined, function (error) {
           if (error.status_code === 404 &&
@@ -304,7 +294,7 @@
       };
     return substorage.allDocs(options)
       .push(function (results) {
-        if (results.data.rows.length > 0) {
+        if (results.data.total_rows > 0) {
           if (results.data.rows[0].value.op === "remove" ||
               results.data.rows[0].value.op === "removeAttachment") {
             throwRemovedError(id);
@@ -352,7 +342,7 @@
 
     // Check if query involved _timestamp.
     // If not, use default behavior and only query on latest revisions
-      rev_query = options.include_revisions,
+      rev_query = this._include_revisions,
       doc_id_name,
       timestamp_name;
 
@@ -393,13 +383,16 @@
         }
 
         if (rev_query) {
-          // Only query on documents which are puts are putAttachments
+
+          // We only query on versions mapping to puts or putAttachments
           results = results.map(function (docum, ind) {
             var data_key;
             if (docum.op === "put") {
               return docum;
             }
             if (docum.op === "putAttachment") {
+              // putAttachment document does not contain doc metadata, so we
+              // add it from the most recent non-removed put on same id
               docum.doc = {};
               for (i = ind + 1; i < results.length; i += 1) {
                 if (results[i].doc_id === docum.doc_id) {
@@ -411,10 +404,9 @@
                     }
                     return docum;
                   }
+                  // If most recent edit on document was a remove before this 
+                  // attachment, then don't include attachment in query
                   if (results[i].doc_id === "remove") {
-                    //console.log("not returning putAttachment at ",
-                    //  docum.timestamp,
-                    //  " because it was attached to a removed document");
                     return false;
                   }
                 }
@@ -423,20 +415,26 @@
             return false;
           });
         } else {
+
+          // Only query on latest revisions of non-removed documents/attachment
+          // edits
           results = results.map(function (docum, ind) {
             var data_key;
             if (docum.op === "put") {
+              // Mark as read and include in query
               if (!seen.hasOwnProperty(docum.doc_id)) {
                 seen[docum.doc_id] = {};
-                //console.log("returning put at ", docum.timestamp,
-                //  " because it is most recent edit to " + docum.doc_id);
                 return docum;
               }
-              //console.log("not returning put at ", docum.timestamp,
-              //  " because it was edited later");
-            } else if (docum.op === "remove") {
+
+            } else if (docum.op === "remove" ||
+                      docum.op === "removeAttachment") {
+              // Mark as read but do not include in query
               seen[docum.doc_id] = {};
+
             } else if (docum.op === "putAttachment") {
+              // If latest edit, mark as read, add document metadata from most
+              // recent put, and add to query
               if (!seen.hasOwnProperty(docum.doc_id)) {
                 seen[docum.doc_id] = {};
                 docum.doc = {};
@@ -448,41 +446,37 @@
                           docum.doc[data_key] = results[i].doc[data_key];
                         }
                       }
-                      /**console.log("returning putAttachment at ",
-                        docum.timestamp,
-                          " because it is most recent edit to attachment " +
-                          docum.name + " of document " + docum.doc_id);
-                      **/
                       return docum;
                     }
                     if (results[i].doc_id === "remove") {
-                      /**console.log("not returning putAttachment at ",
-                        docum.timestamp,
-                        " because it was attached to a removed document");
-                      **/
+                      // If most recent edit on document was a remove before
+                      // this attachment, then don't include attachment in query
                       return false;
                     }
                   }
                 }
               }
-            } else if (docum.op === "removeAttachment") {
-              seen[docum.doc_id] = {};
             }
             return false;
           });
         }
+
         docs_to_query = results
           .filter(function (docum) {
             return docum;
           })
           .map(function (docum) {
+            // Save timestamp and id information for retrieval at the end of
+            // buildQuery
             docum.doc[timestamp_name] = docum.timestamp;
             docum.doc[doc_id_name] = docum.doc_id;
             return docum.doc;
           });
-
+        // Return timestamp and id information from query
         options.select_list.push(doc_id_name);
         options.select_list.push(timestamp_name);
+
+        // Sort on timestamp with updated timestamp_name
         options.sort_on[options.sort_on.length - 1] = [
           timestamp_name, "descending"
         ];
