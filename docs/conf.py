@@ -43,7 +43,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'jIO'
-copyright = u'2013, Nexedi'
+copyright = u'2013, Nexedi SA'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
