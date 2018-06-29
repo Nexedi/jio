@@ -46,46 +46,44 @@
 
   HistoryStorage.prototype.get = function (id_in) {
 
-    if (this._include_revisions) {
-      // Try to treat id_in as a timestamp instead of a name
-      return this._sub_storage.get(id_in)
-        .push(function (result) {
-          if (result.op === "put") {
-            return result.doc;
-          }
-          throwRemovedError(id_in);
-        }, function (error) {
-          if (error.status_code === 404 &&
-              error instanceof jIO.util.jIOError) {
-            throwCantFindError(id_in);
-          }
-          throw error;
-        });
-    }
-
     // Query to get the last edit made to this document
     var substorage = this._sub_storage,
+      doc_id_query,
+      metadata_query,
+      options;
 
-      // Include id_in as value in query object for safety
-      metadata_query = new ComplexQuery({
-        operator: "AND",
-        query_list: [
-          new SimpleQuery({key: "doc_id", value: id_in}),
-          new ComplexQuery({
-            operator: "OR",
-            query_list: [
-              new SimpleQuery({key: "op", value: "remove"}),
-              new SimpleQuery({key: "op", value: "put"})
-            ]
-          })
-        ]
-      }),
-      options = {
-        query: metadata_query,
-        select_list: ["op"],
-        limit: [0, 1],
-        sort_on: [["timestamp", "descending"]]
-      };
+    if (this._include_revisions) {
+      doc_id_query = new SimpleQuery({
+        operator: "<=",
+        key: "timestamp",
+        value: id_in
+      });
+    } else {
+      doc_id_query = new SimpleQuery({key: "doc_id", value: id_in});
+    }
+
+    // Include id_in as value in query object for safety
+    metadata_query = new ComplexQuery({
+      operator: "AND",
+      query_list: [
+        doc_id_query,
+        new ComplexQuery({
+          operator: "OR",
+          query_list: [
+            new SimpleQuery({key: "op", value: "remove"}),
+            new SimpleQuery({key: "op", value: "put"})
+          ]
+        })
+      ]
+    });
+    options = {
+      query: metadata_query,
+      select_list: ["op"],
+      limit: [0, 1],
+      sort_on: [["timestamp", "descending"]]
+    };
+
+
     return substorage.allDocs(options)
       .push(function (results) {
         if (results.data.total_rows > 0) {
@@ -102,7 +100,6 @@
   };
 
   HistoryStorage.prototype.put = function (id, data) {
-
     var timestamp = generateUniqueTimestamp(Date.now()),
       metadata = {
         // XXX: remove this attribute once query can sort_on id
@@ -133,9 +130,11 @@
       query_removed_check,
       options,
       query_doc_id,
-      options_remcheck;
+      options_remcheck,
+      include_revs = this._include_revisions,
+      have_seen_id = false;
 
-    if (this._include_revisions) {
+    if (include_revs) {
       query_doc_id = new SimpleQuery({
         operator: "<=",
         key: "timestamp",
@@ -143,6 +142,7 @@
       });
     } else {
       query_doc_id = new SimpleQuery({key: "doc_id", value: id});
+      have_seen_id = true;
     }
 
     query_removed_check = new ComplexQuery({
@@ -177,7 +177,7 @@
     options_remcheck = {
       query: query_removed_check,
       select_list: ["op", "timestamp"],
-      //limit: [0, 1],
+      limit: [0, 1],
       sort_on: [["timestamp", "descending"]]
     };
     options = {
@@ -187,8 +187,12 @@
     };
 
     return this._sub_storage.allDocs(options_remcheck)
+      // Check the document exists and is not removed
       .push(function (results) {
         if (results.data.total_rows > 0) {
+          if (results.data.rows[0].id === id) {
+            have_seen_id = true;
+          }
           if (results.data.rows[0].value.op === "remove") {
             throwRemovedError(id);
           }
@@ -205,6 +209,18 @@
           attachment_promises = [],
           ind,
           entry;
+
+        // If input mapped to a real timestamp, then the first query result must
+        // have the inputted id.  Otherwise, unexpected results could arise
+        // by inputting nonsensical strings as id when include_revisions = true
+        if (include_revs &&
+            results.data.total_rows > 0 &&
+            results.data.rows[0].id !== id &&
+            !have_seen_id) {
+          throwCantFindError(id);
+        }
+
+
         // Only return attachments if:
         // (it is the most recent revision) AND (it is a putAttachment)
         attachments = results.data.rows.filter(function (docum) {
@@ -257,7 +273,6 @@
     // Query to get the last edit made to this document
     var substorage = this._sub_storage,
 
-      // Include id_in as value in query object for safety
       // "doc_id: id AND
       //  (op: remove OR ((op: putAttachment OR op: removeAttachment) AND
       //  name: name))"
@@ -295,6 +310,7 @@
     return substorage.allDocs(options)
       .push(function (results) {
         if (results.data.total_rows > 0) {
+          // XXX: issue if attachments are put on a removed document
           if (results.data.rows[0].value.op === "remove" ||
               results.data.rows[0].value.op === "removeAttachment") {
             throwRemovedError(id);
@@ -324,8 +340,6 @@
   };
 
   HistoryStorage.prototype.buildQuery = function (options) {
-    // XXX: if include_revisions, we should also include the document results
-    // for different edits of attachments
     // Set default values
     if (options === undefined) {options = {}; }
     if (options.query === undefined) {options.query = ""; }
@@ -338,76 +352,68 @@
     options.query = jIO.QueryFactory.create(options.query);
 
     var meta_options,
-      substorage = this._sub_storage,
-
-    // Check if query involved _timestamp.
-    // If not, use default behavior and only query on latest revisions
-      rev_query = this._include_revisions,
+      include_revs = this._include_revisions,
       doc_id_name,
       timestamp_name;
 
-    // Query for all edits putting or removing documents (and nothing about
-    // attachments)
+    // Query for all edits
     meta_options = {
-      query: "",//(op: remove) OR (op: put)",
-      sort_on: options.sort_on
+      query: "",
+      sort_on: options.sort_on,
+      select_list: ["doc", "op", "doc_id"]
     };
     return this._sub_storage.allDocs(meta_options)
-
-      // Get all documents found in query
-      // XXX: Once include_docs is implemented, this step can be simplified
       .push(function (results) {
-        var promises = results.data.rows.map(function (data) {
-          return substorage.get(data.id);
-        });
-        return RSVP.all(promises);
-      })
-      .push(function (results) {
+        results = results.data.rows;
         var seen = {},
           query_matches,
           docs_to_query,
           i;
 
-
         doc_id_name = "_doc_id";
         timestamp_name = "_timestamp";
         for (i = 0; i < results.length; i += 1) {
-          if (results[i].op === "put") {
-            while (results[i].doc.hasOwnProperty(doc_id_name)) {
+          if (results[i].value.op === "put") {
+            while (results[i].value.doc.hasOwnProperty(doc_id_name)) {
               doc_id_name = "_" + doc_id_name;
             }
-            while (results[i].doc.hasOwnProperty(timestamp_name)) {
+            while (results[i].value.doc.hasOwnProperty(timestamp_name)) {
               timestamp_name = "_" + timestamp_name;
             }
           }
         }
 
-        if (rev_query) {
+        if (include_revs) {
 
           // We only query on versions mapping to puts or putAttachments
           results = results.map(function (docum, ind) {
             var data_key;
-            if (docum.op === "put") {
+            if (docum.value.op === "put") {
               return docum;
             }
-            if (docum.op === "putAttachment") {
+            if (docum.value.op === "remove") {
+              docum.value.doc = {};
+              return docum;
+            }
+            if (docum.value.op === "putAttachment" ||
+                docum.value.op === "removeAttachment") {
+
               // putAttachment document does not contain doc metadata, so we
               // add it from the most recent non-removed put on same id
-              docum.doc = {};
+              docum.value.doc = {};
               for (i = ind + 1; i < results.length; i += 1) {
-                if (results[i].doc_id === docum.doc_id) {
-                  if (results[i].op === "put") {
-                    for (data_key in results[i].doc) {
-                      if (results[i].doc.hasOwnProperty(data_key)) {
-                        docum.doc[data_key] = results[i].doc[data_key];
+                if (results[i].value.doc_id === docum.value.doc_id) {
+                  if (results[i].value.op === "put") {
+                    for (data_key in results[i].value.doc) {
+                      if (results[i].value.doc.hasOwnProperty(data_key)) {
+                        docum.value.doc[data_key] =
+                          results[i].value.doc[data_key];
                       }
                     }
                     return docum;
                   }
-                  // If most recent edit on document was a remove before this 
-                  // attachment, then don't include attachment in query
-                  if (results[i].doc_id === "remove") {
-                    return false;
+                  if (results[i].value.op === "remove") {
+                    return docum;
                   }
                 }
               }
@@ -420,35 +426,36 @@
           // edits
           results = results.map(function (docum, ind) {
             var data_key;
-            if (docum.op === "put") {
+            if (docum.value.op === "put") {
               // Mark as read and include in query
-              if (!seen.hasOwnProperty(docum.doc_id)) {
-                seen[docum.doc_id] = {};
+              if (!seen.hasOwnProperty(docum.value.doc_id)) {
+                seen[docum.value.doc_id] = {};
                 return docum;
               }
 
-            } else if (docum.op === "remove" ||
-                      docum.op === "removeAttachment") {
+            } else if (docum.value.op === "remove" ||
+                      docum.value.op === "removeAttachment") {
               // Mark as read but do not include in query
-              seen[docum.doc_id] = {};
+              seen[docum.value.doc_id] = {};
 
-            } else if (docum.op === "putAttachment") {
+            } else if (docum.value.op === "putAttachment") {
               // If latest edit, mark as read, add document metadata from most
               // recent put, and add to query
-              if (!seen.hasOwnProperty(docum.doc_id)) {
-                seen[docum.doc_id] = {};
-                docum.doc = {};
+              if (!seen.hasOwnProperty(docum.value.doc_id)) {
+                seen[docum.value.doc_id] = {};
+                docum.value.doc = {};
                 for (i = ind + 1; i < results.length; i += 1) {
-                  if (results[i].doc_id === docum.doc_id) {
-                    if (results[i].op === "put") {
-                      for (data_key in results[i].doc) {
-                        if (results[i].doc.hasOwnProperty(data_key)) {
-                          docum.doc[data_key] = results[i].doc[data_key];
+                  if (results[i].value.doc_id === docum.value.doc_id) {
+                    if (results[i].value.op === "put") {
+                      for (data_key in results[i].value.doc) {
+                        if (results[i].value.doc.hasOwnProperty(data_key)) {
+                          docum.value.doc[data_key] =
+                            results[i].value.doc[data_key];
                         }
                       }
                       return docum;
                     }
-                    if (results[i].doc_id === "remove") {
+                    if (results[i].value.doc_id === "remove") {
                       // If most recent edit on document was a remove before
                       // this attachment, then don't include attachment in query
                       return false;
@@ -462,16 +469,18 @@
         }
 
         docs_to_query = results
+          // Filter out all docs flagged as false in previous map call
           .filter(function (docum) {
             return docum;
           })
           .map(function (docum) {
             // Save timestamp and id information for retrieval at the end of
             // buildQuery
-            docum.doc[timestamp_name] = docum.timestamp;
-            docum.doc[doc_id_name] = docum.doc_id;
-            return docum.doc;
+            docum.value.doc[timestamp_name] = docum.id;
+            docum.value.doc[doc_id_name] = docum.value.doc_id;
+            return docum.value.doc;
           });
+
         // Return timestamp and id information from query
         options.select_list.push(doc_id_name);
         options.select_list.push(timestamp_name);

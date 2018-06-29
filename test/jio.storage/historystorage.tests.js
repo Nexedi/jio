@@ -202,6 +202,41 @@
         .always(function () {start(); });
     });
 
+  test("get attachment immediately after removing it",
+    function () {
+      stop();
+      expect(3);
+      var jio = this.jio,
+        blob1 = this.blob1;
+
+      jio.put("doc", {title: "foo0"})
+        .push(function () {
+          return jio.putAttachment("doc", "attacheddata", blob1);
+        })
+        .push(function () {
+          return jio.removeAttachment("doc", "attacheddata");
+        })
+        .push(function () {
+          return jio.getAttachment("doc", "attacheddata");
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            ok(error instanceof jIO.util.jIOError, "throws a jio error");
+            deepEqual(error.status_code,
+              404,
+              "allAttachments of a removed document throws a 404 error");
+            deepEqual(error.message,
+              "HistoryStorage: cannot find object 'doc' (removed)",
+              "Error is handled by Historystorage.");
+          })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
 
   test("Ordering of put and remove attachments is correct",
     function () {
@@ -386,7 +421,7 @@
   test("Correctness of allAttachments method on older revisions",
     function () {
       stop();
-      expect(8);
+      expect(11);
       var jio = this.jio,
         history = this.history,
         not_history = this.not_history,
@@ -488,12 +523,28 @@
             data: blob11
           });
         })
+        .push(function () {
+          return history.allAttachments("not-a-timestamp-or-doc_id");
+        })
+        .push(function () {
+          ok(false, "This query should have thrown a 404 error");
+        },
+          function (error) {
+            ok(error instanceof jIO.util.jIOError, "throws a jio error");
+            deepEqual(error.status_code,
+              404,
+              "allAttachments of a removed document throws a 404 error");
+            deepEqual(error.message,
+              "HistoryStorage: cannot find object 'not-a-timestamp-or-doc_id'",
+              "Error is handled by Historystorage.");
+          })
         .fail(function (error) {
           //console.log(error);
           ok(false, error);
         })
         .always(function () {start(); });
     });
+
 
 
   /////////////////////////////////////////////////////////////////
@@ -543,6 +594,118 @@
       });
     }
   });
+
+  test("Removing documents before putting them",
+    function () {
+      stop();
+      expect(4);
+      var jio = this.jio,
+        not_history = this.not_history,
+        timestamps;
+
+      jio.remove("doc")
+        .push(function () {
+          return jio.put("doc2", {title: "foo"});
+        })
+        .push(function () {
+          return jio.get("doc");
+        })
+        .push(function () {
+          ok(false, "This statement should not be reached");
+        }, function (error) {
+          ok(error instanceof jIO.util.jIOError, "Correct type of error");
+          deepEqual(error.status_code,
+            404,
+            "Correct status code for getting a non-existent document"
+            );
+          deepEqual(error.message,
+            "HistoryStorage: cannot find object 'doc' (removed)",
+            "Error is handled by history storage before reaching console");
+        })
+        .push(function () {
+          return not_history.allDocs({
+            select_list: ["timestamp"],
+            sort_on: [["timestamp", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.value.timestamp;
+          });
+        })
+        .push(function () {
+          return jio.allDocs({select_list: ["title"]});
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              id: "doc2",
+              value: {title: "foo"},
+              doc: {},
+              timestamp: timestamps[1]
+            }], "DOcument that was removed before being put is not retrieved");
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
+  test("Removing documents and then putting them",
+    function () {
+      stop();
+      expect(2);
+      var jio = this.jio,
+        history = this.history,
+        timestamps;
+
+      jio.remove("doc")
+        .push(function () {
+          return jio.put("doc", {title: "foo"});
+        })
+        .push(function () {
+          return jio.get("doc");
+        })
+        .push(function (result) {
+          deepEqual(result, {
+            title: "foo"
+          }, "A put was the most recent edit on 'doc'");
+        })
+        .push(function () {
+          return history.allDocs({
+            select_list: ["timestamp"]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.timestamp;
+          });
+        })
+        .push(function () {
+          return history.allDocs({select_list: ["title"]});
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              id: "doc",
+              value: {title: "foo"},
+              doc: {},
+              timestamp: timestamps[0]
+            },
+            {
+              id: "doc",
+              value: {},
+              doc: {},
+              timestamp: timestamps[1]
+            }], "DOcument that was removed before being put is not retrieved");
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
 
   test("Handling bad input",
     function () {
@@ -614,7 +777,7 @@
   test("Getting a document with timestamp when include_revisions is false",
     function () {
       stop();
-      expect(9);
+      expect(6);
       var jio = this.jio,
         history = this.history,
         timestamp;
@@ -654,10 +817,13 @@
             "HistoryStorage: cannot find object '" + timestamp + "'",
             "Error is handled by history storage before reaching console");
         })
+        /**
+         * XXX: I don't think this test is necessary
         .push(function () {
           return history.get("doc");
         })
-        .push(function () {
+        .push(function (res) {
+          console.log(res);
           ok(false, "This statement should not be reached");
         }, function (error) {
           //console.log(error);
@@ -670,6 +836,8 @@
             "HistoryStorage: cannot find object 'doc'",
             "Error is handled by history storage before reaching console");
         })
+        **/
+
         .fail(function (error) {
           //console.log(error);
           ok(false, error);
@@ -919,6 +1087,52 @@
         })
         .always(function () {start(); });
     });
+
+  test("Getting after attachments have been put",
+    function () {
+      stop();
+      expect(4);
+      var jio = this.jio,
+        history = this.history,
+        blob = new Blob(['a']),
+        edit_log;
+
+      jio.put("doc", {"title": "foo0"})
+        .push(function () {
+          return jio.putAttachment("doc", "attachment", blob);
+        })
+        .push(function () {
+          return jio.removeAttachment("doc", "attachment", blob);
+        })
+        .push(function () {
+          return jio.get("doc");
+        })
+        .push(function (res) {
+          deepEqual(res, {title: "foo0"});
+          return history.allDocs({select_list: ["title"]});
+        })
+        .push(function (results) {
+          edit_log = results.data.rows;
+          return history.get(edit_log[0].timestamp);
+        })
+        .push(function (result) {
+          deepEqual(result, {title: "foo0"});
+          return history.get(edit_log[1].timestamp);
+        })
+        .push(function (result) {
+          deepEqual(result, {title: "foo0"});
+          return history.get(edit_log[2].timestamp);
+        })
+        .push(function (result) {
+          deepEqual(result, {title: "foo0"});
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
 
   /////////////////////////////////////////////////////////////////
   // Querying older revisions
@@ -1656,10 +1870,10 @@
         })
         .push(function () {
           return history.allDocs({
-            query: "NOT (date: >= 2 AND date: <= 3)",
+            query: "NOT (date: >= 2 AND date: <= 3) AND " +
+              "(date: = 1 OR date: = 4)",
             select_list: ["date", "non-existent-key", "type", "title"],
-            sort_on: [["date", "descending"]
-              ]
+            sort_on: [["date", "descending"]]
           });
         })
         .push(function (results) {
@@ -1724,16 +1938,194 @@
                 type: "foo"
               },
               timestamp: timestamps[1]
-            },
-            {
-              doc: {},
-              id: "doc",
-              value: {},
-              timestamp: timestamps[0]
             }
           ],
             "Query gives correct results in correct order");
         })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
+  test(
+    "allDocs with include_revisions with an attachment on a removed document",
+    function () {
+      stop();
+      expect(1);
+      var jio = this.jio,
+        history = this.history,
+        not_history = this.not_history,
+        timestamps,
+        blob = new Blob(['a']);
+
+      jio.put("document", {title: "foo"})
+        .push(function () {
+          return jio.remove("document");
+        })
+        .push(function () {
+          return jio.putAttachment("document", "attachment", blob);
+        })
+
+        // Get timestamps
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.id;
+          });
+        })
+        .push(function () {
+          return history.allDocs({select_list: ["title"]});
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              id: "document",
+              doc: {},
+              value: {},
+              timestamp: timestamps[2]
+            },
+            {
+              id: "document",
+              doc: {},
+              value: {},
+              timestamp: timestamps[1]
+            },
+            {
+              id: "document",
+              doc: {},
+              value: {title: "foo"},
+              timestamp: timestamps[0]
+            }],
+            "Attachment on removed document is handled correctly"
+            );
+          return not_history.allDocs({select_list: ["doc"]});
+        })
+
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    }
+  );
+
+  test("allDocs with include_revisions with a removed attachment",
+    function () {
+      stop();
+      expect(2);
+      var jio = this.jio,
+        history = this.history,
+        not_history = this.not_history,
+        timestamps,
+        blob = new Blob(['a']);
+
+      jio.put("document", {title: "foo"})
+        .push(function () {
+          return jio.putAttachment("document", "attachment", blob);
+        })
+        .push(function () {
+          return jio.removeAttachment("document", "attachment");
+        })
+
+        // Get timestamps
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.id;
+          });
+        })
+
+        .push(function () {
+          return history.allDocs({select_list: ["title"]});
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              id: "document",
+              doc: {},
+              value: {title: "foo"},
+              timestamp: timestamps[2]
+            },
+            {
+              id: "document",
+              doc: {},
+              value: {title: "foo"},
+              timestamp: timestamps[1]
+            },
+            {
+              id: "document",
+              doc: {},
+              value: {title: "foo"},
+              timestamp: timestamps[0]
+            }],
+            "Attachment on removed document is handled correctly"
+            );
+        })
+        .push(function () {
+          return jio.allAttachments("document");
+        })
+        .push(function (results) {
+          deepEqual(results, {}, "No non-removed attachments");
+        })
+
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
+  test("Parallel edits will not break anything",
+    function () {
+      stop();
+      expect(2);
+      var jio = this.jio,
+        history = this.history,
+        blob1 = new Blob(['ab']),
+        blob2 = new Blob(['abc']),
+        blob3 = new Blob(['abcd']);
+
+      jio.put("doc", {k: "v0"})
+        .push(function () {
+          return RSVP.all([
+            jio.put("doc", {k: "v"}),
+            jio.putAttachment("doc", "data", blob1),
+            jio.putAttachment("doc", "data2", blob2),
+            jio.putAttachment("doc", "data", blob3),
+            jio.removeAttachment("doc", "data"),
+            jio.removeAttachment("doc", "data2"),
+            jio.remove("doc"),
+            jio.remove("doc"),
+            jio.put("doc", {k: "v"}),
+            jio.put("doc", {k: "v"}),
+            jio.put("doc2", {k: "foo"}),
+            jio.remove("doc"),
+            jio.remove("doc")
+          ]);
+        })
+
+        .push(function () {
+          ok(true, "No errors thrown.");
+          return history.allDocs();
+        })
+        .push(function (results) {
+          var res = results.data.rows;
+          equal(res.length,
+            14,
+            "All edits are recorded regardless of ordering");
+          return jio.allDocs();
+        })
+
         .fail(function (error) {
           //console.log(error);
           ok(false, error);
