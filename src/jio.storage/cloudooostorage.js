@@ -49,9 +49,9 @@
           "application/xml"
         ), error;
         if (data.getElementsByTagName('fault').length === 0) {
-          return jIO.util.dataURItoBlob(
-            "data:" + to + ';base64,' +
-              data.getElementsByTagName('string')[0].textContent
+          return jIO.util.base64toBlob(
+            data.getElementsByTagName('string')[0].textContent,
+            to
           );
         }
         error = new jIO.util.jIOError('Conversion failed', 418);
