@@ -165,6 +165,20 @@
   }
   util.stringify = stringify;
 
+  function base64toBlob(b64String, mimeString) {
+
+    var byteString = atob(b64String),
+    // write the bytes of the string to an ArrayBuffer
+      arrayBuffer = new ArrayBuffer(byteString.length),
+      _ia = new Uint8Array(arrayBuffer),
+      i;
+    for (i = 0; i < byteString.length; i += 1) {
+      _ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([arrayBuffer], {type: mimeString});
+  }
+
+  util.base64toBlob = base64toBlob;
 
   // https://gist.github.com/davoclavo/4424731
   function dataURItoBlob(dataURI) {
@@ -172,18 +186,9 @@
       return new Blob();
     }
     // convert base64 to raw binary data held in a string
-    var byteString = atob(dataURI.split(',')[1]),
-    // separate out the mime component
-      mimeString = dataURI.split(',')[0].split(':')[1],
-    // write the bytes of the string to an ArrayBuffer
-      arrayBuffer = new ArrayBuffer(byteString.length),
-      _ia = new Uint8Array(arrayBuffer),
-      i;
+    var mimeString = dataURI.split(',')[0].split(':')[1];
     mimeString = mimeString.slice(0, mimeString.length - ";base64".length);
-    for (i = 0; i < byteString.length; i += 1) {
-      _ia[i] = byteString.charCodeAt(i);
-    }
-    return new Blob([arrayBuffer], {type: mimeString});
+    return base64toBlob(dataURI.split(',')[1], mimeString);
   }
 
   util.dataURItoBlob = dataURItoBlob;
