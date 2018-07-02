@@ -188,6 +188,34 @@
 
   util.dataURItoBlob = dataURItoBlob;
 
+  function base64toBlob(b64Data, contentType, sliceSize) {
+    contentType = contentType || '';
+    sliceSize = sliceSize || 512;
+
+    var byteCharacters = window.atob(b64Data),
+      byteArrays = [],
+      slice,
+      byteArray,
+      byteNumbers = [],
+      offset,
+      i;
+
+    for (offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+      slice = byteCharacters.slice(offset, offset + sliceSize);
+      for (i = 0; i < slice.length; i += 1) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+
+      byteArray = new Uint8Array(byteNumbers);
+
+      byteArrays.push(byteArray);
+    }
+
+    return new Blob(byteArrays, {type: contentType});
+  }
+
+  util.base64toBlob = base64toBlob;
+
   // tools
   function checkId(argument_list, storage, method_name) {
     if (typeof argument_list[0] !== 'string' || argument_list[0] === '') {
