@@ -54,7 +54,7 @@
             to
           );
         }
-        error = new jIO.util.jIOError('Conversion failed', 418);
+        error = new jIO.util.jIOError('Conversion failed', 500);
         error.detail = data.getElementsByTagName('string')[0].textContent;
         throw error;
       });

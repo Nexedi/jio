@@ -326,7 +326,7 @@
             '<param><value><string>docy' +
             '</string></value></param></params></methodCall>'
         );
-        equal(error.status_code, 418);
+        equal(error.status_code, 500);
         equal(error.message, 'Conversion failed');
         equal(error.detail, 'errorFromCloudooo');
       })
