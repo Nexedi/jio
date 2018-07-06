@@ -22,6 +22,115 @@
       });
   }
 
+  module("HistoryStorage.post", {
+    setup: function () {
+      // create storage of type "history" with memory as substorage
+      var dbname = "db_" + Date.now();
+      this.jio = jIO.createJIO({
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "history",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "indexeddb",
+                database: dbname
+              }
+            }
+          }
+        }
+      });
+      this.history = jIO.createJIO({
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "history",
+            include_revisions: true,
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "indexeddb",
+                database: dbname
+              }
+            }
+          }
+        }
+      });
+      this.not_history = jIO.createJIO({
+        type: "query",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "indexeddb",
+            database: dbname
+          }
+        }
+      });
+    }
+  });
+
+  test("Verifying simple post works",
+    function () {
+      stop();
+      expect(2);
+      var jio = this.jio,
+        history = this.history,
+        not_history = this.not_history,
+        //timestamps,
+        id;
+
+      return jio.post({title: "foo0"})
+        .push(function (result) {
+          id = result;
+          return jio.put(result, {title: "foo1"});
+        })
+        .push(function (result) {
+          return jio.get(result);
+        })
+        .push(function (res) {
+          deepEqual(res, {
+            title: "foo1"
+          }, "history storage only retrieves latest version");
+        })
+        .push(function () {
+          return not_history.allDocs({
+            select_list: ["timestamp"]
+          });
+        })
+        .push(function () {
+          return history.allDocs({select_list: ["title"]});
+        })
+        .push(function (res) {
+          deepEqual(res.data.rows, [
+            {
+              value: {
+                title: "foo1"
+              },
+              doc: {},
+              //timestamp: timestamps[1],
+              id: id
+            },
+            {
+              value: {
+                title: "foo0"
+              },
+              doc: {},
+              //timestamp: timestamps[0],
+              id: id
+            }
+          ],
+            "Two revisions logged with correct metadata");
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
 
   /////////////////////////////////////////////////////////////////
   // Attachments
@@ -36,28 +145,34 @@
       this.blob3 = new Blob(['ccc']);
       this.other_blob = new Blob(['1']);
       this.jio = jIO.createJIO({
-        type: "history",
+        type: "query",
         sub_storage: {
-          type: "query",
+          type: "history",
           sub_storage: {
-            type: "uuid",
+            type: "query",
             sub_storage: {
-              type: "indexeddb",
-              database: dbname
+              type: "uuid",
+              sub_storage: {
+                type: "indexeddb",
+                database: dbname
+              }
             }
           }
         }
       });
       this.history = jIO.createJIO({
-        type: "history",
-        include_revisions: true,
+        type: "query",
         sub_storage: {
-          type: "query",
+          type: "history",
+          include_revisions: true,
           sub_storage: {
-            type: "uuid",
+            type: "query",
             sub_storage: {
-              type: "indexeddb",
-              database: dbname
+              type: "uuid",
+              sub_storage: {
+                type: "indexeddb",
+                database: dbname
+              }
             }
           }
         }
@@ -556,28 +671,34 @@
       // create storage of type "history" with memory as substorage
       var dbname = "db_" + Date.now();
       this.jio = jIO.createJIO({
-        type: "history",
+        type: "query",
         sub_storage: {
-          type: "query",
+          type: "history",
           sub_storage: {
-            type: "uuid",
+            type: "query",
             sub_storage: {
-              type: "indexeddb",
-              database: dbname
+              type: "uuid",
+              sub_storage: {
+                type: "indexeddb",
+                database: dbname
+              }
             }
           }
         }
       });
       this.history = jIO.createJIO({
-        type: "history",
-        include_revisions: true,
+        type: "query",
         sub_storage: {
-          type: "query",
+          type: "history",
+          include_revisions: true,
           sub_storage: {
-            type: "uuid",
+            type: "query",
             sub_storage: {
-              type: "indexeddb",
-              database: dbname
+              type: "uuid",
+              sub_storage: {
+                type: "indexeddb",
+                database: dbname
+              }
             }
           }
         }
@@ -599,9 +720,7 @@
     function () {
       stop();
       expect(4);
-      var jio = this.jio,
-        not_history = this.not_history,
-        timestamps;
+      var jio = this.jio;
 
       jio.remove("doc")
         .push(function () {
@@ -623,17 +742,6 @@
             "Error is handled by history storage before reaching console");
         })
         .push(function () {
-          return not_history.allDocs({
-            select_list: ["timestamp"],
-            sort_on: [["timestamp", "ascending"]]
-          });
-        })
-        .push(function (results) {
-          timestamps = results.data.rows.map(function (d) {
-            return d.value.timestamp;
-          });
-        })
-        .push(function () {
           return jio.allDocs({select_list: ["title"]});
         })
         .push(function (results) {
@@ -641,9 +749,9 @@
             {
               id: "doc2",
               value: {title: "foo"},
-              doc: {},
-              timestamp: timestamps[1]
-            }], "DOcument that was removed before being put is not retrieved");
+              //timestamp: timestamps[1],
+              doc: {}
+            }], "Document that was removed before being put is not retrieved");
         })
         .fail(function (error) {
           //console.log(error);
@@ -657,8 +765,7 @@
       stop();
       expect(2);
       var jio = this.jio,
-        history = this.history,
-        timestamps;
+        history = this.history;
 
       jio.remove("doc")
         .push(function () {
@@ -673,16 +780,6 @@
           }, "A put was the most recent edit on 'doc'");
         })
         .push(function () {
-          return history.allDocs({
-            select_list: ["timestamp"]
-          });
-        })
-        .push(function (results) {
-          timestamps = results.data.rows.map(function (d) {
-            return d.timestamp;
-          });
-        })
-        .push(function () {
           return history.allDocs({select_list: ["title"]});
         })
         .push(function (results) {
@@ -690,14 +787,14 @@
             {
               id: "doc",
               value: {title: "foo"},
-              doc: {},
-              timestamp: timestamps[0]
+              //timestamp: timestamps[0],
+              doc: {}
             },
             {
               id: "doc",
               value: {},
-              doc: {},
-              timestamp: timestamps[1]
+              //timestamp: timestamps[1],
+              doc: {}
             }], "DOcument that was removed before being put is not retrieved");
         })
         .fail(function (error) {
@@ -713,14 +810,15 @@
       expect(2);
       var jio = this.jio,
         history = this.history,
+        not_history = this.not_history,
         timestamp;
 
       jio.put("doc", {title: "foo"})
         .push(function () {
-          return history.allDocs();
+          return not_history.allDocs();
         })
         .push(function (res) {
-          timestamp = res.data.rows[0].timestamp;
+          timestamp = res.data.rows[0].id;
           return history.put(timestamp, {key: "val"});
         })
         .push(function () {
@@ -779,7 +877,7 @@
       stop();
       expect(6);
       var jio = this.jio,
-        history = this.history,
+        not_history = this.not_history,
         timestamp;
       jio.put("not_doc", {})
         .push(function () {
@@ -799,31 +897,13 @@
             "Error is handled by history storage before reaching console");
         })
         .push(function () {
-          return history.allDocs();
+          return not_history.allDocs();
         })
         .push(function (results) {
-          timestamp = results.data.rows[0].timestamp;
+          timestamp = results.data.rows[0].id;
           return jio.get(timestamp);
         })
         .push(function () {
-          ok(false, "This statement should not be reached");
-        }, function (error) {
-          ok(error instanceof jIO.util.jIOError, "Correct type of error");
-          deepEqual(error.status_code,
-            404,
-            "Correct status code for getting a non-existent document"
-            );
-          deepEqual(error.message,
-            "HistoryStorage: cannot find object '" + timestamp + "'",
-            "Error is handled by history storage before reaching console");
-        })
-        /**
-         * XXX: I don't think this test is necessary
-        .push(function () {
-          return history.get("doc");
-        })
-        .push(function (res) {
-          console.log(res);
           ok(false, "This statement should not be reached");
         }, function (error) {
           //console.log(error);
@@ -833,10 +913,9 @@
             "Correct status code for getting a non-existent document"
             );
           deepEqual(error.message,
-            "HistoryStorage: cannot find object 'doc'",
+            "HistoryStorage: cannot find object '" + timestamp + "'",
             "Error is handled by history storage before reaching console");
         })
-        **/
 
         .fail(function (error) {
           //console.log(error);
@@ -1093,6 +1172,7 @@
       stop();
       expect(4);
       var jio = this.jio,
+        not_history = this.not_history,
         history = this.history,
         blob = new Blob(['a']),
         edit_log;
@@ -1108,20 +1188,22 @@
           return jio.get("doc");
         })
         .push(function (res) {
-          deepEqual(res, {title: "foo0"});
-          return history.allDocs({select_list: ["title"]});
+          deepEqual(res,
+            {title: "foo0"},
+            "Correct information returned");
+          return not_history.allDocs({select_list: ["title"]});
         })
         .push(function (results) {
           edit_log = results.data.rows;
-          return history.get(edit_log[0].timestamp);
+          return history.get(edit_log[0].id);
         })
         .push(function (result) {
           deepEqual(result, {title: "foo0"});
-          return history.get(edit_log[1].timestamp);
+          return history.get(edit_log[1].id);
         })
         .push(function (result) {
           deepEqual(result, {title: "foo0"});
-          return history.get(edit_log[2].timestamp);
+          return history.get(edit_log[2].id);
         })
         .push(function (result) {
           deepEqual(result, {title: "foo0"});
@@ -1141,30 +1223,36 @@
   module("HistoryStorage.allDocs", {
     setup: function () {
       // create storage of type "history" with memory as substorage
-      var dbname = "db_" + Date.now();
+      this.dbname = "db_" + Date.now();
       this.jio = jIO.createJIO({
-        type: "history",
+        type: "uuid",
         sub_storage: {
           type: "query",
           sub_storage: {
-            type: "uuid",
+            type: "history",
             sub_storage: {
-              type: "indexeddb",
-              database: dbname
+              type: "query",
+              sub_storage: {
+                type: "indexeddb",
+                database: this.dbname
+              }
             }
           }
         }
       });
       this.history = jIO.createJIO({
-        type: "history",
-        include_revisions: true,
+        type: "uuid",
         sub_storage: {
           type: "query",
           sub_storage: {
-            type: "uuid",
+            type: "history",
+            include_revisions: true,
             sub_storage: {
-              type: "indexeddb",
-              database: dbname
+              type: "query",
+              sub_storage: {
+                type: "indexeddb",
+                database: this.dbname
+              }
             }
           }
         }
@@ -1175,7 +1263,7 @@
           type: "uuid",
           sub_storage: {
             type: "indexeddb",
-            database: dbname
+            database: this.dbname
           }
         }
       });
@@ -1223,26 +1311,27 @@
           deepEqual(results.data.rows[0], {
             doc: {},
             value: {},
-            id: "doc",
-            timestamp: timestamp
+            //timestamp: timestamp,
+            id: "doc"
           },
             "Correct document format is returned."
             );
           return not_history.allDocs();
         })
         .push(function (results) {
+          timestamp = results.data.rows[0].id;
           equal(results.data.total_rows,
             1,
             "Exactly one result returned");
-          return not_history.get(results.data.rows[0].id);
+          return not_history.get(timestamp);
         })
         .push(function (result) {
           deepEqual(result, {
-            timestamp: timestamp,
             doc_id: "doc",
             doc: {
               title: "version0"
             },
+            timestamp: timestamp,
             op: "put"
           },
             "When a different type of storage queries historystorage, all " +
@@ -1256,36 +1345,27 @@
         .always(function () {start(); });
     });
 
-  test("Putting doc with _doc_id and _timestamp properties" +
-    "and retrieving them with allDocs",
+  test("Putting doc with troublesome properties and retrieving with allDocs",
     function () {
       stop();
       expect(1);
-      var jio = this.jio,
-        not_history = this.not_history,
-        timestamp;
+      var jio = this.jio;
       jio.put("doc", {
         title: "version0",
-        _doc_id: "bar",
-        __doc_id: "bar2",
-        ___doc_id: "bar3",
-        _timestamp: "foo",
-        ____timestamp: "foo2"
+        doc_id: "bar",
+        _doc_id: "bar2",
+        timestamp: "foo",
+        _timestamp: "foo2",
+        id: "baz",
+        _id: "baz2",
+        __id: "baz3",
+        op: "zop"
       })
-        .push(function () {
-          return not_history.allDocs({
-            query: "doc_id: doc",
-            select_list: ["timestamp"]
-          });
-        })
-        .push(function (results) {
-          timestamp = results.data.rows[0].value.timestamp;
-        })
         .push(function () {
           return jio.allDocs({
             query: "title: version0 AND _timestamp: >= 0",
-            select_list: ["title", "_doc_id", "__doc_id", "___doc_id",
-              "_timestamp", "____timestamp"]
+            select_list: ["title", "doc_id", "_doc_id", "timestamp",
+              "_timestamp", "id", "_id", "__id", "op"]
           });
         })
         .push(function (results) {
@@ -1293,17 +1373,20 @@
             {
               doc: {},
               id: "doc",
+              //timestamp: timestamp,
               value: {
                 title: "version0",
-                _doc_id: "bar",
-                __doc_id: "bar2",
-                ___doc_id: "bar3",
-                _timestamp: "foo",
-                ____timestamp: "foo2"
-              },
-              timestamp: timestamp
+                doc_id: "bar",
+                _doc_id: "bar2",
+                timestamp: "foo",
+                _timestamp: "foo2",
+                id: "baz",
+                _id: "baz2",
+                __id: "baz3",
+                op: "zop"
+              }
             }],
-            "_doc_id properties are not overwritten in allDocs call");
+            "Poorly-named properties are not overwritten in allDocs call");
         })
         .fail(function (error) {
           //console.log(error);
@@ -1393,8 +1476,8 @@
               subtitle: "subvers2"
             },
             doc: {},
-            id: "doc",
-            timestamp: timestamps[2]
+            //timestamp: timestamps[2],
+            id: "doc"
           },
             "Correct document format is returned."
             );
@@ -1416,8 +1499,8 @@
                 title: "version2",
                 subtitle: "subvers2"
               },
-              doc: {},
-              timestamp: timestamps[2]
+              //timestamp: timestamps[2],
+              doc: {}
             },
             {
               id: "doc",
@@ -1425,8 +1508,8 @@
                 title: "version1",
                 subtitle: "subvers1"
               },
-              doc: {},
-              timestamp: timestamps[1]
+              //timestamp: timestamps[1],
+              doc: {}
             },
             {
               id: "doc",
@@ -1434,8 +1517,8 @@
                 title: "version0",
                 subtitle: "subvers0"
               },
-              doc: {},
-              timestamp: timestamps[0]
+              //timestamp: timestamps[0],
+              doc: {}
             }
           ], "Full version history is included.");
 
@@ -1550,14 +1633,14 @@
             {
               id: "doc_c",
               value: {},
-              doc: {},
-              timestamp: timestamps[5]
+              //timestamp: timestamps[5],
+              doc: {}
             },
             {
               id: "doc_a",
               value: {},
-              doc: {},
-              timestamp: timestamps[1]
+              //timestamp: timestamps[1],
+              doc: {}
             }
           ],
             "Empty query returns latest revisions (and no removed documents)");
@@ -1582,8 +1665,6 @@
       stop();
       expect(2);
       var jio = this.jio,
-        not_history = this.not_history,
-        timestamps,
         docs = [
           {
             "date": 1,
@@ -1617,16 +1698,6 @@
           return putFullDoc(jio, "third_doc", docs[2], "data", blobs[2]); // 5,6
         })
         .push(function () {
-          return not_history.allDocs({
-            sort_on: [["timestamp", "ascending"]]
-          });
-        })
-        .push(function (results) {
-          timestamps = results.data.rows.map(function (d) {
-            return d.id;
-          });
-        })
-        .push(function () {
           return jio.allDocs({
             query: "NOT (date: > 2)",
             select_list: ["date", "non-existent-key"],
@@ -1641,20 +1712,20 @@
             {
               doc: {},
               id: "doc",
-              value: {date: 1},
-              timestamp: timestamps[2]
+              //timestamp: timestamps[2],
+              value: {date: 1}
             },
             {
               doc: {},
               id: "third_doc",
-              value: {date: 2},
-              timestamp: timestamps[6]
+              //timestamp: timestamps[6],
+              value: {date: 2}
             },
             {
               doc: {},
               id: "second_doc",
-              value: {date: 2},
-              timestamp: timestamps[4]
+              //timestamp: timestamps[4],
+              value: {date: 2}
             }
           ],
             "Query gives correct results in correct order");
@@ -1881,63 +1952,63 @@
             {
               doc: {},
               id: "second_doc",
+              //timestamp: timestamps[9],
               value: {
                 date: 4,
                 title: "second_doc",
                 type: "bar2"
-              },
-              timestamp: timestamps[9]
+              }
             },
             {
               doc: {},
               id: "second_doc",
+              //timestamp: timestamps[8],
               value: {
                 date: 4,
                 title: "second_doc",
                 type: "bar2"
-              },
-              timestamp: timestamps[8]
+              }
             },
             {
               doc: {},
               id: "doc",
+              //timestamp: timestamps[6],
               value: {
                 date: 4,
                 title: "doc",
                 type: "foo2"
-              },
-              timestamp: timestamps[6]
+              }
             },
             {
               doc: {},
               id: "doc",
+              //timestamp: timestamps[5],
               value: {
                 date: 4,
                 title: "doc",
                 type: "foo2"
-              },
-              timestamp: timestamps[5]
+              }
             },
 
             {
               doc: {},
               id: "doc",
+              //timestamp: timestamps[2],
               value: {
                 date: 1,
                 title: "doc",
                 type: "foo"
-              },
-              timestamp: timestamps[2]
+              }
             },
             {
               doc: {},
               id: "doc",
+              //timestamp: timestamps[1],
               value: {
                 date: 1,
                 title: "doc",
                 type: "foo"
-              },
-              timestamp: timestamps[1]
+              }
             }
           ],
             "Query gives correct results in correct order");
@@ -1957,7 +2028,6 @@
       var jio = this.jio,
         history = this.history,
         not_history = this.not_history,
-        timestamps,
         blob = new Blob(['a']);
 
       jio.put("document", {title: "foo"})
@@ -1967,18 +2037,6 @@
         .push(function () {
           return jio.putAttachment("document", "attachment", blob);
         })
-
-        // Get timestamps
-        .push(function () {
-          return not_history.allDocs({
-            sort_on: [["timestamp", "ascending"]]
-          });
-        })
-        .push(function (results) {
-          timestamps = results.data.rows.map(function (d) {
-            return d.id;
-          });
-        })
         .push(function () {
           return history.allDocs({select_list: ["title"]});
         })
@@ -1987,20 +2045,20 @@
             {
               id: "document",
               doc: {},
-              value: {},
-              timestamp: timestamps[2]
+              //timestamp: timestamps[2],
+              value: {}
             },
             {
               id: "document",
               doc: {},
-              value: {},
-              timestamp: timestamps[1]
+              //timestamp: timestamps[1],
+              value: {}
             },
             {
               id: "document",
               doc: {},
-              value: {title: "foo"},
-              timestamp: timestamps[0]
+              //timestamp: timestamps[0],
+              value: {title: "foo"}
             }],
             "Attachment on removed document is handled correctly"
             );
@@ -2021,8 +2079,6 @@
       expect(2);
       var jio = this.jio,
         history = this.history,
-        not_history = this.not_history,
-        timestamps,
         blob = new Blob(['a']);
 
       jio.put("document", {title: "foo"})
@@ -2033,18 +2089,6 @@
           return jio.removeAttachment("document", "attachment");
         })
 
-        // Get timestamps
-        .push(function () {
-          return not_history.allDocs({
-            sort_on: [["timestamp", "ascending"]]
-          });
-        })
-        .push(function (results) {
-          timestamps = results.data.rows.map(function (d) {
-            return d.id;
-          });
-        })
-
         .push(function () {
           return history.allDocs({select_list: ["title"]});
         })
@@ -2053,20 +2097,20 @@
             {
               id: "document",
               doc: {},
-              value: {title: "foo"},
-              timestamp: timestamps[2]
+              //timestamp: timestamps[2],
+              value: {title: "foo"}
             },
             {
               id: "document",
               doc: {},
-              value: {title: "foo"},
-              timestamp: timestamps[1]
+              //timestamp: timestamps[1],
+              value: {title: "foo"}
             },
             {
               id: "document",
               doc: {},
-              value: {title: "foo"},
-              timestamp: timestamps[0]
+              //timestamp: timestamps[0],
+              value: {title: "foo"}
             }],
             "Attachment on removed document is handled correctly"
             );
@@ -2133,6 +2177,48 @@
         .always(function () {start(); });
     });
 
+  test("Adding second query storage on top of history",
+    function () {
+      stop();
+      expect(1);
+      var jio = this.jio;
+      return jio.put("doca", {title: "foo0", date: 0})
+        .push(function () {
+          return jio.put("docb", {title: "bar0", date: 0});
+        })
+        .push(function () {
+          return jio.put("docb", {title: "bar1", date: 0});
+        })
+        .push(function () {
+          return jio.put("doca", {title: "foo1", date: 1});
+        })
+        .push(function () {
+          return jio.put("docb", {title: "bar2", date: 2});
+        })
+        .push(function () {
+          return jio.allDocs({
+            query: "title: foo1 OR title: bar2",
+            select_list: ["title"],
+            sort_on: [["date", "ascending"]],
+            limit: [0, 1]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              doc: {},
+              id: "doca",
+              value: {title: "foo1"}
+            }
+          ]);
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
 
   module("HistoryStorage.Full-Example", {
     setup: function () {
@@ -2144,28 +2230,34 @@
       this.other_blob = new Blob(['1']);
 
       this.jio = jIO.createJIO({
-        type: "history",
+        type: "query",
         sub_storage: {
-          type: "query",
+          type: "history",
           sub_storage: {
-            type: "uuid",
+            type: "query",
             sub_storage: {
-              type: "indexeddb",
-              database: dbname
+              type: "uuid",
+              sub_storage: {
+                type: "indexeddb",
+                database: dbname
+              }
             }
           }
         }
       });
       this.history = jIO.createJIO({
-        type: "history",
-        include_revisions: true,
+        type: "query",
         sub_storage: {
-          type: "query",
+          type: "history",
+          include_revisions: true,
           sub_storage: {
-            type: "uuid",
+            type: "query",
             sub_storage: {
-              type: "indexeddb",
-              database: dbname
+              type: "uuid",
+              sub_storage: {
+                type: "indexeddb",
+                database: dbname
+              }
             }
           }
         }
@@ -2189,8 +2281,6 @@
       expect(1);
       var jio = this.jio,
         history = this.history,
-        not_history = this.not_history,
-        timestamps,
         blobs1 = [
           new Blob(['a']),
           new Blob(['ab']),
@@ -2225,18 +2315,6 @@
           return putFullDoc(jio, "doc", {title: "bar3"}, "data", blobs1[4]);
         })
 
-        // Get timestamps
-        .push(function () {
-          return not_history.allDocs({
-            sort_on: [["timestamp", "ascending"]]
-          });
-        })
-        .push(function (results) {
-          timestamps = results.data.rows.map(function (d) {
-            return d.id;
-          });
-        })
-
         .push(function () {
           return history.allDocs({
             select_list: ["title"]
@@ -2247,86 +2325,86 @@
             {
               doc: {},
               id: "doc",
-              value: {title: "bar3"},
-              timestamp: timestamps[13]
+              //timestamp: timestamps[13],
+              value: {title: "bar3"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar3"},
-              timestamp: timestamps[12]
+              //timestamp: timestamps[12],
+              value: {title: "bar3"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar2"},
-              timestamp: timestamps[11]
+              //timestamp: timestamps[11],
+              value: {title: "bar2"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar2"},
-              timestamp: timestamps[10]
+              //timestamp: timestamps[10],
+              value: {title: "bar2"}
             },
             {
               doc: {},
               id: "doc2",
-              value: {title: "foo1"},
-              timestamp: timestamps[9]
+              //timestamp: timestamps[9],
+              value: {title: "foo1"}
             },
             {
               doc: {},
               id: "doc2",
-              value: {title: "foo1"},
-              timestamp: timestamps[8]
+              //timestamp: timestamps[8],
+              value: {title: "foo1"}
             },
             {
               doc: {},
               id: "doc2",
-              value: {title: "foo0"},
-              timestamp: timestamps[7]
+              //timestamp: timestamps[7],
+              value: {title: "foo0"}
             },
             {
               doc: {},
               id: "doc2",
-              value: {title: "foo0"},
-              timestamp: timestamps[6]
+              //timestamp: timestamps[6],
+              value: {title: "foo0"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar1"},
-              timestamp: timestamps[5]
+              //timestamp: timestamps[5],
+              value: {title: "bar1"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar1"},
-              timestamp: timestamps[4]
+              //timestamp: timestamps[4],
+              value: {title: "bar1"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar0"},
-              timestamp: timestamps[3]
+              //timestamp: timestamps[3],
+              value: {title: "bar0"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar0"},
-              timestamp: timestamps[2]
+              //timestamp: timestamps[2],
+              value: {title: "bar0"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar"},
-              timestamp: timestamps[1]
+              //timestamp: timestamps[1],
+              value: {title: "bar"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar"},
-              timestamp: timestamps[0]
+              //timestamp: timestamps[0],
+              value: {title: "bar"}
             }
           ],
             "allDocs with include_revisions should return all revisions");
@@ -2344,9 +2422,7 @@
       stop();
       expect(1);
       var jio = this.jio,
-        not_history = this.not_history,
         history = this.history,
-        timestamps,
         blobs1 = [
           new Blob(['a']),
           new Blob(['ab']),
@@ -2368,18 +2444,6 @@
           return jio.putAttachment("doc", "data", blobs1[1]);
         })
 
-        // Get timestamps
-        .push(function () {
-          return not_history.allDocs({
-            sort_on: [["timestamp", "ascending"]]
-          });
-        })
-        .push(function (results) {
-          timestamps = results.data.rows.map(function (d) {
-            return d.id;
-          });
-        })
-
         .push(function () {
           return history.allDocs({
             select_list: ["title"]
@@ -2390,32 +2454,32 @@
             {
               doc: {},
               id: "doc",
-              value: {title: "bar0"},
-              timestamp: timestamps[4]
+              //timestamp: timestamps[4],
+              value: {title: "bar0"}
             },
             {
               doc: {},
               id: "doc2",
-              value: {title: "foo0"},
-              timestamp: timestamps[3]
+              //timestamp: timestamps[3],
+              value: {title: "foo0"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar0"},
-              timestamp: timestamps[2]
+              //timestamp: timestamps[2],
+              value: {title: "bar0"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar0"},
-              timestamp: timestamps[1]
+              //timestamp: timestamps[1],
+              value: {title: "bar0"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar"},
-              timestamp: timestamps[0]
+              //timestamp: timestamps[0],
+              value: {title: "bar"}
             }
           ],
             "allDocs with include_revisions should return all revisions");
@@ -2433,9 +2497,7 @@
       stop();
       expect(2);
       var jio = this.jio,
-        not_history = this.not_history,
         history = this.history,
-        timestamps,
         blobs1 = [
           new Blob(['a']),
           new Blob(['ab']),
@@ -2456,18 +2518,6 @@
         .push(function () {
           return jio.putAttachment("doc", "data", blobs1[1]);
         })
-
-        // Get timestamps
-        .push(function () {
-          return not_history.allDocs({
-            sort_on: [["timestamp", "ascending"]]
-          });
-        })
-        .push(function (results) {
-          timestamps = results.data.rows.map(function (d) {
-            return d.id;
-          });
-        })
         .push(function () {
           return jio.allDocs({
             select_list: ["title"]
@@ -2478,14 +2528,14 @@
             {
               doc: {},
               id: "doc",
-              value: {title: "bar0"},
-              timestamp: timestamps[4]
+              //timestamp: timestamps[4],
+              value: {title: "bar0"}
             },
             {
               doc: {},
               id: "doc2",
-              value: {title: "foo0"},
-              timestamp: timestamps[3]
+              //timestamp: timestamps[3],
+              value: {title: "foo0"}
             }
           ],
             "allDocs with include_revisions false should return all revisions");
@@ -2500,32 +2550,32 @@
             {
               doc: {},
               id: "doc",
-              value: {title: "bar0"},
-              timestamp: timestamps[4]
+              //timestamp: timestamps[4],
+              value: {title: "bar0"}
             },
             {
               doc: {},
               id: "doc2",
-              value: {title: "foo0"},
-              timestamp: timestamps[3]
+              //timestamp: timestamps[3],
+              value: {title: "foo0"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar0"},
-              timestamp: timestamps[2]
+              //timestamp: timestamps[2],
+              value: {title: "bar0"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar0"},
-              timestamp: timestamps[1]
+              //timestamp: timestamps[1],
+              value: {title: "bar0"}
             },
             {
               doc: {},
               id: "doc",
-              value: {title: "bar"},
-              timestamp: timestamps[0]
+              //timestamp: timestamps[0],
+              value: {title: "bar"}
             }
           ],
             "allDocs with include_revisions true should return all revisions");

@@ -236,7 +236,6 @@
           attachment_promises[entry.value.name] =
             substorage.getAttachment(entry.id, entry.value.name);
         }
-
         return RSVP.hash(attachment_promises);
       });
   };
@@ -256,7 +255,6 @@
         return substorage.putAttachment(timestamp, name, blob);
       });
   };
-
   HistoryStorage.prototype.getAttachment = function (id, name) {
 
     if (this._include_revisions) {
@@ -335,9 +333,10 @@
   HistoryStorage.prototype.repair = function () {
     return this._sub_storage.repair.apply(this._sub_storage, arguments);
   };
-  HistoryStorage.prototype.hasCapacity = function () {
-    return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+  HistoryStorage.prototype.hasCapacity = function (name) {
+    return name === 'list' || name === 'include';
   };
+
 
   HistoryStorage.prototype.buildQuery = function (options) {
     // Set default values
@@ -348,40 +347,21 @@
     if (options.include_revisions === undefined) {
       options.include_revisions = false;
     }
-    options.sort_on.push(["timestamp", "descending"]);
     options.query = jIO.QueryFactory.create(options.query);
 
-    var meta_options,
-      include_revs = this._include_revisions,
-      doc_id_name,
-      timestamp_name;
-
-    // Query for all edits
-    meta_options = {
+    var meta_options  = {
       query: "",
-      sort_on: options.sort_on,
+      sort_on: [["timestamp", "descending"]],
       select_list: ["doc", "op", "doc_id"]
-    };
+    },
+      include_revs = this._include_revisions;
+
     return this._sub_storage.allDocs(meta_options)
       .push(function (results) {
         results = results.data.rows;
         var seen = {},
-          query_matches,
           docs_to_query,
           i;
-
-        doc_id_name = "_doc_id";
-        timestamp_name = "_timestamp";
-        for (i = 0; i < results.length; i += 1) {
-          if (results[i].value.op === "put") {
-            while (results[i].value.doc.hasOwnProperty(doc_id_name)) {
-              doc_id_name = "_" + doc_id_name;
-            }
-            while (results[i].value.doc.hasOwnProperty(timestamp_name)) {
-              timestamp_name = "_" + timestamp_name;
-            }
-          }
-        }
 
         if (include_revs) {
 
@@ -412,6 +392,8 @@
                     }
                     return docum;
                   }
+                  // If most recent metadata edit before the attachment edit 
+                  // was a remove, then leave doc empty
                   if (results[i].value.op === "remove") {
                     return docum;
                   }
@@ -455,7 +437,7 @@
                       }
                       return docum;
                     }
-                    if (results[i].value.doc_id === "remove") {
+                    if (results[i].value.op === "remove") {
                       // If most recent edit on document was a remove before
                       // this attachment, then don't include attachment in query
                       return false;
@@ -467,45 +449,30 @@
             return false;
           });
         }
-
         docs_to_query = results
+
           // Filter out all docs flagged as false in previous map call
           .filter(function (docum) {
             return docum;
           })
+
+          // Put into correct format to be passed back to query storage
           .map(function (docum) {
-            // Save timestamp and id information for retrieval at the end of
-            // buildQuery
-            docum.value.doc[timestamp_name] = docum.id;
-            docum.value.doc[doc_id_name] = docum.value.doc_id;
-            return docum.value.doc;
+            docum.doc = docum.value.doc;
+            docum.id = docum.value.doc_id;
+            delete docum.value.doc_id;
+            delete docum.value.op;
+
+            if (options.include_docs) {
+              docum.doc = docum.value.doc;
+            } else {
+              docum.doc = {};
+            }
+
+            docum.value = {};
+            return docum;
           });
-
-        // Return timestamp and id information from query
-        options.select_list.push(doc_id_name);
-        options.select_list.push(timestamp_name);
-
-        // Sort on timestamp with updated timestamp_name
-        options.sort_on[options.sort_on.length - 1] = [
-          timestamp_name, "descending"
-        ];
-        query_matches = options.query.exec(docs_to_query, options);
-        return query_matches;
-      })
-        // Format the results of the query, and return
-        .push(function (query_matches) {
-        return query_matches.map(function (docum) {
-          var doc_id = docum[doc_id_name],
-            time = docum[timestamp_name];
-          delete docum[timestamp_name];
-          delete docum[doc_id_name];
-          return {
-            doc: {},
-            value: docum,
-            id: doc_id,
-            timestamp: time
-          };
-        });
+        return docs_to_query;
       });
   };
 
