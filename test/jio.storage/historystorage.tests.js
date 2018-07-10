@@ -2586,4 +2586,477 @@
         })
         .always(function () {start(); });
     });
+
+
+  module("HistoryStorage.pack", {
+    setup: function () {
+      // create storage of type "history" with memory as substorage
+      var dbname = "db_" + Date.now();
+      this.jio = jIO.createJIO({
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "history",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "indexeddb",
+                database: dbname
+              }
+            }
+          }
+        }
+      });
+      this.history = jIO.createJIO({
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "history",
+            include_revisions: true,
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "indexeddb",
+                database: dbname
+              }
+            }
+          }
+        }
+      });
+      this.not_history = jIO.createJIO({
+        type: "query",
+        sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "indexeddb",
+            database: dbname
+          }
+        }
+      });
+      this.blob = new Blob(['a']);
+    }
+  });
+
+  test("Verifying pack works with keep_latest_num",
+    function () {
+      stop();
+      expect(2);
+      var jio = this.jio,
+        not_history = this.not_history;
+      return jio.put("doc_a", {title: "rev"})
+        .push(function () {
+          return jio.put("doc_a", {title: "rev0"});
+        })
+        .push(function () {
+          return jio.put("doc_a", {title: "rev1"});
+        })
+        .push(function () {
+          return jio.put("doc_b", {title: "data"});
+        })
+        .push(function () {
+          return jio.put("doc_b", {title: "data0"});
+        })
+        .push(function () {
+          return jio.put("doc_a", {title: "rev2"});
+        })
+        .push(function () {
+          return jio.put("doc_b", {title: "data1"});
+        })
+        .push(function () {
+          return jio.put("doc_b", {title: "data2"});
+        })
+        .push(function () {
+          return jio.__storage._sub_storage.__storage._sub_storage
+            .__storage.packOldRevisions({
+              keep_latest_num: 2
+            });
+        })
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "descending"]],
+            select_list: ["doc", "doc_id", "timestamp", "op"]
+          });
+        })
+        .push(function (results) {
+          equal(results.data.total_rows, 4, "Correct amount of results");
+          deepEqual(results.data.rows, [
+            {
+              doc: {},
+              id: results.data.rows[0].id,
+              value: {
+                doc: {title: "data2"},
+                doc_id: "doc_b",
+                timestamp: results.data.rows[0].id,
+                op: "put"
+              }
+            },
+            {
+              doc: {},
+              id: results.data.rows[1].id,
+              value: {
+                doc: {title: "data1"},
+                doc_id: "doc_b",
+                timestamp: results.data.rows[1].id,
+                op: "put"
+              }
+            },
+            {
+              doc: {},
+              id: results.data.rows[2].id,
+              value: {
+                doc: {title: "rev2"},
+                doc_id: "doc_a",
+                timestamp: results.data.rows[2].id,
+                op: "put"
+              }
+            },
+            {
+              doc: {},
+              id: results.data.rows[3].id,
+              value: {
+                doc: {title: "rev1"},
+                doc_id: "doc_a",
+                timestamp: results.data.rows[3].id,
+                op: "put"
+              }
+            }
+          ],
+            "Keep the correct documents after pack");
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
+  test("Verifying pack works with fixed timestamp",
+    function () {
+      stop();
+      expect(2);
+      var jio = this.jio,
+        not_history = this.not_history,
+        timestamp;
+      return jio.allDocs()
+        .push(function () {
+          return RSVP.all([
+            jio.put("doc_a", {title: "old_rev0"}),
+            jio.put("doc_a", {title: "old_rev1"}),
+            jio.put("doc_a", {title: "old_rev2"}),
+            jio.put("doc_b", {title: "old_data0"}),
+            jio.put("doc_b", {title: "old_data1"}),
+            jio.put("doc_b", {title: "old_data2"}),
+            jio.put("doc_c", {title: "latest_bar"})
+          ]);
+        })
+        .push(function () {
+          return not_history.allDocs({sort_on: [["timestamp", "descending"]]});
+        })
+        .push(function (results) {
+          timestamp = results.data.rows[0].id;
+          return jio.put("doc_a", {title: "latest_rev"});
+        })
+        .push(function () {
+          return jio.put("doc_b", {title: "latest_data"});
+        })
+        .push(function () {
+          return jio.__storage._sub_storage.__storage._sub_storage
+            .__storage.packOldRevisions({
+              keep_active_revs: timestamp
+            });
+        })
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "descending"]],
+            select_list: ["doc", "doc_id", "timestamp"]
+          });
+        })
+        .push(function (results) {
+          equal(results.data.total_rows, 3, "Correct amount of results");
+          deepEqual(results.data.rows, [
+            {
+              doc: {},
+              id: results.data.rows[0].id,
+              value: {
+                doc: {title: "latest_data"},
+                doc_id: "doc_b",
+                timestamp: results.data.rows[0].id
+              }
+            },
+            {
+              doc: {},
+              id: results.data.rows[1].id,
+              value: {
+                doc: {title: "latest_rev"},
+                doc_id: "doc_a",
+                timestamp: results.data.rows[1].id
+              }
+            },
+            {
+              doc: {},
+              id: results.data.rows[2].id,
+              value: {
+                doc: {title: "latest_bar"},
+                doc_id: "doc_c",
+                timestamp: results.data.rows[2].id
+              }
+            }
+          ],
+            "Keep the correct documents after pack");
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
+  test("Verifying pack works with fixed timestamp and more complex operations",
+    function () {
+      stop();
+      expect(2);
+      var jio = this.jio,
+        not_history = this.not_history,
+        timestamp;
+      return jio.allDocs()
+        .push(function () {
+          return RSVP.all([
+            jio.put("doc_a", {title: "old_rev0"}),
+            jio.put("doc_a", {title: "old_rev1"}),
+            jio.put("doc_a", {title: "old_rev2"}),
+            jio.put("doc_b", {title: "latest_data"})
+          ]);
+        })
+        .push(function () {
+          return jio.allDocs({sort_on: [["timestamp", "descending"]]});
+        })
+        .push(function (results) {
+          timestamp = results.data.rows[0].id;
+          return jio.remove("doc_a");
+        })
+        .push(function () {
+          return jio.__storage._sub_storage.__storage._sub_storage
+            .__storage.packOldRevisions({
+              keep_active_revs: timestamp
+            });
+        })
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "descending"]],
+            select_list: ["doc", "doc_id", "timestamp", "op"]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              doc: {},
+              id: results.data.rows[0].id,
+              value: {
+                op: "remove",
+                doc_id: "doc_a",
+                timestamp: results.data.rows[0].id
+              }
+            },
+            {
+              doc: {},
+              id: results.data.rows[1].id,
+              value: {
+                doc: {title: "latest_data"},
+                doc_id: "doc_b",
+                op: "put",
+                timestamp: results.data.rows[1].id
+              }
+            }
+          ],
+            "Keep the correct documents after pack");
+        })
+        .push(function () {
+          return jio.allDocs({
+            sort_on: [["timestamp", "descending"]],
+            select_list: ["title"]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              doc: {},
+              id: "doc_b",
+              value: {title: "latest_data"}
+            }
+          ],
+            "Memory not corrupted by pack without include_revisions");
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
+  test("Verifying pack works with fixed timestamp and more complex operations",
+    function () {
+      stop();
+      expect(2);
+      var jio = this.jio,
+        not_history = this.not_history,
+        timestamp;
+      return jio.allDocs()
+        .push(function () {
+          return RSVP.all([
+            jio.put("doc_a", {title: "old_rev0"}),
+            jio.put("doc_a", {title: "old_rev1"}),
+            jio.put("doc_a", {title: "old_rev2"}),
+            jio.put("doc_b", {title: "latest_data"})
+          ]);
+        })
+        .push(function () {
+          return jio.allDocs({sort_on: [["timestamp", "descending"]]});
+        })
+        .push(function (results) {
+          timestamp = results.data.rows[0].id;
+          return jio.remove("doc_a");
+        })
+        .push(function () {
+          return jio.__storage._sub_storage.__storage._sub_storage
+            .__storage.packOldRevisions({
+              keep_active_revs: timestamp
+            });
+        })
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "descending"]],
+            select_list: ["doc", "doc_id", "timestamp", "op"]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              doc: {},
+              id: results.data.rows[0].id,
+              value: {
+                op: "remove",
+                doc_id: "doc_a",
+                timestamp: results.data.rows[0].id
+              }
+            },
+            {
+              doc: {},
+              id: results.data.rows[1].id,
+              value: {
+                doc: {title: "latest_data"},
+                doc_id: "doc_b",
+                op: "put",
+                timestamp: results.data.rows[1].id
+              }
+            }
+          ],
+            "Keep the correct documents after pack");
+        })
+        .push(function () {
+          return jio.allDocs({
+            sort_on: [["timestamp", "descending"]],
+            select_list: ["title"]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              doc: {},
+              id: "doc_b",
+              value: {title: "latest_data"}
+            }
+          ],
+            "Memory not corrupted by pack without include_revisions");
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
+  test("Verifying pack works with fixed timestamp and more complex operations",
+    function () {
+      stop();
+      expect(2);
+      var jio = this.jio,
+        not_history = this.not_history,
+        timestamp,
+        blob = this.blob;
+      return jio.allDocs()
+        .push(function () {
+          return RSVP.all([
+            jio.put("doc_a", {title: "old_rev0"}),
+            jio.putAttachment("doc_a", "attach_aa", blob),
+            jio.put("doc_b", {title: "latest_data"})
+          ]);
+        })
+        .push(function () {
+          return jio.allDocs({sort_on: [["timestamp", "descending"]]});
+        })
+        .push(function (results) {
+          timestamp = results.data.rows[0].id;
+          return jio.remove("doc_a");
+        })
+        .push(function () {
+          return jio.__storage._sub_storage.__storage._sub_storage
+            .__storage.packOldRevisions({
+              keep_active_revs: timestamp
+            });
+        })
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "descending"]],
+            select_list: ["doc", "doc_id", "timestamp", "op"]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              doc: {},
+              id: results.data.rows[0].id,
+              value: {
+                op: "remove",
+                doc_id: "doc_a",
+                timestamp: results.data.rows[0].id
+              }
+            },
+            {
+              doc: {},
+              id: results.data.rows[1].id,
+              value: {
+                doc: {title: "latest_data"},
+                doc_id: "doc_b",
+                op: "put",
+                timestamp: results.data.rows[1].id
+              }
+            }
+          ],
+            "Keep the correct documents after pack");
+        })
+        .push(function () {
+          return jio.allDocs({
+            sort_on: [["timestamp", "descending"]],
+            select_list: ["title"]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              doc: {},
+              id: "doc_b",
+              value: {title: "latest_data"}
+            }
+          ],
+            "Memory not corrupted by pack without include_revisions");
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
 }(jIO, RSVP, Blob, QUnit));

@@ -15,6 +15,71 @@
     return timestamp + "-" + uuid;
   }
 
+  function removeOldRevs(
+    substorage,
+    results,
+    keepDoc
+  ) {
+    var ind,
+      promises = [],
+      seen = {},
+      docum,
+      log,
+      start_ind,
+      new_promises,
+      doc_id,
+      checkIsId,
+      removeDoc;
+    for (ind = 0; ind < results.data.rows.length; ind += 1) {
+      docum = results.data.rows[ind];
+      // Count the number of revisions of each document, and delete older
+      // ones.
+      if (!seen.hasOwnProperty(docum.value.doc_id)) {
+        seen[docum.value.doc_id] = {count: 0};
+      }
+      log = seen[docum.value.doc_id];
+      log.count += 1;
+      //log.id = docum.id;
+
+      // Record the index of the most recent edit that is before the cutoff
+      if (!log.hasOwnProperty("s") && !keepDoc({doc: docum, log: log})) {
+        log.s = ind;
+      }
+
+      // Record the index of the most recent put or remove
+      if ((!log.hasOwnProperty("pr")) &&
+          (docum.value.op === "put" || docum.value.op === "remove")) {
+        log.pr = ind;
+        log.final = ind;
+      }
+
+      if ((docum.op === "putAttachment" || docum.op === "removeAttachment") &&
+          log.hasOwnProperty(docum.name) &&
+          !log[docum.name].hasOwnProperty("prA")) {
+        log[docum.name].prA = ind;
+        log.final = ind;
+      }
+    }
+    checkIsId = function (d) {
+      return d.value.doc_id === doc_id;
+    };
+    removeDoc = function (d) {
+      return substorage.remove(d.id);
+    };
+    for (doc_id in seen) {
+      if (seen.hasOwnProperty(doc_id)) {
+        log = seen[doc_id];
+        start_ind = Math.max(log.s, log.final + 1);
+        new_promises = results.data.rows
+          .slice(start_ind)
+          .filter(checkIsId)
+          .map(removeDoc);
+        promises = promises.concat(new_promises);
+      }
+    }
+    return RSVP.all(promises);
+  }
+
   function throwCantFindError(id) {
     throw new jIO.util.jIOError(
       "HistoryStorage: cannot find object '" + id + "'",
@@ -42,6 +107,34 @@
     } else {
       this._include_revisions = false;
     }
+    var substorage = this._sub_storage;
+    this.packOldRevisions = function (save_info) {
+      /**
+      save_info has this form:
+        {
+          keep_latest_num: 10,
+          keep_active_revs: timestamp
+        }
+        keep_latest_num = x: keep at most the x latest copies of each unique doc
+        keep_active_revs = x: throw away all outdated revisions from before x
+      **/
+      var options = {
+        sort_on: [["timestamp", "descending"]],
+        select_list: ["doc", "doc_id", "op"]
+      },
+        keep_fixed_num = save_info.hasOwnProperty("keep_latest_num");
+      return substorage.allDocs(options)
+        .push(function (results) {
+          if (keep_fixed_num) {
+            return removeOldRevs(substorage, results, function (data) {
+              return data.log.count <= save_info.keep_latest_num;
+            });
+          }
+          return removeOldRevs(substorage, results, function (data) {
+            return data.doc.id > save_info.keep_active_revs;
+          });
+        });
+    };
   }
 
   HistoryStorage.prototype.get = function (id_in) {
@@ -330,13 +423,14 @@
       };
     return this._sub_storage.put(timestamp, metadata);
   };
+
   HistoryStorage.prototype.repair = function () {
     return this._sub_storage.repair.apply(this._sub_storage, arguments);
   };
+
   HistoryStorage.prototype.hasCapacity = function (name) {
     return name === 'list' || name === 'include';
   };
-
 
   HistoryStorage.prototype.buildQuery = function (options) {
     // Set default values
@@ -442,6 +536,7 @@
                       // this attachment, then don't include attachment in query
                       return false;
                     }
+                    docum.value.doc = {};
                   }
                 }
               }
