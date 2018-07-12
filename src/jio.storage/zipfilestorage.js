@@ -210,8 +210,8 @@
           throw new jIO.util.jIOError("Cannot find document", 404);
         }
         if (!(zip.files.hasOwnProperty(attachId) && !zip.files[attachId].dir)) {
-          throw new jIO.util.jIOError("Cannot find attachment: "
-            + '/' + id + " , " + name,
+          throw new jIO.util.jIOError("Cannot find attachment: " +
+            '/' + id + " , " + name,
             404);
         }
         return zip.file(attachId).async('blob');
@@ -228,8 +228,8 @@
           throw new jIO.util.jIOError("Cannot find document", 404);
         }
         if (!(zip.files.hasOwnProperty(attachId) && !zip.files[attachId].dir)) {
-          throw new jIO.util.jIOError("Cannot find attachment: "
-            + '/' + id + " , " + name,
+          throw new jIO.util.jIOError("Cannot find attachment: " +
+            '/' + id + " , " + name,
             404);
         }
         zip.remove(attachId);
