@@ -50,10 +50,12 @@
       if (body) {
         if (body.$schema && body.$schema !== "") {
           ret.portal_type = "JSON Schema";
+          ret.parent_relative_url = "schema_module";
           ret.title = body.title || filename;
         } else {
           // XXX need schema relation property
           ret.portal_type = "JSON Document";
+          ret.parent_relative_url = "document_module";
         }
       } else {
         ret.format = "json";
