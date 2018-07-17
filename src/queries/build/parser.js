@@ -105,7 +105,7 @@ case 12:
  this.$ = $$[$0-1]; 
 break;
 case 13:
- simpleQuerySetKey($$[$0], $$[$0-2]); this.$ = $$[$0]; 
+ querySetKey($$[$0], $$[$0-2]); this.$ = $$[$0]; 
 break;
 case 15:
  $$[$0].operator = $$[$0-1] ; this.$ = $$[$0]; 
