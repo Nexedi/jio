@@ -321,8 +321,41 @@
           "NOT(a:=b OR c:% AND d:<2)"
         )
       ).toString(),
-      "NOT ( ( a: = \"b\" ) OR ( ( c: \"%\" ) AND ( d: < \"2\" ) ) )",
+      "NOT ( ( a: = \"b\" OR ( c:  \"%\" AND d: < \"2\" ) ) )",
       "create(create(\"NOT(a:=b OR c:% AND d:<2)\")).toString();"
+    );
+
+    deepEqual(
+      jIO.QueryFactory.create(jIO.Query.objectToSearchText(jsoned)).toJSON(),
+      jsoned,
+      "create( objectToSearchText(create(\"NOT(a:=b OR c:% AND d:<2)\")" +
+        ".toJSON()) ).toJSON()"
+    );
+
+    deepEqual(
+      jIO.QueryFactory.create("a:(b OR c)").toString(),
+      "a: (  \"b\" OR  \"c\" )",
+      "create( \"a:(b OR c)\" ).toString()"
+    );
+
+    deepEqual(
+      jIO.QueryFactory.create("(a:b OR a:c)").toString(),
+      "a: (  \"b\" OR  \"c\" )",
+      "create( \"(a:b OR a:c)\" ).toString()"
+    );
+
+    deepEqual(
+      jIO.QueryFactory.create({
+        "type": "complex",
+        "query_list": [{
+          "type": "simple",
+          "value": "a"
+        }, {
+          "type": "simple",
+          "value": "b"
+        }]
+      }).toString(),
+      "(  \"a\"   \"b\" )"
     );
 
   });

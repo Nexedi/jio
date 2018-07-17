@@ -58,11 +58,11 @@ var arrayExtend = function () {
   }
   return {type:"complex",operator:operator,query_list:query_list2};
 
-}, simpleQuerySetKey = function (query, key) {
+}, querySetKey = function (query, key) {
   var i;
   if (query.type === "complex") {
     for (i = 0; i < query.query_list.length; ++i) {
-      simpleQuerySetKey (query.query_list[i],key);
+      querySetKey(query.query_list[i], key);
     }
     return true;
   }
