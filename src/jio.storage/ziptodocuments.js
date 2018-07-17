@@ -25,45 +25,49 @@
    */
   function ZipToDocumentsBridgeStorage(spec) {
     this._sub_storage = jIO.createJIO(spec.sub_storage);
-  }
-
-  function endsWith(str, suffix) {
-    return str.indexOf(suffix, str.length - suffix.length) !== -1;
-  }
-
-  /**
-   * used for generate metadata for files
-   * based on extension and file content.
-   * used for determine supported or not
-   * supported file by return undefined.
-   *
-   * @function generateMetadata
-   */
-  function generateMetadata(id, filename, path, body) {
-    var ret;
-    if (endsWith(filename, ".json")) {
-      ret = {
-        id: id,
-        content_type: "application/json",
-        reference: path
-      };
-      if (body) {
-        if (body.$schema && body.$schema !== "") {
-          ret.portal_type = "JSON Schema";
-          ret.parent_relative_url = "schema_module";
-          ret.title = body.title || filename;
-        } else {
-          // XXX need schema relation property
-          ret.portal_type = "JSON Document";
-          ret.parent_relative_url = "document_module";
-        }
-      } else {
-        ret.format = "json";
-      }
-      // used for detect supported extension
-      return ret;
+    if (spec.generateMetadata) {
+      this._generateMetadata = spec.generateMetadata;
+    } else {
+      throw new jIO.util.jIOError("Need specify generateMetadata function",
+        400);
+      /**
+       * used for generate metadata for files
+       * based on extension and file content.
+       * used for determine supported or not
+       * supported file by return undefined.
+       *
+       * @function generateMetadata
+       */
+      // example generateMetadata function
+      // function generateMetadata(id, filename, path, body) {
+      //   var ret;
+      //   if (endsWith(filename, ".json")) {
+      //     ret = {
+      //       id: id,
+      //       content_type: "application/json",
+      //       reference: path
+      //     };
+      //     if (body) {
+      //       if (body.$schema && body.$schema !== "") {
+      //         ret.portal_type = "JSON Schema";
+      //         ret.parent_relative_url = "schema_module";
+      //         ret.title = body.title;
+      //       } else {
+      //         // XXX need schema relation property
+      //         ret.portal_type = "JSON Document";
+      //         ret.parent_relative_url = "document_module";
+      //         ret.title = body.filename;
+      //       }
+      //     } else {
+      //       ret.format = "json";
+      //     }
+      //     // used for detect supported extension
+      //     return ret;
+      //   }
+      // }
     }
   }
+
 
   ZipToDocumentsBridgeStorage.prototype.get = function (id) {
     var context = this,
@@ -73,7 +77,7 @@
       dirname = path.substring(0, idx),
       file_supported;
     path = path.substring(1);
-    file_supported = generateMetadata(id, filename, path);
+    file_supported = context._generateMetadata(id, filename, path);
     if (!file_supported) {
       return new RSVP.Queue()
         .push(function () {
@@ -94,7 +98,7 @@
         throw error;
       })
       .push(function (attachment) {
-        return generateMetadata(id, filename, path, attachment);
+        return context._generateMetadata(id, filename, path, attachment);
       });
   };
 
@@ -159,7 +163,7 @@
 
         function push_doc(k, filename, path) {
           return function (json) {
-            result_dict[k].doc = generateMetadata(k, filename, path, json);
+            result_dict[k].doc = context._generateMetadata(k, filename, path, json);
           };
         }
 
@@ -175,7 +179,7 @@
                 path = dirname.substring(1) + filename;
                 k = encodeJsonPointer(dirname.substring(1) + filename);
                 // check file with extension supported
-                if (generateMetadata(k, filename, path)) {
+                if (context._generateMetadata(k, filename, path)) {
                   result_dict[k] = {
                     id: k,
                     value: {}
