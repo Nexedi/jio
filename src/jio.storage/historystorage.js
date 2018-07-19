@@ -438,15 +438,12 @@
     if (options.query === undefined) {options.query = ""; }
     if (options.sort_on === undefined) {options.sort_on = []; }
     if (options.select_list === undefined) {options.select_list = []; }
-    if (options.include_revisions === undefined) {
-      options.include_revisions = false;
-    }
     options.query = jIO.QueryFactory.create(options.query);
 
     var meta_options  = {
       query: "",
       sort_on: [["timestamp", "descending"]],
-      select_list: ["doc", "op", "doc_id"]
+      select_list: ["doc", "op", "doc_id", "timestamp"]
     },
       include_revs = this._include_revisions;
 
@@ -554,8 +551,13 @@
           // Put into correct format to be passed back to query storage
           .map(function (docum) {
             docum.doc = docum.value.doc;
-            docum.id = docum.value.doc_id;
+            if (include_revs) {
+              docum.id = docum.value.timestamp;
+            } else {
+              docum.id = docum.value.doc_id;
+            }
             delete docum.value.doc_id;
+            delete docum.value.timestamp;
             delete docum.value.op;
 
             if (options.include_docs) {

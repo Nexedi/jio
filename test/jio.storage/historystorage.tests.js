@@ -79,12 +79,11 @@
       var jio = this.jio,
         history = this.history,
         not_history = this.not_history,
-        //timestamps,
-        id;
+        timestamps;
 
       return jio.post({title: "foo0"})
         .push(function (result) {
-          id = result;
+          //id = result;
           return jio.put(result, {title: "foo1"});
         })
         .push(function (result) {
@@ -97,7 +96,12 @@
         })
         .push(function () {
           return not_history.allDocs({
-            select_list: ["timestamp"]
+            sort_on: [["timestamp", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.id;
           });
         })
         .push(function () {
@@ -110,16 +114,14 @@
                 title: "foo1"
               },
               doc: {},
-              //timestamp: timestamps[1],
-              id: id
+              id: timestamps[1]
             },
             {
               value: {
                 title: "foo0"
               },
               doc: {},
-              //timestamp: timestamps[0],
-              id: id
+              id: timestamps[0]
             }
           ],
             "Two revisions logged with correct metadata");
@@ -765,7 +767,9 @@
       stop();
       expect(2);
       var jio = this.jio,
-        history = this.history;
+        history = this.history,
+        timestamps,
+        not_history = this.not_history;
 
       jio.remove("doc")
         .push(function () {
@@ -780,20 +784,29 @@
           }, "A put was the most recent edit on 'doc'");
         })
         .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.id;
+          });
+        })
+        .push(function () {
           return history.allDocs({select_list: ["title"]});
         })
         .push(function (results) {
           deepEqual(results.data.rows, [
             {
-              id: "doc",
+              //id: "doc",
               value: {title: "foo"},
-              //timestamp: timestamps[0],
+              id: timestamps[1],
               doc: {}
             },
             {
-              id: "doc",
               value: {},
-              //timestamp: timestamps[1],
+              id: timestamps[0],
               doc: {}
             }], "DOcument that was removed before being put is not retrieved");
         })
@@ -1494,30 +1507,30 @@
             "Querying with include_revisions retrieves all versions");
           deepEqual(results.data.rows, [
             {
-              id: "doc",
+              //id: results.data.rows[0].id,
               value: {
                 title: "version2",
                 subtitle: "subvers2"
               },
-              //timestamp: timestamps[2],
+              id: timestamps[2],
               doc: {}
             },
             {
-              id: "doc",
+              //id: results.data.rows[1].id,
               value: {
                 title: "version1",
                 subtitle: "subvers1"
               },
-              //timestamp: timestamps[1],
+              id: timestamps[1],
               doc: {}
             },
             {
-              id: "doc",
+              //id: results.data.rows[2].id,
               value: {
                 title: "version0",
                 subtitle: "subvers0"
               },
-              //timestamp: timestamps[0],
+              id: timestamps[0],
               doc: {}
             }
           ], "Full version history is included.");
@@ -1951,8 +1964,7 @@
           deepEqual(results.data.rows, [
             {
               doc: {},
-              id: "second_doc",
-              //timestamp: timestamps[9],
+              id: timestamps[9],
               value: {
                 date: 4,
                 title: "second_doc",
@@ -1961,8 +1973,7 @@
             },
             {
               doc: {},
-              id: "second_doc",
-              //timestamp: timestamps[8],
+              id: timestamps[8],
               value: {
                 date: 4,
                 title: "second_doc",
@@ -1971,8 +1982,7 @@
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[6],
+              id: timestamps[6],
               value: {
                 date: 4,
                 title: "doc",
@@ -1981,8 +1991,7 @@
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[5],
+              id: timestamps[5],
               value: {
                 date: 4,
                 title: "doc",
@@ -1992,8 +2001,7 @@
 
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[2],
+              id: timestamps[2],
               value: {
                 date: 1,
                 title: "doc",
@@ -2002,8 +2010,7 @@
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[1],
+              id: timestamps[1],
               value: {
                 date: 1,
                 title: "doc",
@@ -2028,7 +2035,8 @@
       var jio = this.jio,
         history = this.history,
         not_history = this.not_history,
-        blob = new Blob(['a']);
+        blob = new Blob(['a']),
+        timestamps;
 
       jio.put("document", {title: "foo"})
         .push(function () {
@@ -2038,26 +2046,33 @@
           return jio.putAttachment("document", "attachment", blob);
         })
         .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.id;
+          });
+        })
+        .push(function () {
           return history.allDocs({select_list: ["title"]});
         })
         .push(function (results) {
           deepEqual(results.data.rows, [
             {
-              id: "document",
+              id: timestamps[2],
               doc: {},
-              //timestamp: timestamps[2],
               value: {}
             },
             {
-              id: "document",
+              id: timestamps[1],
               doc: {},
-              //timestamp: timestamps[1],
               value: {}
             },
             {
-              id: "document",
+              id: timestamps[0],
               doc: {},
-              //timestamp: timestamps[0],
               value: {title: "foo"}
             }],
             "Attachment on removed document is handled correctly"
@@ -2079,7 +2094,9 @@
       expect(2);
       var jio = this.jio,
         history = this.history,
-        blob = new Blob(['a']);
+        blob = new Blob(['a']),
+        timestamps,
+        not_history = this.not_history;
 
       jio.put("document", {title: "foo"})
         .push(function () {
@@ -2088,28 +2105,34 @@
         .push(function () {
           return jio.removeAttachment("document", "attachment");
         })
-
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.id;
+          });
+        })
         .push(function () {
           return history.allDocs({select_list: ["title"]});
         })
         .push(function (results) {
           deepEqual(results.data.rows, [
             {
-              id: "document",
+              id: timestamps[2],
               doc: {},
-              //timestamp: timestamps[2],
               value: {title: "foo"}
             },
             {
-              id: "document",
+              id: timestamps[1],
               doc: {},
-              //timestamp: timestamps[1],
               value: {title: "foo"}
             },
             {
-              id: "document",
+              id: timestamps[0],
               doc: {},
-              //timestamp: timestamps[0],
               value: {title: "foo"}
             }],
             "Attachment on removed document is handled correctly"
@@ -2281,6 +2304,8 @@
       expect(1);
       var jio = this.jio,
         history = this.history,
+        timestamps,
+        not_history = this.not_history,
         blobs1 = [
           new Blob(['a']),
           new Blob(['ab']),
@@ -2314,6 +2339,16 @@
         .push(function () {
           return putFullDoc(jio, "doc", {title: "bar3"}, "data", blobs1[4]);
         })
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.id;
+          });
+        })
 
         .push(function () {
           return history.allDocs({
@@ -2324,86 +2359,72 @@
           deepEqual(results.data.rows, [
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[13],
+              id: timestamps[13],
               value: {title: "bar3"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[12],
+              id: timestamps[12],
               value: {title: "bar3"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[11],
+              id: timestamps[11],
               value: {title: "bar2"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[10],
+              id: timestamps[10],
               value: {title: "bar2"}
             },
             {
               doc: {},
-              id: "doc2",
-              //timestamp: timestamps[9],
+              id: timestamps[9],
               value: {title: "foo1"}
             },
             {
               doc: {},
-              id: "doc2",
-              //timestamp: timestamps[8],
+              id: timestamps[8],
               value: {title: "foo1"}
             },
             {
               doc: {},
-              id: "doc2",
-              //timestamp: timestamps[7],
+              id: timestamps[7],
               value: {title: "foo0"}
             },
             {
               doc: {},
-              id: "doc2",
-              //timestamp: timestamps[6],
+              id: timestamps[6],
               value: {title: "foo0"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[5],
+              id: timestamps[5],
               value: {title: "bar1"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[4],
+              id: timestamps[4],
               value: {title: "bar1"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[3],
+              id: timestamps[3],
               value: {title: "bar0"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[2],
+              id: timestamps[2],
               value: {title: "bar0"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[1],
+              id: timestamps[1],
               value: {title: "bar"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[0],
+              id: timestamps[0],
               value: {title: "bar"}
             }
           ],
@@ -2423,6 +2444,8 @@
       expect(1);
       var jio = this.jio,
         history = this.history,
+        not_history = this.not_history,
+        timestamps,
         blobs1 = [
           new Blob(['a']),
           new Blob(['ab']),
@@ -2443,6 +2466,16 @@
         .push(function () {
           return jio.putAttachment("doc", "data", blobs1[1]);
         })
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.id;
+          });
+        })
 
         .push(function () {
           return history.allDocs({
@@ -2453,32 +2486,27 @@
           deepEqual(results.data.rows, [
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[4],
+              id: timestamps[4],
               value: {title: "bar0"}
             },
             {
               doc: {},
-              id: "doc2",
-              //timestamp: timestamps[3],
+              id: timestamps[3],
               value: {title: "foo0"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[2],
+              id: timestamps[2],
               value: {title: "bar0"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[1],
+              id: timestamps[1],
               value: {title: "bar0"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[0],
+              id: timestamps[0],
               value: {title: "bar"}
             }
           ],
@@ -2498,6 +2526,8 @@
       expect(2);
       var jio = this.jio,
         history = this.history,
+        not_history = this.not_history,
+        timestamps,
         blobs1 = [
           new Blob(['a']),
           new Blob(['ab']),
@@ -2541,6 +2571,16 @@
             "allDocs with include_revisions false should return all revisions");
         })
         .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.id;
+          });
+        })
+        .push(function () {
           return history.allDocs({
             select_list: ["title"]
           });
@@ -2549,32 +2589,27 @@
           deepEqual(results.data.rows, [
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[4],
+              id: timestamps[4],
               value: {title: "bar0"}
             },
             {
               doc: {},
-              id: "doc2",
-              //timestamp: timestamps[3],
+              id: timestamps[3],
               value: {title: "foo0"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[2],
+              id: timestamps[2],
               value: {title: "bar0"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[1],
+              id: timestamps[1],
               value: {title: "bar0"}
             },
             {
               doc: {},
-              id: "doc",
-              //timestamp: timestamps[0],
+              id: timestamps[0],
               value: {title: "bar"}
             }
           ],
