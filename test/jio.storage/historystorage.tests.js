@@ -832,7 +832,7 @@
         })
         .push(function (res) {
           timestamp = res.data.rows[0].id;
-          return history.put(timestamp, {key: "val"});
+          return jio.put(timestamp, {key: "val"});
         })
         .push(function () {
           return jio.get("doc");
@@ -993,6 +993,119 @@
             404,
             "Can't access non-existent document"
             );
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
+  test("Updating a document with include revisions",
+    function () {
+      stop();
+      expect(1);
+      var jio = this.jio,
+        history = this.history,
+        not_history = this.not_history,
+        timestamps,
+        t_id;
+      jio.put("doc", {title: "version0"})
+        .push(function () {
+          return history.put("doc", {title: "version1"});
+        })
+        .push(function () {
+          return not_history.allDocs({sort_on: [["timestamp", "ascending"]]});
+        })
+        .push(function (results) {
+          t_id = results.data.rows[0].id;
+          return history.put(t_id, {title: "version0.1"});
+        })
+        .push(function () {
+          return jio.put(t_id, {title: "label0"});
+        })
+        .push(function () {
+          return history.put("1234567891012-abcd", {k: "v"});
+        })
+        .push(function () {
+          return not_history.allDocs({
+            select_list: ["timestamp"]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.value.timestamp;
+          });
+        })
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "ascending"]],
+            select_list: ["timestamp", "op", "doc_id", "doc"]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              id: timestamps[0],
+              doc: {},
+              value: {
+                timestamp: timestamps[0],
+                op: "put",
+                doc_id: "doc",
+                doc: {
+                  title: "version0"
+                }
+              }
+            },
+            {
+              id: timestamps[1],
+              doc: {},
+              value: {
+                timestamp: timestamps[1],
+                op: "put",
+                doc_id: "doc",
+                doc: {
+                  title: "version1"
+                }
+              }
+            },
+            {
+              id: timestamps[2],
+              doc: {},
+              value: {
+                timestamp: timestamps[2],
+                op: "put",
+                doc_id: "doc",
+                doc: {
+                  title: "version0.1"
+                }
+              }
+            },
+            {
+              id: timestamps[3],
+              doc: {},
+              value: {
+                timestamp: timestamps[3],
+                op: "put",
+                doc_id: timestamps[0],
+                doc: {
+                  title: "label0"
+                }
+              }
+            },
+            {
+              id: timestamps[4],
+              doc: {},
+              value: {
+                timestamp: timestamps[4],
+                op: "put",
+                doc_id: "1234567891012-abcd",
+                doc: {
+                  k: "v"
+                }
+              }
+            }
+          ], "Documents stored with correct metadata");
         })
         .fail(function (error) {
           //console.log(error);

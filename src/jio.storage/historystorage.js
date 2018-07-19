@@ -15,6 +15,13 @@
     return timestamp + "-" + uuid;
   }
 
+  function isTimestamp(id) {
+    //A timestamp is of the form 
+    //"[13 digit number]-[4 numbers/lowercase letters]"
+    var re = /^[0-9]{13}-[a-z0-9]{4}$/;
+    return re.test(id);
+  }
+
   function removeOldRevs(
     substorage,
     results,
@@ -193,7 +200,8 @@
   };
 
   HistoryStorage.prototype.put = function (id, data) {
-    var timestamp = generateUniqueTimestamp(Date.now()),
+    var substorage = this._sub_storage,
+      timestamp = generateUniqueTimestamp(Date.now()),
       metadata = {
         // XXX: remove this attribute once query can sort_on id
         timestamp: timestamp,
@@ -201,6 +209,22 @@
         doc: data,
         op: "put"
       };
+
+    if (this._include_revisions && isTimestamp(id)) {
+      return substorage.get(id)
+        .push(function (metadata) {
+          metadata.timestamp = timestamp;
+          metadata.doc = data;
+          return substorage.put(timestamp, metadata);
+        },
+          function (error) {
+            if (error.status_code === 404 &&
+                error instanceof jIO.util.jIOError) {
+              return substorage.put(timestamp, metadata);
+            }
+            throw error;
+          });
+    }
     return this._sub_storage.put(timestamp, metadata);
   };
 
@@ -343,6 +367,20 @@
         op: "putAttachment"
       },
       substorage = this._sub_storage;
+
+    if (this._include_revisions && isTimestamp(id)) {
+      return substorage.get(id)
+        .push(function (metadata) {
+          metadata.timestamp = timestamp;
+          metadata.name = name;
+        },
+          function (error) {
+            if (!(error.status_code === 404 &&
+                error instanceof jIO.util.jIOError)) {
+              throw error;
+            }
+          });
+    }
     return this._sub_storage.put(timestamp, metadata)
       .push(function () {
         return substorage.putAttachment(timestamp, name, blob);
