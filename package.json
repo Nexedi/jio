@@ -14,9 +14,10 @@
     "test": "test"
   },
   "scripts": {
-    "test": "./node_modules/.bin/grunt test",
-    "lint": "./node_modules/.bin/grunt lint",
-    "prepublish": "./node_modules/.bin/grunt build"
+    "start": "grunt server",
+    "test": "grunt test",
+    "lint": "grunt lint",
+    "prepublish": "grunt build"
   },
   "repository": {
     "type": "git",
@@ -29,10 +30,11 @@
     "cloud"
   ],
   "dependencies": {
-    "rsvp": "git+https://lab.nexedi.com/nexedi/rsvp.js.git",
-    "uritemplate": "git+https://lab.nexedi.com/nexedi/uritemplate-js.git",
+    "elasticlunr": "git+https://github.com/weixsong/elasticlunr.js.git#v0.9.6",
     "moment": "2.21.0",
-    "rusha": "0.8.2"
+    "rsvp": "git+https://lab.nexedi.com/nexedi/rsvp.js.git",
+    "rusha": "0.8.2",
+    "uritemplate": "git+https://lab.nexedi.com/nexedi/uritemplate-js.git"
   },
   "devDependencies": {
     "renderjs": "git+https://lab.nexedi.com/nexedi/renderjs.git",

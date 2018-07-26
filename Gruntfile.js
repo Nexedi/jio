@@ -161,6 +161,7 @@ module.exports = function (grunt) {
 
           'src/jio.js',
 
+          'node_modules/elasticlunr/elasticlunr.js',
           'node_modules/rusha/rusha.js',
 
           'src/jio.storage/replicatestorage.js',
@@ -171,6 +172,7 @@ module.exports = function (grunt) {
           'src/jio.storage/parserstorage.js',
           'src/jio.storage/httpstorage.js',
           'src/jio.storage/dropboxstorage.js',
+          'src/jio.storage/elasticlunrstorage.js',
           'src/jio.storage/davstorage.js',
           'src/jio.storage/gdrivestorage.js',
           'src/jio.storage/unionstorage.js',

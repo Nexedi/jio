@@ -9,7 +9,7 @@ The documentation can be found on [https://jio.nexedi.com/](https://jio.nexedi.c
 ### jIO Quickstart
     git clone https://lab.nexedi.com/nexedi/jio.git
     npm install
-    grunt server
+    npm start
 
 
 ### jIO Code
