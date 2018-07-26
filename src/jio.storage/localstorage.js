@@ -24,7 +24,8 @@
 (function (jIO, sessionStorage, localStorage, RSVP) {
   "use strict";
 
-  function LocalStorage(spec) {
+  function LocalStorage(spec, utils) {
+    this._utils = utils;
     if (spec.sessiononly === true) {
       this._storage = sessionStorage;
     } else {

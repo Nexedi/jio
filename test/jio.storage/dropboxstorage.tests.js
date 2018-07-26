@@ -10,7 +10,8 @@
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
     module = QUnit.module,
-    token = "sample_token";
+    token = "sample_token",
+    utils = {callback: function () {return true; }};
 
   /////////////////////////////////////////////////////////////////
   // DropboxStorage constructor
@@ -24,6 +25,15 @@
     });
     equal(jio.__type, "dropbox");
     deepEqual(jio.__storage._access_token, token);
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "dropbox",
+      access_token: token
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
   });
 
   /////////////////////////////////////////////////////////////////

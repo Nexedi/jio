@@ -142,12 +142,13 @@
   }
 
   // XXX docstring
-  function ERP5Storage(spec) {
+  function ERP5Storage(spec, utils) {
     if (typeof spec.url !== "string" || !spec.url) {
       throw new TypeError("ERP5 'url' must be a string " +
                           "which contains more than one character.");
     }
     this._url = spec.url;
+    this._utils = utils;
     this._default_view_reference = spec.default_view_reference;
   }
 

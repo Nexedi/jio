@@ -9,8 +9,9 @@
    * @class FileSystemBridgeStorage
    * @constructor
    */
-  function FileSystemBridgeStorage(spec) {
-    this._sub_storage = jIO.createJIO(spec.sub_storage);
+  function FileSystemBridgeStorage(spec, utils) {
+    this._utils = utils;
+    this._sub_storage = jIO.createJIO(spec.sub_storage, utils);
   }
   var DOCUMENT_EXTENSION = ".json",
     DOCUMENT_KEY = "/.jio_documents/",

@@ -105,11 +105,12 @@
    * @class DropboxStorage
    * @constructor
    */
-  function DropboxStorage(spec) {
+  function DropboxStorage(spec, utils) {
     if (typeof spec.access_token !== 'string' || !spec.access_token) {
       throw new TypeError("Access Token' must be a string " +
                           "which contains more than one character.");
     }
+    this._utils = utils;
     this._access_token = spec.access_token;
   }
 
@@ -255,15 +256,12 @@
       })
       .push(function (evt) {
         if (evt.target.response instanceof Blob) {
-         //create a new blob with type AES-GCM to decrypt back
-          var cryptblob = new Blob([evt.target.response],
-              {type: "application/x-jio-aes-gcm-encryption"});
-          return cryptblob;
+          return evt.target.response;
         }
         return new Blob(
           [evt.target.responseText],
-          {"type": "application/x-jio-aes-gcm-encryption"}
-          // evt.target.getResponseHeader('Content-Type') ||
+          {"type": evt.target.getResponseHeader('Content-Type') ||
+            "application/octet-stream"}
         );
       }, function (error) {
         if (error.target !== undefined && error.target.status === 409) {

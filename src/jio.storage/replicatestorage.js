@@ -53,18 +53,20 @@
     return rusha.digestFromArrayBuffer(content);
   }
 
-  function ReplicateStorage(spec) {
+  function ReplicateStorage(spec, utils) {
+    this._utils = utils;
     this._query_options = spec.query || {};
     if (spec.signature_hash_key !== undefined) {
       this._query_options.select_list = [spec.signature_hash_key];
     }
     this._signature_hash_key = spec.signature_hash_key;
 
-    this._local_sub_storage = jIO.createJIO(spec.local_sub_storage);
-    this._remote_sub_storage = jIO.createJIO(spec.remote_sub_storage);
+    this._local_sub_storage = jIO.createJIO(spec.local_sub_storage, utils);
+    this._remote_sub_storage = jIO.createJIO(spec.remote_sub_storage, utils);
 
     if (spec.hasOwnProperty('signature_sub_storage')) {
-      this._signature_sub_storage = jIO.createJIO(spec.signature_sub_storage);
+      this._signature_sub_storage = jIO.createJIO(spec.signature_sub_storage,
+        utils);
       this._custom_signature_sub_storage = true;
     } else {
       this._signature_hash = "_replicate_" + generateHash(

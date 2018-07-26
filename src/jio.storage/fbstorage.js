@@ -11,7 +11,7 @@
         "{+access_token}",
     get_feed_template = UriTemplate.parse(GET_FEED_URL);
 
-  function FBStorage(spec) {
+  function FBStorage(spec, utils) {
     if (typeof spec.access_token !== 'string' || !spec.access_token) {
       throw new TypeError("Access Token must be a string " +
                           "which contains more than one character.");
@@ -20,6 +20,7 @@
       throw new TypeError("User ID must be a string " +
                           "which contains more than one character.");
     }
+    this._utils = utils;
     this._access_token = spec.access_token;
     this._user_id = spec.user_id;
     this._default_field_list = spec.default_field_list || [];

@@ -36,8 +36,9 @@
    * @class QueryStorage
    * @constructor
    */
-  function QueryStorage(spec) {
-    this._sub_storage = jIO.createJIO(spec.sub_storage);
+  function QueryStorage(spec, utils) {
+    this._utils = utils;
+    this._sub_storage = jIO.createJIO(spec.sub_storage, utils);
     this._key_schema = {key_set: {}, cast_lookup: {}};
     initKeySchema(this, spec);
   }

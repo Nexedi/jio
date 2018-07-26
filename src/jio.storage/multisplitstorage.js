@@ -205,8 +205,9 @@
    *
    * @class MultiSplitStorage
    */
-  function MultiSplitStorage(spec) {
+  function MultiSplitStorage(spec, utils) {
     var that = this, priv = {};
+    this._utils = utils;
 
     /**
      * The list of sub storages we want to use to store part of documents.

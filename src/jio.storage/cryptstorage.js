@@ -1,12 +1,13 @@
 /*
  * Copyright 2015, Nexedi SA
- * Released under the LGPL license.
- * hcrypto, Uint8Array, ArrayBuffer*/
+* Released under the LGPL license.
+   * hcrypto, Uint8Array, ArrayBuffer*/
+
 /*jslint nomen: true*/
+/*global jIO, RSVP, DOMParser, Blob, DOMException, crypto, Uint8Array,
+  ArrayBuffer, CryptoKey*/
 /*jslint maxlen: 160 */
-/*global jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer, CryptoKey*/
-(function (jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer,
-  CryptoKey) {
+(function (jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer, CryptoKey) {
   "use strict";
 
   /*
@@ -35,103 +36,46 @@
    */
 
 
-  function hexToBuffer(hex) {
-    // Xxxx use Uint8Array or ArrayBuffer or DataView
-    var i,
-      byteLen = hex.length / 2,
-      arr,
-      j = 0;
-
-    if (byteLen !== parseInt(byteLen, 10)) {
-      throw new Error("Invalid hex length '" + hex.length + "'");
-    }
-
-    arr = new Uint8Array(byteLen);
-
-    for (i = 0; i < byteLen; i += 1) {
-      arr[i] = parseInt(hex[j] + hex[j + 1], 16);
-      j += 2;
-    }
-
-    return arr;
-  }
-
-  function convertKey(that) {
-    return new RSVP.Queue()
-      .push(function () {
-        return window.crypto.subtle.deriveKey({
-          "name": "PBKDF2",
-          "salt": hexToBuffer("6f0904840608c09ae18c131542fbd1bd"),
-          "iterations": 1000,
-          //we can add iteration number but slow CPU will freez
-          "hash": "SHA-256"
-        }, that.importedkey, {
-          "name": "AES-GCM",
-          "length": 256
-        }, false, ["encrypt", "decrypt"]);
-      })
-      .push(function (res) {
-        that.key = res;
-        return;
-      });
-  }
-
-  function addevent(that) {
-    try {
-      window.addEventListener('message', function (event) {
-        if (event.origin !== window.origin) {return; }
-        if (!(event.data instanceof CryptoKey)) {return; }
-        if (event.data.algorithm.name !== "PBKDF2" &&
-            event.data.usages[0] !== "deriveKey") {return; }
-        that.importedkey = event.data;
-        convertKey(that);
-      }, false);
-    } catch (error) {
-      throw new jIO.util.jIOError(error + "failed to build event lisener please reload the page", 803);
-    }
-  }
-
   var MIME_TYPE = "application/x-jio-aes-gcm-encryption";
 
-  function CryptStorage(spec) {
-    addevent(this);
-    this.importedkey = "";
-    this.key = "";
-    this._sub_storage = jIO.createJIO(spec.sub_storage);
+  function CryptStorage(spec, utils) {
+    this._utils = utils;
+    this._keyid = spec.keyid;
+    this._key = "";
+    this._sub_storage = jIO.createJIO(spec.sub_storage, utils);
   }
 
   CryptStorage.prototype.get = function () {
     return this._sub_storage.get.apply(this._sub_storage,
-      arguments);
+                                       arguments);
   };
 
   CryptStorage.prototype.post = function () {
     return this._sub_storage.post.apply(this._sub_storage,
-      arguments);
+                                        arguments);
   };
 
   CryptStorage.prototype.put = function () {
     return this._sub_storage.put.apply(this._sub_storage,
-      arguments);
+                                       arguments);
   };
 
   CryptStorage.prototype.remove = function () {
     return this._sub_storage.remove.apply(this._sub_storage,
-      arguments);
+                                          arguments);
   };
 
   CryptStorage.prototype.hasCapacity = function () {
     return this._sub_storage.hasCapacity.apply(this._sub_storage,
-      arguments);
+                                               arguments);
   };
 
   CryptStorage.prototype.buildQuery = function () {
     return this._sub_storage.buildQuery.apply(this._sub_storage,
-      arguments);
+                                              arguments);
   };
 
   CryptStorage.prototype.putAttachment = function (id, name, blob) {
-
     var initializaton_vector = crypto.getRandomValues(new Uint8Array(12)),
       that = this;
     return new RSVP.Queue()
@@ -152,7 +96,7 @@
           name: "AES-GCM",
           iv: initializaton_vector
         },
-          that.key, buf);
+          that._key, buf);
       })
       .push(function (coded) {
         var blob = new Blob([initializaton_vector, coded], {
@@ -161,16 +105,37 @@
         return that._sub_storage.putAttachment(id, name, blob);
       })
       .push(undefined, function (error) {
+        var cryptoerror = {keyid: that._keyid},
+          callback_crypto = {
+            addkey_crypto: that.addkey.bind(that),
+            error_crypto: cryptoerror
+          };
+        if (that._utils === undefined) {
+          throw new jIO.util.jIOError(that._keyid + ": no callback function declared");
+        }
+        if (!that._utils.hasOwnProperty("crypto_getCryptoKey")) {
+          throw new jIO.util.jIOError(that._keyid + ":crypto_getCryptoKey function not declared in callback");
+        }
         if (error instanceof DOMException) {
           if (error.name === "OperationError") {
-            throw new jIO.util.jIOError(error.name + " : failed to decrypt due to mismatching password", 801);
-          }
-          if (error.name === "InvalidAccessError") {
-            throw new jIO.util.jIOError(error.name + " :  invalid encryption algorithm, or invalid key for specified encryption algorithm", 801);
+            cryptoerror.error_type = error.name;
+            cryptoerror.error_message = "Failed to decrypt due to incorrect password or data";
+          } else if (error.name === "InvalidAccessError") {
+            cryptoerror.error_type = error.name;
+            cryptoerror.error_message = "invalid encryption algorithm, or invalid key for specified encryption algorithm";
           }
         } else if (error instanceof TypeError) {
-          throw new jIO.util.jIOError(error + " : password is not type CRYPTOKEY ", 801);
+          cryptoerror.error_type = error.name;
+          cryptoerror.error_message = "password is not type CRYPTOKEY";
         }
+        return new RSVP.Queue()
+          .push(function () {
+            return that._utils.crypto_getCryptoKey(callback_crypto);
+          })
+          .push(function () {
+            throw new jIO.util.jIOError(that._keyid + " : " + cryptoerror.error_type +
+              " : " + cryptoerror.error_message, 801);
+          });
       });
   };
 
@@ -178,9 +143,6 @@
     var that = this;
     return that._sub_storage.getAttachment(id, name)
       .push(function (blob) {
-        if (blob.type !== MIME_TYPE) {
-          return blob;
-        }
         return new RSVP.Queue()
           .push(function () {
             return new RSVP.Queue()
@@ -197,25 +159,44 @@
                       name: "AES-GCM",
                       iv: initializaton_vector
                     },
-                      that.key, coded.slice(12));
+                      that._key, coded.slice(12));
                   })
                   .push(function (arr) {
                     arr = String.fromCharCode.apply(null, new Uint8Array(arr));
                     return jIO.util.dataURItoBlob(arr);
                   })
                   .push(undefined, function (error) {
+                    var cryptoerror = {keyid: that._keyid},
+                      callback_crypto = {
+                        addkey_crypto: that.addkey.bind(that),
+                        error_crypto: cryptoerror
+                      };
+                    if (that._utils === undefined) {
+                      throw new jIO.util.jIOError(that._keyid + ": no callback function declared");
+                    }
+                    if (!that._utils.hasOwnProperty("crypto_getCryptoKey")) {
+                      throw new jIO.util.jIOError(that._keyid + ":crypto_getCryptoKey function not declared in callback");
+                    }
                     if (error instanceof DOMException) {
                       if (error.name === "OperationError") {
-                        throw new jIO.util.jIOError(error.name + " : failed to decrypt due to mismatching password", 801);
+                        cryptoerror.error_type = error.name;
+                        cryptoerror.error_message = "Failed to decrypt due to incorrect password or data";
+                      } else if (error.name === "InvalidAccessError") {
+                        cryptoerror.error_type = error.name;
+                        cryptoerror.error_message = "invalid encryption algorithm, or invalid key for specified encryption algorithm";
                       }
-                      if (error.name === "InvalidAccessError") {
-                        throw new jIO.util.jIOError(error.name + " :  invalid encryption algorithm, or invalid key for specified encryption algorithm", 801);
-                      }
-                      return blob;
+                    } else if (error instanceof TypeError) {
+                      cryptoerror.error_type = error.name;
+                      cryptoerror.error_message = "password is not type CRYPTOKEY";
                     }
-                    if (error instanceof TypeError) {
-                      throw new jIO.util.jIOError(error + " : password is not type CRYPTOKEY ", 801);
-                    }
+                    return new RSVP.Queue()
+                      .push(function () {
+                        return that._utils.crypto_getCryptoKey(callback_crypto);
+                      })
+                      .push(function () {
+                        throw new jIO.util.jIOError(that._keyid + " : " + cryptoerror.error_type
+                          + " : " + cryptoerror.error_message, 801);
+                      });
                   });
               });
           });
@@ -224,13 +205,39 @@
 
   CryptStorage.prototype.removeAttachment = function () {
     return this._sub_storage.removeAttachment.apply(this._sub_storage,
-      arguments);
+                                                    arguments);
   };
 
   CryptStorage.prototype.allAttachments = function () {
     return this._sub_storage.allAttachments.apply(this._sub_storage,
-      arguments);
+                                                  arguments);
   };
+
+  CryptStorage.prototype.addkey = function (key) {
+    var that = this;
+    if (key === undefined || key === null) {return; }
+    if (!(key.hasOwnProperty("CryptoKey") && key.hasOwnProperty("Salt"))) {return; }
+    if (!(key.CryptoKey instanceof CryptoKey && key.Salt instanceof ArrayBuffer)) {return; }
+    if (key.CryptoKey.algorithm.name !== "PBKDF2"
+        &&  key.CryptoKey.usages[0] !== "deriveKey") {return; }
+    return new RSVP.Queue()
+      .push(function () {
+        return window.crypto.subtle.deriveKey({
+          "name": "PBKDF2",
+          "salt":  key.Salt,
+          "iterations": 1000,
+          //we can add iteration number but slow CPU will freez
+          "hash": "SHA-256"
+        }, key.CryptoKey, {
+          "name": "AES-GCM",
+          "length": 256
+        }, false, ["encrypt", "decrypt"]);
+      })
+      .push(function (res) {
+        that._key = res;
+      });
+  };
+
 
   jIO.addStorage('crypt', CryptStorage);
 

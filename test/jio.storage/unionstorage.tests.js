@@ -11,7 +11,8 @@
     equal = QUnit.equal,
     module = QUnit.module,
     throws = QUnit.throws,
-    frozen_blob = new Blob(["foobar"]);
+    frozen_blob = new Blob(["foobar"]),
+    utils = {callback: function () {return true; }};
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -115,6 +116,13 @@
   Storage500.prototype.repair = generateError;
   jIO.addStorage('unionstorage500', Storage500);
 
+  function Storagecallback(spec, utils) {
+    this._spec = spec;
+    this._utils = utils;
+    return this;
+  }
+  jIO.addStorage('unioncallback', Storagecallback);
+
   /////////////////////////////////////////////////////////////////
   // unionStorage.constructor
   /////////////////////////////////////////////////////////////////
@@ -143,6 +151,20 @@
     equal(jio.__storage._storage_list[0].__type, "unionstorage404");
     ok(jio.__storage._storage_list[1] instanceof jio.constructor);
     equal(jio.__storage._storage_list[1].__type, "unionstorage200");
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "union",
+      storage_list: [{
+        type: "unioncallback"
+      }]
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
+    deepEqual(jio.__storage._storage_list["0"].
+      __storage._utils.callback(), true);
+
   });
 
   /////////////////////////////////////////////////////////////////

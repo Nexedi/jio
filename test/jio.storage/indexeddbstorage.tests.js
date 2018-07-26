@@ -13,6 +13,7 @@
     equal = QUnit.equal,
     module = QUnit.module,
     big_string = "",
+    utils = {callback: function () {return true; }},
     j;
 
   for (j = 0; j < 3000000; j += 1) {
@@ -46,6 +47,15 @@
 
     equal(jio.__type, "indexeddb");
     deepEqual(jio.__storage._database_name, "jio:qunit");
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "indexeddb",
+      database: "qunit"
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
   });
 
   /////////////////////////////////////////////////////////////////

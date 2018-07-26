@@ -16,8 +16,9 @@
 
   var rusha = new Rusha();
 
-  function ShaStorage(spec) {
-    this._sub_storage = jIO.createJIO(spec.sub_storage);
+  function ShaStorage(spec, utils) {
+    this._utils = utils;
+    this._sub_storage = jIO.createJIO(spec.sub_storage, utils);
   }
 
   ShaStorage.prototype.post = function (param) {

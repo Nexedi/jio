@@ -10,7 +10,8 @@
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
     module = QUnit.module,
-    throws = QUnit.throws;
+    throws = QUnit.throws,
+    utils = {callback: function () {return true; }};
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -19,6 +20,13 @@
     return this;
   }
   jIO.addStorage('shastorage200', Storage200);
+
+  function Storagecallback(spec, utils) {
+    this._spec = spec;
+    this._utils = utils;
+    return this;
+  }
+  jIO.addStorage('shastoragecallback', Storagecallback);
 
   /////////////////////////////////////////////////////////////////
   // shaStorage.constructor
@@ -34,6 +42,19 @@
 
     ok(jio.__storage._sub_storage instanceof jio.constructor);
     equal(jio.__storage._sub_storage.__type, "shastorage200");
+
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "document",
+      sub_storage: {
+        type: "shastoragecallback"
+      }
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
+    deepEqual(jio.__storage._sub_storage.__storage._utils.callback(), true);
 
   });
 

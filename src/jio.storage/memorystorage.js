@@ -29,8 +29,10 @@
    * @class MemoryStorage
    * @constructor
    */
-  function MemoryStorage() {
+  function MemoryStorage(spec, utils) {
+    this._spec = spec; //not used just for compatibility issue 
     this._database = {};
+    this._utils = utils;
   }
 
   MemoryStorage.prototype.put = function (id, metadata) {

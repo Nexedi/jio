@@ -10,7 +10,8 @@
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
     module = QUnit.module,
-    throws = QUnit.throws;
+    throws = QUnit.throws,
+    utils = {callback: function () {return true; }};
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -19,6 +20,13 @@
     return this;
   }
   jIO.addStorage('querystorage200', Storage200);
+
+  function Storagecallback(spec, utils) {
+    this._spec = spec;
+    this._utils = utils;
+    return this;
+  }
+  jIO.addStorage('querystoragecallback', Storagecallback);
 
   /////////////////////////////////////////////////////////////////
   // queryStorage.constructor
@@ -42,6 +50,19 @@
       }
     }, 'check key_schema');
     ok(typeof jio.__storage._key_schema.cast_lookup.dateType === 'function');
+
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "query",
+      sub_storage: {
+        type: "querystoragecallback"
+      }
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
+    deepEqual(jio.__storage._sub_storage.__storage._utils.callback(), true);
 
   });
 
