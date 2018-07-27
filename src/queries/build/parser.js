@@ -90,13 +90,13 @@ case 5: case 8: case 11: case 14: case 16:
  this.$ = $$[$0]; 
 break;
 case 6:
- this.$ = mkComplexQuery('', 'AND', [$$[$0-1], $$[$0]]); 
+ this.$ = mkComplexQuery('AND', [$$[$0-1], $$[$0]]); 
 break;
 case 7:
- this.$ = mkComplexQuery('', 'OR', [$$[$0-2], $$[$0]]); 
+ this.$ = mkComplexQuery('OR', [$$[$0-2], $$[$0]]); 
 break;
 case 9:
- this.$ = mkComplexQuery('', 'AND', [$$[$0-2], $$[$0]]); 
+ this.$ = mkComplexQuery('AND', [$$[$0-2], $$[$0]]); 
 break;
 case 10:
  this.$ = mkNotQuery($$[$0]); 
@@ -105,7 +105,7 @@ case 12:
  this.$ = $$[$0-1]; 
 break;
 case 13:
- querySetKey($$[$0], $$[$0-2]); this.$ = $$[$0]; 
+ simpleQuerySetKey($$[$0], $$[$0-2]); this.$ = $$[$0]; 
 break;
 case 15:
  $$[$0].operator = $$[$0-1] ; this.$ = $$[$0]; 

@@ -209,64 +209,47 @@
     }
   }
 
-  function ensurePushableQueue(callback, argument_list, context) {
-    var result;
-    try {
-      result = callback.apply(context, argument_list);
-    } catch (e) {
-      return new RSVP.Queue()
-        .push(function returnPushableError() {
-          return RSVP.reject(e);
-        });
-    }
-    if (result instanceof RSVP.Queue) {
-      return result;
-    }
-    return new RSVP.Queue()
-      .push(function returnPushableResult() {
-        return result;
-      });
-  }
-
   function declareMethod(klass, name, precondition_function, post_function) {
     klass.prototype[name] = function () {
       var argument_list = arguments,
         context = this,
-        precondition_result,
-        storage_method,
-        queue;
+        precondition_result;
 
-      // Precondition function are not asynchronous
-      if (precondition_function !== undefined) {
-        precondition_result = precondition_function.apply(
-          context.__storage,
-          [argument_list, context, name]
-        );
-      }
-
-      storage_method = context.__storage[name];
-      if (storage_method === undefined) {
-        throw new jIO.util.jIOError(
-          "Capacity '" + name + "' is not implemented on '" +
-            context.__type + "'",
-          501
-        );
-      }
-      queue = ensurePushableQueue(storage_method, argument_list,
-                                  context.__storage);
-
-      if (post_function !== undefined) {
-        queue
-          .push(function (result) {
+      return new RSVP.Queue()
+        .push(function () {
+          if (precondition_function !== undefined) {
+            return precondition_function.apply(
+              context.__storage,
+              [argument_list, context, name]
+            );
+          }
+        })
+        .push(function (result) {
+          var storage_method = context.__storage[name];
+          precondition_result = result;
+          if (storage_method === undefined) {
+            throw new jIO.util.jIOError(
+              "Capacity '" + name + "' is not implemented on '" +
+                context.__type + "'",
+              501
+            );
+          }
+          return storage_method.apply(
+            context.__storage,
+            argument_list
+          );
+        })
+        .push(function (result) {
+          if (post_function !== undefined) {
             return post_function.call(
               context,
               argument_list,
               result,
               precondition_result
             );
-          });
-      }
-      return queue;
+          }
+          return result;
+        });
     };
     // Allow chain
     return this;
@@ -298,16 +281,17 @@
   JioProxyStorage.prototype.post = function () {
     var context = this,
       argument_list = arguments;
-    return ensurePushableQueue(function () {
-      var storage_method = context.__storage.post;
-      if (storage_method === undefined) {
-        throw new jIO.util.jIOError(
-          "Capacity 'post' is not implemented on '" + context.__type + "'",
-          501
-        );
-      }
-      return context.__storage.post.apply(context.__storage, argument_list);
-    });
+    return new RSVP.Queue()
+      .push(function () {
+        var storage_method = context.__storage.post;
+        if (storage_method === undefined) {
+          throw new jIO.util.jIOError(
+            "Capacity 'post' is not implemented on '" + context.__type + "'",
+            501
+          );
+        }
+        return context.__storage.post.apply(context.__storage, argument_list);
+      });
   };
 
   declareMethod(JioProxyStorage, 'putAttachment', function (argument_list,
@@ -425,8 +409,13 @@
         501
       );
     }
-    return ensurePushableQueue(storage_method, argument_list,
-                               context.__storage);
+    return new RSVP.Queue()
+      .push(function () {
+        return storage_method.apply(
+          context.__storage,
+          argument_list
+        );
+      });
   };
 
   JioProxyStorage.prototype.hasCapacity = function (name) {
@@ -450,26 +439,27 @@
     if (options === undefined) {
       options = {};
     }
-    return ensurePushableQueue(function () {
-      if (context.hasCapacity("list") &&
-          ((options.query === undefined) || context.hasCapacity("query")) &&
-          ((options.sort_on === undefined) || context.hasCapacity("sort")) &&
-          ((options.select_list === undefined) ||
-           context.hasCapacity("select")) &&
-          ((options.include_docs === undefined) ||
-           context.hasCapacity("include")) &&
-          ((options.limit === undefined) || context.hasCapacity("limit"))) {
-        return context.buildQuery(options)
-          .push(function (result) {
-            return {
-              data: {
-                rows: result,
-                total_rows: result.length
-              }
-            };
-          });
-      }
-    });
+    return new RSVP.Queue()
+      .push(function () {
+        if (context.hasCapacity("list") &&
+            ((options.query === undefined) || context.hasCapacity("query")) &&
+            ((options.sort_on === undefined) || context.hasCapacity("sort")) &&
+            ((options.select_list === undefined) ||
+             context.hasCapacity("select")) &&
+            ((options.include_docs === undefined) ||
+             context.hasCapacity("include")) &&
+            ((options.limit === undefined) || context.hasCapacity("limit"))) {
+          return context.buildQuery(options);
+        }
+      })
+      .push(function (result) {
+        return {
+          data: {
+            rows: result,
+            total_rows: result.length
+          }
+        };
+      });
   };
 
   declareMethod(JioProxyStorage, "allAttachments", checkId);
@@ -478,13 +468,14 @@
   JioProxyStorage.prototype.repair = function () {
     var context = this,
       argument_list = arguments;
-    return ensurePushableQueue(function () {
-      var storage_method = context.__storage.repair;
-      if (storage_method !== undefined) {
-        return context.__storage.repair.apply(context.__storage,
-                                              argument_list);
-      }
-    });
+    return new RSVP.Queue()
+      .push(function () {
+        var storage_method = context.__storage.repair;
+        if (storage_method !== undefined) {
+          return context.__storage.repair.apply(context.__storage,
+                                                argument_list);
+        }
+      });
   };
 
   /////////////////////////////////////////////////////////////////

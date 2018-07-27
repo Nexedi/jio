@@ -11,6 +11,7 @@
     equal = QUnit.equal,
     module = QUnit.module,
     domain = "https://example.org",
+    utils = {callback: function () {return true; }},
     traverse_template = domain + "?mode=traverse{&relative_url,view}",
     search_template = domain + "?mode=search{&query,select_list*,limit*," +
       "sort_on*,local_roles*,selection_domain*}",
@@ -48,6 +49,15 @@
     equal(jio.__type, "erp5");
     deepEqual(jio.__storage._url, domain);
     deepEqual(jio.__storage._default_view_reference, "bar_view");
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "erp5",
+      url: domain
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
   });
 
   /////////////////////////////////////////////////////////////////

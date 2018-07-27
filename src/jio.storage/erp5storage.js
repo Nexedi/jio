@@ -73,56 +73,59 @@
   };
 
   function extractPropertyFromFormJSON(json) {
-    var form = json._embedded._view,
-      converted_json = {
-        portal_type: json._links.type.name
-      },
-      form_data_json = {},
-      field,
-      key,
-      prefix_length,
-      result;
+    return new RSVP.Queue()
+      .push(function () {
+        var form = json._embedded._view,
+          converted_json = {
+            portal_type: json._links.type.name
+          },
+          form_data_json = {},
+          field,
+          key,
+          prefix_length,
+          result;
 
-    if (json._links.hasOwnProperty('parent')) {
-      converted_json.parent_relative_url =
-        new URI(json._links.parent.href).segment(2);
-    }
+        if (json._links.hasOwnProperty('parent')) {
+          converted_json.parent_relative_url =
+            new URI(json._links.parent.href).segment(2);
+        }
 
-    form_data_json.form_id = {
-      "key": [form.form_id.key],
-      "default": form.form_id["default"]
-    };
-    // XXX How to store datetime
-    for (key in form) {
-      if (form.hasOwnProperty(key)) {
-        field = form[key];
-        prefix_length = 0;
-        if (key.indexOf('my_') === 0 && field.editable) {
-          prefix_length = 3;
+        form_data_json.form_id = {
+          "key": [form.form_id.key],
+          "default": form.form_id["default"]
+        };
+        // XXX How to store datetime
+        for (key in form) {
+          if (form.hasOwnProperty(key)) {
+            field = form[key];
+            prefix_length = 0;
+            if (key.indexOf('my_') === 0 && field.editable) {
+              prefix_length = 3;
+            }
+            if (key.indexOf('your_') === 0) {
+              prefix_length = 5;
+            }
+            if ((prefix_length !== 0) &&
+                (allowed_field_dict.hasOwnProperty(field.type))) {
+              form_data_json[key.substring(prefix_length)] = {
+                "default": field["default"],
+                "key": field.key
+              };
+              converted_json[key.substring(prefix_length)] = field["default"];
+            }
+          }
         }
-        if (key.indexOf('your_') === 0) {
-          prefix_length = 5;
-        }
-        if ((prefix_length !== 0) &&
-            (allowed_field_dict.hasOwnProperty(field.type))) {
-          form_data_json[key.substring(prefix_length)] = {
-            "default": field["default"],
-            "key": field.key
-          };
-          converted_json[key.substring(prefix_length)] = field["default"];
-        }
-      }
-    }
 
-    result = {
-      data: converted_json,
-      form_data: form_data_json
-    };
-    if (form.hasOwnProperty('_actions') &&
-        form._actions.hasOwnProperty('put')) {
-      result.action_href = form._actions.put.href;
-    }
-    return result;
+        result = {
+          data: converted_json,
+          form_data: form_data_json
+        };
+        if (form.hasOwnProperty('_actions') &&
+            form._actions.hasOwnProperty('put')) {
+          result.action_href = form._actions.put.href;
+        }
+        return result;
+      });
   }
 
   function extractPropertyFromForm(context, id) {
@@ -139,12 +142,13 @@
   }
 
   // XXX docstring
-  function ERP5Storage(spec) {
+  function ERP5Storage(spec, utils) {
     if (typeof spec.url !== "string" || !spec.url) {
       throw new TypeError("ERP5 'url' must be a string " +
                           "which contains more than one character.");
     }
     this._url = spec.url;
+    this._utils = utils;
     this._default_view_reference = spec.default_view_reference;
   }
 

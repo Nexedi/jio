@@ -258,11 +258,9 @@
       {
         "type": "complex",
         "operator": "NOT",
-        "key": "",
         "query_list": [{
           "type": "complex",
           "operator": "OR",
-          "key": "",
           "query_list": [{
             "key": "a",
             "operator": "=",
@@ -271,7 +269,6 @@
           }, {
             "type": "complex",
             "operator": "AND",
-            "key": "",
             "query_list": [{
               "key": "c",
               "type": "simple",
@@ -311,21 +308,8 @@
           "NOT(a:=b OR c:% AND d:<2)"
         )
       ).toString(),
-      "NOT ( ( a: = \"b\" OR ( c:  \"%\" AND d: < \"2\" ) ) )",
+      "NOT ( ( a: = \"b\" ) OR ( ( c: \"%\" ) AND ( d: < \"2\" ) ) )",
       "create(create(\"NOT(a:=b OR c:% AND d:<2)\")).toString();"
-    );
-
-    deepEqual(
-      jIO.QueryFactory.create(jIO.Query.objectToSearchText(jsoned)).toJSON(),
-      jsoned,
-      "create( objectToSearchText(create(\"NOT(a:=b OR c:% AND d:<2)\")" +
-        ".toJSON()) ).toJSON()"
-    );
-
-    deepEqual(
-      jIO.QueryFactory.create("a:(b OR c)").toString(),
-      "a: (  \"b\" OR  \"c\" )",
-      "create( \"a:(b OR c)\" ).toString()"
     );
 
   });

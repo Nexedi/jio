@@ -72,7 +72,7 @@
    * @class GdriveStorage
    * @constructor
    */
-  function GdriveStorage(spec) {
+  function GdriveStorage(spec, utils) {
     if (spec === undefined || spec.access_token === undefined ||
         typeof spec.access_token !== 'string') {
       throw new TypeError("Access Token must be a string " +
@@ -83,6 +83,7 @@
       throw new TypeError("trashing parameter" +
                           " must be a boolean (true or false)");
     }
+    this._utils = utils;
     this._trashing = spec.trashing || true;
     this._access_token = spec.access_token;
     return;

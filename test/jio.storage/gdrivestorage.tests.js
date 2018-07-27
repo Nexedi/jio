@@ -12,6 +12,7 @@
     module = QUnit.module,
     throws = QUnit.throws,
     token = "sample_token",
+    utils = {callback: function () {return true; }},
     domain = "https://www.googleapis.com",
     boundary = "---------314159265358979323846",
     list_url = domain + "/drive/v2/files" +
@@ -56,6 +57,15 @@
     });
     equal(jio.__type, "gdrive");
     deepEqual(jio.__storage._access_token, token);
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "gdrive",
+      access_token: token
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
   });
 
   test("reject invalid trashing parameter", function () {

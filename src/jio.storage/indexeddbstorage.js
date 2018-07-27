@@ -38,12 +38,13 @@
   // Read only as changing it can lead to data corruption
   var UNITE = 2000000;
 
-  function IndexedDBStorage(description) {
+  function IndexedDBStorage(description, utils) {
     if (typeof description.database !== "string" ||
         description.database === "") {
       throw new TypeError("IndexedDBStorage 'database' description property " +
                           "must be a non-empty string");
     }
+    this._utils = utils;
     this._database_name = "jio:" + description.database;
   }
 

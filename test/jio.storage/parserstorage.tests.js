@@ -9,7 +9,8 @@
     expect = QUnit.expect,
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
-    module = QUnit.module;
+    module = QUnit.module,
+    utils = {callback: function () {return true; }};
 
   /////////////////////////////////////////////////////////////////
   // Custom RSS test substorage definition
@@ -51,6 +52,18 @@
   };
 
   jIO.addStorage('rssstorage200', RSSStorage200);
+
+  /////////////////////////////////////////////////////////////////
+  // Custom callback test substorage definition
+  /////////////////////////////////////////////////////////////////
+
+  function Storagecallback(spec, utils) {
+    this._spec = spec;
+    this._utils = utils;
+    return this;
+  }
+  jIO.addStorage('parsestoragecallback', Storagecallback);
+
   /////////////////////////////////////////////////////////////////
   // Custom atom test substorage definition
   /////////////////////////////////////////////////////////////////
@@ -172,6 +185,19 @@
     equal(jio.__storage._attachment_id, "barname");
     equal(jio.__storage._parser_name, "fooparser");
     equal(jio.__storage._parser, undefined);
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "parser",
+      sub_storage: {
+        type: "parsestoragecallback"
+      }
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
+    deepEqual(jio.__storage._sub_storage.__storage._utils.callback(), true);
+
   });
 
   /////////////////////////////////////////////////////////////////
