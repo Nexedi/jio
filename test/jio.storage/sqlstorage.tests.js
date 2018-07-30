@@ -1,6 +1,6 @@
 /*jslint nomen: true */
-/*global jIO, QUnit, sinon, localStorage */
-(function (jIO, QUnit, sinon, localStorage) {
+/*global jIO, QUnit, sinon */
+(function (jIO, QUnit, sinon) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -66,61 +66,92 @@
 
   jIO.addStorage('sql200', Storage200);
 
+  function Index200() {
+    this.attachments = {};
+    return this;
+  }
+
+  Index200.prototype.putAttachment = function (id, name, data) {
+    var context = this;
+    return new RSVP.Queue().push(function () {
+      context.attachments[id] = {
+        id: id,
+        name: name,
+        data: data
+      };
+      return context.attachments[id];
+    });
+  };
+
+  Index200.prototype.getAttachment = function (id) {
+    var context = this;
+    return new RSVP.Queue().push(function () {
+      if (context.attachments[id] !== undefined) {
+        return context.attachments[id].data;
+      }
+
+      throw new Error("not found");
+    });
+  };
+
+  jIO.addStorage('index200', Index200);
+
   /////////////////////////////////////////////////////////////////
   // SqlStorage.constructor
   /////////////////////////////////////////////////////////////////
   module("SqlStorage.constructor", {
     setup: function () {
-      this.getItemSpy = sinon.spy(localStorage, "getItem");
-
       this.jio = jIO.createJIO({
         type: "sql",
+        index_fields: ["title"],
+        index_sub_storage: {
+          type: "index200"
+        },
         sub_storage: {
           type: "sql200"
         }
       });
-    },
-    teardown: function () {
-      this.getItemSpy.restore();
-      delete this.getItemSpy;
     }
   });
 
   test("set the type", function () {
     equal(this.jio.__type, "sql");
-  });
 
-  test("spy load from localStorage", function () {
-    ok(
-      this.getItemSpy.calledOnce,
-      "getItem count " + this.getItemSpy.callCount
-    );
+    stop();
+    this.jio.post({
+      title: "title 1"
+    })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
   });
 
   /////////////////////////////////////////////////////////////////
   // SqlStorage.hasCapacity
   /////////////////////////////////////////////////////////////////
-  module("SqlStorage.hasCapacity");
-  test("can list documents", function () {
-    var jio = jIO.createJIO({
-      type: "sql",
-      sub_storage: {
-        type: "sql200"
-      }
-    });
+  module("SqlStorage.hasCapacity", {
+    setup: function () {
+      this.jio = jIO.createJIO({
+        type: "sql",
+        index_sub_storage: {
+          type: "index200"
+        },
+        sub_storage: {
+          type: "sql200"
+        }
+      });
+    }
+  });
 
-    ok(jio.hasCapacity("list"));
+  test("can list documents", function () {
+    ok(this.jio.hasCapacity("list"));
   });
 
   test("can query documents", function () {
-    var jio = jIO.createJIO({
-      type: "sql",
-      sub_storage: {
-        type: "sql200"
-      }
-    });
-
-    ok(jio.hasCapacity("query"));
+    ok(this.jio.hasCapacity("query"));
   });
 
   /////////////////////////////////////////////////////////////////
@@ -133,23 +164,26 @@
         index_fields: [
           "title"
         ],
+        index_sub_storage: {
+          type: "index200"
+        },
         sub_storage: {
           type: "sql200"
         }
       });
-      this.jio.__storage.__resetDb([
+      this.jio.__storage._resetDb([
         "title"
       ]);
-      this.db = this.jio.__storage.__db;
+      this.db = this.jio.__storage._db;
 
-      this.setItemSpy = sinon.spy(localStorage, "setItem");
       this.runSpy = sinon.spy(this.db, "run");
+      this.saveSpy = sinon.spy(this.jio.__storage, "_saveDb");
     },
     teardown: function () {
-      this.setItemSpy.restore();
-      delete this.setItemSpy;
       this.runSpy.restore();
       delete this.runSpy;
+      this.saveSpy.restore();
+      delete this.saveSpy;
     }
   });
 
@@ -163,8 +197,8 @@
     this.jio.post(doc)
       .then(function () {
         ok(
-          context.setItemSpy.calledOnce,
-          "setItem count " + context.setItemSpy.callCount
+          context.saveSpy.calledOnce,
+          "save count " + context.saveSpy.callCount
         );
         ok(
           context.runSpy.calledOnce,
@@ -202,23 +236,26 @@
         index_fields: [
           "title"
         ],
+        index_sub_storage: {
+          type: "index200"
+        },
         sub_storage: {
           type: "sql200"
         }
       });
-      this.jio.__storage.__resetDb([
+      this.jio.__storage._resetDb([
         "title"
       ]);
-      this.db = this.jio.__storage.__db;
+      this.db = this.jio.__storage._db;
 
-      this.setItemSpy = sinon.spy(localStorage, "setItem");
       this.runSpy = sinon.spy(this.db, "run");
+      this.saveSpy = sinon.spy(this.jio.__storage, "_saveDb");
     },
     teardown: function () {
-      this.setItemSpy.restore();
-      delete this.setItemSpy;
       this.runSpy.restore();
       delete this.runSpy;
+      this.saveSpy.restore();
+      delete this.saveSpy;
     }
   });
 
@@ -232,8 +269,8 @@
     this.jio.put("1", doc)
       .then(function () {
         ok(
-          context.setItemSpy.calledOnce,
-          "setItem count " + context.setItemSpy.callCount
+          context.saveSpy.calledOnce,
+          "save count " + context.saveSpy.callCount
         );
         ok(
           context.runSpy.calledOnce,
@@ -271,23 +308,26 @@
         index_fields: [
           "title"
         ],
+        index_sub_storage: {
+          type: "index200"
+        },
         sub_storage: {
           type: "sql200"
         }
       });
-      this.jio.__storage.__resetDb([
+      this.jio.__storage._resetDb([
         "title"
       ]);
-      this.db = this.jio.__storage.__db;
+      this.db = this.jio.__storage._db;
 
-      this.setItemSpy = sinon.spy(localStorage, "setItem");
       this.runSpy = sinon.spy(this.db, "run");
+      this.saveSpy = sinon.spy(this.jio.__storage, "_saveDb");
     },
     teardown: function () {
-      this.setItemSpy.restore();
-      delete this.setItemSpy;
       this.runSpy.restore();
       delete this.runSpy;
+      this.saveSpy.restore();
+      delete this.saveSpy;
     }
   });
 
@@ -298,8 +338,8 @@
     this.jio.remove("1")
       .then(function () {
         ok(
-          context.setItemSpy.calledOnce,
-          "setItem count " + context.setItemSpy.callCount
+          context.saveSpy.calledOnce,
+          "save count " + context.saveSpy.callCount
         );
         ok(
           context.runSpy.calledOnce,
@@ -333,11 +373,14 @@
     setup: function () {
       this.jio = jIO.createJIO({
         type: "sql",
+        index_sub_storage: {
+          type: "index200"
+        },
         sub_storage: {
           type: "sql200"
         }
       });
-      this.jio.__storage.__resetDb([
+      this.jio.__storage._resetDb([
         "title"
       ]);
     }
@@ -423,7 +466,7 @@
   });
 
   test("search multiple fields", function () {
-    this.jio.__storage.__resetDb([
+    this.jio.__storage._resetDb([
       "title",
       "body"
     ]);
@@ -468,7 +511,7 @@
   });
 
   test("limit results", function () {
-    this.jio.__storage.__resetDb([
+    this.jio.__storage._resetDb([
       "title"
     ]);
     var context = this,
@@ -517,7 +560,7 @@
   });
 
   test("sort results", function () {
-    this.jio.__storage.__resetDb([
+    this.jio.__storage._resetDb([
       "title",
       "body"
     ]);
@@ -566,4 +609,4 @@
         start();
       });
   });
-}(jIO, QUnit, sinon, localStorage));
+}(jIO, QUnit, sinon));

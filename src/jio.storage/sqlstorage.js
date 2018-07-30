@@ -7,34 +7,37 @@
  * JIO Sql Storage. Type = "sql".
  * sql "database" storage.
  */
-/*global Blob, jIO, RSVP, SQL, localStorage*/
+/*global Blob, jIO, RSVP, SQL*/
 /*jslint nomen: true*/
 
-(function (jIO, RSVP, SQL, localStorage) {
+(function (Blob, jIO, RSVP, SQL) {
   "use strict";
 
   var sqlStorageKey = 'jio_sql',
     sqlTable = "jiosearch";
 
-  function resetDb(indexFields) {
+  function initSQLDb(indexFields) {
     var db = new SQL.Database(),
       fields = ["id"].concat(indexFields);
     db.run("CREATE TABLE " + sqlTable + " ( " + fields.join(", ") + ");");
     return db;
   }
 
-  function initDb(indexFields) {
-    var data = localStorage.getItem(sqlStorageKey);
-    if (data) {
-      return new SQL.Database(data.split(","));
-    }
+  function loadSQLDb(storage, indexFields) {
+    var db = null;
 
-    return resetDb(indexFields);
-  }
-
-  function saveDb(db) {
-    var data = db["export"](); // jslint throws error
-    localStorage.setItem(sqlStorageKey, data);
+    return storage
+      .getAttachment(sqlStorageKey, sqlStorageKey, {
+        format: 'array_buffer'
+      })
+      .push(function (data) {
+        db = new SQL.Database(data);
+      }, function () {
+        db = initSQLDb(indexFields);
+      })
+      .push(function () {
+        return db;
+      });
   }
 
   function docToParams(id, doc) {
@@ -98,14 +101,57 @@
     * @constructor
     */
   function SqlStorage(spec) {
+    if (!spec.index_sub_storage) {
+      throw new TypeError(
+        "SQL 'index_sub_storage' must be provided."
+      );
+    }
+    this._index_sub_storage = jIO.createJIO(spec.index_sub_storage);
+    if (!this._index_sub_storage.hasCapacity('getAttachment')) {
+      throw new TypeError(
+        "SQL 'index_sub_storage' must have getAttachment capacity."
+      );
+    }
+
     this._sub_storage = jIO.createJIO(spec.sub_storage);
-    this.__index_fields = spec.index_fields;
-    this.__db = initDb(spec.index_fields || []);
+    this._index_fields = spec.index_fields;
   }
 
-  SqlStorage.prototype.__resetDb = function (indexFields) {
-    this.__index_fields = indexFields;
-    this.__db = resetDb(indexFields);
+  SqlStorage.prototype._getDb = function () {
+    var context = this;
+
+    if (this._db) {
+      return new RSVP.Queue().push(function () {
+        return context._db;
+      });
+    }
+
+    return loadSQLDb(
+      this._index_sub_storage,
+      this._index_fields
+    ).push(function (db) {
+      context._db = db;
+      return context._db;
+    });
+  };
+
+  SqlStorage.prototype._resetDb = function (indexFields) {
+    this._index_fields = indexFields;
+    this._db = initSQLDb(indexFields);
+  };
+
+  SqlStorage.prototype._saveDb = function () {
+    var context = this;
+
+    return this._getDb()
+      .push(function (db) {
+        var data = db["export"](); // jslint throws error
+        return context._index_sub_storage.putAttachment(
+          sqlStorageKey,
+          sqlStorageKey,
+          new Blob([data])
+        );
+      });
   };
 
   SqlStorage.prototype.get = function () {
@@ -117,42 +163,50 @@
   };
 
   SqlStorage.prototype.post = function (doc) {
-    var db = this.__db,
-      indexFields = this.__index_fields;
+    var context = this,
+      indexFields = this._index_fields;
 
     return this._sub_storage.post.apply(this._sub_storage, arguments)
       .push(function (id) {
-        db.run(
-          "INSERT INTO " + sqlTable + dbValues(indexFields),
-          docToParams(id, doc)
-        );
-        saveDb(db);
+        return context._getDb().push(function (db) {
+          db.run(
+            "INSERT INTO " + sqlTable + dbValues(indexFields),
+            docToParams(id, doc)
+          );
+          return context._saveDb();
+        });
       });
   };
 
   SqlStorage.prototype.put = function (id, doc) {
-    var db = this.__db,
-      indexFields = this.__index_fields;
+    var context = this,
+      indexFields = this._index_fields;
 
     return this._sub_storage.put.apply(this._sub_storage, arguments)
       .push(function () {
+        return context._getDb();
+      })
+      .push(function (db) {
         db.run(
           "UPDATE " + sqlTable + dbSet(indexFields) + " WHERE id=:id",
           docToParams(id, doc)
         );
-        saveDb(db);
+        return context._saveDb();
       });
   };
 
   SqlStorage.prototype.remove = function (id) {
-    var db = this.__db;
+    var context = this;
 
     return this._sub_storage.remove(id)
       .push(function () {
+        return context._getDb();
+      })
+      .push(function (db) {
         db.run("DELETE FROM " + sqlTable + " WHERE id=:id", {
           ":id": id
         });
-        saveDb(db);
+        return context._saveDb();
       });
   };
 
@@ -195,11 +249,13 @@
     }
 
     var context = this,
-      db = this.__db,
       parsed_query = jIO.QueryFactory.create(options.query);
 
     return new RSVP.Queue()
       .push(function () {
+        return context._getDb();
+      })
+      .push(function (db) {
         var query = "SELECT id FROM " + sqlTable,
           where = dbWhere(
             parsed_query.query_list || [parsed_query],
@@ -241,5 +297,4 @@
   };
 
   jIO.addStorage('sql', SqlStorage);
-
-}(jIO, RSVP, SQL, localStorage));
+}(Blob, jIO, RSVP, SQL));
