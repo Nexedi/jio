@@ -1281,7 +1281,7 @@
 
   test("extract complex AND single local_roles", function () {
     var search_url = domain + "?mode=search&" +
-                     "query=%28%20portal_type%3A%20%20%22Person%22%20%29&" +
+                     "query=portal_type%3A%20%20%22Person%22&" +
                      "select_list=destination&select_list=source&limit=5&" +
                      "local_roles=Assignee",
       search_hateoas = JSON.stringify({
@@ -1385,7 +1385,7 @@
 
   test("extract sub multiple local_roles", function () {
     var search_url = domain + "?mode=search&" +
-                     "query=%28%20portal_type%3A%20%20%22Person%22%20%29&" +
+                     "query=portal_type%3A%20%20%22Person%22&" +
                      "select_list=destination&select_list=source&limit=5&" +
                      "local_roles=Assignee&local_roles=Assignor",
       search_hateoas = JSON.stringify({
@@ -1490,7 +1490,7 @@
 
   test("extract complex AND single domains", function () {
     var search_url = domain + "?mode=search&" +
-                     "query=%28%20portal_type%3A%20%20%22Person%22%20%29&" +
+                     "query=portal_type%3A%20%20%22Person%22&" +
                      "select_list=destination&select_list=source&limit=5&" +
                      "selection_domain=%7B%22group%22%3A%22bar%2Ffoo%22%7D",
       search_hateoas = JSON.stringify({
