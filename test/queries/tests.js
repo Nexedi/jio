@@ -258,11 +258,9 @@
       {
         "type": "complex",
         "operator": "NOT",
-        "key": "",
         "query_list": [{
           "type": "complex",
           "operator": "OR",
-          "key": "",
           "query_list": [{
             "key": "a",
             "operator": "=",
@@ -271,7 +269,6 @@
           }, {
             "type": "complex",
             "operator": "AND",
-            "key": "",
             "query_list": [{
               "key": "c",
               "type": "simple",
@@ -326,6 +323,12 @@
       jIO.QueryFactory.create("a:(b OR c)").toString(),
       "a: (  \"b\" OR  \"c\" )",
       "create( \"a:(b OR c)\" ).toString()"
+    );
+
+    deepEqual(
+      jIO.QueryFactory.create("(a:b OR a:c)").toString(),
+      "a: (  \"b\" OR  \"c\" )",
+      "create( \"(a:b OR a:c)\" ).toString()"
     );
 
   });
