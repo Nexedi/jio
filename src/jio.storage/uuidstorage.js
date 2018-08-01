@@ -8,8 +8,9 @@
    * @class UUIDStorage
    * @constructor
    */
-  function UUIDStorage(spec) {
-    this._sub_storage = jIO.createJIO(spec.sub_storage);
+  function UUIDStorage(spec, utils) {
+    this._utils = utils;
+    this._sub_storage = jIO.createJIO(spec.sub_storage, utils);
   }
 
   UUIDStorage.prototype.get = function () {

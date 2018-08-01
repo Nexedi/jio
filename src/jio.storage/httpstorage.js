@@ -3,13 +3,14 @@
 (function (jIO, RSVP, Blob) {
   "use strict";
 
-  function HttpStorage(spec) {
+  function HttpStorage(spec, utils) {
     if (spec.hasOwnProperty('catch_error')) {
       this._catch_error = spec.catch_error;
     } else {
       this._catch_error = false;
     }
     // If timeout not set, use 0 for no timeout value
+    this._utils = utils;
     this._timeout = spec.timeout || 0;
   }
 

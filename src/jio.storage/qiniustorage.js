@@ -71,7 +71,8 @@
    * @class QiniuStorage
    * @constructor
    */
-  function QiniuStorage(spec) {
+  function QiniuStorage(spec, utils) {
+    this._utils = utils;
     if (typeof spec.bucket !== 'string' && !spec.bucket) {
       throw new TypeError("Qiniu 'bucket' must be a string " +
                           "which contains more than one character.");

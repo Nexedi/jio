@@ -238,11 +238,12 @@
   /////////////////////////////////////////////////////////////
   // Storage
   /////////////////////////////////////////////////////////////
-  function ParserStorage(spec) {
+  function ParserStorage(spec, utils) {
+    this._utils = utils;
     this._attachment_id = spec.attachment_id;
     this._document_id = spec.document_id;
     this._parser_name = spec.parser;
-    this._sub_storage = jIO.createJIO(spec.sub_storage);
+    this._sub_storage = jIO.createJIO(spec.sub_storage, utils);
   }
 
   ParserStorage.prototype.hasCapacity = function (capacity) {

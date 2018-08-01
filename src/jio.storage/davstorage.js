@@ -76,11 +76,12 @@
    * @class DavStorage
    * @constructor
    */
-  function DavStorage(spec) {
+  function DavStorage(spec, utils) {
     if (typeof spec.url !== 'string') {
       throw new TypeError("DavStorage 'url' is not of type string");
     }
     this._url = spec.url;
+    this._utils = utils;
     // XXX digest login
     if (typeof spec.basic_login === 'string') {
       this._authorization = "Basic " + spec.basic_login;

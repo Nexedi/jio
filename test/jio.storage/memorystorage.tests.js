@@ -9,7 +9,8 @@
     expect = QUnit.expect,
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
-    module = QUnit.module;
+    module = QUnit.module,
+    utils = {callback: function () {return true; }};
 
   /////////////////////////////////////////////////////////////////
   // memoryStorage constructor
@@ -23,6 +24,14 @@
 
     equal(jio.__type, "memory");
     deepEqual(jio.__storage._database, {});
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "memory"
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
   });
 
   test("Storage's memory database is not shared", function () {

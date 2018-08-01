@@ -427,7 +427,7 @@
    * @class IndexStorage
    * @constructor
    */
-  function IndexStorage(spec) {
+  function IndexStorage(spec, utils) {
     var i;
     if (!Array.isArray(spec.indices)) {
       throw new TypeError("IndexStorage 'indices' must be an array of " +
@@ -451,6 +451,7 @@
                             "'indices[x].index' must be a string array");
       }
     }
+    this._utils = utils;
     this._sub_storage = spec.sub_storage;
   }
 

@@ -10,7 +10,8 @@
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
     throws = QUnit.throws,
-    module = QUnit.module;
+    module = QUnit.module,
+    utils = {callback: function () {return true; }};
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -19,6 +20,13 @@
     return this;
   }
   jIO.addStorage('zipstorage200', Storage200);
+
+  function Storagecallback(spec, utils) {
+    this._spec = spec;
+    this._utils = utils;
+    return this;
+  }
+  jIO.addStorage('zipstoragecallback', Storagecallback);
 
   /////////////////////////////////////////////////////////////////
   // ZipStorage.constructor
@@ -31,6 +39,19 @@
     });
     equal(jio.__type, "zip");
     equal(jio.__storage._sub_storage.__type, "zipstorage200");
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "document",
+      sub_storage: {
+        type: "zipstoragecallback"
+      }
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
+    deepEqual(jio.__storage._sub_storage.__storage._utils.callback(), true);
+
   });
 
   /////////////////////////////////////////////////////////////////

@@ -10,7 +10,8 @@
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
     module = QUnit.module,
-    domain = "https://example.org";
+    domain = "https://example.org",
+    utils = {callback: function () {return true; }};
 
   /////////////////////////////////////////////////////////////////
   // davStorage constructor
@@ -25,6 +26,14 @@
     equal(jio.__type, "http");
     deepEqual(jio.__storage._catch_error, false);
     deepEqual(jio.__storage._timeout, 0);
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "http"
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
   });
 
   test("Storage store catch_error", function () {

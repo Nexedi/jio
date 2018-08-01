@@ -12,7 +12,8 @@
     module = QUnit.module,
     throws = QUnit.throws,
     token = "sample_token",
-    user_id = "sample_user_id";
+    user_id = "sample_user_id",
+    utils = {callback: function () {return true; }};
 
   /////////////////////////////////////////////////////////////////
   // Facebook Storage constructor
@@ -29,6 +30,16 @@
     equal(jio.__type, "facebook");
     deepEqual(jio.__storage._access_token, token);
     deepEqual(jio.__storage._user_id, user_id);
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "facebook",
+      access_token: token,
+      user_id: user_id
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
   });
 
   test("reject non string token", function () {

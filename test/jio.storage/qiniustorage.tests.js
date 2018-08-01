@@ -18,7 +18,8 @@
       bucket: bucket,
       access_key: access_key,
       secret_key: secret_key
-    };
+    },
+    utils = {callback: function () {return true; }};
 
   /////////////////////////////////////////////////////////////////
   // qiniuStorage constructor
@@ -32,6 +33,14 @@
     deepEqual(jio.__storage._bucket, qiniu_spec.bucket);
     deepEqual(jio.__storage._access_key, qiniu_spec.access_key);
     deepEqual(jio.__storage._secret_key, qiniu_spec.secret_key);
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "qiniu"
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
   });
 
   /////////////////////////////////////////////////////////////////
