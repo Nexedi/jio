@@ -283,8 +283,9 @@
    *
    * @class GidStorage
    */
-  function GidStorage(spec) {
+  function GidStorage(spec, utils) {
     var that = this, priv = {};
+    this._utils = utils;
 
     priv.sub_storage = spec.sub_storage;
     priv.constraints = spec.constraints || {

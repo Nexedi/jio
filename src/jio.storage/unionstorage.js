@@ -32,14 +32,15 @@
    * @class UnionStorage
    * @constructor
    */
-  function UnionStorage(spec) {
+  function UnionStorage(spec, utils) {
+    this._utils = utils;
     if (!Array.isArray(spec.storage_list)) {
       throw new jIO.util.jIOError("storage_list is not an Array", 400);
     }
     var i;
     this._storage_list = [];
     for (i = 0; i < spec.storage_list.length; i += 1) {
-      this._storage_list.push(jIO.createJIO(spec.storage_list[i]));
+      this._storage_list.push(jIO.createJIO(spec.storage_list[i], utils));
     }
   }
 

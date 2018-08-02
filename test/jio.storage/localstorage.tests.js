@@ -11,7 +11,8 @@
     expect = QUnit.expect,
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
-    module = QUnit.module;
+    module = QUnit.module,
+    utils = {callback: function () {return true; }};
 
   /////////////////////////////////////////////////////////////////
   // localStorage.constructor
@@ -24,6 +25,14 @@
 
     equal(jio.__type, "local");
     equal(jio.__storage._storage, localStorage);
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "local"
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
   });
 
   test("sessiononly", function () {

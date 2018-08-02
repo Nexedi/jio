@@ -11,7 +11,8 @@
     equal = QUnit.equal,
     module = QUnit.module,
     domain = "https://example.org",
-    basic_login = "login:passwd";
+    basic_login = "login:passwd",
+    utils = {callback: function () {return true; }};
 
   /////////////////////////////////////////////////////////////////
   // davStorage constructor
@@ -28,6 +29,15 @@
     deepEqual(jio.__storage._url, domain);
     deepEqual(jio.__storage._authorization, undefined);
     deepEqual(jio.__storage._with_credentials, undefined);
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "dav",
+      url: domain
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
   });
 
   test("Storage store basic login", function () {

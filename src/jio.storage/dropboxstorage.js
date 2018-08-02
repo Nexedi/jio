@@ -105,11 +105,12 @@
    * @class DropboxStorage
    * @constructor
    */
-  function DropboxStorage(spec) {
+  function DropboxStorage(spec, utils) {
     if (typeof spec.access_token !== 'string' || !spec.access_token) {
       throw new TypeError("Access Token' must be a string " +
                           "which contains more than one character.");
     }
+    this._utils = utils;
     this._access_token = spec.access_token;
   }
 

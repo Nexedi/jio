@@ -69,7 +69,8 @@
       });
   }
 
-  function WebSQLStorage(spec) {
+  function WebSQLStorage(spec, utils) {
+    this._utils = utils;
     if (typeof spec.database !== 'string' || !spec.database) {
       throw new TypeError("database must be a string " +
                           "which contains more than one character.");

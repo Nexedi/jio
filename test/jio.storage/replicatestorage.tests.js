@@ -12,6 +12,7 @@
     module = QUnit.module,
     throws = QUnit.throws,
     big_string = "",
+    utils = {callback: function () {return true; }},
     j;
 
   for (j = 0; j < 30; j += 1) {
@@ -35,6 +36,27 @@
     return this;
   }
   jIO.addStorage('signaturestorage2713', Storage2713);
+
+  function Storagecallback(spec, utils) {
+    this._spec = spec;
+    this._utils = utils;
+    return this;
+  }
+  jIO.addStorage('localcallback', Storagecallback);
+
+  function Storagecallback1(spec, utils) {
+    this._spec = spec;
+    this._utils = utils;
+    return this;
+  }
+  jIO.addStorage('replicatecallback', Storagecallback1);
+
+  function Storagecallback2(spec, utils) {
+    this._spec = spec;
+    this._utils = utils;
+    return this;
+  }
+  jIO.addStorage('signaturecallback', Storagecallback2);
 
   /////////////////////////////////////////////////////////////////
   // replicateStorage.constructor
@@ -100,6 +122,30 @@
              .__storage._sub_storage
              .__storage._sub_storage.__type,
           "replicatestorage200");
+
+  });
+
+  test("Test callback", function () {
+    var jio = jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: {
+        type: "localcallback"
+      },
+      remote_sub_storage: {
+        type: "replicatecallback"
+      },
+      signature_sub_storage: {
+        type: "signaturecallback"
+      }
+    }, utils);
+
+    deepEqual(jio.__storage._utils.callback(), true);
+    deepEqual(jio.__storage._local_sub_storage.__storage.
+      _utils.callback(), true);
+    deepEqual(jio.__storage._remote_sub_storage.__storage.
+      _utils.callback(), true);
+    deepEqual(jio.__storage._signature_sub_storage.__storage.
+      _utils.callback(), true);
 
   });
 

@@ -12,8 +12,9 @@
 
   var MIME_TYPE = "application/x-jio-utf16_lz_string";
 
-  function ZipStorage(spec) {
-    this._sub_storage = jIO.createJIO(spec.sub_storage);
+  function ZipStorage(spec, utils) {
+    this._utils = utils;
+    this._sub_storage = jIO.createJIO(spec.sub_storage, utils);
   }
 
   ZipStorage.prototype.get = function () {
