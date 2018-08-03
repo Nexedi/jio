@@ -2265,6 +2265,63 @@
         .always(function () {start(); });
     });
 
+  test("allDocs with include_revisions only one document",
+    function () {
+      stop();
+      expect(1);
+      var jio = this.jio,
+        history = this.history,
+        timestamps,
+        not_history = this.not_history;
+
+      jio.put("doc a", {title: "foo0"})
+        .push(function () {
+          return jio.put("doc a", {title: "foo1"});
+        })
+        .push(function () {
+          return jio.put("doc b", {title: "bar0"});
+        })
+        .push(function () {
+          return jio.put("doc b", {title: "bar1"});
+        })
+        .push(function () {
+          return not_history.allDocs({
+            sort_on: [["timestamp", "ascending"]]
+          });
+        })
+        .push(function (results) {
+          timestamps = results.data.rows.map(function (d) {
+            return d.id;
+          });
+        })
+        .push(function () {
+          return history.allDocs({
+            query: 'doc_id: "doc a"',
+            select_list: ["title"]
+          });
+        })
+        .push(function (results) {
+          deepEqual(results.data.rows, [
+            {
+              id: timestamps[1],
+              doc: {},
+              value: {title: "foo1"}
+            },
+            {
+              id: timestamps[0],
+              doc: {},
+              value: {title: "foo0"}
+            }],
+            "Only specified document revision history is returned"
+            );
+        })
+        .fail(function (error) {
+          //console.log(error);
+          ok(false, error);
+        })
+        .always(function () {start(); });
+    });
+
   test("Parallel edits will not break anything",
     function () {
       stop();

@@ -240,8 +240,6 @@
   };
 
   HistoryStorage.prototype.allAttachments = function (id) {
-    // XXX: allAttachments with timestamp:
-    // should return all non-removed attachments at this point in time
     var substorage = this._sub_storage,
       query_obj,
       query_removed_check,
@@ -251,6 +249,8 @@
       include_revs = this._include_revisions,
       have_seen_id = false;
 
+    // id is a timestamp, and allAttachments will return attachment versions
+    // up-to-and-including those made at time id
     if (include_revs) {
       query_doc_id = new SimpleQuery({
         operator: "<=",
@@ -289,7 +289,6 @@
         })
       ]
     });
-
 
     options_remcheck = {
       query: query_removed_check,
@@ -388,6 +387,8 @@
   };
   HistoryStorage.prototype.getAttachment = function (id, name) {
 
+    // In this case, id is a timestamp, so return attachment version at that
+    // time
     if (this._include_revisions) {
       return this._sub_storage.getAttachment(id, name)
         .push(undefined, function (error) {
@@ -467,7 +468,10 @@
   };
 
   HistoryStorage.prototype.hasCapacity = function (name) {
-    return name === 'list' || name === 'include';
+    return name === 'list' ||
+      name === 'include' ||
+      name === 'query' ||
+      name === 'select';
   };
 
   HistoryStorage.prototype.buildQuery = function (options) {
@@ -477,13 +481,16 @@
     if (options.sort_on === undefined) {options.sort_on = []; }
     if (options.select_list === undefined) {options.select_list = []; }
     options.query = jIO.QueryFactory.create(options.query);
-
     var meta_options  = {
       query: "",
       sort_on: [["timestamp", "descending"]],
       select_list: ["doc", "op", "doc_id", "timestamp"]
     },
       include_revs = this._include_revisions;
+
+    if (include_revs) {// && options.query.key === "doc_id") {
+      meta_options.query = options.query;
+    }
 
     return this._sub_storage.allDocs(meta_options)
       .push(function (results) {
@@ -588,23 +595,19 @@
 
           // Put into correct format to be passed back to query storage
           .map(function (docum) {
-            docum.doc = docum.value.doc;
+
             if (include_revs) {
               docum.id = docum.value.timestamp;
+              //docum.doc = docum.value.doc;
             } else {
               docum.id = docum.value.doc_id;
+              //docum.doc = docum.value.doc;
             }
             delete docum.value.doc_id;
             delete docum.value.timestamp;
             delete docum.value.op;
-
-            if (options.include_docs) {
-              docum.doc = docum.value.doc;
-            } else {
-              docum.doc = {};
-            }
-
-            docum.value = {};
+            docum.value = docum.value.doc;
+            //docum.value = {};
             return docum;
           });
         return docs_to_query;
