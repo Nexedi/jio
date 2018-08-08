@@ -529,4 +529,6 @@
   };
 
   jIO.addStorage("indexeddb", IndexedDBStorage);
-}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest, DOMError));
+
+/* Safari does not define DOMError */
+}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest, DOMError || {}));

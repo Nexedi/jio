@@ -14,6 +14,12 @@
 
   "use strict";
 
+  if (window.openDatabase === undefined) {
+    window.openDatabase = function () {
+      throw new Error('WebSQL is not supported by ' + navigator.userAgent);
+    };
+  }
+
   /**
    * The JIO Websql Storage extension
    *
