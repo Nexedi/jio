@@ -217,11 +217,13 @@ module.exports = function (grunt) {
     copy: {
       latest: {
         files: [{
-          src: '<%= uglify.jio.src %>',
+          src: '<%= concat.jio.dest %>',
           dest: "dist/<%= pkg.name %>-latest.js"
+/*
         }, {
           src: '<%= uglify.jio.dest %>',
           dest: "dist/<%= pkg.name %>-latest.min.js"
+*/
         }]
       }
     },
@@ -282,5 +284,5 @@ module.exports = function (grunt) {
   grunt.registerTask('lint', ['jslint']);
   grunt.registerTask('test', ['qunit']);
   grunt.registerTask('server', ['connect:client', 'watch']);
-  grunt.registerTask('build', ['concat', 'uglify', 'copy']);
+  grunt.registerTask('build', ['concat', 'copy']);
 };
