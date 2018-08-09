@@ -103,6 +103,7 @@ ${JIOVERSION}: ${EXTERNALDIR}/URI.js \
 	${EXTERNALDIR}/uritemplate.js \
 	${EXTERNALDIR}/lz-string.js \
 	${EXTERNALDIR}/moment.js \
+	${EXTERNALDIR}/elasticlunr.js \
 	${SRCDIR}/queries/parser-begin.js \
 	${SRCDIR}/queries/build/parser.js \
 	${SRCDIR}/queries/parser-end.js \
@@ -130,7 +131,8 @@ ${JIOVERSION}: ${EXTERNALDIR}/URI.js \
 	${SRCDIR}/jio.storage/cryptstorage.js \
 	${SRCDIR}/jio.storage/websqlstorage.js \
 	${SRCDIR}/jio.storage/fbstorage.js \
-	${SRCDIR}/jio.storage/cloudooostorage.js
+	${SRCDIR}/jio.storage/cloudooostorage.js \
+	${SRCDIR}/jio.storage/elasticlunrstorage.js
 	@mkdir -p $(@D)
 	cat $^ > $@
 
