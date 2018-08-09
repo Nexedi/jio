@@ -17,15 +17,19 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
+
+import RSVP from 'rsvp';
+import URI from 'urijs';
+import UriTemplate from 'uritemplate';
+import FormData from 'form-data';
+import { jIO, SimpleQuery, ComplexQuery } from '../jio';
+import { Blob } from '../utils-compat';
+
 // JIO ERP5 Storage Description :
 // {
 //   type: "erp5"
 //   url: {string}
 // }
-
-/*jslint nomen: true, unparam: true */
-/*global jIO, UriTemplate, FormData, RSVP, URI, Blob,
-         SimpleQuery, ComplexQuery*/
 
 (function (jIO, UriTemplate, FormData, RSVP, URI, Blob,
            SimpleQuery, ComplexQuery) {

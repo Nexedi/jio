@@ -17,9 +17,19 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*global RSVP, window, parseStringToObject*/
-/*jslint nomen: true, maxlen: 90*/
-(function (RSVP, window, parseStringToObject) {
+
+/*eslint max-len: ["error", 90], no-useless-escape: "off"*/
+/*global window*/
+
+import RSVP from 'rsvp';
+import { parseStringToObject } from './parser-final';
+
+var moduleExports = {};
+try {
+  moduleExports = window;
+} catch (err) {}
+
+(function (RSVP, moduleExports, parseStringToObject) {
   "use strict";
 
   var query_class_dict = {},
@@ -576,7 +586,6 @@
    * #crossLink "Query/toString:method"
    */
   ComplexQuery.prototype.toString = function () {
-    /*global objectToSearchText */
     return objectToSearchText(this.toJSON());
   };
 
@@ -1079,9 +1088,11 @@
   Query.parseStringToObject = parseStringToObject;
   Query.objectToSearchText = objectToSearchText;
 
-  window.Query = Query;
-  window.SimpleQuery = SimpleQuery;
-  window.ComplexQuery = ComplexQuery;
-  window.QueryFactory = QueryFactory;
+  moduleExports.Query = Query;
+  moduleExports.SimpleQuery = SimpleQuery;
+  moduleExports.ComplexQuery = ComplexQuery;
+  moduleExports.QueryFactory = QueryFactory;
 
-}(RSVP, window, parseStringToObject));
+}(RSVP, moduleExports, parseStringToObject));
+
+export default moduleExports;

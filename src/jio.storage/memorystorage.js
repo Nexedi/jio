@@ -18,8 +18,8 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
-/*jslint nomen: true*/
-/*global jIO, RSVP*/
+import RSVP from 'rsvp';
+import { jIO } from '../jio';
 
 /**
  * JIO Memory Storage. Type = 'memory'.

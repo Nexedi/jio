@@ -19,7 +19,6 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
-/*jslint indent: 2, maxlen: 80, sloppy: true, nomen: true, regexp: true */
 /*global window, exports, require, define, jIO, RSVP */
 
 /**

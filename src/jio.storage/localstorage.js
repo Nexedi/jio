@@ -18,8 +18,10 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
-/*jslint nomen: true*/
-/*global jIO, sessionStorage, localStorage, RSVP */
+/*global sessionStorage, localStorage */
+
+import RSVP from 'rsvp';
+import { jIO } from '../jio';
 
 /**
  * JIO Local Storage. Type = 'local'.

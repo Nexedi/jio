@@ -17,12 +17,18 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
+
+/*global JSON*/
+
+import RSVP from 'rsvp';
+import UriTemplate from 'uritemplate';
+import { jIO } from '../jio';
+import { Blob } from '../utils-compat';
+
 /**
  * JIO Google Drive Storage. Type = "gdrive".
  * Google Drive "database" storage.
  */
-/*global jIO, Blob, RSVP, UriTemplate, JSON*/
-/*jslint nomen: true*/
 
 (function (jIO, Blob, RSVP, UriTemplate, JSON) {
   "use strict";

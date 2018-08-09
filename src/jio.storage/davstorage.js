@@ -18,8 +18,11 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
-/*jslint nomen: true*/
-/*global jIO, RSVP, DOMParser, Blob */
+/*global DOMParser */
+
+import RSVP from 'rsvp';
+import { jIO } from '../jio';
+import { Blob } from '../utils-compat';
 
 // JIO Dav Storage Description :
 // {

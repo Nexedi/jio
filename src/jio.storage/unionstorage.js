@@ -17,15 +17,16 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint nomen: true */
-/*global RSVP*/
+
+import RSVP from 'rsvp';
+import { jIO } from '../jio';
 
 /**
  * JIO Union Storage. Type = 'union'.
  * This provide a unified access other multiple storage.
  * New document are created in the first sub storage.
  * Document are searched in each sub storage until it is found.
- * 
+ *
  *
  * Storage Description:
  *

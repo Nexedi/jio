@@ -18,14 +18,14 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
-/*jslint nomen: true*/
-/*global Rusha*/
+import Rusha from 'rusha';
+import { jIO } from '../jio';
 
 /**
  * JIO Sha Storage. Type = 'sha'.
  */
 
-(function (Rusha) {
+(function (jIO, Rusha) {
   "use strict";
 
   var rusha = new Rusha();
@@ -72,4 +72,4 @@
 
   jIO.addStorage('sha', ShaStorage);
 
-}(Rusha));
+}(jIO, Rusha));

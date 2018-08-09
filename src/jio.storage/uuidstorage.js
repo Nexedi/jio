@@ -17,7 +17,9 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint nomen: true*/
+
+import { jIO } from '../jio';
+
 (function (jIO) {
   "use strict";
 

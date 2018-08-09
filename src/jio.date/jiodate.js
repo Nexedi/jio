@@ -17,9 +17,18 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*global window, moment */
-/*jslint nomen: true, maxlen: 200*/
-(function (window, moment) {
+
+/*eslint max-len: ["error", 200], no-useless-escape: "off"*/
+/*global window */
+
+import moment from 'moment';
+
+var moduleExports = {};
+try {
+  moduleExports = window;
+} catch (err) {}
+
+(function (moduleExports, moment) {
   "use strict";
 
 //   /**
@@ -183,17 +192,7 @@
   };
 
 
-//   _export('JIODate', JIODate);
-// 
-//   _export('YEAR', YEAR);
-//   _export('MONTH', MONTH);
-//   _export('DAY', DAY);
-//   _export('HOUR', HOUR);
-//   _export('MIN', MIN);
-//   _export('SEC', SEC);
-//   _export('MSEC', MSEC);
-
-  window.jiodate = {
+  moduleExports.jiodate = {
     JIODate: JIODate,
     YEAR: YEAR,
     MONTH: MONTH,
@@ -203,4 +202,6 @@
     SEC: SEC,
     MSEC: MSEC
   };
-}(window, moment));
+}(moduleExports, moment));
+
+export default moduleExports;

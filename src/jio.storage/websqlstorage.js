@@ -17,16 +17,26 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
+
+/*global openDatabase, navigator*/
+
+import RSVP from 'rsvp';
+import { jIO } from '../jio';
+import { Blob } from '../utils-compat';
+
 /**
  * JIO Websql Storage. Type = "websql".
  * websql "database" storage.
  */
-/*global Blob, jIO, RSVP, openDatabase*/
-/*jslint nomen: true*/
 
 (function (jIO, RSVP, Blob, openDatabase) {
-
   "use strict";
+
+  if (openDatabase === undefined) {
+    openDatabase = function () {
+      throw new Error('WebSQL is not supported by ' + navigator.userAgent);
+    };
+  }
 
   /**
    * The JIO Websql Storage extension

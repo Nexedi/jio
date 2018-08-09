@@ -17,8 +17,11 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint nomen: true*/
-/*global RSVP, Blob*/
+
+import RSVP from 'rsvp';
+import { jIO } from '../jio';
+import { Blob } from '../utils-compat';
+
 (function (jIO, RSVP, Blob) {
   "use strict";
 

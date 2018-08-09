@@ -17,7 +17,7 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint indent: 2, maxlen: 80, nomen: true */
+
 /*global jIO, hex_sha256, define */
 
 /**

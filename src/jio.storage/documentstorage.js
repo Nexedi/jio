@@ -17,9 +17,15 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint nomen: true*/
-/*global Blob, RSVP, unescape, escape*/
-(function (jIO, Blob, RSVP, unescape, escape) {
+
+/*eslint no-unsafe-negation: "off"*/
+/*global unescape, escape*/
+
+import RSVP from 'rsvp';
+import { jIO } from '../jio';
+import { Blob, btoa, atob } from '../utils-compat';
+
+(function (jIO, Blob, RSVP, unescape, escape, atob, btoa) {
   "use strict";
   /**
    * The jIO DocumentStorage extension
@@ -37,18 +43,18 @@
     DOCUMENT_REGEXP = new RegExp("^jio_document/([\\w=]+)" +
                                  DOCUMENT_EXTENSION + "$"),
     ATTACHMENT_REGEXP = new RegExp("^jio_attachment/([\\w=]+)/([\\w=]+)$"),
-    btoa = function (str) {
-      return window.btoa(unescape(encodeURIComponent(str)));
+    btoaU = function (str) {
+      return btoa(unescape(encodeURIComponent(str)));
     },
-    atob = function (str) {
-      return decodeURIComponent(escape(window.atob(str)));
+    atobU = function (str) {
+      return decodeURIComponent(escape(atob(str)));
     };
 
   function getSubAttachmentIdFromParam(id, name) {
     if (name === undefined) {
-      return 'jio_document/' + btoa(id) + DOCUMENT_EXTENSION;
+      return 'jio_document/' + btoaU(id) + DOCUMENT_EXTENSION;
     }
-    return 'jio_attachment/' + btoa(id) + "/" + btoa(name);
+    return 'jio_attachment/' + btoaU(id) + "/" + btoaU(name);
   }
 
   DocumentStorage.prototype.get = function (id) {
@@ -70,8 +76,8 @@
             if (ATTACHMENT_REGEXP.test(key)) {
               exec = ATTACHMENT_REGEXP.exec(key);
               try {
-                if (atob(exec[1]) === id) {
-                  attachments[atob(exec[2])] = {};
+                if (atobU(exec[1]) === id) {
+                  attachments[atobU(exec[2])] = {};
                 }
               } catch (error) {
                 // Check if unable to decode base64 data
@@ -142,7 +148,7 @@
                   attachment = undefined;
                   if (DOCUMENT_REGEXP.test(key)) {
                     try {
-                      id = atob(DOCUMENT_REGEXP.exec(key)[1]);
+                      id = atobU(DOCUMENT_REGEXP.exec(key)[1]);
                     } catch (error) {
                       // Check if unable to decode base64 data
                       if (!error instanceof ReferenceError) {
@@ -155,8 +161,8 @@
                   } else if (ATTACHMENT_REGEXP.test(key)) {
                     exec = ATTACHMENT_REGEXP.exec(key);
                     try {
-                      id = atob(exec[1]);
-                      attachment = atob(exec[2]);
+                      id = atobU(exec[1]);
+                      attachment = atobU(exec[2]);
                     } catch (error) {
                       // Check if unable to decode base64 data
                       if (!error instanceof ReferenceError) {
@@ -209,7 +215,7 @@
             if (DOCUMENT_REGEXP.test(key)) {
               try {
                 result.push({
-                  id: atob(DOCUMENT_REGEXP.exec(key)[1]),
+                  id: atobU(DOCUMENT_REGEXP.exec(key)[1]),
                   value: {}
                 });
               } catch (error) {
@@ -249,4 +255,4 @@
 
   jIO.addStorage('document', DocumentStorage);
 
-}(jIO, Blob, RSVP, unescape, escape));
+}(jIO, Blob, RSVP, unescape, escape, atob, btoa));

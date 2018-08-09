@@ -18,7 +18,6 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
-/*jslint indent:2, maxlen: 80, nomen: true */
 /*global jIO, define, Blob */
 
 /**

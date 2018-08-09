@@ -18,6 +18,9 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
+/*global JSON, FormData, btoa, Blob, jIO, RSVP, UriTemplate, crypto,
+         Uint8Array, TextEncoder*/
+
 /**
  * JIO Qiniu Storage. Type = "qiniu".
  * Qiniu "database" storage.
@@ -28,9 +31,6 @@
  * - disable getAttachment HTTP cache
  */
 
-/*global JSON, FormData, btoa, Blob, jIO, RSVP, UriTemplate, crypto,
-         Uint8Array, TextEncoder*/
-/*jslint nomen: true*/
 (function (JSON, FormData, btoa, Blob, jIO, RSVP, UriTemplate, Crypto,
            Uint8Array, TextEncoder) {
   "use strict";

@@ -18,8 +18,11 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
-/*jslint nomen: true*/
-/*global jIO, RSVP, DOMParser, XMLSerializer*/
+/*global DOMParser, XMLSerializer*/
+
+import RSVP from 'rsvp';
+import { jIO } from '../jio';
+
 (function (jIO, RSVP, DOMParser, XMLSerializer) {
   "use strict";
 
@@ -43,7 +46,7 @@
   }
 
   /**
-   * convert a blob 
+   * convert a blob
    * from a format to another
    * return converted blob.
    **/
@@ -84,7 +87,7 @@
    * The jIO CloudoooStorage extension
    *
    * Convert attachment : att_id?from="format"&to="format"
-   * 
+   *
    * @class CloudoooStorage
    * @constructor
    */

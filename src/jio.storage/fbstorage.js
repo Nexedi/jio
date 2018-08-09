@@ -17,8 +17,11 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint nomen: true */
-/*global RSVP, UriTemplate*/
+
+import RSVP from 'rsvp';
+import UriTemplate from 'uritemplate';
+import { jIO } from '../jio';
+
 (function (jIO, RSVP, UriTemplate) {
   "use strict";
 

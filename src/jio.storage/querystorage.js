@@ -17,8 +17,10 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint nomen: true*/
-/*global RSVP, jiodate*/
+
+import RSVP from 'rsvp';
+import { jIO, jiodate } from '../jio';
+
 (function (jIO, RSVP, jiodate) {
   "use strict";
 

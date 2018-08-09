@@ -1,10 +1,4 @@
-/*jslint
-    indent: 2,
-    maxlen: 80,
-    plusplus: true,
-    nomen: true,
-    regexp: true
-*/
+/*eslint no-useless-escape: "off"*/
 /*global
     define: true,
     exports: true,
@@ -15,6 +9,7 @@
     XMLHttpRequest,
     FormData
 */
+
 /**
  * JIO XWiki Storage. Type = 'xwiki'.
  * XWiki Document/Attachment storage.

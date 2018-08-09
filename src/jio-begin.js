@@ -1,5 +1,5 @@
 /*
- * Copyright 2014, Nexedi SA
+ * Copyright 2018, Nexedi SA
  *
  * This program is free software: you can Use, Study, Modify and Redistribute
  * it under the terms of the GNU General Public License version 3, or (at your
@@ -17,31 +17,8 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
+(function(RSVP) {
+  "use strict";
 
-import jiodates from './jio.date/jiodate';
-import queries from './queries/query';
-
-/**
- * jIO Storage Builder
- */
-function JioBuilder() {
-  if (!(this instanceof JioBuilder)) {
-    return new JioBuilder();
-  }
-}
-
-JioBuilder.prototype.util = {};
-JioBuilder.prototype.Query = queries.Query;
-JioBuilder.prototype.QueryFactory = queries.QueryFactory;
-
-var jIO = new JioBuilder(),
-  jiodate = jiodates.jiodate,
-  SimpleQuery = queries.SimpleQuery,
-  ComplexQuery = queries.ComplexQuery;
-
-export {
-  jIO,
-  jiodate,
-  SimpleQuery,
-  ComplexQuery
-};
+  var jiodates = window,
+    queries = window;

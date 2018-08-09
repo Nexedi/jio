@@ -18,6 +18,12 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
+/*global indexedDB, Math, IDBKeyRange, IDBOpenDBRequest, DOMError*/
+
+import RSVP from 'rsvp';
+import { jIO } from '../jio';
+import { Blob } from '../utils-compat';
+
 /**
  * JIO Indexed Database Storage.
  *
@@ -40,10 +46,6 @@
  * - http://www.w3.org/TR/IndexedDB/
  * - https://developer.mozilla.org/en-US/docs/IndexedDB/Using_IndexedDB
  */
-
-/*jslint nomen: true */
-/*global indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
-        DOMError, Event*/
 
 (function (indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
            DOMError) {
@@ -543,4 +545,7 @@
   };
 
   jIO.addStorage("indexeddb", IndexedDBStorage);
-}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest, DOMError));
+
+/* Safari does not define DOMError */
+}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
+  DOMError || {}));

@@ -8,12 +8,14 @@
     "Sven Franck <sven.franck@nexedi.com>"
   ],
   "description": "Client-side JavaScript library to manage documents across multiple storages",
-  "main": "jio.js",
+  "main": "dist/node/jio.js",
+  "module": "dist/jio.module.js",
   "directories": {
     "example": "examples",
     "test": "test"
   },
   "scripts": {
+    "start": "./node_modules/.bin/grunt server",
     "test": "./node_modules/.bin/grunt test",
     "lint": "./node_modules/.bin/grunt lint",
     "prepublish": "./node_modules/.bin/grunt build"
@@ -29,28 +31,39 @@
     "cloud"
   ],
   "dependencies": {
-    "rsvp": "git+https://lab.nexedi.com/nexedi/rsvp.js.git",
-    "uritemplate": "git+https://lab.nexedi.com/nexedi/uritemplate-js.git",
+    "form-data": "^2.3.2",
+    "jquery": "^3.3.1",
     "moment": "2.21.0",
-    "rusha": "0.8.2"
+    "rsvp": "git+https://lab.nexedi.com/nexedi/rsvp.js.git",
+    "rusha": "0.8.2",
+    "sjcl": "^1.0.7",
+    "urijs": "^1.19.1",
+    "uritemplate": "git+https://lab.nexedi.com/nexedi/uritemplate-js.git",
+    "xhr2": "^0.1.4"
   },
   "devDependencies": {
-    "renderjs": "git+https://lab.nexedi.com/nexedi/renderjs.git",
+    "connect-livereload": "~0.3.0",
     "grunt": "0.4.x",
     "grunt-cli": "~0.1.11",
     "grunt-contrib-concat": "0.3.x",
+    "grunt-contrib-connect": "~0.5.0",
     "grunt-contrib-copy": "~0.4.1",
     "grunt-contrib-qunit": "~0.3.0",
-    "qunitjs": "~1.23.1",
-    "qunit-tap": "1.5.0",
+    "grunt-contrib-uglify": "0.2.x",
     "grunt-contrib-watch": "~0.5.3",
     "grunt-jslint": "~1.0.0",
-    "lz-string": "^1.4.4",
-    "sinon": "~1.7.3",
-    "jison": "~0.4.16",
-    "connect-livereload": "~0.3.0",
     "grunt-open": "~0.2.2",
-    "grunt-contrib-connect": "~0.5.0"
+    "gruntify-eslint": "^5.0.0",
+    "jison": "~0.4.16",
+    "lz-string": "^1.4.4",
+    "qunit-tap": "1.5.0",
+    "qunitjs": "~1.23.1",
+    "renderjs": "git+https://lab.nexedi.com/nexedi/renderjs.git",
+    "rollup-plugin-commonjs": "^9.1.5",
+    "rollup-plugin-hypothetical": "^2.1.0",
+    "rollup-plugin-node-builtins": "^2.1.2",
+    "rollup-plugin-node-resolve": "^3.3.0",
+    "sinon": "~1.7.3"
   },
   "engines": {
     "npm": ">=1.3"

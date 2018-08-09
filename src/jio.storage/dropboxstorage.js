@@ -17,12 +17,15 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
+
+import RSVP from 'rsvp';
+import { jIO } from '../jio';
+import { Blob } from '../utils-compat';
+
 /**
  * JIO Dropbox Storage. Type = "dropbox".
  * Dropbox "database" storage.
  */
-/*global Blob, jIO, RSVP*/
-/*jslint nomen: true*/
 
 (function (jIO, RSVP, Blob, JSON) {
   "use strict";

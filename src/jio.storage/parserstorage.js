@@ -17,8 +17,11 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint nomen: true*/
-/*global jIO, DOMParser, Node */
+
+/*global DOMParser, Node */
+
+import { jIO } from '../jio';
+
 (function (jIO, DOMParser, Node) {
   "use strict";
 

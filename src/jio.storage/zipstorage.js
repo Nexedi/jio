@@ -17,9 +17,15 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint nomen: true*/
-/*global RSVP, Blob, LZString, DOMException*/
-(function (RSVP, Blob, LZString, DOMException) {
+
+/*global DOMException*/
+
+import RSVP from 'rsvp';
+import LZString from 'lz-string';
+import { jIO } from '../jio';
+import { Blob } from '../utils-compat';
+
+(function (jIO, RSVP, Blob, LZString, DOMException) {
   "use strict";
 
   /**
@@ -130,4 +136,4 @@
   };
 
   jIO.addStorage('zip', ZipStorage);
-}(RSVP, Blob, LZString, DOMException));
+}(jIO, RSVP, Blob, LZString, DOMException));

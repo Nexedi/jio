@@ -2,19 +2,40 @@
 
 jIO is a promised-based JavaScript library that offers connectors to many storages (Dropbox, webdav, IndexedDB, GDrive, ...) using a single API. jIO supports offline use, replication, encryption and synchronization as well as querying of stored documents and attachments allowing to build complex client-side centric web applications.
 
-### jIO Documentation
+## jIO Documentation
 
 The documentation can be found on [https://jio.nexedi.com/](https://jio.nexedi.com/)
 
-### jIO Quickstart
+## jIO Quickstart
     git clone https://lab.nexedi.com/nexedi/jio.git
     npm install
     grunt server
 
 
-### jIO Code
+## jIO Code
 
 RenderJS source code is hosted on Gitlab at [https://lab.nexedi.com/nexedi/jio](https://lab.nexedi.com/nexedi/jio) (Github [mirror](https://github.com/nexedi/jio/) - please use the issue tracker on Gitlab)
 
-### jIO Test
+## jIO Test
 You can run tests after installing and building jIO by opening the */test/* folder
+
+## Build with rollup
+
+```
+$ npm install -g rollup
+$ rollup -c
+```
+
+## jIO for Node.js
+
+1. Install the package
+```sh
+$ npm install --save https://lab.nexedi.com/nexedi/jio.git
+```
+2. Import the library and create your first storage:
+```javascript
+const { jIO } = require('jio/dist/node/jio.js');
+const jio = jIO.createJIO({
+  type: 'memory'
+});
+```

@@ -1,6 +1,5 @@
-/*jslint indent: 2, maxlen: 80, nomen: true */
 /*global define, jIO, test_util, RSVP, test, ok, deepEqual, module, stop,
-  start, hex_sha256 */
+  start */
 
 // define([module_name], [dependencies], module);
 (function (dependencies, module) {

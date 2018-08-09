@@ -19,8 +19,9 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
-/*jslint nomen: true*/
-/*global jIO, RSVP, Rusha*/
+import RSVP from 'rsvp';
+import Rusha from 'rusha';
+import { jIO } from '../jio';
 
 (function (jIO, RSVP, Rusha, stringify) {
   "use strict";

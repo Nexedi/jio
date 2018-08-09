@@ -17,6 +17,7 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
+
 module.exports = function (grunt) {
   "use strict";
 
@@ -41,6 +42,7 @@ module.exports = function (grunt) {
     ];
   };
 
+  grunt.loadNpmTasks('gruntify-eslint');
   grunt.loadNpmTasks('grunt-jslint');
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-uglify');
@@ -59,10 +61,7 @@ module.exports = function (grunt) {
         directives: {
           maxlen: 100,
           indent: 2,
-          maxerr: 3,
-          predef: [
-            'module'
-          ]
+          maxerr: 3
         }
       },
       grunt: {
@@ -78,44 +77,11 @@ module.exports = function (grunt) {
           ]
         }
       },
-      jio: {
-        src: ['src/jio.js'],
-        directives: {
-          maxlen: 80,
-          indent: 2,
-          maxerr: 3,
-          nomen: true
-        }
-      },
-      jio_storages: {
-        src: ['src/jio.storage/*.js'],
-        directives: {
-          maxlen: 80,
-          indent: 2,
-          maxerr: 3,
-          predef: [
-            'define',
-            'exports',
-            'require',
-            'window',
-            'jIO',
-            'complex_queries'
-          ]
-        }
-      },
-      jiodate: {
-        src: ['src/jio.date/jiodate.js'],
-        directives: {
-          maxlen: 80,
-          indent: 2,
-          maxerr: 3,
-          predef: [
-            'jIO'
-          ]
-        },
-      },
       tests: {
         src: ['test/**/*.js'],
+        exclude: [
+          'test/node/**/*.js'
+        ],
         directives: {
           maxlen: 80,
           indent: 2,
@@ -123,21 +89,6 @@ module.exports = function (grunt) {
           predef: [
             'RSVP',
             'QUnit',
-            'jIO'
-          ]
-        },
-      },
-      queries: {
-        src: ['src/queries/*.js'],
-        exclude: [
-          'src/queries/parser-begin.js',
-          'src/queries/parser-end.js'
-        ],
-        directives: {
-          maxlen: 80,
-          indent: 2,
-          maxerr: 3,
-          predef: [
             'jIO'
           ]
         }
@@ -155,12 +106,68 @@ module.exports = function (grunt) {
             'QUnit',
             'jIO'
           ]
-        },
+        }
+      }
+    },
+    eslint: {
+      options: {
+        maxWarnings: 3
       },
+      jio: {
+        src: [
+          'src/jio.bundle.js',
+          'src/jio.js',
+          'src/storage.js',
+          'src/utils-compat.js',
+          'src/utils.js'
+        ]
+      },
+      jio_storages: {
+        src: ['src/jio.storage/*.js']
+      },
+      jiodate: {
+        src: ['src/jio.date/jiodate.js']
+      },
+      queries: {
+        src: ['src/queries/query.js']
+      },
+      nodeTests: {
+        src: ['test/node/**/*.js']
+      }
     },
     concat: {
       options: {
-        separator: ';'
+        separator: ';',
+        process: function (src, filepath) {
+          // skip process libs
+          if (
+            filepath.indexOf('node_modules/') === 0 ||
+              filepath.indexOf('lib/') === 0
+          ) {
+            return src;
+          }
+
+          var importRegex = new RegExp(
+            "import" +
+              "(?:[\"'\\s]*([\\w*{}\\n\\r\\t, ]+)from\\s*)?" +
+              "[\"'\\s].*([@\\w/_-]+)[\"'\\s].*;" +
+              "(\\r\\n\\t|\\n|\\r\\t)?$",
+            'gm'
+          ),
+            exportRegex = new RegExp(
+              "export" +
+                "(?:[\"'\\s]*([\\w*{}\\n\\r\\t, ]+))?" +
+                "[\"'\\s].*([@\\w/_-]+)[\"'\\s].*;" +
+                "(\\r\\n\\t|\\n|\\r\\t)?$",
+              'gm'
+            );
+
+          return src
+            // remove import statements
+            .replace(importRegex, '')
+            // remove export statements
+            .replace(exportRegex, '');
+        }
       },
       jio: {
         // duplicate files are ignored
@@ -178,7 +185,11 @@ module.exports = function (grunt) {
 
           'src/jio.date/*.js',
 
+          'src/jio-begin.js',
           'src/jio.js',
+          'src/storage.js',
+          'src/utils.js',
+          'src/jio-end.js',
 
           'node_modules/rusha/rusha.js',
 
@@ -258,11 +269,11 @@ module.exports = function (grunt) {
         files: [
           '<%= jslint.npm.src %>',
           '<%= jslint.grunt.src %>',
-          '<%= jslint.jio.src %>',
-          '<%= jslint.jiodate.src %>',
-          '<%= jslint.jio_storages.src %>',
           '<%= jslint.tests.src %>',
-          '<%= jslint.queries.src %>',
+          '<%= eslint.jio.src %>',
+          '<%= eslint.jiodate.src %>',
+          '<%= eslint.jio_storages.src %>',
+          '<%= eslint.queries.src %>',
           '<%= concat.jio.src %>',
           '<%= qunit.files %>',
           'test/**/*.js',
@@ -300,7 +311,7 @@ module.exports = function (grunt) {
 
   grunt.registerTask('default', ['all']);
   grunt.registerTask('all', ['lint', 'build']);
-  grunt.registerTask('lint', ['jslint']);
+  grunt.registerTask('lint', ['jslint', 'eslint']);
   grunt.registerTask('test', ['qunit']);
   grunt.registerTask('server', ['connect:client', 'watch']);
   grunt.registerTask('build', ['concat', 'copy']);

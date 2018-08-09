@@ -1,7 +1,7 @@
-/*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, jIO, btoa, b64_hmac_sha1, jQuery, XMLHttpRequest, XHRwrapper,
+/*global define, jIO, btoa, b64_hmac_sha1, jQuery, XMLHttpRequest,
   FormData*/
-/**
+
+  /**
  * JIO S3 Storage. Type = "s3".
  * Amazon S3 "database" storage.
  */

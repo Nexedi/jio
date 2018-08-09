@@ -18,8 +18,11 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
-/*jslint nomen: true*/
-/*global jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer*/
+/*global DOMException, crypto, Uint8Array, ArrayBuffer*/
+
+import RSVP from 'rsvp';
+import { jIO } from '../jio';
+import { Blob } from '../utils-compat';
 
 (function (jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer) {
   "use strict";

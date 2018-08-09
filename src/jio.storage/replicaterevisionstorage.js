@@ -302,7 +302,7 @@
       };
       functions.repair_sub_storages_count = 0;
       functions.repairAllSubStoragesCallback = function (method,
-                                                         index, err, response) {
+                                                         index, err) {
         /*jslint unparam: true */
         if (err) {
           return command.error(err);
@@ -573,7 +573,7 @@
         }
       };
       functions.putAttachments = function (param, attachment_to_put) {
-        return function (method, index, err, response) {
+        return function (method, index, err) {
           /*jslint unparam: true */
           var i, attachment;
           if (err) {
@@ -606,9 +606,9 @@
           }
         };
       };
-      functions.putAttachmentCallback = function (param) {
+      functions.putAttachmentCallback = function () {
         /*jslint unparam: true */
-        return function (method, index, err, response) {
+        return function (method, index, err) {
           if (err) {
             return callback(err, undefined);
           }

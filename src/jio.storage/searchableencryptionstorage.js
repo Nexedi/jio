@@ -4,7 +4,6 @@
 **                        31/01/2014                                  **
 ***********************************************************************/
 
-/*jslint indent:2,maxlen:80,nomen:true*/
 /*global  jIO, define, exports, require, sjcl*/
 
 (function (dependencies, module) {
