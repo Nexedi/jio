@@ -70,12 +70,12 @@
     expect(2);
     stop();
 
-    var test = this;
+    var that = this;
 
     this.jio.put("put1", {"title": "myPut1"})
       .then(function (uuid) {
         equal(uuid, "put1");
-        deepEqual(test.jio.__storage._database.put1, {
+        deepEqual(that.jio.__storage._database.put1, {
           attachments: {},
           doc: "{\"title\":\"myPut1\"}"
         });
@@ -90,7 +90,7 @@
 
   test("put when document already exists", function () {
     var id = "put1",
-      test = this;
+      that = this;
     this.jio.__storage._database[id] = {
       "foo": "bar",
       "attachments": {"foo": "bar"},
@@ -102,7 +102,7 @@
     this.jio.put(id, {"title": "myPut2"})
       .then(function (uuid) {
         equal(uuid, "put1");
-        deepEqual(test.jio.__storage._database.put1, {
+        deepEqual(that.jio.__storage._database.put1, {
           "foo": "bar",
           "attachments": {"foo": "bar"},
           doc: "{\"title\":\"myPut2\"}"

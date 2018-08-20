@@ -292,9 +292,9 @@
               return jIO.util.readBlobAsText(error.target.response);
             })
             .push(function (evt) {
-              var err_content = JSON.parse(evt.target.result);
-              if ((err_content.error['.tag'] === 'path') &&
-                  (err_content.error.path['.tag'] === 'not_found')) {
+              var err_content2 = JSON.parse(evt.target.result);
+              if ((err_content2.error['.tag'] === 'path') &&
+                  (err_content2.error.path['.tag'] === 'not_found')) {
                 throw new jIO.util.jIOError("Cannot find attachment: " +
                                             id + "/, " + name, 404);
               }

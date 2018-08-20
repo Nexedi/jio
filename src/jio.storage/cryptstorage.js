@@ -140,8 +140,9 @@
                                      that._key, buf);
       })
       .push(function (coded) {
-        var blob = new Blob([initializaton_vector, coded], {type: MIME_TYPE});
-        return that._sub_storage.putAttachment(id, name, blob);
+        var final_blob = new Blob([initializaton_vector, coded],
+                                  {type: MIME_TYPE});
+        return that._sub_storage.putAttachment(id, name, final_blob);
       });
   };
 

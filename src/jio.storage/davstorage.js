@@ -185,7 +185,7 @@
 
         var i,
           attachment = {},
-          id,
+          new_id,
           attachment_list = new DOMParser().parseFromString(
             response.target.responseText,
             "text/xml"
@@ -196,11 +196,11 @@
         // exclude parent folder and browse
         for (i = 1; i < attachment_list.length; i += 1) {
           // XXX Only get files for now
-          id = attachment_list[i].querySelector("D\\:href, href").
+          new_id = attachment_list[i].querySelector("D\\:href, href").
             textContent.split('/').slice(-1)[0];
           // XXX Ugly
-          if ((id !== undefined) && (id !== "")) {
-            attachment[id] = {};
+          if ((new_id !== undefined) && (new_id !== "")) {
+            attachment[new_id] = {};
           }
         }
         return attachment;
