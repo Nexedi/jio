@@ -29,6 +29,7 @@ EXTERNALDIR = external
 VERSION = 3.32.1
 JIOVERSION = ${DISTDIR}/jio-v${VERSION}.js
 JIOLATEST = ${DISTDIR}/jio-latest.js
+JIONODELATEST = ${DISTDIR}/jio-node-latest.js
 
 all: fetch lint build
 
@@ -131,6 +132,29 @@ ${JIOVERSION}: ${EXTERNALDIR}/URI.js \
 	${SRCDIR}/jio.storage/websqlstorage.js \
 	${SRCDIR}/jio.storage/fbstorage.js \
 	${SRCDIR}/jio.storage/cloudooostorage.js
+	@mkdir -p $(@D)
+	cat $^ > $@
+
+#############################################
+# Node
+#############################################
+node: ${JIONODELATEST}
+
+${JIONODELATEST}: ${SRCDIR}/node/jio-start.js \
+	${EXTERNALDIR}/rsvp-2.0.4.js \
+	${EXTERNALDIR}/moment.js \
+	${SRCDIR}/node/jio-external.js \
+	${SRCDIR}/queries/parser-begin.js \
+	${SRCDIR}/queries/build/parser.js \
+	${SRCDIR}/queries/parser-end.js \
+	${SRCDIR}/queries/query.js \
+	${SRCDIR}/node/query.js \
+	${SRCDIR}/jio.date/jiodate.js \
+	${SRCDIR}/jio.js \
+	${SRCDIR}/node/jio.js \
+	${SRCDIR}/jio.storage/uuidstorage.js \
+	${SRCDIR}/jio.storage/memorystorage.js \
+	${SRCDIR}/node/jio-end.js
 	@mkdir -p $(@D)
 	cat $^ > $@
 
