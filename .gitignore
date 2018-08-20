@@ -6,3 +6,4 @@
 .directory
 
 node_modules/*
+lint

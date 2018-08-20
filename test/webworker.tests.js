@@ -10,15 +10,15 @@ var global = self,
   self.openDatabase = {};
 
   importScripts(
-    "../node_modules/rsvp/dist/rsvp-2.0.4.js",
+    "../external/rsvp-2.0.4.js",
     "../dist/jio-latest.js"
   );
   self.exports = self;
-  importScripts("../node_modules/qunitjs/qunit/qunit.js");
+  importScripts("../external/qunit.js");
   self.exports = undefined;
   //QUnit.config.autorun = false;
   //QUnit.config.testTimeout = 5000;
-  importScripts("../node_modules/sinon/pkg/sinon.js");
+  importScripts("../external/sinon.js");
 
   importScripts("../node_modules/qunit-tap/lib/qunit-tap.js");
 

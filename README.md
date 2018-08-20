@@ -8,8 +8,9 @@ The documentation can be found on [https://jio.nexedi.com/](https://jio.nexedi.c
 
 ### jIO Quickstart
     git clone https://lab.nexedi.com/nexedi/jio.git
-    npm install
-    grunt server
+    cd jio.git
+    npm install jslint@0.9.2 jison@0.4.16
+    make
 
 
 ### jIO Code
