@@ -2,7 +2,7 @@
 (function (require) {
   "use strict";
 
-  var jIO = require('../dist/jio-node-latest.js'),
+  var jIO = require('../dist/jio-node-latest.js').jIO,
     storage = jIO.createJIO({type: 'memory'});
   storage
     .put('1', {

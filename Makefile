@@ -141,19 +141,23 @@ ${JIOVERSION}: ${EXTERNALDIR}/URI.js \
 node: ${JIONODELATEST}
 
 ${JIONODELATEST}: ${SRCDIR}/node/jio-start.js \
-	${EXTERNALDIR}/rsvp-2.0.4.js \
-	${EXTERNALDIR}/moment.js \
 	${SRCDIR}/node/jio-external.js \
+	${SRCDIR}/node/jio-compat.js \
 	${SRCDIR}/queries/parser-begin.js \
 	${SRCDIR}/queries/build/parser.js \
 	${SRCDIR}/queries/parser-end.js \
 	${SRCDIR}/queries/query.js \
 	${SRCDIR}/node/query.js \
 	${SRCDIR}/jio.date/jiodate.js \
+	${SRCDIR}/node/date.js \
 	${SRCDIR}/jio.js \
 	${SRCDIR}/node/jio.js \
-	${SRCDIR}/jio.storage/uuidstorage.js \
+	${SRCDIR}/jio.storage/documentstorage.js \
+	${SRCDIR}/jio.storage/erp5storage.js \
 	${SRCDIR}/jio.storage/memorystorage.js \
+	${SRCDIR}/jio.storage/querystorage.js \
+	${SRCDIR}/jio.storage/replicatestorage.js \
+	${SRCDIR}/jio.storage/uuidstorage.js \
 	${SRCDIR}/node/jio-end.js
 	@mkdir -p $(@D)
 	cat $^ > $@

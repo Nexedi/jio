@@ -1,4 +1,4 @@
 
-  module.exports = jIO;
+  module.exports = window;
 
-} ({}));
+}());

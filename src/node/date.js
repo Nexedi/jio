@@ -1,0 +1,1 @@
+var jiodate = window.jiodate;

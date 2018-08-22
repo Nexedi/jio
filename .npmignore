@@ -1,0 +1,9 @@
+dist/jio*
+!dist/jio-node*
+examples/
+external/
+src/
+test/
+.htaccess
+config.mk
+Makefile

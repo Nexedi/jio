@@ -19,3 +19,13 @@ RenderJS source code is hosted on Gitlab at [https://lab.nexedi.com/nexedi/jio](
 
 ### jIO Test
 You can run tests after installing and building jIO by opening the */test/* folder
+
+### Node
+
+1. Run `$ npm install https://lab.nexedi.com/nexedi/jio.git`
+2. Import the library:
+```
+const { jIO } = require('jio');
+jIO.createJIO({});
+...
+```

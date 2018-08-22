@@ -1,0 +1,46 @@
+{
+  "name": "jio",
+  "version": "v3.31.0",
+  "license": "LGPLv3",
+  "author": "Nexedi SA",
+  "contributors": [
+    "Tristan Cavelier <tristan.cavelier@tiolive.com>",
+    "Sven Franck <sven.franck@nexedi.com>"
+  ],
+  "description": "Client-side JavaScript library to manage documents across multiple storages",
+  "main": "dist/jio-node-latest.js",
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "scripts": {
+    "build": "make node",
+    "test": "node test/node.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://lab.nexedi.com/nexedi/jio.git"
+  },
+  "keywords": [
+    "io",
+    "input",
+    "output",
+    "cloud"
+  ],
+  "dependencies": {
+    "form-data": "^2.3.2",
+    "moment": "2.21.0",
+    "rsvp": "git+https://lab.nexedi.com/nexedi/rsvp.js.git",
+    "rusha": "0.8.2",
+    "urijs": "^1.19.1",
+    "uritemplate": "git+https://lab.nexedi.com/nexedi/uritemplate-js.git",
+    "xhr2": "^0.1.4"
+  },
+  "devDependencies": {
+    "qunit": "git://github.com/qunitjs/node-qunit.git#v0.9.3",
+    "sinon": "~1.7.3"
+  },
+  "engines": {
+    "npm": ">=1.3"
+  }
+}
