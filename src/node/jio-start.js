@@ -1,3 +1,2 @@
-(function () {
-  var window = {},
-    navigator = {};
+(function (window) {
+  var navigator = {};

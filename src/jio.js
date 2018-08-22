@@ -65,7 +65,7 @@
    * @return {Promise} The promise
    */
   function ajax(param) {
-    var xhr = new XMLHttpRequest();
+    var xhr = new window.XMLHttpRequest();
     return new RSVP.Promise(function (resolve, reject, notify) {
       var k;
       xhr.open(param.type || "GET", param.url, true);
@@ -84,7 +84,11 @@
         resolve(e);
       });
       xhr.addEventListener("error", reject);
-      xhr.addEventListener("progress", notify);
+      xhr.addEventListener("progress", function (e) {
+        if (notify) {
+          notify(e);
+        }
+      });
       if (typeof param.xhrFields === 'object' && param.xhrFields !== null) {
         for (k in param.xhrFields) {
           if (param.xhrFields.hasOwnProperty(k)) {

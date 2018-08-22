@@ -8,3 +8,4 @@ var RSVP = require('RSVP'),
   process = require('process');
 
 window.FormData = FormData;
+window.XMLHttpRequest = XMLHttpRequest;
