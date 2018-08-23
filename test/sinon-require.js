@@ -2,6 +2,66 @@ var sinon = require('sinon');
 
 global.sinon = sinon;
 
+// sinon/lib/sinon/util/event.js
+
+(function () {
+  var push = [].push;
+
+  sinon.Event = function Event(type, bubbles, cancelable, target) {
+    this.initEvent(type, bubbles, cancelable, target);
+  };
+
+  sinon.Event.prototype = {
+    initEvent: function (type, bubbles, cancelable, target) {
+      this.type = type;
+      this.bubbles = bubbles;
+      this.cancelable = cancelable;
+      this.target = target;
+    },
+
+    stopPropagation: function () { },
+
+    preventDefault: function () {
+      this.defaultPrevented = true;
+    }
+  };
+
+  sinon.EventTarget = {
+    addEventListener: function addEventListener(event, listener, useCapture) {
+      this.eventListeners = this.eventListeners || {};
+      this.eventListeners[event] = this.eventListeners[event] || [];
+      push.call(this.eventListeners[event], listener);
+    },
+
+    removeEventListener: function removeEventListener(event, listener, useCapture) {
+      var listeners = this.eventListeners && this.eventListeners[event] || [];
+
+      for (var i = 0, l = listeners.length; i < l; ++i) {
+        if (listeners[i] == listener) {
+          return listeners.splice(i, 1);
+        }
+      }
+    },
+
+    dispatchEvent: function dispatchEvent(event) {
+      var type = event.type;
+      var listeners = this.eventListeners && this.eventListeners[type] || [];
+
+      for (var i = 0; i < listeners.length; i++) {
+        if (typeof listeners[i] == "function") {
+          listeners[i].call(this, event);
+        } else {
+          listeners[i].handleEvent(event);
+        }
+      }
+
+      return !!event.defaultPrevented;
+    }
+  };
+}());
+
+// sinon/lib/sinon/util/fake_server.js
+
 sinon.fakeServer = (function () {
   var push = [].push;
   function F() { }
@@ -189,7 +249,7 @@ sinon.fakeServer = (function () {
   };
 }());
 
-// sinon/lib/sinon/util/fake_xml_http_request
+// sinon/lib/sinon/util/fake_xml_http_request.js
 
 sinon.xhr = { XMLHttpRequest: global.XMLHttpRequest };
 

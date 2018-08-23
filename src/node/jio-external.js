@@ -1,4 +1,4 @@
-var RSVP = require('RSVP'),
+var RSVP = require('rsvp'),
   moment = require('moment'),
   Rusha = require('rusha'),
   XMLHttpRequest = require('xhr2'),
