@@ -94,7 +94,7 @@ lint: $(patsubst ${TESTDIR}/jio.storage/%.js, ${LINTDIR}/${TESTDIR}/jio.storage/
 #############################################
 # Build
 #############################################
-build: ${JIOLATEST}
+build: ${JIOLATEST} node
 
 ${JIOLATEST}: ${JIOVERSION}
 	@mkdir -p $(@D)
@@ -139,6 +139,7 @@ ${JIOVERSION}: ${EXTERNALDIR}/URI.js \
 # Node
 #############################################
 node: ${JIONODELATEST}
+	npm install
 
 ${JIONODELATEST}: ${SRCDIR}/node/jio-start.js \
 	${SRCDIR}/node/jio-external.js \
