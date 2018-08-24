@@ -27,6 +27,7 @@ testrunner.run({
   tests: [
     'test/jio.storage/dropboxstorage.tests.js',
     'test/jio.storage/erp5storage.tests.js',
+    'test/jio.storage/gdrivestorage.tests.js',
     'test/jio.storage/mappingstorage.tests.js',
     'test/jio.storage/memorystorage.tests.js',
     'test/jio.storage/querystorage.tests.js',

@@ -70,15 +70,17 @@ function Blob(blobParts, options) {
     buffers = [];
 
   html5weakmap.set(this, priv);
-  for (i = 0; i < blobParts.length; ++i) {
-    if (Buffer.isBuffer(blobParts[i])) {
-      buffers.push(blobParts[i]);
-    } else if (blobParts[i] instanceof Blob) {
-      buffers.push(html5weakmap.get(blobParts[i]).data);
-    } else if (blobParts[i] instanceof ArrayBuffer) {
-      buffers.push(new Buffer(new Uint8Array(blobParts[i])));
-    } else {
-      buffers.push(new Buffer('' + blobParts[i]));
+  if (blobParts) {
+    for (i = 0; i < blobParts.length; ++i) {
+      if (Buffer.isBuffer(blobParts[i])) {
+        buffers.push(blobParts[i]);
+      } else if (blobParts[i] instanceof Blob) {
+        buffers.push(html5weakmap.get(blobParts[i]).data);
+      } else if (blobParts[i] instanceof ArrayBuffer) {
+        buffers.push(new Buffer(new Uint8Array(blobParts[i])));
+      } else {
+        buffers.push(new Buffer('' + blobParts[i]));
+      }
     }
   }
   priv.data = Buffer.concat(buffers);

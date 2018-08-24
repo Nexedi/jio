@@ -156,6 +156,7 @@ ${JIONODELATEST}: ${SRCDIR}/node/jio-start.js \
 	${SRCDIR}/jio.storage/documentstorage.js \
 	${SRCDIR}/jio.storage/dropboxstorage.js \
 	${SRCDIR}/jio.storage/erp5storage.js \
+	${SRCDIR}/jio.storage/gdrivestorage.js \
 	${SRCDIR}/jio.storage/mappingstorage.js \
 	${SRCDIR}/jio.storage/memorystorage.js \
 	${SRCDIR}/jio.storage/querystorage.js \
