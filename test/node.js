@@ -25,6 +25,7 @@ if (reportData) {
 testrunner.run({
   code: 'test/node-require.js',
   tests: [
+    'test/jio.storage/dropboxstorage.tests.js',
     'test/jio.storage/erp5storage.tests.js',
     'test/jio.storage/mappingstorage.tests.js',
     'test/jio.storage/memorystorage.tests.js',
