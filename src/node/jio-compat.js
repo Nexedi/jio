@@ -63,6 +63,8 @@ EventTarget.prototype.dispatchEvent = function (event) {
   }
 };
 
+window.EventTarget = window.EventTarget || EventTarget;
+
 function Blob(blobParts, options) {
   // https://developer.mozilla.org/en-US/docs/Web/API/Blob
   var i,
@@ -101,7 +103,7 @@ Blob.prototype.slice = function (start, end, contentType) {
   });
 };
 
-window.Blob = Blob;
+window.Blob = window.Blob || Blob;
 
 function FileReader() {
   EventTarget.call(this);
@@ -153,6 +155,8 @@ FileReader.prototype.readAsDataURL = function (blob) {
   });
 };
 
+window.FileReader = window.FileReader || FileReader;
+
 function atob(str) {
   try {
     return window.atob(str);
@@ -169,6 +173,8 @@ function atob(str) {
   }
 }
 
+window.atob = window.atob || atob;
+
 function btoa(str) {
   try {
     return window.btoa(str);
@@ -184,3 +190,5 @@ function btoa(str) {
     return buffer.toString('base64');
   }
 }
+
+window.btoa = window.btoa || btoa;
