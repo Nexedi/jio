@@ -25,6 +25,15 @@ if (reportData) {
 testrunner.run({
   code: 'test/node-require.js',
   tests: [
+    'test/jio/util.js',
+    'test/queries/jiodate.tests.js',
+    /*
+    'test/queries/key-jiodate.tests.js',
+    'test/queries/key-schema.tests.js',
+    'test/queries/key-typechecks.tests.js',
+    'test/queries/key.tests.js',
+    'test/queries/tests.js',
+    */
     'test/jio.storage/documentstorage.tests.js',
     'test/jio.storage/drivetojiomapping.tests.js',
     'test/jio.storage/dropboxstorage.tests.js',
@@ -35,6 +44,8 @@ testrunner.run({
     'test/jio.storage/memorystorage.tests.js',
     'test/jio.storage/querystorage.tests.js',
     'test/jio.storage/replicatestorage.tests.js',
+    'test/jio.storage/shastorage.tests.js',
+    'test/jio.storage/unionstorage.tests.js',
     'test/jio.storage/uuidstorage.tests.js'
   ]
 }, (err, _report) => {

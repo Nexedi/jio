@@ -7,5 +7,6 @@ var RSVP = require('rsvp'),
   UriTemplate = require('uritemplate'),
   process = require('process');
 
+window.moment = moment;
 window.FormData = window.FormData || FormData;
 window.XMLHttpRequest = window.XMLHttpRequest || XMLHttpRequest;
