@@ -154,6 +154,7 @@ ${JIONODELATEST}: ${SRCDIR}/node/jio-start.js \
 	${SRCDIR}/jio.js \
 	${SRCDIR}/node/jio.js \
 	${SRCDIR}/jio.storage/documentstorage.js \
+	${SRCDIR}/jio.storage/drivetojiomapping.js \
 	${SRCDIR}/jio.storage/dropboxstorage.js \
 	${SRCDIR}/jio.storage/erp5storage.js \
 	${SRCDIR}/jio.storage/fbstorage.js \
