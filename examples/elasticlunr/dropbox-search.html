@@ -1,0 +1,64 @@
+<html>
+<head>
+  <title></title>
+  <script src="https://rawgit.com/Marak/faker.js/master/examples/browser/js/faker.js" type="text/javascript"></script>
+  <script type="text/javascript" src="../../external/rsvp-2.0.4.js"></script>
+  <script type="text/javascript" src="../../dist/jio-latest.js"></script>
+
+  <style type="text/css" media="screen">
+    #access_token {
+      width: 500px;
+    }
+    #results,
+    #create-status,
+    #search-status {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Search documents in Dropbox</h1>
+
+  <p>Your dropbox access token (required):</p>
+  <input type="text" id="access_token" value="">
+
+  <p>Index with engine:</p>
+  <select id="index-select">
+    <option value="elasticlunr" selected="true">Elasticlunr</option>
+    <option value="sql" disabled="true">SQL</option>
+  </select>
+
+  <p>Step 1: create random documents</p>
+  <span>Number: </span>
+  <input type="number" id="doc_count" placeholder="How many documents to create?" value="1000">
+  <button type="button" id="create" onclick="javascript:window.create()">Create</button>
+  <span id="create-status">Creating documents... <span id="create-count"></span></span>
+
+  <p>Step 2: search documents by title (do not include "%"):</p>
+  <span>Title: </span>
+  <input type="text" id="query">
+  <span id="search-status">Searching documents...</span>
+  <br />
+  <br />
+  <button type="button" id="search-index" onclick="javascript:window.searchWithIndex()">Search using Index</button>
+  <br />
+  <button type="button" id="search-query" onclick="javascript:window.searchWithQuery()">Search using Query</button>
+
+  <div id="results">
+    <h2><span id="result-count"></span> results found in <span id="result-time"></span> seconds</h2>
+
+    <table id="results-list">
+      <thead>
+        <tr>
+          <th>Id</th>
+          <th>Title</th>
+          <!-- <th>Description</th> -->
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script type="text/javascript" src="./dropbox-search.js"></script>
+</body>
+</html>
