@@ -17,28 +17,19 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint indent: 2, maxlen: 120, nomen: true, vars: true */
-/*global define, exports, require, module, jIO, jiodate, window, test,
-  ok, equal, deepEqual, sinon, start, stop, RSVP */
-
-// define([module_name], [dependencies], module);
-(function (dependencies, module) {
+/*global jiodate*/
+(function (jIO, jiodate) {
   "use strict";
-  if (typeof define === 'function' && define.amd) {
-    return define(dependencies, module);
-  }
-  if (typeof exports === 'object') {
-    return module(require('jio'), require('jiodate'));
-  }
-  module(jIO, jiodate);
-}(['jio', 'jiodate', 'qunit'], function (jIO, jiodate) {
-  "use strict";
+  var test = QUnit.test,
+    stop = QUnit.stop,
+    start = QUnit.start,
+    deepEqual = QUnit.deepEqual,
+    module = QUnit.module,
+    noop = function () {
+      return; // use with RSVP.all
+    };
 
   module('Custom Key Queries with JIODate');
-
-  var noop = function () {
-    return; // use with RSVP.all
-  };
 
   test('Stock comparison operators with year precision', function () {
     var docList = function () {
@@ -172,7 +163,8 @@
         jIO.QueryFactory.create(qs, key_schema).
           exec(docList()).
           then(function (dl) {
-            deepEqual(dl, expected, "Match with '" + qs + "' (parsed query string)");
+            deepEqual(dl, expected, "Match with '" + qs +
+                                    "' (parsed query string)");
           })
       );
     });
@@ -190,7 +182,8 @@
           exec(docList()).
           then(function (dl) {
             deepEqual(dl, [
-            ], "Match with an invalid parsed string " + qs + " should return empty list but not raise errors");
+            ], "Match with an invalid parsed string " + qs +
+               " should return empty list but not raise errors");
           })
       );
     });
@@ -198,4 +191,4 @@
     RSVP.all(promise).then(noop).always(start);
   });
 
-}));
+}(jIO, jiodate));

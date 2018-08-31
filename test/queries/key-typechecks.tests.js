@@ -17,22 +17,12 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint indent: 2, maxlen: 90, nomen: true */
-/*global define, exports, require, module, jIO, window, test,
-  raises, ok, equal, deepEqual, sinon */
-
-// define([module_name], [dependencies], module);
-(function (dependencies, module) {
+(function (jIO) {
   "use strict";
-  if (typeof define === 'function' && define.amd) {
-    return define(dependencies, module);
-  }
-  if (typeof exports === 'object') {
-    return module(require('jio'));
-  }
-  module(jIO);
-}(['jio', 'qunit'], function (jIO) {
-  "use strict";
+  var test = QUnit.test,
+    equal = QUnit.equal,
+    ok = QUnit.ok,
+    module = QUnit.module;
 
   module('Key and key_schema objects validation');
 
@@ -53,7 +43,8 @@
     } catch (e) {
       equal(e.name, 'TypeError', 'wrong exception type');
       equal(e.message,
-         "QueryFactory.create(): Argument 1 is not a search text or a parsable object",
+         "QueryFactory.create(): Argument 1 is not a search text or a " +
+         "parsable object",
          'wrong exception message');
     }
 
@@ -139,4 +130,4 @@
     }
   });
 
-}));
+}(jIO));

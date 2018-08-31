@@ -17,28 +17,58 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint indent: 2, maxlen: 120, nomen: true, vars: true */
-/*global define, exports, require, module, jIO, window, test, ok,
-  equal, deepEqual, sinon, stop, start, RSVP, jiodate */
+/*global jiodate*/
+(function (jIO, jiodate) {
+  "use strict";
+  var test = QUnit.test,
+    stop = QUnit.stop,
+    start = QUnit.start,
+    equal = QUnit.equal,
+    deepEqual = QUnit.deepEqual,
+    module = QUnit.module,
+    noop = function () {
+      return; // use with RSVP.all
+    },
+    dateCast = function (obj) {
+      return new jiodate.JIODate(obj);
+    },
+    translationEqualityMatcher = function (data) {
+      return function (object_value, value) {
+        value = data[value];
+        return (object_value === value);
+      };
+    },
+    // This method is provided as an example.
+    // A more robust solution to manage diacritics is recommended for production
+    // environments, with unicode normalization, like (untested):
+    // https://github.com/walling/unorm/
+    accentFold = function (s) {
+      var map = [
+        [new RegExp('[àáâãäå]', 'gi'), 'a'],
+        [new RegExp('æ', 'gi'), 'ae'],
+        [new RegExp('ç', 'gi'), 'c'],
+        [new RegExp('[èéêë]', 'gi'), 'e'],
+        [new RegExp('[ìíîï]', 'gi'), 'i'],
+        [new RegExp('ñ', 'gi'), 'n'],
+        [new RegExp('[òóôõö]', 'gi'), 'o'],
+        [new RegExp('œ', 'gi'), 'oe'],
+        [new RegExp('[ùúûü]', 'gi'), 'u'],
+        [new RegExp('[ýÿ]', 'gi'), 'y']
+      ];
 
-// define([module_name], [dependencies], module);
-(function (dependencies, module) {
-  "use strict";
-  if (typeof define === 'function' && define.amd) {
-    return define(dependencies, module);
-  }
-  if (typeof exports === 'object') {
-    return module(require('jio'), require('jiodate'));
-  }
-  module(jIO, jiodate);
-}(['jio', 'jiodate', 'qunit'], function (jIO, jiodate) {
-  "use strict";
+      map.forEach(function (o) {
+        var rep = function (match) {
+          if (match.toUpperCase() === match) {
+            return o[1].toUpperCase();
+          }
+          return o[1];
+        };
+        s = s.replace(o[0], rep);
+      });
+      return s;
+    };
 
   module('Custom Key Queries');
-
-  var noop = function () {
-    return; // use with RSVP.all
-  };
 
   test('Simple Key with read_from', function () {
     var docList = function () {
@@ -86,18 +116,13 @@
           deepEqual(dl, [
             {'identifier': 'a'},
             {'identifier': 'A'}
-          ], 'It should be possible to query with a case-insensitive alias key');
+          ], 'It should be possible to query with a case-insensitive alias ' +
+             'key');
         })
     );
 
     RSVP.all(promise).then(noop).always(start);
   });
-
-
-  var dateCast = function (obj) {
-    return new jiodate.JIODate(obj);
-  };
-
 
   test('Simple Key with date casting', function () {
     var docList = function () {
@@ -109,48 +134,45 @@
         {'identifier': 'c', 'date': '2013-03-03'},
         {'identifier': 'd', 'date': '2013-04-04'}
       ];
-    }, promise = [];
-
-    var sameDay = function (a, b) {
-      return (
-        (a.mom.year() === b.mom.year()) &&
-          (a.mom.month() === b.mom.month()) &&
-            (a.mom.date() === b.mom.date())
-      );
-    };
-
-    var sameMonth = function (a, b) {
-      return (
-        (a.mom.year() === b.mom.year()) &&
-          (a.mom.month() === b.mom.month())
-      );
-    };
-
-    var sameYear = function (a, b) {
-      return (a.mom.year() === b.mom.year());
-    };
-
-    var keys = {
-      day: {
-        read_from: 'date',
-        cast_to: dateCast,
-        equal_match: sameDay
+    },
+      promise = [],
+      sameDay = function (a, b) {
+        return (
+          (a.mom.year() === b.mom.year()) &&
+            (a.mom.month() === b.mom.month()) &&
+              (a.mom.date() === b.mom.date())
+        );
       },
-      month: {
-        read_from: 'date',
-        cast_to: dateCast,
-        equal_match: sameMonth
+      sameMonth = function (a, b) {
+        return (
+          (a.mom.year() === b.mom.year()) &&
+            (a.mom.month() === b.mom.month())
+        );
       },
-      year: {
-        read_from: 'date',
-        cast_to: dateCast,
-        equal_match: sameYear
+      sameYear = function (a, b) {
+        return (a.mom.year() === b.mom.year());
       },
-      broken: {
-        read_from: 'date',
-        cast_to: function () { throw new Error('Broken!'); }
-      }
-    };
+      keys = {
+        day: {
+          read_from: 'date',
+          cast_to: dateCast,
+          equal_match: sameDay
+        },
+        month: {
+          read_from: 'date',
+          cast_to: dateCast,
+          equal_match: sameMonth
+        },
+        year: {
+          read_from: 'date',
+          cast_to: dateCast,
+          equal_match: sameYear
+        },
+        broken: {
+          read_from: 'date',
+          cast_to: function () { throw new Error('Broken!'); }
+        }
+      };
 
     stop();
 
@@ -206,7 +228,8 @@
         exec(docList()).
         then(function (dl) {
           deepEqual(dl.length, 0,
-                    'Constructors that throw exceptions should not break a query, but silently fail comparisons');
+                    'Constructors that throw exceptions should not break a ' +
+                    'query, but silently fail comparisons');
         })
     );
 
@@ -482,15 +505,6 @@
     RSVP.all(promise).then(noop).always(start);
   });
 
-
-  var translationEqualityMatcher = function (data) {
-    return function (object_value, value) {
-      value = data[value];
-      return (object_value === value);
-    };
-  };
-
-
   test('Simple Key with translation lookup', function () {
     var docList = function () {
       return [
@@ -518,7 +532,8 @@
         then(function (dl) {
           deepEqual(dl, [
             {'identifier': '1', 'state': 'open'}
-          ], 'It should be possible to look for a translated string with a custom match function');
+          ], 'It should be possible to look for a translated string with a ' +
+             'custom match function');
         })
     );
 
@@ -534,7 +549,8 @@
         then(function (dl) {
           deepEqual(dl, [
             {'identifier': '1', 'state': 'open'}
-          ], 'It should be possible to look for a translated string with operator =');
+          ], 'It should be possible to look for a translated string with ' +
+             'operator =');
         })
     );
 
@@ -548,41 +564,12 @@
 //    }).exec(doc_list);
 //    deepEqual(doc_list, [
 //      {'identifier': '2', 'state': 'closed'}
-//    ], 'It should be possible to look for a translated string with operator !=');
+//    ], 'It should be possible to look for a translated string with ' +
+//      'operator !=');
 
     RSVP.all(promise).then(noop).always(start);
   });
 
-
-  // This method is provided as an example.
-  // A more robust solution to manage diacritics is recommended for production
-  // environments, with unicode normalization, like (untested):
-  // https://github.com/walling/unorm/
-  var accentFold = function (s) {
-    var map = [
-      [new RegExp('[àáâãäå]', 'gi'), 'a'],
-      [new RegExp('æ', 'gi'), 'ae'],
-      [new RegExp('ç', 'gi'), 'c'],
-      [new RegExp('[èéêë]', 'gi'), 'e'],
-      [new RegExp('[ìíîï]', 'gi'), 'i'],
-      [new RegExp('ñ', 'gi'), 'n'],
-      [new RegExp('[òóôõö]', 'gi'), 'o'],
-      [new RegExp('œ', 'gi'), 'oe'],
-      [new RegExp('[ùúûü]', 'gi'), 'u'],
-      [new RegExp('[ýÿ]', 'gi'), 'y']
-    ];
-
-    map.forEach(function (o) {
-      var rep = function (match) {
-        if (match.toUpperCase() === match) {
-          return o[1].toUpperCase();
-        }
-        return o[1];
-      };
-      s = s.replace(o[0], rep);
-    });
-    return s;
-  };
 
   test('Accent folding', function () {
     equal(accentFold('àéîöùç'), 'aeiouc');
@@ -629,4 +616,4 @@
     RSVP.all(promise).then(noop).always(start);
   });
 
-}));
+}(jIO, jiodate));

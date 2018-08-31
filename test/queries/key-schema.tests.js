@@ -17,38 +17,29 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint indent: 2, maxlen: 100, nomen: true, vars: true */
-/*global define, exports, require, module, jIO, window, test, ok,
-  deepEqual, sinon, start, stop, RSVP, jiodate */
-
-// define([module_name], [dependencies], module);
-(function (dependencies, module) {
+/*global jiodate*/
+(function (jIO, jiodate) {
   "use strict";
-  if (typeof define === 'function' && define.amd) {
-    return define(dependencies, module);
-  }
-  if (typeof exports === 'object') {
-    return module(require('jio'), require('jiodate'));
-  }
-  module(jIO, jiodate);
-}(['jio', 'jiodate', 'qunit'], function (jIO, jiodate) {
-  "use strict";
+  var test = QUnit.test,
+    stop = QUnit.stop,
+    start = QUnit.start,
+    deepEqual = QUnit.deepEqual,
+    module = QUnit.module,
+    noop = function () {
+      return; // use with RSVP.all
+    },
+    translationEqualityMatcher = function (data) {
+      return function (object_value, value) {
+        value = data[value];
+        return (object_value === value);
+      };
+    },
+    key_schema;
 
   module('Custom Key Queries with Schema');
 
-  var noop = function () {
-    return; // use with RSVP.all
-  };
-
-  var translationEqualityMatcher = function (data) {
-    return function (object_value, value) {
-      value = data[value];
-      return (object_value === value);
-    };
-  };
-
   /*jslint unparam: true*/
-  var key_schema = {
+  key_schema = {
     cast_lookup: {
       dateType: function (obj) {
         return new jiodate.JIODate(obj);
@@ -330,7 +321,8 @@
         then(function (dl) {
           deepEqual(dl, [
             {'identifier': '1', 'state': 'open'}
-          ], 'Key Schema: It should be possible to look for a translated string');
+          ], 'Key Schema: It should be possible to look for a translated ' +
+             'string');
         })
     );
 
@@ -345,7 +337,8 @@
         then(function (dl) {
           deepEqual(dl, [
             {'identifier': '1', 'state': 'open'}
-          ], 'Key Schema: It should be possible to look for a translated string with operator =');
+          ], 'Key Schema: It should be possible to look for a translated ' +
+             'string with operator =');
         })
     );
 
@@ -360,9 +353,10 @@
 //    }).exec(doc_list);
 //    deepEqual(doc_list, [
 //      {'identifier': '2', 'state': 'closed'}
-//    ], 'Key Schema: It should be possible to look for a translated string with operator !=');
+//    ], 'Key Schema: It should be possible to look for a translated ' +
+//       'string with operator !=');
 
     RSVP.all(promise).then(noop).always(start);
   });
 
-}));
+}(jIO, jiodate));

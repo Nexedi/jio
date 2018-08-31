@@ -17,22 +17,16 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*jslint indent: 2, maxlen: 80, nomen: true */
-/*global define, exports, require, module, jIO, window, test, ok,
-  deepEqual, stop, start, expect */
-
-// define([module_name], [dependencies], module);
-(function (dependencies, module) {
+/*global jiodate*/
+(function (jIO, jiodate) {
   "use strict";
-  if (typeof define === 'function' && define.amd) {
-    return define(dependencies, module);
-  }
-  if (typeof exports === 'object') {
-    return module(require('jio'));
-  }
-  module(jIO);
-}(['jio', 'qunit'], function (jIO) {
-  "use strict";
+  var test = QUnit.test,
+    stop = QUnit.stop,
+    start = QUnit.start,
+    deepEqual = QUnit.deepEqual,
+    expect = QUnit.expect,
+    ok = QUnit.ok,
+    module = QUnit.module;
 
   module('Query');
 
@@ -572,7 +566,7 @@
             },
             cast_lookup: {
               dateType: function (str) {
-                return window.jiodate.JIODate(new Date(str).toISOString());
+                return jiodate.JIODate(new Date(str).toISOString());
               }
             }
           };
@@ -655,4 +649,4 @@
       }).always(start);
   });
 
-}));
+}(jIO, jiodate));
