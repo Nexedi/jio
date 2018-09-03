@@ -29,6 +29,8 @@ EXTERNALDIR = external
 VERSION = 3.32.1
 JIOVERSION = ${DISTDIR}/jio-v${VERSION}.js
 JIOLATEST = ${DISTDIR}/jio-latest.js
+JIONODEVERSION = ${DISTDIR}/jio-v${VERSION}-node.js
+JIONODELATEST = ${DISTDIR}/jio-latest-node.js
 
 all: fetch lint build
 
@@ -77,6 +79,21 @@ ${LINTDIR}/${EXAMPLEDIR}/%.js: ${EXAMPLEDIR}/%.js
 	${JSLINT} ${LINTOPTS} --predef RSVP --predef window --predef QUnit --predef jIO --predef rJS $<
 	@cat $< > $@
 
+${LINTDIR}/node/%.js: ${SRCDIR}/node/%.js
+	@mkdir -p $(@D)
+	${JSLINT} ${LINTOPTS} --nomen true $<
+	@cat $< > $@
+
+${LINTDIR}/${TESTDIR}/%.js: ${TESTDIR}/%.js
+	@mkdir -p $(@D)
+	${JSLINT} ${LINTOPTS} $<
+	@cat $< > $@
+
+${LINTDIR}/${TESTDIR}/node/%.js: ${TESTDIR}/node/%.js
+	@mkdir -p $(@D)
+	${JSLINT} ${LINTOPTS} $<
+	@cat $< > $@
+
 #############################################
 # Check test files
 #############################################
@@ -88,12 +105,15 @@ lint: $(patsubst ${TESTDIR}/jio.storage/%.js, ${LINTDIR}/${TESTDIR}/jio.storage/
 	${LINTDIR}/queries/query.js \
 	${LINTDIR}/jio.date/jiodate.js \
 	${LINTDIR}/jio.js \
+	${LINTDIR}/node/jio.js \
+	${LINTDIR}/${TESTDIR}/node.js \
+	${LINTDIR}/${TESTDIR}/node/node-require.js \
 	$(patsubst ${SRCDIR}/jio.storage/%.js, ${LINTDIR}/jio.storage/%.js, $(wildcard ${SRCDIR}/jio.storage/*.js))
 
 #############################################
 # Build
 #############################################
-build: ${JIOLATEST}
+build: ${JIOLATEST} ${JIONODELATEST}
 
 ${JIOLATEST}: ${JIOVERSION}
 	@mkdir -p $(@D)
@@ -131,6 +151,45 @@ ${JIOVERSION}: ${EXTERNALDIR}/URI.js \
 	${SRCDIR}/jio.storage/websqlstorage.js \
 	${SRCDIR}/jio.storage/fbstorage.js \
 	${SRCDIR}/jio.storage/cloudooostorage.js
+	@mkdir -p $(@D)
+	cat $^ > $@
+
+#############################################
+# Node
+#############################################
+${JIONODELATEST}: ${JIONODEVERSION}
+	@mkdir -p $(@D)
+	cp $< $@
+
+${JIONODEVERSION}: ${SRCDIR}/node/jio-start.js \
+	${EXTERNALDIR}/rsvp-2.0.4.js \
+	${EXTERNALDIR}/moment.js \
+	${EXTERNALDIR}/URI.js \
+	${EXTERNALDIR}/uritemplate.js \
+	${EXTERNALDIR}/rusha.js \
+	${SRCDIR}/node/jio-external.js \
+	${EXTERNALDIR}/xhr2.js \
+	${SRCDIR}/queries/parser-begin.js \
+	${SRCDIR}/queries/build/parser.js \
+	${SRCDIR}/queries/parser-end.js \
+	${SRCDIR}/queries/query.js \
+	${SRCDIR}/node/jio-compat.js \
+	${SRCDIR}/jio.date/jiodate.js \
+	${SRCDIR}/jio.js \
+	${SRCDIR}/node/jio.js \
+	${SRCDIR}/jio.storage/replicatestorage.js \
+	${SRCDIR}/jio.storage/shastorage.js \
+	${SRCDIR}/jio.storage/uuidstorage.js \
+	${SRCDIR}/jio.storage/memorystorage.js \
+	${SRCDIR}/jio.storage/dropboxstorage.js \
+	${SRCDIR}/jio.storage/gdrivestorage.js \
+	${SRCDIR}/jio.storage/unionstorage.js \
+	${SRCDIR}/jio.storage/erp5storage.js \
+	${SRCDIR}/jio.storage/querystorage.js \
+	${SRCDIR}/jio.storage/drivetojiomapping.js \
+	${SRCDIR}/jio.storage/documentstorage.js \
+	${SRCDIR}/jio.storage/fbstorage.js \
+	${SRCDIR}/node/jio-end.js
 	@mkdir -p $(@D)
 	cat $^ > $@
 
@@ -190,7 +249,7 @@ ${EXTERNALDIR}/renderjs-latest.js:
 	@mkdir -p $(@D)
 	curl -s -o $@ https://lab.nexedi.com/nexedi/renderjs/raw/master/dist/renderjs-latest.js
 
-.PHONY: clean ${JIOVERSION}
+.PHONY: clean ${JIOVERSION} ${JIONODEVERSION}
 
 clean:
 	rm -rf ${LINTDIR}
