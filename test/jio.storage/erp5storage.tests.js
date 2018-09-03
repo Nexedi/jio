@@ -67,6 +67,21 @@
     equal(jio.__type, "erp5");
     deepEqual(jio.__storage._url, domain);
     deepEqual(jio.__storage._default_view_reference, "bar_view");
+    equal(jio.__storage._access_token, undefined);
+  });
+
+  test("Storage store access_token", function () {
+    var jio = jIO.createJIO({
+      type: "erp5",
+      url: domain,
+      default_view_reference: "bar_view",
+      access_token: 'foo'
+    });
+
+    equal(jio.__type, "erp5");
+    deepEqual(jio.__storage._url, domain);
+    deepEqual(jio.__storage._default_view_reference, "bar_view");
+    equal(jio.__storage._access_token, 'foo');
   });
 
   /////////////////////////////////////////////////////////////////
@@ -120,6 +135,75 @@
       });
   });
 
+  test("get ERP5 document with access token", function () {
+    var id = "person_module/20150119_azerty",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id) + "&view=bar_view",
+      document_hateoas = JSON.stringify({
+        // Kept property
+        "title": "foo",
+        // Remove all _ properties
+        "_bar": "john doo",
+        "_links": {
+          type: {
+            name: "Person"
+          }
+        },
+        "_embedded": {
+          "_view": {
+            form_id: {
+              key: "form_id",
+              "default": "Base_view"
+            }
+          }
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, document_hateoas]);
+
+    stop();
+    expect(12);
+
+    this.jio = jIO.createJIO({
+      type: "erp5",
+      url: domain,
+      default_view_reference: "bar_view",
+      access_token: 'footoken'
+    });
+
+    this.jio.get(id)
+      .then(function (result) {
+        deepEqual(result, {
+          portal_type: "Person"
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, false);
+        deepEqual(server.requests[0].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, traverse_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, false);
+        deepEqual(server.requests[1].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("get ERP5 document with empty form", function () {
     var id = "person_module/20150119_azerty",
       traverse_url = domain + "?mode=traverse&relative_url=" +
@@ -153,7 +237,7 @@
     }, document_hateoas]);
 
     stop();
-    expect(10);
+    expect(12);
 
     this.jio.get(id)
       .then(function (result) {
@@ -165,10 +249,12 @@
         equal(server.requests[0].url, domain);
         equal(server.requests[0].requestBody, undefined);
         equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {});
         equal(server.requests[1].method, "GET");
         equal(server.requests[1].url, traverse_url);
         equal(server.requests[1].requestBody, undefined);
         equal(server.requests[1].withCredentials, true);
+        deepEqual(server.requests[1].requestHeaders, {});
       })
       .fail(function (error) {
         ok(false, error);
@@ -335,6 +421,66 @@
       });
   });
 
+  test("allAttachments ERP5 document with access token", function () {
+    var id = "person_module/20150119_azerty",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id),
+      document_hateoas = JSON.stringify({
+        // Kept property
+        "title": "foo",
+        // Remove all _ properties
+        "_bar": "john doo",
+        "_links": {
+          type: {
+            name: "Person"
+          }
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, document_hateoas]);
+
+    stop();
+    expect(12);
+
+    this.jio = jIO.createJIO({
+      type: "erp5",
+      url: domain,
+      access_token: 'footoken'
+    });
+
+    this.jio.allAttachments(id)
+      .then(function (result) {
+        deepEqual(result, {
+          links: {}
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, false);
+        deepEqual(server.requests[0].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, traverse_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, false);
+        deepEqual(server.requests[1].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("allAttachments ERP5 document", function () {
     var id = "person_module/20150119_azerty",
       traverse_url = domain + "?mode=traverse&relative_url=" +
@@ -360,7 +506,7 @@
     }, document_hateoas]);
 
     stop();
-    expect(10);
+    expect(12);
 
     this.jio.allAttachments(id)
       .then(function (result) {
@@ -372,10 +518,12 @@
         equal(server.requests[0].url, domain);
         equal(server.requests[0].requestBody, undefined);
         equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {});
         equal(server.requests[1].method, "GET");
         equal(server.requests[1].url, traverse_url);
         equal(server.requests[1].requestBody, undefined);
         equal(server.requests[1].withCredentials, true);
+        deepEqual(server.requests[1].requestHeaders, {});
       })
       .fail(function (error) {
         ok(false, error);
@@ -489,6 +637,65 @@
       });
   });
 
+
+  test("putAttachment submit ERP5 form with access token", function () {
+    var submit_url = domain + "/Form_view/Base_edit",
+      id = "fake",
+      form_json = {
+        "my_title": "fooé",
+        "your_reference": "barè"
+        // XXX Check FileUpload
+      },
+      context = this,
+      server = this.server;
+
+    this.server.respondWith("POST", submit_url, [204, {
+      "Content-Type": "text/xml"
+    }, ""]);
+
+    stop();
+    expect(13);
+
+    this.jio = jIO.createJIO({
+      type: "erp5",
+      url: domain,
+      access_token: 'footoken'
+    });
+
+    this.jio.putAttachment(
+      id,
+      submit_url,
+      new Blob([JSON.stringify(form_json)])
+    )
+      .then(function () {
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, submit_url);
+        equal(server.requests[0].status, 204);
+        equal(server.requests[0].responseType, "blob");
+        ok(server.requests[0].requestBody instanceof FormData);
+
+        ok(context.spy.calledTwice, "FormData.append count " +
+           context.spy.callCount);
+        equal(context.spy.firstCall.args[0], "my_title", "First append call");
+        equal(context.spy.firstCall.args[1], "fooé", "First append call");
+        equal(context.spy.secondCall.args[0], "your_reference",
+              "Second append call");
+        equal(context.spy.secondCall.args[1], "barè", "Second append call");
+
+        equal(server.requests[0].withCredentials, false);
+        deepEqual(server.requests[0].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken',
+                   'Content-Type': 'text/plain;charset=utf-8'});
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("putAttachment submit ERP5 form", function () {
     var submit_url = domain + "/Form_view/Base_edit",
       id = "fake",
@@ -505,7 +712,7 @@
     }, ""]);
 
     stop();
-    expect(12);
+    expect(13);
 
     this.jio.putAttachment(
       id,
@@ -529,6 +736,8 @@
         equal(context.spy.secondCall.args[1], "barè", "Second append call");
 
         equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders,
+                  {'Content-Type': 'text/plain;charset=utf-8'});
       })
       .fail(function (error) {
         ok(false, error);
@@ -712,6 +921,72 @@
       });
   });
 
+  test("getAttachment: view uses default form with access token", function () {
+    var id = "person_module/1",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id) + "&view=foo_view",
+      document_hateoas = JSON.stringify({
+        "title": "foo",
+        "_bar": "john doo",
+        "_embedded": "youhou",
+        "_links": {
+          type: {
+            name: "Person"
+          }
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, document_hateoas]);
+
+    stop();
+    expect(14);
+
+    this.jio = jIO.createJIO({
+      type: "erp5",
+      url: domain,
+      default_view_reference: "foo_view",
+      access_token: 'footoken'
+    });
+
+    this.jio.getAttachment(id, "view")
+      .then(function (result) {
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, false);
+        deepEqual(server.requests[0].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, traverse_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, false);
+        deepEqual(server.requests[1].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+
+        ok(result instanceof Blob, "Data is Blob");
+        deepEqual(result.type, "application/hal+json", "Check mimetype");
+        return jIO.util.readBlobAsText(result);
+      })
+      .then(function (result) {
+        var expected = JSON.parse(document_hateoas);
+        deepEqual(JSON.parse(result.target.result), expected,
+              "Attachment correctly fetched");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("getAttachment: view uses default form", function () {
     var id = "person_module/1",
       traverse_url = domain + "?mode=traverse&relative_url=" +
@@ -736,7 +1011,7 @@
     }, document_hateoas]);
 
     stop();
-    expect(12);
+    expect(14);
 
     this.jio.getAttachment(id, "view")
       .then(function (result) {
@@ -745,10 +1020,12 @@
         equal(server.requests[0].url, domain);
         equal(server.requests[0].requestBody, undefined);
         equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {});
         equal(server.requests[1].method, "GET");
         equal(server.requests[1].url, traverse_url);
         equal(server.requests[1].requestBody, undefined);
         equal(server.requests[1].withCredentials, true);
+        deepEqual(server.requests[1].requestHeaders, {});
 
         ok(result instanceof Blob, "Data is Blob");
         deepEqual(result.type, "application/hal+json", "Check mimetype");
@@ -1035,6 +1312,93 @@
     }
   });
 
+
+  test("get all documents with access token", function () {
+    var search_url = domain + "?mode=search&select_list=title" +
+                     "&select_list=reference",
+      search_hateoas = JSON.stringify({
+
+        "_embedded": {
+          "contents": [
+            {
+              "_links": {
+                "self": {
+                  "href": "urn:jio:get:person_module/2"
+                }
+              },
+              "reference": "foo2",
+              "title": "bar2"
+            },
+            {
+              "_links": {
+                "self": {
+                  "href": "urn:jio:get:organisation_module/3"
+                }
+              },
+              "title": "bar3"
+            }
+          ]
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, search_hateoas]);
+
+    stop();
+    expect(12);
+
+    this.jio = jIO.createJIO({
+      type: "erp5",
+      url: domain,
+      access_token: 'footoken'
+    });
+
+    this.jio.allDocs()
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [{
+              id: "person_module/2",
+              value: {
+                reference: "foo2",
+                title: "bar2"
+              }
+            }, {
+              id: "organisation_module/3",
+              value: {
+                title: "bar3"
+              }
+            }],
+            total_rows: 2
+          }
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, false);
+        deepEqual(server.requests[0].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, search_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, false);
+        deepEqual(server.requests[1].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("get all documents", function () {
     var search_url = domain + "?mode=search&select_list=title" +
                      "&select_list=reference",
@@ -1072,7 +1436,7 @@
     }, search_hateoas]);
 
     stop();
-    expect(10);
+    expect(12);
 
     this.jio.allDocs()
       .then(function (result) {
@@ -1098,10 +1462,12 @@
         equal(server.requests[0].url, domain);
         equal(server.requests[0].requestBody, undefined);
         equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {});
         equal(server.requests[1].method, "GET");
         equal(server.requests[1].url, search_url);
         equal(server.requests[1].requestBody, undefined);
         equal(server.requests[1].withCredentials, true);
+        deepEqual(server.requests[1].requestHeaders, {});
       })
       .fail(function (error) {
         ok(false, error);
@@ -1723,6 +2089,145 @@
       });
   });
 
+  test("put ERP5 document with access token", function () {
+    var id = "person_module/20150119_azerty",
+      context = this,
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id) + "&view=bar_view",
+      put_url = domain + "azertytrea?f=g",
+      document_hateoas = JSON.stringify({
+        // Kept property
+        "title": "foo",
+        // Remove all _ properties
+        "_bar": "john doo",
+        "_links": {
+          type: {
+            name: "Person"
+          }
+        },
+        "_embedded": {
+          "_view": {
+            form_id: {
+              key: "form_id",
+              "default": "Base_view"
+            },
+            my_title: {
+              key: "field_my_title",
+              "default": "foo",
+              editable: true,
+              type: "StringField"
+            },
+            my_id: {
+              key: "field_my_id",
+              "default": "",
+              editable: true,
+              type: "StringField"
+            },
+            my_title_non_editable: {
+              key: "field_my_title_non_editable",
+              "default": "foo",
+              editable: false,
+              type: "StringField"
+            },
+            my_start_date: {
+              key: "field_my_start_date",
+              "default": "foo",
+              editable: true,
+              type: "DateTimeField"
+            },
+            your_reference: {
+              key: "field_your_reference",
+              "default": "bar",
+              editable: true,
+              type: "StringField"
+            },
+            your_reference_non_editable: {
+              key: "field_your_reference_non_editable",
+              "default": "bar",
+              editable: false,
+              type: "StringField"
+            },
+            sort_index: {
+              key: "field_sort_index",
+              "default": "foobar",
+              editable: true,
+              type: "StringField"
+            },
+            "_actions": {
+              put: {
+                href: put_url
+              }
+            }
+          }
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, document_hateoas]);
+    this.server.respondWith("POST", put_url, [204, {
+      "Content-Type": "text/html"
+    }, ""]);
+
+    stop();
+    expect(26);
+
+    this.jio = jIO.createJIO({
+      type: "erp5",
+      url: domain,
+      default_view_reference: "bar_view",
+      access_token: 'footoken'
+    });
+
+    this.jio.put(id, {title: "barè", id: "foo", reference: "bar2"})
+      .then(function (result) {
+        equal(result, id);
+        equal(server.requests.length, 3);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, false);
+        deepEqual(server.requests[0].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, traverse_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, false);
+        deepEqual(server.requests[1].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+        equal(server.requests[2].method, "POST");
+        equal(server.requests[2].url, put_url);
+        ok(server.requests[2].requestBody instanceof FormData);
+        equal(server.requests[2].withCredentials, false);
+        deepEqual(server.requests[2].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken',
+                   'Content-Type': 'text/plain;charset=utf-8'});
+
+        equal(context.spy.callCount, 4, "FormData.append count");
+        equal(context.spy.firstCall.args[0], "form_id", "First append call");
+        equal(context.spy.firstCall.args[1], "Base_view", "First append call");
+        equal(context.spy.secondCall.args[0], "field_my_title",
+              "Second append call");
+        equal(context.spy.secondCall.args[1], "barè", "Second append call");
+        equal(context.spy.thirdCall.args[0], "field_my_id",
+              "Third append call");
+        equal(context.spy.thirdCall.args[1], "foo", "Third append call");
+        equal(context.spy.getCall(3).args[0], "field_your_reference",
+              "Fourth append call");
+        equal(context.spy.getCall(3).args[1], "bar2", "Fourth append call");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("put ERP5 document", function () {
     var id = "person_module/20150119_azerty",
       context = this,
@@ -1808,7 +2313,7 @@
     }, ""]);
 
     stop();
-    expect(23);
+    expect(26);
 
     this.jio.put(id, {title: "barè", id: "foo", reference: "bar2"})
       .then(function (result) {
@@ -1818,14 +2323,18 @@
         equal(server.requests[0].url, domain);
         equal(server.requests[0].requestBody, undefined);
         equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {});
         equal(server.requests[1].method, "GET");
         equal(server.requests[1].url, traverse_url);
         equal(server.requests[1].requestBody, undefined);
         equal(server.requests[1].withCredentials, true);
+        deepEqual(server.requests[1].requestHeaders, {});
         equal(server.requests[2].method, "POST");
         equal(server.requests[2].url, put_url);
         ok(server.requests[2].requestBody instanceof FormData);
         equal(server.requests[2].withCredentials, true);
+        deepEqual(server.requests[2].requestHeaders,
+                  {'Content-Type': 'text/plain;charset=utf-8'});
 
         equal(context.spy.callCount, 4, "FormData.append count");
         equal(context.spy.firstCall.args[0], "form_id", "First append call");
@@ -2042,6 +2551,176 @@
     }
   });
 
+  test("post ERP5 document with access token", function () {
+    var id = "person_module/20150119_azerty",
+      context = this,
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id) + "&view=bar_view",
+      put_url = domain + "azertytrea?f=g",
+      document_hateoas = JSON.stringify({
+        // Kept property
+        "title": "foo",
+        // Remove all _ properties
+        "_bar": "john doo",
+        "_links": {
+          type: {
+            name: "Person"
+          }
+        },
+        "_embedded": {
+          "_view": {
+            form_id: {
+              key: "form_id",
+              "default": "Base_view"
+            },
+            my_title: {
+              key: "field_my_title",
+              "default": "foo",
+              editable: true,
+              type: "StringField"
+            },
+            my_id: {
+              key: "field_my_id",
+              "default": "",
+              editable: true,
+              type: "StringField"
+            },
+            my_title_non_editable: {
+              key: "field_my_title_non_editable",
+              "default": "foo",
+              editable: false,
+              type: "StringField"
+            },
+            my_start_date: {
+              key: "field_my_start_date",
+              "default": "foo",
+              editable: true,
+              type: "DateTimeField"
+            },
+            your_reference: {
+              key: "field_your_reference",
+              "default": "bar",
+              editable: true,
+              type: "StringField"
+            },
+            sort_index: {
+              key: "field_sort_index",
+              "default": "foobar",
+              editable: true,
+              type: "StringField"
+            },
+            "_actions": {
+              put: {
+                href: put_url
+              }
+            }
+          }
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, document_hateoas]);
+    this.server.respondWith("POST", put_url, [204, {
+      "Content-Type": "text/html"
+    }, ""]);
+    this.server.respondWith("POST", add_url, [201, {
+      "Content-Type": "text/html",
+      "X-Location": "urn:jio:get:" + id
+    }, ""]);
+
+    stop();
+    expect(40);
+
+    this.jio = jIO.createJIO({
+      type: "erp5",
+      url: domain,
+      default_view_reference: "bar_view",
+      access_token: 'footoken'
+    });
+
+    this.jio.post({
+      title: "barè",
+      id: "foo",
+      portal_type: "Foo",
+      parent_relative_url: "foo_module",
+      reference: "bar2"
+    })
+      .then(function (result) {
+        equal(result, id);
+        equal(server.requests.length, 5);
+
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, false);
+        deepEqual(server.requests[0].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+
+        equal(server.requests[1].method, "POST");
+        equal(server.requests[1].url, add_url);
+        ok(server.requests[1].requestBody instanceof FormData);
+        equal(server.requests[1].withCredentials, false);
+        deepEqual(server.requests[1].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken',
+                   'Content-Type': 'text/plain;charset=utf-8'});
+
+        equal(server.requests[2].method, "GET");
+        equal(server.requests[2].url, domain);
+        equal(server.requests[2].requestBody, undefined);
+        equal(server.requests[2].withCredentials, false);
+        deepEqual(server.requests[2].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+
+        equal(server.requests[3].method, "GET");
+        equal(server.requests[3].url, traverse_url);
+        equal(server.requests[3].requestBody, undefined);
+        equal(server.requests[3].withCredentials, false);
+        deepEqual(server.requests[3].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken'});
+
+        equal(server.requests[4].method, "POST");
+        equal(server.requests[4].url, put_url);
+        ok(server.requests[4].requestBody instanceof FormData);
+        equal(server.requests[4].withCredentials, false);
+        deepEqual(server.requests[4].requestHeaders,
+                  {'X-ACCESS-TOKEN': 'footoken',
+                   'Content-Type': 'text/plain;charset=utf-8'});
+
+        equal(context.spy.callCount, 6, "FormData.append count");
+
+        equal(context.spy.firstCall.args[0], "portal_type",
+              "First append call");
+        equal(context.spy.firstCall.args[1], "Foo", "First append call");
+        equal(context.spy.secondCall.args[0], "parent_relative_url",
+              "Second append call");
+        equal(context.spy.secondCall.args[1], "foo_module",
+              "Second append call");
+
+        equal(context.spy.thirdCall.args[0], "form_id", "Third append call");
+        equal(context.spy.thirdCall.args[1], "Base_view", "Third append call");
+        equal(context.spy.getCall(3).args[0], "field_my_title",
+              "Fourthappend call");
+        equal(context.spy.getCall(3).args[1], "barè", "Fourth append call");
+        equal(context.spy.getCall(4).args[0], "field_my_id",
+              "Fifth append call");
+        equal(context.spy.getCall(4).args[1], "foo", "Fifth append call");
+        equal(context.spy.getCall(5).args[0], "field_your_reference",
+              "Sixth append call");
+        equal(context.spy.getCall(5).args[1], "bar2", "Sixth append call");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("post ERP5 document", function () {
     var id = "person_module/20150119_azerty",
       context = this,
@@ -2125,7 +2804,7 @@
     }, ""]);
 
     stop();
-    expect(35);
+    expect(40);
 
     this.jio.post({
       title: "barè",
@@ -2142,26 +2821,33 @@
         equal(server.requests[0].url, domain);
         equal(server.requests[0].requestBody, undefined);
         equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {});
 
         equal(server.requests[1].method, "POST");
         equal(server.requests[1].url, add_url);
         ok(server.requests[1].requestBody instanceof FormData);
         equal(server.requests[1].withCredentials, true);
+        deepEqual(server.requests[1].requestHeaders,
+                  {'Content-Type': 'text/plain;charset=utf-8'});
 
         equal(server.requests[2].method, "GET");
         equal(server.requests[2].url, domain);
         equal(server.requests[2].requestBody, undefined);
         equal(server.requests[2].withCredentials, true);
+        deepEqual(server.requests[2].requestHeaders, {});
 
         equal(server.requests[3].method, "GET");
         equal(server.requests[3].url, traverse_url);
         equal(server.requests[3].requestBody, undefined);
         equal(server.requests[3].withCredentials, true);
+        deepEqual(server.requests[3].requestHeaders, {});
 
         equal(server.requests[4].method, "POST");
         equal(server.requests[4].url, put_url);
         ok(server.requests[4].requestBody instanceof FormData);
         equal(server.requests[4].withCredentials, true);
+        deepEqual(server.requests[4].requestHeaders,
+                  {'Content-Type': 'text/plain;charset=utf-8'});
 
         equal(context.spy.callCount, 6, "FormData.append count");
 

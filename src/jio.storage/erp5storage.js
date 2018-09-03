@@ -31,15 +31,32 @@
            SimpleQuery, ComplexQuery) {
   "use strict";
 
+  function ajax(storage, options) {
+    if (options === undefined) {
+      options = {};
+    }
+    if (options.xhrFields === undefined) {
+      options.xhrFields = {};
+    }
+    if (storage._access_token !== undefined) {
+      if (options.headers === undefined) {
+        options.headers = {};
+      }
+      options.headers['X-ACCESS-TOKEN'] = storage._access_token;
+      options.xhrFields.withCredentials = false;
+    } else {
+      options.xhrFields.withCredentials = true;
+    }
+
+    return jIO.util.ajax(options);
+  }
+
   function getSiteDocument(storage) {
     return new RSVP.Queue()
       .push(function () {
-        return jIO.util.ajax({
+        return ajax(storage, {
           "type": "GET",
-          "url": storage._url,
-          "xhrFields": {
-            withCredentials: true
-          }
+          "url": storage._url
         });
       })
       .push(function (event) {
@@ -56,16 +73,13 @@
         // XXX need to get modified metadata
         return new RSVP.Queue()
           .push(function () {
-            return jIO.util.ajax({
+            return ajax(storage, {
               "type": "GET",
               "url": UriTemplate.parse(site_hal._links.traverse.href)
                                 .expand({
                   relative_url: id,
                   view: options._view
-                }),
-              "xhrFields": {
-                withCredentials: true
-              }
+                })
             });
           })
           .push(undefined, function (error) {
@@ -160,6 +174,9 @@
     }
     this._url = spec.url;
     this._default_view_reference = spec.default_view_reference;
+    if (spec.hasOwnProperty('access_token')) {
+      this._access_token = spec.access_token;
+    }
   }
 
   function convertJSONToGet(json) {
@@ -192,13 +209,10 @@
         var form_data = new FormData();
         form_data.append("portal_type", data.portal_type);
         form_data.append("parent_relative_url", data.parent_relative_url);
-        return jIO.util.ajax({
+        return ajax(context, {
           type: "POST",
           url: site_hal._actions.add.href,
-          data: form_data,
-          xhrFields: {
-            withCredentials: true
-          }
+          data: form_data
         });
       })
       .push(function (evt) {
@@ -273,6 +287,7 @@
   };
 
   ERP5Storage.prototype.getAttachment = function (id, action, options) {
+    var storage = this;
     if (options === undefined) {
       options = {};
     }
@@ -317,10 +332,7 @@
             request_options = {
               "type": "GET",
               "dataType": "blob",
-              "url": action,
-              "xhrFields": {
-                withCredentials: true
-              }
+              "url": action
             };
           if (options.start !== undefined ||  options.end !== undefined) {
             start = options.start || 0;
@@ -342,7 +354,7 @@
             }
             request_options.headers = {Range: range};
           }
-          return jIO.util.ajax(request_options);
+          return ajax(storage, request_options);
         })
         .push(function (evt) {
           if (evt.target.response === undefined) {
@@ -359,6 +371,7 @@
   };
 
   ERP5Storage.prototype.putAttachment = function (id, name, blob) {
+    var storage = this;
     // Assert we use a callable on a document from the ERP5 site
     if (name.indexOf(this._url) !== 0) {
       throw new jIO.util.jIOError("Can not store outside ERP5: " +
@@ -394,14 +407,11 @@
             }
           }
         }
-        return jIO.util.ajax({
+        return ajax(storage, {
           "type": "POST",
           "url": name,
           "data": data,
-          "dataType": "blob",
-          "xhrFields": {
-            withCredentials: true
-          }
+          "dataType": "blob"
         });
       });
   };
@@ -460,6 +470,7 @@
   }
 
   ERP5Storage.prototype.buildQuery = function (options) {
+    var storage = this;
 //     if (typeof options.query !== "string") {
 //       options.query = (options.query ?
 //                        jIO.Query.objectToSearchText(options.query) :
@@ -552,7 +563,7 @@
           selection_domain = JSON.stringify(selection_domain);
         }
 
-        return jIO.util.ajax({
+        return ajax(storage, {
           "type": "GET",
           "url": UriTemplate.parse(site_hal._links.raw_search.href)
                             .expand({
@@ -563,10 +574,7 @@
               sort_on: sort_list,
               local_roles: local_roles,
               selection_domain: selection_domain
-            }),
-          "xhrFields": {
-            withCredentials: true
-          }
+            })
         });
       })
       .push(function (response) {
