@@ -190,7 +190,7 @@ ${EXTERNALDIR}/renderjs-latest.js:
 	@mkdir -p $(@D)
 	curl -s -o $@ https://lab.nexedi.com/nexedi/renderjs/raw/master/dist/renderjs-latest.js
 
-.phony: clean
+.PHONY: clean ${JIOVERSION}
 
 clean:
 	rm -rf ${LINTDIR}
