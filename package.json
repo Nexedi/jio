@@ -1,0 +1,26 @@
+{
+  "name": "@nexedi/jio",
+  "version": "v3.32.1",
+  "license": "GPLv3+",
+  "author": "Nexedi SA",
+  "contributors": [
+    "Tristan Cavelier <tristan.cavelier@tiolive.com>",
+    "Sven Franck <sven.franck@nexedi.com>"
+  ],
+  "description": "Client-side JavaScript library to manage documents across multiple storages",
+  "main": "dist/jio-latest-node.js",
+  "repository": {
+    "type": "git",
+    "url": "https://lab.nexedi.com/nexedi/jio.git"
+  },
+  "homepage": "https://jio.nexedi.com",
+  "keywords": [
+    "io",
+    "input",
+    "output",
+    "cloud"
+  ],
+  "engines": {
+    "npm": ">=1.3"
+  }
+}
