@@ -56,7 +56,7 @@
           }
         }
       });
-      this.jio.__storage._resetIndex("id", [
+      this.jio.__storage._resetIndex([
         "title"
       ]);
       this.documents = {};

@@ -743,7 +743,7 @@
     expect(2);
 
     // index documents to execute query
-    this.jio.__storage._resetIndex("id", [
+    this.jio.__storage._resetIndex([
       "title"
     ]);
     indexDocuments(this.jio, [{
@@ -792,7 +792,7 @@
     stop();
 
     // index documents to execute query
-    this.jio.__storage._resetIndex("id", [
+    this.jio.__storage._resetIndex([
       "title"
     ]);
     indexDocuments(this.jio, [{
@@ -844,7 +844,7 @@
     stop();
 
     // index documents to execute query
-    this.jio.__storage._resetIndex("id", [
+    this.jio.__storage._resetIndex([
       "title", "subtitle"
     ]);
     indexDocuments(this.jio, [{
@@ -896,7 +896,7 @@
     stop();
 
     // index documents to execute query
-    this.jio.__storage._resetIndex("id", [
+    this.jio.__storage._resetIndex([
       "title", "subtitle"
     ]);
     indexDocuments(this.jio, [{
@@ -955,7 +955,7 @@
     expect(2);
 
     // index documents to execute query
-    this.jio.__storage._resetIndex("id", [
+    this.jio.__storage._resetIndex([
       "title"
     ]);
     indexDocuments(this.jio, [{
@@ -1003,7 +1003,7 @@
     expect(1);
 
     // index documents to execute query
-    this.jio.__storage._resetIndex("id", [
+    this.jio.__storage._resetIndex([
       "title"
     ]);
     indexDocuments(this.jio, [{
@@ -1064,7 +1064,7 @@
     expect(2);
 
     // index documents to execute query
-    this.jio.__storage._resetIndex("id", [
+    this.jio.__storage._resetIndex([
       "title"
     ]);
     indexDocuments(this.jio, [{
@@ -1119,7 +1119,7 @@
     expect(2);
 
     // index documents to execute query
-    this.jio.__storage._resetIndex("id", [
+    this.jio.__storage._resetIndex([
       "title"
     ]);
     indexDocuments(this.jio, [{

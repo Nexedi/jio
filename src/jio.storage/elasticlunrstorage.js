@@ -171,10 +171,11 @@
     });
   };
 
-  ElasticlunrStorage.prototype._resetIndex = function (id, indexFields) {
-    this._index_id = 'id';
-    this._index_fields = indexFields;
-    this._index = initIndex(id, indexFields);
+  ElasticlunrStorage.prototype._resetIndex = function (indexFields) {
+    if (indexFields) {
+      this._index_fields = indexFields;
+    }
+    this._index = initIndex(this._index_id, this._index_fields);
   };
 
   ElasticlunrStorage.prototype._saveIndex = function () {
