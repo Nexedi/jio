@@ -19,11 +19,30 @@
  */
 
 /*jslint sloppy: true, nomen: true */
-/*global jIO, RSVP, Blob, Query, elasticlunr */
-(function (jIO, RSVP, Blob, Query, elasticlunr) {
+/*global jIO, RSVP, Blob, Query, elasticlunr, localStorage */
+(function (jIO, RSVP, Blob, Query, elasticlunr, localStorage) {
   'use strict';
 
-  var elasticlunrStorageKey = 'jio_elasticlunr';
+  var elasticlunrStorageKey = 'jio_elasticlunr',
+    notifyChangeKey = elasticlunrStorageKey + '_notify';
+
+  function notifyIndexChanged() {
+    localStorage.setItem(notifyChangeKey, JSON.stringify({
+      type: 'update',
+      date: new Date()
+    }));
+    // no need to keep the actual value
+    localStorage.removeItem(notifyChangeKey);
+  }
+
+  function listenIndexChanged(context) {
+    window.addEventListener('storage', function (event) {
+      // since we remove the item after setting it, make sure we only run once
+      if (event.newValue && event.key === notifyChangeKey) {
+        context._onIndexChanged();
+      }
+    });
+  }
 
   function findDuplicates(array) {
     var sorted = array.slice().sort(),
@@ -149,7 +168,15 @@
       this._sub_storage.__type;
     this._index_id = spec.id || 'id';
     this._index_fields = spec.index_fields || [];
+
+    listenIndexChanged(this);
   }
+
+  ElasticlunrStorage.prototype._onIndexChanged = function () {
+    // force-reload index from storage
+    this._index = null;
+    this._getIndex();
+  };
 
   ElasticlunrStorage.prototype._getIndex = function () {
     var context = this;
@@ -180,6 +207,9 @@
 
   ElasticlunrStorage.prototype._saveIndex = function () {
     var context = this;
+
+    // notify other tabs that the index has changed
+    notifyIndexChanged();
 
     return this._getIndex()
       .push(function (index) {
@@ -336,4 +366,4 @@
   };
 
   jIO.addStorage('elasticlunr', ElasticlunrStorage);
-}(jIO, RSVP, Blob, Query, elasticlunr));
+}(jIO, RSVP, Blob, Query, elasticlunr, localStorage));

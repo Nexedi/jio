@@ -1,6 +1,6 @@
 /*jslint nomen: true */
-/*global jIO, QUnit, sinon, Blob, elasticlunr */
-(function (jIO, QUnit, sinon, Blob, elasticlunr) {
+/*global jIO, QUnit, sinon, Blob, elasticlunr, localStorage */
+(function (jIO, QUnit, sinon, Blob, elasticlunr, localStorage) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -1261,7 +1261,15 @@
   /////////////////////////////////////////////////////////////////
   // ElasticlunrStorage.__storage._saveIndex
   /////////////////////////////////////////////////////////////////
-  module("ElasticlunrStorage.__storage._saveIndex");
+  module("ElasticlunrStorage.__storage._saveIndex", {
+    setup: function () {
+      this.notifyIndexChangedStub = sinon.stub(localStorage, "setItem");
+    },
+    teardown: function () {
+      this.notifyIndexChangedStub.restore();
+      delete this.notifyIndexChangedStub;
+    }
+  });
 
   test("stores index as attachment", function () {
     Index200.prototype.getAttachment = function () {
@@ -1277,7 +1285,8 @@
         type: "elasticlunr200"
       }
     }),
-      blob = new Blob(["{}"]);
+      blob = new Blob(["{}"]),
+      context = this;
 
     jio.__storage._getIndex = function () {
       return new RSVP.Queue().push(function () {
@@ -1301,11 +1310,15 @@
     };
 
     stop();
-    expect(4);
+    expect(5);
 
     jio.__storage._saveIndex()
       .then(function (result) {
         equal(result, "OK");
+        ok(
+          context.notifyIndexChangedStub.called,
+          "load index count " + context.callCount
+        );
       })
       .fail(function (error) {
         ok(false, error);
@@ -1314,4 +1327,4 @@
         start();
       });
   });
-}(jIO, QUnit, sinon, Blob, elasticlunr));
+}(jIO, QUnit, sinon, Blob, elasticlunr, localStorage));
