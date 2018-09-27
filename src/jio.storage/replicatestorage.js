@@ -40,6 +40,27 @@
   SkipError.prototype = new Error();
   SkipError.prototype.constructor = SkipError;
 
+  function ReplicateReport() {
+    this._list = [];
+    this.name = 'ReplicateReport';
+    this.message = this.name;
+    this.has_error = false;
+  }
+
+  ReplicateReport.prototype = {
+    constructor: ReplicateReport,
+    logError: function (id, error) {
+      this._list.push([id, error]);
+      this.has_error = true;
+    },
+    doNothing: function (id) {
+      this._list.push([id, 'Nothing']);
+    },
+    toString: function () {
+      return this._list.toString();
+    }
+  };
+
   /****************************************************
    Use a local jIO to read/write/search documents
    Synchronize in background those document with a remote jIO.
@@ -808,6 +829,7 @@
   function propagateModification(context, source, destination, doc, hash, id,
                                  skip_document_dict,
                                  skip_deleted_document_dict,
+                                 report,
                                  options) {
     var result = new RSVP.Queue(),
       post_id,
@@ -901,6 +923,11 @@
             hash: hash,
             from_local: from_local
           });
+        })
+        .push(function () {
+          if (options.create_new_document === true) {
+            report.createDocument(id, true);
+          }
         });
     }
     return result
@@ -958,6 +985,7 @@
                              source, destination, id,
                              conflict_force, conflict_revert,
                              conflict_ignore,
+                             report,
                              options) {
     // No need to check twice
     skip_document_dict[id] = null;
@@ -1012,6 +1040,7 @@
           return propagateModification(context, source, destination, doc,
                                        local_hash, id, skip_document_dict,
                                        skip_deleted_document_dict,
+                                       report,
                                        {use_post: ((options.use_post) &&
                                                    (remote_hash === null)),
                                         from_local: from_local,
@@ -1042,6 +1071,7 @@
             id,
             skip_document_dict,
             skip_deleted_document_dict,
+            report,
             {use_post: ((options.use_revert_post) &&
                         (local_hash === null)),
               from_local: !from_local,
@@ -1056,6 +1086,7 @@
           return propagateModification(context, source, destination, doc,
                                        local_hash, id, skip_document_dict,
                                        skip_deleted_document_dict,
+                                       report,
                                        {use_post: options.use_post,
                                         from_local: from_local,
                                         create_new_document:
@@ -1067,6 +1098,9 @@
                                     stringify(doc) + " !== " +
                                     stringify(remote_doc),
                                     409);
+      })
+      .push(undefined, function (error) {
+        report.logError(id, error);
       });
   }
 
@@ -1100,7 +1134,7 @@
                                     source, destination, id,
                                     conflict_force, conflict_revert,
                                     conflict_ignore,
-                                    local_hash, status_hash,
+                                    local_hash, status_hash, report,
                                     options) {
     queue
       .push(function () {
@@ -1124,8 +1158,10 @@
                                    source, destination, id,
                                    conflict_force, conflict_revert,
                                    conflict_ignore,
+                                   report,
                                    options);
         }
+        report.doNothing(id);
       });
   }
 
@@ -1133,7 +1169,7 @@
                        skip_deleted_document_dict,
                        cache, source_key, destination_key,
                        source, destination, signature_allDocs,
-                       options) {
+                       report, options) {
     var argument_list = [],
       argument_list_deletion = [];
     if (!options.hasOwnProperty("use_post")) {
@@ -1214,6 +1250,7 @@
                                   options.conflict_revert,
                                   options.conflict_ignore,
                                   local_hash, status_hash,
+                                  report,
                                   options]);
             }
           }
@@ -1278,7 +1315,8 @@
       argument_list = arguments,
       skip_document_dict = {},
       skip_deleted_document_dict = {},
-      cache = {};
+      cache = {},
+      report = new ReplicateReport();
 
     return new RSVP.Queue()
       .push(function () {
@@ -1345,7 +1383,7 @@
                              cache, 'local', 'remote',
                              context._local_sub_storage,
                              context._remote_sub_storage,
-                             signature_allDocs,
+                             signature_allDocs, report,
                              {
               use_post: context._use_remote_post,
               conflict_force: (context._conflict_handling ===
@@ -1376,7 +1414,8 @@
                              cache, 'remote', 'local',
                              context._remote_sub_storage,
                              context._local_sub_storage,
-                             signature_allDocs, {
+                             signature_allDocs,
+                             report, {
               use_revert_post: context._use_remote_post,
               conflict_force: (context._conflict_handling ===
                                CONFLICT_KEEP_REMOTE),
@@ -1431,6 +1470,12 @@
               );
             });
         }
+      })
+      .push(function () {
+        if (report.has_error) {
+          throw report;
+        }
+        return report;
       });
   };
 

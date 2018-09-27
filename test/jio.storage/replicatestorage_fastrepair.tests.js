@@ -146,7 +146,8 @@
         id = result;
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (result) {
+        equal(result, 'nutnut2');
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
