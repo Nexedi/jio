@@ -77,7 +77,8 @@
         id = result;
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (result) {
+        deepEqual(result.toString(), 'lala');
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
@@ -495,6 +496,8 @@
         equal(error.message, "Conflict on 'conflict': " +
                              "{\"title\":\"foo\"} !== {\"title\":\"bar\"}");
         equal(error.status_code, 409);
+        equal(error.show(), "Conflict on 'conflict': " +
+                             "{\"title\":\"foo\"} !== {\"title\":\"bar\"}");
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get("conflict");
