@@ -45,9 +45,9 @@ var arrayExtend = function () {
   if (query.operator === "NOT") {
     return query.query_list[0];
   }
-  return {"type": "complex", "key": "", "operator": "NOT", "query_list": [query]};
+  return {"type": "complex", "operator": "NOT", "query_list": [query]};
 
-}, mkComplexQuery = function (key, operator, query_list) {
+}, mkComplexQuery = function (operator, query_list) {
   var i, query_list2 = [];
   for (i = 0; i < query_list.length; i += 1) {
     if (query_list[i].operator === operator) {
@@ -56,10 +56,17 @@ var arrayExtend = function () {
       query_list2.push(query_list[i]);
     }
   }
-  return {type:"complex",key:key,operator:operator,query_list:query_list2};
+  return {type:"complex",operator:operator,query_list:query_list2};
 
-}, querySetKey = function (query, key) {
-  if (({simple: 1, complex: 1})[query.type] && !query.key) {
+}, simpleQuerySetKey = function (query, key) {
+  var i;
+  if (query.type === "complex") {
+    for (i = 0; i < query.query_list.length; ++i) {
+      simpleQuerySetKey (query.query_list[i],key);
+    }
+    return true;
+  }
+  if (query.type === "simple" && !query.key) {
     query.key = key;
     return true;
   }

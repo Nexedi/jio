@@ -538,8 +538,6 @@
      */
     this.operator = spec.operator;
 
-    this.key = spec.key || this.key;
-
     /**
      * The sub Query list which are used to query an item.
      *
@@ -559,7 +557,6 @@
 
   ComplexQuery.prototype.operator = "AND";
   ComplexQuery.prototype.type = "complex";
-  ComplexQuery.prototype.key = "";
 
   /**
    * #crossLink "Query/match:method"
@@ -576,8 +573,21 @@
    * #crossLink "Query/toString:method"
    */
   ComplexQuery.prototype.toString = function () {
-    /*global objectToSearchText */
-    return objectToSearchText(this.toJSON());
+    var str_list = [], this_operator = this.operator;
+    if (this.operator === "NOT") {
+      str_list.push("NOT (");
+      str_list.push(this.query_list[0].toString());
+      str_list.push(")");
+      return str_list.join(" ");
+    }
+    this.query_list.forEach(function (query) {
+      str_list.push("(");
+      str_list.push(query.toString());
+      str_list.push(")");
+      str_list.push(this_operator);
+    });
+    str_list.length -= 1;
+    return str_list.join(" ");
   };
 
   /**
@@ -587,7 +597,6 @@
     var s = {
       "type": "complex",
       "operator": this.operator,
-      "key": this.key,
       "query_list": []
     };
     this.query_list.forEach(function (query) {
@@ -677,26 +686,12 @@
   };
 
   function objectToSearchText(query) {
-    var str_list = [], operator = "", query_list = null;
+    var str_list = [];
     if (query.type === "complex") {
-      query_list = query.query_list || [];
-      if (query_list.length === 0) {
-        return "";
-      }
-      operator = query.operator;
-      if (operator === "NOT") {
-        str_list.push("NOT");
-        // fallback to AND operator if several queries are given
-        // i.e. `NOT ( a AND b )`
-        operator = "AND";
-      }
-      if (query.key) {
-        str_list.push(query.key + ":");
-      }
       str_list.push("(");
-      query_list.forEach(function (sub_query) {
+      (query.query_list || []).forEach(function (sub_query) {
         str_list.push(objectToSearchText(sub_query));
-        str_list.push(operator);
+        str_list.push(query.operator);
       });
       str_list.length -= 1;
       str_list.push(")");
@@ -873,7 +868,8 @@
    * #crossLink "Query/toString:method"
    */
   SimpleQuery.prototype.toString = function () {
-    return objectToSearchText(this.toJSON());
+    return (this.key ? this.key + ":" : "") +
+      (this.operator ? " " + this.operator : "") + ' "' + this.value + '"';
   };
 
   /**
