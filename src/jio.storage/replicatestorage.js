@@ -29,7 +29,218 @@
     CONFLICT_THROW = 0,
     CONFLICT_KEEP_LOCAL = 1,
     CONFLICT_KEEP_REMOTE = 2,
-    CONFLICT_CONTINUE = 3;
+    CONFLICT_CONTINUE = 3,
+
+    // 0 - 99 error
+    LOG_UNEXPECTED_ERROR = 0,
+    LOG_UNRESOLVED_CONFLICT = 74,
+    LOG_UNEXPECTED_LOCAL_ATTACHMENT = 49,
+    LOG_UNEXPECTED_REMOTE_ATTACHMENT = 47,
+    LOG_UNRESOLVED_ATTACHMENT_CONFLICT = 75,
+    // 100 - 199 solving conflict
+    LOG_FORCE_PUT_REMOTE = 116,
+    LOG_FORCE_DELETE_REMOTE = 136,
+    LOG_FORCE_PUT_REMOTE_ATTACHMENT = 117,
+    LOG_FORCE_DELETE_REMOTE_ATTACHMENT = 137,
+    LOG_FORCE_PUT_LOCAL = 118,
+    LOG_FORCE_DELETE_LOCAL = 138,
+    LOG_FORCE_PUT_LOCAL_ATTACHMENT = 119,
+    LOG_FORCE_DELETE_LOCAL_ATTACHMENT = 139,
+    // 200 - 299 pushing change
+    LOG_PUT_REMOTE = 216,
+    LOG_POST_REMOTE = 226,
+    LOG_DELETE_REMOTE = 236,
+    LOG_PUT_REMOTE_ATTACHMENT = 217,
+    LOG_DELETE_REMOTE_ATTACHMENT = 237,
+    LOG_PUT_LOCAL = 218,
+    LOG_POST_LOCAL = 228,
+    LOG_DELETE_LOCAL = 238,
+    LOG_PUT_LOCAL_ATTACHMENT = 219,
+    LOG_DELETE_LOCAL_ATTACHMENT = 239,
+    LOG_FALSE_CONFLICT = 284,
+    LOG_FALSE_CONFLICT_ATTACHMENT = 285,
+    // 300 - 399 nothing to do
+    LOG_SKIP_LOCAL_CREATION = 348,
+    LOG_SKIP_LOCAL_MODIFICATION = 358,
+    LOG_SKIP_LOCAL_DELETION = 368,
+    LOG_SKIP_REMOTE_CREATION = 346,
+    LOG_SKIP_REMOTE_MODIFICATION = 356,
+    LOG_SKIP_REMOTE_DELETION = 366,
+    LOG_SKIP_LOCAL_ATTACHMENT_CREATION = 349,
+    LOG_SKIP_LOCAL_ATTACHMENT_MODIFICATION = 359,
+    LOG_SKIP_LOCAL_ATTACHMENT_DELETION = 369,
+    LOG_SKIP_REMOTE_ATTACHMENT_CREATION = 347,
+    LOG_SKIP_REMOTE_ATTACHMENT_MODIFICATION = 357,
+    LOG_SKIP_REMOTE_ATTACHMENT_DELETION = 367,
+    LOG_SKIP_CONFLICT = 374,
+    LOG_SKIP_CONFLICT_ATTACHMENT = 375,
+    LOG_NO_CHANGE = 384,
+    LOG_NO_CHANGE_ATTACHMENT = 385;
+
+  function ReplicateReport(log_level, log_console) {
+    this._list = [];
+    this.name = 'ReplicateReport';
+    this.message = this.name;
+    this.has_error = false;
+    this._log_level = log_level;
+    this._log_console = log_console;
+  }
+
+  ReplicateReport.prototype = {
+    constructor: ReplicateReport,
+
+    LOG_UNEXPECTED_ERROR: LOG_UNEXPECTED_ERROR,
+    LOG_UNRESOLVED_CONFLICT: LOG_UNRESOLVED_CONFLICT,
+    LOG_UNEXPECTED_LOCAL_ATTACHMENT: LOG_UNEXPECTED_LOCAL_ATTACHMENT,
+    LOG_UNEXPECTED_REMOTE_ATTACHMENT: LOG_UNEXPECTED_REMOTE_ATTACHMENT,
+    LOG_UNRESOLVED_ATTACHMENT_CONFLICT: LOG_UNRESOLVED_ATTACHMENT_CONFLICT,
+    LOG_FORCE_PUT_REMOTE: LOG_FORCE_PUT_REMOTE,
+    LOG_FORCE_DELETE_REMOTE: LOG_FORCE_DELETE_REMOTE,
+    LOG_FORCE_PUT_LOCAL: LOG_FORCE_PUT_LOCAL,
+    LOG_FORCE_DELETE_LOCAL: LOG_FORCE_DELETE_LOCAL,
+    LOG_FORCE_PUT_REMOTE_ATTACHMENT: LOG_FORCE_PUT_REMOTE_ATTACHMENT,
+    LOG_FORCE_DELETE_REMOTE_ATTACHMENT: LOG_FORCE_DELETE_REMOTE_ATTACHMENT,
+    LOG_FORCE_PUT_LOCAL_ATTACHMENT: LOG_FORCE_PUT_LOCAL_ATTACHMENT,
+    LOG_FORCE_DELETE_LOCAL_ATTACHMENT: LOG_FORCE_DELETE_LOCAL_ATTACHMENT,
+    LOG_PUT_REMOTE: LOG_PUT_REMOTE,
+    LOG_POST_REMOTE: LOG_POST_REMOTE,
+    LOG_DELETE_REMOTE: LOG_DELETE_REMOTE,
+    LOG_PUT_REMOTE_ATTACHMENT: LOG_PUT_REMOTE_ATTACHMENT,
+    LOG_DELETE_REMOTE_ATTACHMENT: LOG_DELETE_REMOTE_ATTACHMENT,
+    LOG_PUT_LOCAL: LOG_PUT_LOCAL,
+    LOG_DELETE_LOCAL: LOG_DELETE_LOCAL,
+    LOG_PUT_LOCAL_ATTACHMENT: LOG_PUT_LOCAL_ATTACHMENT,
+    LOG_DELETE_LOCAL_ATTACHMENT: LOG_DELETE_LOCAL_ATTACHMENT,
+    LOG_FALSE_CONFLICT: LOG_FALSE_CONFLICT,
+    LOG_FALSE_CONFLICT_ATTACHMENT: LOG_FALSE_CONFLICT_ATTACHMENT,
+    LOG_SKIP_LOCAL_CREATION: LOG_SKIP_LOCAL_CREATION,
+    LOG_SKIP_LOCAL_MODIFICATION: LOG_SKIP_LOCAL_MODIFICATION,
+    LOG_SKIP_LOCAL_DELETION: LOG_SKIP_LOCAL_DELETION,
+    LOG_SKIP_REMOTE_CREATION: LOG_SKIP_REMOTE_CREATION,
+    LOG_SKIP_REMOTE_MODIFICATION: LOG_SKIP_REMOTE_MODIFICATION,
+    LOG_SKIP_REMOTE_DELETION: LOG_SKIP_REMOTE_DELETION,
+    LOG_SKIP_LOCAL_ATTACHMENT_CREATION: LOG_SKIP_LOCAL_ATTACHMENT_CREATION,
+    LOG_SKIP_LOCAL_ATTACHMENT_MODIFICATION:
+      LOG_SKIP_LOCAL_ATTACHMENT_MODIFICATION,
+    LOG_SKIP_LOCAL_ATTACHMENT_DELETION: LOG_SKIP_LOCAL_ATTACHMENT_DELETION,
+    LOG_SKIP_REMOTE_ATTACHMENT_CREATION: LOG_SKIP_REMOTE_ATTACHMENT_CREATION,
+    LOG_SKIP_REMOTE_ATTACHMENT_MODIFICATION:
+      LOG_SKIP_REMOTE_ATTACHMENT_MODIFICATION,
+    LOG_SKIP_REMOTE_ATTACHMENT_DELETION: LOG_SKIP_REMOTE_ATTACHMENT_DELETION,
+    LOG_SKIP_CONFLICT: LOG_SKIP_CONFLICT,
+    LOG_SKIP_CONFLICT_ATTACHMENT: LOG_SKIP_CONFLICT_ATTACHMENT,
+    LOG_NO_CHANGE: LOG_NO_CHANGE,
+    LOG_NO_CHANGE_ATTACHMENT: LOG_NO_CHANGE_ATTACHMENT,
+
+    logConsole: function (code, a, b, c) {
+      if (!this._log_console) {
+        return;
+      }
+      var txt = code,
+        parsed_code = code,
+        log;
+
+      // Check severity level
+      if (parsed_code >= 300) {
+        txt += ' SKIP ';
+        log = console.info;
+      } else if (parsed_code >= 200) {
+        txt += ' SOLVE ';
+        log = console.log;
+      } else if (parsed_code >= 100) {
+        txt += ' FORCE ';
+        log = console.warn;
+      } else {
+        txt += ' ERROR ';
+        log = console.error;
+      }
+
+      // Check operation
+      parsed_code = code % 100;
+      if (parsed_code >= 80) {
+        txt += 'idem ';
+      } else if (parsed_code >= 70) {
+        txt += 'conflict ';
+      } else if (parsed_code >= 60) {
+        txt += 'deleted ';
+      } else if (parsed_code >= 50) {
+        txt += 'modified ';
+      } else if (parsed_code >= 40) {
+        txt += 'created ';
+      } else if (parsed_code >= 30) {
+        txt += 'delete ';
+      } else if (parsed_code >= 20) {
+        txt += 'post ';
+      } else if (parsed_code >= 10) {
+        txt += 'put ';
+      }
+
+      // Check document
+      parsed_code = code % 10;
+      if (parsed_code >= 8) {
+        txt += 'local ';
+      } else if (parsed_code >= 6) {
+        txt += 'remote ';
+      }
+      if (parsed_code !== 0) {
+        txt += (parsed_code % 2 === 0) ? 'document' : 'attachment';
+      }
+      txt += ' ' + a;
+      if (b !== undefined) {
+        txt += ' ' + b;
+        if (c !== undefined) {
+          txt += ' ' + c;
+        }
+      }
+      log(txt);
+    },
+
+    log: function (id, type, extra) {
+      if (type === undefined) {
+        if (extra === undefined) {
+          extra = 'Unknown type: ' + type;
+        }
+        type = LOG_UNEXPECTED_ERROR;
+      }
+      if (type < this._log_level) {
+        if (extra === undefined) {
+          this.logConsole(type, id);
+          this._list.push([type, id]);
+        } else {
+          this.logConsole(type, id, extra);
+          this._list.push([type, id, extra]);
+        }
+        if (type < 100) {
+          this.has_error = true;
+        }
+      }
+    },
+
+    logAttachment: function (id, name, type, extra) {
+      if (type === undefined) {
+        if (extra === undefined) {
+          extra = 'Unknown type: ' + type;
+        }
+        type = LOG_UNEXPECTED_ERROR;
+      }
+      if (type < this._log_level) {
+        if (extra === undefined) {
+          this.logConsole(type, id, name);
+          this._list.push([type, id, name]);
+        } else {
+          this.logConsole(type, id, name, extra);
+          this._list.push([type, id, name, extra]);
+        }
+        if (type < 100) {
+          this.has_error = true;
+        }
+      }
+    },
+
+    toString: function () {
+      return this._list.toString();
+    }
+  };
 
   function SkipError(message) {
     if ((message !== undefined) && (typeof message !== "string")) {
@@ -58,6 +269,8 @@
 
   function ReplicateStorage(spec) {
     this._query_options = spec.query || {};
+    this._log_level = spec.report_level || 100;
+    this._log_console = spec.debug || false;
     if (spec.signature_hash_key !== undefined) {
       this._query_options.select_list = [spec.signature_hash_key];
     }
@@ -277,7 +490,16 @@
 
   function propagateAttachmentDeletion(context,
                                        destination,
-                                       id, name) {
+                                       id, name,
+                                       conflict, from_local, report) {
+    if (conflict) {
+      report.logAttachment(id, name, from_local ?
+                                     LOG_FORCE_DELETE_REMOTE_ATTACHMENT :
+                                     LOG_FORCE_DELETE_LOCAL_ATTACHMENT);
+    } else {
+      report.logAttachment(id, name, from_local ? LOG_DELETE_REMOTE_ATTACHMENT :
+                                                  LOG_DELETE_LOCAL_ATTACHMENT);
+    }
     return destination.removeAttachment(id, name)
       .push(function () {
         return context._signature_sub_storage.removeAttachment(id, name);
@@ -286,7 +508,16 @@
 
   function propagateAttachmentModification(context,
                                            destination,
-                                           blob, hash, id, name) {
+                                           blob, hash, id, name,
+                                           from_local, is_conflict, report) {
+    if (is_conflict) {
+      report.logAttachment(id, name, from_local ?
+                                     LOG_FORCE_PUT_REMOTE_ATTACHMENT :
+                                     LOG_FORCE_PUT_LOCAL_ATTACHMENT);
+    } else {
+      report.logAttachment(id, name, from_local ? LOG_PUT_REMOTE_ATTACHMENT :
+                                                  LOG_PUT_LOCAL_ATTACHMENT);
+    }
     return destination.putAttachment(id, name, blob)
       .push(function () {
         return context._signature_sub_storage.putAttachment(id, name,
@@ -301,7 +532,7 @@
                                        status_hash, local_hash, blob,
                                        source, destination, id, name,
                                        conflict_force, conflict_revert,
-                                       conflict_ignore) {
+                                       conflict_ignore, from_local, report) {
     // No need to check twice
     skip_attachment_dict[name] = null;
     var remote_blob;
@@ -325,6 +556,7 @@
       .push(function (remote_hash) {
         if (local_hash === remote_hash) {
           // Same modifications on both side
+          report.logAttachment(id, name, LOG_FALSE_CONFLICT_ATTACHMENT);
           if (local_hash === null) {
             // Deleted on both side, drop signature
             return context._signature_sub_storage.removeAttachment(id, name);
@@ -342,15 +574,21 @@
             // Deleted locally
             return propagateAttachmentDeletion(context,
                                                destination,
-                                               id, name);
+                                               id, name,
+                                               (remote_hash !== status_hash),
+                                               from_local, report);
           }
           return propagateAttachmentModification(context,
                                        destination, blob,
-                                       local_hash, id, name);
+                                       local_hash, id, name,
+                                       from_local,
+                                       (remote_hash !== status_hash),
+                                       report);
         }
 
         // Conflict cases
         if (conflict_ignore === true) {
+          report.logAttachment(id, name, LOG_SKIP_CONFLICT_ATTACHMENT);
           return;
         }
 
@@ -359,7 +597,9 @@
           if (remote_hash === null) {
             // Deleted remotely
             return propagateAttachmentDeletion(context,
-                                               source, id, name);
+                                               source, id, name,
+                                               (local_hash !== status_hash),
+                                               !from_local, report);
           }
           return propagateAttachmentModification(
             context,
@@ -367,7 +607,10 @@
             remote_blob,
             remote_hash,
             id,
-            name
+            name,
+            !from_local,
+            (local_hash !== status_hash),
+            report
           );
         }
 
@@ -376,12 +619,14 @@
           // Copy remote modification remotely
           return propagateAttachmentModification(context,
                                        destination, blob,
-                                       local_hash, id, name);
+                                       local_hash, id, name, from_local,
+                                       false,
+                                       report);
         }
-        throw new jIO.util.jIOError("Conflict on '" + id +
-                                    "' with attachment '" +
-                                    name + "'",
-                                    409);
+        report.logAttachment(id, name, LOG_UNRESOLVED_ATTACHMENT_CONFLICT);
+      })
+      .push(undefined, function (error) {
+        report.logAttachment(id, name, LOG_UNEXPECTED_ERROR, error);
       });
   }
 
@@ -392,7 +637,9 @@
                                               conflict_force,
                                               conflict_revert,
                                               conflict_ignore,
-                                              is_creation, is_modification) {
+                                              is_creation, is_modification,
+                                              from_local,
+                                              report) {
     var blob,
       status_hash;
     queue
@@ -427,14 +674,20 @@
         var array_buffer = evt.target.result,
           local_hash = generateHashFromArrayBuffer(array_buffer);
 
-        if (local_hash !== status_hash) {
-          return checkAndPropagateAttachment(context,
-                                             skip_attachment_dict,
-                                             status_hash, local_hash, blob,
-                                             source, destination, id, name,
-                                             conflict_force, conflict_revert,
-                                             conflict_ignore);
+        if (local_hash === status_hash) {
+          if (!from_local) {
+            report.logAttachment(id, name, LOG_NO_CHANGE_ATTACHMENT);
+          }
+          return;
         }
+        return checkAndPropagateAttachment(context,
+                                           skip_attachment_dict,
+                                           status_hash, local_hash, blob,
+                                           source, destination, id, name,
+                                           conflict_force, conflict_revert,
+                                           conflict_ignore,
+                                           from_local,
+                                           report);
       });
   }
 
@@ -442,7 +695,7 @@
                               skip_attachment_dict,
                               destination, id, name, source,
                               conflict_force, conflict_revert,
-                              conflict_ignore) {
+                              conflict_ignore, from_local, report) {
     var status_hash;
     queue
       .push(function () {
@@ -456,16 +709,17 @@
                                  status_hash, null, null,
                                  source, destination, id, name,
                                  conflict_force, conflict_revert,
-                                 conflict_ignore);
+                                 conflict_ignore, from_local, report);
       });
   }
 
   function pushDocumentAttachment(context,
                                   skip_attachment_dict, id, source,
                                   destination, signature_allAttachments,
-                                  options) {
+                                  report, options) {
     var local_dict = {},
-      signature_dict = {};
+      signature_dict = {},
+      from_local = options.from_local;
     return source.allAttachments(id)
       .push(undefined, function (error) {
         if ((error instanceof jIO.util.jIOError) &&
@@ -510,7 +764,19 @@
                                   options.conflict_revert,
                                   options.conflict_ignore,
                                   is_creation,
-                                  is_modification]);
+                                  is_modification,
+                                  from_local,
+                                  report]);
+            } else {
+              if (signature_dict.hasOwnProperty(key)) {
+                report.logAttachment(id, key, from_local ?
+                                     LOG_SKIP_LOCAL_ATTACHMENT_MODIFICATION :
+                                     LOG_SKIP_REMOTE_ATTACHMENT_MODIFICATION);
+              } else {
+                report.logAttachment(id, key, from_local ?
+                                     LOG_SKIP_LOCAL_ATTACHMENT_CREATION :
+                                     LOG_SKIP_REMOTE_ATTACHMENT_CREATION);
+              }
             }
           }
         }
@@ -523,10 +789,10 @@
       })
       .push(function () {
         var key, argument_list = [];
-        if (options.check_deletion === true) {
-          for (key in signature_dict) {
-            if (signature_dict.hasOwnProperty(key)) {
-              if (!local_dict.hasOwnProperty(key)) {
+        for (key in signature_dict) {
+          if (signature_dict.hasOwnProperty(key)) {
+            if (!local_dict.hasOwnProperty(key)) {
+              if (options.check_deletion === true) {
                 argument_list.push([undefined,
                                              context,
                                              skip_attachment_dict,
@@ -534,29 +800,51 @@
                                              source,
                                              options.conflict_force,
                                              options.conflict_revert,
-                                             options.conflict_ignore]);
+                                             options.conflict_ignore,
+                                             from_local,
+                                             report]);
+              } else {
+                report.logAttachment(id, key, from_local ?
+                                     LOG_SKIP_LOCAL_ATTACHMENT_DELETION :
+                                     LOG_SKIP_REMOTE_ATTACHMENT_DELETION);
               }
             }
           }
-          return dispatchQueue(
-            context,
-            checkAttachmentLocalDeletion,
-            argument_list,
-            context._parallel_operation_attachment_amount
-          );
         }
+        return dispatchQueue(
+          context,
+          checkAttachmentLocalDeletion,
+          argument_list,
+          context._parallel_operation_attachment_amount
+        );
       });
   }
 
-  function propagateFastAttachmentDeletion(queue, id, name, storage) {
+  function propagateFastAttachmentDeletion(queue, id, name, storage, signature,
+                                           from_local, report) {
+    report.logAttachment(id, name, from_local ? LOG_DELETE_REMOTE_ATTACHMENT :
+                                                LOG_DELETE_LOCAL_ATTACHMENT);
     return queue
       .push(function () {
         return storage.removeAttachment(id, name);
+      })
+      .push(function () {
+        return signature.removeAttachment(id, name);
+      });
+  }
+
+  function propagateFastSignatureDeletion(queue, id, name, signature,
+                                          report) {
+    report.logAttachment(id, name, LOG_FALSE_CONFLICT_ATTACHMENT);
+    return queue
+      .push(function () {
+        return signature.removeAttachment(id, name);
       });
   }
 
   function propagateFastAttachmentModification(queue, id, key, source,
-                                               destination, signature, hash) {
+                                               destination, signature, hash,
+                                               from_local, report) {
     return queue
       .push(function () {
         return signature.getAttachment(id, key, {format: 'json'})
@@ -569,6 +857,9 @@
           })
           .push(function (result) {
             if (result.hash !== hash) {
+              report.logAttachment(id, key, from_local ?
+                                            LOG_PUT_REMOTE_ATTACHMENT :
+                                            LOG_PUT_LOCAL_ATTACHMENT);
               return source.getAttachment(id, key)
                 .push(function (blob) {
                   return destination.putAttachment(id, key, blob);
@@ -587,7 +878,8 @@
   function repairFastDocumentAttachment(context, id,
                                         signature_hash,
                                         signature_attachment_hash,
-                                        signature_from_local) {
+                                        signature_from_local,
+                                        report) {
     if (signature_hash === signature_attachment_hash) {
       // No replication to do
       return;
@@ -608,6 +900,7 @@
           destination,
           push_argument_list = [],
           delete_argument_list = [],
+          delete_signature_argument_list = [],
           signature_attachment_dict = result_list[0],
           local_attachment_dict = result_list[1],
           remote_attachment_list = result_list[2],
@@ -618,13 +911,15 @@
           check_remote_modification =
             context._check_remote_attachment_modification,
           check_remote_creation = context._check_remote_attachment_creation,
-          check_remote_deletion = context._check_remote_attachment_deletion;
+          check_remote_deletion = context._check_remote_attachment_deletion,
+          from_local;
 
         if (signature_from_local) {
           source_attachment_dict = local_attachment_dict;
           destination_attachment_dict = remote_attachment_list;
           source = context._local_sub_storage;
           destination = context._remote_sub_storage;
+          from_local = true;
         } else {
           source_attachment_dict = remote_attachment_list;
           destination_attachment_dict = local_attachment_dict;
@@ -635,6 +930,7 @@
           check_local_deletion = check_remote_deletion;
           check_remote_creation = check_local_creation;
           check_remote_deletion = check_local_deletion;
+          from_local = false;
         }
 
         // Push all source attachments
@@ -652,8 +948,20 @@
                 source,
                 destination,
                 context._signature_sub_storage,
-                signature_hash
+                signature_hash,
+                from_local,
+                report
               ]);
+            } else {
+              if (signature_attachment_dict.hasOwnProperty(key)) {
+                report.logAttachment(id, key, from_local ?
+                                     LOG_SKIP_LOCAL_ATTACHMENT_MODIFICATION :
+                                     LOG_SKIP_REMOTE_ATTACHMENT_MODIFICATION);
+              } else {
+                report.logAttachment(id, key, from_local ?
+                                     LOG_SKIP_LOCAL_ATTACHMENT_CREATION :
+                                     LOG_SKIP_REMOTE_ATTACHMENT_CREATION);
+              }
             }
           }
         }
@@ -662,16 +970,19 @@
         for (key in signature_attachment_dict) {
           if (signature_attachment_dict.hasOwnProperty(key)) {
             if (check_local_deletion &&
-                !source_attachment_dict.hasOwnProperty(key)) {
-              delete_argument_list.push([
+                !source_attachment_dict.hasOwnProperty(key) &&
+                !destination_attachment_dict.hasOwnProperty(key)) {
+              delete_signature_argument_list.push([
                 undefined,
                 id,
                 key,
-                context._signature_sub_storage
+                context._signature_sub_storage,
+                report
               ]);
             }
           }
         }
+
         for (key in destination_attachment_dict) {
           if (destination_attachment_dict.hasOwnProperty(key)) {
             if (!source_attachment_dict.hasOwnProperty(key)) {
@@ -683,8 +994,21 @@
                   undefined,
                   id,
                   key,
-                  destination
+                  destination,
+                  context._signature_sub_storage,
+                  from_local,
+                  report
                 ]);
+              } else {
+                if (signature_attachment_dict.hasOwnProperty(key)) {
+                  report.logAttachment(id, key, from_local ?
+                       LOG_SKIP_LOCAL_ATTACHMENT_DELETION :
+                       LOG_SKIP_REMOTE_ATTACHMENT_DELETION);
+                } else {
+                  report.logAttachment(id, key, from_local ?
+                       LOG_SKIP_LOCAL_ATTACHMENT_CREATION :
+                       LOG_SKIP_REMOTE_ATTACHMENT_CREATION);
+                }
               }
             }
           }
@@ -702,6 +1026,12 @@
             propagateFastAttachmentDeletion,
             delete_argument_list,
             context._parallel_operation_attachment_amount
+          ),
+          dispatchQueue(
+            context,
+            propagateFastSignatureDeletion,
+            delete_signature_argument_list,
+            context._parallel_operation_attachment_amount
           )
         ]);
       })
@@ -715,7 +1045,7 @@
       });
   }
 
-  function repairDocumentAttachment(context, id, signature_hash_key,
+  function repairDocumentAttachment(context, id, report, signature_hash_key,
                                     signature_hash,
                                     signature_attachment_hash,
                                     signature_from_local) {
@@ -723,7 +1053,7 @@
       return repairFastDocumentAttachment(context, id,
                                     signature_hash,
                                     signature_attachment_hash,
-                                    signature_from_local);
+                                    signature_from_local, report);
     }
 
     var skip_attachment_dict = {};
@@ -757,6 +1087,7 @@
             context._local_sub_storage,
             context._remote_sub_storage,
             signature_allAttachments,
+            report,
             {
               conflict_force: (context._conflict_handling ===
                                CONFLICT_KEEP_LOCAL),
@@ -767,7 +1098,8 @@
               check_modification:
                 context._check_local_attachment_modification,
               check_creation: context._check_local_attachment_creation,
-              check_deletion: context._check_local_attachment_deletion
+              check_deletion: context._check_local_attachment_deletion,
+              from_local: true
             }
           )
             .push(function () {
@@ -787,6 +1119,7 @@
             context._remote_sub_storage,
             context._local_sub_storage,
             signature_allAttachments,
+            report,
             {
               use_revert_post: context._use_remote_post,
               conflict_force: (context._conflict_handling ===
@@ -798,7 +1131,8 @@
               check_modification:
                 context._check_remote_attachment_modification,
               check_creation: context._check_remote_attachment_creation,
-              check_deletion: context._check_remote_attachment_deletion
+              check_deletion: context._check_remote_attachment_deletion,
+              from_local: false
             }
           );
         }
@@ -808,14 +1142,17 @@
   function propagateModification(context, source, destination, doc, hash, id,
                                  skip_document_dict,
                                  skip_deleted_document_dict,
+                                 report,
                                  options) {
     var result = new RSVP.Queue(),
       post_id,
-      from_local;
+      from_local,
+      conflict;
     if (options === undefined) {
       options = {};
     }
     from_local = options.from_local;
+    conflict = options.conflict || false;
 
     if (doc === null) {
       result
@@ -835,6 +1172,7 @@
     if (options.use_post) {
       result
         .push(function () {
+          report.log(id, from_local ? LOG_POST_REMOTE : LOG_POST_LOCAL);
           return destination.post(doc);
         })
         .push(function (new_id) {
@@ -886,6 +1224,12 @@
     } else {
       result
         .push(function () {
+          if (conflict) {
+            report.log(id, from_local ? LOG_FORCE_PUT_REMOTE :
+                                        LOG_FORCE_PUT_LOCAL);
+          } else {
+            report.log(id, from_local ? LOG_PUT_REMOTE : LOG_PUT_LOCAL);
+          }
           // Drop signature if the destination document was empty
           // but a signature exists
           if (options.create_new_document === true) {
@@ -913,29 +1257,45 @@
   }
 
   function propagateDeletion(context, destination, id,
-                             skip_deleted_document_dict) {
+                             skip_deleted_document_dict, report, options) {
     // Do not delete a document if it has an attachment
     // ie, replication should prevent losing user data
     // Synchronize attachments before, to ensure
     // all of them will be deleted too
     var result;
     if (context._signature_hash_key !== undefined) {
+      if (options.conflict) {
+        report.log(id, options.from_local ? LOG_FORCE_DELETE_REMOTE :
+                                            LOG_FORCE_DELETE_LOCAL);
+      } else {
+        report.log(id, options.from_local ? LOG_DELETE_REMOTE :
+                                            LOG_DELETE_LOCAL);
+      }
       result = destination.remove(id)
         .push(function () {
           return context._signature_sub_storage.remove(id);
         });
     } else {
-      result = repairDocumentAttachment(context, id)
+      result = repairDocumentAttachment(context, id, report)
         .push(function () {
           return destination.allAttachments(id);
         })
         .push(function (attachment_dict) {
           if (JSON.stringify(attachment_dict) === "{}") {
+            if (options.conflict) {
+              report.log(id, options.from_local ? LOG_FORCE_DELETE_REMOTE :
+                                                  LOG_FORCE_DELETE_LOCAL);
+            } else {
+              report.log(id, options.from_local ? LOG_DELETE_REMOTE :
+                                                  LOG_DELETE_LOCAL);
+            }
             return destination.remove(id)
               .push(function () {
                 return context._signature_sub_storage.remove(id);
               });
           }
+          report.log(id, options.from_local ? LOG_UNEXPECTED_REMOTE_ATTACHMENT :
+                                              LOG_UNEXPECTED_LOCAL_ATTACHMENT);
         }, function (error) {
           if ((error instanceof jIO.util.jIOError) &&
               (error.status_code === 404)) {
@@ -958,6 +1318,7 @@
                              source, destination, id,
                              conflict_force, conflict_revert,
                              conflict_ignore,
+                             report,
                              options) {
     // No need to check twice
     skip_document_dict[id] = null;
@@ -991,6 +1352,7 @@
           remote_hash = remote_list[1];
         if (local_hash === remote_hash) {
           // Same modifications on both side
+          report.log(id, LOG_FALSE_CONFLICT);
           if (local_hash === null) {
             // Deleted on both side, drop signature
             return context._signature_sub_storage.remove(id);
@@ -1007,13 +1369,19 @@
           if (local_hash === null) {
             // Deleted locally
             return propagateDeletion(context, destination, id,
-                                     skip_deleted_document_dict);
+                                     skip_deleted_document_dict,
+                                     report,
+                                     {from_local: from_local,
+                                      conflict: (remote_hash !== status_hash)
+                                      });
           }
           return propagateModification(context, source, destination, doc,
                                        local_hash, id, skip_document_dict,
                                        skip_deleted_document_dict,
+                                       report,
                                        {use_post: ((options.use_post) &&
                                                    (remote_hash === null)),
+                                        conflict: (remote_hash !== status_hash),
                                         from_local: from_local,
                                         create_new_document:
                                           ((remote_hash === null) &&
@@ -1023,6 +1391,7 @@
 
         // Conflict cases
         if (conflict_ignore === true) {
+          report.log(id, LOG_SKIP_CONFLICT);
           return;
         }
 
@@ -1031,7 +1400,10 @@
           if (remote_hash === null) {
             // Deleted remotely
             return propagateDeletion(context, source, id,
-                                     skip_deleted_document_dict);
+                                     skip_deleted_document_dict, report,
+                                     {from_local: !from_local,
+                                      conflict: (local_hash !== null)
+                                     });
           }
           return propagateModification(
             context,
@@ -1042,9 +1414,11 @@
             id,
             skip_document_dict,
             skip_deleted_document_dict,
+            report,
             {use_post: ((options.use_revert_post) &&
                         (local_hash === null)),
               from_local: !from_local,
+              conflict: true,
               create_new_document: ((local_hash === null) &&
                                     (status_hash !== null))}
           );
@@ -1056,17 +1430,17 @@
           return propagateModification(context, source, destination, doc,
                                        local_hash, id, skip_document_dict,
                                        skip_deleted_document_dict,
+                                       report,
                                        {use_post: options.use_post,
+                                        conflict: true,
                                         from_local: from_local,
                                         create_new_document:
                                           (status_hash !== null)});
         }
-        doc = doc || local_hash;
-        remote_doc = remote_doc || remote_hash;
-        throw new jIO.util.jIOError("Conflict on '" + id + "': " +
-                                    stringify(doc) + " !== " +
-                                    stringify(remote_doc),
-                                    409);
+        report.log(id, LOG_UNRESOLVED_CONFLICT);
+      })
+      .push(undefined, function (error) {
+        report.log(id, LOG_UNEXPECTED_ERROR, error);
       });
   }
 
@@ -1075,7 +1449,7 @@
                               cache, destination_key,
                               destination, id, source,
                               conflict_force, conflict_revert,
-                              conflict_ignore, options) {
+                              conflict_ignore, report, options) {
     var status_hash;
     queue
       .push(function () {
@@ -1089,7 +1463,7 @@
                                  status_hash, null, null,
                                  source, destination, id,
                                  conflict_force, conflict_revert,
-                                 conflict_ignore,
+                                 conflict_ignore, report,
                                  options);
       });
   }
@@ -1100,7 +1474,7 @@
                                     source, destination, id,
                                     conflict_force, conflict_revert,
                                     conflict_ignore,
-                                    local_hash, status_hash,
+                                    local_hash, status_hash, report,
                                     options) {
     queue
       .push(function () {
@@ -1124,7 +1498,11 @@
                                    source, destination, id,
                                    conflict_force, conflict_revert,
                                    conflict_ignore,
+                                   report,
                                    options);
+        }
+        if (!options.from_local) {
+          report.log(id, LOG_NO_CHANGE);
         }
       });
   }
@@ -1133,7 +1511,7 @@
                        skip_deleted_document_dict,
                        cache, source_key, destination_key,
                        source, destination, signature_allDocs,
-                       options) {
+                       report, options) {
     var argument_list = [],
       argument_list_deletion = [];
     if (!options.hasOwnProperty("use_post")) {
@@ -1214,7 +1592,19 @@
                                   options.conflict_revert,
                                   options.conflict_ignore,
                                   local_hash, status_hash,
+                                  report,
                                   options]);
+            } else if (local_hash === status_hash) {
+              report.log(key, LOG_NO_CHANGE);
+            } else {
+              if (signature_dict.hasOwnProperty(key)) {
+                report.log(key, options.from_local ?
+                           LOG_SKIP_LOCAL_MODIFICATION :
+                           LOG_SKIP_REMOTE_MODIFICATION);
+              } else {
+                report.log(key, options.from_local ? LOG_SKIP_LOCAL_CREATION :
+                                                     LOG_SKIP_REMOTE_CREATION);
+              }
             }
           }
         }
@@ -1241,8 +1631,11 @@
                                              options.conflict_force,
                                              options.conflict_revert,
                                              options.conflict_ignore,
+                                             report,
                                              options]);
               } else {
+                report.log(key, options.from_local ? LOG_SKIP_LOCAL_DELETION :
+                                                     LOG_SKIP_REMOTE_DELETION);
                 skip_deleted_document_dict[key] = null;
               }
             }
@@ -1262,11 +1655,11 @@
       });
   }
 
-  function repairDocument(queue, context, id, signature_hash_key,
+  function repairDocument(queue, context, id, report, signature_hash_key,
                           signature_hash, signature_attachment_hash,
                           signature_from_local) {
     queue.push(function () {
-      return repairDocumentAttachment(context, id, signature_hash_key,
+      return repairDocumentAttachment(context, id, report, signature_hash_key,
                                       signature_hash,
                                       signature_attachment_hash,
                                       signature_from_local);
@@ -1278,7 +1671,8 @@
       argument_list = arguments,
       skip_document_dict = {},
       skip_deleted_document_dict = {},
-      cache = {};
+      cache = {},
+      report = new ReplicateReport(this._log_level, this._log_console);
 
     return new RSVP.Queue()
       .push(function () {
@@ -1345,7 +1739,7 @@
                              cache, 'local', 'remote',
                              context._local_sub_storage,
                              context._remote_sub_storage,
-                             signature_allDocs,
+                             signature_allDocs, report,
                              {
               use_post: context._use_remote_post,
               conflict_force: (context._conflict_handling ===
@@ -1376,7 +1770,8 @@
                              cache, 'remote', 'local',
                              context._remote_sub_storage,
                              context._local_sub_storage,
-                             signature_allDocs, {
+                             signature_allDocs,
+                             report, {
               use_revert_post: context._use_remote_post,
               conflict_force: (context._conflict_handling ===
                                CONFLICT_KEEP_REMOTE),
@@ -1417,9 +1812,10 @@
                 // is deleted but not pushed to the other storage
                 if (!skip_deleted_document_dict.hasOwnProperty(row.id)) {
                   local_argument_list.push(
-                    [undefined, context, row.id, context._signature_hash_key,
+                    [undefined, context, row.id, report,
+                      context._signature_hash_key,
                       row.value.hash, row.value.attachment_hash,
-                      row.value.from_local]
+                      row.value.from_local, report]
                   );
                 }
               }
@@ -1431,6 +1827,12 @@
               );
             });
         }
+      })
+      .push(function () {
+        if (report.has_error) {
+          throw report;
+        }
+        return report;
       });
   };
 

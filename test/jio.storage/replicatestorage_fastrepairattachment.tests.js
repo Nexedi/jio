@@ -70,6 +70,65 @@
   };
 
   /////////////////////////////////////////////////////////////////
+  // replicateStorage.repair fast use cases
+  /////////////////////////////////////////////////////////////////
+  function StorageAllDocsDynamicSelect(spec) {
+    this._sub_storage = jIO.createJIO(spec.sub_storage);
+  }
+  StorageAllDocsDynamicSelect.prototype.get = function () {
+    return this._sub_storage.get.apply(this._sub_storage, arguments);
+  };
+  StorageAllDocsDynamicSelect.prototype.post = function () {
+    return this._sub_storage.post.apply(this._sub_storage, arguments);
+  };
+  StorageAllDocsDynamicSelect.prototype.put = function () {
+    return this._sub_storage.put.apply(this._sub_storage, arguments);
+  };
+  StorageAllDocsDynamicSelect.prototype.remove = function () {
+    return this._sub_storage.remove.apply(this._sub_storage, arguments);
+  };
+  StorageAllDocsDynamicSelect.prototype.hasCapacity = function () {
+    return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+  };
+  StorageAllDocsDynamicSelect.prototype.buildQuery = function (options) {
+    var is_replicate_query = false;
+    if ((options.select_list !== undefined) &&
+        (options.select_list[0] === 'foo_etag')) {
+      options = {
+        select_list: ['foo_etag', 'title']
+      };
+      is_replicate_query = true;
+    }
+    return this._sub_storage.buildQuery(options)
+      .push(function (result) {
+        var i;
+        if (is_replicate_query === true) {
+          for (i = 0; i < result.length; i += 1) {
+            result[i].value.foo_etag = result[i].value.title + ' dynetag';
+          }
+        }
+        return result;
+      });
+  };
+  StorageAllDocsDynamicSelect.prototype.allAttachments = function () {
+    return this._sub_storage.allAttachments.apply(this._sub_storage, arguments);
+  };
+  StorageAllDocsDynamicSelect.prototype.putAttachment = function () {
+    return this._sub_storage.putAttachment.apply(this._sub_storage, arguments);
+  };
+  StorageAllDocsDynamicSelect.prototype.getAttachment = function () {
+    return this._sub_storage.getAttachment.apply(this._sub_storage, arguments);
+  };
+  StorageAllDocsDynamicSelect.prototype.removeAttachment = function () {
+    return this._sub_storage.removeAttachment.apply(this._sub_storage,
+                                                    arguments);
+  };
+  jIO.addStorage(
+    'storagealldocsdynamicselect2',
+    StorageAllDocsDynamicSelect
+  );
+
+  /////////////////////////////////////////////////////////////////
   // attachment replication
   /////////////////////////////////////////////////////////////////
   module("replicateStorage.fast.repair.attachment", {
@@ -77,6 +136,7 @@
       // Uses memory substorage, so that it is flushed after each run
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         check_local_attachment_creation: true,
         check_local_attachment_modification: true,
@@ -87,7 +147,7 @@
         local_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -99,7 +159,7 @@
         remote_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -114,7 +174,7 @@
 
   test("local attachment creation", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this,
@@ -134,7 +194,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.__storage._remote_sub_storage.getAttachment(
           id,
           "foo",
@@ -170,7 +234,7 @@
   test("local attachment creation, local document creation not checked",
        function () {
       stop();
-      expect(6);
+      expect(7);
 
       var id,
         context = this,
@@ -178,13 +242,14 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         check_local_creation: false,
         check_local_attachment_creation: true,
         local_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -196,7 +261,7 @@
         remote_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -220,7 +285,10 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_SKIP_LOCAL_CREATION, id]
+          ]);
           return context.jio.__storage._remote_sub_storage.getAttachment(
             id,
             "foo",
@@ -238,7 +306,7 @@
           ok(error instanceof jIO.util.jIOError);
           equal(error.status_code, 404);
           var error_message = "Cannot find attachment: " +
-            "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+            "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
             "jio_attachment/";
           equal(
             error.message.substring(0, error_message.length),
@@ -255,7 +323,7 @@
 
   test("local attachment creation not checked", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var id,
       context = this,
@@ -263,13 +331,14 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: false,
       check_local_attachment_modification: true,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -281,7 +350,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -306,7 +375,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_SKIP_LOCAL_ATTACHMENT_CREATION, id, 'foo']
+        ]);
         return context.jio.__storage._remote_sub_storage.getAttachment(
           id,
           "foo",
@@ -324,7 +397,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -342,22 +415,24 @@
   test("local attachment creation, local document creation and use remote post",
        function () {
       stop();
-      expect(4);
+      expect(5);
 
       var id,
         context = this,
         post_id,
-        blob = new Blob([big_string]);
+        blob = new Blob([big_string]),
+        report;
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         use_remote_post: true,
         check_local_attachment_creation: true,
         local_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -369,7 +444,7 @@
         remote_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -389,12 +464,17 @@
           return context.jio.repair();
         })
         // Another document should have been created
-        .then(function () {
+        .then(function (result) {
+          report = result;
           return context.jio.__storage._remote_sub_storage.allDocs();
         })
         .then(function (result) {
           equal(result.data.total_rows, 1);
           post_id = result.data.rows[0].id;
+          deepEqual(report._list, [
+            [report.LOG_POST_REMOTE, id],
+            [report.LOG_PUT_REMOTE_ATTACHMENT, post_id, 'foo']
+          ]);
           return context.jio.getAttachment(
             post_id,
             "foo",
@@ -429,7 +509,7 @@
 
   test("remote attachment creation", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this,
@@ -457,7 +537,12 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_PUT_LOCAL, id],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -485,7 +570,7 @@
   test("remote attachment creation, remote document creation not checked",
        function () {
       stop();
-      expect(6);
+      expect(7);
 
       var id,
         context = this,
@@ -493,13 +578,14 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         check_remote_creation: false,
         check_local_attachment_creation: true,
         local_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -511,7 +597,7 @@
         remote_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -544,7 +630,10 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_SKIP_REMOTE_CREATION, id]
+          ]);
           return context.jio.getAttachment(
             id,
             "foo",
@@ -562,7 +651,7 @@
           ok(error instanceof jIO.util.jIOError);
           equal(error.status_code, 404);
           var error_message = "Cannot find attachment: " +
-            "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+            "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
             "jio_attachment/";
           equal(
             error.message.substring(0, error_message.length),
@@ -579,7 +668,7 @@
 
   test("remote attachment creation not checked", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var id,
       context = this,
@@ -587,12 +676,14 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_remote_attachment_creation: false,
+      check_remote_attachment_modification: true,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -604,7 +695,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -637,7 +728,12 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_PUT_LOCAL, id],
+          [report.LOG_SKIP_REMOTE_ATTACHMENT_CREATION, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -655,7 +751,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -672,7 +768,7 @@
 
   test("local and remote attachment creations", function () {
     stop();
-    expect(2);
+    expect(3);
     var context = this,
       id = 'foobar',
       blob = new Blob(["a"]),
@@ -701,7 +797,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FALSE_CONFLICT, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -728,7 +828,7 @@
 
   test("local and remote attachment creations: keep local", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -737,6 +837,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 1,
       check_local_attachment_creation: true,
@@ -744,7 +845,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -756,7 +857,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -790,7 +891,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FALSE_CONFLICT, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -826,7 +931,7 @@
   test("local and remote attachment creations: keep local, " +
        "local not matching allAttachments", function () {
       stop();
-      expect(7);
+      expect(8);
 
       var context = this,
         id = 'foobar',
@@ -835,6 +940,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         conflict_handling: 1,
         check_local_attachment_creation: true,
@@ -854,7 +960,7 @@
         remote_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -892,7 +998,11 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_REMOTE, id],
+            [report.LOG_DELETE_REMOTE_ATTACHMENT, id, 'conflict']
+          ]);
           return context.jio.getAttachment(
             id,
             "conflict",
@@ -930,7 +1040,7 @@
   test("local and remote attachment creations: keep local, " +
        "remote not matching allAttachments", function () {
       stop();
-      expect(3);
+      expect(4);
 
       var context = this,
         id = 'foobar',
@@ -939,6 +1049,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         conflict_handling: 1,
         check_local_attachment_creation: true,
@@ -946,7 +1057,7 @@
         local_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -987,7 +1098,11 @@
         .then(function () {
           return context.jio.repair();
         })
-         .then(function () {
+         .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_REMOTE, id],
+            [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'conflict']
+          ]);
           return context.jio.getAttachment(
             id,
             "conflict",
@@ -1022,7 +1137,7 @@
 
   test("local and remote attachment creations: keep remote", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1031,6 +1146,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 2,
       check_local_attachment_creation: true,
@@ -1038,7 +1154,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -1050,7 +1166,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -1084,7 +1200,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1120,7 +1240,7 @@
   test("local and remote attachment creations: keep remote, " +
        "local not matching allAttachments", function () {
       stop();
-      expect(3);
+      expect(4);
 
       var context = this,
         id = 'foobar',
@@ -1129,6 +1249,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         conflict_handling: 2,
         check_local_attachment_creation: true,
@@ -1148,7 +1269,7 @@
         remote_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -1186,7 +1307,11 @@
         .then(function () {
           return context.jio.repair();
         })
-         .then(function () {
+         .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_LOCAL, id],
+            [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'conflict']
+          ]);
           return context.jio.getAttachment(
             id,
             "conflict",
@@ -1222,7 +1347,7 @@
   test("local and remote attachment creations: keep remote, " +
        "remote not matching allAttachments", function () {
       stop();
-      expect(7);
+      expect(8);
 
       var context = this,
         id = 'foobar',
@@ -1231,6 +1356,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         conflict_handling: 2,
         check_local_attachment_creation: true,
@@ -1238,7 +1364,7 @@
         local_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -1279,7 +1405,11 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_LOCAL, id],
+            [report.LOG_DELETE_LOCAL_ATTACHMENT, id, 'conflict']
+          ]);
           return context.jio.getAttachment(
             id,
             "conflict",
@@ -1306,7 +1436,7 @@
           ok(error instanceof jIO.util.jIOError);
           equal(error.status_code, 404);
           var error_message = "Cannot find attachment: " +
-            "_replicate_44c4bbda10d24c5e61597a46decdad1142ec8566 , " +
+            "_replicate_7c9eb264c153b7919aa88a0ffb9ad81ae18e2ace , " +
             "jio_attachment/";
           equal(
             error.message.substring(0, error_message.length),
@@ -1323,7 +1453,7 @@
 
   test("local and remote attachment creations: continue", function () {
     stop();
-    expect(4);
+    expect(5);
 
     var context = this,
       id = 'foobar',
@@ -1332,6 +1462,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 3,
       check_local_attachment_creation: true,
@@ -1339,7 +1470,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -1351,7 +1482,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -1385,7 +1516,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_CONFLICT, id]
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1420,11 +1554,12 @@
 
   test("local and remote same attachment creations", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
-      blob = new Blob([big_string]);
+      blob = new Blob([big_string]),
+      blob2 = new Blob(['a']);
 
     context.jio.put(id, {"title": "foo"})
       .push(function () {
@@ -1443,13 +1578,17 @@
           ),
           context.jio.__storage._remote_sub_storage.putAttachment(id,
                                                                   "conflict",
-                                                                  blob)
+                                                                  blob2)
         ]);
       })
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FALSE_CONFLICT, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1484,7 +1623,7 @@
 
   test("no attachment modification", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1500,7 +1639,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_NO_CHANGE, id]
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1535,7 +1678,7 @@
 
   test("local attachment modification", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1558,7 +1701,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1593,7 +1740,7 @@
 
   test("local attachment modification not checked", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1602,13 +1749,14 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       check_local_attachment_modification: false,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -1620,7 +1768,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -1647,7 +1795,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_SKIP_LOCAL_ATTACHMENT_MODIFICATION, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1682,7 +1834,7 @@
 
   test("remote attachment modification", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1712,7 +1864,12 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_PUT_LOCAL, id],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1747,7 +1904,7 @@
 
   test("remote attachment modification not checked", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1756,13 +1913,14 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       check_remote_attachment_modification: false,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -1774,7 +1932,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -1808,7 +1966,12 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_PUT_LOCAL, id],
+          [report.LOG_SKIP_REMOTE_ATTACHMENT_MODIFICATION, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1843,7 +2006,7 @@
 
   test("local and remote attachment modifications", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1883,7 +2046,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FALSE_CONFLICT, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1918,7 +2085,7 @@
 
   test("local and remote attachment modifications: keep local", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1928,6 +2095,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 1,
       check_local_attachment_creation: true,
@@ -1937,7 +2105,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -1949,7 +2117,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -1992,7 +2160,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -2027,7 +2199,7 @@
 
   test("local and remote attachment modifications: keep remote", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -2037,6 +2209,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 2,
       check_local_attachment_creation: true,
@@ -2046,7 +2219,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -2058,7 +2231,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -2101,7 +2274,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -2136,7 +2313,7 @@
 
   test("local and remote attachment modifications: continue", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -2146,6 +2323,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 3,
       check_local_attachment_creation: true,
@@ -2155,7 +2333,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -2167,7 +2345,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -2210,7 +2388,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_CONFLICT, id]
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -2245,7 +2426,7 @@
 
   test("local attachment deletion", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this,
@@ -2268,7 +2449,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_DELETE_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2299,7 +2484,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -2317,7 +2502,7 @@
   test("local attachment deletion not checked", function () {
 
     stop();
-    expect(5);
+    expect(6);
 
     var id,
       context = this,
@@ -2325,6 +2510,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       check_local_attachment_deletion: false,
@@ -2335,7 +2521,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -2347,7 +2533,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -2375,7 +2561,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_SKIP_LOCAL_ATTACHMENT_DELETION, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2412,7 +2602,7 @@
 
   test("remote attachment deletion", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this,
@@ -2435,7 +2625,12 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_PUT_LOCAL, id],
+          [report.LOG_DELETE_LOCAL_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2463,7 +2658,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -2481,7 +2676,7 @@
   test("remote attachment deletion not checked", function () {
 
     stop();
-    expect(5);
+    expect(6);
 
     var id,
       context = this,
@@ -2489,6 +2684,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       check_local_attachment_deletion: true,
@@ -2499,7 +2695,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -2511,7 +2707,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -2539,7 +2735,12 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_PUT_LOCAL, id],
+          [report.LOG_SKIP_REMOTE_ATTACHMENT_DELETION, id, 'foo']
+        ]);
         return context.jio.__storage._remote_sub_storage.getAttachment(
           id,
           "foo",
@@ -2576,7 +2777,7 @@
 
   test("local and remote attachment deletions", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this,
@@ -2602,7 +2803,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FALSE_CONFLICT, id],
+          [report.LOG_FALSE_CONFLICT_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2630,7 +2835,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -2647,7 +2852,7 @@
 
   test("local deletion and remote modifications", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this,
@@ -2674,7 +2879,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2709,7 +2918,7 @@
 
   test("local deletion and remote modifications: keep local", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this,
@@ -2718,6 +2927,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 1,
       check_local_attachment_creation: true,
@@ -2729,7 +2939,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -2741,7 +2951,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -2772,7 +2982,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id],
+          [report.LOG_DELETE_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2800,7 +3014,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -2818,7 +3032,7 @@
   test("local deletion and remote modifications: keep local, dont check local",
        function () {
       stop();
-      expect(5);
+      expect(6);
 
       var id,
         context = this,
@@ -2827,6 +3041,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         conflict_handling: 1,
         check_local_attachment_creation: true,
@@ -2838,7 +3053,7 @@
         local_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -2850,7 +3065,7 @@
         remote_sub_storage: {
           type: "uuid",
           sub_storage: {
-            type: "storagealldocsdynamicselect",
+            type: "storagealldocsdynamicselect2",
             sub_storage: {
               type: "query",
               sub_storage: {
@@ -2881,7 +3096,11 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_REMOTE, id],
+            [report.LOG_SKIP_LOCAL_ATTACHMENT_DELETION, id, 'foo']
+          ]);
           return context.jio.getAttachment(
             id,
             "foo",
@@ -2918,7 +3137,7 @@
 
   test("local deletion and remote modifications: keep remote", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this,
@@ -2927,6 +3146,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 2,
       check_local_attachment_creation: true,
@@ -2938,7 +3158,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -2950,7 +3170,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -2981,7 +3201,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -3016,7 +3240,7 @@
 
   test("local deletion and remote modifications: ignore", function () {
     stop();
-    expect(5);
+    expect(6);
 
     var id,
       context = this,
@@ -3025,6 +3249,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 3,
       check_local_attachment_creation: true,
@@ -3036,7 +3261,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3048,7 +3273,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3079,7 +3304,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_CONFLICT, id]
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -3116,7 +3344,7 @@
 
   test("local modifications and remote deletion", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this,
@@ -3148,7 +3376,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -3183,7 +3415,7 @@
 
   test("local modifications and remote deletion: keep remote", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this,
@@ -3192,6 +3424,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 2,
       check_local_attachment_creation: true,
@@ -3203,7 +3436,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3215,7 +3448,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3246,7 +3479,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id],
+          [report.LOG_DELETE_LOCAL_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -3274,7 +3511,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -3291,7 +3528,7 @@
 
   test("local modifications and remote deletion: keep local", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this,
@@ -3300,6 +3537,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 1,
       check_local_attachment_creation: true,
@@ -3311,7 +3549,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3323,7 +3561,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3354,7 +3592,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -3389,7 +3631,7 @@
 
   test("local modif and remote del: keep remote, not check modif", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this,
@@ -3398,6 +3640,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 2,
       check_local_attachment_creation: true,
@@ -3409,7 +3652,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3421,7 +3664,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3452,7 +3695,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id],
+          [report.LOG_DELETE_LOCAL_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -3480,7 +3727,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -3497,7 +3744,7 @@
 
   test("local modifications and remote deletion: ignore", function () {
     stop();
-    expect(5);
+    expect(6);
 
     var id,
       context = this,
@@ -3506,6 +3753,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 3,
       check_local_attachment_creation: true,
@@ -3517,7 +3765,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3529,7 +3777,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3560,7 +3808,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_CONFLICT, id]
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -3600,7 +3851,7 @@
   /////////////////////////////////////////////////////////////////
   test("document and attachment deletion performance", function () {
     stop();
-    expect(12);
+    expect(13);
 
     var id,
       context = this,
@@ -3620,7 +3871,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_DELETE_REMOTE, id]
+        ]);
         return context.jio.__storage._remote_sub_storage.getAttachment(
           id,
           "foo",
@@ -3644,7 +3898,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -3656,7 +3910,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_document/";
         equal(
           error.message.substring(0, error_message.length),
@@ -3747,12 +4001,13 @@
     );
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3764,7 +4019,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3906,13 +4161,14 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       parallel_operation_attachment_amount: 2,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -3924,7 +4180,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -4046,13 +4302,14 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       parallel_operation_attachment_amount: 4,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -4064,7 +4321,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -4104,7 +4361,7 @@
 
   test("attachment skipped when local document deletion skipped", function () {
     stop();
-    expect(18);
+    expect(19);
 
     var id,
       context = this,
@@ -4113,6 +4370,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_deletion: false,
       check_local_attachment_modification: true,
@@ -4124,7 +4382,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -4136,7 +4394,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -4174,7 +4432,11 @@
         return context.jio.repair();
       })
 
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_LOCAL_DELETION, id],
+          [report.LOG_NO_CHANGE, id]
+        ]);
         ok(true, 'second repair success');
 
         // local document still deleted
@@ -4235,7 +4497,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -4292,7 +4554,7 @@
 
   test("attachment skipped when remot document deletion skipped", function () {
     stop();
-    expect(18);
+    expect(19);
 
     var id,
       context = this,
@@ -4301,6 +4563,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_remote_deletion: false,
       check_local_attachment_modification: true,
@@ -4312,7 +4575,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -4324,7 +4587,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -4359,7 +4622,11 @@
         return context.jio.repair();
       })
 
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_SKIP_REMOTE_DELETION, id]
+        ]);
         ok(true, 'second repair success');
 
         // remote document still deleted
@@ -4420,7 +4687,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -4477,7 +4744,7 @@
 
   test("att sig deleted when local doc del resolved", function () {
     stop();
-    expect(16);
+    expect(17);
 
     var id,
       context = this,
@@ -4513,7 +4780,13 @@
         return context.jio.repair();
       })
 
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foo'],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foomod'],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foocre']
+        ]);
         ok(true, 'second repair success');
 
         // local document recreated
@@ -4611,7 +4884,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -4629,7 +4902,7 @@
 
   test("att sig deleted when remot doc del resolved", function () {
     stop();
-    expect(16);
+    expect(17);
 
     var id,
       context = this,
@@ -4661,7 +4934,13 @@
         return context.jio.repair();
       })
 
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo'],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foomod'],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foocre']
+        ]);
         ok(true, 'second repair success');
 
         // remote document recreated
@@ -4759,7 +5038,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -4777,7 +5056,7 @@
 
   test("att sig deleted when local not checked doc del resolved", function () {
     stop();
-    expect(16);
+    expect(17);
 
     var id,
       context = this,
@@ -4786,6 +5065,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_deletion: false,
       check_local_attachment_modification: true,
@@ -4797,7 +5077,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -4809,7 +5089,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -4849,7 +5129,14 @@
         return context.jio.repair();
       })
 
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_LOCAL_DELETION, id],
+          [report.LOG_FORCE_PUT_LOCAL, id],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foo'],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foomod'],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foocre']
+        ]);
         ok(true, 'second repair success');
 
         // local document recreated
@@ -4947,7 +5234,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
@@ -4965,7 +5252,7 @@
 
   test("att sig deleted when remot doc not checked del resolved", function () {
     stop();
-    expect(16);
+    expect(17);
 
     var id,
       context = this,
@@ -4974,6 +5261,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_remote_deletion: false,
       check_local_attachment_modification: true,
@@ -4985,7 +5273,7 @@
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -4997,7 +5285,7 @@
       remote_sub_storage: {
         type: "uuid",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "storagealldocsdynamicselect2",
           sub_storage: {
             type: "query",
             sub_storage: {
@@ -5033,7 +5321,13 @@
         return context.jio.repair();
       })
 
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo'],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foomod'],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foocre']
+        ]);
         ok(true, 'second repair success');
 
         // remote document recreated
@@ -5131,7 +5425,7 @@
         ok(error instanceof jIO.util.jIOError);
         equal(error.status_code, 404);
         var error_message = "Cannot find attachment: " +
-          "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+          "_replicate_200e37c2a642ca3b7445acb600508c785e85610e , " +
           "jio_attachment/";
         equal(
           error.message.substring(0, error_message.length),
