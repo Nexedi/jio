@@ -100,6 +100,7 @@
       // Uses memory substorage, so that it is flushed after each run
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
           type: "uuid",
@@ -136,7 +137,7 @@
 
   test("local document creation", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this;
@@ -146,7 +147,10 @@
         id = result;
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id]
+        ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
@@ -174,7 +178,7 @@
 
   test("local document creation and use remote post", function () {
     stop();
-    expect(13);
+    expect(14);
 
     var id,
       post_id,
@@ -183,6 +187,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -220,7 +225,10 @@
         return context.jio.repair();
       })
       // Document 'id' has been deleted in both storages
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_POST_REMOTE, id]
+        ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .fail(function (error) {
@@ -294,7 +302,7 @@
 
   test("local document creation, remote post and delayed allDocs", function () {
     stop();
-    expect(11);
+    expect(12);
 
     var id,
       post_id = "_foobar",
@@ -325,6 +333,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -359,7 +368,10 @@
         return context.jio.repair();
       })
       // Document 'id' has been deleted in both storages
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_POST_REMOTE, id]
+        ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .fail(function (error) {
@@ -421,7 +433,7 @@
 
   test("remote document creation", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this;
@@ -432,7 +444,10 @@
         id = result;
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_LOCAL, id]
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
@@ -460,7 +475,7 @@
 
   test("local and remote document creations", function () {
     stop();
-    expect(5);
+    expect(3);
 
     var context = this;
 
@@ -476,11 +491,10 @@
       .then(function () {
         ok(false);
       })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Conflict on 'conflict': " +
-                             "\"foo dynetag\" !== \"bar dynetag\"");
-        equal(error.status_code, 409);
+      .fail(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_UNRESOLVED_CONFLICT, 'conflict']
+        ]);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get("conflict");
@@ -498,7 +512,7 @@
 
   test("local and remote document creations with same 'etag'", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this;
 
@@ -511,7 +525,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FALSE_CONFLICT, 'conflict']
+        ]);
         return context.jio.__storage._signature_sub_storage.get("conflict");
       })
       .then(function (result) {
@@ -549,12 +566,13 @@
 
   test("local and remote document creations: keep local", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "storagealldocsdynamicselect",
@@ -586,7 +604,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, 'conflict']
+        ]);
         return context.jio.__storage._signature_sub_storage.get("conflict");
       })
       .then(function (result) {
@@ -624,12 +645,13 @@
   test("local and remote document creations: keep local, remote post",
     function () {
       stop();
-      expect(3);
+      expect(4);
 
       var context = this;
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         use_remote_post: 1,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
@@ -662,7 +684,10 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_REMOTE, 'conflict']
+          ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .then(function (result) {
@@ -700,12 +725,13 @@
   test("local and remote document creations: keep local, " +
        "local not matching query", function () {
       stop();
-      expect(3);
+      expect(4);
 
       var context = this;
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
           type: "storagealldocsdynamicselect",
@@ -740,7 +766,10 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_REMOTE, 'conflict']
+          ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .then(function (result) {
@@ -778,12 +807,13 @@
   test("local and remote document creations: keep local, " +
        "remote not matching query", function () {
       stop();
-      expect(3);
+      expect(4);
 
       var context = this;
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
           type: "storagealldocsdynamicselect",
@@ -817,7 +847,10 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_REMOTE, 'conflict']
+          ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .then(function (result) {
@@ -856,12 +889,13 @@
 
   test("local and remote document creations: keep remote", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "storagealldocsdynamicselect",
@@ -893,7 +927,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, 'conflict']
+        ]);
         return context.jio.__storage._signature_sub_storage.get("conflict");
       })
       .then(function (result) {
@@ -931,12 +968,13 @@
   test("local and remote document creations: keep remote, remote post",
     function () {
       stop();
-      expect(3);
+      expect(4);
 
       var context = this;
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         use_remote_post: 1,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
@@ -969,7 +1007,10 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_LOCAL, 'conflict']
+          ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .then(function (result) {
@@ -1007,12 +1048,13 @@
   test("local and remote document creations: keep remote, " +
        "local not matching query", function () {
       stop();
-      expect(3);
+      expect(4);
 
       var context = this;
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
           type: "storagealldocsdynamicselect",
@@ -1046,7 +1088,10 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_LOCAL, 'conflict']
+          ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .then(function (result) {
@@ -1086,12 +1131,13 @@
   test("local and remote document creations: keep remote, " +
        "remote not matching query", function () {
       stop();
-      expect(3);
+      expect(4);
 
       var context = this;
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
           type: "storagealldocsdynamicselect",
@@ -1125,7 +1171,10 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_LOCAL, 'conflict']
+          ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .then(function (result) {
@@ -1162,12 +1211,13 @@
 
   test("local and remote document creations: continue", function () {
     stop();
-    expect(4);
+    expect(5);
 
     var context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "storagealldocsdynamicselect",
@@ -1199,7 +1249,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_CONFLICT, 'conflict']
+        ]);
         return context.jio.__storage._signature_sub_storage.get("conflict");
       })
       .fail(function (error) {
@@ -1236,12 +1289,13 @@
   test("local and remote document creations: continue, remote post",
     function () {
       stop();
-      expect(4);
+      expect(5);
 
       var context = this;
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         use_remote_post: 1,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
@@ -1274,7 +1328,10 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_SKIP_CONFLICT, 'conflict']
+          ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .fail(function (error) {
@@ -1310,7 +1367,7 @@
 
   test("local and remote same document creations", function () {
     stop();
-    expect(1);
+    expect(2);
 
     var context = this;
 
@@ -1323,7 +1380,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FALSE_CONFLICT, 'conflict']
+        ]);
         return context.jio.__storage._signature_sub_storage.get("conflict");
       })
       .then(function (result) {
@@ -1342,7 +1402,7 @@
 
   test("no modification", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this;
@@ -1355,7 +1415,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_NO_CHANGE, id]
+        ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
@@ -1383,7 +1447,7 @@
 
   test("local document modification", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this;
@@ -1399,7 +1463,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id]
+        ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
@@ -1428,13 +1495,14 @@
 
   test("local document modification: use remote post", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: 1,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -1475,7 +1543,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id]
+        ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
@@ -1503,13 +1574,14 @@
 
   test("local document modification not checked", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_local_modification: false,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -1549,7 +1621,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_LOCAL_MODIFICATION, id],
+          [report.LOG_NO_CHANGE, id]
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
@@ -1586,7 +1662,7 @@
 
   test("remote document modification", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this;
@@ -1605,7 +1681,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_PUT_LOCAL, id]
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
@@ -1633,13 +1713,14 @@
 
   test("remote document modification not checked", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_remote_modification: false,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -1682,7 +1763,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_SKIP_REMOTE_MODIFICATION, id]
+        ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
@@ -1719,7 +1804,7 @@
 
   test("local and remote document modifications", function () {
     stop();
-    expect(4);
+    expect(2);
 
     var id,
       context = this;
@@ -1747,11 +1832,10 @@
       .then(function () {
         ok(false);
       })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Conflict on '" + id + "': " +
-                             "\"foo4 dynetag\" !== \"foo5 dynetag\"");
-        equal(error.status_code, 409);
+      .fail(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_UNRESOLVED_CONFLICT, id]
+        ]);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id);
@@ -1769,13 +1853,14 @@
 
   test("local and remote document modifications: keep local", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "uuid",
@@ -1824,7 +1909,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id]
+        ]);
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
@@ -1861,13 +1949,14 @@
 
   test("local and remote document modifications: keep remote", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "uuid",
@@ -1916,7 +2005,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id]
+        ]);
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
@@ -1953,13 +2045,14 @@
 
   test("local and remote document modifications: continue", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "uuid",
@@ -2008,7 +2101,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_CONFLICT, id]
+        ]);
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
@@ -2045,7 +2141,7 @@
 
   test("local and remote document same modifications", function () {
     stop();
-    expect(1);
+    expect(2);
 
     var id,
       context = this;
@@ -2070,7 +2166,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FALSE_CONFLICT, id]
+        ]);
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
@@ -2089,7 +2188,7 @@
 
   test("local document deletion", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var id,
       context = this;
@@ -2105,7 +2204,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_DELETE_REMOTE, id]
+        ]);
         ok(true, "Removal correctly synced");
       })
       .then(function () {
@@ -2134,13 +2236,14 @@
 
   test("local document deletion not checked", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_local_deletion: false,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -2180,7 +2283,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_LOCAL_DELETION, id],
+          [report.LOG_NO_CHANGE, id]
+        ]);
         ok(true, "Removal correctly synced");
       })
       .then(function () {
@@ -2216,7 +2323,7 @@
 
   test("local document deletion with attachment", function () {
     stop();
-    expect(10);
+    expect(11);
 
     var id,
       context = this,
@@ -2237,7 +2344,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_DELETE_REMOTE, id]
+        ]);
         ok(true, "Removal correctly synced");
       })
       .then(function () {
@@ -2279,7 +2389,7 @@
 
   test("remote document deletion", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var id,
       context = this;
@@ -2295,7 +2405,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_DELETE_LOCAL, id]
+        ]);
         ok(true, "Removal correctly synced");
       })
       .then(function () {
@@ -2324,13 +2438,14 @@
 
   test("remote document deletion not checked", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_remote_deletion: false,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -2370,7 +2485,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_SKIP_REMOTE_DELETION, id]
+        ]);
         ok(true, "Removal correctly synced");
       })
       .then(function () {
@@ -2406,7 +2525,7 @@
 
   test("remote document deletion with attachment", function () {
     stop();
-    expect(10);
+    expect(11);
 
     var id,
       context = this,
@@ -2426,7 +2545,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_DELETE_LOCAL, id]
+        ]);
         ok(true, "Removal correctly synced");
       })
       .then(function () {
@@ -2468,7 +2591,7 @@
 
   test("local and remote document deletions", function () {
     stop();
-    expect(8);
+    expect(9);
 
     var id,
       context = this;
@@ -2487,7 +2610,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FALSE_CONFLICT, id]
+        ]);
         return context.jio.get(id)
           .then(function () {
             ok(false, "Document should be locally deleted");
@@ -2530,7 +2656,7 @@
 
   test("local deletion and remote modifications", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this;
@@ -2555,7 +2681,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id]
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
@@ -2583,13 +2712,14 @@
 
   test("local deletion and remote modifications: keep local", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 1,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -2638,7 +2768,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_DELETE_REMOTE, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -2680,13 +2813,14 @@
 
   test("local deletion and remote modifications: keep remote", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 2,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -2735,7 +2869,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id]
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
@@ -2772,13 +2909,14 @@
 
   test("local deletion and remote modifications: ignore", function () {
     stop();
-    expect(5);
+    expect(6);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 3,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -2827,7 +2965,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_CONFLICT, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -2863,7 +3004,7 @@
 
   test("local modifications and remote deletion", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this;
@@ -2882,7 +3023,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id]
+        ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
@@ -2910,7 +3054,7 @@
 
   test("local modifications and remote deletion: use remote post", function () {
     stop();
-    expect(13);
+    expect(14);
 
     var id,
       context = this,
@@ -2918,6 +3062,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -2962,7 +3107,10 @@
         return context.jio.repair();
       })
       // Old id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_POST_REMOTE, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -3037,7 +3185,7 @@
 
   test("local modif, remote del: remote post, no check loc mod", function () {
     stop();
-    expect(13);
+    expect(14);
 
     var id,
       context = this,
@@ -3045,6 +3193,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       check_local_modification: false,
       signature_hash_key: 'foo_etag',
@@ -3090,7 +3239,11 @@
         return context.jio.repair();
       })
       // Old id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_LOCAL_MODIFICATION, id],
+          [report.LOG_POST_REMOTE, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -3165,13 +3318,14 @@
 
   test("local modifications and remote deletion: keep local", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 1,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -3215,7 +3369,10 @@
         return context.jio.repair();
       })
       // Old id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id]
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
@@ -3252,7 +3409,7 @@
 
   test("local modif and remote del: keep local, use remote post", function () {
     stop();
-    expect(13);
+    expect(14);
 
     var id,
       context = this,
@@ -3260,6 +3417,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 1,
       use_remote_post: true,
       signature_hash_key: 'foo_etag',
@@ -3305,7 +3463,10 @@
         return context.jio.repair();
       })
       // Old id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_POST_REMOTE, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -3380,13 +3541,14 @@
 
   test("local modifications and remote deletion: keep remote", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 2,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -3430,7 +3592,10 @@
         return context.jio.repair();
       })
       // id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_DELETE_LOCAL, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -3472,13 +3637,14 @@
 
   test("local modif and remote del: keep remote, not check modif", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 2,
       check_local_modification: false,
       signature_hash_key: 'foo_etag',
@@ -3523,7 +3689,11 @@
         return context.jio.repair();
       })
       // id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_LOCAL_MODIFICATION, id],
+          [report.LOG_FORCE_DELETE_LOCAL, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -3565,13 +3735,14 @@
 
   test("local modifications and remote deletion: ignore", function () {
     stop();
-    expect(5);
+    expect(6);
 
     var id,
       context = this;
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 3,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -3615,7 +3786,10 @@
         return context.jio.repair();
       })
       // id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_CONFLICT, id]
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
@@ -3659,6 +3833,7 @@
     // in the same local sub storage
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "uuid",
@@ -3759,6 +3934,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "replicatefaststorage200defaultquery"
@@ -3815,6 +3991,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "replicatefaststorage200customquery"
@@ -3864,6 +4041,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "query",
