@@ -102,7 +102,7 @@
 
   test("local attachment creation", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this,
@@ -116,7 +116,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.__storage._remote_sub_storage.getAttachment(
           id,
           "foo",
@@ -134,6 +138,7 @@
         });
       })
       .fail(function (error) {
+        console.warn(error);
         ok(false, error);
       })
       .always(function () {
@@ -144,7 +149,7 @@
   test("local attachment creation, local document creation not checked",
        function () {
       stop();
-      expect(6);
+      expect(7);
 
       var id,
         context = this,
@@ -176,7 +181,10 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_SKIP_LOCAL_CREATION, id]
+          ]);
           return context.jio.__storage._remote_sub_storage.getAttachment(
             id,
             "foo",
@@ -211,7 +219,7 @@
 
   test("local attachment creation not checked", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var id,
       context = this,
@@ -220,6 +228,7 @@
     this.jio = jIO.createJIO({
       type: "replicate",
       check_local_attachment_creation: false,
+      check_local_attachment_modification: true,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
@@ -242,7 +251,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_SKIP_LOCAL_ATTACHMENT_CREATION, id, 'foo']
+        ]);
         return context.jio.__storage._remote_sub_storage.getAttachment(
           id,
           "foo",
@@ -278,12 +291,13 @@
   test("local attachment creation, local document creation and use remote post",
        function () {
       stop();
-      expect(4);
+      expect(5);
 
       var id,
         context = this,
         post_id,
-        blob = new Blob([big_string]);
+        blob = new Blob([big_string]),
+        report;
 
       this.jio = jIO.createJIO({
         type: "replicate",
@@ -312,12 +326,17 @@
           return context.jio.repair();
         })
         // Another document should have been created
-        .then(function () {
+        .then(function (result) {
+          report = result;
           return context.jio.__storage._remote_sub_storage.allDocs();
         })
         .then(function (result) {
           equal(result.data.total_rows, 1);
           post_id = result.data.rows[0].id;
+          deepEqual(report._list, [
+            [report.LOG_POST_REMOTE, id],
+            [report.LOG_PUT_REMOTE_ATTACHMENT, post_id, 'foo']
+          ]);
           return context.jio.getAttachment(
             post_id,
             "foo",
@@ -352,7 +371,7 @@
 
   test("remote attachment creation", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this,
@@ -367,7 +386,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_LOCAL, id],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -395,7 +418,7 @@
   test("remote attachment creation, remote document creation not checked",
        function () {
       stop();
-      expect(6);
+      expect(7);
 
       var id,
         context = this,
@@ -428,7 +451,10 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_SKIP_REMOTE_CREATION, id],
+          ]);
           return context.jio.getAttachment(
             id,
             "foo",
@@ -464,7 +490,7 @@
 
   test("remote attachment creation not checked", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var id,
       context = this,
@@ -473,6 +499,7 @@
     this.jio = jIO.createJIO({
       type: "replicate",
       check_remote_attachment_creation: false,
+      check_remote_attachment_modification: true,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
@@ -496,7 +523,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_LOCAL, id],
+          [report.LOG_SKIP_REMOTE_ATTACHMENT_CREATION, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -531,7 +562,7 @@
 
   test("local and remote attachment creations", function () {
     stop();
-    expect(5);
+    expect(3);
 
     var context = this,
       id = 'foobar',
@@ -556,10 +587,11 @@
       .then(function () {
         ok(false);
       })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Conflict on 'foobar' with attachment 'conflict'");
-        equal(error.status_code, 409);
+      .fail(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_UNRESOLVED_ATTACHMENT_CONFLICT, id, 'conflict']
+        ]);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.getAttachment(
@@ -579,7 +611,7 @@
 
   test("local and remote attachment creations: keep local", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -620,7 +652,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_FORCE_PUT_REMOTE_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -656,7 +692,7 @@
   test("local and remote attachment creations: keep local, " +
        "local not matching allAttachments", function () {
       stop();
-      expect(3);
+      expect(4);
 
       var context = this,
         id = 'foobar',
@@ -709,7 +745,11 @@
         .then(function () {
           return context.jio.repair();
         })
-         .then(function () {
+         .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_NO_CHANGE, id],
+            [report.LOG_FORCE_PUT_REMOTE_ATTACHMENT, id, 'conflict']
+          ]);
           return context.jio.getAttachment(
             id,
             "conflict",
@@ -745,7 +785,7 @@
   test("local and remote attachment creations: keep local, " +
        "remote not matching allAttachments", function () {
       stop();
-      expect(3);
+      expect(4);
 
       var context = this,
         id = 'foobar',
@@ -789,7 +829,11 @@
         .then(function () {
           return context.jio.repair();
         })
-         .then(function () {
+         .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_NO_CHANGE, id],
+            [report.LOG_FORCE_PUT_REMOTE_ATTACHMENT, id, 'conflict']
+          ]);
           return context.jio.getAttachment(
             id,
             "conflict",
@@ -824,7 +868,7 @@
 
   test("local and remote attachment creations: keep remote", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -865,7 +909,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_FORCE_PUT_LOCAL_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -901,7 +949,7 @@
   test("local and remote attachment creations: keep remote, " +
        "local not matching allAttachments", function () {
       stop();
-      expect(3);
+      expect(4);
 
       var context = this,
         id = 'foobar',
@@ -954,7 +1002,11 @@
         .then(function () {
           return context.jio.repair();
         })
-         .then(function () {
+         .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_NO_CHANGE, id],
+            [report.LOG_FORCE_PUT_LOCAL_ATTACHMENT, id, 'conflict']
+          ]);
           return context.jio.getAttachment(
             id,
             "conflict",
@@ -990,7 +1042,7 @@
   test("local and remote attachment creations: keep remote, " +
        "remote not matching allAttachments", function () {
       stop();
-      expect(3);
+      expect(4);
 
       var context = this,
         id = 'foobar',
@@ -1034,7 +1086,11 @@
         .then(function () {
           return context.jio.repair();
         })
-         .then(function () {
+         .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_NO_CHANGE, id],
+            [report.LOG_FORCE_PUT_LOCAL_ATTACHMENT, id, 'conflict']
+          ]);
           return context.jio.getAttachment(
             id,
             "conflict",
@@ -1069,7 +1125,7 @@
 
   test("local and remote attachment creations: continue", function () {
     stop();
-    expect(4);
+    expect(5);
 
     var context = this,
       id = 'foobar',
@@ -1110,7 +1166,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_SKIP_CONFLICT_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1145,7 +1205,7 @@
 
   test("local and remote same attachment creations", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1167,7 +1227,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_FALSE_CONFLICT_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1202,7 +1266,7 @@
 
   test("no attachment modification", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1221,7 +1285,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_NO_CHANGE_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1256,7 +1324,7 @@
 
   test("local attachment modification", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1279,7 +1347,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1314,7 +1386,7 @@
 
   test("local attachment modification not checked", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1355,7 +1427,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_SKIP_LOCAL_ATTACHMENT_MODIFICATION, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1390,7 +1466,7 @@
 
   test("remote attachment modification", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1414,7 +1490,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1449,7 +1529,7 @@
 
   test("remote attachment modification not checked", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1459,7 +1539,9 @@
     this.jio = jIO.createJIO({
       type: "replicate",
       check_local_attachment_creation: true,
+      check_local_attachment_modification: true,
       check_remote_attachment_modification: false,
+      check_remote_attachment_creation: true,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
@@ -1491,7 +1573,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_SKIP_REMOTE_ATTACHMENT_MODIFICATION, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1526,7 +1612,7 @@
 
   test("local and remote attachment modifications", function () {
     stop();
-    expect(6);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1557,11 +1643,11 @@
       .then(function () {
         ok(false);
       })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Conflict on 'foobar' " +
-                             "with attachment 'conflict'");
-        equal(error.status_code, 409);
+      .fail(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_UNRESOLVED_ATTACHMENT_CONFLICT, id, 'conflict']
+        ]);
       })
       .then(function () {
         return context.jio.getAttachment(
@@ -1598,7 +1684,7 @@
 
   test("local and remote attachment modifications: keep local", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1647,7 +1733,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_FORCE_PUT_REMOTE_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1682,7 +1772,7 @@
 
   test("local and remote attachment modifications: keep remote", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1731,7 +1821,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_FORCE_PUT_LOCAL_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1766,7 +1860,7 @@
 
   test("local and remote attachment modifications: continue", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1815,7 +1909,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_SKIP_CONFLICT_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1850,7 +1948,7 @@
 
   test("local and remote attachment same modifications", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var context = this,
       id = 'foobar',
@@ -1877,7 +1975,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_FALSE_CONFLICT_ATTACHMENT, id, 'conflict']
+        ]);
         return context.jio.getAttachment(
           id,
           "conflict",
@@ -1912,7 +2014,7 @@
 
   test("local attachment deletion", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this,
@@ -1932,7 +2034,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_DELETE_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -1978,7 +2084,7 @@
   test("local attachment deletion not checked", function () {
 
     stop();
-    expect(5);
+    expect(6);
 
     var id,
       context = this,
@@ -2020,7 +2126,12 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_SKIP_LOCAL_ATTACHMENT_DELETION, id, 'foo'],
+          [report.LOG_NO_CHANGE_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2057,7 +2168,7 @@
 
   test("remote attachment deletion", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this,
@@ -2078,7 +2189,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_DELETE_LOCAL_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2124,7 +2239,7 @@
   test("remote attachment deletion not checked", function () {
 
     stop();
-    expect(5);
+    expect(6);
 
     var id,
       context = this,
@@ -2167,7 +2282,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_SKIP_REMOTE_ATTACHMENT_DELETION, id, 'foo']
+        ]);
         return context.jio.__storage._remote_sub_storage.getAttachment(
           id,
           "foo",
@@ -2204,7 +2323,7 @@
 
   test("local and remote attachment deletions", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this,
@@ -2228,7 +2347,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_FALSE_CONFLICT_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2273,7 +2396,7 @@
 
   test("local deletion and remote modifications", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this,
@@ -2298,7 +2421,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_FORCE_PUT_LOCAL_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2333,7 +2460,7 @@
 
   test("local deletion and remote modifications: keep local", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this,
@@ -2381,7 +2508,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_FORCE_DELETE_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2427,7 +2558,7 @@
   test("local deletion and remote modifications: keep local, dont check local",
        function () {
       stop();
-      expect(9);
+      expect(10);
 
       var id,
         context = this,
@@ -2475,7 +2606,12 @@
         .then(function () {
           return context.jio.repair();
         })
-        .then(function () {
+        .then(function (report) {
+          deepEqual(report._list, [
+            [report.LOG_NO_CHANGE, id],
+            [report.LOG_SKIP_LOCAL_ATTACHMENT_DELETION, id, 'foo'],
+            [report.LOG_FORCE_DELETE_REMOTE_ATTACHMENT, id, 'foo']
+          ]);
           return context.jio.getAttachment(
             id,
             "foo",
@@ -2520,7 +2656,7 @@
 
   test("local deletion and remote modifications: keep remote", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this,
@@ -2568,7 +2704,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_FORCE_PUT_LOCAL_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2603,7 +2743,7 @@
 
   test("local deletion and remote modifications: ignore", function () {
     stop();
-    expect(5);
+    expect(6);
 
     var id,
       context = this,
@@ -2651,7 +2791,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_SKIP_CONFLICT_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2688,7 +2832,7 @@
 
   test("local modifications and remote deletion", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this,
@@ -2713,7 +2857,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2748,7 +2896,7 @@
 
   test("local modifications and remote deletion: keep remote", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this,
@@ -2795,7 +2943,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_FORCE_DELETE_LOCAL_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2840,7 +2992,7 @@
 
   test("local modifications and remote deletion: keep local", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this,
@@ -2887,7 +3039,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_FORCE_PUT_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -2922,7 +3078,7 @@
 
   test("local modif and remote del: keep remote, not check modif", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this,
@@ -2969,7 +3125,12 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_SKIP_LOCAL_ATTACHMENT_MODIFICATION, id, 'foo'],
+          [report.LOG_FORCE_DELETE_LOCAL_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -3014,7 +3175,7 @@
 
   test("local modifications and remote deletion: ignore", function () {
     stop();
-    expect(5);
+    expect(6);
 
     var id,
       context = this,
@@ -3061,7 +3222,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_NO_CHANGE, id],
+          [report.LOG_SKIP_CONFLICT_ATTACHMENT, id, 'foo']
+        ]);
         return context.jio.getAttachment(
           id,
           "foo",
@@ -3688,7 +3853,7 @@
 
   test("attachment skipped when local document deletion skipped", function () {
     stop();
-    expect(18);
+    expect(19);
 
     var id,
       context = this,
@@ -3745,7 +3910,11 @@
         return context.jio.repair();
       })
 
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_LOCAL_DELETION, id],
+          [report.LOG_NO_CHANGE, id]
+        ]);
         ok(true, 'second repair success');
 
         // local document still deleted
@@ -3862,7 +4031,7 @@
 
   test("attachment skipped when remot document deletion skipped", function () {
     stop();
-    expect(18);
+    expect(19);
 
     var id,
       context = this,
@@ -3916,7 +4085,10 @@
         return context.jio.repair();
       })
 
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_REMOTE_DELETION, id]
+        ]);
         ok(true, 'second repair success');
 
         // remote document still deleted
@@ -4033,7 +4205,7 @@
 
   test("att sig deleted when local doc del resolved", function () {
     stop();
-    expect(16);
+    expect(17);
 
     var id,
       context = this,
@@ -4091,7 +4263,13 @@
         return context.jio.repair();
       })
 
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foo'],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foomod'],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foocre']
+        ]);
         ok(true, 'second repair success');
 
         // local document recreated
@@ -4206,7 +4384,7 @@
 
   test("att sig deleted when remot doc del resolved", function () {
     stop();
-    expect(16);
+    expect(17);
 
     var id,
       context = this,
@@ -4260,7 +4438,13 @@
         return context.jio.repair();
       })
 
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo'],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foomod'],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foocre']
+        ]);
         ok(true, 'second repair success');
 
         // remote document recreated
@@ -4375,7 +4559,7 @@
 
   test("att sig deleted when local not checked doc del resolved", function () {
     stop();
-    expect(16);
+    expect(17);
 
     var id,
       context = this,
@@ -4434,7 +4618,14 @@
         return context.jio.repair();
       })
 
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_LOCAL_DELETION, id],
+          [report.LOG_FORCE_PUT_LOCAL, id],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foo'],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foomod'],
+          [report.LOG_PUT_LOCAL_ATTACHMENT, id, 'foocre']
+        ]);
         ok(true, 'second repair success');
 
         // local document recreated
@@ -4549,7 +4740,7 @@
 
   test("att sig deleted when remot doc not checked del resolved", function () {
     stop();
-    expect(16);
+    expect(17);
 
     var id,
       context = this,
@@ -4604,7 +4795,13 @@
         return context.jio.repair();
       })
 
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo'],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foomod'],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foocre']
+        ]);
         ok(true, 'second repair success');
 
         // remote document recreated
