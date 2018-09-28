@@ -29,16 +29,27 @@
     CONFLICT_THROW = 0,
     CONFLICT_KEEP_LOCAL = 1,
     CONFLICT_KEEP_REMOTE = 2,
-    CONFLICT_CONTINUE = 3;
-
-  function SkipError(message) {
-    if ((message !== undefined) && (typeof message !== "string")) {
-      throw new TypeError('You must pass a string.');
-    }
-    this.message = message || "Skip some asynchronous code";
-  }
-  SkipError.prototype = new Error();
-  SkipError.prototype.constructor = SkipError;
+    CONFLICT_CONTINUE = 3,
+    // 0 - 99 error
+    LOG_UNEXPECTED_ERROR = 0,
+    LOG_UNRESOLVED_CONFLICT = 1,
+    // 100 - 199 solving conflict
+    LOG_FORCE_PUT_REMOTE = 100,
+    LOG_FORCE_POST_REMOTE = 101,
+    LOG_FORCE_PUT_LOCAL = 150,
+    LOG_FORCE_POST_LOCAL = 151,
+    // 200 - 299 pushing change
+    LOG_PUT_REMOTE = 200,
+    LOG_POST_REMOTE = 201,
+    LOG_PUT_LOCAL = 250,
+    LOG_POST_LOCAL = 251,
+    LOG_DELETE_LOCAL = 253,
+    LOG_FALSE_CONFLICT = 299,
+    // 300 - 399 nothing to do
+    LOG_SKIP_LOCAL_CREATION = 300,
+    LOG_SKIP_REMOTE_CREATION = 350,
+    LOG_SKIP_CONFLICT = 398,
+    LOG_NO_CHANGE = 399;
 
   function ReplicateReport() {
     this._list = [];
@@ -49,17 +60,53 @@
 
   ReplicateReport.prototype = {
     constructor: ReplicateReport,
-    logError: function (id, error) {
-      this._list.push([id, error]);
-      this.has_error = true;
+
+    LOG_UNEXPECTED_ERROR: LOG_UNEXPECTED_ERROR,
+    LOG_UNRESOLVED_CONFLICT: LOG_UNRESOLVED_CONFLICT,
+    LOG_FORCE_PUT_REMOTE: LOG_FORCE_PUT_REMOTE,
+    LOG_FORCE_POST_REMOTE: LOG_FORCE_POST_REMOTE,
+    LOG_FORCE_PUT_LOCAL: LOG_FORCE_PUT_LOCAL,
+    LOG_FORCE_POST_LOCAL: LOG_FORCE_POST_LOCAL,
+    LOG_PUT_REMOTE: LOG_PUT_REMOTE,
+    LOG_POST_REMOTE: LOG_POST_REMOTE,
+    LOG_PUT_LOCAL: LOG_PUT_LOCAL,
+    LOG_DELETE_LOCAL: LOG_DELETE_LOCAL,
+    LOG_FALSE_CONFLICT: LOG_FALSE_CONFLICT,
+    LOG_SKIP_LOCAL_CREATION: LOG_SKIP_LOCAL_CREATION,
+    LOG_SKIP_REMOTE_CREATION: LOG_SKIP_REMOTE_CREATION,
+    LOG_SKIP_CONFLICT: LOG_SKIP_CONFLICT,
+    LOG_NO_CHANGE: LOG_NO_CHANGE,
+
+    log: function (id, type, extra) {
+      if (type === undefined) {
+        if (extra === undefined) {
+          extra = 'Unknown type: ' + type;
+        }
+        type = LOG_UNEXPECTED_ERROR;
+      }
+      if (extra === undefined) {
+        this._list.push([type, id]);
+      } else {
+        this._list.push([type, id, extra]);
+      }
+      if (type < 100) {
+        this.has_error = true;
+      }
     },
-    doNothing: function (id) {
-      this._list.push([id, 'Nothing']);
-    },
+
     toString: function () {
       return this._list.toString();
     }
   };
+
+  function SkipError(message) {
+    if ((message !== undefined) && (typeof message !== "string")) {
+      throw new TypeError('You must pass a string.');
+    }
+    this.message = message || "Skip some asynchronous code";
+  }
+  SkipError.prototype = new Error();
+  SkipError.prototype.constructor = SkipError;
 
   /****************************************************
    Use a local jIO to read/write/search documents
@@ -833,11 +880,13 @@
                                  options) {
     var result = new RSVP.Queue(),
       post_id,
-      from_local;
+      from_local,
+      conflict;
     if (options === undefined) {
       options = {};
     }
     from_local = options.from_local;
+    conflict = options.conflict || false;
 
     if (doc === null) {
       result
@@ -857,6 +906,7 @@
     if (options.use_post) {
       result
         .push(function () {
+          report.log(id, from_local ? LOG_POST_REMOTE : LOG_POST_LOCAL);
           return destination.post(doc);
         })
         .push(function (new_id) {
@@ -908,6 +958,12 @@
     } else {
       result
         .push(function () {
+          if (conflict) {
+            report.log(id, from_local ? LOG_FORCE_PUT_REMOTE :
+                                        LOG_FORCE_PUT_LOCAL);
+          } else {
+            report.log(id, from_local ? LOG_PUT_REMOTE : LOG_PUT_LOCAL);
+          }
           // Drop signature if the destination document was empty
           // but a signature exists
           if (options.create_new_document === true) {
@@ -923,11 +979,6 @@
             hash: hash,
             from_local: from_local
           });
-        })
-        .push(function () {
-          if (options.create_new_document === true) {
-            report.createDocument(id, true);
-          }
         });
     }
     return result
@@ -1024,6 +1075,7 @@
             return context._signature_sub_storage.remove(id);
           }
 
+          report.log(id, LOG_FALSE_CONFLICT);
           return context._signature_sub_storage.put(id, {
             hash: local_hash,
             from_local: from_local
@@ -1043,6 +1095,7 @@
                                        report,
                                        {use_post: ((options.use_post) &&
                                                    (remote_hash === null)),
+                                        conflict: (remote_hash !== status_hash),
                                         from_local: from_local,
                                         create_new_document:
                                           ((remote_hash === null) &&
@@ -1052,6 +1105,7 @@
 
         // Conflict cases
         if (conflict_ignore === true) {
+          report.log(id, LOG_SKIP_CONFLICT);
           return;
         }
 
@@ -1075,6 +1129,7 @@
             {use_post: ((options.use_revert_post) &&
                         (local_hash === null)),
               from_local: !from_local,
+              conflict: true,
               create_new_document: ((local_hash === null) &&
                                     (status_hash !== null))}
           );
@@ -1088,19 +1143,17 @@
                                        skip_deleted_document_dict,
                                        report,
                                        {use_post: options.use_post,
+                                        conflict: true,
                                         from_local: from_local,
                                         create_new_document:
                                           (status_hash !== null)});
         }
         doc = doc || local_hash;
         remote_doc = remote_doc || remote_hash;
-        throw new jIO.util.jIOError("Conflict on '" + id + "': " +
-                                    stringify(doc) + " !== " +
-                                    stringify(remote_doc),
-                                    409);
+        report.log(id, LOG_UNRESOLVED_CONFLICT);
       })
       .push(undefined, function (error) {
-        report.logError(id, error);
+        report.log(id, LOG_UNEXPECTED_ERROR, error);
       });
   }
 
@@ -1161,7 +1214,9 @@
                                    report,
                                    options);
         }
-        report.doNothing(id);
+        if (!options.from_local) {
+          report.log(id, LOG_NO_CHANGE);
+        }
       });
   }
 
@@ -1252,6 +1307,9 @@
                                   local_hash, status_hash,
                                   report,
                                   options]);
+            } else {
+              report.log(key, options.from_local ? LOG_SKIP_LOCAL_CREATION :
+                                                   LOG_SKIP_REMOTE_CREATION);
             }
           }
         }
