@@ -1359,9 +1359,9 @@
       });
   });
 
-  test("XXXlocal document modification not checked", function () {
+  test("local document modification not checked", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
@@ -1394,7 +1394,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_LOCAL_MODIFICATION, id],
+          [report.LOG_NO_CHANGE, id],
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
@@ -1429,7 +1433,7 @@
 
   test("remote document modification", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this;
@@ -1448,7 +1452,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_LOCAL, id]
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
@@ -1475,7 +1482,7 @@
 
   test("remote document modification not checked", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
@@ -1511,7 +1518,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_REMOTE_MODIFICATION, id]
+        ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
@@ -1546,7 +1556,7 @@
 
   test("local and remote document modifications", function () {
     stop();
-    expect(4);
+    expect(2);
 
     var id,
       context = this;
@@ -1569,10 +1579,7 @@
         ok(false);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Conflict on '" + id + "': " +
-                             "{\"title\":\"foo4\"} !== {\"title\":\"foo5\"}");
-        equal(error.status_code, 409);
+        deepEqual(error._list, [[error.LOG_UNRESOLVED_CONFLICT, id]]);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id);
@@ -1590,7 +1597,7 @@
 
   test("local and remote document modifications: keep local", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
@@ -1626,7 +1633,8 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [[report.LOG_FORCE_PUT_REMOTE, id]]);
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
@@ -1661,7 +1669,7 @@
 
   test("local and remote document modifications: keep remote", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
@@ -1697,7 +1705,8 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [[report.LOG_FORCE_PUT_LOCAL, id]]);
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
@@ -1732,7 +1741,7 @@
 
   test("local and remote document modifications: continue", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
@@ -1768,7 +1777,8 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [[report.LOG_SKIP_CONFLICT, id]]);
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
@@ -1803,7 +1813,7 @@
 
   test("local and remote document same modifications", function () {
     stop();
-    expect(1);
+    expect(2);
 
     var id,
       context = this;
@@ -1822,7 +1832,8 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [[report.LOG_FALSE_CONFLICT, id]]);
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
@@ -1841,7 +1852,7 @@
 
   test("local document deletion", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var id,
       context = this;
@@ -1857,7 +1868,8 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [[report.LOG_DELETE_REMOTE, id]]);
         ok(true, "Removal correctly synced");
       })
       .then(function () {
@@ -1886,7 +1898,7 @@
 
   test("local document deletion not checked", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var id,
       context = this;
@@ -1919,7 +1931,11 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_LOCAL_DELETION, id],
+          [report.LOG_NO_CHANGE, id]
+        ]);
         ok(true, "Removal correctly synced");
       })
       .then(function () {
@@ -1975,8 +1991,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
-        ok(true, "Removal correctly synced");
+      .fail(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_UNEXPECTED_REMOTE_ATTACHMENT, id]
+        ]);
       })
       .then(function () {
         return context.jio.get(id);
@@ -2017,7 +2035,7 @@
 
   test("remote document deletion", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var id,
       context = this;
@@ -2033,7 +2051,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_DELETE_LOCAL, id]
+        ]);
         ok(true, "Removal correctly synced");
       })
       .then(function () {
@@ -2062,7 +2083,7 @@
 
   test("remote document deletion not checked", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var id,
       context = this;
@@ -2095,7 +2116,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_REMOTE_DELETION, id]
+        ]);
         ok(true, "Removal correctly synced");
       })
       .then(function () {
@@ -2150,8 +2174,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
-        ok(true, "Removal correctly synced");
+      .fail(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_UNEXPECTED_LOCAL_ATTACHMENT, id]
+        ]);
       })
       .then(function () {
         return context.jio.__storage._remote_sub_storage.get(id);
@@ -2191,7 +2217,7 @@
 
   test("local and remote document deletions", function () {
     stop();
-    expect(8);
+    expect(9);
 
     var id,
       context = this;
@@ -2210,7 +2236,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FALSE_CONFLICT, id]
+        ]);
         return context.jio.get(id)
           .then(function () {
             ok(false, "Document should be locally deleted");
@@ -2253,7 +2282,7 @@
 
   test("local deletion and remote modifications", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this;
@@ -2272,7 +2301,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id]
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
@@ -2299,7 +2331,7 @@
 
   test("local deletion and remote modifications: keep local", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this;
@@ -2335,7 +2367,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_DELETE_REMOTE, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -2376,7 +2411,7 @@
 
   test("local deletion and remote modifications: keep remote", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
@@ -2412,7 +2447,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_LOCAL, id]
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
@@ -2447,7 +2485,7 @@
 
   test("local deletion and remote modifications: ignore", function () {
     stop();
-    expect(5);
+    expect(6);
 
     var id,
       context = this;
@@ -2483,7 +2521,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_CONFLICT, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -2518,7 +2559,7 @@
 
   test("local modifications and remote deletion", function () {
     stop();
-    expect(2);
+    expect(3);
 
     var id,
       context = this;
@@ -2537,7 +2578,10 @@
       .then(function () {
         return context.jio.repair();
       })
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id]
+        ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
@@ -2564,7 +2608,7 @@
 
   test("local modifications and remote deletion: use remote post", function () {
     stop();
-    expect(13);
+    expect(14);
 
     var id,
       context = this,
@@ -2602,7 +2646,10 @@
         return context.jio.repair();
       })
       // Old id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_POST_REMOTE, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -2675,7 +2722,7 @@
 
   test("local modif, remote del: remote post, no check loc mod", function () {
     stop();
-    expect(13);
+    expect(14);
 
     var id,
       context = this,
@@ -2714,7 +2761,11 @@
         return context.jio.repair();
       })
       // Old id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_LOCAL_MODIFICATION, id],
+          [report.LOG_POST_REMOTE, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -2786,7 +2837,7 @@
 
   test("local modifications and remote deletion: keep local", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var id,
       context = this;
@@ -2823,7 +2874,10 @@
         return context.jio.repair();
       })
       // Old id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_PUT_REMOTE, id]
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
@@ -2858,7 +2912,7 @@
 
   test("local modif and remote del: keep local, use remote post", function () {
     stop();
-    expect(13);
+    expect(14);
 
     var id,
       context = this,
@@ -2897,7 +2951,10 @@
         return context.jio.repair();
       })
       // Old id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_POST_REMOTE, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -2969,7 +3026,7 @@
 
   test("local modifications and remote deletion: keep remote", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this;
@@ -3006,7 +3063,10 @@
         return context.jio.repair();
       })
       // id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_FORCE_DELETE_LOCAL, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -3047,7 +3107,7 @@
 
   test("local modif and remote del: keep remote, not check modif", function () {
     stop();
-    expect(9);
+    expect(10);
 
     var id,
       context = this;
@@ -3085,7 +3145,11 @@
         return context.jio.repair();
       })
       // id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_LOCAL_MODIFICATION, id],
+          [report.LOG_FORCE_DELETE_LOCAL, id]
+        ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
@@ -3126,7 +3190,7 @@
 
   test("local modifications and remote deletion: ignore", function () {
     stop();
-    expect(5);
+    expect(6);
 
     var id,
       context = this;
@@ -3163,7 +3227,10 @@
         return context.jio.repair();
       })
       // id deleted
-      .then(function () {
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_SKIP_CONFLICT, id]
+        ]);
         return context.jio.get(id);
       })
       .then(function (result) {
