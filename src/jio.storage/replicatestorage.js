@@ -1348,13 +1348,17 @@
                                   local_hash, status_hash,
                                   report,
                                   options]);
-            } else if (signature_dict.hasOwnProperty(key)) {
-              report.log(key, options.from_local ?
-                         LOG_SKIP_LOCAL_MODIFICATION :
-                         LOG_SKIP_REMOTE_MODIFICATION);
+            } else if (local_hash === status_hash) {
+              report.log(key, LOG_NO_CHANGE);
             } else {
-              report.log(key, options.from_local ? LOG_SKIP_LOCAL_CREATION :
-                                                   LOG_SKIP_REMOTE_CREATION);
+              if (signature_dict.hasOwnProperty(key)) {
+                report.log(key, options.from_local ?
+                           LOG_SKIP_LOCAL_MODIFICATION :
+                           LOG_SKIP_REMOTE_MODIFICATION);
+              } else {
+                report.log(key, options.from_local ? LOG_SKIP_LOCAL_CREATION :
+                                                     LOG_SKIP_REMOTE_CREATION);
+              }
             }
           }
         }
