@@ -748,15 +748,31 @@
       });
   }
 
-  function propagateFastAttachmentDeletion(queue, id, name, storage) {
+  function propagateFastAttachmentDeletion(queue, id, name, storage, signature,
+                                           from_local, report) {
+    report.logAttachment(id, name, from_local ? LOG_DELETE_REMOTE_ATTACHMENT :
+                                                LOG_DELETE_LOCAL_ATTACHMENT);
     return queue
       .push(function () {
         return storage.removeAttachment(id, name);
+      })
+      .push(function () {
+        return signature.removeAttachment(id, name);
+      });
+  }
+
+  function propagateFastSignatureDeletion(queue, id, name, signature,
+                                          report) {
+    report.logAttachment(id, name, LOG_FALSE_CONFLICT_ATTACHMENT);
+    return queue
+      .push(function () {
+        return signature.removeAttachment(id, name);
       });
   }
 
   function propagateFastAttachmentModification(queue, id, key, source,
-                                               destination, signature, hash) {
+                                               destination, signature, hash,
+                                               from_local, report) {
     return queue
       .push(function () {
         return signature.getAttachment(id, key, {format: 'json'})
@@ -769,6 +785,9 @@
           })
           .push(function (result) {
             if (result.hash !== hash) {
+              report.logAttachment(id, key, from_local ?
+                                            LOG_PUT_REMOTE_ATTACHMENT :
+                                            LOG_PUT_LOCAL_ATTACHMENT);
               return source.getAttachment(id, key)
                 .push(function (blob) {
                   return destination.putAttachment(id, key, blob);
@@ -787,7 +806,8 @@
   function repairFastDocumentAttachment(context, id,
                                         signature_hash,
                                         signature_attachment_hash,
-                                        signature_from_local, report) {
+                                        signature_from_local,
+                                        report) {
     if (signature_hash === signature_attachment_hash) {
       // No replication to do
       return;
@@ -808,6 +828,7 @@
           destination,
           push_argument_list = [],
           delete_argument_list = [],
+          delete_signature_argument_list = [],
           signature_attachment_dict = result_list[0],
           local_attachment_dict = result_list[1],
           remote_attachment_list = result_list[2],
@@ -818,13 +839,15 @@
           check_remote_modification =
             context._check_remote_attachment_modification,
           check_remote_creation = context._check_remote_attachment_creation,
-          check_remote_deletion = context._check_remote_attachment_deletion;
+          check_remote_deletion = context._check_remote_attachment_deletion,
+          from_local;
 
         if (signature_from_local) {
           source_attachment_dict = local_attachment_dict;
           destination_attachment_dict = remote_attachment_list;
           source = context._local_sub_storage;
           destination = context._remote_sub_storage;
+          from_local = true;
         } else {
           source_attachment_dict = remote_attachment_list;
           destination_attachment_dict = local_attachment_dict;
@@ -835,6 +858,7 @@
           check_local_deletion = check_remote_deletion;
           check_remote_creation = check_local_creation;
           check_remote_deletion = check_local_deletion;
+          from_local = false;
         }
 
         // Push all source attachments
@@ -853,8 +877,19 @@
                 destination,
                 context._signature_sub_storage,
                 signature_hash,
+                from_local,
                 report
               ]);
+            } else {
+              if (signature_attachment_dict.hasOwnProperty(key)) {
+                report.logAttachment(id, key, from_local ?
+                                     LOG_SKIP_LOCAL_ATTACHMENT_MODIFICATION :
+                                     LOG_SKIP_REMOTE_ATTACHMENT_MODIFICATION);
+              } else {
+                report.logAttachment(id, key, from_local ?
+                                     LOG_SKIP_LOCAL_ATTACHMENT_CREATION :
+                                     LOG_SKIP_REMOTE_ATTACHMENT_CREATION);
+              }
             }
           }
         }
@@ -863,8 +898,9 @@
         for (key in signature_attachment_dict) {
           if (signature_attachment_dict.hasOwnProperty(key)) {
             if (check_local_deletion &&
-                !source_attachment_dict.hasOwnProperty(key)) {
-              delete_argument_list.push([
+                !source_attachment_dict.hasOwnProperty(key) &&
+                !destination_attachment_dict.hasOwnProperty(key)) {
+              delete_signature_argument_list.push([
                 undefined,
                 id,
                 key,
@@ -874,6 +910,7 @@
             }
           }
         }
+
         for (key in destination_attachment_dict) {
           if (destination_attachment_dict.hasOwnProperty(key)) {
             if (!source_attachment_dict.hasOwnProperty(key)) {
@@ -886,8 +923,20 @@
                   id,
                   key,
                   destination,
+                  context._signature_sub_storage,
+                  from_local,
                   report
                 ]);
+              } else {
+                if (signature_attachment_dict.hasOwnProperty(key)) {
+                  report.logAttachment(id, key, from_local ?
+                       LOG_SKIP_LOCAL_ATTACHMENT_DELETION :
+                       LOG_SKIP_REMOTE_ATTACHMENT_DELETION);
+                } else {
+                  report.logAttachment(id, key, from_local ?
+                       LOG_SKIP_LOCAL_ATTACHMENT_CREATION :
+                       LOG_SKIP_REMOTE_ATTACHMENT_CREATION);
+                }
               }
             }
           }
@@ -904,6 +953,12 @@
             context,
             propagateFastAttachmentDeletion,
             delete_argument_list,
+            context._parallel_operation_attachment_amount
+          ),
+          dispatchQueue(
+            context,
+            propagateFastSignatureDeletion,
+            delete_signature_argument_list,
             context._parallel_operation_attachment_amount
           )
         ]);
