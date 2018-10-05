@@ -392,6 +392,14 @@
                 buildKeyPath([id, name])
               ))
                 .then(function (evt) {
+                  if (!evt.target.result) {
+                    throw new jIO.util.jIOError(
+                      "IndexedDB: cannot find object '" +
+                          buildKeyPath([id, name]) +
+                          "' in the 'attachment' store",
+                      404
+                    );
+                  }
                   var attachment = evt.target.result,
                     total_length = attachment.info.length,
                     promise_list = [],

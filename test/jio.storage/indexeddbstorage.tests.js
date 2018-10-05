@@ -39,18 +39,14 @@
   }
 
   function deleteIndexedDB(storage) {
-    return new RSVP.Queue()
-      .push(function () {
-        function resolver(resolve, reject) {
-          var request = indexedDB.deleteDatabase(
-            storage.__storage._database_name
-          );
-          request.onerror = reject;
-          request.onblocked = reject;
-          request.onsuccess = resolve;
-        }
-        return new RSVP.Promise(resolver);
-      });
+    return new RSVP.Promise(function resolver(resolve, reject) {
+      var request = indexedDB.deleteDatabase(
+        storage.__storage._database_name
+      );
+      request.onerror = reject;
+      request.onblocked = reject;
+      request.onsuccess = resolve;
+    });
   }
 
   /////////////////////////////////////////////////////////////////
@@ -891,28 +887,20 @@
            context.spy_key_range.callCount);
 
       })
-      .always(function () {
-        context.spy_open.restore();
-        delete context.spy_open;
-        context.spy_create_store.restore();
-        delete context.spy_create_store;
-        context.spy_transaction.restore();
-        delete context.spy_transaction;
-        context.spy_store.restore();
-        delete context.spy_store;
-        context.spy_put.restore();
-        delete context.spy_put;
-        context.spy_index.restore();
-        delete context.spy_index;
-        context.spy_create_index.restore();
-        delete context.spy_create_index;
-        context.spy_cursor.restore();
-        delete context.spy_cursor;
-        context.spy_key_range.restore();
-        delete context.spy_key_range;
-      })
       .fail(function (error) {
         ok(false, error);
+      })
+      .always(function () {
+        var i,
+          spy_list = ['spy_open', 'spy_create_store', 'spy_transaction',
+                      'spy_store', 'spy_put', 'spy_index', 'spy_create_index',
+                      'spy_cursor', 'spy_key_range'];
+        for (i = 0; i < spy_list.length; i += 1) {
+          if (context.hasOwnProperty(spy_list[i])) {
+            context[spy_list[i]].restore();
+            delete context[spy_list[i]];
+          }
+        }
       })
       .always(function () {
         start();
@@ -1299,8 +1287,8 @@
         return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
-        equal(result.target.result, big_string,
-              "Attachment correctly fetched");
+        ok(result.target.result === big_string,
+           "Attachment correctly fetched");
       })
       .fail(function (error) {
         ok(false, error);
@@ -1403,6 +1391,34 @@
         start();
       });
   });
+
+  test("non existing attachment", function () {
+    var context = this,
+      attachment = "attachment";
+    stop();
+    expect(3);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put("foo", {"title": "bar"});
+      })
+      .then(function () {
+        return context.jio.getAttachment("foo", attachment);
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(
+          error.message,
+          "IndexedDB: cannot find object 'foo_attachment' " +
+            "in the 'attachment' store"
+        );
+        equal(error.status_code, 404);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // indexeddbStorage.removeAttachment
   /////////////////////////////////////////////////////////////////
@@ -1561,6 +1577,9 @@
         context.spy_key_range = sinon.spy(IDBKeyRange, "only");
 
         return context.jio.putAttachment("foo", attachment, big_string);
+      })
+      .fail(function (error) {
+        ok(false, error);
       })
       .then(function () {
 
