@@ -346,30 +346,31 @@
       return waitForTransaction(db, ["metadata", "attachment", "blob"],
                                 "readwrite", function (tx) {
 
-          var promise_list = [];
+          var promise_list = [],
+            result;
 
           function deleteEntry(cursor) {
             promise_list.push(
               waitForIDBRequest(cursor.delete())
             );
           }
-
+          result = RSVP.all([
+            waitForIDBRequest(tx.objectStore("metadata").delete(id)),
+            // XXX Why not possible to delete with KeyCursor?
+            waitForAllSynchronousCursor(
+              tx.objectStore("attachment").index("_id")
+                .openCursor(IDBKeyRange.only(id)),
+              deleteEntry
+            ),
+            waitForAllSynchronousCursor(
+              tx.objectStore("blob").index("_id")
+                .openCursor(IDBKeyRange.only(id)),
+              deleteEntry
+            ),
+          ]);
           return new RSVP.Queue()
             .push(function () {
-              return RSVP.all([
-                waitForIDBRequest(tx.objectStore("metadata").delete(id)),
-                // XXX Why not possible to delete with KeyCursor?
-                waitForAllSynchronousCursor(
-                  tx.objectStore("attachment").index("_id")
-                    .openCursor(IDBKeyRange.only(id)),
-                  deleteEntry
-                ),
-                waitForAllSynchronousCursor(
-                  tx.objectStore("blob").index("_id")
-                    .openCursor(IDBKeyRange.only(id)),
-                  deleteEntry
-                ),
-              ]);
+              return result;
             })
             .push(function () {
               return RSVP.all(promise_list);
@@ -461,7 +462,8 @@
   };
 
   function removeAttachment(tx, id, name) {
-    var promise_list = [];
+    var promise_list = [],
+      result;
 
     function deleteEntry(cursor) {
       promise_list.push(
@@ -469,11 +471,12 @@
       );
     }
 
+    result = waitForIDBRequest(
+      tx.objectStore("attachment").delete(buildKeyPath([id, name]))
+    );
     return new RSVP.Queue()
       .push(function () {
-        return waitForIDBRequest(
-          tx.objectStore("attachment").delete(buildKeyPath([id, name]))
-        );
+        return result;
       })
       .push(function () {
         return waitForAllSynchronousCursor(
@@ -509,10 +512,11 @@
         return waitForOpenIndexedDB(db_name, function (db) {
           return waitForTransaction(db, ["attachment", "blob"], "readwrite",
                                     function (tx) {
+              var result = removeAttachment(tx, id, name);
               return new RSVP.Queue()
                 .push(function () {
                   // First remove the previous attachment
-                  return removeAttachment(tx, id, name);
+                  return result;
                 })
                 .push(function () {
                   // Then write the attachment info
