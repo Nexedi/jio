@@ -346,15 +346,14 @@
       return waitForTransaction(db, ["metadata", "attachment", "blob"],
                                 "readwrite", function (tx) {
 
-          var promise_list = [],
-            result;
+          var promise_list = [];
 
           function deleteEntry(cursor) {
             promise_list.push(
               waitForIDBRequest(cursor.delete())
             );
           }
-          result = RSVP.all([
+          return RSVP.all([
             waitForIDBRequest(tx.objectStore("metadata").delete(id)),
             // XXX Why not possible to delete with KeyCursor?
             waitForAllSynchronousCursor(
@@ -367,12 +366,8 @@
                 .openCursor(IDBKeyRange.only(id)),
               deleteEntry
             ),
-          ]);
-          return new RSVP.Queue()
-            .push(function () {
-              return result;
-            })
-            .push(function () {
+          ])
+            .then(function () {
               return RSVP.all(promise_list);
             });
         });
@@ -393,14 +388,10 @@
           return waitForTransaction(db, ["attachment", "blob"], "readonly",
                                     function (tx) {
               // XXX Should raise if key is not good
-              var result = waitForIDBRequest(tx.objectStore("attachment").get(
+              return waitForIDBRequest(tx.objectStore("attachment").get(
                 buildKeyPath([id, name])
-              ));
-              return new RSVP.Queue()
-                .push(function () {
-                  return result;
-                })
-                .push(function (evt) {
+              ))
+                .then(function (evt) {
                   var attachment = evt.target.result,
                     total_length = attachment.info.length,
                     promise_list = [],
@@ -462,8 +453,7 @@
   };
 
   function removeAttachment(tx, id, name) {
-    var promise_list = [],
-      result;
+    var promise_list = [];
 
     function deleteEntry(cursor) {
       promise_list.push(
@@ -471,21 +461,17 @@
       );
     }
 
-    result = waitForIDBRequest(
+    return waitForIDBRequest(
       tx.objectStore("attachment").delete(buildKeyPath([id, name]))
-    );
-    return new RSVP.Queue()
-      .push(function () {
-        return result;
-      })
-      .push(function () {
+    )
+      .then(function () {
         return waitForAllSynchronousCursor(
           tx.objectStore("blob").index("_id_attachment")
             .openCursor(IDBKeyRange.only([id, name])),
           deleteEntry
         );
       })
-      .push(function () {
+      .then(function () {
         return RSVP.all(promise_list);
       });
   }
@@ -512,13 +498,9 @@
         return waitForOpenIndexedDB(db_name, function (db) {
           return waitForTransaction(db, ["attachment", "blob"], "readwrite",
                                     function (tx) {
-              var result = removeAttachment(tx, id, name);
-              return new RSVP.Queue()
-                .push(function () {
-                  // First remove the previous attachment
-                  return result;
-                })
-                .push(function () {
+              // First remove the previous attachment
+              return removeAttachment(tx, id, name)
+                .then(function () {
                   // Then write the attachment info
                   return waitForIDBRequest(tx.objectStore("attachment").put({
                     "_key_path": buildKeyPath([id, name]),
@@ -530,7 +512,7 @@
                     }
                   }));
                 })
-                .push(function () {
+                .then(function () {
                   var blob_store = tx.objectStore("blob"),
                     promise_list = [],
                     i;
