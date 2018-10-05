@@ -461,16 +461,16 @@
       );
     }
 
-    return waitForIDBRequest(
-      tx.objectStore("attachment").delete(buildKeyPath([id, name]))
-    )
-      .then(function () {
-        return waitForAllSynchronousCursor(
-          tx.objectStore("blob").index("_id_attachment")
-            .openCursor(IDBKeyRange.only([id, name])),
-          deleteEntry
-        );
-      })
+    return RSVP.all([
+      waitForIDBRequest(
+        tx.objectStore("attachment").delete(buildKeyPath([id, name]))
+      ),
+      waitForAllSynchronousCursor(
+        tx.objectStore("blob").index("_id_attachment")
+          .openCursor(IDBKeyRange.only([id, name])),
+        deleteEntry
+      )
+    ])
       .then(function () {
         return RSVP.all(promise_list);
       });
@@ -501,22 +501,23 @@
               // First remove the previous attachment
               return removeAttachment(tx, id, name)
                 .then(function () {
-                  // Then write the attachment info
-                  return waitForIDBRequest(tx.objectStore("attachment").put({
-                    "_key_path": buildKeyPath([id, name]),
-                    "_id": id,
-                    "_attachment": name,
-                    "info": {
-                      "content_type": blob.type,
-                      "length": blob.size
-                    }
-                  }));
-                })
-                .then(function () {
-                  var blob_store = tx.objectStore("blob"),
-                    promise_list = [],
+                  var blob_store,
+                    promise_list,
                     i;
+                  // Then write the attachment info
+                  promise_list = [
+                    waitForIDBRequest(tx.objectStore("attachment").put({
+                      "_key_path": buildKeyPath([id, name]),
+                      "_id": id,
+                      "_attachment": name,
+                      "info": {
+                        "content_type": blob.type,
+                        "length": blob.size
+                      }
+                    }))
+                  ];
                   // Finally, write all blob parts
+                  blob_store = tx.objectStore("blob");
                   for (i = 0; i < blob_part.length; i += 1) {
                     promise_list.push(
                       waitForIDBRequest(blob_store.put({
