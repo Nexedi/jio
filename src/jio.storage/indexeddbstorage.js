@@ -304,28 +304,27 @@
         return waitForOpenIndexedDB(context._database_name, function (db) {
           return waitForTransaction(db, ["metadata", "attachment"], "readonly",
                                     function (tx) {
-              return new RSVP.Queue()
-                .push(function () {
-                  return waitForIDBRequest(tx.objectStore("metadata").get(id));
-                })
-                .push(function (evt) {
-                  if (!evt.target.result) {
-                    throw new jIO.util.jIOError(
-                      "IndexedDB: cannot find object '" + id +
-                        "' in the 'metadata' store",
-                      404
-                    );
-                  }
-                  return waitForAllSynchronousCursor(
-                    tx.objectStore("attachment").index("_id")
-                      .openCursor(IDBKeyRange.only(id)),
-                    addEntry
-                  );
-                });
+              return RSVP.all([
+                waitForIDBRequest(tx.objectStore("metadata").get(id)),
+                waitForAllSynchronousCursor(
+                  tx.objectStore("attachment").index("_id")
+                    .openCursor(IDBKeyRange.only(id)),
+                  addEntry
+                )
+              ]);
             });
         });
       })
-      .push(function () {
+      .push(function (result_list) {
+        var evt = result_list[0];
+        if (!evt.target.result) {
+          throw new jIO.util.jIOError(
+            "IndexedDB: cannot find object '" + id +
+              "' in the 'metadata' store",
+            404
+          );
+        }
+
         return attachment_dict;
       });
   };
