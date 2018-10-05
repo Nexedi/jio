@@ -41,7 +41,7 @@
  * - https://developer.mozilla.org/en-US/docs/IndexedDB/Using_IndexedDB
  */
 
-/*jslint nomen: true, unparam: true */
+/*jslint nomen: true */
 /*global indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
         DOMError, Event*/
 
@@ -172,7 +172,7 @@
       } catch (error) {
         reject(error);
       }
-      tx.oncomplete = function (evt) {
+      tx.oncomplete = function () {
         return new RSVP.Queue()
           .push(function () {
             // db.close();
@@ -341,47 +341,44 @@
         });
     });
   };
-/*
-  function deleteEntry(cursor) {
-    cursor["delete"]();
-  }
 
   IndexedDBStorage.prototype.remove = function (id) {
-    var resolved_amount = 0;
-    return openIndexedDB(this)
-      .push(function (db) {
-        return new RSVP.Promise(function (resolve, reject) {
-          function resolver() {
-            if (resolved_amount < 2) {
-              resolved_amount += 1;
-            } else {
-              resolve();
-            }
+    return waitForOpenIndexedDB(this._database_name, function (db) {
+      return waitForTransaction(db, ["metadata", "attachment", "blob"],
+                                "readwrite", function (tx) {
+
+          var promise_list = [];
+
+          function deleteEntry(cursor) {
+            promise_list.push(
+              waitForIDBRequest(cursor.delete())
+            );
           }
-          var transaction = openTransaction(db, ["metadata", "attachment",
-                                            "blob"], "readwrite");
-          handleRequest(
-            transaction.objectStore("metadata")["delete"](id),
-            resolver,
-            reject
-          );
-          // XXX Why not possible to delete with KeyCursor?
-          handleCursor(transaction.objectStore("attachment").index("_id")
-              .openCursor(IDBKeyRange.only(id)),
-            deleteEntry,
-            resolver,
-            reject
-            );
-          handleCursor(transaction.objectStore("blob").index("_id")
-              .openCursor(IDBKeyRange.only(id)),
-            deleteEntry,
-            resolver,
-            reject
-            );
+
+          return new RSVP.Queue()
+            .push(function () {
+              return RSVP.all([
+                waitForIDBRequest(tx.objectStore("metadata").delete(id)),
+                // XXX Why not possible to delete with KeyCursor?
+                waitForAllSynchronousCursor(
+                  tx.objectStore("attachment").index("_id")
+                    .openCursor(IDBKeyRange.only(id)),
+                  deleteEntry
+                ),
+                waitForAllSynchronousCursor(
+                  tx.objectStore("blob").index("_id")
+                    .openCursor(IDBKeyRange.only(id)),
+                  deleteEntry
+                ),
+              ]);
+            })
+            .push(function () {
+              return RSVP.all(promise_list);
+            });
         });
-      });
+    });
   };
-*/
+
   IndexedDBStorage.prototype.getAttachment = function (id, name, options) {
     if (options === undefined) {
       options = {};
@@ -463,36 +460,31 @@
 
   };
 
-  function removeAttachment(transaction, id, name) {
-    return;
-    /*
-                  return waitForIDBRequest(tx.objectStore("attachment").put({
-                    "_key_path": buildKeyPath([id, name]),
-                    "_id": id,
-                    "_attachment": name,
-                    "info": {
-                      "content_type": blob.type,
-                      "length": blob.size
-                    }
-                  }));
-      // XXX How to get the right attachment
-    function deleteContent() {
-      handleCursor(
-        transaction.objectStore("blob").index("_id_attachment")
-          .openCursor(IDBKeyRange.only([id, name])),
-        deleteEntry,
-        resolve,
-        reject
+  function removeAttachment(tx, id, name) {
+    var promise_list = [];
+
+    function deleteEntry(cursor) {
+      promise_list.push(
+        waitForIDBRequest(cursor.delete())
       );
     }
-    handleRequest(
-      transaction.objectStore("attachment")["delete"](
-        buildKeyPath([id, name])
-      ),
-      deleteContent,
-      reject
-    );
-    */
+
+    return new RSVP.Queue()
+      .push(function () {
+        return waitForIDBRequest(
+          tx.objectStore("attachment").delete(buildKeyPath([id, name]))
+        );
+      })
+      .push(function () {
+        return waitForAllSynchronousCursor(
+          tx.objectStore("blob").index("_id_attachment")
+            .openCursor(IDBKeyRange.only([id, name])),
+          deleteEntry
+        );
+      })
+      .push(function () {
+        return RSVP.all(promise_list);
+      });
   }
 
   IndexedDBStorage.prototype.putAttachment = function (id, name, blob) {
