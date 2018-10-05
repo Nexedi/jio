@@ -109,10 +109,9 @@
 
   function readBlobAsText(blob, encoding) {
     var fr = new FileReader();
-    return new RSVP.Promise(function (resolve, reject, notify) {
+    return new RSVP.Promise(function (resolve, reject) {
       fr.addEventListener("load", resolve);
       fr.addEventListener("error", reject);
-      fr.addEventListener("progress", notify);
       fr.readAsText(blob, encoding);
     }, function () {
       fr.abort();
@@ -122,10 +121,9 @@
 
   function readBlobAsArrayBuffer(blob) {
     var fr = new FileReader();
-    return new RSVP.Promise(function (resolve, reject, notify) {
+    return new RSVP.Promise(function (resolve, reject) {
       fr.addEventListener("load", resolve);
       fr.addEventListener("error", reject);
-      fr.addEventListener("progress", notify);
       fr.readAsArrayBuffer(blob);
     }, function () {
       fr.abort();
@@ -135,10 +133,9 @@
 
   function readBlobAsDataURL(blob) {
     var fr = new FileReader();
-    return new RSVP.Promise(function (resolve, reject, notify) {
+    return new RSVP.Promise(function (resolve, reject) {
       fr.addEventListener("load", resolve);
       fr.addEventListener("error", reject);
-      fr.addEventListener("progress", notify);
       fr.readAsDataURL(blob);
     }, function () {
       fr.abort();
