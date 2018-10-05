@@ -391,12 +391,13 @@
         return waitForOpenIndexedDB(db_name, function (db) {
           return waitForTransaction(db, ["attachment", "blob"], "readonly",
                                     function (tx) {
+              // XXX Should raise if key is not good
+              var result = waitForIDBRequest(tx.objectStore("attachment").get(
+                buildKeyPath([id, name])
+              ));
               return new RSVP.Queue()
                 .push(function () {
-                  // XXX Should raise if key is not good
-                  return waitForIDBRequest(tx.objectStore("attachment").get(
-                    buildKeyPath([id, name])
-                  ));
+                  return result;
                 })
                 .push(function (evt) {
                   var attachment = evt.target.result,
