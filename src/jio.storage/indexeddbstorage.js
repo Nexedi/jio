@@ -507,39 +507,39 @@
           return waitForTransaction(db, ["attachment", "blob"], "readwrite",
                                     function (tx) {
               // First remove the previous attachment
-              return removeAttachment(tx, id, name)
-                .then(function () {
-                  var blob_store,
-                    promise_list,
-                    i;
-                  // Then write the attachment info
-                  promise_list = [
-                    waitForIDBRequest(tx.objectStore("attachment").put({
-                      "_key_path": buildKeyPath([id, name]),
-                      "_id": id,
-                      "_attachment": name,
-                      "info": {
-                        "content_type": blob.type,
-                        "length": blob.size
-                      }
-                    }))
-                  ];
-                  // Finally, write all blob parts
-                  blob_store = tx.objectStore("blob");
-                  for (i = 0; i < blob_part.length; i += 1) {
-                    promise_list.push(
-                      waitForIDBRequest(blob_store.put({
-                        "_key_path": buildKeyPath([id, name, i]),
-                        "_id" : id,
-                        "_attachment" : name,
-                        "_part" : i,
-                        "blob": blob_part[i]
-                      }))
-                    );
+              // return removeAttachment(tx, id, name)
+                // .then(function () {
+              var blob_store,
+                promise_list,
+                i;
+              // Then write the attachment info
+              promise_list = [
+                waitForIDBRequest(tx.objectStore("attachment").put({
+                  "_key_path": buildKeyPath([id, name]),
+                  "_id": id,
+                  "_attachment": name,
+                  "info": {
+                    "content_type": blob.type,
+                    "length": blob.size
                   }
-                  return RSVP.all(promise_list);
-                });
+                }))
+              ];
+              // Finally, write all blob parts
+              blob_store = tx.objectStore("blob");
+              for (i = 0; i < blob_part.length; i += 1) {
+                promise_list.push(
+                  waitForIDBRequest(blob_store.put({
+                    "_key_path": buildKeyPath([id, name, i]),
+                    "_id" : id,
+                    "_attachment" : name,
+                    "_part" : i,
+                    "blob": blob_part[i]
+                  }))
+                );
+              }
+              return RSVP.all(promise_list);
             });
+            // });
         });
       });
   };
