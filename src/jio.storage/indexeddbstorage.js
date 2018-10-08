@@ -346,25 +346,33 @@
       return waitForTransaction(db, ["metadata", "attachment", "blob"],
                                 "readwrite", function (tx) {
 
-          var promise_list = [];
+          var promise_list = [],
+            metadata_store = tx.objectStore("metadata"),
+            attachment_store = tx.objectStore("attachment"),
+            blob_store = tx.objectStore("blob");
 
-          function deleteEntry(cursor) {
+          function deleteAttachment(cursor) {
             promise_list.push(
-              waitForIDBRequest(cursor.delete())
+              waitForIDBRequest(attachment_store.delete(cursor.primaryKey))
             );
           }
+          function deleteBlob(cursor) {
+            promise_list.push(
+              waitForIDBRequest(blob_store.delete(cursor.primaryKey))
+            );
+          }
+
           return RSVP.all([
-            waitForIDBRequest(tx.objectStore("metadata").delete(id)),
-            // XXX Why not possible to delete with KeyCursor?
+            waitForIDBRequest(metadata_store.delete(id)),
             waitForAllSynchronousCursor(
-              tx.objectStore("attachment").index("_id")
-                .openCursor(IDBKeyRange.only(id)),
-              deleteEntry
+              attachment_store.index("_id")
+                              .openKeyCursor(IDBKeyRange.only(id)),
+              deleteAttachment
             ),
             waitForAllSynchronousCursor(
-              tx.objectStore("blob").index("_id")
-                .openCursor(IDBKeyRange.only(id)),
-              deleteEntry
+              blob_store.index("_id")
+                        .openKeyCursor(IDBKeyRange.only(id)),
+              deleteBlob
             ),
           ])
             .then(function () {
@@ -498,7 +506,6 @@
           array_buffer_list.push(result_list[i].target.result.blob);
         }
         // total_length = attachment.info.length;
-        console.log('array_buffer_list', array_buffer_list);
         if ((options.start === undefined) && (options.end === undefined)) {
           return new Blob(array_buffer_list,
                           {type: attachment.info.content_type});
@@ -510,30 +517,6 @@
       });
 
   };
-
-  function removeAttachment(tx, id, name) {
-    var promise_list = [];
-
-    function deleteEntry(cursor) {
-      promise_list.push(
-        waitForIDBRequest(cursor.delete())
-      );
-    }
-
-    return RSVP.all([
-      waitForIDBRequest(
-        tx.objectStore("attachment").delete(buildKeyPath([id, name]))
-      ),
-      waitForAllSynchronousCursor(
-        tx.objectStore("blob").index("_id_attachment")
-          .openCursor(IDBKeyRange.only([id, name])),
-        deleteEntry
-      )
-    ])
-      .then(function () {
-        return RSVP.all(promise_list);
-      });
-  }
 
   IndexedDBStorage.prototype.putAttachment = function (id, name, blob) {
     var db_name = this._database_name;
@@ -557,9 +540,6 @@
         return waitForOpenIndexedDB(db_name, function (db) {
           return waitForTransaction(db, ["attachment", "blob"], "readwrite",
                                     function (tx) {
-              // First remove the previous attachment
-              // return removeAttachment(tx, id, name)
-                // .then(function () {
               var blob_store,
                 promise_list,
                 delete_promise_list = [],
@@ -598,7 +578,7 @@
                 );
                 if (index > blob_part.length + 1) {
                   delete_promise_list.push(
-                    waitForIDBRequest(cursor.delete())
+                    waitForIDBRequest(blob_store.delete(cursor.primaryKey))
                   );
                 }
               }
@@ -606,8 +586,8 @@
               // Finally, remove all remaining blobs
               promise_list.push(
                 waitForAllSynchronousCursor(
-                  tx.objectStore("blob").index("_id_attachment")
-                    .openCursor(IDBKeyRange.only([id, name])),
+                  blob_store.index("_id_attachment")
+                            .openKeyCursor(IDBKeyRange.only([id, name])),
                   deleteEntry
                 )
               );
@@ -628,7 +608,30 @@
     return waitForOpenIndexedDB(this._database_name, function (db) {
       return waitForTransaction(db, ["attachment", "blob"], "readwrite",
                                 function (tx) {
-          return removeAttachment(tx, id, name);
+          var promise_list = [],
+            attachment_store = tx.objectStore("attachment"),
+            blob_store = tx.objectStore("blob");
+
+          function deleteEntry(cursor) {
+            promise_list.push(
+              waitForIDBRequest(blob_store.delete(cursor.primaryKey))
+            );
+          }
+
+          return RSVP.all([
+            waitForIDBRequest(
+              attachment_store.delete(buildKeyPath([id, name]))
+            ),
+            waitForAllSynchronousCursor(
+              blob_store.index("_id_attachment")
+                        .openKeyCursor(IDBKeyRange.only([id, name])),
+              deleteEntry
+            )
+          ])
+            .then(function () {
+              return RSVP.all(promise_list);
+            });
+
         });
     });
   };
