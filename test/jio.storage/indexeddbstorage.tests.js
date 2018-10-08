@@ -1581,7 +1581,7 @@
     var context = this,
       attachment = "attachment";
     stop();
-    expect(17);
+    expect(18);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1638,18 +1638,12 @@
                   "store first argument");
         deepEqual(context.spy_store.secondCall.args[0], "blob",
                   "store first argument");
-        /*
-        deepEqual(context.spy_store.thirdCall.args[0], "attachment",
-                  "store first argument");
-        deepEqual(context.spy_store.getCall(3).args[0], "blob",
-                  "store first argument");
-        */
-        equal(context.spy_delete.callCount, 110, "delete count " +
+
+        equal(context.spy_delete.callCount, 1, "delete count " +
            context.spy_delete.callCount);
-        /*
-        deepEqual(context.spy_delete.firstCall.args[0], "foo_attachment",
+        deepEqual(context.spy_delete.firstCall.args[0], "foo_attachment_1",
                   "delete first argument");
-        */
+
         equal(context.spy_index.callCount, 1, "index count " +
            context.spy_index.callCount);
 
@@ -1657,16 +1651,8 @@
            context.spy_cursor.callCount);
         equal(context.spy_key_cursor.callCount, 1, "cursor count " +
            context.spy_key_cursor.callCount);
-        /*
-        equal(context.spy_cursor_delete.callCount, 0, "delete count " +
-           context.spy_cursor_delete.callCount);
-        ok(context.spy_key_range.calledOnce, "key range count " +
-           context.spy_key_range.callCount);
-        deepEqual(context.spy_key_range.firstCall.args[0],
-                  ["foo", "attachment"],
-                  "key range first argument");
-        */
-        equal(context.spy_put.callCount, 3, "put count " +
+
+        equal(context.spy_put.callCount, 2, "put count " +
            context.spy_put.callCount);
         deepEqual(context.spy_put.firstCall.args[0], {
           "_attachment": "attachment",
@@ -1674,7 +1660,7 @@
           "_key_path": "foo_attachment",
           "info": {
             "content_type": "text/plain;charset=utf-8",
-            "length": 3000000
+            "length": 12
           }
         }, "put first argument");
         delete context.spy_put.secondCall.args[0].blob;
@@ -1686,13 +1672,6 @@
           "_key_path": "foo_attachment_0"
         }, "put first argument");
         delete context.spy_put.thirdCall.args[0].blob;
-        // XXX Check blob content
-        deepEqual(context.spy_put.thirdCall.args[0], {
-          "_attachment": "attachment",
-          "_id": "foo",
-          "_part": 1,
-          "_key_path": "foo_attachment_1"
-        }, "put first argument");
       })
       .always(function () {
         context.spy_open.restore();

@@ -576,7 +576,7 @@
                   cursor.primaryKey.slice(key_path.length + 1),
                   10
                 );
-                if (index > blob_part.length + 1) {
+                if (index >= blob_part.length) {
                   delete_promise_list.push(
                     waitForIDBRequest(blob_store.delete(cursor.primaryKey))
                   );
