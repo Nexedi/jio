@@ -562,11 +562,13 @@
                 // .then(function () {
               var blob_store,
                 promise_list,
+                delete_promise_list = [],
+                key_path = buildKeyPath([id, name]),
                 i;
-              // Then write the attachment info
+              // First write the attachment info on top of previous
               promise_list = [
                 waitForIDBRequest(tx.objectStore("attachment").put({
-                  "_key_path": buildKeyPath([id, name]),
+                  "_key_path": key_path,
                   "_id": id,
                   "_attachment": name,
                   "info": {
@@ -575,7 +577,7 @@
                   }
                 }))
               ];
-              // Finally, write all blob parts
+              // Then, write all blob parts on top of previous
               blob_store = tx.objectStore("blob");
               for (i = 0; i < blob_part.length; i += 1) {
                 promise_list.push(
@@ -588,7 +590,34 @@
                   }))
                 );
               }
-              return RSVP.all(promise_list);
+
+              function deleteEntry(cursor) {
+                var index = parseInt(
+                  cursor.primaryKey.slice(key_path.length + 1),
+                  10
+                );
+                if (index > blob_part.length + 1) {
+                  delete_promise_list.push(
+                    waitForIDBRequest(cursor.delete())
+                  );
+                }
+              }
+
+              // Finally, remove all remaining blobs
+              promise_list.push(
+                waitForAllSynchronousCursor(
+                  tx.objectStore("blob").index("_id_attachment")
+                    .openCursor(IDBKeyRange.only([id, name])),
+                  deleteEntry
+                )
+              );
+
+              return RSVP.all(promise_list)
+                .then(function () {
+                  if (delete_promise_list.length) {
+                    return RSVP.all(delete_promise_list);
+                  }
+                });
             });
             // });
         });
