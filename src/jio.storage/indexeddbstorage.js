@@ -379,37 +379,74 @@
       options = {};
     }
     var db_name = this._database_name,
-      type,
       start,
       end;
+
+    start = options.start || 0;
+    end = options.end;
+
     return new RSVP.Queue()
       .push(function () {
         return waitForOpenIndexedDB(db_name, function (db) {
           return waitForTransaction(db, ["attachment", "blob"], "readonly",
                                     function (tx) {
-              // XXX Should raise if key is not good
-              return waitForIDBRequest(tx.objectStore("attachment").get(
-                buildKeyPath([id, name])
-              ))
+              var promise_list,
+                key_path = buildKeyPath([id, name]),
+                blob_store;
+
+              /*
+                start_index,
+                end_index,
+                i;
+*/
+
+              promise_list = [
+                // Get the attachment info (mime type)
+                waitForIDBRequest(tx.objectStore("attachment").get(
+                  key_path
+                ))
+              ];
+
+              blob_store = tx.objectStore("blob");
+
+              function getBlob(cursor) {
+                var index = parseInt(
+                  cursor.primaryKey.slice(key_path.length + 1),
+                  10
+                ),
+                  i = index;
+                // Extend array size
+                while (i > promise_list.length - 1) {
+                  promise_list.push(null);
+                  i -= 1;
+                }
+                // Sort the blob by their index
+                promise_list.splice(
+                  index + 1,
+                  0,
+                  waitForIDBRequest(blob_store.get(cursor.primaryKey))
+                );
+              }
+
+              // Get all needed blobs
+              return waitForAllSynchronousCursor(
+                blob_store.index("_id_attachment")
+                  .openKeyCursor(IDBKeyRange.only([id, name])),
+                getBlob
+              )
+                .then(function () {
+                  return RSVP.all(promise_list);
+                });
+            });
+        });
+
+/*
+
+              
+
                 .then(function (evt) {
-                  if (!evt.target.result) {
-                    throw new jIO.util.jIOError(
-                      "IndexedDB: cannot find object '" +
-                          buildKeyPath([id, name]) +
-                          "' in the 'attachment' store",
-                      404
-                    );
-                  }
-                  var attachment = evt.target.result,
-                    total_length = attachment.info.length,
-                    promise_list = [],
-                    store = tx.objectStore("blob"),
-                    start_index,
-                    end_index,
-                    i;
-                  type = attachment.info.content_type;
-                  start = options.start || 0;
-                  end = options.end || total_length;
+
+
                   if (end > total_length) {
                     end = total_length;
                   }
@@ -434,23 +471,37 @@
                       waitForIDBRequest(store.get(buildKeyPath([id, name, i])))
                     );
                   }
-                  return RSVP.all(promise_list);
                 });
-            });
-        });
+
+*/
       })
       .push(function (result_list) {
         // No need to keep the IDB open
-        var array_buffer_list = [],
-          blob,
-          i,
+        var blob,
           index,
-          len = result_list.length;
-        for (i = 0; i < len; i += 1) {
+          attachment = result_list[0].target.result,
+          array_buffer_list = [],
+          i;
+          // total_length;
+
+        // Should raise if key is not good
+        if (!attachment) {
+          throw new jIO.util.jIOError(
+            "IndexedDB: cannot find object '" +
+                buildKeyPath([id, name]) +
+                "' in the 'attachment' store",
+            404
+          );
+        }
+
+        for (i = 1; i < result_list.length; i += 1) {
           array_buffer_list.push(result_list[i].target.result.blob);
         }
+        // total_length = attachment.info.length;
+        console.log('array_buffer_list', array_buffer_list);
         if ((options.start === undefined) && (options.end === undefined)) {
-          return new Blob(array_buffer_list, {type: type});
+          return new Blob(array_buffer_list,
+                          {type: attachment.info.content_type});
         }
         index = Math.floor(start / UNITE) * UNITE;
         blob = new Blob(array_buffer_list, {type: "application/octet-stream"});
