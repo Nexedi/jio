@@ -175,7 +175,6 @@
       tx.oncomplete = function () {
         return new RSVP.Queue()
           .push(function () {
-            // db.close();
             return result;
           })
           .push(resolve, function (error) {
@@ -183,9 +182,11 @@
             reject(error);
           });
       };
+      tx.onerror = function (error) {
+        canceller();
+        reject(error);
+      };
       tx.onabort = function (evt) {
-        // evt.preventDefault();
-        // evt.stopPropagation();
         reject(evt.target);
       };
       return tx;
@@ -490,7 +491,6 @@
           attachment = result_list[0].target.result,
           array_buffer_list = [],
           i;
-          // total_length;
 
         // Should raise if key is not good
         if (!attachment) {
@@ -505,10 +505,18 @@
         for (i = 1; i < result_list.length; i += 1) {
           array_buffer_list.push(result_list[i].target.result.blob);
         }
-        // total_length = attachment.info.length;
         if ((options.start === undefined) && (options.end === undefined)) {
-          return new Blob(array_buffer_list,
+          blob = new Blob(array_buffer_list,
                           {type: attachment.info.content_type});
+          if (blob.length !== attachment.info.total_length) {
+            throw new jIO.util.jIOError(
+              "IndexedDB: attachment '" +
+                  buildKeyPath([id, name]) +
+                  "' in the 'attachment' store is broken",
+              500
+            );
+          }
+          return blob;
         }
         index = Math.floor(start / UNITE) * UNITE;
         blob = new Blob(array_buffer_list, {type: "application/octet-stream"});
@@ -599,7 +607,6 @@
                   }
                 });
             });
-            // });
         });
       });
   };
