@@ -296,7 +296,7 @@
       context = this;
 
     function addEntry(cursor) {
-      attachment_dict[cursor.value._attachment] = {};
+      attachment_dict[cursor.primaryKey.slice(cursor.key.length + 1)] = {};
     }
 
     return new RSVP.Queue()
@@ -308,7 +308,7 @@
                 waitForIDBRequest(tx.objectStore("metadata").get(id)),
                 waitForAllSynchronousCursor(
                   tx.objectStore("attachment").index("_id")
-                    .openCursor(IDBKeyRange.only(id)),
+                    .openKeyCursor(IDBKeyRange.only(id)),
                   addEntry
                 )
               ]);
