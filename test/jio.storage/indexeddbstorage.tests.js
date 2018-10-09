@@ -1223,6 +1223,8 @@
         context.spy_index = sinon.spy(IDBObjectStore.prototype, "index");
         context.spy_create_index = sinon.spy(IDBObjectStore.prototype,
                                              "createIndex");
+        context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
+        context.spy_key_cursor = sinon.spy(IDBIndex.prototype, "openKeyCursor");
 
         return context.jio.getAttachment("foo", attachment);
       })
@@ -1252,17 +1254,24 @@
         deepEqual(context.spy_store.secondCall.args[0], "blob",
                   "store first argument");
 
-        equal(context.spy_get.callCount, 3, "get count " +
+        equal(context.spy_get.callCount, 1, "get count " +
            context.spy_get.callCount);
         deepEqual(context.spy_get.firstCall.args[0], "foo_attachment",
-                  "get first argument");
-        deepEqual(context.spy_get.secondCall.args[0], "foo_attachment_0",
-                  "get first argument");
-        deepEqual(context.spy_get.thirdCall.args[0], "foo_attachment_1",
                   "get first argument");
 
         ok(context.spy_index.called, "index count " +
            context.spy_index.callCount);
+
+        equal(context.spy_cursor.callCount, 1, "cursor count " +
+           context.spy_cursor.callCount);
+        ok(!context.spy_key_cursor.called, "cursor key count " +
+           context.spy_key_cursor.callCount);
+
+        ok(context.spy_key_range.calledOnce, "key range count " +
+           context.spy_key_range.callCount);
+        deepEqual(context.spy_key_range.firstCall.args[0],
+                  ["foo", "attachment"],
+                  "key range first argument");
       })
       .always(function () {
         context.spy_open.restore();
@@ -1279,6 +1288,10 @@
         delete context.spy_index;
         context.spy_create_index.restore();
         delete context.spy_create_index;
+        context.spy_cursor.restore();
+        delete context.spy_cursor;
+        context.spy_key_cursor.restore();
+        delete context.spy_key_cursor;
       })
       .fail(function (error) {
         ok(false, error);
