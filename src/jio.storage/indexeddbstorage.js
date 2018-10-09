@@ -494,7 +494,7 @@
           );
         }
 
-        if ((options.start === undefined) && (options.end === undefined)) {
+        if ((start === 0) && (end === undefined)) {
           blob = new Blob(array_buffer_list,
                           {type: attachment.info.content_type});
           if (blob.length !== attachment.info.total_length) {
