@@ -137,8 +137,10 @@
         type = LOG_UNEXPECTED_ERROR;
       }
       if (extra === undefined) {
+        console.log(type, id);
         this._list.push([type, id]);
       } else {
+        console.log(type, id, extra);
         this._list.push([type, id, extra]);
       }
       if (type < 100) {
@@ -154,8 +156,10 @@
         type = LOG_UNEXPECTED_ERROR;
       }
       if (extra === undefined) {
+        console.log(type, id, name);
         this._list.push([type, id, name]);
       } else {
+        console.log(type, id, name, extra);
         this._list.push([type, id, name, extra]);
       }
       if (type < 100) {
