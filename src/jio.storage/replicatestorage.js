@@ -136,22 +136,22 @@
       if (!this._log_console) {
         return;
       }
-      var txt,
+      var txt = code,
         parsed_code = code,
         log;
 
       // Check severity level
       if (parsed_code >= 300) {
-        txt = 'SKIP ';
+        txt += ' SKIP ';
         log = console.info;
       } else if (parsed_code >= 200) {
-        txt = 'SOLVE ';
+        txt += ' SOLVE ';
         log = console.log;
       } else if (parsed_code >= 100) {
-        txt = 'FORCE ';
+        txt += ' FORCE ';
         log = console.warn;
       } else {
-        txt = 'ERROR ';
+        txt += ' ERROR ';
         log = console.error;
       }
 
@@ -185,7 +185,14 @@
       if (parsed_code !== 0) {
         txt += (parsed_code % 2 === 0) ? 'document' : 'attachment';
       }
-      log(code, txt, a, b, c);
+      txt += ' ' + a;
+      if (b !== undefined) {
+        txt += ' ' + b;
+        if (c !== undefined) {
+          txt += ' ' + c;
+        }
+      }
+      log(txt);
     },
 
     log: function (id, type, extra) {
