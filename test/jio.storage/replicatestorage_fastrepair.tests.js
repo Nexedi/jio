@@ -100,6 +100,7 @@
       // Uses memory substorage, so that it is flushed after each run
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
           type: "uuid",
@@ -186,6 +187,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -331,6 +333,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -569,6 +572,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "storagealldocsdynamicselect",
@@ -647,6 +651,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         use_remote_post: 1,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
@@ -726,6 +731,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
           type: "storagealldocsdynamicselect",
@@ -807,6 +813,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
           type: "storagealldocsdynamicselect",
@@ -888,6 +895,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "storagealldocsdynamicselect",
@@ -966,6 +974,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         use_remote_post: 1,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
@@ -1045,6 +1054,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
           type: "storagealldocsdynamicselect",
@@ -1127,6 +1137,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
           type: "storagealldocsdynamicselect",
@@ -1206,6 +1217,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "storagealldocsdynamicselect",
@@ -1283,6 +1295,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         use_remote_post: 1,
         signature_hash_key: 'foo_etag',
         local_sub_storage: {
@@ -1489,6 +1502,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: 1,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -1567,6 +1581,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_local_modification: false,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -1705,6 +1720,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_remote_modification: false,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -1844,6 +1860,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "uuid",
@@ -1939,6 +1956,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "uuid",
@@ -2034,6 +2052,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "uuid",
@@ -2224,6 +2243,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_local_deletion: false,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -2425,6 +2445,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_remote_deletion: false,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -2698,6 +2719,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 1,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -2798,6 +2820,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 2,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -2893,6 +2916,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 3,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -3038,6 +3062,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -3168,6 +3193,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       check_local_modification: false,
       signature_hash_key: 'foo_etag',
@@ -3299,6 +3325,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 1,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -3390,6 +3417,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 1,
       use_remote_post: true,
       signature_hash_key: 'foo_etag',
@@ -3520,6 +3548,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 2,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -3615,6 +3644,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 2,
       check_local_modification: false,
       signature_hash_key: 'foo_etag',
@@ -3712,6 +3742,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 3,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
@@ -3802,6 +3833,7 @@
     // in the same local sub storage
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "uuid",
@@ -3902,6 +3934,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "replicatefaststorage200defaultquery"
@@ -3958,6 +3991,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "replicatefaststorage200customquery"
@@ -4007,6 +4041,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
         type: "query",

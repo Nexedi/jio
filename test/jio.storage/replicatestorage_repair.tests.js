@@ -44,6 +44,7 @@
       // Uses memory substorage, so that it is flushed after each run
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         local_sub_storage: {
           type: "uuid",
           sub_storage: {
@@ -109,6 +110,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_local_creation: false,
       local_sub_storage: {
         type: "uuid",
@@ -172,6 +174,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       local_sub_storage: {
         type: "uuid",
@@ -300,6 +303,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       local_sub_storage: {
         type: "uuid",
@@ -427,6 +431,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_remote_creation: false,
       local_sub_storage: {
         type: "uuid",
@@ -520,6 +525,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
@@ -586,6 +592,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         use_remote_post: 1,
         local_sub_storage: {
           type: "uuid",
@@ -653,6 +660,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         local_sub_storage: {
           type: "query",
           sub_storage: {
@@ -721,6 +729,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         local_sub_storage: {
           type: "query",
           sub_storage: {
@@ -789,6 +798,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
@@ -855,6 +865,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         use_remote_post: 1,
         local_sub_storage: {
           type: "uuid",
@@ -922,6 +933,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         local_sub_storage: {
           type: "query",
           sub_storage: {
@@ -992,6 +1004,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         local_sub_storage: {
           type: "query",
           sub_storage: {
@@ -1058,6 +1071,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
@@ -1123,6 +1137,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         use_remote_post: 1,
         local_sub_storage: {
           type: "uuid",
@@ -1307,6 +1322,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       local_sub_storage: {
         type: "uuid",
@@ -1368,6 +1384,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_local_modification: false,
       local_sub_storage: {
         type: "uuid",
@@ -1489,6 +1506,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_remote_modification: false,
       local_sub_storage: {
         type: "uuid",
@@ -1604,6 +1622,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
@@ -1676,6 +1695,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
@@ -1748,6 +1768,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       local_sub_storage: {
         type: "uuid",
         sub_storage: {
@@ -1905,6 +1926,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_local_deletion: false,
       local_sub_storage: {
         type: "uuid",
@@ -2090,6 +2112,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       check_remote_deletion: false,
       local_sub_storage: {
         type: "uuid",
@@ -2338,6 +2361,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 1,
       local_sub_storage: {
         type: "uuid",
@@ -2418,6 +2442,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 2,
       local_sub_storage: {
         type: "uuid",
@@ -2492,6 +2517,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 3,
       local_sub_storage: {
         type: "uuid",
@@ -2616,6 +2642,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       local_sub_storage: {
         type: "uuid",
@@ -2730,6 +2757,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       use_remote_post: true,
       check_local_modification: false,
       local_sub_storage: {
@@ -2844,6 +2872,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 1,
       local_sub_storage: {
         type: "uuid",
@@ -2920,6 +2949,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 1,
       use_remote_post: true,
       local_sub_storage: {
@@ -3033,6 +3063,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 2,
       local_sub_storage: {
         type: "uuid",
@@ -3114,6 +3145,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 2,
       check_local_modification: false,
       local_sub_storage: {
@@ -3197,6 +3229,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       conflict_handling: 3,
       local_sub_storage: {
         type: "uuid",
@@ -3299,6 +3332,7 @@
         );
       })
       .fail(function (error) {
+        console.warn(error);
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find document: " +
                 "_replicate_8662994dcefb3a2ceec61e86953efda8ec6520d6");
@@ -3378,6 +3412,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       local_sub_storage: {
         type: "replicatestorage200chechrepair"
       },
@@ -3426,6 +3461,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       local_sub_storage: {
         type: "replicatestorage200defaultquery"
       },
@@ -3475,6 +3511,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       local_sub_storage: {
         type: "replicatestorage200customquery"
       },
@@ -3563,6 +3600,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       local_sub_storage: {
         type: "memory"
       },
@@ -3685,6 +3723,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       parallel_operation_amount: 2,
       local_sub_storage: {
         type: "memory"
@@ -3782,6 +3821,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       parallel_operation_amount: 4,
       local_sub_storage: {
         type: "memory"

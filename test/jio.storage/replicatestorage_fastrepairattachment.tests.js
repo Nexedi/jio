@@ -136,6 +136,7 @@
       // Uses memory substorage, so that it is flushed after each run
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         check_local_attachment_creation: true,
         check_local_attachment_modification: true,
@@ -241,6 +242,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         check_local_creation: false,
         check_local_attachment_creation: true,
@@ -329,6 +331,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: false,
       check_local_attachment_modification: true,
@@ -422,6 +425,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         use_remote_post: true,
         check_local_attachment_creation: true,
@@ -574,6 +578,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         check_remote_creation: false,
         check_local_attachment_creation: true,
@@ -671,6 +676,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_remote_attachment_creation: false,
       check_remote_attachment_modification: true,
@@ -831,6 +837,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 1,
       check_local_attachment_creation: true,
@@ -933,6 +940,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         conflict_handling: 1,
         check_local_attachment_creation: true,
@@ -1041,6 +1049,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         conflict_handling: 1,
         check_local_attachment_creation: true,
@@ -1137,6 +1146,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 2,
       check_local_attachment_creation: true,
@@ -1239,6 +1249,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         conflict_handling: 2,
         check_local_attachment_creation: true,
@@ -1345,6 +1356,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         conflict_handling: 2,
         check_local_attachment_creation: true,
@@ -1450,6 +1462,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 3,
       check_local_attachment_creation: true,
@@ -1735,6 +1748,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       check_local_attachment_modification: false,
@@ -1898,6 +1912,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       check_remote_attachment_modification: false,
@@ -2079,6 +2094,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 1,
       check_local_attachment_creation: true,
@@ -2192,6 +2208,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 2,
       check_local_attachment_creation: true,
@@ -2305,6 +2322,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 3,
       check_local_attachment_creation: true,
@@ -2491,6 +2509,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       check_local_attachment_deletion: false,
@@ -2664,6 +2683,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       check_local_attachment_deletion: true,
@@ -2906,6 +2926,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 1,
       check_local_attachment_creation: true,
@@ -3019,6 +3040,7 @@
 
       this.jio = jIO.createJIO({
         type: "replicate",
+        report_level: 1000,
         signature_hash_key: 'foo_etag',
         conflict_handling: 1,
         check_local_attachment_creation: true,
@@ -3123,6 +3145,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 2,
       check_local_attachment_creation: true,
@@ -3225,6 +3248,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 3,
       check_local_attachment_creation: true,
@@ -3399,6 +3423,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 2,
       check_local_attachment_creation: true,
@@ -3511,6 +3536,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 1,
       check_local_attachment_creation: true,
@@ -3613,6 +3639,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 2,
       check_local_attachment_creation: true,
@@ -3725,6 +3752,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       conflict_handling: 3,
       check_local_attachment_creation: true,
@@ -3972,6 +4000,7 @@
     );
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       local_sub_storage: {
@@ -4131,6 +4160,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       parallel_operation_attachment_amount: 2,
@@ -4271,6 +4301,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_attachment_creation: true,
       parallel_operation_attachment_amount: 4,
@@ -4338,6 +4369,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_deletion: false,
       check_local_attachment_modification: true,
@@ -4530,6 +4562,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_remote_deletion: false,
       check_local_attachment_modification: true,
@@ -5031,6 +5064,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_local_deletion: false,
       check_local_attachment_modification: true,
@@ -5226,6 +5260,7 @@
 
     this.jio = jIO.createJIO({
       type: "replicate",
+      report_level: 1000,
       signature_hash_key: 'foo_etag',
       check_remote_deletion: false,
       check_local_attachment_modification: true,

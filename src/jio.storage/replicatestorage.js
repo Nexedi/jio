@@ -77,64 +77,13 @@
     LOG_NO_CHANGE = 384,
     LOG_NO_CHANGE_ATTACHMENT = 385;
 
-  function ReplicateReport() {
+  function ReplicateReport(log_level, log_console) {
     this._list = [];
     this.name = 'ReplicateReport';
     this.message = this.name;
     this.has_error = false;
-  }
-
-  function logConsole(code, a, b, c) {
-    var txt,
-      parsed_code = code,
-      log;
-
-    // Check severity level
-    if (parsed_code >= 300) {
-      txt = 'SKIP ';
-      log = console.info;
-    } else if (parsed_code >= 200) {
-      txt = 'SOLVE ';
-      log = console.log;
-    } else if (parsed_code >= 100) {
-      txt = 'FORCE ';
-      log = console.warn;
-    } else {
-      txt = 'ERROR ';
-      log = console.error;
-    }
-
-    // Check operation
-    parsed_code = code % 100;
-    if (parsed_code >= 80) {
-      txt += 'idem ';
-    } else if (parsed_code >= 70) {
-      txt += 'conflict ';
-    } else if (parsed_code >= 60) {
-      txt += 'deleted ';
-    } else if (parsed_code >= 50) {
-      txt += 'modified ';
-    } else if (parsed_code >= 40) {
-      txt += 'created ';
-    } else if (parsed_code >= 30) {
-      txt += 'delete ';
-    } else if (parsed_code >= 20) {
-      txt += 'post ';
-    } else if (parsed_code >= 10) {
-      txt += 'put ';
-    }
-
-    // Check document
-    parsed_code = code % 10;
-    if (parsed_code >= 8) {
-      txt += 'local ';
-    } else if (parsed_code >= 6) {
-      txt += 'remote ';
-    }
-    if (parsed_code !== 0) {
-      txt += (parsed_code % 2 === 0) ? 'document' : 'attachment';
-    }
-    log(code, txt, a, b, c);
+    this._log_level = log_level;
+    this._log_console = log_console;
   }
 
   ReplicateReport.prototype = {
@@ -183,6 +132,62 @@
     LOG_NO_CHANGE: LOG_NO_CHANGE,
     LOG_NO_CHANGE_ATTACHMENT: LOG_NO_CHANGE_ATTACHMENT,
 
+    logConsole: function (code, a, b, c) {
+      if (!this._log_console) {
+        return;
+      }
+      var txt,
+        parsed_code = code,
+        log;
+
+      // Check severity level
+      if (parsed_code >= 300) {
+        txt = 'SKIP ';
+        log = console.info;
+      } else if (parsed_code >= 200) {
+        txt = 'SOLVE ';
+        log = console.log;
+      } else if (parsed_code >= 100) {
+        txt = 'FORCE ';
+        log = console.warn;
+      } else {
+        txt = 'ERROR ';
+        log = console.error;
+      }
+
+      // Check operation
+      parsed_code = code % 100;
+      if (parsed_code >= 80) {
+        txt += 'idem ';
+      } else if (parsed_code >= 70) {
+        txt += 'conflict ';
+      } else if (parsed_code >= 60) {
+        txt += 'deleted ';
+      } else if (parsed_code >= 50) {
+        txt += 'modified ';
+      } else if (parsed_code >= 40) {
+        txt += 'created ';
+      } else if (parsed_code >= 30) {
+        txt += 'delete ';
+      } else if (parsed_code >= 20) {
+        txt += 'post ';
+      } else if (parsed_code >= 10) {
+        txt += 'put ';
+      }
+
+      // Check document
+      parsed_code = code % 10;
+      if (parsed_code >= 8) {
+        txt += 'local ';
+      } else if (parsed_code >= 6) {
+        txt += 'remote ';
+      }
+      if (parsed_code !== 0) {
+        txt += (parsed_code % 2 === 0) ? 'document' : 'attachment';
+      }
+      log(code, txt, a, b, c);
+    },
+
     log: function (id, type, extra) {
       if (type === undefined) {
         if (extra === undefined) {
@@ -190,15 +195,17 @@
         }
         type = LOG_UNEXPECTED_ERROR;
       }
-      if (extra === undefined) {
-        logConsole(type, id);
-        this._list.push([type, id]);
-      } else {
-        logConsole(type, id, extra);
-        this._list.push([type, id, extra]);
-      }
-      if (type < 100) {
-        this.has_error = true;
+      if (type < this._log_level) {
+        if (extra === undefined) {
+          this.logConsole(type, id);
+          this._list.push([type, id]);
+        } else {
+          this.logConsole(type, id, extra);
+          this._list.push([type, id, extra]);
+        }
+        if (type < 100) {
+          this.has_error = true;
+        }
       }
     },
 
@@ -209,15 +216,17 @@
         }
         type = LOG_UNEXPECTED_ERROR;
       }
-      if (extra === undefined) {
-        logConsole(type, id, name);
-        this._list.push([type, id, name]);
-      } else {
-        logConsole(type, id, name, extra);
-        this._list.push([type, id, name, extra]);
-      }
-      if (type < 100) {
-        this.has_error = true;
+      if (type < this._log_level) {
+        if (extra === undefined) {
+          this.logConsole(type, id, name);
+          this._list.push([type, id, name]);
+        } else {
+          this.logConsole(type, id, name, extra);
+          this._list.push([type, id, name, extra]);
+        }
+        if (type < 100) {
+          this.has_error = true;
+        }
       }
     },
 
@@ -253,6 +262,8 @@
 
   function ReplicateStorage(spec) {
     this._query_options = spec.query || {};
+    this._log_level = spec.report_level || 100;
+    this._log_console = spec.debug || false;
     if (spec.signature_hash_key !== undefined) {
       this._query_options.select_list = [spec.signature_hash_key];
     }
@@ -1654,7 +1665,7 @@
       skip_document_dict = {},
       skip_deleted_document_dict = {},
       cache = {},
-      report = new ReplicateReport();
+      report = new ReplicateReport(this._log_level, this._log_console);
 
     return new RSVP.Queue()
       .push(function () {
