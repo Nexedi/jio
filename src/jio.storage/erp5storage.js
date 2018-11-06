@@ -38,10 +38,11 @@
     if (options.xhrFields === undefined) {
       options.xhrFields = {};
     }
-    if (storage._access_token !== undefined) {
+    if (storage._access_token) {
       if (options.headers === undefined) {
         options.headers = {};
       }
+      options.headers.Accept = "*/*";
       options.headers['X-ACCESS-TOKEN'] = storage._access_token;
       options.xhrFields.withCredentials = false;
     } else {

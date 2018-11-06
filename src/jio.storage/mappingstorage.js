@@ -546,7 +546,8 @@
       query,
       property,
       select_list = [],
-      sort_on = [];
+      sort_on = [],
+      queryOptions = {};
 
     function mapQuery(one_query) {
       var j, query_list = [], key, sub_query;
@@ -622,14 +623,21 @@
     if (query !== undefined) {
       query = Query.objectToSearchText(query);
     }
-    return this._sub_storage.allDocs(
-      {
-        query: query,
-        select_list: select_list,
-        sort_on: sort_on,
-        limit: option.limit
-      }
-    )
+
+    if (query) {
+      queryOptions.query = query;
+    }
+    if (select_list) {
+      queryOptions.select_list = select_list;
+    }
+    if (sort_on) {
+      queryOptions.sort_on = sort_on;
+    }
+    if (option.limit) {
+      queryOptions.limit = option.limit;
+    }
+
+    return this._sub_storage.allDocs(queryOptions)
       .push(function (result) {
         var sub_doc, map_info = storage._map_id || ["equalSubId"];
         for (i = 0; i < result.data.total_rows; i += 1) {

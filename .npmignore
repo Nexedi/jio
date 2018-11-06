@@ -1,5 +1,6 @@
 *
-!dist/jio-latest-node.js
+!dist/jio.js
+!dist/jio-node.js
 !README.md
 !COPYING
 !package.json

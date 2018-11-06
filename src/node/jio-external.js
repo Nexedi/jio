@@ -1,7 +1,12 @@
-  var RSVP = window.RSVP,
-    moment = global.moment,
-    UriTemplate = window.UriTemplate,
-    Rusha = window.Rusha;
+  var RSVP = require('rsvp'),
+  moment = require('moment'),
+  Rusha = require('rusha'),
+  XMLHttpRequest = require('xhr2'),
+  FormData = require('form-data'),
+  URI = require('urijs'),
+  UriTemplate = require('uritemplate'),
+  process = require('process');
 
-  // Allow xhr2 to export XMLHttpRequest
-  module = {};
+window.moment = moment;
+window.FormData = window.FormData || FormData;
+window.XMLHttpRequest = window.XMLHttpRequest || XMLHttpRequest;

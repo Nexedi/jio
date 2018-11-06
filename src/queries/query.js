@@ -332,7 +332,7 @@
       }
     }
 
-    if (option.sort_on) {
+    if (option.sort_on && option.sort_on.length) {
       sortOn(option.sort_on, item_list, this._key_schema);
     }
 
