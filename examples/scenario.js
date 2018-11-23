@@ -71,6 +71,23 @@
       });
 
       ///////////////////////////
+      // Linshare storage
+      ///////////////////////////
+//       return g.run({
+//         type: "query",
+//         sub_storage: {
+//           type: "uuid",
+//           sub_storage: {
+//             type: "linshare",
+//             url: "https://demo.linshare.org/",
+//             credential_token: window.btoa(
+//               'user1@linshare.org' + ':' + 'password1'
+//             )
+//           }
+//         }
+//       });
+
+      ///////////////////////////
       // WebSQL storage
       ///////////////////////////
 //      return g.run({
