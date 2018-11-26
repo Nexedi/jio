@@ -42,22 +42,23 @@
   });
 
   /////////////////////////////////////////////////////////////////
-  // DropboxStorage.put
+  // DropboxStorage.allDocs
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.put");
   
-  test("put document", function () {
+  test("put new document", function () {
     stop();
-    expect(1);
+    expect(2);
     var jio = jIO.createJIO({
       type: "linshare"
     });
-    jio.put("foo", {bar: 'foo'})
+    jio.put("foo", {"bar": "foo"})
       .then(function (res) {
-        equal(res, "foo", "test ended");
+        ok(false, error);
       })
       .fail(function (error) {
-        ok(false, error);
+        equal(error.status_code, 400, "Check Status");
+        equal(error.message, "Can't create document with id : foo");
       })
       .always(function () {
         start();
