@@ -42,7 +42,7 @@
   });
 
   /////////////////////////////////////////////////////////////////
-  // DropboxStorage.allDocs
+  // DropboxStorage.put
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.put");
   
@@ -52,13 +52,71 @@
     var jio = jIO.createJIO({
       type: "linshare"
     });
-    jio.put("foo", {"bar": "foo"})
+    jio.post({"bar": "foo"})
+      .then(function (id) {
+        return jio.put(id, {"bar": "2713"});
+      })
       .then(function (res) {
-        ok(false, error);
+        console.warn(res);
+        equal(res, "foo");
       })
       .fail(function (error) {
-        equal(error.status_code, 400, "Check Status");
-        equal(error.message, "Can't create document with id : foo");
+        console.warn(error);
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+  /////////////////////////////////////////////////////////////////
+  // DropboxStorage.allDocs
+  /////////////////////////////////////////////////////////////////
+  module("LinshareStorage.allDocs");
+  
+  test("allDocs with include docs", function () {
+    stop();
+    expect(2);
+    var jio = jIO.createJIO({
+      type: "linshare"
+    });
+    jio.allDocs({include_docs: true})
+      .then(function (result) {
+        deepEqual(result, {}, 'check result');
+        console.warn(res);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // DropboxStorage.getAttachment
+  /////////////////////////////////////////////////////////////////
+  module("LinshareStorage.getAttachment");
+  
+  test("getAttachment retrieve content", function () {
+    stop();
+    expect(1);
+    var jio = jIO.createJIO({
+      type: "linshare"
+    }),
+      doc_id;
+    jio.post({})
+      .then(function (id) {
+        doc_id = id;
+        return jio.putAttachment(id, "data", new Blob(['tralalaal']));
+      })
+      .then(function () {
+        return jio.getAttachment(doc_id, "data");
+      })
+      .then(function (result) {
+        deepEqual(new Blob(['tralalaal']), result, "Check Blob");
+      })
+      .fail(function (error) {
+        ok(false, error);
       })
       .always(function () {
         start();
