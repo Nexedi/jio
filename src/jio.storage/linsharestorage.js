@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Nexedi SA
+ * Copyright 2013, Nexedi SA
  *
  * This program is free software: you can Use, Study, Modify and Redistribute
  * it under the terms of the GNU General Public License version 3, or (at your
@@ -28,10 +28,6 @@
 
 (function (jIO, RSVP, Blob, UriTemplate, FormData) {
   "use strict";
-  var default_url = "https://softinst89769.host.vifib.net/erp5/portal_skins/" +
-    "erp5_http_proxy/ERP5Site_getHTTPResource?url=https://demo.linshare.org/" +
-    "linshare/webservice/rest/user/v2/documents/{uuid}",
-    default_token = "dXNlcjFAbGluc2hhcmUub3JnOnBhc3N3b3JkMQ==";
 
   function makeRequest(storage, options) {
     var ajax_param = {
@@ -51,6 +47,7 @@
     }
     if (options.download) {
       ajax_param.url += '/download';
+      ajax_param.dataType = 'blob';
     }
     return new RSVP.Queue()
       .push(function () {
@@ -93,8 +90,10 @@
    * @constructor
    */
   function LinshareStorage(spec) {
-    this._url_template = UriTemplate.parse(spec.url_template || default_url);
-    this._credential_token = spec.credential_token || default_token;
+    this._url_template = UriTemplate.parse(
+      spec.url + '/linshare/webservice/rest/user/v2/documents/{uuid}'
+    );
+    this._credential_token = spec.credential_token;
     this._id_map = {};
   }
 
@@ -183,6 +182,11 @@
   };
 
   // Attachments link by field "description" - Dict
+
+  LinshareStorage.prototype.allAttachments = function (id) {
+    return this._id_map[id].attachment;
+  };
+
   LinshareStorage.prototype.putAttachment = function (id, name, blob) {
     var storage = this,
       data = new FormData();
@@ -216,10 +220,7 @@
       type: "GET",
       uuid: this._id_map[id].attachment[name],
       download: true
-    })
-      .push(function (result) {
-        return new Blob([result]);
-      });
+    });
   };
 
   LinshareStorage.prototype.removeAttachment = function (id, name) {
