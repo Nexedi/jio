@@ -23,10 +23,10 @@
  * http://download.linshare.org/components/linshare-core/2.2.2/
  * Can't set up id, implied can't put new document
  */
-/*global Blob, jIO, RSVP, UriTemplate*/
+/*global Blob, jIO, RSVP, UriTemplate, FormData*/
 /*jslint nomen: true*/
 
-(function (jIO, RSVP, Blob, UriTemplate) {
+(function (jIO, RSVP, Blob, UriTemplate, FormData) {
   "use strict";
   var default_url = "https://softinst89769.host.vifib.net/erp5/portal_skins/" +
     "erp5_http_proxy/ERP5Site_getHTTPResource?url=https://demo.linshare.org/" +
@@ -67,20 +67,20 @@
       });
   }
 
-  function checkAttachmentMap(storage, id, name) {
-    checkDocumentMap(storage, id);
-    if (!storage._id_map[id].attachment.hasOwnProperty(name)) {
+  function checkDocumentMap(storage, id) {
+    if (!storage._id_map.hasOwnProperty(id)) {
       throw new jIO.util.jIOError(
-        "Can't find attachment with name :" + name,
+        "Can't find document with id : " + id,
         404
       );
     }
   }
 
-  function checkDocumentMap(storage, id) {
-    if (!storage._id_map.hasOwnProperty(id)) {
+  function checkAttachmentMap(storage, id, name) {
+    checkDocumentMap(storage, id);
+    if (!storage._id_map[id].attachment.hasOwnProperty(name)) {
       throw new jIO.util.jIOError(
-        "Can't find document with id : " + id,
+        "Can't find attachment with name :" + name,
         404
       );
     }
@@ -111,9 +111,9 @@
     }));
 
     return makeRequest(this, {
-        data: data,
-        type: "POST"
-      })
+      data: data,
+      type: "POST"
+    })
       .push(function (result) {
         if (storage._id_map.hasOwnProperty(id)) {
           storage._id_map[id].uuid = result.uuid;
@@ -131,20 +131,20 @@
         type: "DELETE",
         uuid: storage._id_map[id].uuid
       })
-      .push(function () {
-        var promise_list = [],
-          name;
-        for (name in storage._id_map[id].attachment) {
-          if (storage._id_map[id].attachment.hasOwnProperty(name)) {
-            promise_list.push(storage.removeAttachment(id, name));
+        .push(function () {
+          var promise_list = [],
+            name;
+          for (name in storage._id_map[id].attachment) {
+            if (storage._id_map[id].attachment.hasOwnProperty(name)) {
+              promise_list.push(storage.removeAttachment(id, name));
+            }
           }
-        }
-        return RSVP.all(promise_list);
-      })
-      .push(function () {
-        delete storage._id_map[id];
-        return id;
-      });
+          return RSVP.all(promise_list);
+        })
+        .push(function () {
+          delete storage._id_map[id];
+          return id;
+        });
     }
   };
 
@@ -154,9 +154,9 @@
       type: "GET",
       uuid: this._id_map[id].uuid
     })
-    .push(function (result) {
-      return JSON.parse(result.metaData).doc;
-    });
+      .push(function (result) {
+        return JSON.parse(result.metaData).doc;
+      });
   };
 
   LinshareStorage.prototype.hasCapacity = function (name) {
@@ -171,7 +171,7 @@
         var  rows = [],
           len = result.length,
           i;
-        for (i = 0 ; i < len ; i += 1) {
+        for (i = 0; i < len; i += 1) {
           if (result[i].hasOwnProperty('type')) {
             if (result[i].description === 'jio/document') {
               rows.push({id: JSON.parse(result[i].metaData).id, value: {}});
@@ -183,14 +183,9 @@
   };
 
   // Attachments link by field "description" - Dict
-
-  LinshareStorage.prototype.allAttachments = function (id) {
-  };
-
   LinshareStorage.prototype.putAttachment = function (id, name, blob) {
     var storage = this,
-      data = new FormData(),
-      uuid;
+      data = new FormData();
     if (!storage._id_map.hasOwnProperty(id)) {
       throw new jIO.util.JIOError(
         "Can't find document with id :" + id,
@@ -209,10 +204,10 @@
       data: data,
       type: "POST"
     })
-    .push(function (result) {
-      storage._id_map[id].attachment[name] = result.uuid;
-      return result.uuid;
-    });
+      .push(function (result) {
+        storage._id_map[id].attachment[name] = result.uuid;
+        return result.uuid;
+      });
   };
 
   LinshareStorage.prototype.getAttachment = function (id, name) {
@@ -222,9 +217,9 @@
       uuid: this._id_map[id].attachment[name],
       download: true
     })
-    .push(function (result) {
-      return new Blob([result]);
-    });
+      .push(function (result) {
+        return new Blob([result]);
+      });
   };
 
   LinshareStorage.prototype.removeAttachment = function (id, name) {
@@ -234,10 +229,10 @@
         type: "DELETE",
         uuid: this._id_map[id].attachment[name]
       })
-      .push(function () {
-        delete this._id_map[id].attachment[name];
-        return id;
-      });
+        .push(function () {
+          delete this._id_map[id].attachment[name];
+          return id;
+        });
     }
   };
 
@@ -248,13 +243,12 @@
       type: "GET"
     })
       .push(function (result) {
-        var  rows = [],
-          len = result.length,
+        var len = result.length,
           i,
           metadata,
           row,
           id;
-        for (i = 0 ; i < len ; i += 1) {
+        for (i = 0; i < len; i += 1) {
           row = result[i];
           if (row.hasOwnProperty('description')) {
             if (row.description === 'jio/document') {
@@ -279,4 +273,4 @@
 
   jIO.addStorage('linshare', LinshareStorage);
 
-}(jIO, RSVP, Blob, UriTemplate));
+}(jIO, RSVP, Blob, UriTemplate, FormData));

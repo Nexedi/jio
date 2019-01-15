@@ -27,6 +27,7 @@
     ok = QUnit.ok,
     expect = QUnit.expect,
     equal = QUnit.equal,
+    deepEqual = QUnit.deepEqual,
     module = QUnit.module;
 
   /////////////////////////////////////////////////////////////////
@@ -45,7 +46,7 @@
   // DropboxStorage.put
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.put");
-  
+
   test("put new document", function () {
     stop();
     expect(2);
@@ -72,7 +73,7 @@
   // DropboxStorage.allDocs
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.allDocs");
-  
+
   test("allDocs with include docs", function () {
     stop();
     expect(2);
@@ -82,7 +83,6 @@
     jio.allDocs({include_docs: true})
       .then(function (result) {
         deepEqual(result, {}, 'check result');
-        console.warn(res);
       })
       .fail(function (error) {
         ok(false, error);
@@ -96,7 +96,7 @@
   // DropboxStorage.getAttachment
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.getAttachment");
-  
+
   test("getAttachment retrieve content", function () {
     stop();
     expect(1);
