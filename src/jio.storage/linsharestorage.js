@@ -23,36 +23,50 @@
  * http://download.linshare.org/components/linshare-core/2.2.2/
  * Can't set up id, implied can't put new document
  */
-/*global jIO, RSVP, UriTemplate, FormData*/
+/*global jIO, RSVP, UriTemplate, FormData, Blob*/
 /*jslint nomen: true*/
 
-(function (jIO, RSVP, UriTemplate, FormData) {
+(function (jIO, RSVP, UriTemplate, FormData, Blob) {
   "use strict";
 
-  function makeRequest(storage, options) {
-    var ajax_param = {
-      type: options.type,
-      url: storage._url_template.expand({uuid: options.uuid || ""}),
-      headers : {
-        "Authorization": "Basic " + storage._credential_token,
+  function makeRequest(storage, uuid, options, download) {
+    if (options === undefined) {
+      options = {};
+    }
+    if (options.xhrFields === undefined) {
+      options.xhrFields = {};
+    }
+
+    if (options.headers === undefined) {
+      options.headers = {};
+    }
+
+    // Prefer JSON by default
+    if (download === true) {
+      options.url = storage._blob_template.expand({uuid: uuid});
+      options.dataType = 'blob';
+    } else {
+      options.url = storage._url_template.expand({uuid: uuid || ""});
+      if (!options.headers.hasOwnProperty('Accept')) {
+        options.headers.Accept = 'application/json';
+        options.dataType = 'json';
       }
-    };
-    if (options.data) {
-      ajax_param.data = options.data;
     }
-    if (options.download) {
-      ajax_param.url += '/download';
-      ajax_param.dataType = 'blob';
-    }
+
+    // Use cookie based auth
+      /*
+      headers : {
+        "Authorization": "Basic " + storage._credential_token
+      }
+      */
+    options.xhrFields.withCredentials = true;
+
     return new RSVP.Queue()
       .push(function () {
-        return jIO.util.ajax(ajax_param);
+        return jIO.util.ajax(options);
       })
       .push(function (event) {
-        if (options.download) {
-          return event.target.response;
-        }
-        return JSON.parse(event.target.response);
+        return event.target.response;
       });
   }
 
@@ -66,84 +80,216 @@
     this._url_template = UriTemplate.parse(
       spec.url + '/linshare/webservice/rest/user/v2/documents/{uuid}'
     );
-    this._credential_token = spec.credential_token;
+    this._blob_template = UriTemplate.parse(
+      spec.url + '/linshare/webservice/rest/user/v2/documents/{uuid}/download'
+    );
+    // this._credential_token = spec.credential_token;
   }
 
-  function restrictDocumentId(id) {
-    if (id !== "/") {
+  var capacity_list = ['list', 'include'];
+  LinshareStorage.prototype.hasCapacity = function (name) {
+    return (capacity_list.indexOf(name) !== -1);
+  };
+
+  function sortByModificationDate(entry1, entry2) {
+    var date1 = entry1.modificationDate,
+      date2 = entry2.modificationDate;
+    return (date1 === date2) ? 0 : ((date1 < date2) ? 1 : -1);
+  }
+
+  function getDocumentList(storage, options) {
+    return makeRequest(storage, "", {
+      type: "GET"
+    })
+      .push(function (entry_list) {
+        // Linshare only allow to get the full list of documents
+        // First, sort the entries by modificationDate in order to
+        // drop the 'old' entries with the same 'name'
+        // (as linshare does not to update an existing doc)
+        entry_list.sort(sortByModificationDate);
+
+        // Only return one document per name
+        // Keep the newer document
+        var entry_dict = {},
+          i,
+          len = entry_list.length,
+          entry_name,
+          entry,
+          result_list = [];
+
+        for (i = 0; i < len; i += 1) {
+          entry_name = entry_list[i].name;
+
+          // If we only need one precise name, no need to check the others
+          if (!options.hasOwnProperty('only_id') ||
+              (options.only_id === entry_name)) {
+
+            if (!entry_dict.hasOwnProperty(entry_name)) {
+              entry = {
+                id: entry_name,
+                value: {},
+                _linshare_uuid: entry_list[i].uuid
+              };
+              if (options.include_docs === true) {
+                entry.doc = JSON.parse(entry_list[i].metaData) || {};
+              }
+              result_list.push(entry);
+
+              if (options.all_revision !== true) {
+                // If we only want to fetch 'one revision',
+                // ie, the latest document matching this id
+                entry_dict[entry_name] = null;
+
+                if (options.only_id === entry_name) {
+                  // Document has been found, no need to check all the others
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        return result_list;
+      });
+  }
+
+  LinshareStorage.prototype.buildQuery = function (options) {
+    return getDocumentList(this, {
+      include_docs: options.include_docs
+    });
+  };
+
+  LinshareStorage.prototype.get = function (id) {
+    // It is not possible to get a document by its name
+    // The only way is to list all of them, and find it manually
+    return getDocumentList(this, {
+      include_docs: true,
+      only_id: id
+    })
+      .push(function (result_list) {
+        if (result_list.length === 1) {
+          return result_list[0].doc;
+        }
+
+        throw new jIO.util.jIOError(
+          "Can't find document with id : " + id,
+          404
+        );
+      });
+  };
+
+  function createLinshareDocument(storage, id, doc, blob) {
+    var data = new FormData();
+    data.append('file', blob, id);
+    data.append('filesize', blob.size);
+    data.append('filename', id);
+    data.append('description', doc.title || doc.description || '');
+    data.append('metadata', jIO.util.stringify(doc));
+    return makeRequest(storage, '', {
+      type: 'POST',
+      data: data
+    });
+  }
+
+  LinshareStorage.prototype.put = function (id, doc) {
+    var storage = this;
+    return getDocumentList(storage, {
+      include_docs: true,
+      only_id: id
+    })
+      .push(function (result_list) {
+        if (result_list.length === 1) {
+          // Update existing document metadata
+          var data = {
+            uuid: result_list[0]._linshare_uuid,
+            metaData: jIO.util.stringify(doc),
+            name: id,
+            description: doc.title || doc.description || ''
+          };
+          return makeRequest(storage, result_list[0]._linshare_uuid, {
+            type: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            data: jIO.util.stringify(data)
+          });
+        }
+        // Create a new one
+        return createLinshareDocument(storage, id, doc, new Blob());
+      });
+  };
+
+  LinshareStorage.prototype.remove = function (id) {
+    var storage = this;
+    // Delete all entries matching the id
+    return getDocumentList(storage, {
+      include_docs: true,
+      only_id: id,
+      all_revision: true
+    })
+      .push(function (result_list) {
+        var promise_list = [],
+          i,
+          len = result_list.length;
+        for (i = 0; i < len; i += 1) {
+          promise_list.push(
+            makeRequest(storage, result_list[i]._linshare_uuid, {
+              type: "DELETE"
+            })
+          );
+        }
+        return RSVP.all(promise_list);
+      });
+  };
+
+  LinshareStorage.prototype.allAttachments = function (id) {
+    return this.get(id)
+      .push(function () {
+        return {enclosure: {}};
+      });
+  };
+
+  function restrictAttachmentId(name) {
+    if (name !== "enclosure") {
       throw new jIO.util.jIOError(
-        "id " + id + " is forbidden (!== /) in linshare",
+        "attachment name " + name + " is forbidden in linshare",
         400
       );
     }
   }
 
-  LinshareStorage.prototype.get = function (id) {
-    restrictDocumentId(id);
-    return {};
-  };
-
-  LinshareStorage.prototype.hasCapacity = function (name) {
-    return name === "list";
-  };
-
-  LinshareStorage.prototype.buildQuery = function () {
-    return [{
-      id: "/",
-      value: {}
-    }];
-  };
-
-  LinshareStorage.prototype.allAttachments = function (id) {
-    restrictDocumentId(id);
-    return makeRequest(this, {
-      type: "GET"
-    })
-      .push(function (share_list) {
-        var attachment_dict = {},
-          len = share_list.length,
-          i;
-        for (i = 0; i < len; i += 1) {
-          // Return the list of names, to reduce the number of queries
-          attachment_dict[share_list[i].uuid] = {name: share_list[i].name};
-        }
-        return attachment_dict;
+  LinshareStorage.prototype.putAttachment = function (id, name, blob) {
+    restrictAttachmentId(name);
+    var storage = this;
+    return storage.get(id)
+      .push(function (doc) {
+        // Create a new document with the same id but a different blob content
+        return createLinshareDocument(storage, id, doc, blob);
       });
   };
 
-  LinshareStorage.prototype.putAttachment = function (id, name, blob) {
-    // a new uuid is generated each time a new share is uploaded
-    // allAttachment will return the list of uuid, while putAttachment uses
-    // attribute. But as name can be identical over multiple uuid,
-    // we will use this unusual behaviour for now
-    restrictDocumentId(id);
-    var data = new FormData();
-    data.append('file', blob, name);
-    data.append('filename', name);
-    data.append('filesize', blob.size);
-    return makeRequest(this, {
-      data: data,
-      type: "POST"
-    });
-  };
-
   LinshareStorage.prototype.getAttachment = function (id, name) {
-    restrictDocumentId(id);
-    return makeRequest(this, {
-      type: "GET",
-      uuid: name,
-      download: true
-    });
-  };
+    restrictAttachmentId(name);
+    var storage = this;
+    // It is not possible to get a document by its name
+    // The only way is to list all of them, and find it manually
+    return getDocumentList(storage, {
+      include_docs: true,
+      only_id: id
+    })
+      .push(function (result_list) {
+        if (result_list.length === 1) {
+          return makeRequest(storage, result_list[0]._linshare_uuid, {
+          }, true);
+        }
 
-  LinshareStorage.prototype.removeAttachment = function (id, name) {
-    restrictDocumentId(id);
-    return makeRequest(this, {
-      type: "DELETE",
-      uuid: name
-    });
+        throw new jIO.util.jIOError(
+          "Can't find document with id : " + id,
+          404
+        );
+      });
+
+
   };
 
   jIO.addStorage('linshare', LinshareStorage);
 
-}(jIO, RSVP, UriTemplate, FormData));
+}(jIO, RSVP, UriTemplate, FormData, Blob));
