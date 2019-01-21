@@ -382,20 +382,30 @@
           name: 'foo2',
           modificationDate: '1'
         }
-      ]);
+      ]),
+      server = this.server;
 
     this.server.respondWith("GET", search_url, [200, {
       "Content-Type": "application/json"
     }, search_result]);
 
     stop();
-    expect(3);
+    expect(9);
 
     this.jio.get('foo')
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Can't find document with id : foo");
         equal(error.status_code, 404);
+
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
       })
       .fail(function (error) {
         ok(false, error);
@@ -651,7 +661,6 @@
       });
   });
 
-
   /////////////////////////////////////////////////////////////////
   // LinshareStorage.remove
   /////////////////////////////////////////////////////////////////
@@ -813,6 +822,130 @@
       })
       .fail(function (error) {
         console.warn(error);
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // LinshareStorage.allAttachments
+  /////////////////////////////////////////////////////////////////
+  module("LinshareStorage.allAttachments", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "linshare",
+        url: domain
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("non existing document", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2'
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1'
+        }
+      ]),
+      server = this.server;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    stop();
+    expect(9);
+
+    this.jio.allAttachments('foo')
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Can't find document with id : foo");
+        equal(error.status_code, 404);
+
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("existing document", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2'
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1'
+        }, {
+          uuid: 'uuid4',
+          name: 'foo',
+          modificationDate: '2',
+        }, {
+          uuid: 'uuid5',
+          name: 'foo',
+          modificationDate: '1',
+        }, {
+          uuid: 'uuid3',
+          name: 'foo',
+          modificationDate: '3',
+          metaData: JSON.stringify({
+            title: 'foouuid3'
+          })
+        }
+      ]),
+      server = this.server;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    stop();
+    expect(7);
+
+    this.jio.allAttachments('foo')
+      .then(function (result) {
+        deepEqual(result, {enclosure: {}}, "Check document");
+        equal(server.requests.length, 1);
+
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+      })
+      .fail(function (error) {
         ok(false, error);
       })
       .always(function () {
