@@ -570,7 +570,6 @@
       });
   });
 
-
   test("update a document", function () {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       put_url = domain + "/linshare/webservice/rest/user/v2/documents/uuid3",
@@ -645,6 +644,175 @@
 
       })
       .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+
+  /////////////////////////////////////////////////////////////////
+  // LinshareStorage.remove
+  /////////////////////////////////////////////////////////////////
+  module("LinshareStorage.remove", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "linshare",
+        url: domain
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("non existing document", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2'
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1'
+        }
+      ]),
+      server = this.server;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    stop();
+    expect(7);
+
+    this.jio.remove('foo')
+      .then(function (result) {
+        deepEqual(result, 'foo', "Check document");
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remove a document", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      remove_url_1 =
+        domain + "/linshare/webservice/rest/user/v2/documents/uuid3",
+      remove_url_2 =
+        domain + "/linshare/webservice/rest/user/v2/documents/uuid4",
+      remove_url_3 =
+        domain + "/linshare/webservice/rest/user/v2/documents/uuid5",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2'
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1'
+        }, {
+          uuid: 'uuid4',
+          name: 'foo',
+          modificationDate: '2',
+        }, {
+          uuid: 'uuid5',
+          name: 'foo',
+          modificationDate: '1',
+        }, {
+          uuid: 'uuid3',
+          name: 'foo',
+          modificationDate: '3',
+          metaData: JSON.stringify({
+            title: 'foouuid3'
+          })
+        }
+      ]),
+      server = this.server;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    this.server.respondWith("DELETE", remove_url_1, [200, {
+      "Content-Type": "application/json"
+    }, JSON.stringify({})]);
+
+    this.server.respondWith("DELETE", remove_url_2, [200, {
+      "Content-Type": "application/json"
+    }, JSON.stringify({})]);
+
+    this.server.respondWith("DELETE", remove_url_3, [200, {
+      "Content-Type": "application/json"
+    }, JSON.stringify({})]);
+
+    stop();
+    expect(22);
+
+    this.jio.remove('foo')
+      .then(function (result) {
+        deepEqual(result, 'foo', "Check document");
+        equal(server.requests.length, 4);
+
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+
+        equal(server.requests[1].method, "DELETE");
+        equal(server.requests[1].url, remove_url_1);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+        deepEqual(server.requests[1].requestHeaders, {
+          "Accept": "application/json",
+          "Content-Type": "text/plain;charset=utf-8"
+        });
+
+        equal(server.requests[2].method, "DELETE");
+        equal(server.requests[2].url, remove_url_2);
+        equal(server.requests[2].requestBody, undefined);
+        equal(server.requests[2].withCredentials, true);
+        deepEqual(server.requests[2].requestHeaders, {
+          "Accept": "application/json",
+          "Content-Type": "text/plain;charset=utf-8"
+        });
+
+        equal(server.requests[3].method, "DELETE");
+        equal(server.requests[3].url, remove_url_3);
+        equal(server.requests[3].requestBody, undefined);
+        equal(server.requests[3].withCredentials, true);
+        deepEqual(server.requests[3].requestHeaders, {
+          "Accept": "application/json",
+          "Content-Type": "text/plain;charset=utf-8"
+        });
+
+      })
+      .fail(function (error) {
+        console.warn(error);
         ok(false, error);
       })
       .always(function () {

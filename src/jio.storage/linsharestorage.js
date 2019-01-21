@@ -232,7 +232,6 @@
     var storage = this;
     // Delete all entries matching the id
     return getDocumentList(storage, {
-      include_docs: true,
       only_id: id,
       all_revision: true
     })
