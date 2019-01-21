@@ -282,7 +282,6 @@
     // It is not possible to get a document by its name
     // The only way is to list all of them, and find it manually
     return getDocumentList(storage, {
-      include_docs: true,
       only_id: id
     })
       .push(function (result_list) {

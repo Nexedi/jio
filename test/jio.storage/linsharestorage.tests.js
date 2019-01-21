@@ -954,6 +954,197 @@
   });
 
   /////////////////////////////////////////////////////////////////
+  // LinshareStorage.putAttachment
+  /////////////////////////////////////////////////////////////////
+  module("LinshareStorage.putAttachment", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "linshare",
+        url: domain
+      });
+
+      this.spy = sinon.spy(FormData.prototype, "append");
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+      this.spy.restore();
+      delete this.spy;
+    }
+  });
+
+
+  test("forbidden attachment", function () {
+    var server = this.server;
+
+    stop();
+    expect(4);
+
+    this.jio.putAttachment('foo', 'bar', new Blob())
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "attachment name bar is forbidden in linshare");
+        equal(error.status_code, 400);
+
+        equal(server.requests.length, 0);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("non existing document", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2'
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1'
+        }
+      ]),
+      server = this.server;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    stop();
+    expect(9);
+
+    this.jio.putAttachment('foo', 'enclosure', new Blob())
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Can't find document with id : foo");
+        equal(error.status_code, 404);
+
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("update a document", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2'
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1'
+        }, {
+          uuid: 'uuid4',
+          name: 'foo',
+          modificationDate: '2',
+        }, {
+          uuid: 'uuid5',
+          name: 'foo',
+          modificationDate: '1',
+        }, {
+          uuid: 'uuid3',
+          name: 'foo',
+          modificationDate: '3',
+          metaData: JSON.stringify({
+            title: 'foouuid3'
+          })
+        }
+      ]),
+      server = this.server,
+      context = this,
+      blob = new Blob(['barfoo']);
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    this.server.respondWith("POST", search_url, [200, {
+      "Content-Type": "application/json"
+    }, JSON.stringify({})]);
+
+    stop();
+    expect(24);
+
+    this.jio.putAttachment('foo', 'enclosure', blob)
+      .then(function (result) {
+        deepEqual(result, {}, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+
+        equal(server.requests[1].method, "POST");
+        equal(server.requests[1].url, search_url);
+
+        ok(server.requests[1].requestBody instanceof FormData);
+        equal(context.spy.callCount, 5, "FormData.append count");
+
+        equal(context.spy.firstCall.args[0], "file", "First append call");
+        equal(context.spy.firstCall.args[1], blob, "First append call");
+        equal(context.spy.firstCall.args[2], "foo", "First append call");
+
+        equal(context.spy.secondCall.args[0], "filesize",
+              "Second append call");
+        equal(context.spy.secondCall.args[1], blob.size, "Second append call");
+
+        equal(context.spy.thirdCall.args[0], "filename",
+              "Third append call");
+        equal(context.spy.thirdCall.args[1], "foo", "Third append call");
+
+        equal(context.spy.getCall(3).args[0], "description",
+              "Fourth append call");
+        equal(context.spy.getCall(3).args[1], "foouuid3", "Fourth append call");
+
+        equal(context.spy.getCall(4).args[0], "metadata",
+              "Fourth append call");
+        equal(context.spy.getCall(4).args[1],
+              JSON.stringify({title: 'foouuid3'}),
+              "Fourth append call");
+
+        equal(server.requests[1].withCredentials, true);
+        deepEqual(server.requests[1].requestHeaders, {
+          "Accept": "application/json",
+          "Content-Type": "text/plain;charset=utf-8"
+        });
+
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
   // DropboxStorage.getAttachment
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.getAttachment");
