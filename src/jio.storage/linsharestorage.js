@@ -56,7 +56,7 @@
     // Use cookie based auth
       /*
       headers : {
-        "Authorization": "Basic " + storage._credential_token
+        "Authorization": "Basic " + storage._access_token
       }
       */
     options.xhrFields.withCredentials = true;
@@ -77,13 +77,21 @@
    * @constructor
    */
   function LinshareStorage(spec) {
+
+    if (typeof spec.url !== "string" || !spec.url) {
+      throw new TypeError("Linshare 'url' must be a string " +
+                          "which contains more than one character.");
+    }
     this._url_template = UriTemplate.parse(
       spec.url + '/linshare/webservice/rest/user/v2/documents/{uuid}'
     );
     this._blob_template = UriTemplate.parse(
       spec.url + '/linshare/webservice/rest/user/v2/documents/{uuid}/download'
     );
-    // this._credential_token = spec.credential_token;
+
+    if (spec.hasOwnProperty('access_token')) {
+      this._access_token = spec.access_token;
+    }
   }
 
   var capacity_list = ['list', 'include'];

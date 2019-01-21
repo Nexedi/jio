@@ -37,9 +37,41 @@
 
   test("create storage", function () {
     var jio = jIO.createJIO({
-      type: "linshare"
+      type: "linshare",
+      url: "https://example.org/foo"
     });
     equal(jio.__type, "linshare");
+    deepEqual(
+      jio.__storage._url_template.templateText,
+      "https://example.org/foo/linshare/webservice/rest/user/" +
+        "v2/documents/{uuid}"
+    );
+    deepEqual(
+      jio.__storage._blob_template.templateText,
+      "https://example.org/foo/linshare/webservice/rest/user/" +
+        "v2/documents/{uuid}/download"
+    );
+    equal(jio.__storage._credential_token, undefined);
+  });
+
+  test("create storage store access token", function () {
+    var jio = jIO.createJIO({
+      type: "linshare",
+      url: "https://example.org/bar",
+      access_token: "azerty"
+    });
+    equal(jio.__type, "linshare");
+    deepEqual(
+      jio.__storage._url_template.templateText,
+      "https://example.org/bar/linshare/webservice/rest/user/" +
+        "v2/documents/{uuid}"
+    );
+    deepEqual(
+      jio.__storage._blob_template.templateText,
+      "https://example.org/bar/linshare/webservice/rest/user/" +
+        "v2/documents/{uuid}/download"
+    );
+    equal(jio.__storage._access_token, "azerty");
   });
 
   /////////////////////////////////////////////////////////////////
