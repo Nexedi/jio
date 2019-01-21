@@ -65,6 +65,14 @@
         return jIO.util.ajax(options);
       })
       .push(function (event) {
+        if (download === true) {
+          return (
+            event.target.response ||
+            // sinon does not fill the response attribute
+            new Blob([event.target.responseText], {type: 'text/plain'})
+          );
+        }
+
         return (
           event.target.response ||
           // sinon does not fill the response attribute

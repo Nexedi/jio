@@ -821,7 +821,6 @@
 
       })
       .fail(function (error) {
-        console.warn(error);
         ok(false, error);
       })
       .always(function () {
@@ -977,7 +976,6 @@
       delete this.spy;
     }
   });
-
 
   test("forbidden attachment", function () {
     var server = this.server;
@@ -1145,27 +1143,160 @@
   });
 
   /////////////////////////////////////////////////////////////////
-  // DropboxStorage.getAttachment
+  // LinshareStorage.getAttachment
   /////////////////////////////////////////////////////////////////
-  module("LinshareStorage.getAttachment");
+  module("LinshareStorage.getAttachment", {
+    setup: function () {
 
-  test("getAttachment retrieve content", function () {
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "linshare",
+        url: domain
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("forbidden attachment", function () {
+    var server = this.server;
+
     stop();
-    expect(1);
-    var jio = jIO.createJIO({
-      type: "linshare"
-    }),
-      doc_id;
-    jio.post({})
-      .then(function (id) {
-        doc_id = id;
-        return jio.putAttachment(id, "data", new Blob(['tralalaal']));
+    expect(4);
+
+    this.jio.getAttachment('foo', 'bar')
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "attachment name bar is forbidden in linshare");
+        equal(error.status_code, 400);
+
+        equal(server.requests.length, 0);
       })
-      .then(function () {
-        return jio.getAttachment(doc_id, "data");
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("non existing document", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2'
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1'
+        }
+      ]),
+      server = this.server;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    stop();
+    expect(9);
+
+    this.jio.getAttachment('foo', 'enclosure')
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Can't find document with id : foo");
+        equal(error.status_code, 404);
+
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("retrieve a document", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2'
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1'
+        }, {
+          uuid: 'uuid4',
+          name: 'foo',
+          modificationDate: '2',
+        }, {
+          uuid: 'uuid5',
+          name: 'foo',
+          modificationDate: '1',
+        }, {
+          uuid: 'uuid3',
+          name: 'foo',
+          modificationDate: '3',
+          metaData: JSON.stringify({
+            title: 'foouuid3'
+          })
+        }
+      ]),
+      download_url =
+        domain + "/linshare/webservice/rest/user/v2/documents/uuid3/download",
+      server = this.server;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    this.server.respondWith("GET", download_url, [200, {
+      "Content-Type": "text/plain"
+    }, "foo\nbaré"]);
+
+    stop();
+    expect(14);
+
+    this.jio.getAttachment('foo', 'enclosure')
+      .then(function (result) {
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, download_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+        deepEqual(server.requests[1].requestHeaders, {});
+
+        ok(result instanceof Blob, "Data is Blob");
+        deepEqual(result.type, "text/plain", "Check mimetype");
+        return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
-        deepEqual(new Blob(['tralalaal']), result, "Check Blob");
+        var expected = "foo\nbaré";
+        equal(result.target.result, expected, "Attachment correctly fetched");
       })
       .fail(function (error) {
         ok(false, error);
