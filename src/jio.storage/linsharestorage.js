@@ -297,8 +297,6 @@
           404
         );
       });
-
-
   };
 
   jIO.addStorage('linshare', LinshareStorage);
