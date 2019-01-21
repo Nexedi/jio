@@ -18,8 +18,8 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 /*jslint nomen: true */
-/*global Blob*/
-(function (jIO, QUnit) {
+/*global Blob, sinon*/
+(function (jIO, QUnit, Blob, sinon) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -28,7 +28,8 @@
     expect = QUnit.expect,
     equal = QUnit.equal,
     deepEqual = QUnit.deepEqual,
-    module = QUnit.module;
+    module = QUnit.module,
+    domain = "https://example.org/foo";
 
   /////////////////////////////////////////////////////////////////
   // LinshareStorage constructor
@@ -92,6 +93,263 @@
   });
 
   /////////////////////////////////////////////////////////////////
+  // LinshareStorage.allDocs
+  /////////////////////////////////////////////////////////////////
+  module("LinshareStorage.allDocs", {
+    setup: function () {
+
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "linshare",
+        url: domain
+      });
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+    }
+  });
+
+  test("get all documents", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2',
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1',
+        }
+      ]),
+      server = this.server;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    stop();
+    expect(7);
+
+    this.jio.allDocs()
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [{
+              _linshare_uuid: "uuid1",
+              id: "foo1",
+              value: {}
+            }, {
+              _linshare_uuid: "uuid2",
+              id: "foo2",
+              value: {}
+            }],
+            total_rows: 2
+          }
+        }, "Check document");
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get all documents with access token", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2',
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1',
+        }
+      ]),
+      server = this.server,
+      token = 'barfoobar';
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    stop();
+    expect(7);
+
+    this.jio = jIO.createJIO({
+      type: "linshare",
+      url: domain,
+      access_token: token
+    });
+
+    this.jio.allDocs()
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [{
+              _linshare_uuid: "uuid1",
+              id: "foo1",
+              value: {}
+            }, {
+              _linshare_uuid: "uuid2",
+              id: "foo2",
+              value: {}
+            }],
+            total_rows: 2
+          }
+        }, "Check document");
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, undefined);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json",
+          "Authorization": "Basic " + token
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get all documents and include docs", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2',
+          metaData: JSON.stringify({
+            title: 'foo1title'
+          })
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1',
+          metaData: JSON.stringify({
+            reference: 'foo2reference'
+          })
+        }
+      ]),
+      server = this.server;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    stop();
+    expect(7);
+
+    this.jio.allDocs({include_docs: true})
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [{
+              _linshare_uuid: "uuid1",
+              id: "foo1",
+              value: {},
+              doc: {title: "foo1title"}
+            }, {
+              _linshare_uuid: "uuid2",
+              id: "foo2",
+              value: {},
+              doc: {reference: "foo2reference"}
+            }],
+            total_rows: 2
+          }
+        }, "Check document");
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("get all documents and keep only one doc per name", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo',
+          modificationDate: '3',
+        }, {
+          uuid: 'uuid2',
+          name: 'foo',
+          modificationDate: '2',
+        }, {
+          uuid: 'uuid3',
+          name: 'foo',
+          modificationDate: '1',
+        }
+      ]),
+      server = this.server;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    stop();
+    expect(7);
+
+    this.jio.allDocs()
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [{
+              _linshare_uuid: "uuid1",
+              id: "foo",
+              value: {}
+            }],
+            total_rows: 1
+          }
+        }, "Check document");
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
   // DropboxStorage.put
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.put");
@@ -112,28 +370,6 @@
       })
       .fail(function (error) {
         console.warn(error);
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-  /////////////////////////////////////////////////////////////////
-  // DropboxStorage.allDocs
-  /////////////////////////////////////////////////////////////////
-  module("LinshareStorage.allDocs");
-
-  test("allDocs with include docs", function () {
-    stop();
-    expect(2);
-    var jio = jIO.createJIO({
-      type: "linshare"
-    });
-    jio.allDocs({include_docs: true})
-      .then(function (result) {
-        deepEqual(result, {}, 'check result');
-      })
-      .fail(function (error) {
         ok(false, error);
       })
       .always(function () {
@@ -172,4 +408,4 @@
       });
   });
 
-}(jIO, QUnit));
+}(jIO, QUnit, Blob, sinon));

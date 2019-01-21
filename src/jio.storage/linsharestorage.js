@@ -54,19 +54,22 @@
     }
 
     // Use cookie based auth
-      /*
-      headers : {
-        "Authorization": "Basic " + storage._access_token
-      }
-      */
-    options.xhrFields.withCredentials = true;
+    if (storage.hasOwnProperty('_access_token')) {
+      options.headers.Authorization = "Basic " + storage._access_token;
+    } else {
+      options.xhrFields.withCredentials = true;
+    }
 
     return new RSVP.Queue()
       .push(function () {
         return jIO.util.ajax(options);
       })
       .push(function (event) {
-        return event.target.response;
+        return (
+          event.target.response ||
+          // sinon does not fill the response attribute
+          JSON.parse(event.target.responseText)
+        );
       });
   }
 
