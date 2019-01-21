@@ -18,8 +18,8 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 /*jslint nomen: true */
-/*global Blob, sinon*/
-(function (jIO, QUnit, Blob, sinon) {
+/*global Blob, sinon, FormData*/
+(function (jIO, QUnit, Blob, sinon, FormData) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -465,26 +465,186 @@
   });
 
   /////////////////////////////////////////////////////////////////
-  // DropboxStorage.put
+  // LinshareStorage.put
   /////////////////////////////////////////////////////////////////
-  module("LinshareStorage.put");
+  module("LinshareStorage.put", {
+    setup: function () {
 
-  test("put new document", function () {
+      this.server = sinon.fakeServer.create();
+      this.server.autoRespond = true;
+      this.server.autoRespondAfter = 5;
+
+      this.jio = jIO.createJIO({
+        type: "linshare",
+        url: domain
+      });
+
+      this.spy = sinon.spy(FormData.prototype, "append");
+    },
+    teardown: function () {
+      this.server.restore();
+      delete this.server;
+      this.spy.restore();
+      delete this.spy;
+    }
+  });
+
+  test("create a document", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2'
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1'
+        }
+      ]),
+      server = this.server,
+      context = this;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    this.server.respondWith("POST", search_url, [200, {
+      "Content-Type": "application/json"
+    }, JSON.stringify({})]);
+
     stop();
-    expect(2);
-    var jio = jIO.createJIO({
-      type: "linshare"
-    });
-    jio.post({"bar": "foo"})
-      .then(function (id) {
-        return jio.put(id, {"bar": "2713"});
-      })
-      .then(function (res) {
-        console.warn(res);
-        equal(res, "foo");
+    expect(24);
+
+    this.jio.put('foo', {foo: 'bar'})
+      .then(function (result) {
+        deepEqual(result, 'foo', "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+
+        equal(server.requests[1].method, "POST");
+        equal(server.requests[1].url, search_url);
+
+        ok(server.requests[1].requestBody instanceof FormData);
+        equal(context.spy.callCount, 5, "FormData.append count");
+
+        equal(context.spy.firstCall.args[0], "file", "First append call");
+        ok(context.spy.firstCall.args[1] instanceof Blob, "First append call");
+        equal(context.spy.firstCall.args[2], "foo", "First append call");
+
+        equal(context.spy.secondCall.args[0], "filesize",
+              "Second append call");
+        equal(context.spy.secondCall.args[1], 0, "Second append call");
+
+        equal(context.spy.thirdCall.args[0], "filename",
+              "Third append call");
+        equal(context.spy.thirdCall.args[1], "foo", "Third append call");
+
+        equal(context.spy.getCall(3).args[0], "description",
+              "Fourth append call");
+        equal(context.spy.getCall(3).args[1], "", "Fourth append call");
+
+        equal(context.spy.getCall(4).args[0], "metadata",
+              "Fourth append call");
+        equal(context.spy.getCall(4).args[1], JSON.stringify({foo: 'bar'}),
+              "Fourth append call");
+
+        equal(server.requests[1].withCredentials, true);
+        deepEqual(server.requests[1].requestHeaders, {
+          "Accept": "application/json",
+          "Content-Type": "text/plain;charset=utf-8"
+        });
+
       })
       .fail(function (error) {
-        console.warn(error);
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+
+  test("update a document", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      put_url = domain + "/linshare/webservice/rest/user/v2/documents/uuid3",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2'
+        }, {
+          uuid: 'uuid2',
+          name: 'foo2',
+          modificationDate: '1'
+        }, {
+          uuid: 'uuid4',
+          name: 'foo',
+          modificationDate: '2',
+        }, {
+          uuid: 'uuid5',
+          name: 'foo',
+          modificationDate: '1',
+        }, {
+          uuid: 'uuid3',
+          name: 'foo',
+          modificationDate: '3',
+          metaData: JSON.stringify({
+            title: 'foouuid3'
+          })
+        }
+      ]),
+      server = this.server,
+      context = this;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    this.server.respondWith("PUT", put_url, [200, {
+      "Content-Type": "application/json"
+    }, JSON.stringify({})]);
+
+    stop();
+    expect(13);
+
+    this.jio.put('foo', {foo: 'bar'})
+      .then(function (result) {
+        deepEqual(result, 'foo', "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+
+        equal(server.requests[1].method, "PUT");
+        equal(server.requests[1].url, put_url);
+
+        ok(
+          server.requests[1].requestBody,
+          JSON.stringify({
+            foo: 'bar'
+          })
+        );
+        equal(context.spy.callCount, 0, "FormData.append count");
+
+        equal(server.requests[1].withCredentials, true);
+        deepEqual(server.requests[1].requestHeaders, {
+          "Accept": "application/json",
+          "Content-Type": "application/json;charset=utf-8"
+        });
+
+      })
+      .fail(function (error) {
         ok(false, error);
       })
       .always(function () {
@@ -523,4 +683,4 @@
       });
   });
 
-}(jIO, QUnit, Blob, sinon));
+}(jIO, QUnit, Blob, sinon, FormData));
