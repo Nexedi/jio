@@ -75,6 +75,23 @@
   });
 
   /////////////////////////////////////////////////////////////////
+  // LinshareStorage hasCapacity
+  /////////////////////////////////////////////////////////////////
+  module("LinshareStorage.hasCapacity", {
+    setup: function () {
+      this.jio = jIO.createJIO({
+        type: "linshare",
+        url: "https://example.org/foo"
+      });
+    }
+  });
+
+  test("check capacities", function () {
+    ok(this.jio.hasCapacity("list"));
+    ok(this.jio.hasCapacity("include"));
+  });
+
+  /////////////////////////////////////////////////////////////////
   // DropboxStorage.put
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.put");
