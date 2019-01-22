@@ -18,12 +18,19 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
-/*global window */
-(function (window, jIO, Blob) {
+/*global window, ArrayBuffer */
+(function (window, jIO, Blob, ArrayBuffer) {
   "use strict";
 
   var FormData,
     originalAjax;
+
+  function convertToBlob(evt, convert) {
+    if (convert && evt.target.response instanceof ArrayBuffer) {
+      evt.target.response = new Blob([evt.target.response]);
+    }
+    return evt;
+  }
 
   // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/
   // Using_XMLHttpRequest#Submitting_forms_and_uploading_files
@@ -43,11 +50,17 @@
 
   originalAjax = jIO.util.ajax;
   jIO.util.ajax = function ajax(param) {
+    var convertToArrayBuffer = param.dataType === 'blob';
+    if (convertToArrayBuffer) {
+      param.dataType = 'arraybuffer';
+    }
     if (param.data instanceof Blob) {
       // Blob is not supported by xhr2, so convert to ArrayBuffer instead
       return jIO.util.readBlobAsArrayBuffer(param.data).then(function (data) {
         param.data = data.target.result;
-        return originalAjax(param);
+        return originalAjax(param).then(function (evt) {
+          return convertToBlob(evt, convertToArrayBuffer);
+        });
       });
     }
 
@@ -63,10 +76,12 @@
       return originalAjax(param);
     }
 
-    return originalAjax(param);
+    return originalAjax(param).then(function (evt) {
+      return convertToBlob(evt, convertToArrayBuffer);
+    });
   };
 
-}(window, window.jIO, window.Blob));
+}(window, window.jIO, window.Blob, ArrayBuffer));
 
 // Define a global variable to allow storages to access jIO
 var jIO = window.jIO,
