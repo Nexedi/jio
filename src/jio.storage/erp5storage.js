@@ -42,6 +42,7 @@
       if (options.headers === undefined) {
         options.headers = {};
       }
+      options.headers.Accept = "*/*";
       options.headers['X-ACCESS-TOKEN'] = storage._access_token;
       options.xhrFields.withCredentials = false;
     } else {
