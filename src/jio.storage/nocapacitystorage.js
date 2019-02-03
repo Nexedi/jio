@@ -51,10 +51,6 @@
         return this._sub_storage.get.apply(this._sub_storage, arguments);
     };
 
-    NoCapacityStorage.prototype.allAttachments = function () {
-        return this._sub_storage.allAttachments.apply(this._sub_storage, arguments);
-    };
-
     NoCapacityStorage.prototype.post = function () {
         return this._sub_storage.post.apply(this._sub_storage, arguments);
     };
@@ -67,20 +63,6 @@
         return this._sub_storage.remove.apply(this._sub_storage, arguments);
     };
 
-    NoCapacityStorage.prototype.getAttachment = function () {
-        return this._sub_storage.getAttachment.apply(this._sub_storage, arguments);
-    };
-
-    NoCapacityStorage.prototype.putAttachment = function () {
-        return this._sub_storage.putAttachment.apply(this._sub_storage, arguments);
-    };
-
-    NoCapacityStorage.prototype.removeAttachment = function () {
-        return this._sub_storage.removeAttachment.apply(this._sub_storage, arguments);
-    };
-
-    NoCapacityStorage.prototype.repair = function () {
-        return this._sub_storage.repair.apply(this._sub_storage, arguments);
-    };
+    jio.addStorage('nocapacity', NoCapacityStorage);
 
 });
