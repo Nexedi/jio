@@ -31,4 +31,4 @@
         QUnit.equal(jio.hasCapacity('query'), false);
     });
 
-})(jIO, QUnit, Blob));
+})(jIO, QUnit, Blob);
