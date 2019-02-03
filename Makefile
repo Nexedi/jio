@@ -26,7 +26,7 @@ TESTDIR = test
 EXAMPLEDIR = examples
 EXTERNALDIR = external
 
-VERSION = 3.35.0
+VERSION = 3.36.0
 JIOVERSION = ${DISTDIR}/jio-v${VERSION}.js
 JIOLATEST = ${DISTDIR}/jio-latest.js
 JIONODEVERSION = ${DISTDIR}/jio-v${VERSION}-node.js
@@ -141,6 +141,7 @@ ${JIOVERSION}: ${EXTERNALDIR}/URI.js \
 	${SRCDIR}/jio.storage/davstorage.js \
 	${SRCDIR}/jio.storage/gdrivestorage.js \
 	${SRCDIR}/jio.storage/unionstorage.js \
+	${SRCDIR}/jio.storage/linsharestorage.js \
 	${SRCDIR}/jio.storage/erp5storage.js \
 	${SRCDIR}/jio.storage/querystorage.js \
 	${SRCDIR}/jio.storage/drivetojiomapping.js \
