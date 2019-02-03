@@ -12,7 +12,7 @@
 
     QUnit.test('test constructor', function () {
         var jio = jIO.createJIO({
-            type="nocapacity",
+            type: "nocapacity",
             schema: {'date': {'type': 'string', format: 'date-time'}},
             sub_storage: {
                 type: 'teststorage'
