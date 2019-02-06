@@ -63,6 +63,6 @@
         return this._sub_storage.remove.apply(this._sub_storage, arguments);
     };
 
-    jio.addStorage('nocapacity', NoCapacityStorage);
+    jio.addStorage("nocapacity", NoCapacityStorage);
 
 });

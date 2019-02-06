@@ -1,4 +1,3 @@
-// TODO: Add license probably
 
 (function (jIO, QUnit, Blob) {
     "use strict";
