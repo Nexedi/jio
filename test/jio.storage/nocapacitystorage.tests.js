@@ -1,33 +1,56 @@
 
-(function (jIO, QUnit, Blob) {
-    "use strict";
+(function (jIO, QUnit) {
+  "use strict";
 
-    function TestStorage () {
-        return this;
-    }
-    jIO.addStorage('teststorage', TestStorage);
+  function TestStorage() {
+    return this;
+  }
 
-    module("NoCapacityStorage");
+  TestStorage.prototype.get = function () { return true; };
+  TestStorage.prototype.post = function () { return true; };
+  TestStorage.prototype.put = function () { return true; };
+  TestStorage.prototype.remove = function () { return true; };
 
-    QUnit.test('test constructor', function () {
-        var jio = jIO.createJIO({
-            type: "nocapacity",
-            schema: {'date': {'type': 'string', format: 'date-time'}},
-            sub_storage: {
-                type: 'teststorage'
-            }
-        });
+  jIO.addStorage('teststorage', TestStorage);
+
+  module("NoCapacityStorage");
+
+  QUnit.test('Constructor does not crash', function () {
+    jIO.createJIO({
+      type: "nocapacity",
+      schema: {'date': {'type': 'string', format: 'date-time'}},
+      sub_storage: {
+        type: 'teststorage'
+      }
     });
+    QUnit.expect(0);
+  });
 
-    QUnit.test('test hasCapacity', function () {
-        var jio = jIO.createJIO({
-            type: "nocapacity",
-            schema: {'date': {'type': 'string', format: 'date-time'}},
-            sub_storage: {
-                type: 'teststorage'
-            }
-        });
-        QUnit.equal(jio.hasCapacity('query'), false);
+  QUnit.test('Storage does not have query capacity', function (assert) {
+    var jio = jIO.createJIO({
+      type: "nocapacity",
+      schema: {'date': {'type': 'string', format: 'date-time'}},
+      sub_storage: {
+        type: 'teststorage'
+      }
     });
+    assert.throws(
+      function () { jio.hasCapacity('query'); }
+    );
+  });
 
-})(jIO, QUnit, Blob);
+  QUnit.test('Storage calls sub-storage methods', function (assert) {
+    var jio = jIO.createJIO({
+      type: "nocapacity",
+      schema: {'date': {'type': 'string', format: 'date-time'}},
+      sub_storage: {
+        type: 'teststorage'
+      }
+    });
+    assert.ok(jio.get("fake id"));
+    assert.ok(jio.post());
+    assert.ok(jio.put("fake id"));
+    assert.ok(jio.remove("fake id"));
+  });
+
+}(jIO, QUnit));

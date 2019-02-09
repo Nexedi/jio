@@ -1,3 +1,6 @@
+/*global define, jIO, btoa, b64_hmac_sha1, jQuery, XMLHttpRequest, XHRwrapper,
+  FormData*/
+
 /*
  e Copyright 2019, Nexedi SA
  *
@@ -18,51 +21,35 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
-(function (dependencies, module) {
-    "use strict";
-    if (typeof define === 'function' && define.amd) {
-        return define(dependencies, module);
-    }
-    if (typeof exports === 'object') {
-        return module(
-            exports,
-            require('jio'),
-            require('rsvp')
-        );
-    }
-    window.no_capacity_storage = {};
-    module(window.no_capacity_storage, jIO, RSVP);
-}([
-    'exports',
-    'jio',
-    'rsvp',
-], function (exports, jIO, RSVP) {
-    "use strict";
+/*jslint nomen: true*/
+(function (jIO) {
+  "use strict";
+  console.log("Nocapacity");
 
-    function NoCapacityStorage(spec) {
-        this._sub_storage = jIO.createJIO(spec.sub_storage);
-    }
+  function NoCapacityStorage(spec) {
+    this.sub_storage = jIO.createJIO(spec.sub_storage);
+  }
 
-    NoCapacityStorage.prototype.hasCapacity = function (name) {
-        return false;
-    }
+  NoCapacityStorage.prototype.hasCapacity = function () {
+    return false;
+  };
 
-    NoCapacityStorage.prototype.get = function () {
-        return this._sub_storage.get.apply(this._sub_storage, arguments);
-    };
+  NoCapacityStorage.prototype.get = function () {
+    return this._sub_storage.get.apply(this._sub_storage, arguments);
+  };
 
-    NoCapacityStorage.prototype.post = function () {
-        return this._sub_storage.post.apply(this._sub_storage, arguments);
-    };
+  NoCapacityStorage.prototype.post = function () {
+    return this._sub_storage.post.apply(this._sub_storage, arguments);
+  };
 
-    NoCapacityStorage.prototype.put = function () {
-        return this._sub_storage.put.apply(this._sub_storage, arguments);
-    };
+  NoCapacityStorage.prototype.put = function () {
+    return this._sub_storage.put.apply(this._sub_storage, arguments);
+  };
 
-    NoCapacityStorage.prototype.remove = function () {
-        return this._sub_storage.remove.apply(this._sub_storage, arguments);
-    };
+  NoCapacityStorage.prototype.remove = function () {
+    return this._sub_storage.remove.apply(this._sub_storage, arguments);
+  };
 
-    jio.addStorage("nocapacity", NoCapacityStorage);
+  jIO.addStorage("nocapacity", NoCapacityStorage);
 
-});
+}(jIO));
