@@ -10,5 +10,3 @@ node_modules/*
 lint
 package-lock.json
 .DS_Store
-
-dist/
