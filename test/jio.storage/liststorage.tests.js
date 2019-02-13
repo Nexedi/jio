@@ -14,25 +14,34 @@
     QUnit.expect(0);
   });
 
-  // line is too long (>80) if I don't do this weird indenting
-  QUnit.test(
-    "Storage list method returns ordered list of ids",
-    function (assert) {
-      var storage = jIO.createJIO({
-        type: "list",
+  QUnit.test('list method returns ordered list of ids', function (assert) {
+    QUnit.stop();
+    QUnit.expect(1);
+
+    var jio = jIO.createJIO({
+      type: 'list',
+      sub_storage: {
+        type: 'uuid',
         sub_storage: {
-          type: "uuid",
-          sub_storage: {
-            type: "memory",
-          }
+          type: 'memory'
         }
-      }),
-        ids = RSVP.all([storage.post(), storage.post(), storage.post()]);
+      }
+    }),
+      ids = [jio.post({}), jio.post({}), jio.post({})];
 
-
-      ids.then(function (values) {
-      });
-    }
-  );
+    RSVP.all(ids).then(
+      function (values) {
+        jio.list().then(function (list) {
+          QUnit.start();
+          assert.equal(values, jio.list());
+        }).fail(function (err) {
+          assert.ok(false, err);
+        });
+      }
+    ).fail(function (err) {
+      QUnit.start();
+      assert.ok(false, err);
+    });
+  });
 
 }(jIO, RSVP, QUnit));

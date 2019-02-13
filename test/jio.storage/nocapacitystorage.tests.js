@@ -2,17 +2,6 @@
 (function (jIO, QUnit) {
   "use strict";
 
-  function TestStorage() {
-    return this;
-  }
-
-  TestStorage.prototype.get = function () { return true; };
-  TestStorage.prototype.post = function () { return true; };
-  TestStorage.prototype.put = function () { return true; };
-  TestStorage.prototype.remove = function () { return true; };
-
-  jIO.addStorage('teststorage', TestStorage);
-
   module("NoCapacityStorage");
 
   QUnit.test('Constructor does not crash', function () {
@@ -20,7 +9,7 @@
       type: "nocapacity",
       schema: {'date': {'type': 'string', format: 'date-time'}},
       sub_storage: {
-        type: 'teststorage'
+        type: 'memory'
       }
     });
     QUnit.expect(0);
@@ -31,7 +20,7 @@
       type: "nocapacity",
       schema: {'date': {'type': 'string', format: 'date-time'}},
       sub_storage: {
-        type: 'teststorage'
+        type: 'memory'
       }
     });
     assert.throws(
@@ -40,17 +29,24 @@
   });
 
   QUnit.test('Storage calls sub-storage methods', function (assert) {
+    QUnit.stop();
+    QUnit.expect(1);
+
     var jio = jIO.createJIO({
       type: "nocapacity",
-      schema: {'date': {'type': 'string', format: 'date-time'}},
       sub_storage: {
-        type: 'teststorage'
+        type: 'memory'
       }
     });
-    assert.ok(jio.get("fake id"));
-    assert.ok(jio.post());
-    assert.ok(jio.put("fake id"));
-    assert.ok(jio.remove("fake id"));
+
+    jio.put("test_id", {foo: "bar"});
+    jio.get("test_id").then(function (val) {
+      QUnit.start();
+      assert.deepEqual(val, {foo: "bar"});
+    }).fail(function (err) {
+      QUnit.start();
+      assert.ok(false, err);
+    });
   });
 
 }(jIO, QUnit));

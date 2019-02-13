@@ -15,16 +15,19 @@
       "type": "indexeddb",
       "database": randomId()
     });
-    this._signature_storage.post("_", {
+    this._signature_storage.put("_", {
       list: []
     });
   }
 
   ListStorage.prototype.post = function () {
-    console.log('alright alright alright alright alright ok now ladies');
-    var id = this._sub_storage.post.apply(this._sub_storage, arguments),
-      updated_list = this._signature_storage.get("_").list.concat(id);
-    this._signature_storage.put("_", {list: updated_list});
+    var id = this._sub_storage.post.apply(this._sub_storage, arguments);
+    this._signature_storage.get('_').then(function (storage) {
+      this._signature_storage.put('_', { list: storage.list.concat(id) });
+    }).fail(function (err) {
+      throw err;
+    });
+    return id;
   };
 
   ListStorage.prototype.get = function () {
@@ -42,7 +45,9 @@
   };
 
   ListStorage.prototype.list = function () {
-    return this._sub_storage.get("_").list;
+    return this._sub_storage.get("_").then(function (storage) {
+      return storage.list;
+    });
   };
 
   jIO.addStorage("list", ListStorage);

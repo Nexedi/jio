@@ -27,7 +27,7 @@
   console.log("Nocapacity");
 
   function NoCapacityStorage(spec) {
-    this.sub_storage = jIO.createJIO(spec.sub_storage);
+    this._sub_storage = jIO.createJIO(spec.sub_storage);
   }
 
   NoCapacityStorage.prototype.hasCapacity = function () {
