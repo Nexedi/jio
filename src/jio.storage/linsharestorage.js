@@ -133,11 +133,18 @@
           i,
           len = entry_list.length,
           entry_name,
+          entry_metadata,
           entry,
           result_list = [];
 
         for (i = 0; i < len; i += 1) {
-          entry_name = entry_list[i].name;
+          try {
+            entry_metadata = JSON.parse(entry_list[i].metaData) || {};
+          } catch (error) {
+            // Metadata are not always JSON
+            entry_metadata = {};
+          }
+          entry_name = entry_metadata.jio_id || entry_list[i].name;
 
           // If we only need one precise name, no need to check the others
           if (!options.hasOwnProperty('only_id') ||
@@ -150,12 +157,7 @@
                 _linshare_uuid: entry_list[i].uuid
               };
               if (options.include_docs === true) {
-                try {
-                  entry.doc = JSON.parse(entry_list[i].metaData) || {};
-                } catch (error) {
-                  // Metadata are not always JSON
-                  entry.doc = {};
-                }
+                entry.doc = entry_metadata.jio_metadata || {};
               }
               result_list.push(entry);
 
@@ -206,9 +208,12 @@
     var data = new FormData();
     data.append('file', blob, id);
     data.append('filesize', blob.size);
-    data.append('filename', id);
-    data.append('description', doc.title || doc.description || '');
-    data.append('metadata', jIO.util.stringify(doc));
+    data.append('filename', doc.title || id);
+    data.append('description', doc.description || id);
+    data.append('metadata', jIO.util.stringify({
+      jio_id: id,
+      jio_metadata: doc
+    }));
     return makeRequest(storage, '', {
       type: 'POST',
       data: data
@@ -226,9 +231,12 @@
           // Update existing document metadata
           var data = {
             uuid: result_list[0]._linshare_uuid,
-            metaData: jIO.util.stringify(doc),
-            name: id,
-            description: doc.title || doc.description || ''
+            metaData: jIO.util.stringify({
+              jio_id: id,
+              jio_metadata: doc
+            }),
+            name: doc.title || id,
+            description: doc.description || id
           };
           return makeRequest(storage, result_list[0]._linshare_uuid, {
             type: 'PUT',
