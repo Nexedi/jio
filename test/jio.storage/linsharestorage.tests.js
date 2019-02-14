@@ -294,6 +294,55 @@
       });
   });
 
+  test("get all documents, include docs and unexpected metadata", function () {
+    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+      search_result = JSON.stringify([
+        {
+          uuid: 'uuid1',
+          name: 'foo1',
+          modificationDate: '2',
+          metaData: 'unexpectedfoo'
+        }
+      ]),
+      server = this.server;
+
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/json"
+    }, search_result]);
+
+    stop();
+    expect(7);
+
+    this.jio.allDocs({include_docs: true})
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [{
+              _linshare_uuid: "uuid1",
+              id: "foo1",
+              value: {},
+              doc: {}
+            }],
+            total_rows: 1
+          }
+        }, "Check document");
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, search_url);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        deepEqual(server.requests[0].requestHeaders, {
+          "Accept": "application/json"
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("get all documents and keep only one doc per name", function () {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
