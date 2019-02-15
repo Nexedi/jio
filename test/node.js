@@ -65,6 +65,7 @@
       'test/jio.storage/fbstorage.tests.js',
       'test/jio.storage/gdrivestorage.tests.js',
       'test/jio.storage/memorystorage.tests.js',
+      'test/jio.storage/nocapacitystorage.tests.js',
       'test/jio.storage/querystorage.tests.js',
       'test/jio.storage/replicatestorage.tests.js',
       'test/jio.storage/replicatestorage_fastrepair.tests.js',
