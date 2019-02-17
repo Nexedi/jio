@@ -15,19 +15,31 @@
       "type": "indexeddb",
       "database": randomId()
     });
-    this._signature_storage.put("_", {
-      list: []
-    });
   }
 
-  ListStorage.prototype.post = function () {
-    var id = this._sub_storage.post.apply(this._sub_storage, arguments);
-    this._signature_storage.get('_').then(function (storage) {
-      this._signature_storage.put('_', { list: storage.list.concat(id) });
-    }).fail(function (err) {
-      throw err;
+  ListStorage.prototype.list = function () {
+    // lazily initialize the list in _signature_storage
+    var ctx = this;
+    return this._signature_storage.get('_').then(function (list) {
+      return list;
+    }).fail(function () {
+      return ctx._signature_storage.put('_', []).then(function () {
+        return [];
+      });
     });
-    return id;
+  };
+
+  ListStorage.prototype.post = function () {
+    var ctx = this;
+    return this._sub_storage.post.apply(this._sub_storage, arguments)
+      .then(function (id) {
+        return ctx.list().then(function (list) {
+          list.push(id);
+          return ctx._signature_storage.put('_', list).then(function () {
+            return id;
+          });
+        });
+      });
   };
 
   ListStorage.prototype.get = function () {
@@ -35,19 +47,22 @@
   };
 
   ListStorage.prototype.put = function () {
-    return this._sub_storage.put.apply(this._sub_storage, arguments);
+    var ctx = this;
+    return this._sub_storage.put.apply(this._sub_storage, arguments)
+      .then(function (id) {
+        return ctx.list().then(function (list) {
+          list.push(id);
+          return ctx._signature_storage.put('_', list).then(function () {
+            return id;
+          });
+        });
+      });
   };
 
   ListStorage.prototype.remove = function (id) {
     var updated_list = this._signature_storage.get("_")
       .list.filter(function (x) { return x !== id; });
     this._signature_storage.put("_", { list: updated_list });
-  };
-
-  ListStorage.prototype.list = function () {
-    return this._sub_storage.get("_").then(function (storage) {
-      return storage.list;
-    });
   };
 
   jIO.addStorage("list", ListStorage);

@@ -1,5 +1,5 @@
-
-(function (jIO, RSVP, QUnit) {
+// (function (jIO, RSVP, QUnit) {
+(function (jIO, QUnit) {
   "use strict";
 
   QUnit.module("ListStorage");
@@ -14,7 +14,9 @@
     QUnit.expect(0);
   });
 
-  QUnit.test('list method returns ordered list of ids', function (assert) {
+  // NOTE: list method is implicitly tested in the following two methods
+
+  QUnit.test('post method correctly records ids', function (assert) {
     QUnit.stop();
     QUnit.expect(1);
 
@@ -26,22 +28,41 @@
           type: 'memory'
         }
       }
-    }),
-      ids = [jio.post({}), jio.post({}), jio.post({})];
-
-    RSVP.all(ids).then(
-      function (values) {
-        jio.list().then(function (list) {
-          QUnit.start();
-          assert.equal(values, jio.list());
-        }).fail(function (err) {
-          assert.ok(false, err);
-        });
-      }
-    ).fail(function (err) {
-      QUnit.start();
-      assert.ok(false, err);
     });
+
+    jio.post({}).then(function (id1) {
+      jio.post({}).then(function (id2) {
+        jio.list().then(function (l) {
+          QUnit.start();
+          assert.deepEqual(l, [id1, id2]);
+        });
+      });
+    }).fail(console.error);
   });
 
-}(jIO, RSVP, QUnit));
+  QUnit.test('put method correctly records ids', function (assert) {
+    QUnit.stop();
+    QUnit.expect(1);
+
+    var jio = jIO.createJIO({
+      type: 'list',
+      sub_storage: {
+        type: 'uuid',
+        sub_storage: {
+          type: 'memory'
+        }
+      }
+    });
+
+    jio.put('test', {}).then(function (id1) {
+      jio.put('test2', {}).then(function (id2) {
+        jio.list().then(function (l) {
+          QUnit.start();
+          assert.deepEqual(l, [id1, id2]);
+        });
+      });
+    }).fail(console.error);
+  });
+
+// }(jIO, RSVP, QUnit));
+}(jIO, QUnit));

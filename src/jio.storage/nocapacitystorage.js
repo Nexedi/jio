@@ -24,7 +24,6 @@
 /*jslint nomen: true*/
 (function (jIO) {
   "use strict";
-  console.log("Nocapacity");
 
   function NoCapacityStorage(spec) {
     this._sub_storage = jIO.createJIO(spec.sub_storage);
