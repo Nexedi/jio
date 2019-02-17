@@ -59,10 +59,17 @@
       });
   };
 
-  ListStorage.prototype.remove = function (id) {
-    var updated_list = this._signature_storage.get("_")
-      .list.filter(function (x) { return x !== id; });
-    this._signature_storage.put("_", { list: updated_list });
+  ListStorage.prototype.remove = function () {
+    var ctx = this;
+    return this._sub_storage.remove.apply(this._sub_storage, arguments)
+      .then(function (id) {
+        return ctx.list().then(function (list) {
+          list = list.filter(function (x) { return id !== x; });
+          return ctx._signature_storage.put('_', list).then(function () {
+            return id;
+          });
+        });
+      });
   };
 
   jIO.addStorage("list", ListStorage);

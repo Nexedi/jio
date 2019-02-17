@@ -64,5 +64,31 @@
     }).fail(console.error);
   });
 
+  QUnit.test('remove method correctly removes id', function (assert) {
+    QUnit.stop();
+    QUnit.expect(1);
+
+    var jio = jIO.createJIO({
+      type: 'list',
+      sub_storage: {
+        type: 'uuid',
+        sub_storage: {
+          type: 'memory'
+        }
+      }
+    });
+
+    jio.put('test', {}).then(function () {
+      jio.put('test2', {}).then(function () {
+        jio.remove('test').then(function () {
+          jio.list().then(function (l2) {
+            QUnit.start();
+            assert.deepEqual(l2, ['test2']);
+          });
+        });
+      });
+    }).fail(console.error);
+  });
+
 // }(jIO, RSVP, QUnit));
 }(jIO, QUnit));
