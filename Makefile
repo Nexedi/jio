@@ -152,7 +152,8 @@ ${JIOVERSION}: ${EXTERNALDIR}/URI.js \
 	${SRCDIR}/jio.storage/cryptstorage.js \
 	${SRCDIR}/jio.storage/fbstorage.js \
 	${SRCDIR}/jio.storage/cloudooostorage.js \
-	${SRCDIR}/jio.storage/nocapacitystorage.js
+	${SRCDIR}/jio.storage/nocapacitystorage.js \
+	${SRCDIR}/jio.storage/liststorage.js
 	@mkdir -p $(@D)
 	cat $^ > $@
 
