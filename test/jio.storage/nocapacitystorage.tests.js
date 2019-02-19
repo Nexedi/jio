@@ -332,11 +332,11 @@
       return true;
     };
     var jio = jIO.createJIO({
-          type: "nocapacity",
-          sub_storage: {
-            type: "dummystorage"
-          }
-    });
+        type: "nocapacity",
+        sub_storage: {
+          type: "dummystorage"
+        }
+      });
     throws(
       function () {
         jio.hasCapacity("list");
