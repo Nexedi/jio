@@ -33,14 +33,19 @@
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
   /////////////////////////////////////////////////////////////////
-  function DummyStorage() {
+  function DummyStorage1() {
     return this;
   }
-  jIO.addStorage('dummystorage1', DummyStorage);
+  function DummyStorage2() {
+    return this;
+  }
+  jIO.addStorage('dummystorage1', DummyStorage1);
+  jIO.addStorage('dummystorage2', DummyStorage2);
 
   /////////////////////////////////////////////////////////////////
   // ListStorage constructor
   /////////////////////////////////////////////////////////////////
+
 
   module("ListStorage.constructor");
 
@@ -49,11 +54,14 @@
       type: "list",
       sub_storage: {
         type: "dummystorage1"
+      },
+      signature_storage: {
+        type: "dummystorage2",
       }
     });
     equal(jio.__type, "list");
     equal(jio.__storage._sub_storage.__type, "dummystorage1");
-    equal(jio.__storage._sub_storage_index.constructor.name, "Set");
+    equal(jio.__storage._signature_storage.__type, "dummystorage2");
   });
 
   /////////////////////////////////////////////////////////////////
@@ -70,19 +78,20 @@
       type: "list",
       sub_storage: {
         type: "dummystorage1"
+      },
+      signature_storage: {
+        type: "dummystorage2",
       }
     });
 
-    DummyStorage.prototype.get = function (id) {
+    DummyStorage1.prototype.get = function (id) {
       equal(id, "1");
       return {"name": "test_name"};
     };
 
     jio.get("1")
       .then(function (result) {
-        deepEqual(result, {
-          "name": "test_name"
-        });
+        deepEqual(result, {"name": "test_name"});
       })
       .fail(function (error) {
         ok(false, error);
@@ -104,10 +113,13 @@
       type: "list",
       sub_storage: {
         type: "dummystorage1"
+      },
+      signature_storage: {
+        type: "dummystorage2",
       }
     });
 
-    DummyStorage.prototype.allAttachments = function (id) {
+    DummyStorage1.prototype.allAttachments = function (id) {
       equal(id, "1");
       return {attachmentname: {}};
     };
@@ -132,24 +144,30 @@
   module("ListStorage.post");
   test("post called substorage post", function () {
     stop();
-    expect(3);
+    expect(4);
 
     var jio = jIO.createJIO({
       type: "list",
       sub_storage: {
         type: "dummystorage1"
+      },
+      signature_storage: {
+        type: "dummystorage2",
       }
     });
 
-    DummyStorage.prototype.post = function (param) {
+    DummyStorage1.prototype.post = function (param) {
       deepEqual(param, {"name": "test_name"});
       return "posted";
+    };
+    DummyStorage2.prototype.put = function (id, value) {
+      equal(id, 'posted');
+      deepEqual(value, {'id': 'posted'});
     };
 
     jio.post({"name": "test_name"})
       .then(function (result) {
         equal(result, "posted");
-        equal(jio.__storage._sub_storage_index.has("posted"), true);
       })
       .fail(function (error) {
         ok(false, error);
@@ -165,24 +183,30 @@
   module("ListStorage.put");
   test("put called substorage put", function () {
     stop();
-    expect(4);
+    expect(5);
 
     var jio = jIO.createJIO({
       type: "list",
       sub_storage: {
         type: "dummystorage1"
+      },
+      signature_storage: {
+        type: "dummystorage2",
       }
     });
-    DummyStorage.prototype.put = function (id, param) {
+    DummyStorage1.prototype.put = function (id, param) {
       equal(id, "1");
       deepEqual(param, {"name": "test_name"});
       return id;
+    };
+    DummyStorage2.prototype.put = function (id, param) {
+      equal(id, "1");
+      deepEqual(param, {'id': '1'});
     };
 
     jio.put("1", {"name": "test_name"})
       .then(function (result) {
         equal(result, "1");
-        equal(jio.__storage._sub_storage_index.has("1"), true);
       })
       .fail(function (error) {
         ok(false, error);
@@ -198,37 +222,35 @@
   module("ListStorage.remove");
   test("remove called substorage remove", function () {
     stop();
-    expect(5);
+    expect(3);
 
     var jio = jIO.createJIO({
       type: "list",
       sub_storage: {
         type: "dummystorage1"
+      },
+      signature_storage: {
+        type: "dummystorage2",
       }
     });
-    DummyStorage.prototype.remove = function (id) {
-      deepEqual(id, "1");
+    DummyStorage1.prototype.remove = function (id) {
+      equal(id, "1");
       return id;
     };
-    DummyStorage.prototype.put = function (id) {
+    DummyStorage2.prototype.remove = function (id) {
+      equal(id, "1");
       return id;
     };
 
-    jio.put("1", {"name": "test_name"})
+    jio.remove("1")
       .then(function (result) {
         equal(result, "1");
-        equal(jio.__storage._sub_storage_index.has("1"), true);
-        jio.remove("1")
-          .then(function (result) {
-            equal(result, "1");
-            equal(jio.__storage._sub_storage_index.has("1"), false);
-          })
-          .fail(function (error) {
-            ok(false, error);
-          })
-          .always(function () {
-            start();
-          });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
       });
   });
 
@@ -244,11 +266,14 @@
       type: "list",
       sub_storage: {
         type: "dummystorage1"
+      },
+      signature_storage: {
+        type: "dummystorage2",
       }
     }),
       blob = new Blob([""]);
 
-    DummyStorage.prototype.getAttachment = function (id, name) {
+    DummyStorage1.prototype.getAttachment = function (id, name) {
       equal(id, "1");
       equal(name, "test_name");
       return blob;
@@ -278,11 +303,14 @@
       type: "list",
       sub_storage: {
         type: "dummystorage1"
+      },
+      signature_storage: {
+        type: "dummystorage2",
       }
     }),
       blob = new Blob([""]);
 
-    DummyStorage.prototype.putAttachment = function (id, name, blob2) {
+    DummyStorage1.prototype.putAttachment = function (id, name, blob2) {
       equal(id, "1");
       equal(name, "test_name");
       deepEqual(blob2, blob);
@@ -313,10 +341,13 @@
       type: "list",
       sub_storage: {
         type: "dummystorage1"
+      },
+      signature_storage: {
+        type: "dummystorage2",
       }
     });
 
-    DummyStorage.prototype.removeAttachment = function (id, name) {
+    DummyStorage1.prototype.removeAttachment = function (id, name) {
       equal(id, "1");
       equal(name, "test_name");
       return "removed";
@@ -344,14 +375,52 @@
         type: "list",
         sub_storage: {
           type: "dummystorage1"
+        },
+        signature_storage: {
+          type: "dummystorage2",
         }
       });
 
-    DummyStorage.prototype.hasCapacity = function () {
+    DummyStorage1.prototype.hasCapacity = function () {
       return false;
     };
 
     ok(jio.hasCapacity("list"));
   });
+/*
+  /////////////////////////////////////////////////////////////////
+  // ListStorage.buildQuery
+  /////////////////////////////////////////////////////////////////
+  module("ListStorage.buildQuery");
+  test("buildQuery calls substorage buildQuery", function () {
+    stop();
+    expect(2);
 
+    var jio = jIO.createJIO({
+        type: "list",
+        sub_storage: {
+          type: "dummystorage1"
+        },
+        signature_storage: {
+          type: "dummystorage2",
+        }
+      });
+
+    DummyStorage2.prototype.buildQuery = function (params) {
+      deepEqual(params, {});
+      return [{"id": "1"}, {"id": "2"}];
+    };
+
+    jio.buildQuery({})
+      .then(function (result) {
+        deepEqual(result, [{"id": "1"}, {"id": "2"}]);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+*/
 }(jIO, QUnit));
