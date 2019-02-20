@@ -18,7 +18,7 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 /*jslint nomen: true */
-/*global Blob*/
+/*global Blob, indexedDB*/
 (function (jIO, QUnit) {
   "use strict";
   var test = QUnit.test,
@@ -28,7 +28,8 @@
     ok = QUnit.ok,
     start = QUnit.start,
     equal = QUnit.equal,
-    module = QUnit.module;
+    module = QUnit.module,
+    test_signature_database = 'test_signature_storage';
 
   /////////////////////////////////////////////////////////////////
   // Custom test substorage definition
@@ -42,18 +43,24 @@
   // ListStorage constructor
   /////////////////////////////////////////////////////////////////
 
+
   module("ListStorage.constructor");
 
   test("create storage", function () {
     var jio = jIO.createJIO({
       type: "list",
+      signature_storage: {
+        type: "indexeddb",
+        database: test_signature_database
+      },
       sub_storage: {
         type: "dummystorage1"
       }
     });
     equal(jio.__type, "list");
     equal(jio.__storage._sub_storage.__type, "dummystorage1");
-    equal(jio.__storage._sub_storage_index.constructor.name, "Set");
+    equal(jio.__storage._signature_storage.__type, "indexeddb");
+    indexedDB.deleteDatabase('jio:' + test_signature_database);
   });
 
   /////////////////////////////////////////////////////////////////
@@ -68,6 +75,10 @@
 
     var jio = jIO.createJIO({
       type: "list",
+      signature_storage: {
+        type: "indexeddb",
+        database: test_signature_database
+      },
       sub_storage: {
         type: "dummystorage1"
       }
@@ -88,6 +99,7 @@
         ok(false, error);
       })
       .always(function () {
+        indexedDB.deleteDatabase('jio:' + test_signature_database);
         start();
       });
   });
@@ -102,6 +114,10 @@
 
     var jio = jIO.createJIO({
       type: "list",
+      signature_storage: {
+        type: "indexeddb",
+        database: test_signature_database
+      },
       sub_storage: {
         type: "dummystorage1"
       }
@@ -122,6 +138,7 @@
         ok(false, error);
       })
       .always(function () {
+        indexedDB.deleteDatabase('jio:' + test_signature_database);
         start();
       });
   });
@@ -136,6 +153,10 @@
 
     var jio = jIO.createJIO({
       type: "list",
+      signature_storage: {
+        type: "indexeddb",
+        database: test_signature_database
+      },
       sub_storage: {
         type: "dummystorage1"
       }
@@ -149,12 +170,16 @@
     jio.post({"name": "test_name"})
       .then(function (result) {
         equal(result, "posted");
-        equal(jio.__storage._sub_storage_index.has("posted"), true);
+        jio.__storage._signature_storage.get("posted")
+          .then(function (result) {
+            equal(result.id, "posted");
+          });
       })
       .fail(function (error) {
         ok(false, error);
       })
       .always(function () {
+        indexedDB.deleteDatabase('jio:' + test_signature_database);
         start();
       });
   });
@@ -169,6 +194,10 @@
 
     var jio = jIO.createJIO({
       type: "list",
+      signature_storage: {
+        type: "indexeddb",
+        database: test_signature_database
+      },
       sub_storage: {
         type: "dummystorage1"
       }
@@ -182,12 +211,16 @@
     jio.put("1", {"name": "test_name"})
       .then(function (result) {
         equal(result, "1");
-        equal(jio.__storage._sub_storage_index.has("1"), true);
+        jio.__storage._signature_storage.get("1")
+          .then(function (result) {
+            equal(result.id, "1");
+          });
       })
       .fail(function (error) {
         ok(false, error);
       })
       .always(function () {
+        indexedDB.deleteDatabase('jio:' + test_signature_database);
         start();
       });
   });
@@ -198,10 +231,14 @@
   module("ListStorage.remove");
   test("remove called substorage remove", function () {
     stop();
-    expect(5);
+    expect(4);
 
     var jio = jIO.createJIO({
       type: "list",
+      signature_storage: {
+        type: "indexeddb",
+        database: test_signature_database
+      },
       sub_storage: {
         type: "dummystorage1"
       }
@@ -217,16 +254,19 @@
     jio.put("1", {"name": "test_name"})
       .then(function (result) {
         equal(result, "1");
-        equal(jio.__storage._sub_storage_index.has("1"), true);
         jio.remove("1")
           .then(function (result) {
             equal(result, "1");
-            equal(jio.__storage._sub_storage_index.has("1"), false);
+            jio.__storage._signature_storage.get("1")
+              .fail(function (error) {
+                equal(error.status_code, 404);
+              });
           })
           .fail(function (error) {
             ok(false, error);
           })
           .always(function () {
+            indexedDB.deleteDatabase('jio:' + test_signature_database);
             start();
           });
       });
@@ -242,6 +282,10 @@
 
     var jio = jIO.createJIO({
       type: "list",
+      signature_storage: {
+        type: "indexeddb",
+        database: test_signature_database
+      },
       sub_storage: {
         type: "dummystorage1"
       }
@@ -262,6 +306,7 @@
         ok(false, error);
       })
       .always(function () {
+        indexedDB.deleteDatabase('jio:' + test_signature_database);
         start();
       });
   });
@@ -276,6 +321,10 @@
 
     var jio = jIO.createJIO({
       type: "list",
+      signature_storage: {
+        type: "indexeddb",
+        database: test_signature_database
+      },
       sub_storage: {
         type: "dummystorage1"
       }
@@ -297,6 +346,7 @@
         ok(false, error);
       })
       .always(function () {
+        indexedDB.deleteDatabase('jio:' + test_signature_database);
         start();
       });
   });
@@ -311,6 +361,10 @@
 
     var jio = jIO.createJIO({
       type: "list",
+      signature_storage: {
+        type: "indexeddb",
+        database: test_signature_database
+      },
       sub_storage: {
         type: "dummystorage1"
       }
@@ -330,6 +384,7 @@
         ok(false, error);
       })
       .always(function () {
+        indexedDB.deleteDatabase('jio:' + test_signature_database);
         start();
       });
   });
@@ -342,6 +397,10 @@
 
     var jio = jIO.createJIO({
         type: "list",
+        signature_storage: {
+          type: "indexeddb",
+          database: test_signature_database
+        },
         sub_storage: {
           type: "dummystorage1"
         }
@@ -352,6 +411,8 @@
     };
 
     ok(jio.hasCapacity("list"));
+    indexedDB.deleteDatabase('jio:' + test_signature_database);
   });
+
 
 }(jIO, QUnit));
