@@ -24,7 +24,7 @@
 
   function ListStorage(spec) {
     this._sub_storage = jIO.createJIO(spec.sub_storage);
-    this._sub_storage_index = new Set();
+    this._signature_storage = jIO.createJIO(spec.signature_storage);
   }
 
   ListStorage.prototype.get = function () {
@@ -37,24 +37,30 @@
     var gadget = this;
     return gadget._sub_storage.post(value)
       .push(function (id) {
-        gadget._sub_storage_index.add(id);
-        return id;
+        return gadget._signature_storage.put(id, {"id": id})
+          .push(function () {
+            return id;
+          });
       });
   };
   ListStorage.prototype.put = function (id, value) {
     var gadget = this;
     return gadget._sub_storage.put(id, value)
       .push(function (result) {
-        gadget._sub_storage_index.add(id);
-        return result;
+        return gadget._signature_storage.put(id, {"id": id})
+          .push(function () {
+            return result;
+          });
       });
   };
   ListStorage.prototype.remove = function (id) {
     var gadget = this;
     return gadget._sub_storage.remove(id)
       .push(function (result) {
-        gadget._sub_storage_index.delete(id);
-        return result;
+        return gadget._signature_storage.remove(id)
+          .push(function () {
+            return result;
+          });
       });
   };
   ListStorage.prototype.getAttachment = function () {
@@ -76,11 +82,7 @@
     }
   };
   ListStorage.prototype.buildQuery = function () {
-    var rows = [], i, ids = Array.from(this._sub_storage_index);
-    for (i = 0; i < ids.length; i += 1) {
-      rows.push({id: ids[i], value: {}});
-    }
-    return rows;
+    return this._signature_storage.buildQuery({});
   };
 
   jIO.addStorage('list', ListStorage);
