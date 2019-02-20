@@ -18,7 +18,7 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 
-/*global console, btoa, Blob*/
+/*global console, btoa, Blob, indexedDB*/
 /*jslint nomen: true, maxlen: 200*/
 (function (window, QUnit, jIO, rJS) {
   "use strict";
@@ -28,7 +28,9 @@
     ok = QUnit.ok,
     stop = QUnit.stop,
     start = QUnit.start,
-    deepEqual = QUnit.deepEqual;
+    deepEqual = QUnit.deepEqual,
+    test_signature_database = 'test_signature_storage_scenario';
+
 
   rJS(window)
 
@@ -61,6 +63,10 @@
         type: "query",
         sub_storage: {
           type: "list",
+          signature_storage: {
+            type: "indexeddb",
+            database: test_signature_database
+          },
           sub_storage: {
             type: "nocapacity",
             sub_storage: {
@@ -367,6 +373,9 @@
 
           .then(function () {
             return jio.repair();
+          })
+          .then(function () {
+            return indexedDB.deleteDatabase('jio:' + test_signature_database);
           })
 
           .fail(function (error) {
