@@ -419,7 +419,7 @@
   ERP5Storage.prototype.hasCapacity = function (name) {
     return ((name === "list") || (name === "query") ||
             (name === "select") || (name === "limit") ||
-            (name === "sort"));
+            (name === "sort") || (name === "group"));
   };
 
   function isSingleLocalRoles(parsed_query) {
@@ -487,7 +487,8 @@
           local_roles,
           local_role_found = false,
           selection_domain,
-          sort_list = [];
+          sort_list = [],
+          group_list = [];
         if (options.query) {
           parsed_query = jIO.QueryFactory.create(options.query);
           result_list = isSingleLocalRoles(parsed_query);
@@ -559,6 +560,10 @@
           }
         }
 
+        if (options.group_by) {
+          group_list = options.group_by;
+        }
+
         if (selection_domain) {
           selection_domain = JSON.stringify(selection_domain);
         }
@@ -572,6 +577,7 @@
               select_list: options.select_list || ["title", "reference"],
               limit: options.limit,
               sort_on: sort_list,
+              group_by: group_list,
               local_roles: local_roles,
               selection_domain: selection_domain
             })

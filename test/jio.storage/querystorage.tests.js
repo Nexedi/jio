@@ -964,6 +964,44 @@
         start();
       });
   });
+
+  test("group_by is not handled", function () {
+    stop();
+    expect(3);
+
+    function StorageGroupCapacity() {
+      return this;
+    }
+    StorageGroupCapacity.prototype.hasCapacity = function (capacity) {
+      return ((capacity === "list") || (capacity === "group"));
+    };
+
+    jIO.addStorage('querystoragegroupcapacity', StorageGroupCapacity);
+
+    var jio = jIO.createJIO({
+      type: "query",
+      sub_storage: {
+        type: "querystoragegroupcapacity"
+      }
+    });
+
+    jio.allDocs({
+      group_by: ["title"]
+    })
+      .then(function () {
+        ok(false, 'Must fail as group is not handled');
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 501);
+        equal(error.message,
+              "Capacity 'group' is not implemented on 'query'");
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // queryStorage.repair
   /////////////////////////////////////////////////////////////////

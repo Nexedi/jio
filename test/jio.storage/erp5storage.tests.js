@@ -32,7 +32,7 @@
     domain = "https://example.org",
     traverse_template = domain + "?mode=traverse{&relative_url,view}",
     search_template = domain + "?mode=search{&query,select_list*,limit*," +
-      "sort_on*,local_roles*,selection_domain*}",
+      "sort_on*,group_by*,local_roles*,selection_domain*}",
     add_url = domain + "lets?add=somedocument",
     root_hateoas = JSON.stringify({
       "_links": {
@@ -1289,6 +1289,7 @@
     ok(this.jio.hasCapacity("query"));
     ok(this.jio.hasCapacity("select"));
     ok(this.jio.hasCapacity("limit"));
+    ok(this.jio.hasCapacity("group"));
   });
 
   /////////////////////////////////////////////////////////////////
@@ -1481,7 +1482,9 @@
     var search_url = domain + "?mode=search&query=title%3A%20%22two%22&" +
                      "select_list=destination&select_list=source&limit=5&" +
                      "sort_on=%5B%22title%22%2C%22descending%22%5D&" +
-                     "sort_on=%5B%22id%22%2C%22descending%22%5D",
+                     "sort_on=%5B%22id%22%2C%22descending%22%5D&" +
+                     "group_by=a_foo_grouping&" +
+                     "group_by=a_bar_grouping",
       search_hateoas = JSON.stringify({
 
         "_embedded": {
@@ -1522,7 +1525,8 @@
       limit: [5],
       select_list: ["destination", "source"],
       query: 'title: "two"',
-      sort_on: [["title", "descending"], ["id", "descending"]]
+      sort_on: [["title", "descending"], ["id", "descending"]],
+      group_by: ["a_foo_grouping", "a_bar_grouping"]
     })
       .then(function (result) {
         deepEqual(result, {
