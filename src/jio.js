@@ -474,6 +474,7 @@
       if (context.hasCapacity("list") &&
           ((options.query === undefined) || context.hasCapacity("query")) &&
           ((options.sort_on === undefined) || context.hasCapacity("sort")) &&
+          ((options.group_by === undefined) || context.hasCapacity("group")) &&
           ((options.select_list === undefined) ||
            context.hasCapacity("select")) &&
           ((options.include_docs === undefined) ||
