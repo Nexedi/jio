@@ -10402,10 +10402,6 @@ var XMLHttpRequest = global.XMLHttpRequest || module.exports,
     });
   };
 
-  JioProxyStorage.prototype.list = function () {
-    return this.__storage.list.apply(this.__storage, arguments);
-  };
-
   declareMethod(JioProxyStorage, 'putAttachment', function (argument_list,
                                                             storage,
                                                             method_name) {
