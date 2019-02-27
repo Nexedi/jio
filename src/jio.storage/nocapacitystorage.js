@@ -29,8 +29,11 @@
     this._sub_storage = jIO.createJIO(spec.sub_storage);
   }
 
-  NoCapacityStorage.prototype.hasCapacity = function () {
-    return false;
+  NoCapacityStorage.prototype.hasCapacity = function (name) {
+    if (name === "query") {
+      return false;
+    }
+    return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
   };
 
   NoCapacityStorage.prototype.get = function () {

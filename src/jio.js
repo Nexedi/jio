@@ -330,10 +330,6 @@
     });
   };
 
-  JioProxyStorage.prototype.list = function () {
-    return this.__storage.list.apply(this.__storage, arguments);
-  };
-
   declareMethod(JioProxyStorage, 'putAttachment', function (argument_list,
                                                             storage,
                                                             method_name) {
@@ -475,11 +471,6 @@
       options = {};
     }
     return ensurePushableQueue(function () {
-      // this will fail with an unhelpful errror message if context does not 
-      // have the "query" capacity.
-      // possible fixes:
-      //  - Catch errors thrown by hasCapacity everywhere all the time
-      //  - Refactor hasCapacity to return false instead of raising an error
       if (context.hasCapacity("list") &&
           ((options.query === undefined) || context.hasCapacity("query")) &&
           ((options.sort_on === undefined) || context.hasCapacity("sort")) &&

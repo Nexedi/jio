@@ -1,31 +1,58 @@
-/*global define, jIO */
+/*global define, jIO, RSVP */
 
 /*jslint nomen: true*/
 (function (jIO) {
+// (function (jIO, RSVP) {
   "use strict";
-
-  function randomId() {
-    // https://gist.github.com/gordonbrander/2230317
-    return '_' + Math.random().toString(36).substr(2, 9);
-  }
 
   function ListStorage(spec) {
     this._sub_storage = jIO.createJIO(spec.sub_storage);
-    this._signature_storage = jIO.createJIO({
-      "type": "indexeddb",
-      "database": randomId()
-    });
+    this._index_storage = jIO.createJIO(spec.index_storage);
+    this._index_initialized = false;
+    this._index_tmp = []; // temporary array to put ids
+    this._index_removed_tmp = []; // temp array to put removed ids
   }
 
-  ListStorage.prototype.list = function () {
-    // lazily initialize the list in _signature_storage
-    var ctx = this;
-    return this._signature_storage.get('_').then(function (list) {
-      return list;
-    }).fail(function () {
-      return ctx._signature_storage.put('_', []).then(function () {
-        return [];
+  ListStorage.prototype.buildQuery = function () {
+    return this.getIndex();
+  };
+
+  ListStorage.prototype.hasCapacity = function (name) {
+    if (name === 'list') {
+      return true;
+    }
+    return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+  };
+
+  ListStorage.prototype.getIndex = function () {
+    // in brief:
+    // pull all ids from _index_tmp and put them in the _index_storage
+    // and remove ids from _index_removed_tmp
+    // and then return the new '_' entry
+    var ctx = this,
+      tmp = this._index_tmp,
+      removed_tmp = this._index_removed_tmp;
+    ctx._index_tmp = [];
+    ctx._index_removed_tmp = [];
+    if (!ctx._index_initialized) {
+      ctx._index_initialized = true;
+      tmp = tmp.filter(function (id) {
+        return removed_tmp.indexOf(id) === -1;
       });
+      return this._index_storage.put('_', tmp)
+        .then(function () {
+          return tmp;
+        });
+    }
+    return ctx._index_storage.get('_').then(function (index) {
+      var newIndex = index.concat(tmp);
+      newIndex = newIndex.filter(function (id) {
+        return removed_tmp.indexOf(id) === -1;
+      });
+      return ctx._index_storage.put('_', newIndex)
+        .then(function () {
+          return newIndex;
+        });
     });
   };
 
@@ -33,12 +60,8 @@
     var ctx = this;
     return this._sub_storage.post.apply(this._sub_storage, arguments)
       .then(function (id) {
-        return ctx.list().then(function (list) {
-          list.push(id);
-          return ctx._signature_storage.put('_', list).then(function () {
-            return id;
-          });
-        });
+        ctx._index_tmp.push(id);
+        return id;
       });
   };
 
@@ -50,12 +73,8 @@
     var ctx = this;
     return this._sub_storage.put.apply(this._sub_storage, arguments)
       .then(function (id) {
-        return ctx.list().then(function (list) {
-          list.push(id);
-          return ctx._signature_storage.put('_', list).then(function () {
-            return id;
-          });
-        });
+        ctx._index_tmp.push(id);
+        return id;
       });
   };
 
@@ -63,14 +82,11 @@
     var ctx = this;
     return this._sub_storage.remove.apply(this._sub_storage, arguments)
       .then(function (id) {
-        return ctx.list().then(function (list) {
-          list = list.filter(function (x) { return id !== x; });
-          return ctx._signature_storage.put('_', list).then(function () {
-            return id;
-          });
-        });
+        ctx._index_removed_tmp.push(id);
+        return id;
       });
   };
 
   jIO.addStorage("list", ListStorage);
 }(jIO));
+// }(jIO, RSVP));
