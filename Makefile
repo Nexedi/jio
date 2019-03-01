@@ -149,7 +149,6 @@ ${JIOVERSION}: ${EXTERNALDIR}/URI.js \
 	${SRCDIR}/jio.storage/localstorage.js \
 	${SRCDIR}/jio.storage/indexeddbstorage.js \
 	${SRCDIR}/jio.storage/cryptstorage.js \
-	${SRCDIR}/jio.storage/websqlstorage.js \
 	${SRCDIR}/jio.storage/fbstorage.js \
 	${SRCDIR}/jio.storage/cloudooostorage.js
 	@mkdir -p $(@D)
