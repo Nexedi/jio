@@ -316,6 +316,28 @@
     );
 
     deepEqual(
+      jIO.QueryFactory.create("NOT(b)").toJSON(),
+      {
+        "type": "complex",
+        "operator": "NOT",
+        "query_list": [
+          {
+            "key": "",
+            "type": "simple",
+            "value": "b"
+          }
+        ]
+      },
+      "create(\"NOT(b)\").toJSON()"
+    );
+
+    deepEqual(
+      jIO.QueryFactory.create("NOT(b)").toString(),
+      "NOT (  \"b\" )",
+      "create(\"NOT(b)\").toString()"
+    );
+
+    deepEqual(
       jIO.QueryFactory.create(
         jIO.QueryFactory.create(
           "NOT(a:=b OR c:% AND d:<2)"
