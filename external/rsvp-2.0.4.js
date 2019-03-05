@@ -602,7 +602,7 @@ define("rsvp/promise",
       then: function(done, fail) {
         this.off('error', onerror);
 
-        var thenPromise = new Promise(function() {},
+        var thenPromise = new this.constructor(function() {},
             function () {
               thenPromise.trigger('promise:cancelled', {});
             });
@@ -736,75 +736,96 @@ define("rsvp/queue",
     ResolvedQueueError.prototype.constructor = ResolvedQueueError;
 
     var Queue = function() {
+      var queue = this,
+        promise_list = [],
+        promise,
+        fulfill,
+        reject,
+        resolved;
+
       if (!(this instanceof Queue)) {
         return new Queue();
       }
 
-      var promise_stack = [],
-        // handleQueue
-        detect_end_index = 1;
-
-      Promise.call(this, function (resolveQueue, rejectQueue) {
-        var detectQueueSuccess,
-          detectQueueError;
-
-        function handleQueue() {
-          if (promise_stack.length === detect_end_index) {
-            return true;
-          }
-          promise_stack.splice(0, detect_end_index);
-
-          promise_stack.push(
-            promise_stack[promise_stack.length - 1].then(detectQueueSuccess,
-                                                         detectQueueError)
-          );
-          detect_end_index = promise_stack.length;
-          return false;
+      function canceller() {
+        for (var i = 0; i < 2; i++) {
+          promise_list[i].cancel();
         }
+      }
 
-        detectQueueSuccess = function (fulfillmentValue) {
-          if (handleQueue()) {
-            return resolveQueue(fulfillmentValue);
-          }
-          return fulfillmentValue;
+      promise = new Promise(function(done, fail) {
+        fulfill = function (fulfillmentValue) {
+          if (resolved) {return;}
+          queue.isFulfilled = true;
+          queue.fulfillmentValue = fulfillmentValue;
+          resolved = true;
+          return done(fulfillmentValue);
         };
-
-        detectQueueError = function (rejectedReason) {
-          if (handleQueue()) {
-            return rejectQueue(rejectedReason);
-          }
-          throw rejectedReason;
+        reject = function (rejectedReason) {
+          if (resolved) {return;}
+          queue.isRejected = true;
+          queue.rejectedReason = rejectedReason ;
+          resolved = true;
+          return fail(rejectedReason);
         };
+      }, canceller);
 
-        // Resolve by default
-        promise_stack.push(
-          resolve().then(detectQueueSuccess)
-        );
-
-      }, function () {
-        // Cancel all created promises
-        var i;
-        for (i = 0; i < promise_stack.length; i += 1) {
-          promise_stack[i].cancel();
+      promise_list.push(resolve());
+      promise_list.push(promise_list[0].then(function () {
+        promise_list.splice(0, 2);
+        if (promise_list.length === 0) {
+          fulfill();
         }
+      }));
 
-      });
-
-      this.push = function (done, fail) {
-        if (this.isFulfilled || this.isRejected) {
-          throw new ResolvedQueueError();
-        }
-        promise_stack.push(
-          promise_stack[promise_stack.length - 1].then(done, fail)
-        );
-        return this;
+      queue.cancel = function () {
+        if (resolved) {return;}
+        resolved = true;
+        promise.cancel();
+        promise.fail(function (rejectedReason) {
+          queue.isRejected = true;
+          queue.rejectedReason = rejectedReason;
+        });
+      };
+      queue.then = function () {
+        return promise.then.apply(promise, arguments);
       };
 
-      return this;
+      queue.push = function(done, fail) {
+        var last_promise = promise_list[promise_list.length - 1],
+          next_promise;
+
+        if (resolved) {
+          throw new ResolvedQueueError();
+        }
+
+        next_promise = last_promise.then(done, fail);
+        promise_list.push(next_promise);
+
+        // Handle pop
+        promise_list.push(next_promise.then(function (fulfillmentValue) {
+          promise_list.splice(0, 2);
+          if (promise_list.length === 0) {
+            fulfill(fulfillmentValue);
+          } else {
+            return fulfillmentValue;
+          }
+        }, function (rejectedReason) {
+          promise_list.splice(0, 2);
+          if (promise_list.length === 0) {
+            reject(rejectedReason);
+          } else {
+            throw rejectedReason;
+          }
+        }));
+
+        return this;
+      };
     };
 
     Queue.prototype = Object.create(Promise.prototype);
     Queue.prototype.constructor = Queue;
+
 
     __exports__.Queue = Queue;
     __exports__.ResolvedQueueError = ResolvedQueueError;
