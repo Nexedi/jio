@@ -427,6 +427,8 @@
       this.server.autoRespond = true;
       this.server.autoRespondAfter = 5;
 
+      this.spy_ajax = sinon.spy(jIO.util, "ajax");
+
       this.jio = jIO.createJIO({
         type: "gdrive",
         access_token: token
@@ -435,6 +437,8 @@
     teardown: function () {
       this.server.restore();
       delete this.server;
+      this.spy_ajax.restore();
+      delete this.spy_ajax;
     }
   });
 
@@ -464,13 +468,14 @@
     var blob = new Blob(["foo"]),
       url_put_att = domain + "/upload/drive/v2/files/sampleId?" +
         "uploadType=media&access_token=" + token,
-      server = this.server;
+      server = this.server,
+      context = this;
 
     this.server.respondWith("PUT", url_put_att, [204, {
       "Content-Type": "text/xml"
     }, '{"mimeType": "text/xml"}']);
     stop();
-    expect(7);
+    expect(11);
 
     this.jio.putAttachment(
       "sampleId",
@@ -478,16 +483,20 @@
       blob
     )
       .then(function () {
+        ok(context.spy_ajax.calledOnce, "ajax count " +
+           context.spy_ajax.callCount);
+        equal(context.spy_ajax.firstCall.args[0].type, "PUT");
+        equal(context.spy_ajax.firstCall.args[0].url, url_put_att);
+        deepEqual(context.spy_ajax.firstCall.args[0].xhrFields, undefined);
+        deepEqual(context.spy_ajax.firstCall.args[0].headers, undefined);
+        equal(context.spy_ajax.firstCall.args[0].data, blob);
+
         equal(server.requests.length, 1);
 
         equal(server.requests[0].method, "PUT");
         equal(server.requests[0].url, url_put_att);
         equal(server.requests[0].status, 204);
         equal(server.requests[0].responseText, "{\"mimeType\": \"text/xml\"}");
-        deepEqual(server.requests[0].requestHeaders, {
-          "Content-Type": "text/plain;charset=utf-8"
-        });
-        equal(server.requests[0].requestBody, blob);
       })
       .fail(function (error) {
         ok(false, error);
