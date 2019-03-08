@@ -21,15 +21,14 @@
 (function (require, global, Object) {
   "use strict";
 
-  var sinon = require('./sinon-require'),
-    jIO;
-  global.sinon = sinon;
-  global.XMLHttpRequest = sinon.FakeXMLHttpRequest;
-
-  jIO = require('../../dist/jio-latest-node');
+  var sinon,
+    jIO = require('../../dist/jio-latest-node');
   global.jIO = jIO;
   Object.keys(jIO.node_env).forEach(function (key) {
     global[key] = jIO.node_env[key];
   });
+
+  sinon = require('./sinon-require');
+  global.sinon = sinon;
 
 }(require, global, Object));
