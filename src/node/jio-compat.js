@@ -220,8 +220,8 @@
 
 }(window, WeakMap, ArrayBuffer, Uint8Array));
 
-var XMLHttpRequest = global.XMLHttpRequest || module.exports,
-  Blob = window.Blob,
+global.XMLHttpRequest = module.exports;
+var Blob = window.Blob,
   atob = window.atob,
   btoa = window.btoa,
   FileReader = window.FileReader,
