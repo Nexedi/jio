@@ -17,15 +17,15 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*global setTimeout*/
-(function (jIO, QUnit, setTimeout) {
+(function (jIO, QUnit) {
   "use strict";
   var test = QUnit.test,
     equal = QUnit.equal,
     stop = QUnit.stop,
     start = QUnit.start,
     expect = QUnit.expect,
-    module = QUnit.module;
+    module = QUnit.module,
+    ok = QUnit.ok;
 
   /////////////////////////////////////////////////////////////////
   // util.stringify
@@ -55,44 +55,29 @@
   /////////////////////////////////////////////////////////////////
   // util.ajax
   /////////////////////////////////////////////////////////////////
-  module("util.ajax", {
-    setup: function () {
-      var context = this;
-
-      this.jioerror = jIO.util.jIOError;
-      this.error_spy = {};
-      function fakejIOError(message, status_code) {
-        context.error_spy.message = message;
-        context.error_spy.status_code = status_code;
-      }
-      fakejIOError.prototype = new Error();
-      fakejIOError.prototype.constructor = fakejIOError;
-      jIO.util.jIOError = fakejIOError;
-    },
-
-    teardown: function () {
-      jIO.util.jIOError = this.jioerror;
-    }
-  });
+  module("util.ajax");
 
   test("ajax timeout", function () {
-    var timeout = 1,
-      context = this;
+    var timeout = 1;
 
     stop();
-    expect(2);
+    expect(3);
 
-    jIO.util.ajax({
-      type: 'GET',
-      url: "//www.foo/com/bar",
-      timeout: timeout
-    });
-
-    setTimeout(function () {
-      start();
-      equal(context.error_spy.message, "Gateway Timeout");
-      equal(context.error_spy.status_code, 504);
-    }, 10);
-
+    return new RSVP.Queue()
+      .then(function () {
+        return jIO.util.ajax({
+          type: 'GET',
+          url: "https://www.example.org/com/bar",
+          timeout: timeout
+        });
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Gateway Timeout");
+        equal(error.status_code, 504);
+      })
+      .always(function () {
+        start();
+      });
   });
-}(jIO, QUnit, setTimeout));
+}(jIO, QUnit));
