@@ -3825,7 +3825,7 @@
 
   test("signature document is not synced", function () {
     stop();
-    expect(6);
+    expect(7);
 
     var context = this;
 
@@ -3836,41 +3836,50 @@
       report_level: 1000,
       signature_hash_key: 'foo_etag',
       local_sub_storage: {
-        type: "uuid",
+        type: "storagealldocsdynamicselect",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "query",
           sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "document",
-              document_id: "/",
-              sub_storage: {
-                type: "local",
-                sessiononly: true
-              }
-            }
+            type: "memory"
           }
         }
       },
       remote_sub_storage: {
-        type: "uuid",
+        type: "storagealldocsdynamicselect",
         sub_storage: {
-          type: "storagealldocsdynamicselect",
+          type: "query",
           sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
+            type: "memory"
           }
         }
       }
     });
+    // Hack to ensure that the signature is stored in the
+    // same local storage, even if memory is used
+    context.jio.__storage._signature_sub_storage
+               .__storage._sub_storage
+               .__storage._sub_storage
+               .__storage._sub_storage
+               .__storage._sub_storage
+               .__storage._database =
+       context.jio.__storage._local_sub_storage
+                  .__storage._sub_storage
+                  .__storage._sub_storage
+                  .__storage._database;
 
-    context.jio.post({title: "foo", foo_etag: "foo etag"})
+    context.jio.put('barfoo', {title: "foo", foo_etag: "foo etag"})
       .then(function () {
         return context.jio.repair();
       })
       .then(function () {
+        // Check that signature is a local document
+        // Otherwise, the test is meaningless
+        return context.jio.__storage._local_sub_storage.get(
+          context.jio.__storage._signature_hash
+        );
+      })
+      .then(function (result) {
+        deepEqual(result, {});
         return context.jio.__storage._remote_sub_storage.get(
           context.jio.__storage._signature_hash
         );
@@ -3878,7 +3887,7 @@
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find document: " +
-                "_replicate_bc03c70b5346672bb87b14c4e17ed1e407676a41");
+                "_replicate_e9fa6706a8a6a961db3f9de41d44bdf11f25fb30");
         equal(error.status_code, 404);
       })
       .then(function () {
@@ -3892,7 +3901,7 @@
       .fail(function (error) {
         ok(error instanceof jIO.util.jIOError);
         equal(error.message, "Cannot find document: " +
-                "_replicate_bc03c70b5346672bb87b14c4e17ed1e407676a41");
+                "_replicate_e9fa6706a8a6a961db3f9de41d44bdf11f25fb30");
         equal(error.status_code, 404);
       })
       .fail(function (error) {
