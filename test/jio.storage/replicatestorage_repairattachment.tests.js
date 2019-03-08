@@ -3713,7 +3713,7 @@
 
   test("use 4 parallel operation", function () {
     stop();
-    expect(40);
+    expect(24);
 
     var context = this,
       order_number = 0,
@@ -3728,20 +3728,9 @@
         'stop put 1',
 
         'start getAttachment 00',
-        'stop getAttachment 00',
-        'start putAttachment 00',
-
         'start getAttachment 01',
-        'stop getAttachment 01',
-        'start putAttachment 01',
-
         'start getAttachment 02',
-        'stop getAttachment 02',
-        'start putAttachment 02',
-
         'start getAttachment 03',
-        'stop getAttachment 03',
-        'start putAttachment 03',
 
         'stop putAttachment 00',
         'stop putAttachment 01',
@@ -3749,20 +3738,9 @@
         'stop putAttachment 03',
 
         'start getAttachment 10',
-        'stop getAttachment 10',
-        'start putAttachment 10',
-
         'start getAttachment 11',
-        'stop getAttachment 11',
-        'start putAttachment 11',
-
         'start getAttachment 12',
-        'stop getAttachment 12',
-        'start putAttachment 12',
-
         'start getAttachment 13',
-        'stop getAttachment 13',
-        'start putAttachment 13',
 
         'stop putAttachment 10',
         'stop putAttachment 11',
@@ -3808,14 +3786,14 @@
       var storage = this;
       return storage._sub_storage.getAttachment(id, name)
         .push(undefined, function (error) {
-          assertExecutionOrder('stop getAttachment ' + name);
+          // assertExecutionOrder('stop getAttachment ' + name);
           throw error;
         });
     };
 
     StorageFourParallelOperation.prototype.putAttachment = function (id, name,
                                                                      blob) {
-      assertExecutionOrder('start putAttachment ' + name);
+      // assertExecutionOrder('start putAttachment ' + name);
       var storage = this;
       return storage._sub_storage.putAttachment(id, name, blob)
         .push(function (result) {

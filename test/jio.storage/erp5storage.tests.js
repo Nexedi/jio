@@ -606,12 +606,15 @@
       });
 
       this.spy = sinon.spy(FormData.prototype, "append");
+      this.spy_ajax = sinon.spy(jIO.util, "ajax");
     },
     teardown: function () {
       this.server.restore();
       delete this.server;
       this.spy.restore();
       delete this.spy;
+      this.spy_ajax.restore();
+      delete this.spy_ajax;
     }
   });
 
@@ -654,7 +657,7 @@
     }, ""]);
 
     stop();
-    expect(13);
+    expect(18);
 
     this.jio = jIO.createJIO({
       type: "erp5",
@@ -668,12 +671,24 @@
       new Blob([JSON.stringify(form_json)])
     )
       .then(function () {
+        ok(context.spy_ajax.calledOnce, "ajax count " +
+           context.spy_ajax.callCount);
+        equal(context.spy_ajax.firstCall.args[0].type, "POST");
+        equal(context.spy_ajax.firstCall.args[0].url, submit_url);
+        equal(context.spy_ajax.firstCall.args[0].dataType, "blob");
+        deepEqual(context.spy_ajax.firstCall.args[0].xhrFields, {
+          withCredentials: false
+        });
+        deepEqual(context.spy_ajax.firstCall.args[0].headers, {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
+        ok(context.spy_ajax.firstCall.args[0].data instanceof FormData,
+           'FormData expected: ' + context.spy_ajax.firstCall.args[0].data);
+
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, submit_url);
         equal(server.requests[0].status, 204);
-        equal(server.requests[0].responseType, "blob");
-        ok(server.requests[0].requestBody instanceof FormData);
 
         ok(context.spy.calledTwice, "FormData.append count " +
            context.spy.callCount);
@@ -684,9 +699,7 @@
         equal(context.spy.secondCall.args[1], "barè", "Second append call");
 
         equal(server.requests[0].withCredentials, false);
-        deepEqual(server.requests[0].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken',
-                   'Content-Type': 'text/plain;charset=utf-8'});
+        equal(server.requests[0].requestHeaders['X-ACCESS-TOKEN'], 'footoken');
       })
       .fail(function (error) {
         ok(false, error);
@@ -712,7 +725,7 @@
     }, ""]);
 
     stop();
-    expect(13);
+    expect(17);
 
     this.jio.putAttachment(
       id,
@@ -720,12 +733,22 @@
       new Blob([JSON.stringify(form_json)])
     )
       .then(function () {
+        ok(context.spy_ajax.calledOnce, "ajax count " +
+           context.spy_ajax.callCount);
+        equal(context.spy_ajax.firstCall.args[0].type, "POST");
+        equal(context.spy_ajax.firstCall.args[0].url, submit_url);
+        equal(context.spy_ajax.firstCall.args[0].dataType, "blob");
+        deepEqual(context.spy_ajax.firstCall.args[0].xhrFields, {
+          withCredentials: true
+        });
+        ok(context.spy_ajax.firstCall.args[0].data instanceof FormData,
+           'FormData expected: ' + context.spy_ajax.firstCall.args[0].data);
+
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, submit_url);
         equal(server.requests[0].status, 204);
         equal(server.requests[0].responseType, "blob");
-        ok(server.requests[0].requestBody instanceof FormData);
 
         ok(context.spy.calledTwice, "FormData.append count " +
            context.spy.callCount);
@@ -736,8 +759,6 @@
         equal(context.spy.secondCall.args[1], "barè", "Second append call");
 
         equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders,
-                  {'Content-Type': 'text/plain;charset=utf-8'});
       })
       .fail(function (error) {
         ok(false, error);
@@ -761,7 +782,7 @@
     }, ""]);
 
     stop();
-    expect(12);
+    expect(16);
 
     this.jio.putAttachment(
       id,
@@ -769,12 +790,21 @@
       new Blob([JSON.stringify(form_json)])
     )
       .then(function () {
+        ok(context.spy_ajax.calledOnce, "ajax count " +
+           context.spy_ajax.callCount);
+        equal(context.spy_ajax.firstCall.args[0].type, "POST");
+        equal(context.spy_ajax.firstCall.args[0].url, submit_url);
+        equal(context.spy_ajax.firstCall.args[0].dataType, "blob");
+        deepEqual(context.spy_ajax.firstCall.args[0].xhrFields, {
+          withCredentials: true
+        });
+        ok(context.spy_ajax.firstCall.args[0].data instanceof FormData,
+           'FormData expected: ' + context.spy_ajax.firstCall.args[0].data);
+
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, submit_url);
         equal(server.requests[0].status, 204);
-        equal(server.requests[0].responseType, "blob");
-        ok(server.requests[0].requestBody instanceof FormData);
 
         ok(context.spy.calledTwice, "FormData.append count " +
            context.spy.callCount);
@@ -812,7 +842,7 @@
     }, ""]);
 
     stop();
-    expect(13);
+    expect(17);
 
     this.jio.putAttachment(
       id,
@@ -820,12 +850,21 @@
       new Blob([JSON.stringify(form_json)])
     )
       .then(function () {
+        ok(context.spy_ajax.calledOnce, "ajax count " +
+           context.spy_ajax.callCount);
+        equal(context.spy_ajax.firstCall.args[0].type, "POST");
+        equal(context.spy_ajax.firstCall.args[0].url, submit_url);
+        equal(context.spy_ajax.firstCall.args[0].dataType, "blob");
+        deepEqual(context.spy_ajax.firstCall.args[0].xhrFields, {
+          withCredentials: true
+        });
+        ok(context.spy_ajax.firstCall.args[0].data instanceof FormData,
+           'FormData expected: ' + context.spy_ajax.firstCall.args[0].data);
+
         equal(server.requests.length, 1);
         equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, submit_url);
         equal(server.requests[0].status, 204);
-        equal(server.requests[0].responseType, "blob");
-        ok(server.requests[0].requestBody instanceof FormData);
 
         ok(context.spy.calledOnce, "FormData.append count " +
            context.spy.callCount);
@@ -2049,6 +2088,7 @@
       this.server.autoRespondAfter = 5;
 
       this.spy = sinon.spy(FormData.prototype, "append");
+      this.spy_ajax = sinon.spy(jIO.util, "ajax");
 
       this.jio = jIO.createJIO({
         type: "erp5",
@@ -2061,6 +2101,8 @@
       delete this.server;
       this.spy.restore();
       delete this.spy;
+      this.spy_ajax.restore();
+      delete this.spy_ajax;
     }
   });
 
@@ -2178,7 +2220,7 @@
     }, ""]);
 
     stop();
-    expect(26);
+    expect(44);
 
     this.jio = jIO.createJIO({
       type: "erp5",
@@ -2190,26 +2232,66 @@
     this.jio.put(id, {title: "barè", id: "foo", reference: "bar2"})
       .then(function (result) {
         equal(result, id);
+
+        equal(context.spy_ajax.callCount, 3, "ajax count");
+        equal(context.spy_ajax.getCall(0).args[0].type, "GET");
+        equal(context.spy_ajax.getCall(0).args[0].url, domain);
+        equal(context.spy_ajax.getCall(0).args[0].dataType, undefined);
+        deepEqual(context.spy_ajax.getCall(0).args[0].xhrFields, {
+          withCredentials: false
+        });
+        deepEqual(context.spy_ajax.getCall(0).args[0].headers, {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
+        equal(context.spy_ajax.getCall(0).args[0].data, undefined);
+
+        equal(context.spy_ajax.getCall(1).args[0].type, "GET");
+        equal(context.spy_ajax.getCall(1).args[0].url, traverse_url);
+        equal(context.spy_ajax.getCall(1).args[0].dataType, undefined);
+        deepEqual(context.spy_ajax.getCall(1).args[0].xhrFields, {
+          withCredentials: false
+        });
+        deepEqual(context.spy_ajax.getCall(1).args[0].headers, {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
+        equal(context.spy_ajax.getCall(1).args[0].data, undefined);
+
+        equal(context.spy_ajax.getCall(2).args[0].type, "POST");
+        equal(context.spy_ajax.getCall(2).args[0].url, put_url);
+        equal(context.spy_ajax.getCall(2).args[0].dataType, "blob");
+        deepEqual(context.spy_ajax.getCall(2).args[0].xhrFields, {
+          withCredentials: false
+        });
+        deepEqual(context.spy_ajax.getCall(2).args[0].headers, {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
+        ok(context.spy_ajax.getCall(2).args[0].data instanceof FormData,
+           'FormData expected: ' + context.spy_ajax.getCall(2).args[0].data);
+
         equal(server.requests.length, 3);
         equal(server.requests[0].method, "GET");
         equal(server.requests[0].url, domain);
         equal(server.requests[0].requestBody, undefined);
         equal(server.requests[0].withCredentials, false);
-        deepEqual(server.requests[0].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken'});
+        equal(
+          server.requests[0].requestHeaders['X-ACCESS-TOKEN'],
+          'footoken'
+        );
         equal(server.requests[1].method, "GET");
         equal(server.requests[1].url, traverse_url);
         equal(server.requests[1].requestBody, undefined);
         equal(server.requests[1].withCredentials, false);
-        deepEqual(server.requests[1].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken'});
+        equal(
+          server.requests[1].requestHeaders['X-ACCESS-TOKEN'],
+          'footoken'
+        );
         equal(server.requests[2].method, "POST");
         equal(server.requests[2].url, put_url);
-        ok(server.requests[2].requestBody instanceof FormData);
         equal(server.requests[2].withCredentials, false);
-        deepEqual(server.requests[2].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken',
-                   'Content-Type': 'text/plain;charset=utf-8'});
+        equal(
+          server.requests[2].requestHeaders['X-ACCESS-TOKEN'],
+          'footoken'
+        );
 
         equal(context.spy.callCount, 4, "FormData.append count");
         equal(context.spy.firstCall.args[0], "form_id", "First append call");
@@ -2317,11 +2399,41 @@
     }, ""]);
 
     stop();
-    expect(26);
+    expect(43);
 
     this.jio.put(id, {title: "barè", id: "foo", reference: "bar2"})
       .then(function (result) {
         equal(result, id);
+
+        equal(context.spy_ajax.callCount, 3, "ajax count");
+        equal(context.spy_ajax.getCall(0).args[0].type, "GET");
+        equal(context.spy_ajax.getCall(0).args[0].url, domain);
+        equal(context.spy_ajax.getCall(0).args[0].dataType, undefined);
+        deepEqual(context.spy_ajax.getCall(0).args[0].xhrFields, {
+          withCredentials: true
+        });
+        deepEqual(context.spy_ajax.getCall(0).args[0].headers, undefined);
+        equal(context.spy_ajax.getCall(0).args[0].data, undefined);
+
+        equal(context.spy_ajax.getCall(1).args[0].type, "GET");
+        equal(context.spy_ajax.getCall(1).args[0].url, traverse_url);
+        equal(context.spy_ajax.getCall(1).args[0].dataType, undefined);
+        deepEqual(context.spy_ajax.getCall(1).args[0].xhrFields, {
+          withCredentials: true
+        });
+        deepEqual(context.spy_ajax.getCall(1).args[0].headers, undefined);
+        equal(context.spy_ajax.getCall(1).args[0].data, undefined);
+
+        equal(context.spy_ajax.getCall(2).args[0].type, "POST");
+        equal(context.spy_ajax.getCall(2).args[0].url, put_url);
+        equal(context.spy_ajax.getCall(2).args[0].dataType, "blob");
+        deepEqual(context.spy_ajax.getCall(2).args[0].xhrFields, {
+          withCredentials: true
+        });
+        deepEqual(context.spy_ajax.getCall(2).args[0].headers, undefined);
+        ok(context.spy_ajax.getCall(2).args[0].data instanceof FormData,
+           'FormData expected: ' + context.spy_ajax.getCall(2).args[0].data);
+
         equal(server.requests.length, 3);
         equal(server.requests[0].method, "GET");
         equal(server.requests[0].url, domain);
@@ -2335,10 +2447,7 @@
         deepEqual(server.requests[1].requestHeaders, {});
         equal(server.requests[2].method, "POST");
         equal(server.requests[2].url, put_url);
-        ok(server.requests[2].requestBody instanceof FormData);
         equal(server.requests[2].withCredentials, true);
-        deepEqual(server.requests[2].requestHeaders,
-                  {'Content-Type': 'text/plain;charset=utf-8'});
 
         equal(context.spy.callCount, 4, "FormData.append count");
         equal(context.spy.firstCall.args[0], "form_id", "First append call");
@@ -2540,6 +2649,7 @@
       this.server.autoRespondAfter = 5;
 
       this.spy = sinon.spy(FormData.prototype, "append");
+      this.spy_ajax = sinon.spy(jIO.util, "ajax");
 
       this.jio = jIO.createJIO({
         type: "erp5",
@@ -2552,6 +2662,8 @@
       delete this.server;
       this.spy.restore();
       delete this.spy;
+      this.spy_ajax.restore();
+      delete this.spy_ajax;
     }
   });
 
@@ -2638,7 +2750,7 @@
     }, ""]);
 
     stop();
-    expect(40);
+    expect(67);
 
     this.jio = jIO.createJIO({
       type: "erp5",
@@ -2656,6 +2768,65 @@
     })
       .then(function (result) {
         equal(result, id);
+
+        equal(context.spy_ajax.callCount, 5, "ajax count");
+        equal(context.spy_ajax.getCall(0).args[0].type, "GET");
+        equal(context.spy_ajax.getCall(0).args[0].url, domain);
+        equal(context.spy_ajax.getCall(0).args[0].dataType, undefined);
+        deepEqual(context.spy_ajax.getCall(0).args[0].xhrFields, {
+          withCredentials: false
+        });
+        deepEqual(context.spy_ajax.getCall(0).args[0].headers, {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
+        equal(context.spy_ajax.getCall(0).args[0].data, undefined);
+
+        equal(context.spy_ajax.getCall(1).args[0].type, "POST");
+        equal(context.spy_ajax.getCall(1).args[0].url, add_url);
+        equal(context.spy_ajax.getCall(1).args[0].dataType, undefined);
+        deepEqual(context.spy_ajax.getCall(1).args[0].xhrFields, {
+          withCredentials: false
+        });
+        deepEqual(context.spy_ajax.getCall(1).args[0].headers, {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
+        ok(context.spy_ajax.getCall(1).args[0].data instanceof FormData,
+           'FormData expected: ' + context.spy_ajax.getCall(1).args[0].data);
+
+        equal(context.spy_ajax.getCall(2).args[0].type, "GET");
+        equal(context.spy_ajax.getCall(2).args[0].url, domain);
+        equal(context.spy_ajax.getCall(2).args[0].dataType, undefined);
+        deepEqual(context.spy_ajax.getCall(2).args[0].xhrFields, {
+          withCredentials: false
+        });
+        deepEqual(context.spy_ajax.getCall(2).args[0].headers, {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
+        equal(context.spy_ajax.getCall(2).args[0].data, undefined);
+
+        equal(context.spy_ajax.getCall(3).args[0].type, "GET");
+        equal(context.spy_ajax.getCall(3).args[0].url, traverse_url);
+        equal(context.spy_ajax.getCall(3).args[0].dataType, undefined);
+        deepEqual(context.spy_ajax.getCall(3).args[0].xhrFields, {
+          withCredentials: false
+        });
+        deepEqual(context.spy_ajax.getCall(3).args[0].headers, {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
+        equal(context.spy_ajax.getCall(3).args[0].data, undefined);
+
+        equal(context.spy_ajax.getCall(4).args[0].type, "POST");
+        equal(context.spy_ajax.getCall(4).args[0].url, put_url);
+        equal(context.spy_ajax.getCall(4).args[0].dataType, "blob");
+        deepEqual(context.spy_ajax.getCall(4).args[0].xhrFields, {
+          withCredentials: false
+        });
+        deepEqual(context.spy_ajax.getCall(4).args[0].headers, {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
+        ok(context.spy_ajax.getCall(4).args[0].data instanceof FormData,
+           'FormData expected: ' + context.spy_ajax.getCall(4).args[0].data);
+
         equal(server.requests.length, 5);
 
         equal(server.requests[0].method, "GET");
@@ -2667,11 +2838,7 @@
 
         equal(server.requests[1].method, "POST");
         equal(server.requests[1].url, add_url);
-        ok(server.requests[1].requestBody instanceof FormData);
         equal(server.requests[1].withCredentials, false);
-        deepEqual(server.requests[1].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken',
-                   'Content-Type': 'text/plain;charset=utf-8'});
 
         equal(server.requests[2].method, "GET");
         equal(server.requests[2].url, domain);
@@ -2689,11 +2856,7 @@
 
         equal(server.requests[4].method, "POST");
         equal(server.requests[4].url, put_url);
-        ok(server.requests[4].requestBody instanceof FormData);
         equal(server.requests[4].withCredentials, false);
-        deepEqual(server.requests[4].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken',
-                   'Content-Type': 'text/plain;charset=utf-8'});
 
         equal(context.spy.callCount, 6, "FormData.append count");
 
@@ -2808,7 +2971,7 @@
     }, ""]);
 
     stop();
-    expect(40);
+    expect(67);
 
     this.jio.post({
       title: "barè",
@@ -2819,6 +2982,56 @@
     })
       .then(function (result) {
         equal(result, id);
+
+
+        equal(context.spy_ajax.callCount, 5, "ajax count");
+        equal(context.spy_ajax.getCall(0).args[0].type, "GET");
+        equal(context.spy_ajax.getCall(0).args[0].url, domain);
+        equal(context.spy_ajax.getCall(0).args[0].dataType, undefined);
+        deepEqual(context.spy_ajax.getCall(0).args[0].xhrFields, {
+          withCredentials: true
+        });
+        deepEqual(context.spy_ajax.getCall(0).args[0].headers, undefined);
+        equal(context.spy_ajax.getCall(0).args[0].data, undefined);
+
+        equal(context.spy_ajax.getCall(1).args[0].type, "POST");
+        equal(context.spy_ajax.getCall(1).args[0].url, add_url);
+        equal(context.spy_ajax.getCall(1).args[0].dataType, undefined);
+        deepEqual(context.spy_ajax.getCall(1).args[0].xhrFields, {
+          withCredentials: true
+        });
+        deepEqual(context.spy_ajax.getCall(1).args[0].headers, undefined);
+        ok(context.spy_ajax.getCall(1).args[0].data instanceof FormData,
+           'FormData expected: ' + context.spy_ajax.getCall(1).args[0].data);
+
+        equal(context.spy_ajax.getCall(2).args[0].type, "GET");
+        equal(context.spy_ajax.getCall(2).args[0].url, domain);
+        equal(context.spy_ajax.getCall(2).args[0].dataType, undefined);
+        deepEqual(context.spy_ajax.getCall(2).args[0].xhrFields, {
+          withCredentials: true
+        });
+        deepEqual(context.spy_ajax.getCall(2).args[0].headers, undefined);
+        equal(context.spy_ajax.getCall(2).args[0].data, undefined);
+
+        equal(context.spy_ajax.getCall(3).args[0].type, "GET");
+        equal(context.spy_ajax.getCall(3).args[0].url, traverse_url);
+        equal(context.spy_ajax.getCall(3).args[0].dataType, undefined);
+        deepEqual(context.spy_ajax.getCall(3).args[0].xhrFields, {
+          withCredentials: true
+        });
+        deepEqual(context.spy_ajax.getCall(3).args[0].headers, undefined);
+        equal(context.spy_ajax.getCall(3).args[0].data, undefined);
+
+        equal(context.spy_ajax.getCall(4).args[0].type, "POST");
+        equal(context.spy_ajax.getCall(4).args[0].url, put_url);
+        equal(context.spy_ajax.getCall(4).args[0].dataType, "blob");
+        deepEqual(context.spy_ajax.getCall(4).args[0].xhrFields, {
+          withCredentials: true
+        });
+        deepEqual(context.spy_ajax.getCall(4).args[0].headers, undefined);
+        ok(context.spy_ajax.getCall(4).args[0].data instanceof FormData,
+           'FormData expected: ' + context.spy_ajax.getCall(4).args[0].data);
+
         equal(server.requests.length, 5);
 
         equal(server.requests[0].method, "GET");
@@ -2829,10 +3042,7 @@
 
         equal(server.requests[1].method, "POST");
         equal(server.requests[1].url, add_url);
-        ok(server.requests[1].requestBody instanceof FormData);
         equal(server.requests[1].withCredentials, true);
-        deepEqual(server.requests[1].requestHeaders,
-                  {'Content-Type': 'text/plain;charset=utf-8'});
 
         equal(server.requests[2].method, "GET");
         equal(server.requests[2].url, domain);
@@ -2848,10 +3058,7 @@
 
         equal(server.requests[4].method, "POST");
         equal(server.requests[4].url, put_url);
-        ok(server.requests[4].requestBody instanceof FormData);
         equal(server.requests[4].withCredentials, true);
-        deepEqual(server.requests[4].requestHeaders,
-                  {'Content-Type': 'text/plain;charset=utf-8'});
 
         equal(context.spy.callCount, 6, "FormData.append count");
 
