@@ -44,17 +44,28 @@
   originalAjax = jIO.util.ajax;
   jIO.util.ajax = function ajax(param) {
     if (param.data instanceof Blob) {
+      // Copy the param dict document (no need for deep copy) to
+      // allow tests to check them
+      param = Object.assign({}, param);
       // Blob is not supported by xhr2, so convert to ArrayBuffer instead
-      return jIO.util.readBlobAsArrayBuffer(param.data).then(function (data) {
-        param.data = data.target.result;
-        return originalAjax(param);
-      });
+      return jIO.util.readBlobAsArrayBuffer(param.data)
+        .then(function (data) {
+          param.data = data.target.result;
+          return originalAjax(param);
+        });
     }
 
     if (param.data instanceof FormData) {
+      // Copy the param dict document (no need for deep copy) to
+      // allow tests to check them
+      param = Object.assign({}, param);
       // Implement minimal FormData for erp5storage
       if (!param.hasOwnProperty('headers')) {
         param.headers = {};
+      } else {
+        // Copy the param dict document (no need for deep copy) to
+        // allow tests to check them
+        param.headers = Object.assign({}, param.headers);
       }
       param.headers["Content-Type"] = "multipart\/form-data; boundary=" +
                                       param.data.boundary;
