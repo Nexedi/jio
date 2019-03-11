@@ -190,11 +190,10 @@
     try {
       return window.atob(str);
     } catch (err) {
-      var buffer;
-      if (str instanceof Buffer) {
-        buffer = str;
-      } else {
-        buffer = Buffer.from(str.toString(), 'base64');
+      var buffer = Buffer.from(str.toString(), 'base64');
+      // Provide the same behaviour than the browser atob
+      if (buffer.toString('base64') !== str) {
+        throw new Error('The string to be decoded is not correctly encoded.');
       }
       return buffer.toString('binary');
     }
@@ -206,13 +205,7 @@
     try {
       return window.btoa(str);
     } catch (err) {
-      var buffer;
-      if (str instanceof Buffer) {
-        buffer = str;
-      } else {
-        buffer = Buffer.from(str.toString(), 'binary');
-      }
-      return buffer.toString('base64');
+      return Buffer.from(str.toString(), 'binary').toString('base64');
     }
   }
 
