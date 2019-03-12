@@ -18,10 +18,8 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 /*jslint nomen: true */
-/*global indexedDB, sinon, IDBDatabase, Blob,
-         IDBTransaction, IDBIndex, IDBObjectStore, IDBKeyRange*/
-(function (jIO, QUnit, indexedDB, sinon, IDBDatabase, Blob,
-  IDBTransaction, IDBIndex, IDBObjectStore, IDBKeyRange) {
+/*global indexedDB, Blob*/
+(function (jIO, QUnit, indexedDB, Blob) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -30,7 +28,8 @@
     expect = QUnit.expect,
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
-    module = QUnit.module;
+    module = QUnit.module,
+    throws = QUnit.throws;
 
   function deleteIndexedDB(storage) {
     return new RSVP.Promise(function resolver(resolve, reject) {
@@ -69,11 +68,10 @@
       deleteIndexedDB(this.jio);
     }
   });
-  test("Constructor with empty index_keys", function () {
+  test("Constructor without index_keys", function () {
     this.jio = jIO.createJIO({
       type: "index2",
       database: "index2_test",
-      index_keys: [],
       sub_storage: {
         type: "dummystorage3"
       }
@@ -82,6 +80,23 @@
     equal(this.jio.__type, "index2");
     equal(this.jio.__storage._sub_storage.__type, "dummystorage3");
     equal(this.jio.__storage._database_name, "jio:index2_test");
+    deepEqual(this.jio.__storage._index_keys, []);
+  });
+
+  test("Constructor with index_keys", function () {
+    this.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "b"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+
+    equal(this.jio.__type, "index2");
+    equal(this.jio.__storage._sub_storage.__type, "dummystorage3");
+    equal(this.jio.__storage._database_name, "jio:index2_test");
+    deepEqual(this.jio.__storage._index_keys, ["a", "b"]);
   });
 
   /////////////////////////////////////////////////////////////////
@@ -96,14 +111,27 @@
     this.jio = jIO.createJIO({
       type: "index2",
       database: "index2_test",
-      index_keys: [],
       sub_storage: {
         type: "dummystorage3"
       }
     });
 
+    throws(
+      function () {
+        this.jio.hasCapacity("non");
+      },
+      function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 501);
+        equal(error.message,
+              "Capacity 'non' is not implemented on 'index2'");
+        return true;
+      }
+    );
+
     ok(this.jio.hasCapacity("list"));
     ok(this.jio.hasCapacity("query"));
+    ok(this.jio.hasCapacity("limit"));
   });
 
   /////////////////////////////////////////////////////////////////
@@ -124,34 +152,22 @@
       deleteIndexedDB(this.jio);
     }
   });
-  test("Simple put get", function () {
+  test("Get calls substorage", function () {
     var context = this;
     stop();
-    expect(4);
-
-    DummyStorage3.prototype.put = function (id, value) {
-      equal(id, "32");
-      deepEqual(value, {"a": 3, "b": 2, "c": 8});
-      return id;
-    };
+    expect(2);
 
     DummyStorage3.prototype.get = function (id) {
       equal(id, "32");
       return {"a": 3, "b": 2, "c": 8};
     };
 
-    context.jio.put("32", {"a": 3, "b": 2, "c": 8})
-      .then(function () {
-        return context.jio.get("32");
-      })
+    context.jio.get("32")
       .then(function (result) {
         deepEqual(result, {"a": 3, "b": 2, "c": 8});
       })
       .fail(function (error) {
         console.log(error);
-      })
-      .then(function () {
-        return deleteIndexedDB(context.jio);
       })
       .always(function () {
         start();
@@ -252,12 +268,12 @@
       });
   });
 
-  test("No index keys provided", function () {
+  test("Querying with key without an index", function () {
     var context = this;
     context.jio = jIO.createJIO({
       type: "index2",
       database: "index2_test",
-      index_keys: [],
+      index_keys: ["a"],
       sub_storage: {
         type: "dummystorage3"
       }
@@ -270,9 +286,6 @@
       deepEqual(value, {"a": "3", "b": "2"});
       return id;
     };
-    DummyStorage3.prototype.buildQuery = function (options) {
-      equal(options.query, 'a:3');
-    };
     DummyStorage3.prototype.hasCapacity = function (capacity) {
       equal(capacity, "query");
       return false;
@@ -280,11 +293,14 @@
 
     context.jio.put("32", {"a": "3", "b": "2"})
       .then(function () {
-        return context.jio.allDocs({query: 'a:"3"'});
+        return context.jio.allDocs({query: 'b:"2"'});
+      })
+      .then(function () {
+        return deleteIndexedDB(context.jio);
       })
       .fail(function (error) {
         equal(error.message,
-          "Capacity 'query' is not implemented on 'dummystorage3'");
+          "No index for this key and substorage doesn't support queries");
       })
       .always(function () {
         start();
@@ -309,7 +325,7 @@
     };
     DummyStorage3.prototype.hasCapacity = function (capacity) {
       equal(capacity, "query");
-      if (capacity === "query") { return true; }
+      return (capacity === 'query');
     };
     DummyStorage3.prototype.buildQuery = function (options) {
       equal(options.query, "a:5");
@@ -419,6 +435,84 @@
       });
   });
 
+  test("Limit without query", function () {
+    var context = this;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "b"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(1);
+
+    DummyStorage3.prototype.put = function (id) {
+      return id;
+    };
+
+    RSVP.all([
+      context.jio.put("1", {"a": "55", "b": "5"}),
+      context.jio.put("2", {"a": "98", "b": "3"}),
+      context.jio.put("3", {"a": "75", "b": "1"}),
+      context.jio.put("8", {"a": "43", "b": "7"}),
+      context.jio.put("6", {"a": "21", "b": "2"})
+    ])
+      .then(function () {
+        return context.jio.allDocs({limit: 3});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 3);
+      })
+      .fail(function (error) {
+        console.log(error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("Limit with query", function () {
+    var context = this;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "b"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(1);
+
+    DummyStorage3.prototype.put = function (id) {
+      return id;
+    };
+
+    RSVP.all([
+      context.jio.put("1", {"a": "55", "b": "2"}),
+      context.jio.put("2", {"a": "98", "b": "2"}),
+      context.jio.put("3", {"a": "75", "b": "2"}),
+      context.jio.put("8", {"a": "43", "b": "2"}),
+      context.jio.put("6", {"a": "21", "b": "2"}),
+      context.jio.put("16", {"a": "39", "b": "2"}),
+      context.jio.put("11", {"a": "16", "b": "3"})
+    ])
+      .then(function () {
+        return context.jio.allDocs({limit: 4, query: "b:2"});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 4);
+      })
+      .fail(function (error) {
+        console.log(error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("Complex queries", function () {
     var context = this;
     context.jio = jIO.createJIO({
@@ -513,131 +607,59 @@
       });
   });
 
-  /////////////////////////////////////////////////////////////////
-  // indexStorage2.put
-  /////////////////////////////////////////////////////////////////
-  module("indexStorage2.put", {
-    setup: function () {
-      this.jio = jIO.createJIO({
-        type: "index2",
-        database: "index2_test",
-        index_keys: ["name", "user"],
-        sub_storage: {
-          type: "dummystorage3"
-        }
-      });
-    },
-    teardown: function () {
-      deleteIndexedDB(this.jio);
-    }
-  });
-
-  test("spy index usage", function () {
+/*  test("Index keys modified", function () {
     var context = this;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
     stop();
-    expect(22);
+    expect(5);
 
-    DummyStorage3.prototype.put = function (id) {
+    DummyStorage3.prototype.put = function (id, value) {
+      equal(id, "32");
+      deepEqual(value, {a: "3", b: "2"});
       return id;
     };
 
-    deleteIndexedDB(context.jio)
+    context.jio.put("32", {"a": "3", "b": "2"})
       .then(function () {
-        context.spy_open = sinon.spy(indexedDB, "open");
-        context.spy_create_store = sinon.spy(IDBDatabase.prototype,
-                                          "createObjectStore");
-        context.spy_transaction = sinon.spy(IDBDatabase.prototype,
-                                          "transaction");
-        context.spy_store = sinon.spy(IDBTransaction.prototype, "objectStore");
-        context.spy_put = sinon.spy(IDBObjectStore.prototype, "put");
-        context.spy_index = sinon.spy(IDBObjectStore.prototype, "index");
-        context.spy_create_index = sinon.spy(IDBObjectStore.prototype,
-                                          "createIndex");
-        context.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
-        context.spy_key_range = sinon.spy(IDBKeyRange, "only");
-
-        return context.jio.put("foo", {"name": "foo", "user": "bar"});
+        return context.jio.allDocs({query: 'a: "3"'});
+      })
+      .then(function (result) {
+        deepEqual(result.data.rows[0], {"id": "32", "value": {}});
       })
       .then(function () {
-
-        ok(context.spy_open.calledOnce, "open count " +
-          context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:index2_test",
-              "open first argument");
-
-        equal(context.spy_create_store.callCount, 1,
-              "createObjectStore count");
-
-        equal(context.spy_create_store.firstCall.args[0], "index-store",
-              "first createObjectStore first argument");
-        deepEqual(context.spy_create_store.firstCall.args[1],
-                  {keyPath: "id", autoIncrement: false},
-                  "first createObjectStore second argument");
-
-        equal(context.spy_create_index.callCount, 2, "createIndex count");
-
-        equal(context.spy_create_index.firstCall.args[0], "Index-name",
-              "first createIndex first argument");
-        equal(context.spy_create_index.firstCall.args[1], "doc.name",
-              "first createIndex second argument");
-        deepEqual(context.spy_create_index.firstCall.args[2], {unique: false},
-                  "first createIndex third argument");
-
-        equal(context.spy_create_index.secondCall.args[0], "Index-user",
-              "second createIndex first argument");
-        equal(context.spy_create_index.secondCall.args[1], "doc.user",
-              "second createIndex second argument");
-        deepEqual(context.spy_create_index.secondCall.args[2],
-                  {unique: false},
-                  "second createIndex third argument");
-
-        ok(context.spy_transaction.calledOnce, "transaction count " +
-           context.spy_transaction.callCount);
-        deepEqual(context.spy_transaction.firstCall.args[0], ["index-store"],
-                  "transaction first argument");
-        equal(context.spy_transaction.firstCall.args[1], "readwrite",
-              "transaction second argument");
-
-        ok(context.spy_store.calledOnce, "store count " +
-           context.spy_store.callCount);
-        deepEqual(context.spy_store.firstCall.args[0], "index-store",
-                  "store first argument");
-
-        ok(context.spy_put.calledOnce, "put count " +
-           context.spy_put.callCount);
-        deepEqual(context.spy_put.firstCall.args[0],
-                  {"id": "foo", doc: {name: "foo", user: "bar"}},
-                  "put first argument");
-
-        ok(!context.spy_index.called, "index count " +
-           context.spy_index.callCount);
-
-        ok(!context.spy_cursor.called, "cursor count " +
-           context.spy_cursor.callCount);
-
-        ok(!context.spy_key_range.called, "key range count " +
-           context.spy_key_range.callCount);
-
+        context.jio = jIO.createJIO({
+          type: "index2",
+          database: "index2_test",
+          index_keys: ["b"],
+          sub_storage: {
+            type: "dummystorage3"
+          }
+        });
+      })
+      .then(function () {
+        console.log(context.jio.__storage._index_keys);
+        return context.jio.put("32", {"a": "3", "b": "2"});
+      })
+      .then(function () {
+        return context.jio.allDocs({query: 'b: "2"'});
+      })
+      .then(function (result) {
+        deepEqual(result.data.rows[0], {"id": "32", "value": {}});
       })
       .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        var i,
-          spy_list = ['spy_open', 'spy_create_store', 'spy_transaction',
-                      'spy_store', 'spy_put', 'spy_index', 'spy_create_index',
-                      'spy_cursor', 'spy_key_range'];
-        for (i = 0; i < spy_list.length; i += 1) {
-          if (context.hasOwnProperty(spy_list[i])) {
-            context[spy_list[i]].restore();
-            delete context[spy_list[i]];
-          }
-        }
+        console.log(error);
       })
       .always(function () {
         start();
       });
-  });
+  });*/
 
   /////////////////////////////////////////////////////////////////
   // IndexStorage2.getAttachment
@@ -747,5 +769,4 @@
       });
   });
 
-}(jIO, QUnit, indexedDB, sinon, IDBDatabase, Blob,
-  IDBTransaction, IDBIndex, IDBObjectStore, IDBKeyRange));
+}(jIO, QUnit, indexedDB, Blob));
