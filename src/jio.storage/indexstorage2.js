@@ -33,11 +33,11 @@
     }
     this._sub_storage = jIO.createJIO(description.sub_storage);
     this._database_name = "jio:" + description.database;
-    this._index_keys = description.index_keys;
+    this._index_keys = description.index_keys || [];
   }
 
   IndexStorage2.prototype.hasCapacity = function (name) {
-    return ((name === "list") || (name === "query"));
+    return ((name === "list") || (name === "query")) || (name === "limit");
   };
 
   function handleUpgradeNeeded(evt, index_keys) {
@@ -160,26 +160,43 @@
     });
   }
 
-  IndexStorage2.prototype._runQuery = function (index, value) {
+  function filterDocValues(doc, keys) {
+    var filtered_doc = {}, i;
+    for (i = 0; i < keys.length; i += 1) {
+      if (doc[keys[i]]) {
+        filtered_doc[keys[i]] = doc[keys[i]];
+      } else {
+        throw new jIO.util.jIOError(
+          "Index key '" + keys[i] + "' not found in document",
+          404
+        );
+      }
+    }
+    return filtered_doc;
+  }
+
+  IndexStorage2.prototype._runQuery = function (index, value, limit) {
     var context = this;
     return new RSVP.Queue()
       .push(function () {
         if ((context._index_keys.indexOf(index) === -1)) {
-          if (context._sub_storage.hasCapacity("query")) {
-            return context._sub_storage.buildQuery(
-              {"query": index + ":" + value}
-            )
-              .then(function (result) {
-                return result;
-              });
+          try {
+            context._sub_storage.hasCapacity("query");
+          } catch (error) {
+            throw new jIO.util.jIOError(
+              "No index for this key and substorage doesn't support queries"
+            );
           }
+          return context._sub_storage.buildQuery(
+            {"query": index + ":" + value}
+          );
         }
-        return waitForOpenIndexedDB(context._database_name,
-          context._index_keys, function (db) {
+        return waitForOpenIndexedDB(context._database_name, context._index_keys,
+          function (db) {
             return waitForTransaction(db, ["index-store"], "readonly",
                                     function (tx) {
                 return waitForIDBRequest(tx.objectStore("index-store")
-                  .index("Index-" + index).getAll(value))
+                  .index("Index-" + index).getAll(value, limit))
                   .then(function (evt) {
                     return evt.target.result;
                   });
@@ -188,12 +205,12 @@
       });
   };
 
-  IndexStorage2.prototype._processQueryObject = function (object) {
+  IndexStorage2.prototype._processQueryObject = function (object, limit) {
     var promise_list = [], context = this, i, j, query_result = new Set();
     return RSVP.Queue()
       .push(function () {
         if (object.type === "simple") {
-          return context._runQuery(object.key, object.value);
+          return context._runQuery(object.key, object.value, limit);
         }
         if (object.type === "complex") {
           for (i = 0; i < object.query_list.length; i += 1) {
@@ -234,18 +251,20 @@
   IndexStorage2.prototype.buildQuery = function (options) {
     var context = this;
     if (options.query) {
-      return this._processQueryObject(parseStringToObject(options.query))
-        .then(function (result) {
+      return this._processQueryObject(parseStringToObject(options.query),
+        options.limit)
+        .push(function (result) {
           return result.map(function (value) {
             return {"id": value.id, "value": {} };
           });
         });
     }
-    return waitForOpenIndexedDB(context._database_name,
-      context._index_keys, function (db) {
+    return waitForOpenIndexedDB(context._database_name, context._index_keys,
+      function (db) {
         return waitForTransaction(db, ["index-store"], "readonly",
           function (tx) {
-            return waitForIDBRequest(tx.objectStore("index-store").getAll())
+            return waitForIDBRequest(tx.objectStore("index-store")
+              .getAll(undefined, options.limit))
               .then(function (evt) {
                 return evt.target.result.map(function (value) {
                   return {"id": value.id, "value": {} };
@@ -259,29 +278,18 @@
     return this._sub_storage.get.apply(this._sub_storage, arguments);
   };
 
-  IndexStorage2.prototype._filter_doc_values = function (doc, keys) {
-    var filtered_doc = {}, i;
-    for (i = 0; i < keys.length; i += 1) {
-      filtered_doc[keys[i]] = doc[keys[i]];
-    }
-    return filtered_doc;
-  };
-
   IndexStorage2.prototype.put = function (id, value) {
     var context = this;
     return context._sub_storage.put(id, value)
-      .push(function (result) {
-        return waitForOpenIndexedDB(context._database_name,
-          context._index_keys, function (db) {
+      .push(function () {
+        return waitForOpenIndexedDB(context._database_name, context._index_keys,
+          function (db) {
             return waitForTransaction(db, ["index-store"], "readwrite",
                                 function (tx) {
                 return waitForIDBRequest(tx.objectStore("index-store").put({
                   "id": id,
-                  "doc": context._filter_doc_values(value, context._index_keys)
-                }))
-                  .then(function () {
-                    return result;
-                  });
+                  "doc": filterDocValues(value, context._index_keys)
+                }));
               });
           });
       });
@@ -291,13 +299,13 @@
     var context = this;
     return context._sub_storage.post(value)
       .push(function (id) {
-        return waitForOpenIndexedDB(context._database_name,
-          context._index_keys, function (db) {
+        return waitForOpenIndexedDB(context._database_name, context._index_keys,
+          function (db) {
             return waitForTransaction(db, ["index-store"], "readwrite",
                                 function (tx) {
                 return waitForIDBRequest(tx.objectStore("index-store").put({
                   "id": id,
-                  "doc": context._filter_doc_values(value, context._index_keys)
+                  "doc": filterDocValues(value, context._index_keys)
                 }))
                   .then(function () {
                     return id;
