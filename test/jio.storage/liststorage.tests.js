@@ -162,7 +162,7 @@
     };
     DummyStorage2.prototype.put = function (id, value) {
       equal(id, 'posted');
-      deepEqual(value, {'id': 'posted'});
+      deepEqual(value, {});
       return id;
     };
 
@@ -202,7 +202,7 @@
     };
     DummyStorage2.prototype.put = function (id, param) {
       equal(id, "1");
-      deepEqual(param, {'id': '1'});
+      deepEqual(param, {});
       return id;
     };
 
@@ -372,6 +372,7 @@
   /////////////////////////////////////////////////////////////////
   module("ListStorage.hasCapacity");
   test("list capacity is implemented", function () {
+    expect(2);
 
     var jio = jIO.createJIO({
         type: "list",
@@ -386,6 +387,10 @@
     DummyStorage1.prototype.hasCapacity = function () {
       return false;
     };
+    DummyStorage2.prototype.hasCapacity = function (capacity) {
+      equal(capacity, 'list');
+      return true;
+    };
 
     ok(jio.hasCapacity("list"));
   });
@@ -396,7 +401,7 @@
   module("ListStorage.buildQuery");
   test("buildQuery calls substorage buildQuery", function () {
     stop();
-    expect(2);
+    expect(1);
 
     var jio = jIO.createJIO({
         type: "list",
@@ -408,12 +413,11 @@
         }
       });
 
-    DummyStorage2.prototype.buildQuery = function (params) {
-      deepEqual(params, {});
+    DummyStorage2.prototype.buildQuery = function () {
       return [{"id": "1"}, {"id": "2"}];
     };
 
-    jio.buildQuery({})
+    jio.buildQuery()
       .then(function (result) {
         deepEqual(result, [{"id": "1"}, {"id": "2"}]);
       })
