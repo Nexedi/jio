@@ -37,7 +37,7 @@
     var gadget = this;
     return gadget._sub_storage.post(value)
       .push(function (id) {
-        return gadget._signature_storage.put(id, {"id": id})
+        return gadget._signature_storage.put(id, {})
           .push(function () {
             return id;
           });
@@ -47,7 +47,7 @@
     var gadget = this;
     return gadget._sub_storage.put(id, value)
       .push(function (result) {
-        return gadget._signature_storage.put(id, {"id": id})
+        return gadget._signature_storage.put(id, {})
           .push(function () {
             return result;
           });
@@ -78,11 +78,12 @@
   };
   ListStorage.prototype.hasCapacity = function (name) {
     if (name === "list") {
-      return true;
+      return this._signature_storage.hasCapacity('list');
     }
+    return false;
   };
   ListStorage.prototype.buildQuery = function () {
-    return this._signature_storage.buildQuery({});
+    return this._signature_storage.buildQuery();
   };
 
   jIO.addStorage('list', ListStorage);
