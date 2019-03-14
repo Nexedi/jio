@@ -132,6 +132,7 @@
     ok(this.jio.hasCapacity("list"));
     ok(this.jio.hasCapacity("query"));
     ok(this.jio.hasCapacity("limit"));
+    ok(this.jio.hasCapacity("select"));
   });
 
   /////////////////////////////////////////////////////////////////
@@ -194,7 +195,7 @@
       }
     });
     stop();
-    expect(3);
+    expect(4);
 
     DummyStorage3.prototype.put = function (id, value) {
       equal(id, "32");
@@ -207,7 +208,8 @@
         return context.jio.allDocs({query: 'a: "3"'});
       })
       .then(function (result) {
-        deepEqual(result.data.rows[0], {"id": "32", "value": {}});
+        equal(result.data.total_rows, 1);
+        deepEqual(result.data.rows, [{"id": "32", "value": {}}]);
       })
       .fail(function (error) {
         console.log(error);
@@ -298,7 +300,7 @@
       .fail(function (error) {
         equal(error.status_code, 404);
         equal(error.message,
-          "No index for this key and substorage doesn't support queries");
+          "No index for 'b' key and substorage doesn't support queries");
       })
       .always(function () {
         start();
@@ -731,7 +733,7 @@
       });
   });
 
-  test("Index keys modified", function () {
+  test("Index keys are modified", function () {
     var context = this;
     context.jio = jIO.createJIO({
       type: "index2",
@@ -805,7 +807,7 @@
       .fail(function (error) {
         equal(error.status_code, 404);
         equal(error.message,
-          "No index for this key and substorage doesn't support queries");
+          "No index for 'a' key and substorage doesn't support queries");
       })
       .always(function () {
         start();

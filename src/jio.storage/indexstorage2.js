@@ -34,12 +34,17 @@
     this._sub_storage = jIO.createJIO(description.sub_storage);
     this._database_name = "jio:" + description.database;
     this._index_keys = description.index_keys || [];
-    this._version = 1;
   }
 
   IndexStorage2.prototype.hasCapacity = function (name) {
-    return ((name === "list") || (name === "query")) || (name === "limit") ||
-      (name === "select");
+    var this_storage_capacity_list = ["limit",
+                                      "select",
+                                      "list",
+                                      "query"];
+
+    if (this_storage_capacity_list.indexOf(name) !== -1) {
+      return true;
+    }
   };
 
   function checkArrayEquality(array1, array2) {
@@ -221,10 +226,8 @@
           try {
             context._sub_storage.hasCapacity("query");
           } catch (error) {
-            throw new jIO.util.jIOError(
-              "No index for this key and substorage doesn't support queries",
-              404
-            );
+            throw new jIO.util.jIOError("No index for '" + index +
+              "' key and substorage doesn't support queries", 404);
           }
           return context._sub_storage.buildQuery(
             { "query": index + ":" + value }
