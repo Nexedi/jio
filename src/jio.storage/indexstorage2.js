@@ -29,34 +29,63 @@
     if (typeof description.database !== "string" ||
         description.database === "") {
       throw new TypeError("IndexStorage2 'database' description property " +
-                          "must be a non-empty string");
+        "must be a non-empty string");
     }
     this._sub_storage = jIO.createJIO(description.sub_storage);
     this._database_name = "jio:" + description.database;
     this._index_keys = description.index_keys || [];
+    this._version = 1;
   }
 
   IndexStorage2.prototype.hasCapacity = function (name) {
-    return ((name === "list") || (name === "query")) || (name === "limit");
+    return ((name === "list") || (name === "query")) || (name === "limit") ||
+      (name === "select");
   };
 
-  function handleUpgradeNeeded(evt, index_keys) {
-    var db = evt.target.result, store, i;
+  function checkArrayEquality(array1, array2) {
+    if (array1.length !== array2.length) {
+      return false;
+    }
+    var i;
+    array1 = array1.sort();
+    array2 = array2.sort();
+    for (i = 0; i < array1.length; i += 1) {
+      if (array1[i] !== array2[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
 
-    store = db.createObjectStore("index-store", {
-      keyPath: "id",
-      autoIncrement: false
-    });
+  function handleUpgradeNeeded(evt, index_keys) {
+    var db = evt.target.result, store, i, current_indices;
+
+    if (!(db.objectStoreNames[0])) {
+      store = db.createObjectStore("index-store", {
+        keyPath: "id",
+        autoIncrement: false
+      });
+    } else {
+      store = evt.target.transaction.objectStore('index-store');
+    }
+    current_indices = new Set(store.indexNames);
     for (i = 0; i < index_keys.length; i += 1) {
-      store.createIndex("Index-" + index_keys[i], "doc." + index_keys[i],
-        {unique: false});
+      if (!(current_indices.has('Index-' + index_keys[i]))) {
+        store.createIndex('Index-' + index_keys[i],
+          'doc.' + index_keys[i], { unique: false });
+      }
+      current_indices.delete('Index-' + index_keys[i]);
+    }
+    current_indices = Array.from(current_indices);
+    for (i = 0; i < current_indices.length; i += 1) {
+      store.deleteIndex(current_indices[i]);
     }
   }
 
-  function waitForOpenIndexedDB(db_name, index_keys, callback) {
+  function waitForOpenIndexedDB(db_name, version, index_keys, callback) {
     function resolver(resolve, reject) {
       // Open DB //
-      var request = indexedDB.open(db_name);
+      var request = indexedDB.open(db_name, version);
       request.onerror = function (error) {
         if (request.result) {
           request.result.close();
@@ -65,7 +94,7 @@
             (error.target instanceof IDBOpenDBRequest) &&
             (error.target.error instanceof DOMError)) {
           reject("Connection to: " + db_name + " failed: " +
-                 error.target.error.message);
+            error.target.error.message);
         } else {
           reject(error);
         }
@@ -81,11 +110,6 @@
         reject("Connection to: " + db_name + " timeout");
       };
 
-      request.onblocked = function () {
-        request.result.close();
-        reject("Connection to: " + db_name + " was blocked");
-      };
-
       // Create DB if necessary //
       request.onupgradeneeded = function (evt) {
         handleUpgradeNeeded(evt, index_keys);
@@ -99,9 +123,23 @@
       request.onsuccess = function () {
         return new RSVP.Queue()
           .push(function () {
+            var store, current_indices, db_version, required_indices;
+            store = request.result.transaction('index-store')
+              .objectStore('index-store');
+            current_indices = store.indexNames;
+            db_version = request.result.version;
+            required_indices = index_keys.map(
+              function (value) {return 'Index-' + value; }
+            );
+            if (!(checkArrayEquality(required_indices,
+                Array.from(current_indices)))) {
+              request.result.close();
+              return waitForOpenIndexedDB(db_name, db_version + 1,
+                index_keys, callback);
+            }
             return callback(request.result);
           })
-          .push(function (result) {
+            .push(function (result) {
             request.result.close();
             resolve(result);
           }, function (error) {
@@ -184,17 +222,18 @@
             context._sub_storage.hasCapacity("query");
           } catch (error) {
             throw new jIO.util.jIOError(
-              "No index for this key and substorage doesn't support queries"
+              "No index for this key and substorage doesn't support queries",
+              404
             );
           }
           return context._sub_storage.buildQuery(
-            {"query": index + ":" + value}
+            { "query": index + ":" + value }
           );
         }
-        return waitForOpenIndexedDB(context._database_name, context._index_keys,
-          function (db) {
+        return waitForOpenIndexedDB(context._database_name, undefined,
+          context._index_keys, function (db) {
             return waitForTransaction(db, ["index-store"], "readonly",
-                                    function (tx) {
+              function (tx) {
                 return waitForIDBRequest(tx.objectStore("index-store")
                   .index("Index-" + index).getAll(value, limit))
                   .then(function (evt) {
@@ -255,19 +294,27 @@
         options.limit)
         .push(function (result) {
           return result.map(function (value) {
-            return {"id": value.id, "value": {} };
+            return {
+              "id": value.id,
+              "value": filterDocValues(value.doc,
+                options.select_list || [])
+            };
           });
         });
     }
-    return waitForOpenIndexedDB(context._database_name, context._index_keys,
-      function (db) {
+    return waitForOpenIndexedDB(context._database_name, undefined,
+      context._index_keys, function (db) {
         return waitForTransaction(db, ["index-store"], "readonly",
           function (tx) {
             return waitForIDBRequest(tx.objectStore("index-store")
               .getAll(undefined, options.limit))
               .then(function (evt) {
                 return evt.target.result.map(function (value) {
-                  return {"id": value.id, "value": {} };
+                  return {
+                    "id": value.id,
+                    "value": filterDocValues(value.doc,
+                      options.select_list || [])
+                  };
                 });
               });
           });
@@ -282,10 +329,10 @@
     var context = this;
     return context._sub_storage.put(id, value)
       .push(function () {
-        return waitForOpenIndexedDB(context._database_name, context._index_keys,
-          function (db) {
+        return waitForOpenIndexedDB(context._database_name, undefined,
+          context._index_keys, function (db) {
             return waitForTransaction(db, ["index-store"], "readwrite",
-                                function (tx) {
+              function (tx) {
                 return waitForIDBRequest(tx.objectStore("index-store").put({
                   "id": id,
                   "doc": filterDocValues(value, context._index_keys)
@@ -299,10 +346,10 @@
     var context = this;
     return context._sub_storage.post(value)
       .push(function (id) {
-        return waitForOpenIndexedDB(context._database_name, context._index_keys,
-          function (db) {
+        return waitForOpenIndexedDB(context._database_name, undefined,
+          context._index_keys, function (db) {
             return waitForTransaction(db, ["index-store"], "readwrite",
-                                function (tx) {
+              function (tx) {
                 return waitForIDBRequest(tx.objectStore("index-store").put({
                   "id": id,
                   "doc": filterDocValues(value, context._index_keys)
@@ -318,16 +365,13 @@
   IndexStorage2.prototype.remove = function (id) {
     var context = this;
     return context._sub_storage.remove(id)
-      .push(function (result) {
-        return waitForOpenIndexedDB(context._database_name, context._index_keys,
-          function (db) {
+      .push(function () {
+        return waitForOpenIndexedDB(context._database_name, undefined,
+          context._index_keys, function (db) {
             return waitForTransaction(db, ["index-store"], "readwrite",
               function (tx) {
                 return waitForIDBRequest(tx.objectStore("index-store")
-                  .delete(id))
-                  .then(function () {
-                    return result;
-                  });
+                  .delete(id));
               });
           });
       });

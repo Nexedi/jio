@@ -42,7 +42,7 @@
     });
   }
 
-  function id_compare(value1, value2) {
+  function idCompare(value1, value2) {
     if (value1.id > value2.id) {
       return 1;
     }
@@ -253,12 +253,12 @@
       })
       .then(function (result) {
         equal(result.data.total_rows, 3);
-        deepEqual(result.data.rows.sort(id_compare),
+        deepEqual(result.data.rows.sort(idCompare),
           [
             {"id": "32", "value": {}},
             {"id": "21", "value": {}},
             {"id": "3", "value": {}}
-          ].sort(id_compare));
+          ].sort(idCompare));
       })
       .fail(function (error) {
         console.log(error);
@@ -279,7 +279,7 @@
       }
     });
     stop();
-    expect(4);
+    expect(5);
 
     DummyStorage3.prototype.put = function (id, value) {
       equal(id, "32");
@@ -295,10 +295,8 @@
       .then(function () {
         return context.jio.allDocs({query: 'b:"2"'});
       })
-      .then(function () {
-        return deleteIndexedDB(context.jio);
-      })
       .fail(function (error) {
+        equal(error.status_code, 404);
         equal(error.message,
           "No index for this key and substorage doesn't support queries");
       })
@@ -387,9 +385,9 @@
       })
       .then(function (result) {
         equal(result.data.total_rows, 2);
-        deepEqual(result.data.rows.sort(id_compare),
+        deepEqual(result.data.rows.sort(idCompare),
           [{"id": "32", "value": {}}, {"id": "3", "value": {}}]
-            .sort(id_compare));
+            .sort(idCompare));
       })
       .fail(function (error) {
         console.log(error);
@@ -513,6 +511,132 @@
       });
   });
 
+  test("Select without query", function () {
+    var context = this;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "b", "c"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(2);
+
+    DummyStorage3.prototype.put = function (id) {
+      return id;
+    };
+
+    RSVP.all([
+      context.jio.put("1", {"a": "55", "b": "2", "c": "try"}),
+      context.jio.put("2", {"a": "98", "b": "2", "c": "adverse"}),
+      context.jio.put("3", {"a": "75", "b": "2", "c": "invite"}),
+      context.jio.put("8", {"a": "43", "b": "2", "c": "absolve"}),
+      context.jio.put("6", {"a": "21", "b": "2", "c": "defy"})
+    ])
+      .then(function () {
+        return context.jio.allDocs({select_list: ["a", "c"]});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 5);
+        deepEqual(result.data.rows.sort(idCompare), [
+          {id: "1", value: {"a": "55", "c": "try"}},
+          {id: "2", value: {"a": "98", "c": "adverse"}},
+          {id: "3", value: {"a": "75", "c": "invite"}},
+          {id: "8", value: {"a": "43", "c": "absolve"}},
+          {id: "6", value: {"a": "21", "c": "defy"}}
+        ].sort(idCompare));
+      })
+      .fail(function (error) {
+        console.log(error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("Select with query and limit", function () {
+    var context = this;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "b", "c"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(2);
+
+    DummyStorage3.prototype.put = function (id) {
+      return id;
+    };
+
+    RSVP.all([
+      context.jio.put("1", {"a": "55", "b": "2", "c": "try"}),
+      context.jio.put("2", {"a": "98", "b": "2", "c": "adverse"}),
+      context.jio.put("3", {"a": "75", "b": "2", "c": "invite"}),
+      context.jio.put("8", {"a": "43", "b": "3", "c": "absolve"}),
+      context.jio.put("6", {"a": "21", "b": "2", "c": "defy"}),
+      context.jio.put("4", {"a": "65", "b": "3", "c": "odd"})
+    ])
+      .then(function () {
+        return context.jio.allDocs({select_list: ["a", "c"],
+          query: "b:2"});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 4);
+        deepEqual(result.data.rows.sort(idCompare), [
+          {id: "1", value: {"a": "55", "c": "try"}},
+          {id: "2", value: {"a": "98", "c": "adverse"}},
+          {id: "3", value: {"a": "75", "c": "invite"}},
+          {id: "6", value: {"a": "21", "c": "defy"}}
+        ].sort(idCompare));
+      })
+      .fail(function (error) {
+        console.log(error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("Select_list key is not present in the index", function () {
+    var context = this;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "c"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(2);
+
+    DummyStorage3.prototype.put = function (id) {
+      return id;
+    };
+
+    RSVP.all([
+      context.jio.put("1", {"a": "55", "b": "2", "c": "try"}),
+      context.jio.put("2", {"a": "55", "b": "5", "c": "adverse"}),
+      context.jio.put("3", {"a": "55", "b": "1", "c": "invite"})
+    ])
+      .then(function () {
+        return context.jio.allDocs({select_list: ["a", "b"],
+          query: "a:55"});
+      })
+      .fail(function (error) {
+        equal(error.status_code, 404);
+        equal(error.message, "Index key 'b' not found in document");
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("Complex queries", function () {
     var context = this;
     context.jio = jIO.createJIO({
@@ -571,7 +695,7 @@
       .then(function (result) {
         equal(result.data.total_rows, 2);
         deepEqual(result.data.rows.sort(), [{"id": "23", "value": {}},
-          {"id": "14", "value": {}}].sort(id_compare));
+          {"id": "14", "value": {}}].sort(idCompare));
       })
       .then(function () {
         return context.jio.allDocs({"query": "name:envision AND user:Mann"});
@@ -585,9 +709,9 @@
       })
       .then(function (result) {
         equal(result.data.total_rows, 3);
-        deepEqual(result.data.rows.sort(id_compare),
+        deepEqual(result.data.rows.sort(idCompare),
           [{"id": "23", "value": {}}, {"id": "38", "value": {}},
-            {"id": "45", "value": {}}].sort(id_compare));
+            {"id": "45", "value": {}}].sort(idCompare));
       })
       .then(function () {
         return context.jio.allDocs(
@@ -607,64 +731,95 @@
       });
   });
 
-/*  test("Index keys modified", function () {
+  test("Index keys modified", function () {
     var context = this;
     context.jio = jIO.createJIO({
       type: "index2",
       database: "index2_test",
-      index_keys: ["a"],
+      index_keys: ["a", "b"],
       sub_storage: {
         type: "dummystorage3"
       }
     });
     stop();
-    expect(5);
+    expect(6);
 
-    DummyStorage3.prototype.put = function (id, value) {
-      equal(id, "32");
-      deepEqual(value, {a: "3", b: "2"});
+    DummyStorage3.prototype.put = function (id) {
       return id;
     };
 
-    context.jio.put("32", {"a": "3", "b": "2"})
+    DummyStorage3.prototype.hasCapacity = function () {
+      return false;
+    };
+
+    RSVP.all([
+      context.jio.put("32", {"a": "3", "b": "2", "c": "inverse"}),
+      context.jio.put("5", {"a": "6", "b": "2", "c": "strong"}),
+      context.jio.put("14", {"a": "67", "b": "3", "c": "disolve"})
+    ])
       .then(function () {
-        return context.jio.allDocs({query: 'a: "3"'});
+        return context.jio.allDocs({query: 'b: "3"'});
       })
       .then(function (result) {
-        deepEqual(result.data.rows[0], {"id": "32", "value": {}});
+        deepEqual(result.data.rows, [{"id": "14", "value": {}}]);
+      })
+      .then(function () {
+        return context.jio.allDocs({query: 'a: "6"'});
+      })
+      .then(function (result) {
+        deepEqual(result.data.rows, [{"id": "5", "value": {}}]);
       })
       .then(function () {
         context.jio = jIO.createJIO({
           type: "index2",
           database: "index2_test",
-          index_keys: ["b"],
+          index_keys: ["b", "c"],
           sub_storage: {
             type: "dummystorage3"
           }
         });
       })
       .then(function () {
-        console.log(context.jio.__storage._index_keys);
-        return context.jio.put("32", {"a": "3", "b": "2"});
+        return RSVP.all([
+          context.jio.put("18", {"a": "2", "b": "3", "c": "align"}),
+          context.jio.put("62", {"a": "6", "b": "2", "c": "disolve"})
+        ]);
       })
       .then(function () {
-        return context.jio.allDocs({query: 'b: "2"'});
+        return context.jio.allDocs({query: 'b: "3"'});
       })
       .then(function (result) {
-        deepEqual(result.data.rows[0], {"id": "32", "value": {}});
+        deepEqual(result.data.rows.sort(idCompare),
+          [{"id": "14", "value": {}}, {"id": "18", "value": {}}]
+          .sort(idCompare));
+      })
+      .then(function () {
+        return context.jio.allDocs({query: 'c: "disolve"'});
+      })
+      .then(function (result) {
+        deepEqual(result.data.rows, [{"id": "62", "value": {}}]);
+      })
+      .then(function () {
+        return context.jio.allDocs({query: 'a: "3"'});
       })
       .fail(function (error) {
-        console.log(error);
+        equal(error.status_code, 404);
+        equal(error.message,
+          "No index for this key and substorage doesn't support queries");
       })
       .always(function () {
         start();
       });
-  });*/
+  });
 
   /////////////////////////////////////////////////////////////////
   // IndexStorage2.getAttachment
   /////////////////////////////////////////////////////////////////
-  module("IndexStorage2.getAttachment");
+  module("IndexStorage2.getAttachment", {
+    teardown: function () {
+      deleteIndexedDB(this.jio);
+    }
+  });
   test("getAttachment called substorage getAttachment", function () {
     stop();
     expect(3);
@@ -700,7 +855,11 @@
   /////////////////////////////////////////////////////////////////
   // IndexStorage2.putAttachment
   /////////////////////////////////////////////////////////////////
-  module("IndexStorage2.putAttachment");
+  module("IndexStorage2.putAttachment", {
+    teardown: function () {
+      deleteIndexedDB(this.jio);
+    }
+  });
   test("putAttachment called substorage putAttachment", function () {
     stop();
     expect(4);
@@ -735,9 +894,13 @@
   });
 
   /////////////////////////////////////////////////////////////////
-  // IndexStorage3.removeAttachment
+  // IndexStorage2.removeAttachment
   /////////////////////////////////////////////////////////////////
-  module("IndexStorage3.removeAttachment");
+  module("IndexStorage2.removeAttachment", {
+    teardown: function () {
+      deleteIndexedDB(this.jio);
+    }
+  });
   test("removeAttachment called substorage removeAttachment", function () {
     stop();
     expect(3);
@@ -763,6 +926,254 @@
       })
       .fail(function (error) {
         ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // indexStorage2.put
+  /////////////////////////////////////////////////////////////////
+  module("indexStorage2.put", {
+    teardown: function () {
+      deleteIndexedDB(this.jio);
+    }
+  });
+  test("Put creates index", function () {
+    var context = this, request, store, records;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "b"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(12);
+
+    DummyStorage3.prototype.put = function (id) {
+      return id;
+    };
+
+    RSVP.all([
+      context.jio.put("32", {"a": "894", "b": "inversion", "c": 2}),
+      context.jio.put("33", {"a": "65", "b": "division", "c": 4}),
+      context.jio.put("34", {"a": "65", "b": "prolong", "c": 8})
+    ])
+      .then(function () {
+        return new RSVP.Promise(function (resolve) {
+          request = indexedDB.open('jio:index2_test');
+          request.onsuccess = function () {
+            resolve(request.result);
+          };
+        });
+      })
+      .then(function (result) {
+        equal(result.version, 1);
+        equal(result.name, 'jio:index2_test');
+        equal(result.objectStoreNames.length, 1);
+        equal(result.objectStoreNames[0], 'index-store');
+        store = result.transaction('index-store').objectStore('index-store');
+        equal(store.indexNames.length, 2);
+        equal(store.keyPath, "id");
+        deepEqual(Array.from(store.indexNames).sort(), ['Index-a', 'Index-b']);
+        equal(store.index('Index-a').keyPath, 'doc.a');
+        equal(store.index('Index-b').keyPath, 'doc.b');
+        equal(store.index('Index-a').unique, false);
+        equal(store.index('Index-b').unique, false);
+        return new RSVP.Promise(function (resolve) {
+          records = store.getAll();
+          records.onsuccess = function () {
+            resolve(records);
+          };
+        });
+      })
+      .then(function (values) {
+        deepEqual(values.result.sort(idCompare), [
+          {"id": "32", "doc": {"a": "894", "b": "inversion"}},
+          {"id": "33", "doc": {"a": "65", "b": "division"}},
+          {"id": "34", "doc": {"a": "65", "b": "prolong"}}
+        ]);
+      })
+      .then(function () {
+        request.result.close();
+      })
+      .fail(function (error) {
+        console.log(error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // indexStorage2.post
+  /////////////////////////////////////////////////////////////////
+  module("indexStorage2.post", {
+    teardown: function () {
+      deleteIndexedDB(this.jio);
+    }
+  });
+  test("Post creates index", function () {
+    var context = this, request, store, records;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "b"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(12);
+
+    DummyStorage3.prototype.post = function (value) {
+      if (value.a === "5") {
+        return "1";
+      }
+      if (value.a === "62") {
+        return "2";
+      }
+      if (value.a === "37") {
+        return "3";
+      }
+    };
+
+    RSVP.all([
+      context.jio.post({"a": "5", "b": "inversion", "c": 2}),
+      context.jio.post({"a": "62", "b": "division", "c": 4}),
+      context.jio.post({"a": "37", "b": "prolong", "c": 8})
+    ])
+      .then(function () {
+        return new RSVP.Promise(function (resolve) {
+          request = indexedDB.open('jio:index2_test');
+          request.onsuccess = function () {
+            resolve(request.result);
+          };
+        });
+      })
+      .then(function (result) {
+        equal(result.version, 1);
+        equal(result.name, 'jio:index2_test');
+        equal(result.objectStoreNames.length, 1);
+        equal(result.objectStoreNames[0], 'index-store');
+        store = result.transaction('index-store').objectStore('index-store');
+        equal(store.indexNames.length, 2);
+        equal(store.keyPath, "id");
+        deepEqual(Array.from(store.indexNames).sort(), ['Index-a', 'Index-b']);
+        equal(store.index('Index-a').keyPath, 'doc.a');
+        equal(store.index('Index-b').keyPath, 'doc.b');
+        equal(store.index('Index-a').unique, false);
+        equal(store.index('Index-b').unique, false);
+        return new RSVP.Promise(function (resolve) {
+          records = store.getAll();
+          records.onsuccess = function () {
+            resolve(records);
+          };
+        });
+      })
+      .then(function (values) {
+        deepEqual(values.result.sort(idCompare), [
+          {"id": "1", "doc": {"a": "5", "b": "inversion"}},
+          {"id": "2", "doc": {"a": "62", "b": "division"}},
+          {"id": "3", "doc": {"a": "37", "b": "prolong"}}
+        ]);
+      })
+      .then(function () {
+        request.result.close();
+      })
+      .fail(function (error) {
+        console.log(error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // indexStorage2.remove
+  /////////////////////////////////////////////////////////////////
+  module("indexStorage2.remove", {
+    teardown: function () {
+      deleteIndexedDB(this.jio);
+    }
+  });
+  test("Remove values", function () {
+    var context = this, request, store, records;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "b"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(3);
+
+    DummyStorage3.prototype.put = function (id) {
+      return id;
+    };
+
+    DummyStorage3.prototype.remove = function (id) {
+      equal(id, "33");
+    };
+
+    RSVP.all([
+      context.jio.put("32", {"a": "894", "b": "inversion", "c": 2}),
+      context.jio.put("33", {"a": "65", "b": "division", "c": 4}),
+      context.jio.put("34", {"a": "65", "b": "prolong", "c": 8})
+    ])
+      .then(function () {
+        return new RSVP.Promise(function (resolve) {
+          request = indexedDB.open('jio:index2_test');
+          request.onsuccess = function () {
+            resolve(request.result);
+          };
+        });
+      })
+      .then(function (result) {
+        store = result.transaction('index-store').objectStore('index-store');
+        return new RSVP.Promise(function (resolve) {
+          records = store.getAll();
+          records.onsuccess = function () {
+            resolve(records);
+          };
+        });
+      })
+      .then(function (values) {
+        deepEqual(values.result.sort(idCompare), [
+          {"id": "32", "doc": {"a": "894", "b": "inversion"}},
+          {"id": "33", "doc": {"a": "65", "b": "division"}},
+          {"id": "34", "doc": {"a": "65", "b": "prolong"}}
+        ]);
+      })
+      .then(function () {
+        return context.jio.remove("33");
+      })
+      .then(function () {
+        store = request.result.transaction('index-store')
+          .objectStore('index-store');
+        return new RSVP.Promise(function (resolve) {
+          records = store.getAll();
+          records.onsuccess = function () {
+            resolve(records);
+          };
+        });
+      })
+      .then(function (values) {
+        deepEqual(values.result.sort(idCompare), [
+          {"id": "32", "doc": {"a": "894", "b": "inversion"}},
+          {"id": "34", "doc": {"a": "65", "b": "prolong"}}
+        ]);
+      })
+      .then(function () {
+        request.result.close();
+      })
+      .fail(function (error) {
+        console.log(error);
       })
       .always(function () {
         start();
