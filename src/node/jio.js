@@ -19,7 +19,7 @@
  */
 
 /*global window */
-(function (window, jIO, Blob) {
+(function (window, jIO, Blob, RSVP) {
   "use strict";
 
   var FormData,
@@ -48,9 +48,12 @@
       // allow tests to check them
       param = Object.assign({}, param);
       // Blob is not supported by xhr2, so convert to ArrayBuffer instead
-      return jIO.util.readBlobAsArrayBuffer(param.data)
-        .then(function (data) {
-          param.data = data.target.result;
+      return new RSVP.Queue()
+        .push(function () {
+          return jIO.util.readBlobAsArrayBuffer(param.data);
+        })
+        .push(function (evt) {
+          param.data = evt.target.result;
           return originalAjax(param);
         });
     }
@@ -77,7 +80,7 @@
     return originalAjax(param);
   };
 
-}(window, window.jIO, window.Blob));
+}(window, window.jIO, window.Blob, window.RSVP));
 
 // Define a global variable to allow storages to access jIO
 var jIO = window.jIO,
