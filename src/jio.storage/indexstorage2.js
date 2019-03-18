@@ -39,8 +39,11 @@
     this._database_name = "jio:" + description.database;
     this._index_keys = description.index_keys || [];
     this._use_sub_storage_query = description.use_sub_storage_query || false;
-    this._use_sub_storage_query_partial =
-      description.use_sub_storage_query_partial || true;
+    this._use_sub_storage_query_partial = true;
+    if (description.use_sub_storage_query_partial !== undefined) {
+      this._use_sub_storage_query_partial =
+        description.use_sub_storage_query_partial;
+    }
   }
 
   IndexStorage2.prototype.hasCapacity = function (name) {
@@ -289,7 +292,8 @@
             );
           }
           throw new jIO.util.jIOError("No index for '" + index +
-            "' key and checking the substorage for partial queries is not set");
+            "' key and checking the substorage for partial queries is not set",
+            404);
         }
         return waitForUpdatedOpenIndexedDB(context._database_name,
           context._index_keys, function (db) {

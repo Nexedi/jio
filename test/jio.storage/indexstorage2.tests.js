@@ -433,12 +433,12 @@
       context.jio.put("2", {"a": "close", "b": 45, "c": "78", "d": "gc4"}),
       context.jio.put("16", {"a": "value", "b": 5, "c": "54", "d": "xf7"}),
       context.jio.put("21", {"a": "value", "b": 83, "c": "4", "d": "gc1"}),
-      context.jio.put("7", {"a": "value", "b": 12, "c": "26", "d": "x54"}),
+      context.jio.put("7", {"a": "value", "b": 5, "c": "26", "d": "x54"}),
       context.jio.put("1", {"a": "exhalt", "b": 68, "c": "28", "d": "o32"})
     ])
       .then(function () {
         return context.jio.allDocs({sort_on:
-          [["a", "ascending"], ["b", "descending"]]});
+          [["a", "ascending"], ["b", "descending"], ["d", "ascending"]]});
       })
       .then(function (result) {
         equal(result.data.total_rows, 5);
@@ -646,7 +646,7 @@
       return id;
     };
     DummyStorage3.prototype.hasCapacity = function (capacity) {
-      return capacity === 'query';
+      return (capacity === 'list') || (capacity === 'query');
     };
     DummyStorage3.prototype.buildQuery = function (options) {
       equal(options.query, "a:5");
@@ -713,6 +713,49 @@
       })
       .fail(function (error) {
         console.log(error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("Partial sub_storage query is disabled", function () {
+    var context = this;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      use_sub_storage_query_partial: false,
+      index_keys: ["a", "b"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(2);
+
+    DummyStorage3.prototype.put = function (id) {
+      return id;
+    };
+    DummyStorage3.prototype.hasCapacity = function (capacity) {
+      return capacity === 'query';
+    };
+    DummyStorage3.prototype.buildQuery = function (options) {
+      equal(options.query, 'c:linear');
+      return [{id: "32", value: {}}];
+    };
+
+    RSVP.all([
+      context.jio.put("32", {a: "3", b: "1", c: "linear"}),
+      context.jio.put("21", {a: "8", b: "1", c: "obscure"}),
+      context.jio.put("3", {a: "5", b: "1", c: "imminent"})
+    ])
+      .then(function () {
+        return context.jio.allDocs({query: 'a: "5" OR c: "linear"'});
+      })
+      .fail(function (error) {
+        equal(error.status_code, 404);
+        equal(error.message, "No index for 'c' key and checking the substorage"
+          + " for partial queries is not set");
       })
       .always(function () {
         start();
