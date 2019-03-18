@@ -108,6 +108,7 @@ lint: $(patsubst ${TESTDIR}/jio.storage/%.js, ${LINTDIR}/${TESTDIR}/jio.storage/
 	${LINTDIR}/node/jio.js \
 	${LINTDIR}/${TESTDIR}/node.js \
 	${LINTDIR}/${TESTDIR}/node/node-require.js \
+	${LINTDIR}/${TESTDIR}/node/ajax.tests.js \
 	$(patsubst ${SRCDIR}/jio.storage/%.js, ${LINTDIR}/jio.storage/%.js, $(wildcard ${SRCDIR}/jio.storage/*.js))
 
 #############################################
