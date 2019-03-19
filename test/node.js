@@ -48,6 +48,7 @@
   testrunner.run({
     code: 'test/node/node-require.js',
     tests: [
+      'test/node/ajax.tests.js',
       'test/jio/util.js',
       'test/queries/key.tests.js',
       'test/queries/key-schema.tests.js',
