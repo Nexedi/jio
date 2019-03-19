@@ -17,14 +17,15 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*global FormData, sinon, RSVP, jIO, QUnit, XMLHttpRequest*/
-(function (jIO, QUnit, FormData) {
+/*global FormData, sinon, RSVP, jIO, QUnit, XMLHttpRequest, Blob, ArrayBuffer*/
+(function (jIO, QUnit, FormData, Blob, ArrayBuffer) {
   "use strict";
   var test = QUnit.test,
     equal = QUnit.equal,
     stop = QUnit.stop,
     start = QUnit.start,
     expect = QUnit.expect,
+    ok = QUnit.ok,
     module = QUnit.module;
 
   /////////////////////////////////////////////////////////////////
@@ -46,6 +47,41 @@
       this.server.restore();
       delete this.server;
     }
+  });
+
+  test("Blob data handling", function () {
+    stop();
+    expect(5);
+
+    var url = "https://www.example.org/com/bar",
+      server = this.server,
+      blob = new Blob(['abc']);
+
+    this.server.respondWith("POST", url, [200, {}, 'OK']);
+
+    return new RSVP.Queue()
+      .then(function () {
+        return jIO.util.ajax({
+          type: 'POST',
+          url: url,
+          data: blob
+        });
+      })
+      .then(function () {
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, url);
+        ok(server.requests[0].requestBody instanceof ArrayBuffer);
+        return jIO.util.readBlobAsText(
+          new Blob([server.requests[0].requestBody])
+        );
+      })
+      .then(function (evt) {
+        equal(evt.target.result, 'abc');
+      })
+      .always(function () {
+        start();
+      });
   });
 
   test("FormData handling without headers", function () {
@@ -156,4 +192,4 @@
         start();
       });
   });
-}(jIO, QUnit, FormData));
+}(jIO, QUnit, FormData, Blob, ArrayBuffer));
