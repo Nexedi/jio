@@ -254,6 +254,7 @@ ${EXTERNALDIR}/renderjs-latest.js:
 
 clean:
 	rm -rf ${LINTDIR}
+	rm ${SRCDIR}/queries/build/parser.js
 
 forceclean: clean
 	rm -rf ${EXTERNALDIR} ${SRCDIR}/queries/build/parser.js
