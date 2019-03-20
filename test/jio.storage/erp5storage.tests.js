@@ -725,7 +725,7 @@
     }, ""]);
 
     stop();
-    expect(17);
+    expect(16);
 
     this.jio.putAttachment(
       id,
@@ -748,7 +748,6 @@
         equal(server.requests[0].method, "POST");
         equal(server.requests[0].url, submit_url);
         equal(server.requests[0].status, 204);
-        equal(server.requests[0].responseType, "blob");
 
         ok(context.spy.calledTwice, "FormData.append count " +
            context.spy.callCount);
