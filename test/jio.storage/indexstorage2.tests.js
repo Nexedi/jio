@@ -1112,6 +1112,7 @@
     context.jio = jIO.createJIO({
       type: "index2",
       database: "index2_test",
+      version: 1,
       index_keys: ["a"],
       sub_storage: {
         type: "dummystorage3"
@@ -1143,6 +1144,7 @@
         context.jio = jIO.createJIO({
           type: "index2",
           database: "index2_test",
+          version: 2,
           index_keys: ["a", "b", "c"],
           sub_storage: {
             type: "dummystorage3"
@@ -1179,6 +1181,7 @@
           type: "index2",
           database: "index2_test",
           index_keys: ["a", "c"],
+          version: 3,
           sub_storage: {
             type: "dummystorage3"
           }
@@ -1208,6 +1211,63 @@
         equal(error.status_code, 404);
         equal(error.message,
           "No index for 'b' key and substorage doesn't support queries");
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("Parallel test", function () {
+    var context = this, i, promise_list = [], jio_list = [],
+      index_keys_combinations;
+    stop();
+    expect(1);
+
+    DummyStorage3.prototype.put = function (id) {
+      return id;
+    };
+
+    DummyStorage3.prototype.hasCapacity = function () {
+      return false;
+    };
+
+    function random(limit) {
+      return Math.floor(Math.random() * Math.floor(limit));
+    }
+
+    index_keys_combinations = [[], ['a'], ['b'], ['c'], ['d'], ['e'],
+      ['a', 'b'], ['a', 'c'], ['a', 'd'], ['a', 'e'], ['b', 'c'], ['b', 'd'],
+      ['b', 'e'], ['c', 'd'], ['c', 'e'], ['a', 'b', 'c'], ['b', 'c', 'd'],
+      ['c', 'd', 'e'], ['a', 'b', 'c', 'd'], ['b', 'c', 'd', 'e'],
+      ['a', 'b', 'c', 'd', 'e']];
+
+    for (i = 0; i < 100; i += 1) {
+      jio_list[i] = jIO.createJIO({
+        type: "index2",
+        database: "index2_test",
+        index_keys:
+          index_keys_combinations[random(index_keys_combinations.length - 1)],
+        version: i + 1,
+        sub_storage: {
+          type: "dummystorage3"
+        }
+      });
+    }
+
+    for (i = 0; i < 100; i += 1) {
+      promise_list.push(jio_list[i].put("43", {"a": "obscure", "b": "cr",
+        "c": "34", "d": "5454", "e": 34}));
+    }
+    RSVP.all(promise_list)
+      .then(function () {
+        return jio_list[99].allDocs();
+      })
+      .then(function (result) {
+        context.jio = jio_list[99];
+        equal(result.data.total_rows, 1);
+      })
+      .fail(function (error) {
+        console.log(error);
       })
       .always(function () {
         start();

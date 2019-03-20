@@ -44,6 +44,7 @@
       this._use_sub_storage_query_partial =
         description.use_sub_storage_query_partial;
     }
+    this._version = description.version || undefined;
   }
 
   IndexStorage2.prototype.hasCapacity = function (name) {
@@ -58,21 +59,6 @@
       return true;
     }
   };
-
-  function checkArrayEquality(array1, array2) {
-    if (array1.length !== array2.length) {
-      return false;
-    }
-    var i;
-    array1 = array1.sort();
-    array2 = array2.sort();
-    for (i = 0; i < array1.length; i += 1) {
-      if (array1[i] !== array2[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
 
   function compareSortOn(value1, value2, sort_on) {
     var current_compare = sort_on.slice(0, 1)[0],
@@ -148,10 +134,10 @@
         reject("Connection to: " + db_name + " timeout");
       };
 
-      request.onblocked = function () {
-        request.result.close();
-        reject("Connection to: " + db_name + " was blocked");
-      };
+     // request.onblocked = function () {
+      //  request.result.close();
+    //    reject("Connection to: " + db_name + " was blocked");
+    //  };
 
       // Create DB if necessary //
       request.onupgradeneeded = function (evt) {
@@ -178,35 +164,6 @@
       };
     }
 
-    return new RSVP.Promise(resolver);
-  }
-
-  function waitForUpdatedOpenIndexedDB(db_name, index_keys, callback) {
-    function resolver(resolve, reject) {
-      var db_version, store, current_indices, required_indices;
-      required_indices = index_keys.map(
-        function (value) {return 'Index-' + value; }
-      );
-      waitForOpenIndexedDB(db_name, undefined, index_keys, function (db) {
-        db_version = db.version;
-        store = db.transaction('index-store').objectStore('index-store');
-        current_indices = store.indexNames;
-        if (checkArrayEquality(required_indices,
-            Array.from(current_indices))) {
-          resolve(callback(db));
-        } else {
-          store.transaction.oncomplete = function () {
-            waitForOpenIndexedDB(db_name, db_version + 1, index_keys,
-              function (db) {
-                resolve(callback(db));
-              });
-          };
-        }
-      })
-        .fail(function (error) {
-          reject(error);
-        });
-    }
     return new RSVP.Promise(resolver);
   }
 
@@ -295,7 +252,7 @@
             "' key and checking the substorage for partial queries is not set",
             404);
         }
-        return waitForUpdatedOpenIndexedDB(context._database_name,
+        return waitForOpenIndexedDB(context._database_name, context._version,
           context._index_keys, function (db) {
             return waitForTransaction(db, ["index-store"], "readonly",
               function (tx) {
@@ -397,7 +354,7 @@
           });
         });
     }
-    return waitForUpdatedOpenIndexedDB(context._database_name,
+    return waitForOpenIndexedDB(context._database_name, context._version,
       context._index_keys, function (db) {
         return waitForTransaction(db, ["index-store"], "readonly",
           function (tx) {
@@ -428,20 +385,25 @@
     return this._sub_storage.get.apply(this._sub_storage, arguments);
   };
 
+  IndexStorage2.prototype._put = function (id, value) {
+    var context = this;
+    return waitForOpenIndexedDB(context._database_name, context._version,
+      context._index_keys, function (db) {
+        return waitForTransaction(db, ["index-store"], "readwrite",
+          function (tx) {
+            return waitForIDBRequest(tx.objectStore("index-store").put({
+              "id": id,
+              "doc": filterDocValues(value, context._index_keys)
+            }));
+          });
+      });
+  };
+
   IndexStorage2.prototype.put = function (id, value) {
     var context = this;
     return context._sub_storage.put(id, value)
       .push(function () {
-        return waitForUpdatedOpenIndexedDB(context._database_name,
-          context._index_keys, function (db) {
-            return waitForTransaction(db, ["index-store"], "readwrite",
-              function (tx) {
-                return waitForIDBRequest(tx.objectStore("index-store").put({
-                  "id": id,
-                  "doc": filterDocValues(value, context._index_keys)
-                }));
-              });
-          });
+        return context._put(id, value);
       });
   };
 
@@ -449,19 +411,7 @@
     var context = this;
     return context._sub_storage.post(value)
       .push(function (id) {
-        return waitForUpdatedOpenIndexedDB(context._database_name,
-          context._index_keys, function (db) {
-            return waitForTransaction(db, ["index-store"], "readwrite",
-              function (tx) {
-                return waitForIDBRequest(tx.objectStore("index-store").put({
-                  "id": id,
-                  "doc": filterDocValues(value, context._index_keys)
-                }))
-                  .then(function () {
-                    return id;
-                  });
-              });
-          });
+        context._put(id, value);
       });
   };
 
@@ -469,7 +419,7 @@
     var context = this;
     return context._sub_storage.remove(id)
       .push(function () {
-        return waitForUpdatedOpenIndexedDB(context._database_name,
+        return waitForOpenIndexedDB(context._database_name, context._version,
           context._index_keys, function (db) {
             return waitForTransaction(db, ["index-store"], "readwrite",
               function (tx) {
