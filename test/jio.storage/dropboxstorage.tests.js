@@ -1003,8 +1003,12 @@
         type: "dropbox",
         access_token: token
       });
+      this.spy_ajax = sinon.spy(jIO.util, "ajax");
     },
     teardown: function () {
+      this.spy_ajax.restore();
+      delete this.spy_ajax;
+
       this.server.restore();
       delete this.server;
     }
@@ -1075,7 +1079,7 @@
 
   test("getAttachment document", function () {
     var url = "https://content.dropboxapi.com/2/files/download",
-      server = this.server;
+      context = this;
     this.server.respondWith("POST", url, [200, {
       "Content-Type": "text/xplain"
     }, "foo\nbaré"]);
@@ -1088,20 +1092,20 @@
       "attachment1"
     )
       .then(function (result) {
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "POST");
-        equal(server.requests[0].url, url);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, "foo\nbaré");
-        deepEqual(server.requests[0].requestHeaders, {
+        equal(context.spy_ajax.callCount, 1);
+        equal(context.spy_ajax.firstCall.args[0].type, "POST");
+        equal(context.spy_ajax.firstCall.args[0].url, url);
+        equal(context.spy_ajax.firstCall.args[0].data, undefined);
+        equal(context.spy_ajax.firstCall.args[0].dataType, 'blob');
+        deepEqual(context.spy_ajax.firstCall.args[0].xhrFields, undefined);
+        deepEqual(context.spy_ajax.firstCall.args[0].headers, {
           "Authorization": "Bearer sample_token",
-          "Content-Type": "text/plain;charset=utf-8",
           "Dropbox-API-Arg": '{"path":"/getAttachment1/attachment1"}'
         });
 
         ok(result instanceof Blob, "Data is Blob");
         deepEqual(result.type, "text/xplain", "Check mimetype");
+
         return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
