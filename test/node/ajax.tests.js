@@ -192,4 +192,36 @@
         start();
       });
   });
+
+  test("Blob responseType handling", function () {
+    stop();
+    expect(6);
+
+    var url = "https://www.example.org/com/bar",
+      server = this.server;
+
+    this.server.respondWith("POST", url, [200, {}, 'OK']);
+
+    return new RSVP.Queue()
+      .then(function () {
+        return jIO.util.ajax({
+          type: 'POST',
+          url: url,
+          dataType: 'blob'
+        });
+      })
+      .then(function (evt) {
+        equal(server.requests.length, 1);
+        equal(server.requests[0].method, "POST");
+        equal(server.requests[0].url, url);
+        equal(server.requests[0].responseType, 'arraybuffer');
+        equal(server.requests[0].responseText, 'OK');
+
+        ok(evt.target.response instanceof Blob, evt.target.response);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 }(jIO, QUnit, FormData, Blob, ArrayBuffer));
