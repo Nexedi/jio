@@ -56,7 +56,10 @@
     }
     return result
       .push(function (evt) {
-        evt.target.response = new Blob([evt.target.response]);
+        evt.target.response = new Blob(
+          [evt.target.response || evt.target.responseText],
+          {type: evt.target.getResponseHeader('Content-Type')}
+        );
         return evt;
       });
   }
@@ -65,13 +68,13 @@
   jIO.util.ajax = function ajax(param) {
     var result,
       need_convertion = (param.dataType === 'blob');
+    // Copy the param dict document (no need for deep copy) to
+    // allow tests to check them
+    param = Object.assign({}, param);
     if (need_convertion) {
       param.dataType = 'arraybuffer';
     }
     if (param.data instanceof Blob) {
-      // Copy the param dict document (no need for deep copy) to
-      // allow tests to check them
-      param = Object.assign({}, param);
       // Blob is not supported by xhr2, so convert to ArrayBuffer instead
       result = new RSVP.Queue()
         .push(function () {
@@ -82,9 +85,6 @@
           return originalAjax(param);
         });
     } else if (param.data instanceof FormData) {
-      // Copy the param dict document (no need for deep copy) to
-      // allow tests to check them
-      param = Object.assign({}, param);
       // Implement minimal FormData for erp5storage
       if (!param.hasOwnProperty('headers')) {
         param.headers = {};
