@@ -41,14 +41,39 @@
   };
   window.FormData = FormData;
 
+  function convertToBlob(promise, convert) {
+    if (!convert) {
+      return promise;
+    }
+    var result;
+    if (promise instanceof RSVP.Queue) {
+      result = promise;
+    } else {
+      result = new RSVP.Queue()
+        .push(function () {
+          return promise;
+        });
+    }
+    return result
+      .push(function (evt) {
+        evt.target.response = new Blob([evt.target.response]);
+        return evt;
+      });
+  }
+
   originalAjax = jIO.util.ajax;
   jIO.util.ajax = function ajax(param) {
+    var result,
+      need_convertion = (param.dataType === 'blob');
+    if (need_convertion) {
+      param.dataType = 'arraybuffer';
+    }
     if (param.data instanceof Blob) {
       // Copy the param dict document (no need for deep copy) to
       // allow tests to check them
       param = Object.assign({}, param);
       // Blob is not supported by xhr2, so convert to ArrayBuffer instead
-      return new RSVP.Queue()
+      result = new RSVP.Queue()
         .push(function () {
           return jIO.util.readBlobAsArrayBuffer(param.data);
         })
@@ -56,9 +81,7 @@
           param.data = evt.target.result;
           return originalAjax(param);
         });
-    }
-
-    if (param.data instanceof FormData) {
+    } else if (param.data instanceof FormData) {
       // Copy the param dict document (no need for deep copy) to
       // allow tests to check them
       param = Object.assign({}, param);
@@ -74,10 +97,12 @@
                                       param.data.boundary;
       param.data.body += '--' + param.data.boundary + '--\r\n';
       param.data = param.data.body;
-      return originalAjax(param);
+      result = originalAjax(param);
+    } else {
+      result = originalAjax(param);
     }
 
-    return originalAjax(param);
+    return convertToBlob(result, need_convertion);
   };
 
 }(window, window.jIO, window.Blob, window.RSVP));
