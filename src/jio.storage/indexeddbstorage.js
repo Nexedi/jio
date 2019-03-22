@@ -97,13 +97,18 @@
   }
 
   function waitForOpenIndexedDB(db_name, callback) {
+    var request;
+
+    function canceller() {
+      if ((request !== undefined) && (request.result !== undefined)) {
+        request.result.close();
+      }
+    }
+
     function resolver(resolve, reject) {
       // Open DB //
-      var request = indexedDB.open(db_name);
+      request = indexedDB.open(db_name);
       request.onerror = function (error) {
-        if (request.result) {
-          request.result.close();
-        }
         if ((error !== undefined) &&
             (error.target instanceof IDBOpenDBRequest) &&
             (error.target.error instanceof DOMError)) {
@@ -115,17 +120,14 @@
       };
 
       request.onabort = function () {
-        request.result.close();
         reject("Aborting connection to: " + db_name);
       };
 
       request.ontimeout = function () {
-        request.result.close();
         reject("Connection to: " + db_name + " timeout");
       };
 
       request.onblocked = function () {
-        request.result.close();
         reject("Connection to: " + db_name + " was blocked");
       };
 
@@ -133,26 +135,28 @@
       request.onupgradeneeded = handleUpgradeNeeded;
 
       request.onversionchange = function () {
-        request.result.close();
         reject(db_name + " was upgraded");
       };
 
       request.onsuccess = function () {
+        var result;
+        try {
+          result = callback(request.result);
+        } catch (error) {
+          reject(error);
+        }
         return new RSVP.Queue()
           .push(function () {
-            return callback(request.result);
+            return result;
           })
-          .push(function (result) {
-            request.result.close();
-            resolve(result);
-          }, function (error) {
-            request.result.close();
+          .push(resolve, function (error) {
+            canceller();
             reject(error);
           });
       };
     }
 
-    return new RSVP.Promise(resolver);
+    return new RSVP.Promise(resolver, canceller);
   }
 
   function waitForTransaction(db, stores, flag, callback) {
@@ -182,14 +186,8 @@
             reject(error);
           });
       };
-      tx.onerror = function (error) {
-        canceller();
-        reject(error);
-      };
-      tx.onabort = function (evt) {
-        reject(evt.target);
-      };
-      return tx;
+      tx.onerror = reject;
+      tx.onabort = reject;
     }
     return new RSVP.Promise(resolver, canceller);
   }
