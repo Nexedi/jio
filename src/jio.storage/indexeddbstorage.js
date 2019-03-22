@@ -194,10 +194,7 @@
           });
       };
       tx.onerror = reject;
-      // tx.onabort = reject;
-      tx.onabort = function (evt) {
-        reject(evt.target);
-      };
+      tx.onabort = reject;
     }
     return new RSVP.Promise(resolver, canceller);
   }
