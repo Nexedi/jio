@@ -107,7 +107,7 @@
 
     function resolver(resolve, reject) {
       // Open DB //
-      request = indexedDB.open(db_name, 2);
+      request = indexedDB.open(db_name);
       request.onerror = function (error) {
         canceller();
         if ((error !== undefined) &&
