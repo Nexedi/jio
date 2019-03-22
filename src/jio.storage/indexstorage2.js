@@ -38,18 +38,67 @@
     this._sub_storage = jIO.createJIO(description.sub_storage);
     this._database_name = "jio:" + description.database;
     this._index_keys = description.index_keys || [];
-    this._use_sub_storage_query = description.use_sub_storage_query || false;
-    this._use_sub_storage_query_partial = true;
-    if (description.use_sub_storage_query_partial !== undefined) {
-      this._use_sub_storage_query_partial =
-        description.use_sub_storage_query_partial;
-    }
     this._version = description.version || undefined;
   }
 
+  function convertToObject(list, key) {
+    var i, obj = {};
+    for (i = 0; i < list.length; i += 1) {
+      obj[list[i][key]] = list[i];
+    }
+    return obj;
+  }
+
+  function keyCount(obj) {
+    return Object.keys(obj).length;
+  }
+
+  function union(list) {
+    var result, i, j;
+    if (list.length === 0) {
+      return [];
+    }
+    result = convertToObject(list[0], 'id');
+    for (i = 1; i < list.length; i += 1) {
+      for (j = 0; j < list[i].length; j += 1) {
+        if (result[list[i][j].id]) {
+          if (keyCount(result[list[i][j].id].doc) <
+              keyCount(list[i][j].doc)) {
+            result[list[i][j].id] = list[i][j];
+          }
+        } else {
+          result[list[i][j].id] = list[i][j];
+        }
+      }
+    }
+    return Object.values(result);
+  }
+
+  function intersect(list) {
+    var result, temp = {}, i, j;
+    if (list.length === 0) {
+      return [];
+    }
+    result = convertToObject(list[0], 'id');
+    for (i = 1; i < list.length; i += 1) {
+      for (j = 0; j < list[i].length; j += 1) {
+        if (result[list[i][j].id]) {
+          if (keyCount(result[list[i][j].id].doc) <
+              keyCount(list[i][j].doc)) {
+            temp[list[i][j].id] = list[i][j];
+          } else {
+            temp[list[i][j].id] = result[list[i][j].id];
+          }
+        }
+      }
+      result = temp;
+      temp = {};
+    }
+    return Object.values(result);
+  }
+
   IndexStorage2.prototype.hasCapacity = function (name) {
-    var this_storage_capacity_list = ["limit",
-                                      "select",
+    var this_storage_capacity_list = ["select",
                                       "list",
                                       "query",
                                       "sort",
@@ -59,27 +108,6 @@
       return true;
     }
   };
-
-  function compareSortOn(value1, value2, sort_on) {
-    var current_compare = sort_on.slice(0, 1)[0],
-      remaining_compare = sort_on.slice(1);
-    if (value1[current_compare[0]] === value2[current_compare[0]]) {
-      if (remaining_compare.length === 0) {
-        return 0;
-      }
-      return compareSortOn(value1, value2, remaining_compare);
-    }
-    if (value1[current_compare[0]] > value2[current_compare[0]]) {
-      if (current_compare[1] === 'ascending') {
-        return 1;
-      }
-      return -1;
-    }
-    if (current_compare[1] === 'descending') {
-      return 1;
-    }
-    return -1;
-  }
 
   function handleUpgradeNeeded(evt, index_keys) {
     var db = evt.target.result, store, i, current_indices;
@@ -93,6 +121,17 @@
       store = evt.target.transaction.objectStore('index-store');
     }
     current_indices = new Set(store.indexNames);
+    for (i = 0; i < index_keys.length; i += 1) {
+      if (!(current_indices.has(index_keys[i]))) {
+        db.deleteObjectStore("index-store");
+        store = db.createObjectStore("index-store", {
+          keyPath: "id",
+          autoIncrement: false
+        });
+        current_indices = new Set();
+        break;
+      }
+    }
     for (i = 0; i < index_keys.length; i += 1) {
       if (!(current_indices.has('Index-' + index_keys[i]))) {
         store.createIndex('Index-' + index_keys[i],
@@ -134,8 +173,9 @@
         reject("Connection to: " + db_name + " timeout");
       };
 
-     // request.onblocked = function () {
-      //  request.result.close();
+    //  request.onblocked = function (evt) {
+    //    console.log("evt", evt);
+    //    request.result.close();
     //    reject("Connection to: " + db_name + " was blocked");
     //  };
 
@@ -215,55 +255,52 @@
 
   function filterDocValues(doc, keys) {
     var filtered_doc = {}, i;
-    for (i = 0; i < keys.length; i += 1) {
-      if (doc[keys[i]]) {
+    if (keys) {
+      for (i = 0; i < keys.length; i += 1) {
         filtered_doc[keys[i]] = doc[keys[i]];
-      } else {
-        throw new jIO.util.jIOError(
-          "Index key '" + keys[i] + "' not found in document",
-          404
-        );
       }
+      return filtered_doc;
     }
-    return filtered_doc;
+    return doc;
   }
 
-  IndexStorage2.prototype._runQuery = function (index, value, limit, sort_on) {
+  IndexStorage2.prototype.forceIncludeDocs = function (result) {
+    var i, get_list = {}, context = this;
+    return RSVP.Queue()
+      .push(function () {
+        for (i = 0; i < result.length; i += 1) {
+          if (!(result[i].include)) {
+            get_list[result[i].id] = context._sub_storage.get(result[i].id);
+          }
+        }
+        return RSVP.hash(get_list);
+      })
+      .push(function (get_result) {
+        var keys;
+        result = convertToObject(result, 'id');
+        keys = Object.keys(get_result);
+        for (i = 0; i < keys.length; i += 1) {
+          result[keys[i]].doc = get_result[keys[i]];
+        }
+        result = Object.values(result);
+        return result;
+      })
+      .push(function () {
+        return result;
+      });
+  };
+
+  IndexStorage2.prototype._runQuery = function (index, value) {
     var context = this;
     return new RSVP.Queue()
       .push(function () {
-        if ((context._index_keys.indexOf(index) === -1)) {
-          if (context._use_sub_storage_query_partial) {
-            try {
-              context._sub_storage.hasCapacity("query");
-            } catch (error) {
-              if (error instanceof jIO.util.jIOError &&
-                  error.status_code === 501) {
-                throw new jIO.util.jIOError("No index for '" + index +
-                  "' key and substorage doesn't support queries", 404);
-              }
-              throw error;
-            }
-            return context._sub_storage.buildQuery(
-              { "query": index + ":" + value }
-            );
-          }
-          throw new jIO.util.jIOError("No index for '" + index +
-            "' key and checking the substorage for partial queries is not set",
-            404);
-        }
         return waitForOpenIndexedDB(context._database_name, context._version,
           context._index_keys, function (db) {
             return waitForTransaction(db, ["index-store"], "readonly",
               function (tx) {
                 return waitForIDBRequest(tx.objectStore("index-store")
-                  .index("Index-" + index).getAll(value, limit))
+                  .index("Index-" + index).getAll(value))
                   .then(function (evt) {
-                    if (sort_on) {
-                      evt.target.result.sort(function (v1, v2) {
-                        return compareSortOn(v1.doc, v2.doc, sort_on);
-                      });
-                    }
                     return evt.target.result;
                   });
               });
@@ -271,114 +308,70 @@
       });
   };
 
-  IndexStorage2.prototype._processQueryObject = function (object, limit,
-    sort_on) {
-    var promise_list = [], context = this, i, j, query_result = new Set();
+  IndexStorage2.prototype._processQueryObject = function (object,
+    include_docs) {
+    var promise_list = [], context = this, i;
+    include_docs = include_docs || false;
     return RSVP.Queue()
       .push(function () {
         if (object.type === "simple") {
-          return context._runQuery(object.key, object.value, limit, sort_on);
+          if ((context._index_keys.indexOf(object.key) === -1)) {
+            return context._sub_storage.allDocs({
+              "query": object.key + ":" + object.value,
+              "include_docs": include_docs
+            })
+              .push(function (result) {
+                if (include_docs) {
+                  result.data.rows.map(function (v) {
+                    v.include = true;
+                  });
+                }
+                return result.data.rows;
+              });
+          }
+          return context._runQuery(object.key, object.value);
         }
         if (object.type === "complex") {
           for (i = 0; i < object.query_list.length; i += 1) {
             promise_list.push(context
-              ._processQueryObject(object.query_list[i]));
+              ._processQueryObject(object.query_list[i], include_docs));
           }
           return RSVP.all(promise_list)
             .then(function (result) {
               if (object.operator === "OR") {
-                for (i = 0; i < result.length; i += 1) {
-                  for (j = 0; j < result[i].length; j += 1) {
-                    query_result.add(result[i][j]);
-                  }
-                }
-                return Array.from(query_result);
+                return union(result);
               }
               if (object.operator === "AND") {
-                var temp_set = new Set();
-                for (i = 0; i < result[0].length; i += 1) {
-                  query_result.add(result[0][i].id);
-                }
-                for (i = 1; i < result.length; i += 1) {
-                  for (j = 0; j < result[i].length; j += 1) {
-                    if (query_result.has(result[i][j].id)) {
-                      temp_set.add(result[i][j]);
-                    }
-                  }
-                  query_result = temp_set;
-                  temp_set = new Set();
-                }
-                return Array.from(query_result);
+                return intersect(result);
               }
             });
         }
-      });
+      })
   };
 
   IndexStorage2.prototype.buildQuery = function (options) {
-    var context = this, substorage = this._sub_storage;
-    try {
-      if (substorage.hasCapacity("list") &&
-          ((options.query === undefined) ||
-           (context._use_sub_storage_query &&
-               substorage.hasCapacity("query"))) &&
-          ((options.sort_on === undefined) ||
-            (substorage.hasCapacity("sort"))) &&
-          ((options.select_list === undefined) ||
-            (substorage.hasCapacity("select"))) &&
-          ((options.limit === undefined) ||
-            (substorage.hasCapacity("limit")))  &&
-          ((options.include_docs === undefined ||
-            (substorage.hasCapacity("include"))))) {
-        return substorage.buildQuery(options);
-      }
-    } catch (error) {
-      if (!((error instanceof jIO.util.jIOError) &&
-          (error.status_code === 501))) {
-        throw error;
-      }
-    }
+    var context = this;
     if (options.query) {
       return this._processQueryObject(parseStringToObject(options.query),
-        options.limit, options.sort_on)
+        options.include_docs)
         .push(function (result) {
           if (options.include_docs) {
-            options.select_list = context._index_keys;
+            result = context.forceIncludeDocs(result);
+            options.select_list = undefined;
+          } else {
+            options.select_list = options.select_list || [];
           }
+          return result;
+        })
+        .push(function (result) {
           return result.map(function (value) {
             return {
               "id": value.id,
-              "value": filterDocValues(value.doc,
-                options.select_list || [])
+              "value": filterDocValues(value.doc, options.select_list)
             };
           });
         });
     }
-    return waitForOpenIndexedDB(context._database_name, context._version,
-      context._index_keys, function (db) {
-        return waitForTransaction(db, ["index-store"], "readonly",
-          function (tx) {
-            return waitForIDBRequest(tx.objectStore("index-store")
-              .getAll(undefined, options.limit))
-              .then(function (evt) {
-                if (options.sort_on) {
-                  evt.target.result.sort(function (v1, v2) {
-                    return compareSortOn(v1.doc, v2.doc, options.sort_on);
-                  });
-                }
-                if (options.include_docs) {
-                  options.select_list = context._index_keys;
-                }
-                return evt.target.result.map(function (value) {
-                  return {
-                    "id": value.id,
-                    "value": filterDocValues(value.doc,
-                      options.select_list || [])
-                  };
-                });
-              });
-          });
-      });
   };
 
   IndexStorage2.prototype.get = function () {
@@ -411,7 +404,7 @@
     var context = this;
     return context._sub_storage.post(value)
       .push(function (id) {
-        context._put(id, value);
+        return context._put(id, value);
       });
   };
 
@@ -441,6 +434,18 @@
   IndexStorage2.prototype.removeAttachment = function () {
     return this._sub_storage.removeAttachment.apply(this._sub_storage,
       arguments);
+  };
+
+  IndexStorage2.prototype.repair = function () {
+    var context = this, promise_list = [], i;
+    return context._sub_storage.allDocs()
+      .push(function (result) {
+        for (i = 0; i < result.data.total_rows; i += 1) {
+          promise_list.push(context.put(result.data.rows[i].id,
+            filterDocValues(result.data.rows[i].value, context._index_keys)));
+        }
+        return RSVP.all(promise_list);
+      });
   };
 
   jIO.addStorage("index2", IndexStorage2);
