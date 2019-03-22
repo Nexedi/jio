@@ -107,8 +107,9 @@
 
     function resolver(resolve, reject) {
       // Open DB //
-      request = indexedDB.open(db_name);
+      request = indexedDB.open(db_name, 2);
       request.onerror = function (error) {
+        canceller();
         if ((error !== undefined) &&
             (error.target instanceof IDBOpenDBRequest) &&
             (error.target.error instanceof DOMError)) {
@@ -120,6 +121,7 @@
       };
 
       request.onabort = function () {
+        canceller();
         reject("Aborting connection to: " + db_name);
       };
 
@@ -128,6 +130,7 @@
       };
 
       request.onblocked = function () {
+        canceller();
         reject("Connection to: " + db_name + " was blocked");
       };
 
@@ -135,6 +138,7 @@
       request.onupgradeneeded = handleUpgradeNeeded;
 
       request.onversionchange = function () {
+        canceller();
         reject(db_name + " was upgraded");
       };
 
@@ -149,7 +153,10 @@
           .push(function () {
             return result;
           })
-          .push(resolve, function (error) {
+          .push(function (final_result) {
+            canceller();
+            resolve(final_result);
+          }, function (error) {
             canceller();
             reject(error);
           });
@@ -187,7 +194,10 @@
           });
       };
       tx.onerror = reject;
-      tx.onabort = reject;
+      // tx.onabort = reject;
+      tx.onabort = function (evt) {
+        reject(evt.target);
+      };
     }
     return new RSVP.Promise(resolver, canceller);
   }
