@@ -194,6 +194,7 @@
     );
 
     ok(this.jio.hasCapacity("query"));
+    ok(this.jio.hasCapacity("limit"));
     ok(this.jio.hasCapacity("sort"));
   });
 
@@ -241,6 +242,14 @@
   // indexStorage2.buildQuery
   /////////////////////////////////////////////////////////////////
   module("indexStorage2.buildQuery", {
+    setup: function () {
+      DummyStorage3.prototype.hasCapacity = function (name) {
+        return (name === 'list') || (name === 'include');
+      };
+      DummyStorage3.prototype.buildQuery = function () {
+        return [];
+      };
+    },
     teardown: function () {
       deleteIndexedDB(this.jio);
     }
@@ -257,24 +266,22 @@
       }
     });
     stop();
-    expect(3);
+    expect(2);
 
     DummyStorage3.prototype.put = function (id) {
       return id;
     };
 
-    DummyStorage3.prototype.hasCapacity = function (name) {
-      return name === "list";
-    };
-
     DummyStorage3.prototype.buildQuery = function (options) {
-      deepEqual(options, {});
-      return [
-        {id: "2", value: {}},
-        {id: "32", value: {}},
-        {id: "16", value: {}},
-        {id: "21", value: {}}
-      ];
+      if (options.include_docs !== true) {
+        return [
+          {id: "2", value: {}},
+          {id: "32", value: {}},
+          {id: "16", value: {}},
+          {id: "21", value: {}}
+        ];
+      }
+      return [];
     };
 
     RSVP.all([
@@ -322,6 +329,9 @@
     };
 
     DummyStorage3.prototype.buildQuery = function (options) {
+      if (options.include_docs === true) {
+        return [];
+      }
       deepEqual(options, {include_docs: false, select_list: ["a", "c"],
         limit: 3, sort_on: [["a", "descending"], ["b", "ascending"]]});
       return [
@@ -463,10 +473,6 @@
       deepEqual(value, {"a": "3", "b": "2"});
       return id;
     };
-    DummyStorage3.prototype.hasCapacity = function (capacity) {
-      return capacity === 'list';
-    };
-    DummyStorage3.prototype.buildQuery = undefined;
 
     context.jio.put("32", {"a": "3", "b": "2"})
       .then(function () {
@@ -476,6 +482,113 @@
         equal(error.status_code, 501);
         equal(error.message,
           "Capacity 'query' is not implemented on 'dummystorage3'");
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("Repair on storage without include_docs support", function () {
+    var context = this, fake_data;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "c"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(3);
+
+    fake_data = {
+      "1": {a: "id54", b: 2, c: "night"},
+      "4": {a: "vn92", b: 7, c: "matter"},
+      "9": {a: "ru23", b: 3, c: "control"}
+    };
+
+    DummyStorage3.prototype.hasCapacity = function (name) {
+      return name === 'list';
+    };
+    DummyStorage3.prototype.put = function (id, value) {
+      fake_data[id] = value;
+      return id;
+    };
+    DummyStorage3.prototype.get = function (id) {
+      return fake_data[id];
+    };
+    DummyStorage3.prototype.buildQuery = function (options) {
+      deepEqual(options, {});
+      var keys = Object.keys(fake_data);
+      return keys.map(function (v) { return {id: v, value: {}}; });
+    };
+
+    RSVP.all([
+      context.jio.put("3", {a: "ab43", b: 9, c: "absorb"}),
+      context.jio.put("5", {a: "gu31", b: 5, c: "control"}),
+      context.jio.put("7", {a: "zf76", b: 3, c: "rules"}),
+      context.jio.put("6", {a: "cc92", b: 6, c: "afraid"})
+    ])
+      .then(function () {
+        return context.jio.allDocs({query: 'c:"control"'});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 2);
+        deepEqual(result.data.rows.sort(idCompare), [{id: "5", value: {}},
+          {id: "9", value: {}}]);
+      })
+      .fail(function (error) {
+        console.log(error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("Repair on storage with include_docs support", function () {
+    var context = this, fake_data;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "c"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(3);
+
+    fake_data = [
+      {id: "1", doc: {a: "id54", b: 2, c: "night"}},
+      {id: "4", doc: {a: "vn92", b: 7, c: "matter"}},
+      {id: "9", doc: {a: "ru23", b: 3, c: "control"}}
+    ];
+
+    DummyStorage3.prototype.put = function (id, value) {
+      fake_data.push({id: id, doc: value});
+      return id;
+    };
+    DummyStorage3.prototype.buildQuery = function (options) {
+      deepEqual(options, {include_docs: true});
+      return fake_data;
+    };
+
+    RSVP.all([
+      context.jio.put("3", {a: "ab43", b: 9, c: "absorb"}),
+      context.jio.put("5", {a: "gu31", b: 5, c: "control"}),
+      context.jio.put("7", {a: "zf76", b: 3, c: "rules"}),
+      context.jio.put("6", {a: "cc92", b: 6, c: "afraid"})
+    ])
+      .then(function () {
+        return context.jio.allDocs({query: 'c:"control"'});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 2);
+        deepEqual(result.data.rows.sort(idCompare), [{id: "5", value: {}},
+          {id: "9", value: {}}]);
+      })
+      .fail(function (error) {
+        console.log(error);
       })
       .always(function () {
         start();
@@ -542,124 +655,21 @@
     DummyStorage3.prototype.put = function (id) {
       return id;
     };
-    DummyStorage3.prototype.hasCapacity = function (name) {
-      return (name === 'list');
-    };
 
     RSVP.all([
       context.jio.put("1", {"a": "55", "b": "2"}),
       context.jio.put("2", {"a": "98", "b": "2"}),
       context.jio.put("3", {"a": "75", "b": "2"}),
       context.jio.put("8", {"a": "43", "b": "3"}),
-      context.jio.put("6", {"a": "21", "b": "3"}),
-      context.jio.put("16", {"a": "39", "b": "3"}),
-      context.jio.put("11", {"a": "16", "b": "3"})
+      context.jio.put("6", {"a": "21", "b": "2"}),
+      context.jio.put("16", {"a": "39", "b": "2"}),
+      context.jio.put("11", {"a": "16", "b": "2"})
     ])
       .then(function () {
         return context.jio.allDocs({limit: 4, query: "b:2"});
       })
       .then(function (result) {
-        equal(result.data.total_rows, 3);
-      })
-      .fail(function (error) {
-        console.log(error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("select_list option is preset", function () {
-    var context = this;
-    context.jio = jIO.createJIO({
-      type: "index2",
-      database: "index2_test",
-      index_keys: ["a", "b", "c"],
-      sub_storage: {
-        type: "dummystorage3"
-      }
-    });
-    stop();
-    expect(2);
-    DummyStorage3.prototype.put = function (id) {
-      return id;
-    };
-    DummyStorage3.prototype.hasCapacity = function (name) {
-      return (name === 'list');
-    };
-    RSVP.all([
-      context.jio.put("1", {"a": "55", "b": "2", "c": "try"}),
-      context.jio.put("2", {"a": "98", "b": "2", "c": "adverse"}),
-      context.jio.put("3", {"a": "75", "b": "2", "c": "invite"}),
-      context.jio.put("8", {"a": "43", "b": "3", "c": "absolve"}),
-      context.jio.put("6", {"a": "21", "b": "2", "c": "defy"}),
-      context.jio.put("4", {"a": "65", "b": "3", "c": "odd"})
-    ])
-      .then(function () {
-        return context.jio.allDocs({select_list: ["a", "c"],
-          query: "b:2"});
-      })
-      .then(function (result) {
         equal(result.data.total_rows, 4);
-        deepEqual(result.data.rows.sort(idCompare), [
-          {id: "1", value: {"a": "55", "c": "try"}},
-          {id: "2", value: {"a": "98", "c": "adverse"}},
-          {id: "3", value: {"a": "75", "c": "invite"}},
-          {id: "6", value: {"a": "21", "c": "defy"}}
-        ]);
-      })
-      .fail(function (error) {
-        console.log(error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("Select_list key is not present in the index", function () {
-    var context = this;
-    context.jio = jIO.createJIO({
-      type: "index2",
-      database: "index2_test",
-      index_keys: ["a", "c"],
-      sub_storage: {
-        type: "dummystorage3"
-      }
-    });
-    stop();
-    expect(3);
-
-    DummyStorage3.prototype.put = function (id) {
-      return id;
-    };
-    DummyStorage3.prototype.hasCapacity = function (name) {
-      return (name === 'list') || (name === 'query') || (name === 'select');
-    };
-    DummyStorage3.prototype.buildQuery = function (options) {
-      deepEqual(options, {select_list: ["a", "b"], query: "a:55"});
-      return [
-        {id: "1", value: {"a": "55", "b": "2"}},
-        {id: "2", value: {"a": "55", "b": "5"}},
-        {id: "3", value: {"a": "55", "b": "1"}}
-      ];
-    };
-
-    RSVP.all([
-      context.jio.put("1", {"a": "55", "b": "2", "c": "try"}),
-      context.jio.put("2", {"a": "55", "b": "5", "c": "adverse"}),
-      context.jio.put("3", {"a": "55", "b": "1", "c": "invite"})
-    ])
-      .then(function () {
-        return context.jio.allDocs({select_list: ["a", "b"],
-          query: "a:55"});
-      })
-      .then(function (result) {
-        equal(result.data.total_rows, 3);
-        deepEqual(result.data.rows.sort(idCompare), [
-          {id: "1", value: {"a": "55", "b": "2"}},
-          {id: "2", value: {"a": "55", "b": "5"}},
-          {id: "3", value: {"a": "55", "b": "1"}}
-        ]);
       })
       .fail(function (error) {
         console.log(error);
@@ -684,18 +694,18 @@
     expect(8);
 
     dummy_data = {
-      "32": {id: "32", value: {"a": "3", "b": "2", "c": "inverse"}},
-      "5": {id: "5", value: {"a": "6", "b": "2", "c": "strong"}},
-      "14": {id: "14", value: {"a": "67", "b": "3", "c": "disolve"}}
+      "32": {id: "32", doc: {"a": "3", "b": "2", "c": "inverse"}},
+      "5": {id: "5", doc: {"a": "6", "b": "2", "c": "strong"}},
+      "14": {id: "14", doc: {"a": "67", "b": "3", "c": "disolve"}}
     };
 
     DummyStorage3.prototype.put = function (id, value) {
-      dummy_data[id] = {id: id, value: value};
+      dummy_data[id] = {id: id, doc: value};
       return id;
     };
 
     DummyStorage3.prototype.hasCapacity = function (name) {
-      return (name === 'list');
+      return (name === 'list') || (name === 'include');
     };
 
     DummyStorage3.prototype.buildQuery = function () {
@@ -937,6 +947,14 @@
       return id;
     };
 
+    DummyStorage3.prototype.hasCapacity = function (name) {
+      return (name === 'list') || (name === 'include');
+    };
+
+    DummyStorage3.prototype.buildQuery = function () {
+      return [];
+    };
+
     RSVP.all([
       context.jio.put("32", {"a": "894", "b": "inversion", "c": 2}),
       context.jio.put("33", {"a": "65", "b": "division", "c": 4}),
@@ -1019,6 +1037,14 @@
       if (value.a === "37") {
         return "3";
       }
+    };
+
+    DummyStorage3.prototype.hasCapacity = function (name) {
+      return (name === 'list') || (name === 'include');
+    };
+
+    DummyStorage3.prototype.buildQuery = function () {
+      return [];
     };
 
     RSVP.all([
