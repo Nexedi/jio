@@ -35,6 +35,7 @@
       throw new TypeError("IndexStorage2 'index_keys' description property " +
         "must be an Array");
     }
+    this._sub_storage_description = description.sub_storage;
     this._sub_storage = jIO.createJIO(description.sub_storage);
     this._database_name = "jio:" + description.database;
     this._index_keys = description.index_keys || [];
@@ -68,38 +69,6 @@
     return doc;
   }
 
-  function getDocs(storage) {
-    var promise_hash = {}, i;
-    try {
-      storage.hasCapacity('include');
-      return storage.allDocs({include_docs: true});
-    } catch (error) {
-      if ((error instanceof jIO.util.jIOError) &&
-          (error.status_code === 501)) {
-        storage.hasCapacity('list');
-        return storage.allDocs()
-          .push(function (result) {
-            var id;
-            for (i = 0; i < result.data.total_rows; i += 1) {
-              id = result.data.rows[i].id;
-              promise_hash[id] = storage.get(id);
-            }
-            return RSVP.hash(promise_hash);
-          })
-          .push(function (temp_result) {
-            var final_result = {data: {rows: []}}, keys;
-            keys = Object.keys(temp_result);
-            for (i = 0; i < keys.length; i += 1) {
-              final_result.data.rows.push({id: keys[i],
-                doc: temp_result[keys[i]]});
-            }
-            final_result.data.total_rows = final_result.data.rows.length;
-            return final_result;
-          });
-      }
-      throw error;
-    }
-  }
   function waitForIDBRequest(request) {
     return new RSVP.Promise(function (resolve, reject) {
       request.onerror = reject;
@@ -107,10 +76,55 @@
     });
   }
 
-  function handleUpgradeNeeded(evt, index_keys, repair_storage) {
+  function VirtualIDB(description) {
+    this._write_operations = description.write_operations;
+  }
+
+  VirtualIDB.prototype.put = function () {
+    this._write_operations.put.push(arguments);
+  };
+
+  VirtualIDB.prototype.hasCapacity = function (name) {
+    return (name === 'list') || (name === 'select');
+  };
+
+  VirtualIDB.prototype.get = function (id) {
+    throw new jIO.util.jIOError("Cannot find document: " + id, 404);
+  };
+
+  VirtualIDB.prototype.buildQuery = function () {
+    return [];
+  };
+
+  jIO.addStorage("virtualidb", VirtualIDB);
+
+  function getVirtualIDB(write_operations, sub_storage_description) {
+    return jIO.createJIO({
+      type: "replicate",
+      local_sub_storage: sub_storage_description,
+      check_local_modification: false,
+      check_local_deletion: false,
+      check_local_creation: true,
+      check_remote_modification: false,
+      check_remote_creation: false,
+      check_remote_deletion: false,
+      remote_sub_storage: {
+        type: "virtualidb",
+        write_operations: write_operations,
+      },
+      signature_sub_storage: {
+        type: "query",
+        sub_storage: {
+          type: "memory"
+        }
+      }
+    });
+  }
+
+  function handleUpgradeNeeded(evt, index_keys, sub_storage_description) {
     var db = evt.target.result, store, i, current_indices, required_indices,
-      put_promise_list = [], docs_promise,
-      repeatUntilPromiseFulfilled;
+      put_promise_list = [], repair_promise, repeatUntilPromiseFulfilled,
+      write_operations;
     required_indices = new Set(index_keys.map(function (name) {
       return 'Index-' + name;
     }));
@@ -142,35 +156,34 @@
           'doc.' + index_keys[i], { unique: false });
       }
 
-      docs_promise = getDocs(repair_storage);
+      write_operations = {put: []};
+      repair_promise = getVirtualIDB(write_operations, sub_storage_description)
+        .repair();
       repeatUntilPromiseFulfilled = function repeatUntilPromiseFulfilled(req) {
         req.onsuccess = function () {
-          if (docs_promise.isRejected) {
-            throw new jIO.util.jIOError(docs_promise.rejectedReason.message,
-              docs_promise.rejectedReason.status_code);
+          if (repair_promise.isRejected) {
+            evt.target.transaction.abort();
+            return;
           }
-          if (docs_promise.isFulfilled) {
-            for (i = 0; i < docs_promise.fulfillmentValue.data.total_rows;
-                i += 1) {
+          if (repair_promise.isFulfilled) {
+            for (i = 0; i < write_operations.put.length; i += 1) {
               put_promise_list.push(waitForIDBRequest(store.put({
-                id: docs_promise.fulfillmentValue.data.rows[i].id,
-                doc: filterDocValues(
-                  docs_promise.fulfillmentValue.data.rows[i].doc,
-                  index_keys
-                )
+                id: write_operations.put[i][0],
+                doc: filterDocValues(write_operations.put[i][1], index_keys)
               })));
             }
+            write_operations.put = [];
             return RSVP.all(put_promise_list);
           }
-          repeatUntilPromiseFulfilled(store.getAll());
+          return repeatUntilPromiseFulfilled(store.getAll());
         };
       };
       repeatUntilPromiseFulfilled(store.getAll());
     }
   }
 
-  function waitForOpenIndexedDB(db_name, version, index_keys, repair_storage,
-    callback) {
+  function waitForOpenIndexedDB(db_name, version, index_keys,
+    sub_storage_description, callback) {
     function resolver(resolve, reject) {
       // Open DB //
       var request = indexedDB.open(db_name, version);
@@ -205,7 +218,7 @@
 
       // Create DB if necessary //
       request.onupgradeneeded = function (evt) {
-        handleUpgradeNeeded(evt, index_keys, repair_storage);
+        handleUpgradeNeeded(evt, index_keys, sub_storage_description);
       };
 
       request.onversionchange = function () {
@@ -292,7 +305,7 @@
   IndexStorage2.prototype._runQuery = function (key, value, limit) {
     var context = this;
     return waitForOpenIndexedDB(context._database_name, context._version,
-      context._index_keys, context._sub_storage, function (db) {
+      context._index_keys, context._sub_storage_description, function (db) {
         return waitForTransaction(db, ["index-store"], "readonly",
           function (tx) {
             return context._iterateCursor(tx.objectStore("index-store")
@@ -336,7 +349,7 @@
       return;
     }
     return waitForOpenIndexedDB(context._database_name, context._version,
-      context._index_keys, context._sub_storage, function (db) {
+      context._index_keys, context._sub_storage_description, function (db) {
         return waitForTransaction(db, ["index-store"], "readwrite",
           function (tx) {
             return waitForIDBRequest(tx.objectStore("index-store").put({
@@ -368,7 +381,7 @@
     return context._sub_storage.remove(id)
       .push(function () {
         return waitForOpenIndexedDB(context._database_name, context._version,
-          context._index_keys, context._sub_storage, function (db) {
+          context._index_keys, context._sub_storage_description, function (db) {
             return waitForTransaction(db, ["index-store"], "readwrite",
               function (tx) {
                 return waitForIDBRequest(tx.objectStore("index-store")
