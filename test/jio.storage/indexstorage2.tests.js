@@ -244,7 +244,7 @@
   module("indexStorage2.buildQuery", {
     setup: function () {
       DummyStorage3.prototype.hasCapacity = function (name) {
-        return (name === 'list') || (name === 'include');
+        return (name === 'list') || (name === 'include') || (name === 'select');
       };
       DummyStorage3.prototype.buildQuery = function () {
         return [];
@@ -256,7 +256,7 @@
   });
 
   test("Sub-storage handles empty options", function () {
-    var context = this;
+    var context = this, call_count = 0;
     context.jio = jIO.createJIO({
       type: "index2",
       database: "index2_test",
@@ -273,6 +273,10 @@
     };
 
     DummyStorage3.prototype.buildQuery = function (options) {
+      call_count += 1;
+      if (call_count === 1) {
+        return [];
+      }
       if (options.include_docs !== true) {
         return [
           {id: "2", value: {}},
@@ -307,7 +311,7 @@
   });
 
   test("Sub storage capacities are used by default", function () {
-    var context = this;
+    var context = this, kemp = 0;
     context.jio = jIO.createJIO({
       type: "index2",
       database: "index2_test",
@@ -329,6 +333,10 @@
     };
 
     DummyStorage3.prototype.buildQuery = function (options) {
+      kemp += 1;
+      if (kemp === 1) {
+        return [];
+      }
       if (options.include_docs === true) {
         return [];
       }
@@ -488,7 +496,7 @@
       });
   });
 
-  test("Repair on storage without include_docs support", function () {
+  test("Use existing data to build Index", function () {
     var context = this, fake_data;
     context.jio = jIO.createJIO({
       type: "index2",
@@ -499,7 +507,7 @@
       }
     });
     stop();
-    expect(3);
+    expect(2);
 
     fake_data = {
       "1": {a: "id54", b: 2, c: "night"},
@@ -508,7 +516,7 @@
     };
 
     DummyStorage3.prototype.hasCapacity = function (name) {
-      return name === 'list';
+      return (name === 'list') || (name === 'select');
     };
     DummyStorage3.prototype.put = function (id, value) {
       fake_data[id] = value;
@@ -517,60 +525,9 @@
     DummyStorage3.prototype.get = function (id) {
       return fake_data[id];
     };
-    DummyStorage3.prototype.buildQuery = function (options) {
-      deepEqual(options, {});
+    DummyStorage3.prototype.buildQuery = function () {
       var keys = Object.keys(fake_data);
-      return keys.map(function (v) { return {id: v, value: {}}; });
-    };
-
-    RSVP.all([
-      context.jio.put("3", {a: "ab43", b: 9, c: "absorb"}),
-      context.jio.put("5", {a: "gu31", b: 5, c: "control"}),
-      context.jio.put("7", {a: "zf76", b: 3, c: "rules"}),
-      context.jio.put("6", {a: "cc92", b: 6, c: "afraid"})
-    ])
-      .then(function () {
-        return context.jio.allDocs({query: 'c:"control"'});
-      })
-      .then(function (result) {
-        equal(result.data.total_rows, 2);
-        deepEqual(result.data.rows.sort(idCompare), [{id: "5", value: {}},
-          {id: "9", value: {}}]);
-      })
-      .fail(function (error) {
-        console.log(error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("Repair on storage with include_docs support", function () {
-    var context = this, fake_data;
-    context.jio = jIO.createJIO({
-      type: "index2",
-      database: "index2_test",
-      index_keys: ["a", "c"],
-      sub_storage: {
-        type: "dummystorage3"
-      }
-    });
-    stop();
-    expect(3);
-
-    fake_data = [
-      {id: "1", doc: {a: "id54", b: 2, c: "night"}},
-      {id: "4", doc: {a: "vn92", b: 7, c: "matter"}},
-      {id: "9", doc: {a: "ru23", b: 3, c: "control"}}
-    ];
-
-    DummyStorage3.prototype.put = function (id, value) {
-      fake_data.push({id: id, doc: value});
-      return id;
-    };
-    DummyStorage3.prototype.buildQuery = function (options) {
-      deepEqual(options, {include_docs: true});
-      return fake_data;
+      return keys.map(function (v) { return {id: v, value: {id: v}}; });
     };
 
     RSVP.all([
@@ -694,18 +651,23 @@
     expect(8);
 
     dummy_data = {
-      "32": {id: "32", doc: {"a": "3", "b": "2", "c": "inverse"}},
-      "5": {id: "5", doc: {"a": "6", "b": "2", "c": "strong"}},
-      "14": {id: "14", doc: {"a": "67", "b": "3", "c": "disolve"}}
+      "32": {id: "32", doc: {"a": "3", "b": "2", "c": "inverse"},
+        value: {"a": "3", "b": "2", "c": "inverse"}},
+      "5": {id: "5", doc: {"a": "6", "b": "2", "c": "strong"},
+        value: {"a": "6", "b": "2", "c": "strong"}},
+      "14": {id: "14", doc: {"a": "67", "b": "3", "c": "disolve"},
+        value: {"a": "67", "b": "3", "c": "disolve"}}
     };
 
     DummyStorage3.prototype.put = function (id, value) {
-      dummy_data[id] = {id: id, doc: value};
+      dummy_data[id] = {id: id, doc: value, value: value};
       return id;
     };
-
+    DummyStorage3.prototype.get = function (id) {
+      return dummy_data[id].doc;
+    };
     DummyStorage3.prototype.hasCapacity = function (name) {
-      return (name === 'list') || (name === 'include');
+      return (name === 'list') || (name === 'include') || (name === 'select');
     };
 
     DummyStorage3.prototype.buildQuery = function () {
@@ -796,6 +758,31 @@
         equal(error.status_code, 501);
         equal(error.message,
           "Capacity 'query' is not implemented on 'dummystorage3'");
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("Repair fails", function () {
+    var context = this;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "c"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(1);
+
+    DummyStorage3.prototype.buildQuery = undefined;
+
+    context.jio.allDocs({query: 'c: "control"'})
+      .fail(function (error) {
+        equal(error.message, "Version change transaction was aborted in" +
+          " upgradeneeded event handler.");
       })
       .always(function () {
         start();
@@ -948,7 +935,7 @@
     };
 
     DummyStorage3.prototype.hasCapacity = function (name) {
-      return (name === 'list') || (name === 'include');
+      return (name === 'list') || (name === 'include') || (name === 'select');
     };
 
     DummyStorage3.prototype.buildQuery = function () {
@@ -1040,7 +1027,7 @@
     };
 
     DummyStorage3.prototype.hasCapacity = function (name) {
-      return (name === 'list') || (name === 'include');
+      return (name === 'list') || (name === 'include') || (name === 'select');
     };
 
     DummyStorage3.prototype.buildQuery = function () {
