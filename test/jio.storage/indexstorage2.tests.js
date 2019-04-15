@@ -66,6 +66,7 @@
   module("indexStorage2.constructor", {
     teardown: function () {
       deleteIndexedDB(this.jio);
+      indexedDB.deleteDatabase("jio:index2_test_signatures");
     }
   });
   test("Constructor without index_keys", function () {
@@ -143,10 +144,11 @@
     );
   });
 
-  test("Constructor with index_keys", function () {
+  test("Constructor with index_keys and version", function () {
     this.jio = jIO.createJIO({
       type: "index2",
       database: "index2_test",
+      version: 4,
       index_keys: ["a", "b"],
       sub_storage: {
         type: "dummystorage3"
@@ -156,6 +158,9 @@
     equal(this.jio.__type, "index2");
     equal(this.jio.__storage._sub_storage.__type, "dummystorage3");
     equal(this.jio.__storage._database_name, "jio:index2_test");
+    equal(this.jio.__storage._version, 4);
+    deepEqual(this.jio.__storage._sub_storage_description,
+      {type: "dummystorage3"});
     deepEqual(this.jio.__storage._index_keys, ["a", "b"]);
   });
 
@@ -165,6 +170,7 @@
   module("indexStorage2.hasCapacity", {
     teardown: function () {
       deleteIndexedDB(this.jio);
+      indexedDB.deleteDatabase("jio:index2_test_signatures");
     }
   });
   test("can list documents", function () {
@@ -214,6 +220,7 @@
     },
     teardown: function () {
       deleteIndexedDB(this.jio);
+      indexedDB.deleteDatabase("jio:index2_test_signatures");
     }
   });
   test("Get calls substorage", function () {
@@ -252,6 +259,7 @@
     },
     teardown: function () {
       deleteIndexedDB(this.jio);
+      indexedDB.deleteDatabase("jio:index2_test_signatures");
     }
   });
 
@@ -650,26 +658,21 @@
     stop();
     expect(8);
 
-    dummy_data = {
-      "32": {id: "32", doc: {"a": "3", "b": "2", "c": "inverse"},
-        value: {"a": "3", "b": "2", "c": "inverse"}},
-      "5": {id: "5", doc: {"a": "6", "b": "2", "c": "strong"},
-        value: {"a": "6", "b": "2", "c": "strong"}},
-      "14": {id: "14", doc: {"a": "67", "b": "3", "c": "disolve"},
-        value: {"a": "67", "b": "3", "c": "disolve"}}
-    };
+    dummy_data = {};
 
     DummyStorage3.prototype.put = function (id, value) {
       dummy_data[id] = {id: id, doc: value, value: value};
       return id;
     };
     DummyStorage3.prototype.get = function (id) {
-      return dummy_data[id].doc;
+      if (dummy_data[id]) {
+        return dummy_data[id].doc;
+      }
+      throw new jIO.util.jIOError("Cannot find document: " + id, 404);
     };
     DummyStorage3.prototype.hasCapacity = function (name) {
       return (name === 'list') || (name === 'include') || (name === 'select');
     };
-
     DummyStorage3.prototype.buildQuery = function () {
       return Object.values(dummy_data);
     };
@@ -789,12 +792,168 @@
       });
   });
 
+  test("Manual repair", function () {
+    var context = this, fake_data;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "c"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(15);
+
+    fake_data = {
+      "1": {a: "id54", b: "9", c: "night"},
+      "4": {a: "vn92", b: "7", c: "matter"},
+      "9": {a: "ru23", b: "3", c: "control"},
+      "42": {a: "k422", b: "100", c: "grape"}
+    };
+
+    DummyStorage3.prototype.hasCapacity = function (name) {
+      return (name === 'list') || (name === 'select');
+    };
+    DummyStorage3.prototype.put = function (id, value) {
+      fake_data[id] = value;
+      return id;
+    };
+    DummyStorage3.prototype.get = function (id) {
+      if (fake_data[id]) {
+        return fake_data[id];
+      }
+      throw new jIO.util.jIOError("Cannot find document: " + id, 404);
+    };
+    DummyStorage3.prototype.remove = function (id) {
+      delete fake_data[id];
+      return id;
+    };
+    DummyStorage3.prototype.buildQuery = function () {
+      var keys = Object.keys(fake_data);
+      return keys.map(function (v) { return {id: v, value: {}}; });
+    };
+
+    context.jio.allDocs({query: 'c: "control"'})
+      .then(function (result) {
+        equal(result.data.total_rows, 1);
+        deepEqual(result.data.rows, [{id: "9", value: {}}]);
+      })
+      .then(function () {
+        fake_data["2"] = {a: "zu64", b: "1", c: "matter"};
+        fake_data["13"] = {a: "tk32", b: "9", c: "matter"};
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.allDocs({query: 'c: "matter"'});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 3);
+        deepEqual(result.data.rows.sort(idCompare), [{id: "13", value: {}},
+          {id: "2", value: {}}, {id: "4", value: {}}]);
+      })
+      .then(function () {
+        fake_data["2"] = {a: "zu64", b: "1", c: "observe"};
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.allDocs({query: 'c: "observe"'});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 1);
+        deepEqual(result.data.rows, [{id: "2", value: {}}]);
+      })
+      .then(function () {
+        delete fake_data["2"];
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.allDocs({query: 'c: "observe"'});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 0);
+        deepEqual(result.data.rows, []);
+      })
+      .then(function () {
+        return RSVP.all([
+          context.jio.put("43", {a: "t345", b: "101", c: "pear"}),
+          context.jio.put("44", {a: "j939", b: "121", c: "grape"}),
+          context.jio.put("45", {a: "q423", b: "131", c: "grape"}),
+          context.jio.remove("42")
+        ]);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.allDocs({query: "c:grape"});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 2);
+        deepEqual(result.data.rows.sort(idCompare), [{id: "44", value: {}},
+          {id: "45", value: {}}]);
+      })
+      .then(function () {
+        context.jio = jIO.createJIO({
+          type: "index2",
+          database: "index2_test",
+          index_keys: ["a", "c"],
+          sub_storage: {
+            type: "dummystorage3"
+          }
+        });
+        delete fake_data["13"];
+        fake_data["3"] = {a: "gg38", b: "4", c: "matter"};
+        fake_data["9"] = {a: "tk32", b: "9", c: "matter"};
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.allDocs({query: "c:matter"});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 3);
+        deepEqual(result.data.rows.sort(idCompare), [{id: "3", value: {}},
+          {id: "4", value: {}}, {id: "9", value: {}}]);
+      })
+      .then(function () {
+        delete fake_data["9"];
+        fake_data["3"] = {a: "xu76", b: "9", c: "night"};
+        fake_data["7"] = {a: "bn02", b: "9", c: "matter"};
+        context.jio = jIO.createJIO({
+          type: "index2",
+          database: "index2_test",
+          index_keys: ["b"],
+          version: 2,
+          sub_storage: {
+            type: "dummystorage3"
+          }
+        });
+        return context.jio.allDocs({query: "b:9"});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 3);
+        deepEqual(result.data.rows.sort(idCompare), [{id: "1", value: {}},
+          {id: "3", value: {}}, {id: "7", value: {}}]);
+      })
+      .then(function () {
+        return context.jio.allDocs({query: "c:matter"});
+      })
+      .fail(function (error) {
+        equal(error.message,
+          "Capacity 'query' is not implemented on 'dummystorage3'");
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // IndexStorage2.getAttachment
   /////////////////////////////////////////////////////////////////
   module("IndexStorage2.getAttachment", {
     teardown: function () {
       deleteIndexedDB(this.jio);
+      indexedDB.deleteDatabase("jio:index2_test_signatures");
     }
   });
   test("getAttachment called substorage getAttachment", function () {
@@ -835,6 +994,7 @@
   module("IndexStorage2.putAttachment", {
     teardown: function () {
       deleteIndexedDB(this.jio);
+      indexedDB.deleteDatabase("jio:index2_test_signatures");
     }
   });
   test("putAttachment called substorage putAttachment", function () {
@@ -876,6 +1036,7 @@
   module("IndexStorage2.removeAttachment", {
     teardown: function () {
       deleteIndexedDB(this.jio);
+      indexedDB.deleteDatabase("jio:index2_test_signatures");
     }
   });
   test("removeAttachment called substorage removeAttachment", function () {
@@ -915,6 +1076,7 @@
   module("indexStorage2.put", {
     teardown: function () {
       deleteIndexedDB(this.jio);
+      indexedDB.deleteDatabase("jio:index2_test_signatures");
     }
   });
   test("Put creates index", function () {
@@ -999,6 +1161,7 @@
   module("indexStorage2.post", {
     teardown: function () {
       deleteIndexedDB(this.jio);
+      indexedDB.deleteDatabase("jio:index2_test_signatures");
     }
   });
   test("Post creates index", function () {
@@ -1091,6 +1254,7 @@
   module("indexStorage2.remove", {
     teardown: function () {
       deleteIndexedDB(this.jio);
+      indexedDB.deleteDatabase("jio:index2_test_signatures");
     }
   });
   test("Remove values", function () {
