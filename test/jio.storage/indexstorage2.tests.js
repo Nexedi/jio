@@ -143,10 +143,11 @@
     );
   });
 
-  test("Constructor with index_keys", function () {
+  test("Constructor with index_keys and version", function () {
     this.jio = jIO.createJIO({
       type: "index2",
       database: "index2_test",
+      version: 4,
       index_keys: ["a", "b"],
       sub_storage: {
         type: "dummystorage3"
@@ -156,6 +157,9 @@
     equal(this.jio.__type, "index2");
     equal(this.jio.__storage._sub_storage.__type, "dummystorage3");
     equal(this.jio.__storage._database_name, "jio:index2_test");
+    equal(this.jio.__storage._version, 4);
+    deepEqual(this.jio.__storage._sub_storage_description,
+      {type: "dummystorage3"});
     deepEqual(this.jio.__storage._index_keys, ["a", "b"]);
   });
 
@@ -650,14 +654,7 @@
     stop();
     expect(8);
 
-    dummy_data = {
-      "32": {id: "32", doc: {"a": "3", "b": "2", "c": "inverse"},
-        value: {"a": "3", "b": "2", "c": "inverse"}},
-      "5": {id: "5", doc: {"a": "6", "b": "2", "c": "strong"},
-        value: {"a": "6", "b": "2", "c": "strong"}},
-      "14": {id: "14", doc: {"a": "67", "b": "3", "c": "disolve"},
-        value: {"a": "67", "b": "3", "c": "disolve"}}
-    };
+    dummy_data = {};
 
     DummyStorage3.prototype.put = function (id, value) {
       dummy_data[id] = {id: id, doc: value, value: value};
@@ -666,6 +663,7 @@
     DummyStorage3.prototype.get = function (id) {
       return dummy_data[id].doc;
     };
+
     DummyStorage3.prototype.hasCapacity = function (name) {
       return (name === 'list') || (name === 'include') || (name === 'select');
     };
@@ -783,6 +781,88 @@
       .fail(function (error) {
         equal(error.message, "Version change transaction was aborted in" +
           " upgradeneeded event handler.");
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("Manual repair", function () {
+    var context = this, fake_data;
+    context.jio = jIO.createJIO({
+      type: "index2",
+      database: "index2_test",
+      index_keys: ["a", "c"],
+      sub_storage: {
+        type: "dummystorage3"
+      }
+    });
+    stop();
+    expect(8);
+
+    fake_data = {
+      "1": {a: "id54", b: 2, c: "night"},
+      "4": {a: "vn92", b: 7, c: "matter"},
+      "9": {a: "ru23", b: 3, c: "control"}
+    };
+
+    DummyStorage3.prototype.hasCapacity = function (name) {
+      return (name === 'list') || (name === 'select');
+    };
+    DummyStorage3.prototype.put = function (id, value) {
+      fake_data[id] = value;
+      return id;
+    };
+    DummyStorage3.prototype.get = function (id) {
+      return fake_data[id];
+    };
+    DummyStorage3.prototype.buildQuery = function () {
+      var keys = Object.keys(fake_data);
+      return keys.map(function (v) { return {id: v, value: {}}; });
+    };
+
+    context.jio.allDocs({query: 'c: "control"'})
+      .then(function (result) {
+        equal(result.data.total_rows, 1);
+        deepEqual(result.data.rows, [{id: "9", value: {}}]);
+      })
+      .then(function () {
+        fake_data["2"] = {a: "zu64", b: 1, c: "matter"};
+        fake_data["13"] = {a: "tk32", b: 9, c: "matter"};
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.allDocs({query: 'c: "matter"'});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 3);
+        deepEqual(result.data.rows.sort(idCompare), [{id: "13", value: {}},
+          {id: "2", value: {}}, {id: "4", value: {}}]);
+      })
+      .then(function () {
+        fake_data["2"] = {a: "zu64", b: 1, c: "observe"};
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.allDocs({query: 'c: "observe"'});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 1);
+        deepEqual(result.data.rows, [{id: "2", value: {}}]);
+      })
+      .then(function () {
+        delete fake_data["2"];
+        return context.jio.repair();
+      })
+      .then(function () {
+        return context.jio.allDocs({query: 'c: "observe"'});
+      })
+      .then(function (result) {
+        equal(result.data.total_rows, 0);
+        deepEqual(result.data.rows, []);
+      })
+      .fail(function (error) {
+        console.log(error);
       })
       .always(function () {
         start();
