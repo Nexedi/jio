@@ -39,7 +39,7 @@
     this._sub_storage = jIO.createJIO(description.sub_storage);
     this._database_name = "jio:" + description.database;
     this._index_keys = description.index_keys || [];
-    this._version = description.version || undefined;
+    this._version = description.version;
   }
 
   IndexStorage2.prototype.hasCapacity = function (name) {
@@ -76,41 +76,82 @@
     });
   }
 
-  function VirtualIDB(description) {
-    this._write_operations = description.write_operations;
+  function iterateCursor(on, query, limit) {
+    return new RSVP.Promise(function (resolve, reject) {
+      var result = [], count = 0, cursor;
+      cursor = on.openKeyCursor(query);
+      cursor.onsuccess = function (cursor) {
+        if (cursor.target.result && count !== limit) {
+          count += 1;
+          result.push({id: cursor.target.result.primaryKey, value: {}});
+          cursor.target.result.continue();
+        } else {
+          resolve(result);
+        }
+      };
+      cursor.onerror = function (error) {
+        reject(error.message);
+      };
+    });
   }
 
-  VirtualIDB.prototype.put = function () {
-    this._write_operations.put.push(arguments);
-  };
+  function VirtualIDB(description) {
+    this._operations = description.operations;
+  }
 
   VirtualIDB.prototype.hasCapacity = function (name) {
     return (name === 'list') || (name === 'select');
   };
 
-  VirtualIDB.prototype.get = function (id) {
-    throw new jIO.util.jIOError("Cannot find document: " + id, 404);
+  VirtualIDB.prototype.put = function (id, value) {
+    var context = this;
+    return new RSVP.Promise(function (resolve, reject) {
+      context._operations.push({type: 'put', arguments: [id, value],
+        onsuccess: resolve, onerror: reject});
+    });
   };
 
-  VirtualIDB.prototype.buildQuery = function () {
-    return [];
+  VirtualIDB.prototype.remove = function (id) {
+    var context = this;
+    return new RSVP.Promise(function (resolve, reject) {
+      context._operations.push({type: 'remove', arguments: [id],
+        onsuccess: resolve, onerror: reject});
+    });
+  };
+
+  VirtualIDB.prototype.get = function (id) {
+    var context = this;
+    return new RSVP.Promise(function (resolve, reject) {
+      context._operations.push({type: 'get', arguments: [id],
+        onsuccess: resolve, onerror: reject});
+    });
+  };
+
+  VirtualIDB.prototype.buildQuery = function (options) {
+    var context = this;
+    return new RSVP.Promise(function (resolve, reject) {
+      context._operations.push({type: 'buildQuery', arguments: [options],
+        onsuccess: resolve, onerror: reject});
+    });
   };
 
   jIO.addStorage("virtualidb", VirtualIDB);
 
-  function getRepairStorage(write_operations, sub_storage_description) {
+  function getRepairStorage(operations, sub_storage_description) {
     return jIO.createJIO({
       type: "replicate",
       local_sub_storage: sub_storage_description,
-      check_local_modification: false,
-      check_local_deletion: false,
+      check_local_modification: true,
+      check_local_deletion: true,
       check_local_creation: true,
       check_remote_modification: false,
       check_remote_creation: false,
       check_remote_deletion: false,
+      conflict_handling: 1,
+      parallel_operation_amount: 10,
       remote_sub_storage: {
         type: "virtualidb",
-        write_operations: write_operations,
+        operations: operations
       },
       signature_sub_storage: {
         type: "query",
@@ -121,10 +162,66 @@
     });
   }
 
+  function repairInTransaction(sub_storage_description, transaction,
+    index_keys, enable_get, enable_allDocs) {
+    var repair_promise, repeatUntilPromiseFulfilled, store,
+      operations = [], handle_get;
+    handle_get = function handle_get(id, onsuccess, onerror) {
+      return function (result) {
+        if (result.target.result === undefined) {
+          return onerror(new jIO.util.jIOError("Cannot find document: " +
+            id, 404));
+        }
+        return onsuccess(result.target.result.doc);
+      };
+    };
+    store = transaction.objectStore('index-store');
+    repair_promise = getRepairStorage(operations,
+      sub_storage_description, enable_get, enable_allDocs).repair();
+    repeatUntilPromiseFulfilled = function repeatUntilPromiseFulfilled(req) {
+      var operation, request;
+      req.onsuccess = function () {
+        while (true) {
+          if (operations.length === 0) {
+            break;
+          }
+          operation = operations.shift();
+          if (operation.type === 'put') {
+            request = store.put({
+              id: operation.arguments[0],
+              doc: filterDocValues(operation.arguments[1], index_keys),
+            });
+            request.onsuccess = operation.onsuccess;
+            request.onerror = operation.onerror;
+          } else if (operation.type === 'get') {
+            request = store.get(operation.arguments[0]);
+            request.onsuccess = handle_get(operation.arguments[0],
+              operation.onsuccess, operation.onerror);
+            request.onerror = operation.onerror;
+          } else if (operation.type === 'buildQuery') {
+            request = iterateCursor(store);
+            request.then(operation.onsuccess).fail(operation.onerror);
+          } else if (operation.type === 'remove') {
+            request = store.delete(operation.arguments[0]);
+            request.onsuccess = operation.onsuccess;
+            request.onerror = operation.onerror;
+          }
+        }
+        if (repair_promise.isRejected) {
+          transaction.abort();
+          return;
+        }
+        if (repair_promise.isFulfilled) {
+          return;
+        }
+        return repeatUntilPromiseFulfilled(store.count());
+      };
+    };
+    repeatUntilPromiseFulfilled(store.count());
+  }
+
   function handleUpgradeNeeded(evt, index_keys, sub_storage_description) {
-    var db = evt.target.result, store, i, current_indices, required_indices,
-      put_promise_list = [], repair_promise, repeatUntilPromiseFulfilled,
-      write_operations;
+    var db = evt.target.result, store, i, current_indices, required_indices;
     required_indices = new Set(index_keys.map(function (name) {
       return 'Index-' + name;
     }));
@@ -155,30 +252,8 @@
         store.createIndex('Index-' + index_keys[i],
           'doc.' + index_keys[i], { unique: false });
       }
-
-      write_operations = {put: []};
-      repair_promise = getRepairStorage(write_operations,
-        sub_storage_description).repair();
-      repeatUntilPromiseFulfilled = function repeatUntilPromiseFulfilled(req) {
-        req.onsuccess = function () {
-          if (repair_promise.isRejected) {
-            evt.target.transaction.abort();
-            return;
-          }
-          if (repair_promise.isFulfilled) {
-            for (i = 0; i < write_operations.put.length; i += 1) {
-              put_promise_list.push(waitForIDBRequest(store.put({
-                id: write_operations.put[i][0],
-                doc: filterDocValues(write_operations.put[i][1], index_keys)
-              })));
-            }
-            write_operations.put = [];
-            return RSVP.all(put_promise_list);
-          }
-          return repeatUntilPromiseFulfilled(store.getAll());
-        };
-      };
-      repeatUntilPromiseFulfilled(store.getAll());
+      return repairInTransaction(sub_storage_description,
+        evt.target.transaction, index_keys, true, true);
     }
   }
 
@@ -283,32 +358,13 @@
     return new RSVP.Promise(resolver, canceller);
   }
 
-  IndexStorage2.prototype._iterateCursor = function (on, query, limit) {
-    return new RSVP.Promise(function (resolve, reject) {
-      var result_list = [], count = 0, cursor;
-      cursor = on.openKeyCursor(query);
-      cursor.onsuccess = function (cursor) {
-        if (cursor.target.result && count !== limit) {
-          count += 1;
-          result_list.push({id: cursor.target.result.primaryKey, value: {}});
-          cursor.target.result.continue();
-        } else {
-          resolve(result_list);
-        }
-      };
-      cursor.onerror = function (error) {
-        reject(error.message);
-      };
-    });
-  };
-
   IndexStorage2.prototype._runQuery = function (key, value, limit) {
     var context = this;
     return waitForOpenIndexedDB(context._database_name, context._version,
       context._index_keys, context._sub_storage_description, function (db) {
         return waitForTransaction(db, ["index-store"], "readonly",
           function (tx) {
-            return context._iterateCursor(tx.objectStore("index-store")
+            return iterateCursor(tx.objectStore("index-store")
               .index("Index-" + key), value, limit);
           });
       });
@@ -387,6 +443,18 @@
                 return waitForIDBRequest(tx.objectStore("index-store")
                   .delete(id));
               });
+          });
+      });
+  };
+
+  IndexStorage2.prototype.repair = function () {
+    var context = this;
+    return waitForOpenIndexedDB(context._database_name, context._version,
+      context._index_keys, context._sub_storage_description, function (db) {
+        return waitForTransaction(db, ["index-store"], "readwrite",
+          function (tx) {
+            return repairInTransaction(context._sub_storage_description, tx,
+              context._index_keys);
           });
       });
   };
