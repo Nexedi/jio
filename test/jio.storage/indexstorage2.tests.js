@@ -63,7 +63,7 @@
   function DummyStorage3() {
     return this;
   }
-  jIO.addStorage('dummystorage3', DummyStorage3);
+  jIO.addStorage("dummystorage3", DummyStorage3);
 
   /////////////////////////////////////////////////////////////////
   // indexStorage2.constructor
@@ -274,7 +274,7 @@
   module("indexStorage2.buildQuery", {
     setup: function () {
       DummyStorage3.prototype.hasCapacity = function (name) {
-        return (name === 'list') || (name === 'include') || (name === 'select');
+        return (name === "list") || (name === "include") || (name === "select");
       };
       DummyStorage3.prototype.buildQuery = function () {
         return [];
@@ -546,7 +546,7 @@
     };
 
     DummyStorage3.prototype.hasCapacity = function (name) {
-      return (name === 'list') || (name === 'select');
+      return (name === "list") || (name === "select");
     };
     DummyStorage3.prototype.put = function (id, value) {
       fake_data[id] = value;
@@ -599,10 +599,10 @@
       return id;
     };
     DummyStorage3.prototype.hasCapacity = function (capacity) {
-      return (capacity === 'list') || (capacity === 'query');
+      return (capacity === "list") || (capacity === "query");
     };
     DummyStorage3.prototype.buildQuery = function (options) {
-      equal(options.query, 'a: "5"');
+      equal(options.query, "a: '5'");
       return [{id: "3", value: {}}];
     };
 
@@ -612,7 +612,7 @@
       context.jio.put("3", {a: "5", b: "1"})
     ])
       .then(function () {
-        return context.jio.allDocs({query: 'a: "5"'});
+        return context.jio.allDocs({query: "a: '5'"});
       })
       .then(function (result) {
         equal(result.data.total_rows, 1);
@@ -693,7 +693,7 @@
       throw new jIO.util.jIOError("Cannot find document: " + id, 404);
     };
     DummyStorage3.prototype.hasCapacity = function (name) {
-      return (name === 'list') || (name === 'include') || (name === 'select');
+      return (name === "list") || (name === "include") || (name === "select");
     };
     DummyStorage3.prototype.buildQuery = function () {
       return Object.values(dummy_data);
@@ -804,7 +804,7 @@
 
     DummyStorage3.prototype.buildQuery = undefined;
 
-    context.jio.allDocs({query: 'c: "control"'})
+    context.jio.allDocs({query: "c: 'control'"})
       .fail(function (error) {
         equal(error, "Connection to: jio:index2_test failed: Version change " +
           "transaction was aborted in upgradeneeded event handler. " +
@@ -836,7 +836,7 @@
     };
 
     DummyStorage3.prototype.hasCapacity = function (name) {
-      return (name === 'list') || (name === 'select');
+      return (name === "list") || (name === "select");
     };
     DummyStorage3.prototype.put = function (id, value) {
       fake_data[id] = value;
@@ -1116,7 +1116,7 @@
     };
 
     DummyStorage3.prototype.hasCapacity = function (name) {
-      return (name === 'list') || (name === 'include') || (name === 'select');
+      return (name === "list") || (name === "include") || (name === "select");
     };
 
     DummyStorage3.prototype.buildQuery = function () {
@@ -1130,7 +1130,7 @@
     ])
       .then(function () {
         return new RSVP.Promise(function (resolve) {
-          request = indexedDB.open('jio:index2_test');
+          request = indexedDB.open("jio:index2_test");
           request.onsuccess = function () {
             resolve(request.result);
           };
@@ -1138,17 +1138,17 @@
       })
       .then(function (result) {
         equal(result.version, 1);
-        equal(result.name, 'jio:index2_test');
+        equal(result.name, "jio:index2_test");
         equal(result.objectStoreNames.length, 1);
-        equal(result.objectStoreNames[0], 'index-store');
-        store = result.transaction('index-store').objectStore('index-store');
+        equal(result.objectStoreNames[0], "index-store");
+        store = result.transaction("index-store").objectStore("index-store");
         equal(store.indexNames.length, 2);
         equal(store.keyPath, "id");
-        deepEqual(Array.from(store.indexNames).sort(), ['Index-a', 'Index-b']);
-        equal(store.index('Index-a').keyPath, 'doc.a');
-        equal(store.index('Index-b').keyPath, 'doc.b');
-        equal(store.index('Index-a').unique, false);
-        equal(store.index('Index-b').unique, false);
+        deepEqual(Array.from(store.indexNames).sort(), ["Index-a", "Index-b"]);
+        equal(store.index("Index-a").keyPath, "doc.a");
+        equal(store.index("Index-b").keyPath, "doc.b");
+        equal(store.index("Index-a").unique, false);
+        equal(store.index("Index-b").unique, false);
         return new RSVP.Promise(function (resolve) {
           records = store.getAll();
           records.onsuccess = function () {
@@ -1208,7 +1208,7 @@
     };
 
     DummyStorage3.prototype.hasCapacity = function (name) {
-      return (name === 'list') || (name === 'include') || (name === 'select');
+      return (name === "list") || (name === "include") || (name === "select");
     };
 
     DummyStorage3.prototype.buildQuery = function () {
@@ -1222,7 +1222,7 @@
     ])
       .then(function () {
         return new RSVP.Promise(function (resolve) {
-          request = indexedDB.open('jio:index2_test');
+          request = indexedDB.open("jio:index2_test");
           request.onsuccess = function () {
             resolve(request.result);
           };
@@ -1230,17 +1230,17 @@
       })
       .then(function (result) {
         equal(result.version, 1);
-        equal(result.name, 'jio:index2_test');
+        equal(result.name, "jio:index2_test");
         equal(result.objectStoreNames.length, 1);
-        equal(result.objectStoreNames[0], 'index-store');
-        store = result.transaction('index-store').objectStore('index-store');
+        equal(result.objectStoreNames[0], "index-store");
+        store = result.transaction("index-store").objectStore("index-store");
         equal(store.indexNames.length, 2);
         equal(store.keyPath, "id");
-        deepEqual(Array.from(store.indexNames).sort(), ['Index-a', 'Index-b']);
-        equal(store.index('Index-a').keyPath, 'doc.a');
-        equal(store.index('Index-b').keyPath, 'doc.b');
-        equal(store.index('Index-a').unique, false);
-        equal(store.index('Index-b').unique, false);
+        deepEqual(Array.from(store.indexNames).sort(), ["Index-a", "Index-b"]);
+        equal(store.index("Index-a").keyPath, "doc.a");
+        equal(store.index("Index-b").keyPath, "doc.b");
+        equal(store.index("Index-a").unique, false);
+        equal(store.index("Index-b").unique, false);
         return new RSVP.Promise(function (resolve) {
           records = store.getAll();
           records.onsuccess = function () {
@@ -1302,14 +1302,14 @@
     ])
       .then(function () {
         return new RSVP.Promise(function (resolve) {
-          request = indexedDB.open('jio:index2_test');
+          request = indexedDB.open("jio:index2_test");
           request.onsuccess = function () {
             resolve(request.result);
           };
         });
       })
       .then(function (result) {
-        store = result.transaction('index-store').objectStore('index-store');
+        store = result.transaction("index-store").objectStore("index-store");
         return new RSVP.Promise(function (resolve) {
           records = store.getAll();
           records.onsuccess = function () {
@@ -1328,8 +1328,8 @@
         return context.jio.remove("33");
       })
       .then(function () {
-        store = request.result.transaction('index-store')
-          .objectStore('index-store');
+        store = request.result.transaction("index-store")
+          .objectStore("index-store");
         return new RSVP.Promise(function (resolve) {
           records = store.getAll();
           records.onsuccess = function () {
