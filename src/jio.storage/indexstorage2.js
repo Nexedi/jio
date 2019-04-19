@@ -48,7 +48,7 @@
   }
 
   IndexStorage2.prototype.hasCapacity = function (name) {
-    return (name === 'query') || (name === 'limit') || (name === 'list') ||
+    return (name === "query") || (name === "limit") || (name === "list") ||
         this._sub_storage.hasCapacity(name);
   };
 
@@ -270,10 +270,10 @@
     signature_storage_name) {
     var db = evt.target.result, store, i, current_indices, required_indices;
     required_indices = new Set(index_keys.map(function (name) {
-      return 'Index-' + name;
+      return "Index-" + name;
     }));
-    if (db.objectStoreNames[0] === 'index-store') {
-      store = evt.target.transaction.objectStore('index-store');
+    if (db.objectStoreNames[0] === "index-store") {
+      store = evt.target.transaction.objectStore("index-store");
     }
 
     current_indices = new Set(store ? store.indexNames : []);
@@ -287,16 +287,16 @@
       }
     } else {
       if (store) {
-        db.deleteObjectStore('index-store');
+        db.deleteObjectStore("index-store");
         current_indices.clear();
       }
-      store = db.createObjectStore('index-store', {
-        keyPath: 'id',
+      store = db.createObjectStore("index-store", {
+        keyPath: "id",
         autoIncrement: false
       });
       for (i = 0; i < index_keys.length; i += 1) {
-        store.createIndex('Index-' + index_keys[i],
-          'doc.' + index_keys[i], { unique: false });
+        store.createIndex("Index-" + index_keys[i],
+          "doc." + index_keys[i], { unique: false });
       }
       return repairInTransaction(sub_storage_description,
         evt.target.transaction, index_keys, signature_storage_name, true);
@@ -429,7 +429,7 @@
     if (options.query && !options.include_docs && !options.sort_on &&
         !options.select_list) {
       query = parseStringToObject(options.query);
-      if (query.type === 'simple') {
+      if (query.type === "simple") {
         if (context._index_keys.indexOf(query.key) !== -1) {
           return context._runQuery(query.key, query.value, options.limit)
             .then(function (result) {
