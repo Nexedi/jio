@@ -42,11 +42,11 @@
  */
 
 /*jslint nomen: true */
-/*global indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
-        DOMError, Event*/
+/*global jIO, RSVP, Blob, Math, IDBKeyRange, Event, waitForOpenIndexedDB,
+  waitForIDBRequest, waitForAllSynchronousCursor, waitForTransaction*/
 
-(function (indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
-           DOMError) {
+(function (jIO, RSVP, Blob, Math, IDBKeyRange, waitForOpenIndexedDB,
+  waitForIDBRequest, waitForAllSynchronousCursor, waitForTransaction) {
   "use strict";
 
   // Read only as changing it can lead to data corruption
@@ -96,143 +96,6 @@
     store.createIndex("_id", "_id", {unique: false});
   }
 
-  function waitForOpenIndexedDB(db_name, callback) {
-    var request;
-
-    function canceller() {
-      if ((request !== undefined) && (request.result !== undefined)) {
-        request.result.close();
-      }
-    }
-
-    function resolver(resolve, reject) {
-      // Open DB //
-      request = indexedDB.open(db_name);
-      request.onerror = function (error) {
-        canceller();
-        if ((error !== undefined) &&
-            (error.target instanceof IDBOpenDBRequest) &&
-            (error.target.error instanceof DOMError)) {
-          reject("Connection to: " + db_name + " failed: " +
-                 error.target.error.message);
-        } else {
-          reject(error);
-        }
-      };
-
-      request.onabort = function () {
-        canceller();
-        reject("Aborting connection to: " + db_name);
-      };
-
-      request.ontimeout = function () {
-        reject("Connection to: " + db_name + " timeout");
-      };
-
-      request.onblocked = function () {
-        canceller();
-        reject("Connection to: " + db_name + " was blocked");
-      };
-
-      // Create DB if necessary //
-      request.onupgradeneeded = handleUpgradeNeeded;
-
-      request.onversionchange = function () {
-        canceller();
-        reject(db_name + " was upgraded");
-      };
-
-      request.onsuccess = function () {
-        var result;
-        try {
-          result = callback(request.result);
-        } catch (error) {
-          reject(error);
-        }
-        return new RSVP.Queue()
-          .push(function () {
-            return result;
-          })
-          .push(function (final_result) {
-            canceller();
-            resolve(final_result);
-          }, function (error) {
-            canceller();
-            reject(error);
-          });
-      };
-    }
-
-    return new RSVP.Promise(resolver, canceller);
-  }
-
-  function waitForTransaction(db, stores, flag, callback) {
-    var tx = db.transaction(stores, flag);
-    function canceller() {
-      try {
-        tx.abort();
-      } catch (unused) {
-        // Transaction already finished
-        return;
-      }
-    }
-    function resolver(resolve, reject) {
-      var result;
-      try {
-        result = callback(tx);
-      } catch (error) {
-        reject(error);
-      }
-      tx.oncomplete = function () {
-        return new RSVP.Queue()
-          .push(function () {
-            return result;
-          })
-          .push(resolve, function (error) {
-            canceller();
-            reject(error);
-          });
-      };
-      tx.onerror = reject;
-      tx.onabort = reject;
-    }
-    return new RSVP.Promise(resolver, canceller);
-  }
-
-  function waitForIDBRequest(request) {
-    return new RSVP.Promise(function (resolve, reject) {
-      request.onerror = reject;
-      request.onsuccess = resolve;
-    });
-  }
-
-  function waitForAllSynchronousCursor(request, callback) {
-    var force_cancellation = false;
-
-    function canceller() {
-      force_cancellation = true;
-    }
-
-    function resolver(resolve, reject) {
-      request.onerror = reject;
-      request.onsuccess = function (evt) {
-        var cursor = evt.target.result;
-        if (cursor && !force_cancellation) {
-          try {
-            callback(cursor);
-          } catch (error) {
-            reject(error);
-          }
-          // continue to next iteration
-          cursor["continue"]();
-        } else {
-          resolve();
-        }
-      };
-    }
-    return new RSVP.Promise(resolver, canceller);
-  }
-
   IndexedDBStorage.prototype.buildQuery = function (options) {
     var result_list = [],
       context = this;
@@ -254,21 +117,22 @@
 
     return new RSVP.Queue()
       .push(function () {
-        return waitForOpenIndexedDB(context._database_name, function (db) {
-          return waitForTransaction(db, ["metadata"], "readonly",
+        return waitForOpenIndexedDB(context._database_name, undefined,
+          handleUpgradeNeeded, function (db) {
+            return waitForTransaction(db, ["metadata"], "readonly",
                                     function (tx) {
-              if (options.include_docs === true) {
+                if (options.include_docs === true) {
+                  return waitForAllSynchronousCursor(
+                    tx.objectStore("metadata").index("_id").openCursor(),
+                    pushIncludedMetadata
+                  );
+                }
                 return waitForAllSynchronousCursor(
-                  tx.objectStore("metadata").index("_id").openCursor(),
-                  pushIncludedMetadata
+                  tx.objectStore("metadata").index("_id").openKeyCursor(),
+                  pushMetadata
                 );
-              }
-              return waitForAllSynchronousCursor(
-                tx.objectStore("metadata").index("_id").openKeyCursor(),
-                pushMetadata
-              );
-            });
-        });
+              });
+          });
       })
       .push(function () {
         return result_list;
@@ -279,12 +143,13 @@
     var context = this;
     return new RSVP.Queue()
       .push(function () {
-        return waitForOpenIndexedDB(context._database_name, function (db) {
-          return waitForTransaction(db, ["metadata"], "readonly",
-                                    function (tx) {
-              return waitForIDBRequest(tx.objectStore("metadata").get(id));
-            });
-        });
+        return waitForOpenIndexedDB(context._database_name, undefined,
+          handleUpgradeNeeded, function (db) {
+            return waitForTransaction(db, ["metadata"], "readonly",
+                                      function (tx) {
+                return waitForIDBRequest(tx.objectStore("metadata").get(id));
+              });
+          });
       })
       .push(function (evt) {
         if (evt.target.result) {
@@ -307,19 +172,20 @@
 
     return new RSVP.Queue()
       .push(function () {
-        return waitForOpenIndexedDB(context._database_name, function (db) {
-          return waitForTransaction(db, ["metadata", "attachment"], "readonly",
-                                    function (tx) {
-              return RSVP.all([
-                waitForIDBRequest(tx.objectStore("metadata").get(id)),
-                waitForAllSynchronousCursor(
-                  tx.objectStore("attachment").index("_id")
-                    .openKeyCursor(IDBKeyRange.only(id)),
-                  addEntry
-                )
-              ]);
-            });
-        });
+        return waitForOpenIndexedDB(context._database_name, undefined,
+          handleUpgradeNeeded, function (db) {
+            return waitForTransaction(db, ["metadata", "attachment"],
+              "readonly", function (tx) {
+                return RSVP.all([
+                  waitForIDBRequest(tx.objectStore("metadata").get(id)),
+                  waitForAllSynchronousCursor(
+                    tx.objectStore("attachment").index("_id")
+                      .openKeyCursor(IDBKeyRange.only(id)),
+                    addEntry
+                  )
+                ]);
+              });
+          });
       })
       .push(function (result_list) {
         var evt = result_list[0];
@@ -336,56 +202,58 @@
   };
 
   IndexedDBStorage.prototype.put = function (id, metadata) {
-    return waitForOpenIndexedDB(this._database_name, function (db) {
-      return waitForTransaction(db, ["metadata"], "readwrite",
-                                function (tx) {
-          return waitForIDBRequest(tx.objectStore("metadata").put({
-            "_id": id,
-            "doc": metadata
-          }));
-        });
-    });
+    return waitForOpenIndexedDB(this._database_name, undefined,
+      handleUpgradeNeeded, function (db) {
+        return waitForTransaction(db, ["metadata"], "readwrite",
+                                  function (tx) {
+            return waitForIDBRequest(tx.objectStore("metadata").put({
+              "_id": id,
+              "doc": metadata
+            }));
+          });
+      });
   };
 
   IndexedDBStorage.prototype.remove = function (id) {
-    return waitForOpenIndexedDB(this._database_name, function (db) {
-      return waitForTransaction(db, ["metadata", "attachment", "blob"],
-                                "readwrite", function (tx) {
+    return waitForOpenIndexedDB(this._database_name, undefined,
+      handleUpgradeNeeded, function (db) {
+        return waitForTransaction(db, ["metadata", "attachment", "blob"],
+                                  "readwrite", function (tx) {
 
-          var promise_list = [],
-            metadata_store = tx.objectStore("metadata"),
-            attachment_store = tx.objectStore("attachment"),
-            blob_store = tx.objectStore("blob");
+            var promise_list = [],
+              metadata_store = tx.objectStore("metadata"),
+              attachment_store = tx.objectStore("attachment"),
+              blob_store = tx.objectStore("blob");
 
-          function deleteAttachment(cursor) {
-            promise_list.push(
-              waitForIDBRequest(attachment_store.delete(cursor.primaryKey))
-            );
-          }
-          function deleteBlob(cursor) {
-            promise_list.push(
-              waitForIDBRequest(blob_store.delete(cursor.primaryKey))
-            );
-          }
+            function deleteAttachment(cursor) {
+              promise_list.push(
+                waitForIDBRequest(attachment_store.delete(cursor.primaryKey))
+              );
+            }
+            function deleteBlob(cursor) {
+              promise_list.push(
+                waitForIDBRequest(blob_store.delete(cursor.primaryKey))
+              );
+            }
 
-          return RSVP.all([
-            waitForIDBRequest(metadata_store.delete(id)),
-            waitForAllSynchronousCursor(
-              attachment_store.index("_id")
-                              .openKeyCursor(IDBKeyRange.only(id)),
-              deleteAttachment
-            ),
-            waitForAllSynchronousCursor(
-              blob_store.index("_id")
-                        .openKeyCursor(IDBKeyRange.only(id)),
-              deleteBlob
-            ),
-          ])
-            .then(function () {
-              return RSVP.all(promise_list);
-            });
-        });
-    });
+            return RSVP.all([
+              waitForIDBRequest(metadata_store.delete(id)),
+              waitForAllSynchronousCursor(
+                attachment_store.index("_id")
+                                .openKeyCursor(IDBKeyRange.only(id)),
+                deleteAttachment
+              ),
+              waitForAllSynchronousCursor(
+                blob_store.index("_id")
+                          .openKeyCursor(IDBKeyRange.only(id)),
+                deleteBlob
+              ),
+            ])
+              .then(function () {
+                return RSVP.all(promise_list);
+              });
+          });
+      });
   };
 
   IndexedDBStorage.prototype.getAttachment = function (id, name, options) {
@@ -416,65 +284,66 @@
 
       return new RSVP.Queue()
         .push(function () {
-          return waitForOpenIndexedDB(db_name, function (db) {
-            return waitForTransaction(db, ["blob"], "readonly",
-                                      function (tx) {
-                var key_path = buildKeyPath([id, name]),
-                  blob_store = tx.objectStore("blob"),
-                  start_index,
-                  end_index,
-                  promise_list = [];
+          return waitForOpenIndexedDB(db_name, undefined,
+            handleUpgradeNeeded, function (db) {
+              return waitForTransaction(db, ["blob"], "readonly",
+                                        function (tx) {
+                  var key_path = buildKeyPath([id, name]),
+                    blob_store = tx.objectStore("blob"),
+                    start_index,
+                    end_index,
+                    promise_list = [];
 
 
-                start_index = Math.floor(start / UNITE);
-                if (end !== undefined) {
-                  end_index =  Math.floor(end / UNITE);
-                  if (end % UNITE === 0) {
-                    end_index -= 1;
-                  }
-                }
-
-                function getBlobKey(cursor) {
-                  var index = parseInt(
-                    cursor.primaryKey.slice(key_path.length + 1),
-                    10
-                  ),
-                    i;
-
-                  if ((start !== 0) && (index < start_index)) {
-                    // No need to fetch blobs at the start
-                    return;
-                  }
-                  if ((end !== undefined) && (index > end_index)) {
-                    // No need to fetch blobs at the end
-                    return;
+                  start_index = Math.floor(start / UNITE);
+                  if (end !== undefined) {
+                    end_index =  Math.floor(end / UNITE);
+                    if (end % UNITE === 0) {
+                      end_index -= 1;
+                    }
                   }
 
-                  i = index - start_index;
-                  // Extend array size
-                  while (i > promise_list.length) {
-                    promise_list.push(null);
-                    i -= 1;
-                  }
-                  // Sort the blob by their index
-                  promise_list.splice(
-                    index - start_index,
-                    0,
-                    waitForIDBRequest(blob_store.get(cursor.primaryKey))
-                  );
-                }
+                  function getBlobKey(cursor) {
+                    var index = parseInt(
+                      cursor.primaryKey.slice(key_path.length + 1),
+                      10
+                    ),
+                      i;
 
-                // Get all blob keys to check if they must be fetched
-                return waitForAllSynchronousCursor(
-                  blob_store.index("_id_attachment")
-                    .openKeyCursor(IDBKeyRange.only([id, name])),
-                  getBlobKey
-                )
-                  .then(function () {
-                    return RSVP.all(promise_list);
-                  });
-              });
-          });
+                    if ((start !== 0) && (index < start_index)) {
+                      // No need to fetch blobs at the start
+                      return;
+                    }
+                    if ((end !== undefined) && (index > end_index)) {
+                      // No need to fetch blobs at the end
+                      return;
+                    }
+
+                    i = index - start_index;
+                    // Extend array size
+                    while (i > promise_list.length) {
+                      promise_list.push(null);
+                      i -= 1;
+                    }
+                    // Sort the blob by their index
+                    promise_list.splice(
+                      index - start_index,
+                      0,
+                      waitForIDBRequest(blob_store.get(cursor.primaryKey))
+                    );
+                  }
+
+                  // Get all blob keys to check if they must be fetched
+                  return waitForAllSynchronousCursor(
+                    blob_store.index("_id_attachment")
+                      .openKeyCursor(IDBKeyRange.only([id, name])),
+                    getBlobKey
+                  )
+                    .then(function () {
+                      return RSVP.all(promise_list);
+                    });
+                });
+            });
         })
         .push(function (result_list) {
           // No need to keep the IDB open
@@ -501,46 +370,47 @@
     // Request the full blob
     return new RSVP.Queue()
       .push(function () {
-        return waitForOpenIndexedDB(db_name, function (db) {
-          return waitForTransaction(db, ["attachment", "blob"], "readonly",
-                                    function (tx) {
-              var key_path = buildKeyPath([id, name]),
-                attachment_store = tx.objectStore("attachment"),
-                blob_store = tx.objectStore("blob");
+        return waitForOpenIndexedDB(db_name, undefined, handleUpgradeNeeded,
+          function (db) {
+            return waitForTransaction(db, ["attachment", "blob"], "readonly",
+                                      function (tx) {
+                var key_path = buildKeyPath([id, name]),
+                  attachment_store = tx.objectStore("attachment"),
+                  blob_store = tx.objectStore("blob");
 
-              function getBlob(cursor) {
-                var index = parseInt(
-                  cursor.primaryKey.slice(key_path.length + 1),
-                  10
-                ),
-                  i = index;
-                // Extend array size
-                while (i > array_buffer_list.length) {
-                  array_buffer_list.push(null);
-                  i -= 1;
+                function getBlob(cursor) {
+                  var index = parseInt(
+                    cursor.primaryKey.slice(key_path.length + 1),
+                    10
+                  ),
+                    i = index;
+                  // Extend array size
+                  while (i > array_buffer_list.length) {
+                    array_buffer_list.push(null);
+                    i -= 1;
+                  }
+                  // Sort the blob by their index
+                  array_buffer_list.splice(
+                    index,
+                    0,
+                    cursor.value.blob
+                  );
                 }
-                // Sort the blob by their index
-                array_buffer_list.splice(
-                  index,
-                  0,
-                  cursor.value.blob
-                );
-              }
 
-              return RSVP.all([
-                // Get the attachment info (mime type)
-                waitForIDBRequest(attachment_store.get(
-                  key_path
-                )),
-                // Get all needed blobs
-                waitForAllSynchronousCursor(
-                  blob_store.index("_id_attachment")
-                    .openCursor(IDBKeyRange.only([id, name])),
-                  getBlob
-                )
-              ]);
-            });
-        });
+                return RSVP.all([
+                  // Get the attachment info (mime type)
+                  waitForIDBRequest(attachment_store.get(
+                    key_path
+                  )),
+                  // Get all needed blobs
+                  waitForAllSynchronousCursor(
+                    blob_store.index("_id_attachment")
+                      .openCursor(IDBKeyRange.only([id, name])),
+                    getBlob
+                  )
+                ]);
+              });
+          });
 
       })
       .push(function (result_list) {
@@ -591,103 +461,106 @@
           handled_size += UNITE;
         }
 
-        return waitForOpenIndexedDB(db_name, function (db) {
-          return waitForTransaction(db, ["attachment", "blob"], "readwrite",
-                                    function (tx) {
-              var blob_store,
-                promise_list,
-                delete_promise_list = [],
-                key_path = buildKeyPath([id, name]),
-                i;
-              // First write the attachment info on top of previous
-              promise_list = [
-                waitForIDBRequest(tx.objectStore("attachment").put({
-                  "_key_path": key_path,
-                  "_id": id,
-                  "_attachment": name,
-                  "info": {
-                    "content_type": blob.type,
-                    "length": blob.size
-                  }
-                }))
-              ];
-              // Then, write all blob parts on top of previous
-              blob_store = tx.objectStore("blob");
-              for (i = 0; i < blob_part.length; i += 1) {
-                promise_list.push(
-                  waitForIDBRequest(blob_store.put({
-                    "_key_path": buildKeyPath([id, name, i]),
-                    "_id" : id,
-                    "_attachment" : name,
-                    "_part" : i,
-                    "blob": blob_part[i]
+        return waitForOpenIndexedDB(db_name, undefined, handleUpgradeNeeded,
+          function (db) {
+            return waitForTransaction(db, ["attachment", "blob"], "readwrite",
+                                      function (tx) {
+                var blob_store,
+                  promise_list,
+                  delete_promise_list = [],
+                  key_path = buildKeyPath([id, name]),
+                  i;
+                // First write the attachment info on top of previous
+                promise_list = [
+                  waitForIDBRequest(tx.objectStore("attachment").put({
+                    "_key_path": key_path,
+                    "_id": id,
+                    "_attachment": name,
+                    "info": {
+                      "content_type": blob.type,
+                      "length": blob.size
+                    }
                   }))
-                );
-              }
-
-              function deleteEntry(cursor) {
-                var index = parseInt(
-                  cursor.primaryKey.slice(key_path.length + 1),
-                  10
-                );
-                if (index >= blob_part.length) {
-                  delete_promise_list.push(
-                    waitForIDBRequest(blob_store.delete(cursor.primaryKey))
+                ];
+                // Then, write all blob parts on top of previous
+                blob_store = tx.objectStore("blob");
+                for (i = 0; i < blob_part.length; i += 1) {
+                  promise_list.push(
+                    waitForIDBRequest(blob_store.put({
+                      "_key_path": buildKeyPath([id, name, i]),
+                      "_id" : id,
+                      "_attachment" : name,
+                      "_part" : i,
+                      "blob": blob_part[i]
+                    }))
                   );
                 }
-              }
 
-              // Finally, remove all remaining blobs
-              promise_list.push(
-                waitForAllSynchronousCursor(
-                  blob_store.index("_id_attachment")
-                            .openKeyCursor(IDBKeyRange.only([id, name])),
-                  deleteEntry
-                )
-              );
-
-              return RSVP.all(promise_list)
-                .then(function () {
-                  if (delete_promise_list.length) {
-                    return RSVP.all(delete_promise_list);
+                function deleteEntry(cursor) {
+                  var index = parseInt(
+                    cursor.primaryKey.slice(key_path.length + 1),
+                    10
+                  );
+                  if (index >= blob_part.length) {
+                    delete_promise_list.push(
+                      waitForIDBRequest(blob_store.delete(cursor.primaryKey))
+                    );
                   }
-                });
-            });
-        });
+                }
+
+                // Finally, remove all remaining blobs
+                promise_list.push(
+                  waitForAllSynchronousCursor(
+                    blob_store.index("_id_attachment")
+                              .openKeyCursor(IDBKeyRange.only([id, name])),
+                    deleteEntry
+                  )
+                );
+
+                return RSVP.all(promise_list)
+                  .then(function () {
+                    if (delete_promise_list.length) {
+                      return RSVP.all(delete_promise_list);
+                    }
+                  });
+              });
+          });
       });
   };
 
   IndexedDBStorage.prototype.removeAttachment = function (id, name) {
-    return waitForOpenIndexedDB(this._database_name, function (db) {
-      return waitForTransaction(db, ["attachment", "blob"], "readwrite",
-                                function (tx) {
-          var promise_list = [],
-            attachment_store = tx.objectStore("attachment"),
-            blob_store = tx.objectStore("blob");
+    return waitForOpenIndexedDB(this._database_name, undefined,
+      handleUpgradeNeeded, function (db) {
+        return waitForTransaction(db, ["attachment", "blob"], "readwrite",
+                                  function (tx) {
+            var promise_list = [],
+              attachment_store = tx.objectStore("attachment"),
+              blob_store = tx.objectStore("blob");
 
-          function deleteEntry(cursor) {
-            promise_list.push(
-              waitForIDBRequest(blob_store.delete(cursor.primaryKey))
-            );
-          }
+            function deleteEntry(cursor) {
+              promise_list.push(
+                waitForIDBRequest(blob_store.delete(cursor.primaryKey))
+              );
+            }
 
-          return RSVP.all([
-            waitForIDBRequest(
-              attachment_store.delete(buildKeyPath([id, name]))
-            ),
-            waitForAllSynchronousCursor(
-              blob_store.index("_id_attachment")
-                        .openKeyCursor(IDBKeyRange.only([id, name])),
-              deleteEntry
-            )
-          ])
-            .then(function () {
-              return RSVP.all(promise_list);
-            });
+            return RSVP.all([
+              waitForIDBRequest(
+                attachment_store.delete(buildKeyPath([id, name]))
+              ),
+              waitForAllSynchronousCursor(
+                blob_store.index("_id_attachment")
+                          .openKeyCursor(IDBKeyRange.only([id, name])),
+                deleteEntry
+              )
+            ])
+              .then(function () {
+                return RSVP.all(promise_list);
+              });
 
-        });
-    });
+          });
+      });
   };
 
   jIO.addStorage("indexeddb", IndexedDBStorage);
-}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest, DOMError));
+}(jIO, RSVP, Blob, Math, IDBKeyRange, waitForOpenIndexedDB, waitForIDBRequest,
+  waitForAllSynchronousCursor, waitForTransaction));

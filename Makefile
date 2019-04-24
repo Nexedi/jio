@@ -59,6 +59,11 @@ ${LINTDIR}/queries/query.js: ${SRCDIR}/queries/query.js
 	${JSLINT} ${LINTOPTS} $<
 	@cat $< > $@
 
+${LINTDIR}/indexeddb/indexeddb.js: ${SRCDIR}/indexeddb/indexeddb.js
+	@mkdir -p $(@D)
+	${JSLINT} ${LINTOPTS} $<
+	@cat $< > $@
+
 ${LINTDIR}/${TESTDIR}/jio.storage/%.js: ${TESTDIR}/jio.storage/%.js
 	@mkdir -p $(@D)
 	${JSLINT} ${LINTOPTS} --predef QUnit --predef RSVP --predef jIO $<
@@ -104,6 +109,7 @@ lint: $(patsubst ${TESTDIR}/jio.storage/%.js, ${LINTDIR}/${TESTDIR}/jio.storage/
 	$(patsubst ${EXAMPLEDIR}/%.js, ${LINTDIR}/${EXAMPLEDIR}/%.js, $(wildcard ${EXAMPLEDIR}/*.js)) \
 	${LINTDIR}/queries/query.js \
 	${LINTDIR}/jio.date/jiodate.js \
+	${LINTDIR}/indexeddb/indexeddb.js \
 	${LINTDIR}/jio.js \
 	${LINTDIR}/node/jio.js \
 	${LINTDIR}/${TESTDIR}/node.js \
@@ -129,6 +135,7 @@ ${JIOVERSION}: ${EXTERNALDIR}/URI.js \
 	${SRCDIR}/queries/parser-end.js \
 	${SRCDIR}/queries/query.js \
 	${SRCDIR}/jio.date/jiodate.js \
+	${SRCDIR}/indexeddb/indexeddb.js \
 	${SRCDIR}/jio.js \
 	${EXTERNALDIR}/rusha.js \
 	${SRCDIR}/jio.storage/replicatestorage.js \
