@@ -789,36 +789,6 @@
       });
   });
 
-  test("Repair fails", function () {
-    var context = this, chrome_error, firefox_error;
-    chrome_error = "Connection to: jio:index2_test failed: Version change " +
-          "transaction was aborted in upgradeneeded event handler. " +
-          "Error: Capacity 'buildQuery' is not implemented on 'dummystorage3'";
-    firefox_error = "Connection to: jio:index2_test failed: A request was " +
-          "aborted, for example through a call to IDBTransaction.abort. " +
-          "Error: Capacity 'buildQuery' is not implemented on 'dummystorage3'";
-    context.jio = jIO.createJIO({
-      type: "index2",
-      database: "index2_test",
-      index_keys: ["a", "c"],
-      sub_storage: {
-        type: "dummystorage3"
-      }
-    });
-    stop();
-    expect(1);
-
-    DummyStorage3.prototype.buildQuery = undefined;
-
-    context.jio.allDocs({query: "c: 'control'"})
-      .fail(function (error) {
-        ok(error === chrome_error || error === firefox_error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
   test("Manual repair", function () {
     var context = this, fake_data;
     context.jio = jIO.createJIO({

@@ -18,11 +18,12 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 /*jslint nomen: true */
-/*global indexedDB, jIO, RSVP, IDBOpenDBRequest, DOMError, Event,
-      parseStringToObject, Set, DOMException*/
+/*global indexedDB, jIO, RSVP, Event, parseStringToObject, Set,
+  waitForTransaction, waitForAllSynchronousCursor, waitForIDBRequest,
+  waitForOpenIndexedDB*/
 
-(function (indexedDB, jIO, RSVP, IDBOpenDBRequest, DOMError,
-  parseStringToObject, DOMException) {
+(function (indexedDB, jIO, RSVP, parseStringToObject, waitForTransaction,
+  waitForAllSynchronousCursor, waitForIDBRequest, waitForOpenIndexedDB) {
   "use strict";
 
   function IndexStorage2(description) {
@@ -74,40 +75,6 @@
     return doc;
   }
 
-  function waitForIDBRequest(request) {
-    return new RSVP.Promise(function (resolve, reject) {
-      request.onerror = reject;
-      request.onsuccess = resolve;
-    });
-  }
-
-  function waitForAllSynchronousCursor(request, callback) {
-    var force_cancellation = false;
-
-    function canceller() {
-      force_cancellation = true;
-    }
-
-    function resolver(resolve, reject) {
-      request.onerror = reject;
-      request.onsuccess = function (evt) {
-        var cursor = evt.target.result;
-        if (cursor && !force_cancellation) {
-          try {
-            callback(cursor);
-          } catch (error) {
-            reject(error);
-          }
-          // continue to next iteration
-          cursor["continue"]();
-        } else {
-          resolve();
-        }
-      };
-    }
-    return new RSVP.Promise(resolver, canceller);
-  }
-
   function getCursorResult(cursor, limit) {
     var result = [], count = 0;
     function pushLimitedMetadata(cursor) {
@@ -122,21 +89,37 @@
       });
   }
 
+  function waitForRepairableOpenIndexedDB(db_name, version, index_keys,
+    sub_storage_description, signature_storage_name, upgrade_handler,
+    callback) {
+    var handleUpgradeNeeded = function (evt) {
+      return upgrade_handler(evt, index_keys, sub_storage_description,
+        signature_storage_name);
+    };
+    return waitForOpenIndexedDB(db_name, version, handleUpgradeNeeded,
+      callback);
+  }
+
   function VirtualIDB(description) {
     this._operations = description.operations;
   }
 
   function virtualOperation(type, context, function_arguments) {
-    var cancel_callback;
+    var cancel_callback, operation = {}, promise;
     function resolver(resolve, reject) {
       cancel_callback = reject;
-      context._operations.push({type: type, arguments: function_arguments,
-        onsuccess: resolve, onerror: reject});
+      operation.type = type;
+      operation.arguments = function_arguments;
+      operation.onsuccess = resolve;
+      operation.onerror = reject;
     }
     function canceller() {
       cancel_callback();
     }
-    return new RSVP.Promise(resolver, canceller);
+    promise = new RSVP.Promise(resolver, canceller);
+    operation.promise = promise;
+    context._operations.push(operation);
+    return promise;
   }
 
   VirtualIDB.prototype.hasCapacity = function (name) {
@@ -201,6 +184,9 @@
 
   function processVirtualOperation(operation, store, index_keys, disable_get) {
     var request, get_success_handler;
+    if (operation.promise.isRejected) {
+      return;
+    }
     if (operation.type === "put") {
       request = store.put({
         id: operation.arguments[0],
@@ -233,8 +219,6 @@
       return {request: request, onsuccess: operation.onsuccess};
     }
   }
-
-  var transaction_failure_reason;
 
   function repairInTransaction(sub_storage_description, transaction,
     index_keys, signature_storage_name, clear_storage) {
@@ -269,7 +253,6 @@
         }
         if (repair_promise.isRejected) {
           transaction.abort();
-          transaction_failure_reason = repair_promise.rejectedReason;
           return;
         }
         if (repair_promise.isFulfilled) {
@@ -279,7 +262,7 @@
           store.get("inexistent"), next_continuation_resolve);
       };
     };
-    repeatUntilPromiseFulfilled(store.get("inexistent"));
+    return repeatUntilPromiseFulfilled(store.get("inexistent"));
   }
 
   function handleUpgradeNeeded(evt, index_keys, sub_storage_description,
@@ -319,122 +302,15 @@
     }
   }
 
-  function waitForOpenIndexedDB(db_name, version, index_keys,
-    sub_storage_description, signature_storage_name, callback) {
-    function resolver(resolve, reject) {
-      // Open DB //
-      var request = indexedDB.open(db_name, version);
-      request.onerror = function (error) {
-        var error_sub_message;
-        if (request.result) {
-          request.result.close();
-        }
-        if ((error !== undefined) &&
-            (error.target instanceof IDBOpenDBRequest) &&
-            ((error.target.error instanceof DOMError) ||
-             (error.target.error instanceof DOMException))) {
-          error_sub_message = error.target.error.message;
-          if (transaction_failure_reason) {
-            error_sub_message += " " + transaction_failure_reason;
-            transaction_failure_reason = undefined;
-          }
-          reject("Connection to: " + db_name + " failed: " + error_sub_message);
-        } else {
-          reject(error);
-        }
-      };
-
-      request.onabort = function () {
-        request.result.close();
-        reject("Aborting connection to: " + db_name);
-      };
-
-      request.ontimeout = function () {
-        request.result.close();
-        reject("Connection to: " + db_name + " timeout");
-      };
-
-      request.onblocked = function () {
-        request.result.close();
-        reject("Connection to: " + db_name + " was blocked");
-      };
-
-      // Create DB if necessary //
-      request.onupgradeneeded = function (evt) {
-        handleUpgradeNeeded(evt, index_keys, sub_storage_description,
-          signature_storage_name);
-      };
-
-      request.onversionchange = function () {
-        request.result.close();
-        reject(db_name + " was upgraded");
-      };
-
-      request.onsuccess = function () {
-        return new RSVP.Queue()
-          .push(function () {
-            return callback(request.result);
-          })
-          .push(function (result) {
-            request.result.close();
-            resolve(result);
-          }, function (error) {
-            request.result.close();
-            reject(error);
-          });
-      };
-    }
-
-    return new RSVP.Promise(resolver);
-  }
-
-  function waitForTransaction(db, stores, flag, callback) {
-    var tx = db.transaction(stores, flag);
-    function canceller() {
-      try {
-        tx.abort();
-      } catch (unused) {
-        // Transaction already finished
-        return;
-      }
-    }
-    function resolver(resolve, reject) {
-      var result;
-      try {
-        result = callback(tx);
-      } catch (error) {
-        reject(error);
-      }
-      tx.oncomplete = function () {
-        return new RSVP.Queue()
-          .push(function () {
-            return result;
-          })
-          .push(resolve, function (error) {
-            canceller();
-            reject(error);
-          });
-      };
-      tx.onerror = function (error) {
-        canceller();
-        reject(error);
-      };
-      tx.onabort = function (evt) {
-        reject(evt.target);
-      };
-      return tx;
-    }
-    return new RSVP.Promise(resolver, canceller);
-  }
-
   IndexStorage2.prototype._runQuery = function (key, value, limit) {
     var context = this;
 
     return RSVP.Queue()
       .push(function () {
-        return waitForOpenIndexedDB(context._database_name, context._version,
-          context._index_keys, context._sub_storage_description,
-          context._signature_storage_name, function (db) {
+        return waitForRepairableOpenIndexedDB(context._database_name,
+          context._version, context._index_keys,
+          context._sub_storage_description, context._signature_storage_name,
+          handleUpgradeNeeded, function (db) {
             return waitForTransaction(db, ["index-store"], "readonly",
               function (tx) {
                 if (limit) {
@@ -485,9 +361,9 @@
     if (context._index_keys.length === 0) {
       return;
     }
-    return waitForOpenIndexedDB(context._database_name, context._version,
-      context._index_keys, context._sub_storage_description,
-      context._signature_storage_name, function (db) {
+    return waitForRepairableOpenIndexedDB(context._database_name,
+      context._version, context._index_keys, context._sub_storage_description,
+      context._signature_storage_name, handleUpgradeNeeded, function (db) {
         return waitForTransaction(db, ["index-store"], "readwrite",
           function (tx) {
             return waitForIDBRequest(tx.objectStore("index-store").put({
@@ -521,9 +397,10 @@
     var context = this;
     return context._sub_storage.remove(id)
       .push(function () {
-        return waitForOpenIndexedDB(context._database_name, context._version,
-          context._index_keys, context._sub_storage_description,
-          context._signature_storage_name, function (db) {
+        return waitForRepairableOpenIndexedDB(context._database_name,
+          context._version, context._index_keys,
+          context._sub_storage_description, context._signature_storage_name,
+          handleUpgradeNeeded, function (db) {
             return waitForTransaction(db, ["index-store"], "readwrite",
               function (tx) {
                 return waitForIDBRequest(tx.objectStore("index-store")
@@ -535,9 +412,9 @@
 
   IndexStorage2.prototype.repair = function () {
     var context = this;
-    return waitForOpenIndexedDB(context._database_name, context._version,
-      context._index_keys, context._sub_storage_description,
-      context._signature_storage_name, function (db) {
+    return waitForRepairableOpenIndexedDB(context._database_name,
+      context._version, context._index_keys, context._sub_storage_description,
+      context._signature_storage_name, handleUpgradeNeeded, function (db) {
         return waitForTransaction(db, ["index-store"], "readwrite",
           function (tx) {
             return repairInTransaction(context._sub_storage_description, tx,
@@ -560,5 +437,5 @@
   };
 
   jIO.addStorage("index2", IndexStorage2);
-}(indexedDB, jIO, RSVP, IDBOpenDBRequest, DOMError, parseStringToObject,
-  DOMException));
+}(indexedDB, jIO, RSVP, parseStringToObject, waitForTransaction,
+  waitForAllSynchronousCursor, waitForIDBRequest, waitForOpenIndexedDB));
