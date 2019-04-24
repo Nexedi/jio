@@ -653,10 +653,10 @@
       context.jio.put("11", {"a": "16", "b": "2"})
     ])
       .then(function () {
-        return context.jio.allDocs({limit: 4, query: "b:2"});
+        return context.jio.allDocs({limit: [1, 3], query: "b:2"});
       })
       .then(function (result) {
-        equal(result.data.total_rows, 4);
+        equal(result.data.total_rows, 2);
       })
       .fail(function (error) {
         console.log(error);
@@ -790,7 +790,13 @@
   });
 
   test("Repair fails", function () {
-    var context = this;
+    var context = this, chrome_error, firefox_error;
+    chrome_error = "Connection to: jio:index2_test failed: Version change " +
+          "transaction was aborted in upgradeneeded event handler. " +
+          "Error: Capacity 'buildQuery' is not implemented on 'dummystorage3'";
+    firefox_error = "Connection to: jio:index2_test failed: A request was " +
+          "aborted, for example through a call to IDBTransaction.abort. " +
+          "Error: Capacity 'buildQuery' is not implemented on 'dummystorage3'";
     context.jio = jIO.createJIO({
       type: "index2",
       database: "index2_test",
@@ -806,9 +812,7 @@
 
     context.jio.allDocs({query: "c: 'control'"})
       .fail(function (error) {
-        equal(error, "Connection to: jio:index2_test failed: Version change " +
-          "transaction was aborted in upgradeneeded event handler. " +
-          "Error: Capacity 'buildQuery' is not implemented on 'dummystorage3'");
+        ok(error === chrome_error || error === firefox_error);
       })
       .always(function () {
         start();

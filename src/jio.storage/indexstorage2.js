@@ -81,63 +81,82 @@
     });
   }
 
-  function iterateCursor(on, query, limit) {
-    return new RSVP.Promise(function (resolve, reject) {
-      var result = [], count = 0, cursor;
-      cursor = on.openKeyCursor(query);
-      cursor.onsuccess = function (cursor) {
-        if (cursor.target.result && count !== limit) {
-          count += 1;
-          result.push({id: cursor.target.result.primaryKey, value: {}});
-          cursor.target.result.continue();
+  function waitForAllSynchronousCursor(request, callback) {
+    var force_cancellation = false;
+
+    function canceller() {
+      force_cancellation = true;
+    }
+
+    function resolver(resolve, reject) {
+      request.onerror = reject;
+      request.onsuccess = function (evt) {
+        var cursor = evt.target.result;
+        if (cursor && !force_cancellation) {
+          try {
+            callback(cursor);
+          } catch (error) {
+            reject(error);
+          }
+          // continue to next iteration
+          cursor["continue"]();
         } else {
-          resolve(result);
+          resolve();
         }
       };
-      cursor.onerror = function (error) {
-        reject(error.message);
-      };
-    });
+    }
+    return new RSVP.Promise(resolver, canceller);
+  }
+
+  function getCursorResult(cursor, limit) {
+    var result = [], count = 0;
+    function pushLimitedMetadata(cursor) {
+      if (count >= limit[0] && count < limit[1]) {
+        result.push({id: cursor.primaryKey, value: {}});
+      }
+      count += 1;
+    }
+    return waitForAllSynchronousCursor(cursor, pushLimitedMetadata)
+      .then(function () {
+        return result;
+      });
   }
 
   function VirtualIDB(description) {
     this._operations = description.operations;
   }
 
+  function virtualOperation(type, context, function_arguments) {
+    var cancel_callback;
+    function resolver(resolve, reject) {
+      cancel_callback = reject;
+      context._operations.push({type: type, arguments: function_arguments,
+        onsuccess: resolve, onerror: reject});
+    }
+    function canceller() {
+      cancel_callback();
+    }
+    return new RSVP.Promise(resolver, canceller);
+  }
+
   VirtualIDB.prototype.hasCapacity = function (name) {
     return (name === "list");
   };
 
-  VirtualIDB.prototype.put = function (id, value) {
-    var context = this;
-    return new RSVP.Promise(function (resolve, reject) {
-      context._operations.push({type: "put", arguments: [id, value],
-        onsuccess: resolve, onerror: reject});
-    });
+  VirtualIDB.prototype.put = function () {
+    return virtualOperation("put", this, arguments);
   };
 
-  VirtualIDB.prototype.remove = function (id) {
-    var context = this;
-    return new RSVP.Promise(function (resolve, reject) {
-      context._operations.push({type: "remove", arguments: [id],
-        onsuccess: resolve, onerror: reject});
-    });
+  VirtualIDB.prototype.remove = function () {
+    return virtualOperation("remove", this, arguments);
   };
 
-  VirtualIDB.prototype.get = function (id) {
-    var context = this;
-    return new RSVP.Promise(function (resolve, reject) {
-      context._operations.push({type: "get", arguments: [id],
-        onsuccess: resolve, onerror: reject});
-    });
+  VirtualIDB.prototype.get = function () {
+    return virtualOperation("get", this, arguments);
   };
 
-  VirtualIDB.prototype.buildQuery = function (options) {
-    var context = this;
-    return new RSVP.Promise(function (resolve, reject) {
-      context._operations.push({type: "buildQuery", arguments: [options],
-        onsuccess: resolve, onerror: reject});
-    });
+  VirtualIDB.prototype.buildQuery = function () {
+    return virtualOperation("buildQuery", this, arguments);
   };
 
   VirtualIDB.prototype.allAttachments = function () {
@@ -204,9 +223,9 @@
       }
     }
     if (operation.type === "buildQuery") {
-      request = iterateCursor(store);
-      request.then(operation.onsuccess).fail(operation.onerror);
-      return;
+      request = store.getAllKeys();
+      request.oerror = operation.onerror;
+      return {request: request, onsuccess: operation.onsuccess};
     }
     if (operation.type === "remove") {
       request = store.delete(operation.arguments[0]);
@@ -237,10 +256,7 @@
         if (continuation_resolve) {
           continuation_resolve.apply(null, arguments);
         }
-        while (true) {
-          if (operations.length === 0) {
-            break;
-          }
+        while (operations.length !== 0) {
           operation_result = processVirtualOperation(operations.shift(), store,
             index_keys, clear_storage);
           // use the current request to continue the repeat loop if possible
@@ -413,14 +429,30 @@
 
   IndexStorage2.prototype._runQuery = function (key, value, limit) {
     var context = this;
-    return waitForOpenIndexedDB(context._database_name, context._version,
-      context._index_keys, context._sub_storage_description,
-      context._signature_storage_name, function (db) {
-        return waitForTransaction(db, ["index-store"], "readonly",
-          function (tx) {
-            return iterateCursor(tx.objectStore("index-store")
-              .index("Index-" + key), value, limit);
+
+    return RSVP.Queue()
+      .push(function () {
+        return waitForOpenIndexedDB(context._database_name, context._version,
+          context._index_keys, context._sub_storage_description,
+          context._signature_storage_name, function (db) {
+            return waitForTransaction(db, ["index-store"], "readonly",
+              function (tx) {
+                if (limit) {
+                  return getCursorResult(tx.objectStore("index-store")
+                    .index("Index-" + key).openCursor(value), limit);
+                }
+                return waitForIDBRequest(tx.objectStore("index-store")
+                  .index("Index-" + key).getAllKeys(value));
+              });
           });
+      })
+      .push(function (result) {
+        if (limit) {
+          return result;
+        }
+        return result.target.result.map(function (item) {
+          return {id: item, value: {}};
+        });
       });
   };
 
@@ -433,12 +465,7 @@
         if (context._index_keys.indexOf(query.key) !== -1) {
           return context._runQuery(query.key, query.value, options.limit)
             .then(function (result) {
-              return result.map(function (value) {
-                return {
-                  id: value.id,
-                  value: {}
-                };
-              });
+              return result;
             });
         }
       }
@@ -483,7 +510,10 @@
     var context = this;
     return context._sub_storage.post(value)
       .push(function (id) {
-        return context._put(id, value);
+        return context._put(id, value)
+          .then(function () {
+            return id;
+          });
       });
   };
 
