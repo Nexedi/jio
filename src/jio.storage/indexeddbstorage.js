@@ -43,14 +43,15 @@
 
 /*jslint nomen: true */
 /*global indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
-        DOMError, Event*/
+        DOMError, Set*/
 
 (function (indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
-           DOMError) {
+           DOMError, Set) {
   "use strict";
 
   // Read only as changing it can lead to data corruption
-  var UNITE = 2000000;
+  var UNITE = 2000000,
+    INDEX_PREFIX = 'doc.';
 
   function IndexedDBStorage(description) {
     if (typeof description.database !== "string" ||
@@ -59,6 +60,8 @@
                           "must be a non-empty string");
     }
     this._database_name = "jio:" + description.database;
+    this._version = description.version;
+    this._index_key_list = description.index_key_list || [];
   }
 
   IndexedDBStorage.prototype.hasCapacity = function (name) {
@@ -69,35 +72,65 @@
     return key_list.join("_");
   }
 
-  function handleUpgradeNeeded(evt) {
+  function handleUpgradeNeeded(evt, index_key_list) {
     var db = evt.target.result,
-      store;
+      store,
+      current_store_list = Array.from(db.objectStoreNames),
+      current_index_list,
+      i,
+      index_key;
 
-    store = db.createObjectStore("metadata", {
-      keyPath: "_id",
-      autoIncrement: false
-    });
-    // It is not possible to use openKeyCursor on keypath directly
-    // https://www.w3.org/Bugs/Public/show_bug.cgi?id=19955
-    store.createIndex("_id", "_id", {unique: true});
+    if (current_store_list.indexOf("metadata") === -1) {
+      store = db.createObjectStore("metadata", {
+        keyPath: "_id",
+        autoIncrement: false
+      });
+      // It is not possible to use openKeyCursor on keypath directly
+      // https://www.w3.org/Bugs/Public/show_bug.cgi?id=19955
+      store.createIndex("_id", "_id", {unique: true});
+    } else {
+      store = evt.target.transaction.objectStore("metadata");
+    }
 
-    store = db.createObjectStore("attachment", {
-      keyPath: "_key_path",
-      autoIncrement: false
-    });
-    store.createIndex("_id", "_id", {unique: false});
+    current_index_list = new Set(store.indexNames);
+    current_index_list.delete("_id");
+    for (i = 0; i < index_key_list.length; i += 1) {
+      // Prefix the index name to prevent conflict with _id
+      index_key = INDEX_PREFIX + index_key_list[i];
+      if (current_index_list.has(index_key)) {
+        current_index_list.delete(index_key);
+      } else {
+        store.createIndex(index_key, index_key,
+                          {unique: false});
+      }
+    }
+    current_index_list = Array.from(current_index_list);
+    for (i = 0; i < current_index_list.length; i += 1) {
+      store.deleteIndex(current_index_list[i]);
+    }
 
-    store = db.createObjectStore("blob", {
-      keyPath: "_key_path",
-      autoIncrement: false
-    });
-    store.createIndex("_id_attachment",
-                      ["_id", "_attachment"], {unique: false});
-    store.createIndex("_id", "_id", {unique: false});
+    if (current_store_list.indexOf("attachment") === -1) {
+      store = db.createObjectStore("attachment", {
+        keyPath: "_key_path",
+        autoIncrement: false
+      });
+      store.createIndex("_id", "_id", {unique: false});
+    }
+
+    if (current_store_list.indexOf("blob") === -1) {
+      store = db.createObjectStore("blob", {
+        keyPath: "_key_path",
+        autoIncrement: false
+      });
+      store.createIndex("_id_attachment",
+                        ["_id", "_attachment"], {unique: false});
+      store.createIndex("_id", "_id", {unique: false});
+    }
   }
 
-  function waitForOpenIndexedDB(db_name, callback) {
-    var request;
+  function waitForOpenIndexedDB(storage, callback) {
+    var request,
+      db_name = storage._database_name;
 
     function canceller() {
       if ((request !== undefined) && (request.result !== undefined)) {
@@ -107,7 +140,7 @@
 
     function resolver(resolve, reject) {
       // Open DB //
-      request = indexedDB.open(db_name);
+      request = indexedDB.open(db_name, storage._version);
       request.onerror = function (error) {
         canceller();
         if ((error !== undefined) &&
@@ -135,7 +168,9 @@
       };
 
       // Create DB if necessary //
-      request.onupgradeneeded = handleUpgradeNeeded;
+      request.onupgradeneeded = function (evt) {
+        handleUpgradeNeeded(evt, storage._index_key_list);
+      };
 
       request.onversionchange = function () {
         canceller();
@@ -239,7 +274,7 @@
 
     function pushIncludedMetadata(cursor) {
       result_list.push({
-        "id": cursor.key,
+        "id": cursor.primaryKey,
         "value": {},
         "doc": cursor.value.doc
       });
@@ -247,24 +282,25 @@
 
     function pushMetadata(cursor) {
       result_list.push({
-        "id": cursor.key,
+        "id": cursor.primaryKey,
         "value": {}
       });
     }
 
     return new RSVP.Queue()
       .push(function () {
-        return waitForOpenIndexedDB(context._database_name, function (db) {
+        return waitForOpenIndexedDB(context, function (db) {
           return waitForTransaction(db, ["metadata"], "readonly",
                                     function (tx) {
+              var key = "_id";
               if (options.include_docs === true) {
                 return waitForAllSynchronousCursor(
-                  tx.objectStore("metadata").index("_id").openCursor(),
+                  tx.objectStore("metadata").index(key).openCursor(),
                   pushIncludedMetadata
                 );
               }
               return waitForAllSynchronousCursor(
-                tx.objectStore("metadata").index("_id").openKeyCursor(),
+                tx.objectStore("metadata").index(key).openKeyCursor(),
                 pushMetadata
               );
             });
@@ -279,7 +315,7 @@
     var context = this;
     return new RSVP.Queue()
       .push(function () {
-        return waitForOpenIndexedDB(context._database_name, function (db) {
+        return waitForOpenIndexedDB(context, function (db) {
           return waitForTransaction(db, ["metadata"], "readonly",
                                     function (tx) {
               return waitForIDBRequest(tx.objectStore("metadata").get(id));
@@ -307,7 +343,7 @@
 
     return new RSVP.Queue()
       .push(function () {
-        return waitForOpenIndexedDB(context._database_name, function (db) {
+        return waitForOpenIndexedDB(context, function (db) {
           return waitForTransaction(db, ["metadata", "attachment"], "readonly",
                                     function (tx) {
               return RSVP.all([
@@ -336,7 +372,7 @@
   };
 
   IndexedDBStorage.prototype.put = function (id, metadata) {
-    return waitForOpenIndexedDB(this._database_name, function (db) {
+    return waitForOpenIndexedDB(this, function (db) {
       return waitForTransaction(db, ["metadata"], "readwrite",
                                 function (tx) {
           return waitForIDBRequest(tx.objectStore("metadata").put({
@@ -348,7 +384,7 @@
   };
 
   IndexedDBStorage.prototype.remove = function (id) {
-    return waitForOpenIndexedDB(this._database_name, function (db) {
+    return waitForOpenIndexedDB(this, function (db) {
       return waitForTransaction(db, ["metadata", "attachment", "blob"],
                                 "readwrite", function (tx) {
 
@@ -392,10 +428,10 @@
     if (options === undefined) {
       options = {};
     }
-    var db_name = this._database_name,
-      start,
+    var start,
       end,
-      array_buffer_list = [];
+      array_buffer_list = [],
+      context = this;
 
     start = options.start || 0;
     end = options.end;
@@ -416,7 +452,7 @@
 
       return new RSVP.Queue()
         .push(function () {
-          return waitForOpenIndexedDB(db_name, function (db) {
+          return waitForOpenIndexedDB(context, function (db) {
             return waitForTransaction(db, ["blob"], "readonly",
                                       function (tx) {
                 var key_path = buildKeyPath([id, name]),
@@ -501,7 +537,7 @@
     // Request the full blob
     return new RSVP.Queue()
       .push(function () {
-        return waitForOpenIndexedDB(db_name, function (db) {
+        return waitForOpenIndexedDB(context, function (db) {
           return waitForTransaction(db, ["attachment", "blob"], "readonly",
                                     function (tx) {
               var key_path = buildKeyPath([id, name]),
@@ -573,7 +609,7 @@
   };
 
   IndexedDBStorage.prototype.putAttachment = function (id, name, blob) {
-    var db_name = this._database_name;
+    var context = this;
     return new RSVP.Queue()
       .push(function () {
         // Split the blob first
@@ -591,7 +627,7 @@
           handled_size += UNITE;
         }
 
-        return waitForOpenIndexedDB(db_name, function (db) {
+        return waitForOpenIndexedDB(context, function (db) {
           return waitForTransaction(db, ["attachment", "blob"], "readwrite",
                                     function (tx) {
               var blob_store,
@@ -658,7 +694,7 @@
   };
 
   IndexedDBStorage.prototype.removeAttachment = function (id, name) {
-    return waitForOpenIndexedDB(this._database_name, function (db) {
+    return waitForOpenIndexedDB(this, function (db) {
       return waitForTransaction(db, ["attachment", "blob"], "readwrite",
                                 function (tx) {
           var promise_list = [],
@@ -690,4 +726,5 @@
   };
 
   jIO.addStorage("indexeddb", IndexedDBStorage);
-}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest, DOMError));
+}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest, DOMError,
+  Set));
