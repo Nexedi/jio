@@ -67,7 +67,7 @@
     if (name === "subquery") {
       return this._index_keys;
     }
-    return ((name === "list") || (name === "include"));
+    return ((name === "list") || (name === "include")) || (name === "subquery");
   };
 
   function buildKeyPath(key_list) {
@@ -79,7 +79,10 @@
       store,
       current_stores = Array.from(db.objectStoreNames),
       current_indices,
-      i;
+      i,
+      required_indices = index_keys.map(function (value) {
+        return "doc." + value;
+      });
 
     if (current_stores.indexOf("metadata") === -1) {
       store = db.createObjectStore("metadata", {
@@ -95,11 +98,11 @@
 
     current_indices = new Set(store.indexNames);
     current_indices.delete("_id");
-    for (i = 0; i < index_keys.length; i += 1) {
-      if (current_indices.has(index_keys[i])) {
-        current_indices.delete(index_keys[i]);
+    for (i = 0; i < required_indices.length; i += 1) {
+      if (current_indices.has(required_indices[i])) {
+        current_indices.delete(required_indices[i]);
       } else {
-        store.createIndex(index_keys[i], "doc." + index_keys[i],
+        store.createIndex(required_indices[i], required_indices[i],
           {unique: false});
       }
     }
@@ -297,7 +300,7 @@
                 key = "_id";
                 if (options.subquery) {
                   query = parseStringToObject(options.subquery);
-                  key = query.key;
+                  key = "doc." + query.key;
                   value = query.value;
                 }
                 if (options.include_docs === true) {
