@@ -359,6 +359,24 @@
       "{complex query without operator}.toString()"
     );
 
+    deepEqual(
+      jIO.QueryFactory.create({
+        "type": "simple",
+        "value": "b\\a"
+      }).toString(),
+      " \"b\\a\"",
+      "{simple query with backslash}.toString()"
+    );
+
+    deepEqual(
+      jIO.QueryFactory.create({
+        "type": "simple",
+        "value": "b\\"
+      }).toString(),
+      " \"b\"",
+      "{simple query ending with backslash}.toString()"
+    );
+
   });
 
   test('Docs with space, tab, and newline', function () {
