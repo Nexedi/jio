@@ -377,6 +377,22 @@
       "{simple query ending with backslash}.toString()"
     );
 
+    deepEqual(
+      jIO.QueryFactory.create('identifier: "\\"').toJSON(),
+      {
+        "key": undefined,  // could not exist as JSON.stringify removes it
+        "type": "simple",
+        "value": 'identifier: "\\"',
+      },
+      "'identifier: \"\\\"'.toJSON()"
+    );
+
+    deepEqual(
+      jIO.QueryFactory.create('identifier: "\\"').toString(),
+      ' "identifier: "\\""',
+      "'identifier: \"\\\"'.toString()"
+    );
+
   });
 
   test('Docs with space, tab, and newline', function () {

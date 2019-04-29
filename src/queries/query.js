@@ -662,7 +662,16 @@
       return new Query(key_schema);
     }
     if (typeof object === "string") {
-      object = parseStringToObject(object);
+      try {
+        object = parseStringToObject(object);
+      } catch (error) {
+        if (error.hash && error.hash.expected &&
+            error.hash.expected.length === 1 &&
+            error.hash.expected[0] === "'QUOTE'") {
+          return new query_class_dict.simple({value: object});
+        }
+        throw error;
+      }
     }
     if (typeof (object || {}).type === "string" &&
         query_class_dict[object.type]) {
