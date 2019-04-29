@@ -7445,6 +7445,10 @@ return new Parser;
                         "Argument 1 is not a search text or a parsable object");
   };
 
+  function sanitizeQueryValue(value) {
+    return value.replace(/((?:\\\\)*)\\$/, "$1");
+  }
+
   function objectToSearchText(query) {
     var i = 0,
       query_list = null,
@@ -7453,7 +7457,8 @@ return new Parser;
       common_key = "";
     if (query.type === "simple") {
       return (query.key ? query.key + ": " : "") +
-        (query.operator || "") + ' "' + query.value + '"';
+        (query.operator || "") +
+        ' "' + sanitizeQueryValue(query.value) + '"';
     }
     if (query.type === "complex") {
       query_list = query.query_list;
@@ -7484,7 +7489,7 @@ return new Parser;
         for (i = 0; i < query_list.length; i += 1) {
           string_list.push(
             (query_list[i].operator || "") +
-              ' "' + query_list[i].value + '"'
+              ' "' + sanitizeQueryValue(query_list[i].value) + '"'
           );
         }
       } else {
