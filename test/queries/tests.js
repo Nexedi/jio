@@ -416,7 +416,7 @@
 
     deepEqual(
       jIO.QueryFactory.create('identifier: "\\"').toString(),
-      ' "identifier: "\\""',
+      ' "identifier: \\"\\\\""',
       "'identifier: \"\\\"'.toString()"
     );
 
