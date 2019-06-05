@@ -321,7 +321,7 @@
           "NOT(a:=b OR c:% AND d:<2)"
         )
       ).toString(),
-      "NOT ( ( a: = \"b\" OR ( c:  \"%\" AND d: < \"2\" ) ) )",
+      "NOT ( ( a: = b OR ( c:  % AND d: < 2 ) ) )",
       "create(create(\"NOT(a:=b OR c:% AND d:<2)\")).toString();"
     );
 
@@ -334,13 +334,13 @@
 
     deepEqual(
       jIO.QueryFactory.create("a:(b OR c)").toString(),
-      "a: (  \"b\" OR  \"c\" )",
+      "a: (  b OR  c )",
       "create( \"a:(b OR c)\" ).toString()"
     );
 
     deepEqual(
       jIO.QueryFactory.create("(a:b OR a:c)").toString(),
-      "a: (  \"b\" OR  \"c\" )",
+      "a: (  b OR  c )",
       "create( \"(a:b OR a:c)\" ).toString()"
     );
 
@@ -355,7 +355,7 @@
           "value": "b"
         }]
       }).toString(),
-      "(  \"a\"   \"b\" )",
+      "(  a   b )",
       "{complex query without operator}.toString()"
     );
 
@@ -364,8 +364,8 @@
         "type": "simple",
         "value": "b\\a"
       }).toString(),
-      " \"b\\a\"",
-      "{simple query with backslash}.toString()"
+      " b\\a",
+      "{simple query with value: \"b\\\\a\"}.toString()"
     );
 
     deepEqual(
@@ -373,8 +373,35 @@
         "type": "simple",
         "value": "b\\"
       }).toString(),
-      " \"b\"",
-      "{simple query ending with backslash}.toString()"
+      " b\\",
+      "{simple query with value: \"b\\\\\"}.toString()"
+    );
+
+    deepEqual(
+      jIO.QueryFactory.create({
+        "type": "simple",
+        "value": '"a b"'
+      }).toString(),
+      " \"\\\"a b\\\"\"",
+      "{simple query with value: '\"a b\"'}.toString()"
+    );
+
+    deepEqual(
+      jIO.QueryFactory.create({
+        "type": "simple",
+        "value": "a b\\"
+      }).toString(),
+      " \"a b\"",  // ending backslash is lost to avoid to create an invalid query
+      "{simple query with value: \"a b\\\\\"}.toString() -> XXX Is this really expected behavior ?"
+    );
+
+    deepEqual(
+      jIO.Query.parseStringToObject('"\"a b\""'),
+      {
+        "type": "simple",
+        "value": "\"a b\"",
+      },
+      "parseStringToObject('\"\\\"a b\\\"\"')"
     );
 
     deepEqual(

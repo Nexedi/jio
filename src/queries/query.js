@@ -681,9 +681,16 @@
                         "Argument 1 is not a search text or a parsable object");
   };
 
-  function sanitizeQueryValue(value) {
-    if (typeof value === "string") {
-      return value.replace(/((?:\\\\)*)\\$/, "$1");
+  function ensureString(value) {
+    if (value === undefined) { return "undefined"; }
+    if (value === null) { return "null"; }
+    return value.toString();
+  }
+
+  function renderSearchTextValue(value) {
+    value = ensureString(value);
+    if (/(?:^[=!><]|[\s":])/.test(value)) {
+      return '"' + value.replace(/((?:\\\\)*)\\$/, "$1").replace(/"/g, '\\"') + '"';
     }
     return value;
   }
@@ -697,7 +704,7 @@
     if (query.type === "simple") {
       return (query.key ? query.key + ": " : "") +
         (query.operator || "") +
-        ' "' + sanitizeQueryValue(query.value) + '"';
+        ' ' + renderSearchTextValue(query.value);
     }
     if (query.type === "complex") {
       query_list = query.query_list;
@@ -728,7 +735,7 @@
         for (i = 0; i < query_list.length; i += 1) {
           string_list.push(
             (query_list[i].operator || "") +
-              ' "' + sanitizeQueryValue(query_list[i].value) + '"'
+              ' ' + renderSearchTextValue(query_list[i].value)
           );
         }
       } else {
