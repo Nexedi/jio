@@ -114,7 +114,7 @@ case 17:
  this.$ = mkSimpleQuery('', $$[$0]); 
 break;
 case 18:
- this.$ = mkSimpleQuery('', $$[$0-1]); 
+ this.$ = mkSimpleQuery('', parseQuotedString($$[$0-1])); 
 break;
 }
 },

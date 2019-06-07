@@ -675,6 +675,16 @@
                         "Argument 1 is not a search text or a parsable object");
   };
 
+  function ensureString(value) {
+    if (value === undefined) { return "undefined"; }
+    if (value === null) { return "null"; }
+    return value.toString();
+  }
+
+  function renderSearchTextValue(value) {
+    return '"' + ensureString(value).replace(/"/g, '\\"') + '"';
+  }
+
   function objectToSearchText(query) {
     var i = 0,
       query_list = null,
@@ -683,7 +693,8 @@
       common_key = "";
     if (query.type === "simple") {
       return (query.key ? query.key + ": " : "") +
-        (query.operator || "") + ' "' + query.value + '"';
+        (query.operator || "") + ' ' +
+        renderSearchTextValue(query.value);
     }
     if (query.type === "complex") {
       query_list = query.query_list;
@@ -714,7 +725,7 @@
         for (i = 0; i < query_list.length; i += 1) {
           string_list.push(
             (query_list[i].operator || "") +
-              ' "' + query_list[i].value + '"'
+              ' ' + renderSearchTextValue(query_list[i].value)
           );
         }
       } else {
