@@ -396,12 +396,23 @@
     );
 
     deepEqual(
-      jIO.Query.parseStringToObject('"\"a b\""'),
+      jIO.Query.parseStringToObject('"\\"a b\\""'),
       {
         "type": "simple",
-        "value": "\"a b\"",
+        "key": "",
+        "value": '"a b"',
       },
       "parseStringToObject('\"\\\"a b\\\"\"')"
+    );
+
+    deepEqual(
+      jIO.Query.parseStringToObject('a=b'),
+      {
+        "type": "simple",
+        "key": "",
+        "value": 'a=b',
+      },
+      "parseStringToObject('a=b')"
     );
 
     deepEqual(

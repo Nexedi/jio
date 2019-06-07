@@ -6069,6 +6069,7 @@ var arrayExtend = function () {
   return newlist;
 
 }, mkSimpleQuery = function (key, value, operator) {
+  //TRISTAN var object = {"type": "simple", "key": key, "value": value.replace(/(?:\\(["\\])|(\\[^"\\]))/g, "$1$2")};
   var object = {"type": "simple", "key": key, "value": value};
   if (operator !== undefined) {
     object.operator = operator;
@@ -6223,9 +6224,11 @@ case 15:
  $$[$0].operator = $$[$0-1] ; this.$ = $$[$0]; 
 break;
 case 17:
+ console.log(17, $$[$0]);
  this.$ = mkSimpleQuery('', $$[$0]); 
 break;
 case 18:
+ console.log(18, $$[$0-1]);
  this.$ = mkSimpleQuery('', $$[$0-1]); 
 break;
 }
@@ -7435,7 +7438,16 @@ return new Parser;
       return new Query(key_schema);
     }
     if (typeof object === "string") {
-      object = parseStringToObject(object);
+      try {
+        object = parseStringToObject(object);
+      } catch (error) {
+        if (error.hash && error.hash.expected &&
+            error.hash.expected.length === 1 &&
+            error.hash.expected[0] === "'QUOTE'") {
+          return new query_class_dict.simple({value: object});
+        }
+        throw error;
+      }
     }
     if (typeof (object || {}).type === "string" &&
         query_class_dict[object.type]) {
@@ -7445,6 +7457,20 @@ return new Parser;
                         "Argument 1 is not a search text or a parsable object");
   };
 
+  function ensureString(value) {
+    if (value === undefined) { return "undefined"; }
+    if (value === null) { return "null"; }
+    return value.toString();
+  }
+
+  function renderSearchTextValue(value) {
+    value = ensureString(value);
+    if (/(?:^[=!><]|[\s":])/.test(value)) {
+      return '"' + value.replace(/((?:\\\\)*)\\$/, "$1").replace(/"/g, '\\"') + '"';
+    }
+    return value;
+  }
+
   function objectToSearchText(query) {
     var i = 0,
       query_list = null,
@@ -7453,7 +7479,8 @@ return new Parser;
       common_key = "";
     if (query.type === "simple") {
       return (query.key ? query.key + ": " : "") +
-        (query.operator || "") + ' "' + query.value + '"';
+        (query.operator || "") +
+        ' ' + renderSearchTextValue(query.value);
     }
     if (query.type === "complex") {
       query_list = query.query_list;
@@ -7484,7 +7511,7 @@ return new Parser;
         for (i = 0; i < query_list.length; i += 1) {
           string_list.push(
             (query_list[i].operator || "") +
-              ' "' + query_list[i].value + '"'
+              ' ' + renderSearchTextValue(query_list[i].value)
           );
         }
       } else {
