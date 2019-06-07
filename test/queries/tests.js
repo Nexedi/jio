@@ -359,6 +359,25 @@
       "{complex query without operator}.toString()"
     );
 
+    deepEqual(
+      jIO.QueryFactory.create({
+        "type": "simple",
+        "value": '"a b"'
+      }).toString(),
+      ' "\\"a b\\""',
+      "{simple query with value: '\"a b\"'}.toString()"
+    );
+
+    deepEqual(
+      jIO.Query.parseStringToObject('"\\"a b\\""'),
+      {
+        "key": "",
+        "type": "simple",
+        "value": '"a b"',
+      },
+      "parseStringToObject('\"\\\"a b\\\"\"')"
+    );
+
   });
 
   test('Docs with space, tab, and newline', function () {
