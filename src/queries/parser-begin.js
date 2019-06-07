@@ -71,6 +71,8 @@ var arrayExtend = function () {
     return true;
   }
   return false;
+}, parseQuotedString = function (string) {
+  return string.replace(/(?:\\(")|(\\[^"]))/g, '$1$2');
 },
   error_offsets = [],
   error_lookaheads = [],

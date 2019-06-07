@@ -72,6 +72,6 @@ value
 
 string
     : WORD   { $$ = mkSimpleQuery('', $1); }
-    | QUOTE QUOTED_STRING QUOTE { $$ = mkSimpleQuery('', $2); }
+    | QUOTE QUOTED_STRING QUOTE { $$ = mkSimpleQuery('', parseQuotedString($2)); }
     ;
 
