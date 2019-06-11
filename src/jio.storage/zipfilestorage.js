@@ -1,5 +1,5 @@
 /*global jIO, RSVP, Blob, JSZip */
-/*jslint nomen: true*/
+/*jslint nomen: true, indent: 2*/
 
 /*
  * Copyright 2016, Nexedi SA
@@ -204,7 +204,9 @@
     return loadZip(this)
       .push(function (zip) {
         if (archive_request) {
-          return zip.generateAsync({type: "blob"});
+          return zip.generateAsync({type: "blob",
+                                    compression: "DEFLATE"
+                                   });
         }
         if (id !== "" && !(zip.files.hasOwnProperty(id) && zip.files[id].dir)) {
           throw new jIO.util.jIOError("Cannot find document", 404);
