@@ -157,6 +157,9 @@
       throw new TypeError("jioquery.sortOn(): " +
                           "Argument 1 is not of type 'array'");
     }
+    if (sort_on_option.length === 0) {
+        return list;
+    }
     list.sort(generateSortFunction(
       key_schema,
       sort_on_option
