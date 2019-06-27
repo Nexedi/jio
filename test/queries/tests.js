@@ -642,6 +642,30 @@
       });
   });*/
 
+  test('Empty sort_on options do not raise', function () {
+    var doc_list = [
+      {'a': 1},
+      {'c': 3},
+      {'b': 2}
+    ];
+
+    stop();
+    expect(1);
+    jIO.QueryFactory.create("").exec(
+      doc_list,
+      {
+        sort_on: [],
+      }
+    )
+      .then(function (list) {
+        deepEqual(list, [
+          {'a': 1},
+          {'c': 3},
+          {'b': 2}
+        ], 'Sorting didn\'t raise');
+      }).always(start);
+  });
+
   test('Multiple sort_on options', function () {
     var i,
       len = 1000,
