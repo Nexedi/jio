@@ -1295,7 +1295,8 @@
               });
           }
           report.log(id, options.from_local ? LOG_UNEXPECTED_REMOTE_ATTACHMENT :
-                                              LOG_UNEXPECTED_LOCAL_ATTACHMENT);
+                                              LOG_UNEXPECTED_LOCAL_ATTACHMENT,
+                     JSON.stringify(attachment_dict));
         }, function (error) {
           if ((error instanceof jIO.util.jIOError) &&
               (error.status_code === 404)) {

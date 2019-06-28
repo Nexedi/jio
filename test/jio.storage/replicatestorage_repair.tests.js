@@ -2015,7 +2015,7 @@
       })
       .fail(function (report) {
         deepEqual(report._list, [
-          [report.LOG_UNEXPECTED_REMOTE_ATTACHMENT, id]
+          [report.LOG_UNEXPECTED_REMOTE_ATTACHMENT, id, '{"foo":{}}']
         ]);
       })
       .then(function () {
@@ -2199,7 +2199,7 @@
       })
       .fail(function (report) {
         deepEqual(report._list, [
-          [report.LOG_UNEXPECTED_LOCAL_ATTACHMENT, id]
+          [report.LOG_UNEXPECTED_LOCAL_ATTACHMENT, id, '{"foo":{}}']
         ]);
       })
       .then(function () {
