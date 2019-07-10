@@ -521,6 +521,7 @@
                       parsed_query.query_list.splice(i, 1);
                       query = jIO.Query.objectToSearchText(parsed_query);
                       local_role_found = true;
+                      sub_query = parsed_query.query_list[i];
                     } else {
                       result_list = isMultipleLocalRoles(sub_query);
                       if (result_list) {
@@ -528,6 +529,7 @@
                         parsed_query.query_list.splice(i, 1);
                         query = jIO.Query.objectToSearchText(parsed_query);
                         local_role_found = true;
+                        sub_query = parsed_query.query_list[i];
                       }
                     }
                   }
