@@ -1992,7 +1992,7 @@
 
   test("local document deletion with attachment", function () {
     stop();
-    expect(7);
+    expect(12);
 
     var id,
       context = this,
@@ -2013,9 +2013,9 @@
       .then(function () {
         return context.jio.repair();
       })
-      .fail(function (report) {
+      .then(function (report) {
         deepEqual(report._list, [
-          [report.LOG_UNEXPECTED_REMOTE_ATTACHMENT, id, '{"foo":{}}']
+          [report.LOG_DELETE_REMOTE, id]
         ]);
       })
       .then(function () {
@@ -2029,26 +2029,27 @@
       .then(function () {
         return context.jio.__storage._remote_sub_storage.get(id);
       })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo"
-        });
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._remote_sub_storage
                       .getAttachment(id, 'foo', {format: 'text'});
       })
-      .then(function (result) {
-        equal(result, big_string);
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , foo");
+        equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id);
       })
-      .then(function (result) {
-        deepEqual(result, {
-          from_local: true,
-          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
-        });
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        // equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
       })
       .always(function () {
         start();
@@ -2177,7 +2178,7 @@
 
   test("remote document deletion with attachment", function () {
     stop();
-    expect(7);
+    expect(12);
 
     var id,
       context = this,
@@ -2197,9 +2198,9 @@
       .then(function () {
         return context.jio.repair();
       })
-      .fail(function (report) {
+      .then(function (report) {
         deepEqual(report._list, [
-          [report.LOG_UNEXPECTED_LOCAL_ATTACHMENT, id, '{"foo":{}}']
+          [report.LOG_DELETE_LOCAL, id]
         ]);
       })
       .then(function () {
@@ -2213,25 +2214,25 @@
       .then(function () {
         return context.jio.get(id);
       })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo"
-        });
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find document: " + id);
+        equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.getAttachment(id, 'foo', {format: 'text'});
       })
-      .then(function (result) {
-        equal(result, big_string);
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + id + " , foo");
+        equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id);
       })
-      .then(function (result) {
-        deepEqual(result, {
-          from_local: true,
-          hash: "5ea9013447539ad65de308cbd75b5826a2ae30e5"
-        });
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 404);
       })
       .always(function () {
         start();
