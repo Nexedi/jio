@@ -1262,7 +1262,8 @@
     // ie, replication should prevent losing user data
     // Synchronize attachments before, to ensure
     // all of them will be deleted too
-    var result;
+    var result,
+      previous_report_length;
     if (context._signature_hash_key !== undefined) {
       if (options.conflict) {
         report.log(id, options.from_local ? LOG_FORCE_DELETE_REMOTE :
@@ -1276,12 +1277,21 @@
           return context._signature_sub_storage.remove(id);
         });
     } else {
+      previous_report_length = report._list.length;
       result = repairDocumentAttachment(context, id, report)
         .push(function () {
-          return destination.allAttachments(id);
-        })
-        .push(function (attachment_dict) {
-          if (JSON.stringify(attachment_dict) === "{}") {
+          var next_report_length = report._list.length,
+            has_error = false,
+            i;
+          // Check if there was an error during attachment replication
+          for (i = previous_report_length; i < next_report_length; i += 1) {
+            if ((report._list[i][1] === id) &&
+                (report._list[i][0] < 100)) {
+              has_error = true;
+            }
+          }
+          if (!has_error) {
+            // Attachment repication has been correctly resolved
             if (options.conflict) {
               report.log(id, options.from_local ? LOG_FORCE_DELETE_REMOTE :
                                                   LOG_FORCE_DELETE_LOCAL);
@@ -1295,8 +1305,7 @@
               });
           }
           report.log(id, options.from_local ? LOG_UNEXPECTED_REMOTE_ATTACHMENT :
-                                              LOG_UNEXPECTED_LOCAL_ATTACHMENT,
-                     JSON.stringify(attachment_dict));
+                                              LOG_UNEXPECTED_LOCAL_ATTACHMENT);
         }, function (error) {
           if ((error instanceof jIO.util.jIOError) &&
               (error.status_code === 404)) {

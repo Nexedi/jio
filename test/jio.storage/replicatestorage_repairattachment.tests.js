@@ -4928,4 +4928,523 @@
       });
   });
 
+  ///////////////////////////////////////
+  // Query parameter handling
+  ///////////////////////////////////////
+  test("local document stop matching query with attachment", function () {
+    stop();
+    expect(4);
+
+    var id,
+      second_id,
+      context = this,
+      blob = new Blob(['a']);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      report_level: 1000,
+      query: {sort_on: [['title', 'descending']], limit: [0, 1]},
+      check_local_attachment_modification: true,
+      check_local_attachment_creation: true,
+      check_local_attachment_deletion: true,
+      check_remote_attachment_modification: true,
+      check_remote_attachment_creation: true,
+      check_remote_attachment_deletion: true,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      }
+    });
+
+    context.jio.post({"title": "a"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(id, 'foo', blob);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
+        ok(true, 'first repair success');
+        // Create another document, which will make the first one
+        // not matching the query anymore
+        // and so, will be considered as deleted
+        return context.jio.post({"title": "b"});
+      })
+      .then(function (result) {
+        second_id = result;
+        return context.jio.repair();
+      })
+
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, second_id],
+          [report.LOG_NO_CHANGE_ATTACHMENT, id, 'foo'],
+          [report.LOG_DELETE_REMOTE, id]
+        ]);
+        ok(true, 'second repair success');
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local document stop matching query with att. conflict", function () {
+    stop();
+    expect(4);
+
+    var id,
+      second_id,
+      context = this,
+      blob = new Blob(['a']),
+      blob2 = new Blob(['b']),
+      blob3 = new Blob(['c']);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      report_level: 1000,
+      query: {sort_on: [['title', 'descending']], limit: [0, 1]},
+      check_local_attachment_modification: true,
+      check_local_attachment_creation: true,
+      check_local_attachment_deletion: true,
+      check_remote_attachment_modification: true,
+      check_remote_attachment_creation: true,
+      check_remote_attachment_deletion: true,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      }
+    });
+
+    context.jio.post({"title": "a"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(id, 'foo', blob);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
+        ok(true, 'first repair success');
+        // Create another document, which will make the first one
+        // not matching the query anymore
+        // and so, will be considered as deleted
+        return RSVP.all([
+          context.jio.post({"title": "b"}),
+          context.jio.putAttachment(id, 'foo', blob2),
+          context.jio.__storage._remote_sub_storage.putAttachment(
+            id,
+            "foo",
+            blob3
+          )
+        ]);
+      })
+      .then(function (result) {
+        second_id = result[0];
+        return context.jio.repair();
+      })
+
+      .fail(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, second_id],
+          [report.LOG_UNRESOLVED_ATTACHMENT_CONFLICT, id, 'foo'],
+          [report.LOG_UNEXPECTED_REMOTE_ATTACHMENT, id]
+        ]);
+        ok(true, 'second repair success');
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("local document stop matching query with att. conf. res.", function () {
+    stop();
+    expect(4);
+
+    var id,
+      second_id,
+      context = this,
+      blob = new Blob(['a']),
+      blob2 = new Blob(['b']),
+      blob3 = new Blob(['c']);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      report_level: 1000,
+      query: {sort_on: [['title', 'descending']], limit: [0, 1]},
+      check_local_attachment_modification: true,
+      check_local_attachment_creation: true,
+      check_local_attachment_deletion: true,
+      check_remote_attachment_modification: true,
+      check_remote_attachment_creation: true,
+      check_remote_attachment_deletion: true,
+      conflict_handling: 2,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      }
+    });
+
+    context.jio.post({"title": "a"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(id, 'foo', blob);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
+        ok(true, 'first repair success');
+        // Create another document, which will make the first one
+        // not matching the query anymore
+        // and so, will be considered as deleted
+        return RSVP.all([
+          context.jio.post({"title": "b"}),
+          context.jio.putAttachment(id, 'foo', blob2),
+          context.jio.__storage._remote_sub_storage.putAttachment(
+            id,
+            "foo",
+            blob3
+          )
+        ]);
+      })
+      .then(function (result) {
+        second_id = result[0];
+        return context.jio.repair();
+      })
+
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, second_id],
+          [report.LOG_FORCE_PUT_LOCAL_ATTACHMENT, id, 'foo'],
+          [report.LOG_DELETE_REMOTE, id]
+        ]);
+        ok(true, 'second repair success');
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote document stop matching query with attachment", function () {
+    stop();
+    expect(4);
+
+    var id,
+      second_id,
+      context = this,
+      blob = new Blob(['a']);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      report_level: 1000,
+      query: {sort_on: [['title', 'descending']], limit: [0, 1]},
+      check_local_attachment_modification: true,
+      check_local_attachment_creation: true,
+      check_local_attachment_deletion: true,
+      check_remote_attachment_modification: true,
+      check_remote_attachment_creation: true,
+      check_remote_attachment_deletion: true,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      }
+    });
+
+    context.jio.post({"title": "a"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(id, 'foo', blob);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
+        ok(true, 'first repair success');
+        // Create another document, which will make the first one
+        // not matching the query anymore
+        // and so, will be considered as deleted
+        return context.jio.__storage._remote_sub_storage.post({"title": "b"});
+      })
+      .then(function (result) {
+        second_id = result;
+        return context.jio.repair();
+      })
+
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_LOCAL, second_id],
+          [report.LOG_NO_CHANGE_ATTACHMENT, id, 'foo'],
+          [report.LOG_DELETE_LOCAL, id]
+        ]);
+        ok(true, 'second repair success');
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote document stop matching query with att. conflict", function () {
+    stop();
+    expect(4);
+
+    var id,
+      second_id,
+      context = this,
+      blob = new Blob(['a']),
+      blob2 = new Blob(['b']),
+      blob3 = new Blob(['c']);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      report_level: 1000,
+      query: {sort_on: [['title', 'descending']], limit: [0, 1]},
+      check_local_attachment_modification: true,
+      check_local_attachment_creation: true,
+      check_local_attachment_deletion: true,
+      check_remote_attachment_modification: true,
+      check_remote_attachment_creation: true,
+      check_remote_attachment_deletion: true,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      }
+    });
+
+    context.jio.post({"title": "a"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(id, 'foo', blob);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
+        ok(true, 'first repair success');
+        // Create another document, which will make the first one
+        // not matching the query anymore
+        // and so, will be considered as deleted
+        return RSVP.all([
+          context.jio.__storage._remote_sub_storage.post({"title": "b"}),
+          context.jio.putAttachment(id, 'foo', blob2),
+          context.jio.__storage._remote_sub_storage.putAttachment(
+            id,
+            "foo",
+            blob3
+          )
+        ]);
+      })
+      .then(function (result) {
+        second_id = result[0];
+        return context.jio.repair();
+      })
+
+      .fail(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_LOCAL, second_id],
+          [report.LOG_UNRESOLVED_ATTACHMENT_CONFLICT, id, 'foo'],
+          [report.LOG_UNEXPECTED_LOCAL_ATTACHMENT, id]
+        ]);
+        ok(true, 'second repair success');
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("remote document stop matching query with att. conf. res.", function () {
+    stop();
+    expect(4);
+
+    var id,
+      second_id,
+      context = this,
+      blob = new Blob(['a']),
+      blob2 = new Blob(['b']),
+      blob3 = new Blob(['c']);
+
+    this.jio = jIO.createJIO({
+      type: "replicate",
+      report_level: 1000,
+      query: {sort_on: [['title', 'descending']], limit: [0, 1]},
+      check_local_attachment_modification: true,
+      check_local_attachment_creation: true,
+      check_local_attachment_deletion: true,
+      check_remote_attachment_modification: true,
+      check_remote_attachment_creation: true,
+      check_remote_attachment_deletion: true,
+      conflict_handling: 1,
+      local_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      },
+      remote_sub_storage: {
+        type: "uuid",
+        sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "memory"
+          }
+        }
+      }
+    });
+
+    context.jio.post({"title": "a"})
+      .then(function (result) {
+        id = result;
+        return context.jio.putAttachment(id, 'foo', blob);
+      })
+      .then(function () {
+        return context.jio.repair();
+      })
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_REMOTE, id],
+          [report.LOG_PUT_REMOTE_ATTACHMENT, id, 'foo']
+        ]);
+        ok(true, 'first repair success');
+        // Create another document, which will make the first one
+        // not matching the query anymore
+        // and so, will be considered as deleted
+        return RSVP.all([
+          context.jio.__storage._remote_sub_storage.post({"title": "b"}),
+          context.jio.putAttachment(id, 'foo', blob2),
+          context.jio.__storage._remote_sub_storage.putAttachment(
+            id,
+            "foo",
+            blob3
+          )
+        ]);
+      })
+      .then(function (result) {
+        second_id = result[0];
+        return context.jio.repair();
+      })
+
+      .then(function (report) {
+        deepEqual(report._list, [
+          [report.LOG_PUT_LOCAL, second_id],
+          [report.LOG_FORCE_PUT_REMOTE_ATTACHMENT, id, 'foo'],
+          [report.LOG_DELETE_LOCAL, id]
+        ]);
+        ok(true, 'second repair success');
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 }(jIO, QUnit, Blob, RSVP));
