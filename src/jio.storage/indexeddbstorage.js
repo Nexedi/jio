@@ -356,8 +356,8 @@
     return new RSVP.Queue()
       .push(function () {
         return waitForOpenIndexedDB(context, function (db) {
-          return waitForTransaction(db, ["metadata", "attachment"],
-            "readonly", function (tx) {
+          return waitForTransaction(db, ["metadata", "attachment"], "readonly",
+                                    function (tx) {
               return RSVP.all([
                 waitForIDBRequest(tx.objectStore("metadata").get(id)),
                 waitForAllSynchronousCursor(
