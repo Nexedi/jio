@@ -301,7 +301,7 @@
                 if (options.subquery) {
                   query = parseStringToObject(options.subquery);
                   key = "doc." + query.key;
-                  value = query.value;
+                  value = IDBKeyRange.only(query.value);
                 }
                 if (options.include_docs === true) {
                   return waitForAllSynchronousCursor(
