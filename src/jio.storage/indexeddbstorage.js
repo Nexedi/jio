@@ -46,7 +46,7 @@
         DOMError, Event, Set, parseStringToObject*/
 
 (function (indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
-           DOMError, parseStringToObject) {
+           DOMError) {
   "use strict";
 
   // Read only as changing it can lead to data corruption
@@ -270,10 +270,7 @@
 
   IndexedDBStorage.prototype.buildQuery = function (options) {
     var result_list = [],
-      context = this,
-      query,
-      key,
-      value;
+      context = this;
 
     function pushIncludedMetadata(cursor) {
       result_list.push({
@@ -295,20 +292,15 @@
         return waitForOpenIndexedDB(context, function (db) {
           return waitForTransaction(db, ["metadata"], "readonly",
                                     function (tx) {
-              key = "_id";
-              if (options.subquery) {
-                query = parseStringToObject(options.subquery);
-                key = INDEX_PREFIX + query.key;
-                value = IDBKeyRange.only(query.value);
-              }
+              var key = "_id";
               if (options.include_docs === true) {
                 return waitForAllSynchronousCursor(
-                  tx.objectStore("metadata").index(key).openCursor(value),
+                  tx.objectStore("metadata").index(key).openCursor(),
                   pushIncludedMetadata
                 );
               }
               return waitForAllSynchronousCursor(
-                tx.objectStore("metadata").index(key).openKeyCursor(value),
+                tx.objectStore("metadata").index(key).openKeyCursor(),
                 pushMetadata
               );
             });
@@ -734,5 +726,4 @@
   };
 
   jIO.addStorage("indexeddb", IndexedDBStorage);
-}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest, DOMError,
-  parseStringToObject));
+}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest, DOMError));
