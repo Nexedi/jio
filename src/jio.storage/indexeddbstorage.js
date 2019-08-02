@@ -298,7 +298,7 @@
               key = "_id";
               if (options.subquery) {
                 query = parseStringToObject(options.subquery);
-                key = "doc." + query.key;
+                key = INDEX_PREFIX + query.key;
                 value = IDBKeyRange.only(query.value);
               }
               if (options.include_docs === true) {
