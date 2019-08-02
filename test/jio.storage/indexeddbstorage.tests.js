@@ -19,9 +19,11 @@
  */
 /*jslint nomen: true */
 /*global indexedDB, Blob, sinon, IDBDatabase,
-         IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange*/
+         IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange,
+         DOMException*/
 (function (jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
-           IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange) {
+           IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange,
+           DOMException) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -286,7 +288,9 @@
                   "transaction first argument");
         equal(test.spy_transaction.firstCall.args[1], "readonly",
               "transaction second argument");
-        return check_callback();
+      })
+      .always(function (param) {
+        return check_callback(param);
       })
       .fail(function (error) {
         ok(false, error);
@@ -328,7 +332,164 @@
       equal(context.spy_create_index.callCount, 0, "createIndex count");
       equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
     });
+  });
 
+  test("version update, no key change", function () {
+    var context = this;
+    expect(10);
+
+    return setupDBMigrationTest(context, {}, {version: 2}, function () {
+      ok(context.spy_open.calledOnce, "open count " +
+         context.spy_open.callCount);
+      equal(context.spy_open.firstCall.args[0], "jio:qunit",
+            "open first argument");
+
+      equal(context.spy_create_store.callCount, 0,
+            "createObjectStore count");
+      equal(context.spy_store.callCount, 2,
+            "objectStore count");
+      equal(context.spy_create_index.callCount, 0, "createIndex count");
+      equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
+    });
+  });
+
+  test("version decrease", function () {
+    var context = this;
+    expect(8);
+
+    return setupDBMigrationTest(context, {version: 3},
+                                {version: 2}, function (evt) {
+        ok(evt.target.error instanceof DOMException);
+        equal(evt.target.error.name, 'VersionError');
+
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 0,
+              "createObjectStore count");
+        equal(context.spy_store.callCount, 0,
+              "objectStore count");
+        equal(context.spy_create_index.callCount, 0, "createIndex count");
+        equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
+      });
+  });
+
+  test("version increase, key added", function () {
+    var context = this;
+    expect(13);
+
+    return setupDBMigrationTest(context, {version: 1, index_key_list: ['a']},
+                                {version: 2, index_key_list: ['a', 'b']},
+                                function () {
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 0,
+              "createObjectStore count");
+        equal(context.spy_store.callCount, 2,
+              "objectStore count");
+        equal(context.spy_create_index.callCount, 1, "createIndex count");
+        equal(context.spy_create_index.firstCall.args[0], "doc.b",
+              "first createIndex first argument");
+        equal(context.spy_create_index.firstCall.args[1], "doc.b",
+              "first createIndex second argument");
+        deepEqual(context.spy_create_index.firstCall.args[2], {unique: false},
+                  "first createIndex third argument");
+
+        equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
+      });
+  });
+
+  test("version increase, key removed", function () {
+    var context = this;
+    expect(11);
+
+    return setupDBMigrationTest(context,
+                                {version: 1, index_key_list: ['a', 'b']},
+                                {version: 2, index_key_list: ['b']},
+                                function () {
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 0,
+              "createObjectStore count");
+        equal(context.spy_store.callCount, 2,
+              "objectStore count");
+        equal(context.spy_create_index.callCount, 0, "createIndex count");
+
+        equal(context.spy_delete_index.callCount, 1, "deleteIndex count");
+        equal(context.spy_delete_index.firstCall.args[0], "doc.a",
+              "first deleteIndex first argument");
+      });
+  });
+
+  test("version increase, keys added and removed", function () {
+    var context = this;
+    expect(18);
+
+    return setupDBMigrationTest(context,
+                                {version: 1, index_key_list: ['a', 'b', 'c']},
+                                {version: 2, index_key_list: ['e', 'b', 'f']},
+                                function () {
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 0,
+              "createObjectStore count");
+        equal(context.spy_store.callCount, 2,
+              "objectStore count");
+        equal(context.spy_create_index.callCount, 2, "createIndex count");
+        equal(context.spy_create_index.firstCall.args[0], "doc.e",
+              "first createIndex first argument");
+        equal(context.spy_create_index.firstCall.args[1], "doc.e",
+              "first createIndex second argument");
+        deepEqual(context.spy_create_index.firstCall.args[2], {unique: false},
+                  "first createIndex third argument");
+
+        equal(context.spy_create_index.secondCall.args[0], "doc.f",
+              "second createIndex first argument");
+        equal(context.spy_create_index.secondCall.args[1], "doc.f",
+              "second createIndex second argument");
+        deepEqual(context.spy_create_index.secondCall.args[2], {unique: false},
+                  "second createIndex third argument");
+
+        equal(context.spy_delete_index.callCount, 2, "deleteIndex count");
+        equal(context.spy_delete_index.firstCall.args[0], "doc.a",
+              "first deleteIndex first argument");
+        equal(context.spy_delete_index.secondCall.args[0], "doc.c",
+              "second deleteIndex first argument");
+      });
+  });
+
+
+  test("version idem, keys added and removed", function () {
+    var context = this;
+    expect(10);
+
+    return setupDBMigrationTest(context,
+                                {version: 1, index_key_list: ['a', 'b', 'c']},
+                                {version: 1, index_key_list: ['e', 'b', 'f']},
+                                function () {
+        ok(context.spy_open.calledOnce, "open count " +
+           context.spy_open.callCount);
+        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+              "open first argument");
+
+        equal(context.spy_create_store.callCount, 0,
+              "createObjectStore count");
+        equal(context.spy_store.callCount, 1,
+              "objectStore count");
+        equal(context.spy_create_index.callCount, 0, "createIndex count");
+        equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
+      });
   });
 
   /////////////////////////////////////////////////////////////////
@@ -2015,4 +2176,5 @@
   });
 
 }(jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
-  IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange));
+  IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange,
+  DOMException));
