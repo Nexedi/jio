@@ -231,6 +231,7 @@
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.constructor");
   test("default unite value", function () {
+    expect(3);
     var jio = jIO.createJIO({
       type: "indexeddb",
       database: "qunit"
@@ -238,6 +239,7 @@
 
     equal(jio.__type, "indexeddb");
     deepEqual(jio.__storage._database_name, "jio:qunit");
+    deepEqual(jio.__storage._index_key_list, []);
   });
 
   /////////////////////////////////////////////////////////////////
