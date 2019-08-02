@@ -74,7 +74,7 @@
     context.jio = jIO.createJIO({
       type: "indexeddb",
       database: "index2_test",
-      index_keys: ["a", "b"],
+      index_key_list: ["a", "b"],
     });
     stop();
     expect(2);
@@ -100,7 +100,7 @@
     context.jio = jIO.createJIO({
       type: "indexeddb",
       database: "index2_test",
-      index_keys: ["a", "b"],
+      index_key_list: ["a", "b"],
     });
     stop();
     expect(2);
@@ -137,7 +137,7 @@
       type: "indexeddb",
       database: "index2_test",
       version: 1,
-      index_keys: ["a"]
+      index_key_list: ["a"]
     });
     stop();
     expect(7);
@@ -158,7 +158,7 @@
           type: "indexeddb",
           database: "index2_test",
           version: 2,
-          index_keys: ["a", "b", "c"],
+          index_key_list: ["a", "b", "c"],
         });
       })
       .then(function () {
@@ -192,7 +192,7 @@
         context.jio = jIO.createJIO({
           type: "indexeddb",
           database: "index2_test",
-          index_keys: ["a", "c"],
+          index_key_list: ["a", "c"],
           version: 3
         });
       })

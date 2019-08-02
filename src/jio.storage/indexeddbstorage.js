@@ -61,7 +61,7 @@
     }
     this._database_name = "jio:" + description.database;
     this._version = description.version;
-    this._index_keys = description.index_keys || [];
+    this._index_key_list = description.index_key_list || [];
   }
 
   IndexedDBStorage.prototype.hasCapacity = function (name) {
@@ -130,9 +130,7 @@
 
   function waitForOpenIndexedDB(storage, callback) {
     var request,
-      db_name = storage._database_name,
-      version = storage._version,
-      index_keys = storage._index_keys;
+      db_name = storage._database_name;
 
     function canceller() {
       if ((request !== undefined) && (request.result !== undefined)) {
@@ -142,7 +140,7 @@
 
     function resolver(resolve, reject) {
       // Open DB //
-      request = indexedDB.open(db_name, version);
+      request = indexedDB.open(db_name, storage._version);
       request.onerror = function (error) {
         canceller();
         if ((error !== undefined) &&
@@ -171,7 +169,7 @@
 
       // Create DB if necessary //
       request.onupgradeneeded = function (evt) {
-        handleUpgradeNeeded(evt, index_keys);
+        handleUpgradeNeeded(evt, storage._index_key_list);
       };
 
       request.onversionchange = function () {
