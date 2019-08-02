@@ -31,6 +31,7 @@
     deepEqual = QUnit.deepEqual,
     equal = QUnit.equal,
     module = QUnit.module,
+    throws = QUnit.throws,
     big_string = "",
     j;
 
@@ -244,12 +245,35 @@
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.hasCapacity");
   test("can list documents", function () {
+    expect(2);
     var jio = jIO.createJIO({
       type: "indexeddb",
       database: "qunit"
     });
 
     ok(jio.hasCapacity("list"));
+    ok(jio.hasCapacity("include"));
+  });
+
+  test("can not search documents", function () {
+    expect(4);
+    var jio = jIO.createJIO({
+      type: "indexeddb",
+      database: "qunit"
+    });
+
+    throws(
+      function () {
+        jio.hasCapacity("query");
+      },
+      function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 501);
+        equal(error.message,
+              "Capacity 'query' is not implemented on 'indexeddb'");
+        return true;
+      }
+    );
   });
 
   /////////////////////////////////////////////////////////////////

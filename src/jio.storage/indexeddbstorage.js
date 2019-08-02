@@ -64,10 +64,7 @@
   }
 
   IndexedDBStorage.prototype.hasCapacity = function (name) {
-    if (name === "subquery") {
-      return this._index_keys;
-    }
-    return ((name === "list") || (name === "include")) || (name === "subquery");
+    return ((name === "list") || (name === "include"));
   };
 
   function buildKeyPath(key_list) {
