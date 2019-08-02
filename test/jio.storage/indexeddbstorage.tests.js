@@ -243,6 +243,95 @@
   });
 
   /////////////////////////////////////////////////////////////////
+  // indexeddbStorage DB migration
+  /////////////////////////////////////////////////////////////////
+  module("indexeddbStorage.upgradeDB");
+
+  function setupDBMigrationTest(test, old_jio_kw, new_jio_kw, check_callback) {
+    // Create a IDB with one document
+    // Migrate it to a new version
+    // Spy IDB behaviour while getting the previous document
+    // Check that doument is still there
+    stop();
+    old_jio_kw.type = "indexeddb";
+    old_jio_kw.database = "qunit";
+    new_jio_kw.type = "indexeddb";
+    new_jio_kw.database = "qunit";
+    test.jio = jIO.createJIO(old_jio_kw);
+
+    return deleteIndexedDB(test.jio)
+      .then(function () {
+        return test.jio.put('foo', {'a': 1});
+      })
+      .then(function () {
+        test.jio = jIO.createJIO(new_jio_kw);
+
+        test.spy_open = sinon.spy(indexedDB, "open");
+        test.spy_create_store = sinon.spy(IDBDatabase.prototype,
+                                          "createObjectStore");
+        test.spy_transaction = sinon.spy(IDBDatabase.prototype, "transaction");
+        test.spy_store = sinon.spy(IDBTransaction.prototype, "objectStore");
+        test.spy_index = sinon.spy(IDBObjectStore.prototype, "index");
+        test.spy_create_index = sinon.spy(IDBObjectStore.prototype,
+                                          "createIndex");
+        test.spy_delete_index = sinon.spy(IDBObjectStore.prototype,
+                                          "deleteIndex");
+        return test.jio.get('foo');
+      })
+      .then(function (result) {
+        deepEqual(result, {'a': 1});
+        ok(test.spy_transaction.calledOnce, "transaction count " +
+           test.spy_transaction.callCount);
+        deepEqual(test.spy_transaction.firstCall.args[0], ["metadata"],
+                  "transaction first argument");
+        equal(test.spy_transaction.firstCall.args[1], "readonly",
+              "transaction second argument");
+        return check_callback();
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        test.spy_open.restore();
+        delete test.spy_open;
+        test.spy_create_store.restore();
+        delete test.spy_create_store;
+        test.spy_transaction.restore();
+        delete test.spy_transaction;
+        test.spy_store.restore();
+        delete test.spy_store;
+        test.spy_index.restore();
+        delete test.spy_index;
+        test.spy_create_index.restore();
+        delete test.spy_create_index;
+        test.spy_delete_index.restore();
+        delete test.spy_delete_index;
+
+        start();
+      });
+  }
+
+  test("no change", function () {
+    var context = this;
+    expect(10);
+
+    return setupDBMigrationTest(context, {}, {}, function () {
+      ok(context.spy_open.calledOnce, "open count " +
+         context.spy_open.callCount);
+      equal(context.spy_open.firstCall.args[0], "jio:qunit",
+            "open first argument");
+
+      equal(context.spy_create_store.callCount, 0,
+            "createObjectStore count");
+      equal(context.spy_store.callCount, 1,
+            "objectStore count");
+      equal(context.spy_create_index.callCount, 0, "createIndex count");
+      equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
+    });
+
+  });
+
+  /////////////////////////////////////////////////////////////////
   // documentStorage.hasCapacity
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.hasCapacity");
