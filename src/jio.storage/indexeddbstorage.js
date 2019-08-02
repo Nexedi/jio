@@ -50,7 +50,8 @@
   "use strict";
 
   // Read only as changing it can lead to data corruption
-  var UNITE = 2000000;
+  var UNITE = 2000000,
+    INDEX_PREFIX = 'doc.';
 
   function IndexedDBStorage(description) {
     if (typeof description.database !== "string" ||
@@ -71,17 +72,15 @@
     return key_list.join("_");
   }
 
-  function handleUpgradeNeeded(evt, index_keys) {
+  function handleUpgradeNeeded(evt, index_key_list) {
     var db = evt.target.result,
       store,
-      current_stores = Array.from(db.objectStoreNames),
-      current_indices,
+      current_store_list = Array.from(db.objectStoreNames),
+      current_index_list,
       i,
-      required_indices = index_keys.map(function (value) {
-        return "doc." + value;
-      });
+      index_key;
 
-    if (current_stores.indexOf("metadata") === -1) {
+    if (current_store_list.indexOf("metadata") === -1) {
       store = db.createObjectStore("metadata", {
         keyPath: "_id",
         autoIncrement: false
@@ -93,22 +92,24 @@
       store = evt.target.transaction.objectStore("metadata");
     }
 
-    current_indices = new Set(store.indexNames);
-    current_indices.delete("_id");
-    for (i = 0; i < required_indices.length; i += 1) {
-      if (current_indices.has(required_indices[i])) {
-        current_indices.delete(required_indices[i]);
+    current_index_list = new Set(store.indexNames);
+    current_index_list.delete("_id");
+    for (i = 0; i < index_key_list.length; i += 1) {
+      // Prefix the index name to prevent conflict with _id
+      index_key = INDEX_PREFIX + index_key_list[i];
+      if (current_index_list.has(index_key)) {
+        current_index_list.delete(index_key);
       } else {
-        store.createIndex(required_indices[i], required_indices[i],
-          {unique: false});
+        store.createIndex(index_key, index_key,
+                          {unique: false});
       }
     }
-    current_indices = Array.from(current_indices);
-    for (i = 0; i < current_indices.length; i += 1) {
-      store.deleteIndex(current_indices[i]);
+    current_index_list = Array.from(current_index_list);
+    for (i = 0; i < current_index_list.length; i += 1) {
+      store.deleteIndex(current_index_list[i]);
     }
 
-    if (current_stores.indexOf("attachment") === -1) {
+    if (current_store_list.indexOf("attachment") === -1) {
       store = db.createObjectStore("attachment", {
         keyPath: "_key_path",
         autoIncrement: false
@@ -116,7 +117,7 @@
       store.createIndex("_id", "_id", {unique: false});
     }
 
-    if (current_stores.indexOf("blob") === -1) {
+    if (current_store_list.indexOf("blob") === -1) {
       store = db.createObjectStore("blob", {
         keyPath: "_key_path",
         autoIncrement: false
