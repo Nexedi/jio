@@ -700,6 +700,78 @@
       });
   });
 
+  test("Unhandled index", function () {
+    var context = this;
+    stop();
+    expect(3);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.allDocs({index: {key: 'a', value: '3'}});
+      })
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(
+          error.message,
+          "IndexedDB: unsupported index 'a'"
+        );
+        equal(error.status_code, 400);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("Handled index", function () {
+    var context = this;
+    this.jio = jIO.createJIO({
+      type: "indexeddb",
+      database: "qunit",
+      index_key_list: ['foo']
+    });
+    stop();
+    expect(1);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return RSVP.all([
+          context.jio.put("1", {"foo": "bar"}),
+          context.jio.put("2", {"foo": "bar2"}),
+          context.jio.put("3", {"foo2": "bar"}),
+          context.jio.put("4", {"foo": "bar"})
+        ]);
+      })
+      .then(function () {
+        return context.jio.allDocs({index: {key: 'foo', value: 'bar'}});
+      })
+      .then(function (result) {
+        deepEqual(result, {
+          "data": {
+            "rows": [
+              {
+                "id": "1",
+                "value": {}
+              },
+              {
+                "id": "4",
+                "value": {}
+              }
+            ],
+            "total_rows": 2
+          }
+        });
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   /////////////////////////////////////////////////////////////////
   // indexeddbStorage.get
   /////////////////////////////////////////////////////////////////
