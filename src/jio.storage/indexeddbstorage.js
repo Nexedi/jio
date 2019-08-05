@@ -65,7 +65,7 @@
   }
 
   IndexedDBStorage.prototype.hasCapacity = function (name) {
-    return ((name === "list") || (name === "include"));
+    return ((name === "list") || (name === "include") || (name === "index"));
   };
 
   function buildKeyPath(key_list) {
@@ -268,7 +268,9 @@
 
   IndexedDBStorage.prototype.buildQuery = function (options) {
     var result_list = [],
-      context = this;
+      context = this,
+      key = "_id",
+      value;
 
     function pushIncludedMetadata(cursor) {
       result_list.push({
@@ -285,20 +287,30 @@
       });
     }
 
+    if (options.index) {
+      if (context._index_key_list.indexOf(options.index.key) === -1) {
+        throw new jIO.util.jIOError(
+          "IndexedDB: unsupported index '" + options.index.key + "'",
+          400
+        );
+      }
+      key = INDEX_PREFIX + options.index.key;
+      value = options.index.value;
+    }
+
     return new RSVP.Queue()
       .push(function () {
         return waitForOpenIndexedDB(context, function (db) {
           return waitForTransaction(db, ["metadata"], "readonly",
                                     function (tx) {
-              var key = "_id";
               if (options.include_docs === true) {
                 return waitForAllSynchronousCursor(
-                  tx.objectStore("metadata").index(key).openCursor(),
+                  tx.objectStore("metadata").index(key).openCursor(value),
                   pushIncludedMetadata
                 );
               }
               return waitForAllSynchronousCursor(
-                tx.objectStore("metadata").index(key).openKeyCursor(),
+                tx.objectStore("metadata").index(key).openKeyCursor(value),
                 pushMetadata
               );
             });
