@@ -464,6 +464,7 @@
     return ensurePushableQueue(function () {
       if (context.hasCapacity("list") &&
           ((options.query === undefined) || context.hasCapacity("query")) &&
+          ((options.index === undefined) || context.hasCapacity("index")) &&
           ((options.sort_on === undefined) || context.hasCapacity("sort")) &&
           ((options.group_by === undefined) || context.hasCapacity("group")) &&
           ((options.select_list === undefined) ||
