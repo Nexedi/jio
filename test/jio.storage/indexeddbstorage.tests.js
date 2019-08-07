@@ -21,7 +21,7 @@
 /*global indexedDB, Blob, sinon, IDBDatabase,
          IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange*/
 (function (jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
-           IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange) {
+           IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange, Rusha) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -32,7 +32,8 @@
     equal = QUnit.equal,
     module = QUnit.module,
     big_string = "",
-    j;
+    j,
+    rusha = new Rusha();
 
   for (j = 0; j < 3000000; j += 1) {
     big_string += "a";
@@ -1303,9 +1304,11 @@
 
   test("check result", function () {
     var context = this,
-      attachment = "attachment";
+      attachment = "attachment",
+      expected_hash,
+      received_blob;
     stop();
-    expect(3);
+    expect(4);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1318,6 +1321,7 @@
         return context.jio.getAttachment("foo", attachment);
       })
       .then(function (result) {
+        received_blob = result;
         ok(result instanceof Blob, "Data is Blob");
         equal(result.type, "text/plain;charset=utf-8");
         return jIO.util.readBlobAsText(result);
@@ -1325,6 +1329,54 @@
       .then(function (result) {
         ok(result.target.result === big_string,
            "Attachment correctly fetched");
+      })
+      .then(function () {
+        return jIO.util.readBlobAsArrayBuffer(new Blob([big_string]));
+      })
+      .then(function (result) {
+        expected_hash = rusha.digestFromArrayBuffer(result.target.result);
+        return jIO.util.readBlobAsArrayBuffer(received_blob);
+      })
+      .then(function (result) {
+        ok(rusha.digestFromArrayBuffer(result.target.result) === expected_hash, "Hash of string sent same as hash of string received");
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+  
+  test("huge attachment", function(){
+    var context = this,
+      big_string,
+      big_string_as_array;
+    stop();
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return jIO.util.ajax({url : "big_test_map"});
+      })
+      .then(function (result) {
+        big_string = result.currentTarget.responseText;
+        return jIO.util.readBlobAsArrayBuffer(new Blob([big_string]));
+      })
+      .then(function (result) {
+        big_string_as_array = result.target.result;
+        return context.jio.put("foo", {"title": "bar"});
+      })
+      .then(function () {
+        return context.jio.putAttachment("foo", "attachment", big_string);
+      })
+      .then(function () {
+        return context.jio.getAttachment("foo", "attachment");
+      })
+      .then(function (result) {
+        return jIO.util.readBlobAsArrayBuffer(result);
+      })
+      .then(function (result) {
+        ok(rusha.digestFromArrayBuffer(result.target.result) === rusha.digestFromArrayBuffer(big_string_as_array), "Hash of string sent same as hash of string received");
       })
       .fail(function (error) {
         ok(false, error);
@@ -1724,4 +1776,4 @@
   });
 
 }(jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
-  IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange));
+  IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange, Rusha));
