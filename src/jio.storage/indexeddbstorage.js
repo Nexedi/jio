@@ -438,8 +438,7 @@
                   var index = parseInt(
                     cursor.primaryKey.slice(key_path.length + 1),
                     10
-                  ),
-                    i;
+                  );
 
                   if ((start !== 0) && (index < start_index)) {
                     // No need to fetch blobs at the start
@@ -450,12 +449,6 @@
                     return;
                   }
 
-                  i = index - start_index;
-                  // Extend array size
-                  while (i > promise_list.length) {
-                    promise_list.push(null);
-                    i -= 1;
-                  }
                   // Sort the blob by their index
                   promise_list.splice(
                     index - start_index,
@@ -512,13 +505,8 @@
                 var index = parseInt(
                   cursor.primaryKey.slice(key_path.length + 1),
                   10
-                ),
-                  i = index;
-                // Extend array size
-                while (i > array_buffer_list.length) {
-                  array_buffer_list.push(null);
-                  i -= 1;
-                }
+                );
+
                 // Sort the blob by their index
                 array_buffer_list.splice(
                   index,
