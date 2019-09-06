@@ -489,7 +489,7 @@
                           {type: "application/octet-stream"});
           index = Math.floor(start / UNITE) * UNITE;
           if (end === undefined) {
-            end = blob.length;
+            end = blob.size;
           } else {
             end = end - index;
           }
@@ -560,7 +560,7 @@
 
         blob = new Blob(array_buffer_list,
                         {type: attachment.info.content_type});
-        if (blob.length !== attachment.info.total_length) {
+        if (blob.size !== attachment.info.length) {
           throw new jIO.util.jIOError(
             "IndexedDB: attachment '" +
                 buildKeyPath([id, name]) +
