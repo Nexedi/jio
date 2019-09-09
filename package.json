@@ -22,5 +22,10 @@
   ],
   "engines": {
     "npm": ">=1.3"
+  },
+  "dependencies": {
+    "jison": "^0.4.16",
+    "jslint": "^0.12.1",
+    "sinon": "^1.7.3"
   }
 }

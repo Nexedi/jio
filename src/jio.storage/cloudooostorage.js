@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2018, Nexedi SA
  *
@@ -24,40 +23,49 @@
   "use strict";
   var parser = new DOMParser(),
     serializer = new XMLSerializer();
+
   function makeXmlRpcRequest(file, from, to, conversion_kw) {
     var xml = parser.parseFromString(
       '<?xml version="1.0" encoding="UTF-8"?><methodCall>' +
         '<methodName>convertFile</methodName><params>' +
         '<param><value><string></string></value></param>' +
         '<param><value><string></string></value></param>' +
-        '<param><value><string></string></value></param></params></methodCall>',
+        '<param><value><string></string></value></param>' +
+        '<param><value><boolean>0</boolean></value></param>' +
+        '<param><value><boolean>0</boolean></value></param>' +
+        '<param><struct></struct></param>' +
+        '</params></methodCall>',
       'text/xml'
     ),
-    string_list = xml.getElementsByTagName('string');
+      element_value,
+      member,
+      key,
+      struct = xml.getElementsByTagName('struct'),
+      string_list = xml.getElementsByTagName('string');
     string_list[0].textContent = file;
     string_list[1].textContent = from;
     string_list[2].textContent = to;
     //
-    if (conversion_kw){
-      var param = parser.parseFromString('<param><value><boolean>0</boolean></value></param>','text/xml').firstChild;
-      xml.firstChild.lastChild.appendChild(param);
-      var param = parser.parseFromString('<param><value><boolean>0</boolean></value></param>','text/xml').firstChild;
-      xml.firstChild.lastChild.appendChild(param);
-      param =  parser.parseFromString('<param><struct></struct></param>','text/xml').firstChild;
-      var struct = param.firstChild;
-      for (var key in conversion_kw) {
-        var element_value = document.createElement(conversion_kw[key][1]);
-        var member = parser.parseFromString('<member><name></name><value></value></member>','text/xml').firstChild;
+    if (conversion_kw) {
+      for (key in conversion_kw) {
+        element_value = parser.parseFromString(
+          '<' + conversion_kw[key][1] + '></' + conversion_kw[key][1] + '>',
+          'text/xml'
+        ).firstChild;
+        member = parser.parseFromString(
+          '<member><name></name><value></value></member>',
+          'text/xml'
+        ).firstChild;
         element_value.textContent = conversion_kw[key][0];
         member.getElementsByTagName('name')[0].textContent = key;
         member.getElementsByTagName('value')[0].appendChild(element_value);
-        struct.appendChild(member);
+        struct[0].appendChild(member);
       }
-      xml.firstChild.lastChild.appendChild(param);
     }
     //
     return serializer.serializeToString(xml);
   }
+
   /**
    * convert a blob 
    * from a format to another
@@ -122,7 +130,7 @@
   };
   CloudoooStorage.prototype.putAttachment = function (id, name, blob, conversion_kw) {
     var storage = this;
-  return storage.get(id)
+    return storage.get(id)
       .push(function (doc) {
         return convert(storage._url, blob, doc.from, doc.to, conversion_kw);
       })
