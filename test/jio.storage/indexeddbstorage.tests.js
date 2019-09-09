@@ -20,10 +20,10 @@
 /*jslint nomen: true */
 /*global indexedDB, Blob, sinon, IDBDatabase,
          IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange,
-         DOMException*/
+         DOMException, Rusha*/
 (function (jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
            IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange,
-           DOMException) {
+           DOMException, Rusha) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -34,12 +34,9 @@
     equal = QUnit.equal,
     module = QUnit.module,
     throws = QUnit.throws,
-    big_string = "",
-    j;
+    big_string = "";
 
-  for (j = 0; j < 3000000; j += 1) {
-    big_string += "a";
-  }
+  big_string = new Array(3000000).fill('a').join('');
 
   function deleteIndexedDB(storage) {
     return new RSVP.Promise(function resolver(resolve, reject) {
@@ -1764,6 +1761,46 @@
       });
   });
 
+
+  test("get huge attachment", function () {
+    var context = this,
+      attachment = "attachment";
+    stop();
+    expect(4);
+
+    deleteIndexedDB(context.jio)
+      .then(function () {
+        return context.jio.put("foo", {"title": "bar"});
+      })
+      .then(function () {
+        return context.jio.putAttachment(
+          "foo",
+          attachment,
+          new Blob([new Array(11 * 2000000).fill('a').join('')],
+                   {type: 'text/fooplain'})
+        );
+      })
+      .then(function () {
+        return context.jio.getAttachment("foo", attachment);
+      })
+      .then(function (blob) {
+        ok(blob instanceof Blob, "Data is Blob");
+        equal(blob.type, 'text/fooplain');
+        equal(blob.size, 22000000);
+        return jIO.util.readBlobAsArrayBuffer(blob);
+      })
+      .then(function (result) {
+        equal((new Rusha()).digestFromArrayBuffer(result.target.result),
+              '6f510194afd8e436d00a543f49a7df09e86c2687');
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("retrieve empty blob", function () {
     var context = this,
       attachment = "attachment",
@@ -2089,4 +2126,4 @@
 
 }(jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
   IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange,
-  DOMException));
+  DOMException, Rusha));
