@@ -48,18 +48,20 @@
     //
     if (conversion_kw) {
       for (key in conversion_kw) {
-        element_value = parser.parseFromString(
-          '<' + conversion_kw[key][1] + '></' + conversion_kw[key][1] + '>',
-          'text/xml'
-        ).firstChild;
-        member = parser.parseFromString(
-          '<member><name></name><value></value></member>',
-          'text/xml'
-        ).firstChild;
-        element_value.textContent = conversion_kw[key][0];
-        member.getElementsByTagName('name')[0].textContent = key;
-        member.getElementsByTagName('value')[0].appendChild(element_value);
-        struct[0].appendChild(member);
+        if (conversion_kw.hasOwnProperty(key)) {
+          element_value = parser.parseFromString(
+            '<' + conversion_kw[key][1] + '></' + conversion_kw[key][1] + '>',
+            'text/xml'
+          ).firstChild;
+          member = parser.parseFromString(
+            '<member><name></name><value></value></member>',
+            'text/xml'
+          ).firstChild;
+          element_value.textContent = conversion_kw[key][0];
+          member.getElementsByTagName('name')[0].textContent = key;
+          member.getElementsByTagName('value')[0].appendChild(element_value);
+          struct[0].appendChild(member);
+        }
       }
     }
     //
@@ -128,7 +130,9 @@
   CloudoooStorage.prototype.getAttachment = function () {
     return this._sub_storage.getAttachment.apply(this._sub_storage, arguments);
   };
-  CloudoooStorage.prototype.putAttachment = function (id, name, blob, conversion_kw) {
+  CloudoooStorage.prototype.putAttachment = function (id, name, blob,
+    conversion_kw
+    ) {
     var storage = this;
     return storage.get(id)
       .push(function (doc) {
