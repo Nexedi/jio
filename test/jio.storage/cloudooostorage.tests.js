@@ -388,12 +388,15 @@
       blob = new Blob(["document_docy_format"], {type: "docy"}),
       blob_convert = new Blob(["document_docx_format"], {type: "docx"}),
       result = serializer.serializeToString(parser.parseFromString(
-        '<?xml version="1.0" encoding=\"UTF-8\"?><methodCall>' +
+        '<?xml version="1.0" encoding="UTF-8"?><methodCall>' +
           '<methodName>convertFile</methodName><params><param><value>' +
           '<string>ZG9jdW1lbnRfZG9jeF9mb3JtYXQ=</string></value></param>' +
           '<param><value><string>docx</string></value></param>' +
-          '<param><value><string>docy' +
-          '</string></value></param></params></methodCall>',
+          '<param><value><string>docy</string></value></param>' +
+	  '<param><value><boolean>0</boolean></value></param>' +
+	  '<param><value><boolean>0</boolean></value></param>' +
+	  '<param><struct></struct></param>' +
+          '</params></methodCall>',
         'text/xml'
       ));
 
@@ -402,7 +405,7 @@
     }, '<?xml version="1.0" encoding="UTF-8"?>' +
       '<string>ZG9jdW1lbnRhdWZvcm1hdGRvY3k=</string>']);
 
-    Storage200.prototype.putAttachment = function (id, name, blob2) {
+    Storage200.prototype.putAttachment = function (id, name, blob2, {}) {
       equal(id, "bar", "putAttachment 200 called");
       equal(name, "data", "putAttachment 200 called");
       deepEqual(blob2, blob, "putAttachment 200 called");
@@ -414,7 +417,7 @@
       return {from: "docx", to: "docy"};
     };
 
-    return jio.putAttachment("bar", "data", blob_convert)
+    return jio.putAttachment("bar", "data", blob_convert, {})
       .then(function () {
         equal(server.requests.length, 1, "Requests Length");
         equal(server.requests[0].method, "POST", "Request Method");
@@ -456,12 +459,15 @@
       jio = this.jio,
       blob = new Blob(["document_docx_format"], {type: "docx"}),
       result = serializer.serializeToString(parser.parseFromString(
-        '<?xml version="1.0" encoding=\"UTF-8\"?><methodCall>' +
+        '<?xml version="1.0" encoding="UTF-8"?><methodCall>' +
           '<methodName>convertFile</methodName><params><param><value>' +
           '<string>ZG9jdW1lbnRfZG9jeF9mb3JtYXQ=</string></value></param>' +
           '<param><value><string>docx</string></value></param>' +
-          '<param><value><string>docy' +
-          '</string></value></param></params></methodCall>',
+          '<param><value><string>docy</string></value></param>' +
+	  '<param><value><boolean>0</boolean></value></param>' +
+	  '<param><value><boolean>0</boolean></value></param>' +
+	  '<param><struct></struct></param>' +
+          '</params></methodCall>',
         'text/xml'
       ));
 
@@ -474,7 +480,7 @@
       return {from: "docx", to: "docy"};
     };
 
-    return jio.putAttachment("bar", "data", blob)
+    return jio.putAttachment("bar", "data", blob, {})
       .fail(function (error) {
         equal(server.requests.length, 1, "Requests Length");
         equal(server.requests[0].method, "POST", "Request Method");
@@ -493,4 +499,86 @@
       });
 
   });
+/////////////////////
+test("putAttachment convert from html to pdf", function () {
+    stop();
+    expect(8);
+
+    var server = this.server,
+      jio = this.jio,
+      blob = new Blob(["document_pdf_format"], {type: "pdf"}),
+      blob_convert = new Blob(["document_html_format"], {type: "html"}),
+      result = serializer.serializeToString(parser.parseFromString(
+        '<?xml version="1.0" encoding="UTF-8"?><methodCall>' +
+          '<methodName>convertFile</methodName><params><param><value>' +
+          '<string>PGh0bWw+PGhlYWQ+PC9oZWFkPgoKICA8Ym9keSBjbGFzcz0icG' +
+	  'FuZS1jb250ZW50Ij48L2JvZHk+PC9odG1sPg==</string></value></param>' +
+          '<param><value><string>html</string></value></param>' +
+          '<param><value><string>pdf</string></value></param>' +
+	  '<param><value><boolean>0</boolean></value></param>' +
+	  '<param><value><boolean>0</boolean></value></param>' +
+	  '<param><struct><member><name>encoding</name><value><string>utf8</string></value></member></struct></param>' +
+          '</params></methodCall>',
+        'text/xml'
+      ));
+
+    this.server.respondWith("POST", cloudooo_url, [200, {
+      "Content-Type": "text/xml"
+    }, '<?xml version='1.0'?>' +
+       '<string>JVBERi0xLjQKMSAwIG9iago8PAovVGl0bGUgKP7/KQovQ3JlYXRvciAo/v8AdwBrAGgAdABtAGwA' +
+       'dABvAHAAZABmACAAMAAuADEAMgAuADQpCi9Qcm9kdWNlciAo/v8AUQB0ACAANAAuADgALgA3KQov' +
+       'Q3JlYXRpb25EYXRlIChEOjIwMTkwOTEwMTQwMTA4KzAyJzAwJykKPj4KZW5kb2JqCjMgMCBvYmoK' +
+       'PDwKL1R5cGUgL0V4dEdTdGF0ZQovU0EgdHJ1ZQovU00gMC4wMgovY2EgMS4wCi9DQSAxLjAKL0FJ' +
+       'UyBmYWxzZQovU01hc2sgL05vbmU+PgplbmRvYmoKNCAwIG9iagpbL1BhdHRlcm4gL0RldmljZVJH' +
+       'Ql0KZW5kb2JqCjYgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9i' +
+       'ago1IDAgb2JqCjw8Ci9UeXBlIC9QYWdlCi9QYXJlbnQgMiAwIFIKL0NvbnRlbnRzIDcgMCBSCi9S' +
+       'ZXNvdXJjZXMgOSAwIFIKL0Fubm90cyAxMCAwIFIKL01lZGlhQm94IFswIDAgNTk1IDg0Ml0KPj4K' +
+       'ZW5kb2JqCjkgMCBvYmoKPDwKL0NvbG9yU3BhY2UgPDwKL1BDU3AgNCAwIFIKL0NTcCAvRGV2aWNl' +
+       'UkdCCi9DU3BnIC9EZXZpY2VHcmF5Cj4+Ci9FeHRHU3RhdGUgPDwKL0dTYSAzIDAgUgo+PgovUGF0' +
+       'dGVybiA8PAo+PgovRm9udCA8PAo+PgovWE9iamVjdCA8PAo+Pgo+PgplbmRvYmoKMTAgMCBvYmoK' +
+       'WyBdCmVuZG9iago3IDAgb2JqCjw8Ci9MZW5ndGggOCAwIFIKL0ZpbHRlciAvRmxhdGVEZWNvZGUK' +
+       'Pj4Kc3RyZWFtCnicpU89C8IwEN3vV9wsmFyutknnDoKDUDI4iINEUMQWSwf/vhcSIdRNE8j7yPHy' +
+       'orf+jNcZdeefGDJ2HkjZmtLCuNelwU5ljs5UmWMYYMIJeujljDjBJzVlzGEEnd6D5PhuL+yFjDtR' +
+       'dzyeBC45Ig4MYI1VMd7UIh+lNLRpVNOa1olPSxmHb3BY4Sg9SDki5oork7ostFT/q+rPP/2+5CIb' +
+       'e3gDFWBZbwplbmRzdHJlYW0KZW5kb2JqCjggMCBvYmoKMTY4CmVuZG9iagoyIDAgb2JqCjw8Ci9U' +
+       'eXBlIC9QYWdlcwovS2lkcyAKWwo1IDAgUgpdCi9Db3VudCAxCi9Qcm9jU2V0IFsvUERGIC9UZXh0' +
+       'IC9JbWFnZUIgL0ltYWdlQ10KPj4KZW5kb2JqCnhyZWYKMCAxMQowMDAwMDAwMDAwIDY1NTM1IGYg' +
+       'CjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDg5OSAwMDAwMCBuIAowMDAwMDAwMTYzIDAwMDAw' +
+       'IG4gCjAwMDAwMDAyNTggMDAwMDAgbiAKMDAwMDAwMDM0NCAwMDAwMCBuIAowMDAwMDAwMjk1IDAw' +
+       'MDAwIG4gCjAwMDAwMDA2MzggMDAwMDAgbiAKMDAwMDAwMDg4MCAwMDAwMCBuIAowMDAwMDAwNDYz' +
+       'IDAwMDAwIG4gCjAwMDAwMDA2MTggMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSAxMQovSW5mbyAx' +
+       'IDAgUgovUm9vdCA2IDAgUgo+PgpzdGFydHhyZWYKOTk3CiUlRU9GCg==</string>']);
+
+    Storage200.prototype.putAttachment = function (id, name, blob2, conversion_kw) {
+      equal(id, "bar", "putAttachment 200 called");
+      equal(name, "data", "putAttachment 200 called");
+      deepEqual( conversion_kw, {"encoding": "utf8"} , 'parameters passed successfully');
+      deepEqual(blob2, blob, "putAttachment 200 called");
+      return "OK";
+    };
+
+    Storage200.prototype.get = function (id) {
+      equal(id, "bar", "get 200 called");
+      return {from: "html", to: "pdf"};
+    };
+
+    return jio.putAttachment("bar", "data", blob_convert, {"encoding": "utf8"})
+      .then(function () {
+        equal(server.requests.length, 1, "Requests Length");
+        equal(server.requests[0].method, "POST", "Request Method");
+        equal(server.requests[0].url, cloudooo_url, "Request Url");
+        deepEqual(
+          server.requests[0].requestBody,
+          result,
+          "Request Body"
+        );
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+/////////////////////
 }(jIO, Blob, sinon, DOMParser, XMLSerializer));
