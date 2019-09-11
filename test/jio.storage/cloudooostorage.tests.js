@@ -392,8 +392,9 @@
           '<methodName>convertFile</methodName><params><param><value>' +
           '<string>ZG9jdW1lbnRfZG9jeF9mb3JtYXQ=</string></value></param>' +
           '<param><value><string>docx</string></value></param>' +
-          '<param><value><string>docy' +
-          '</string></value></param></params></methodCall>',
+          '<param><value><string>docy</string></value></param>' +
+          '<param><struct></struct></param>' +
+          '</params></methodCall>',
         'text/xml'
       ));
 
@@ -460,8 +461,9 @@
           '<methodName>convertFile</methodName><params><param><value>' +
           '<string>ZG9jdW1lbnRfZG9jeF9mb3JtYXQ=</string></value></param>' +
           '<param><value><string>docx</string></value></param>' +
-          '<param><value><string>docy' +
-          '</string></value></param></params></methodCall>',
+          '<param><value><string>docy</string></value></param>' +
+          '<param><struct></struct></param>' +
+          '</params></methodCall>',
         'text/xml'
       ));
 
@@ -492,5 +494,61 @@
         start();
       });
 
+  });
+  test("putAttachment convert from html to pdf", function () {
+    stop();
+    expect(8);
+
+    var server = this.server,
+      jio = this.jio,
+      blob = new Blob(["document_pdf__format"], {type: "pdf"}),
+      blob_convert = new Blob(["document_html_format"], {type: "html"}),
+      result = serializer.serializeToString(parser.parseFromString(
+        '<?xml version="1.0" encoding="UTF-8"?><methodCall>' +
+          '<methodName>convertFile</methodName><params><param><value>' +
+          '<string>ZG9jdW1lbnRfaHRtbF9mb3JtYXQ=</string></value></param>' +
+          '<param><value><string>html</string></value></param>' +
+          '<param><value><string>pdf</string></value></param>' +
+          '<param><struct><member><name>encoding</name>' +
+          '<value><string>utf8</string></value></member></struct></param>' +
+          '</params></methodCall>',
+        'text/xml'
+      ));
+
+    this.server.respondWith("POST", cloudooo_url, [200, {
+      "Content-Type": "text/xml"
+    }, '<?xml version="1.0"?>' +
+      '<string>ZG9jdW1lbnRhdWZvcm1hdGRvY3k=</string>']);
+
+    Storage200.prototype.putAttachment = function (id, name, blob2) {
+      equal(id, "bar", "putAttachment 200 called");
+      equal(name, "data", "putAttachment 200 called");
+      deepEqual(blob2, blob, "putAttachment 200 called");
+      return "OK";
+    };
+
+    Storage200.prototype.get = function (id) {
+      equal(id, "bar", "get 200 called");
+      return {from: "html", to: "pdf"};
+    };
+
+    return jio.putAttachment("bar", "data", blob_convert,
+      {"encoding": ["utf8", "string"]})
+      .then(function () {
+        equal(server.requests.length, 1, "Requests Length");
+        equal(server.requests[0].method, "POST", "Request Method");
+        equal(server.requests[0].url, cloudooo_url, "Request Url");
+        deepEqual(
+          server.requests[0].requestBody,
+          result,
+          "Request Body"
+        );
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
   });
 }(jIO, Blob, sinon, DOMParser, XMLSerializer));
