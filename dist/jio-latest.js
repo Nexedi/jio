@@ -16006,3 +16006,222 @@ return new Parser;
   jIO.addStorage('cloudooo', CloudoooStorage);
 
 }(jIO, RSVP, DOMParser, XMLSerializer));
+/*jslint nomen: true*/
+(function (jIO) {
+  "use strict";
+  /**
+   * The jIO SafeRepairStorage extension
+   *
+   * @class SafeRepairStorage
+   * @constructor
+   */
+  function SafeRepairStorage(spec) {
+    this._sub_storage = jIO.createJIO(spec.sub_storage);
+    this._id_dict = {};
+  }
+  SafeRepairStorage.prototype.get = function () {
+    return this._sub_storage.get.apply(this._sub_storage, arguments);
+  };
+  SafeRepairStorage.prototype.allAttachments = function () {
+    return this._sub_storage.allAttachments.apply(this._sub_storage, arguments);
+  };
+  SafeRepairStorage.prototype.post = function () {
+    return this._sub_storage.post.apply(this._sub_storage, arguments);
+  };
+  SafeRepairStorage.prototype.put = function (id, doc) {
+    var storage = this;
+    return this._sub_storage.put.apply(this._sub_storage, arguments)
+      .push(undefined, function (error) {
+        if (error instanceof jIO.util.jIOError &&
+            error.status_code === 403) {
+          if (storage._id_dict[id]) {
+            return storage._sub_storage.put(storage._id_dict[id], doc);
+          }
+          return storage._sub_storage.post(doc)
+            .push(function (sub_id) {
+              storage._id_dict[id] = sub_id;
+              return sub_id;
+            });
+        }
+      });
+  };
+  SafeRepairStorage.prototype.remove = function () {
+    return;
+  };
+  SafeRepairStorage.prototype.getAttachment = function () {
+    return this._sub_storage.getAttachment.apply(this._sub_storage, arguments);
+  };
+  SafeRepairStorage.prototype.putAttachment = function (id, attachment_id,
+      attachment) {
+    var storage = this;
+    return this._sub_storage.putAttachment.apply(this._sub_storage, arguments)
+      .push(undefined, function (error) {
+        if (error instanceof jIO.util.jIOError &&
+            error.status_code === 403) {
+          return new RSVP.Queue()
+            .push(function () {
+              if (storage._id_dict[id]) {
+                return storage._id_dict[id];
+              }
+              return storage._sub_storage.get(id)
+                .push(function (doc) {
+                  return storage._sub_storage.post(doc);
+                });
+            })
+            .push(function (sub_id) {
+              storage._id_dict[id] = sub_id;
+              return storage._sub_storage.putAttachment(sub_id, attachment_id,
+                  attachment);
+            });
+        }
+      });
+  };
+  SafeRepairStorage.prototype.removeAttachment = function () {
+    return;
+  };
+  SafeRepairStorage.prototype.repair = function () {
+    return this._sub_storage.repair.apply(this._sub_storage, arguments);
+  };
+  SafeRepairStorage.prototype.hasCapacity = function (name) {
+    return this._sub_storage.hasCapacity(name);
+  };
+  SafeRepairStorage.prototype.buildQuery = function () {
+    return this._sub_storage.buildQuery.apply(this._sub_storage,
+                                              arguments);
+  };
+  jIO.addStorage('saferepair', SafeRepairStorage);
+}(jIO));
+/*jslint indent:2, maxlen: 80, nomen: true */
+/*global jIO, RSVP, window, Rusha, Blob, URL */
+(function (window, jIO, RSVP, Rusha, Blob, URL) {
+  "use strict";
+
+  var rusha = new Rusha();
+
+  function AppCacheStorage(spec) {
+    this._manifest = spec.manifest;
+    this._take_installer = spec.take_installer || false;
+    this._origin_url = spec.origin_url !== undefined ?
+        spec.origin_url : window.location.href;
+    this._version = spec.version || "";
+    this._prefix = spec.prefix || "./";
+    this._documents = {};
+    // Harcoded here, find a better way.
+    if (this._take_installer) {
+      this._relative_url_list = [
+        this._prefix,
+        this._prefix + "gadget_officejs_bootloader.js",
+        this._prefix + "gadget_officejs_bootloader_presentation.html",
+        this._prefix + "gadget_officejs_bootloader_presentation.js",
+        this._prefix + "gadget_officejs_bootloader_presentation.css",
+        this._prefix + "gadget_officejs_bootloader_serviceworker.js",
+        this._prefix + "gadget_erp5_nojqm.css",
+        this._prefix + "officejs_logo.png",
+        this._prefix + "jio_appcachestorage.js"
+      ];
+    } else {
+      this._relative_url_list = [this._prefix + "/"];
+    }
+    if (this._take_installer) {
+      this._version = 'app/';
+    }
+    this._version = this._prefix + this._version;
+  }
+
+  AppCacheStorage.prototype.get = function (id) {
+    if (this._documents.hasOwnProperty(id)) {
+      return this._documents[id];
+    }
+    throw new jIO.util.jIOError('can not find document : ' + id, 404);
+  };
+
+  AppCacheStorage.prototype.hasCapacity = function () {
+    return true;
+  };
+
+  AppCacheStorage.prototype.getAttachment = function (origin_url,
+                                                       relative_url) {
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.ajax({
+          type: "GET",
+          url: new URL(relative_url, origin_url),
+          dataType: "blob"
+        });
+      })
+      .push(function (result) {
+        return result.target.response;
+      });
+  };
+
+  AppCacheStorage.prototype.allAttachments = function (id) {
+    if (id === this._origin_url) {
+      var result = {}, i, len = this._relative_url_list.length;
+      for (i = 0; i < len; i += 1) {
+        result[this._relative_url_list[i]] = {};
+      }
+      return result;
+    }
+    return [];
+  };
+
+  AppCacheStorage.prototype.buildQuery = function () {
+    var result = [], id;
+    for (id in this._documents) {
+      if (this._documents.hasOwnProperty(id)) {
+        result.push({
+          'id': id,
+          'value': this._documents[id],
+          'doc': this._documents[id]
+        });
+      }
+    }
+    return result;
+  };
+
+  AppCacheStorage.prototype.repair = function () {
+    var storage = this, url = "";
+    return new RSVP.Queue()
+      .push(function () {
+        url = new URL(storage._manifest, new URL(storage._version,
+                                                 storage._origin_url));
+        return jIO.util.ajax({
+          type: "GET",
+          url: url
+        });
+      })
+      .push(function (response) {
+        var text = response.target.responseText,
+          relative_url_list = text.split('\n'),
+          i,
+          take = false,
+          hash = rusha.digestFromString(text);
+        storage._documents[storage._origin_url] = {'hash': hash};
+        storage._relative_url_list.push(storage._version);
+        storage._relative_url_list.push(storage._version + storage._manifest);
+        for (i = 0; i < relative_url_list.length; i += 1) {
+          if (relative_url_list[i].indexOf("NETWORK:") >= 0) {
+            take = false;
+          } else if (relative_url_list[i] !== "" &&
+              relative_url_list[i].charAt(0) !== '#' &&
+              relative_url_list[i].charAt(0) !== ' ' &&
+              take) {
+            storage._relative_url_list.push(
+              storage._version + relative_url_list[i]
+            );
+          }
+          if (relative_url_list[i].indexOf("CACHE:") >= 0) {
+            take = true;
+          }
+        }
+      })
+      .push(undefined, function (error) {
+        if (!error.message) {
+          error.message = "Can't get manifest. URL: " + url;
+        }
+        throw error;
+      });
+  };
+
+  jIO.addStorage('appcache', AppCacheStorage);
+}(window, jIO, RSVP, Rusha, Blob, URL));
