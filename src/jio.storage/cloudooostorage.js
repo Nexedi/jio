@@ -33,8 +33,6 @@
         '<param><value><string></string></value></param>' +
         '<param><value><string></string></value></param>' +
         '<param><value><string></string></value></param>' +
-        '<param><value><boolean>0</boolean></value></param>' +
-        '<param><value><boolean>0</boolean></value></param>' +
         '<param><struct></struct></param>' +
         '</params></methodCall>',
       'text/xml'

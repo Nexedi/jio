@@ -19,7 +19,8 @@
  */
 
 /*jslint nomen: true*/
-/*global jIO, Blob, sinon, DOMParser, XMLSerializer*/
+/*global window, jIO, Blob, sinon, DOMParser, XMLSerializer, ArrayBuffer,
+Uint8Array*/
 (function (window, jIO, Blob, sinon, DOMParser, XMLSerializer,
   ArrayBuffer, Uint8Array) {
   "use strict";
@@ -394,8 +395,6 @@
           '<string>ZG9jdW1lbnRfZG9jeF9mb3JtYXQ=</string></value></param>' +
           '<param><value><string>docx</string></value></param>' +
           '<param><value><string>docy</string></value></param>' +
-          '<param><value><boolean>0</boolean></value></param>' +
-          '<param><value><boolean>0</boolean></value></param>' +
           '<param><struct></struct></param>' +
           '</params></methodCall>',
         'text/xml'
@@ -464,9 +463,7 @@
           '<methodName>convertFile</methodName><params><param><value>' +
           '<string>ZG9jdW1lbnRfZG9jeF9mb3JtYXQ=</string></value></param>' +
           '<param><value><string>docx</string></value></param>' +
-	  '<param><value><string>docy</string></value></param>' +
-          '<param><value><boolean>0</boolean></value></param>' +
-          '<param><value><boolean>0</boolean></value></param>' +
+          '<param><value><string>docy</string></value></param>' +
           '<param><struct></struct></param>' +
           '</params></methodCall>',
         'text/xml'
@@ -551,8 +548,6 @@
           'FuZS1jb250ZW50Ij48L2JvZHk+PC9odG1sPg==</string></value></param>' +
           '<param><value><string>html</string></value></param>' +
           '<param><value><string>pdf</string></value></param>' +
-          '<param><value><boolean>0</boolean></value></param>' +
-          '<param><value><boolean>0</boolean></value></param>' +
           '<param><struct><member><name>encoding</name>' +
           '<value><string>utf8</string></value></member></struct></param>' +
           '</params></methodCall>',

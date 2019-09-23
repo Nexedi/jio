@@ -61,7 +61,7 @@ ${LINTDIR}/queries/query.js: ${SRCDIR}/queries/query.js
 
 ${LINTDIR}/${TESTDIR}/jio.storage/%.js: ${TESTDIR}/jio.storage/%.js
 	@mkdir -p $(@D)
-	${JSLINT} ${LINTOPTS} --predef QUnit --predef RSVP --predef window --predef jIO --predef ArrayBuffer --predef Uint8Array $<
+	${JSLINT} ${LINTOPTS} --predef QUnit --predef RSVP --predef jIO $<
 	@cat $< > $@
 
 ${LINTDIR}/${TESTDIR}/queries/%.js: ${TESTDIR}/queries/%.js
