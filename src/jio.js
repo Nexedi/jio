@@ -18,25 +18,14 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 /*global window, RSVP, Blob, XMLHttpRequest, QueryFactory, Query, atob,
-  FileReader, ArrayBuffer, Uint8Array, navigator */
+  FileReader, ArrayBuffer, Uint8Array */
 (function (window, RSVP, Blob, QueryFactory, Query, atob,
-           FileReader, ArrayBuffer, Uint8Array, navigator) {
+           FileReader, ArrayBuffer, Uint8Array) {
   "use strict";
 
   /* Safari does not define DOMError */
   if (window.DOMError === undefined) {
     window.DOMError = {};
-  }
-
-  /* Document is not defined in ServiceWorkser */
-  if (window.document === undefined) {
-    window.document = {
-      createElementNS: function () {
-        throw new Error(
-          'document.createElementNS is not supported by ' + navigator.userAgent
-        );
-      }
-    };
   }
 
   var util = {},
@@ -566,4 +555,4 @@
   window.jIO = jIO;
 
 }(window, RSVP, Blob, QueryFactory, Query, atob,
-  FileReader, ArrayBuffer, Uint8Array, navigator));
+  FileReader, ArrayBuffer, Uint8Array));

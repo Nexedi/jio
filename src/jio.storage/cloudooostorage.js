@@ -19,9 +19,20 @@
  */
 
 /*jslint nomen: true*/
-/*global document, jIO, RSVP, DOMParser, XMLSerializer*/
-(function (document, jIO, RSVP, DOMParser, XMLSerializer) {
+/*global window, jIO, RSVP, DOMParser, XMLSerializer, navigator*/
+(function (window, jIO, RSVP, DOMParser, XMLSerializer, navigator) {
   "use strict";
+
+  /* Document is not defined in ServiceWorker */
+  if (window.document === undefined) {
+    window.document = {
+      createElementNS: function () {
+        throw new Error(
+          'document.createElementNS is not supported by ' + navigator.userAgent
+        );
+      }
+    };
+  }
 
   var parser = new DOMParser(),
     serializer = new XMLSerializer();
@@ -50,13 +61,13 @@
     if (conversion_kw) {
       for (key in conversion_kw) {
         if (conversion_kw.hasOwnProperty(key)) {
-          elt = document.createElementNS(null, conversion_kw[key][1]);
+          elt = window.document.createElementNS(null, conversion_kw[key][1]);
           elt.textContent = conversion_kw[key][0];
-          value = document.createElementNS(null, "value");
+          value = window.document.createElementNS(null, "value");
           value.appendChild(elt);
-          name = document.createElementNS(null, "name");
+          name = window.document.createElementNS(null, "name");
           name.textContent = key;
-          member = document.createElementNS(null, "member");
+          member = window.document.createElementNS(null, "member");
           member.appendChild(name);
           member.appendChild(value);
           struct[0].appendChild(member);
@@ -165,4 +176,4 @@
 
   jIO.addStorage('cloudooo', CloudoooStorage);
 
-}(document, jIO, RSVP, DOMParser, XMLSerializer));
+}(window, jIO, RSVP, DOMParser, XMLSerializer, navigator));
