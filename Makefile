@@ -26,7 +26,7 @@ TESTDIR = test
 EXAMPLEDIR = examples
 EXTERNALDIR = external
 
-VERSION = 3.41.0
+VERSION = 3.41.1
 JIOVERSION = ${DISTDIR}/jio-v${VERSION}.js
 JIOLATEST = ${DISTDIR}/jio-latest.js
 JIONODEVERSION = ${DISTDIR}/jio-v${VERSION}-node.js
