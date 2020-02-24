@@ -379,10 +379,10 @@ define("rsvp/events",
     __exports__.EventTarget = EventTarget;
   });
 define("rsvp/hash",
-  ["rsvp/defer","exports"],
+  ["rsvp/promise","exports"],
   function(__dependency1__, __exports__) {
     "use strict";
-    var defer = __dependency1__.defer;
+    var Promise = __dependency1__.Promise;
 
     function size(object) {
       var s = 0;
@@ -395,38 +395,61 @@ define("rsvp/hash",
     }
 
     function hash(promises) {
-      var results = {}, deferred = defer(), remaining = size(promises);
 
-      if (remaining === 0) {
-        deferred.resolve({});
-      }
+      function canceller() {
+        var promise,
+          key;
+        for (key in promises) {
+          if (promises.hasOwnProperty(key)) {
+            promise = promises[key];
 
-      var resolver = function(prop) {
-        return function(value) {
-          resolveAll(prop, value);
-        };
-      };
-
-      var resolveAll = function(prop, value) {
-        results[prop] = value;
-        if (--remaining === 0) {
-          deferred.resolve(results);
-        }
-      };
-
-      var rejectAll = function(error) {
-        deferred.reject(error);
-      };
-
-      for (var prop in promises) {
-        if (promises[prop] && typeof promises[prop].then === 'function') {
-          promises[prop].then(resolver(prop), rejectAll);
-        } else {
-          resolveAll(prop, promises[prop]);
+            if (promise && typeof promise.then === 'function' &&
+                typeof promise.cancel === 'function') {
+              promise.cancel();
+            }
+          }
         }
       }
 
-      return deferred.promise;
+      return new Promise(function(resolve, reject) {
+        var results = {}, remaining = size(promises),
+          promise;
+
+        if (remaining === 0) {
+          resolve(results);
+        }
+
+        function resolver(key) {
+          return function(value) {
+            resolveAll(key, value);
+          };
+        }
+
+        function resolveAll(key, value) {
+          results[key] = value;
+          if (--remaining === 0) {
+            resolve(results);
+          }
+        }
+
+        function cancelAll(rejectionValue) {
+          reject(rejectionValue);
+          canceller();
+        }
+
+        for (var prop in promises) {
+          promise = promises[prop];
+
+          if (promise && typeof promise.then === 'function') {
+            promise.then(resolver(prop), cancelAll);
+          } else {
+            resolveAll(prop, promise);
+          }
+        }
+
+      }, canceller
+      );
+
     }
 
 
@@ -533,6 +556,7 @@ define("rsvp/promise",
         // For now, simply reject the promise and does not propagate the cancel
         // to parent or children
         if (resolved) { return; }
+        promise.isCancelled = true;
         if (canceller !== undefined) {
           try {
             canceller();
@@ -564,6 +588,7 @@ define("rsvp/promise",
 
       if (promise.isFulfilled) { return; }
       if (promise.isRejected) { return; }
+      if (promise.isCancelled) { return; }
 
       if (hasCallback) {
         try {
@@ -594,6 +619,7 @@ define("rsvp/promise",
     Promise.prototype = {
       constructor: Promise,
 
+      isCancelled: undefined,
       isRejected: undefined,
       isFulfilled: undefined,
       rejectedReason: undefined,
@@ -602,7 +628,7 @@ define("rsvp/promise",
       then: function(done, fail) {
         this.off('error', onerror);
 
-        var thenPromise = new this.constructor(function() {},
+        var thenPromise = new Promise(function() {},
             function () {
               thenPromise.trigger('promise:cancelled', {});
             });
@@ -736,96 +762,123 @@ define("rsvp/queue",
     ResolvedQueueError.prototype.constructor = ResolvedQueueError;
 
     var Queue = function() {
-      var queue = this,
-        promise_list = [],
-        promise,
-        fulfill,
-        reject,
-        resolved;
-
       if (!(this instanceof Queue)) {
         return new Queue();
       }
 
-      function canceller() {
-        for (var i = 0; i < 2; i++) {
-          promise_list[i].cancel();
+      var function_stack = [],
+        // is_first_push = true,
+        // async_resolved = false,
+        resolveQueue,
+        rejectQueue,
+        queue = this,
+        current_promise = null,
+        handleDone,
+        handleReject,
+        next_function;
+
+      handleDone = function(result) {
+        if (queue.isRejected) {
+          return;
         }
-      }
-
-      promise = new Promise(function(done, fail) {
-        fulfill = function (fulfillmentValue) {
-          if (resolved) {return;}
-          queue.isFulfilled = true;
-          queue.fulfillmentValue = fulfillmentValue;
-          resolved = true;
-          return done(fulfillmentValue);
-        };
-        reject = function (rejectedReason) {
-          if (resolved) {return;}
-          queue.isRejected = true;
-          queue.rejectedReason = rejectedReason ;
-          resolved = true;
-          return fail(rejectedReason);
-        };
-      }, canceller);
-
-      promise_list.push(resolve());
-      promise_list.push(promise_list[0].then(function () {
-        promise_list.splice(0, 2);
-        if (promise_list.length === 0) {
-          fulfill();
+        if (function_stack.length > 0) {
+          next_function = function_stack.shift();
+          // Remove fail handler
+          function_stack.shift();
+          if (next_function === undefined) {
+            return handleDone(result);
+          }
+          try {
+            current_promise = next_function.call(null, result);
+          } catch (e) {
+            return handleReject(e);
+          }
+          if ((current_promise !== undefined) &&
+              (typeof current_promise.then === "function")) {
+            current_promise.then(handleDone, handleReject);
+          } else {
+            handleDone(current_promise);
+          }
+          return;
         }
-      }));
-
-      queue.cancel = function () {
-        if (resolved) {return;}
-        resolved = true;
-        promise.cancel();
-        promise.fail(function (rejectedReason) {
-          queue.isRejected = true;
-          queue.rejectedReason = rejectedReason;
-        });
-      };
-      queue.then = function () {
-        return promise.then.apply(promise, arguments);
+        // if (async_resolved) {
+        // Prevent immediatly resolving the queue
+        resolveQueue(result);
+        // }
       };
 
-      queue.push = function(done, fail) {
-        var last_promise = promise_list[promise_list.length - 1],
-          next_promise;
+      handleReject = function(error) {
+        if (queue.isRejected) {
+          return;
+        }
+        if (function_stack.length > 0) {
+          // Remove done handler
+          function_stack.shift();
+          next_function = function_stack.shift();
+          if (next_function === undefined) {
+            return handleReject(error);
+          }
+          try {
+            current_promise = next_function.call(null, error);
+          } catch (e) {
+            return handleReject(e);
+          }
+          if ((current_promise !== undefined) &&
+              (typeof current_promise.then === "function")) {
+            current_promise.then(handleDone, handleReject);
+          } else {
+            handleDone(current_promise);
+          }
+          return;
+        }
+        // if (async_resolved) {
+        // Prevent immediatly resolving the queue
+        rejectQueue(error);
+        // }
+      };
 
-        if (resolved) {
+      this.push = function (done, fail) {
+        if (this.isFulfilled || this.isRejected) {
           throw new ResolvedQueueError();
         }
-
-        next_promise = last_promise.then(done, fail);
-        promise_list.push(next_promise);
-
-        // Handle pop
-        promise_list.push(next_promise.then(function (fulfillmentValue) {
-          promise_list.splice(0, 2);
-          if (promise_list.length === 0) {
-            fulfill(fulfillmentValue);
-          } else {
-            return fulfillmentValue;
-          }
-        }, function (rejectedReason) {
-          promise_list.splice(0, 2);
-          if (promise_list.length === 0) {
-            reject(rejectedReason);
-          } else {
-            throw rejectedReason;
-          }
-        }));
-
+        function_stack.push(done, fail);
+        /*
+        if (is_first_push && (done !== undefined)) {
+          is_first_push = false;
+          handleDone();
+        }
+        */
         return this;
       };
+
+      Promise.call(this, function (done, fail) {
+        resolveQueue = done;
+        rejectQueue = fail;
+        // Resolve by default
+        function_stack.push(resolve, undefined);
+        handleDone();
+    /*
+        // Resolve by default
+        resolve().then(function () {
+          async_resolved = true;
+          if (is_first_push) {
+            done(current_promise);
+          }
+        });
+    */
+      }, function () {
+        // Cancel currently running promose
+        if ((current_promise !== undefined) &&
+            (typeof current_promise.cancel === "function")) {
+          current_promise.cancel();
+        }
+      });
+
+      return this;
     };
 
     Queue.prototype = Object.create(Promise.prototype);
     Queue.prototype.constructor = Queue;
-
 
     __exports__.Queue = Queue;
     __exports__.ResolvedQueueError = ResolvedQueueError;
