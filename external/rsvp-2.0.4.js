@@ -767,8 +767,6 @@ define("rsvp/queue",
       }
 
       var function_stack = [],
-        // is_first_push = true,
-        // async_resolved = false,
         resolveQueue,
         rejectQueue,
         queue = this,
@@ -801,10 +799,7 @@ define("rsvp/queue",
           }
           return;
         }
-        // if (async_resolved) {
-        // Prevent immediatly resolving the queue
         resolveQueue(result);
-        // }
       };
 
       handleReject = function(error) {
@@ -831,23 +826,14 @@ define("rsvp/queue",
           }
           return;
         }
-        // if (async_resolved) {
-        // Prevent immediatly resolving the queue
         rejectQueue(error);
-        // }
       };
 
       this.push = function (done, fail) {
-        if (this.isFulfilled || this.isRejected) {
+        if (this.isFulfilled || this.isRejected || this.isCancelled) {
           throw new ResolvedQueueError();
         }
         function_stack.push(done, fail);
-        /*
-        if (is_first_push && (done !== undefined)) {
-          is_first_push = false;
-          handleDone();
-        }
-        */
         return this;
       };
 
@@ -857,17 +843,10 @@ define("rsvp/queue",
         // Resolve by default
         function_stack.push(resolve, undefined);
         handleDone();
-    /*
-        // Resolve by default
-        resolve().then(function () {
-          async_resolved = true;
-          if (is_first_push) {
-            done(current_promise);
-          }
-        });
-    */
       }, function () {
-        // Cancel currently running promose
+        // Skip not executed .push
+        function_stack = [];
+        // Cancel currently running promise
         if ((current_promise !== undefined) &&
             (typeof current_promise.cancel === "function")) {
           current_promise.cancel();
