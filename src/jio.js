@@ -236,10 +236,7 @@
     if (result instanceof RSVP.Queue) {
       return result;
     }
-    return new RSVP.Queue()
-      .push(function returnPushableResult() {
-        return result;
-      });
+    return new RSVP.Queue(result);
   }
 
   function declareMethod(klass, name, precondition_function, post_function) {
