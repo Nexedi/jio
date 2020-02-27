@@ -146,7 +146,8 @@
         "_bar": "john doo",
         "_links": {
           type: {
-            name: "Person"
+            name: "Translated Person",
+            href: "urn:jio:get:portal_types/Person"
           }
         },
         "_embedded": {
@@ -215,7 +216,8 @@
         "_bar": "john doo",
         "_links": {
           type: {
-            name: "Person"
+            name: "Translated Person",
+            href: "urn:jio:get:portal_types/Person"
           }
         },
         "_embedded": {
@@ -275,7 +277,8 @@
         "_bar": "john doo",
         "_links": {
           type: {
-            name: "Person"
+            name: "Translated Person",
+            href: "urn:jio:get:portal_types/Person"
           },
           parent: {
             href: "urn:jio:get:foo_module"

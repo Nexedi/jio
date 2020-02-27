@@ -103,7 +103,8 @@
   function extractPropertyFromFormJSON(json) {
     var form = json._embedded._view,
       converted_json = {
-        portal_type: json._links.type.name
+        portal_type: new URI(json._links.type.href).segment(2)
+                                                   .replace("portal_types/", "")
       },
       form_data_json = {},
       field,
