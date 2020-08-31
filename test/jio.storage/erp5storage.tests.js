@@ -2086,6 +2086,64 @@
       });
   });
 
+  test("extract multiple values for a single domains", function () {
+    var search_url = domain + "?mode=search&" +
+                     "query=%28%20portal_type%3A%20%20%22Person%22%20AND%20" +
+                     "selection_domain_group%3A%20%20%22foo%2Fbar%22%20AND%20" +
+                     "title%3A%20%20%22atitle%22%20%29&" +
+                     "select_list=destination&select_list=source&limit=5&" +
+                     "local_roles=Assignee&" +
+                     "selection_domain=%7B%22group%22%3A%22bar%2Ffoo%22%7D",
+      search_hateoas = JSON.stringify({
+        "_embedded": {
+          "contents": []
+        }
+      }),
+      server = this.server;
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", search_url, [200, {
+      "Content-Type": "application/hal+json"
+    }, search_hateoas]);
+
+    stop();
+    expect(10);
+
+    this.jio.allDocs({
+      limit: [5],
+      select_list: ["destination", "source"],
+      query: 'portal_type:"Person" AND selection_domain_group:"bar/foo" AND ' +
+             'selection_domain_group:"foo/bar" AND ' +
+             'local_roles:"Assignee" AND title:"atitle"'
+    })
+      .then(function (result) {
+        deepEqual(result, {
+          data: {
+            rows: [],
+            total_rows: 0
+          }
+        }, "Check document");
+        equal(server.requests.length, 2);
+        equal(server.requests[0].method, "GET");
+        equal(server.requests[0].url, domain);
+        equal(server.requests[0].requestBody, undefined);
+        equal(server.requests[0].withCredentials, true);
+        equal(server.requests[1].method, "GET");
+        equal(server.requests[1].url, search_url);
+        equal(server.requests[1].requestBody, undefined);
+        equal(server.requests[1].withCredentials, true);
+      })
+      .fail(function (error) {
+        console.log(error);
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("extract local_roles and selection_domain", function () {
     var search_url = domain + "?mode=search&" +
                      "query=&" +
