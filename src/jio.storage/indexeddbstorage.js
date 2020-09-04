@@ -184,10 +184,7 @@
         } catch (error) {
           reject(error);
         }
-        return new RSVP.Queue()
-          .push(function () {
-            return result;
-          })
+        return new RSVP.Queue(result)
           .push(function (final_result) {
             canceller();
             resolve(final_result);
@@ -219,10 +216,7 @@
         reject(error);
       }
       tx.oncomplete = function () {
-        return new RSVP.Queue()
-          .push(function () {
-            return result;
-          })
+        return new RSVP.Queue(result)
           .push(resolve, function (error) {
             canceller();
             reject(error);
