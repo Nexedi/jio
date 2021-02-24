@@ -93,7 +93,7 @@
         // allow tests to check them
         param.headers = Object.assign({}, param.headers);
       }
-      param.headers["Content-Type"] = "multipart\/form-data; boundary=" +
+      param.headers["Content-Type"] = "multipart/form-data; boundary=" +
                                       param.data.boundary;
       param.data.body += '--' + param.data.boundary + '--\r\n';
       param.data = param.data.body;

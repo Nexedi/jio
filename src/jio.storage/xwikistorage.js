@@ -1075,10 +1075,10 @@
           // browsing every entry
 
           // is part of the user space
-          if (/^[^\/]+\/[^\/]+$/.test(i)) {
+          if (/^[^/]+\/[^/]+$/.test(i)) {
             // this is an attachment
             attachmentFound(param, i);
-          } else if (/^[^\/]+$/.test(i)) {
+          } else if (/^[^/]+$/.test(i)) {
             // this is a document
             param._id = i;
             result = repairOne(param, repair);

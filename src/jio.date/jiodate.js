@@ -86,17 +86,17 @@
 
     // XXX these regexps fail to detect many invalid dates.
 
-    if (str.match(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+\-][0-2]\d:[0-5]\d|Z)/)
+    if (str.match(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/)
           || str.match(/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d\d\d/)) {
       // ISO, milliseconds
       this.mom = moment(str);
       this.setPrecision(MSEC);
-    } else if (str.match(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d([+\-][0-2]\d:[0-5]\d|Z)/)
+    } else if (str.match(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d([+-][0-2]\d:[0-5]\d|Z)/)
           || str.match(/\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d/)) {
       // ISO, seconds
       this.mom = moment(str);
       this.setPrecision(SEC);
-    } else if (str.match(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d([+\-][0-2]\d:[0-5]\d|Z)/)
+    } else if (str.match(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d([+-][0-2]\d:[0-5]\d|Z)/)
           || str.match(/\d\d\d\d-\d\d-\d\d \d\d:\d\d/)) {
       // ISO, minutes
       this.mom = moment(str);
@@ -184,7 +184,7 @@
 
 
 //   _export('JIODate', JIODate);
-// 
+//
 //   _export('YEAR', YEAR);
 //   _export('MONTH', MONTH);
 //   _export('DAY', DAY);
