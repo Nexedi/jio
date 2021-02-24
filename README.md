@@ -7,9 +7,10 @@ jIO is a promise-based JavaScript library that offers connectors to many storage
 The documentation can be found on [https://jio.nexedi.com/](https://jio.nexedi.com/)
 
 ### jIO Quickstart
+
     git clone https://lab.nexedi.com/nexedi/jio.git
-    cd jio.git
-    npm install jslint@0.9.2 jison@0.4.16 https://github.com/qunitjs/node-qunit.git#v0.9.3 sinon@1.7.3
+    cd jio
+    npm install  # Or yarn install
     make
 
 
