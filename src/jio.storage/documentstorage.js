@@ -73,11 +73,8 @@
                 if (atob(exec[1]) === id) {
                   attachments[atob(exec[2])] = {};
                 }
-              } catch (error) {
+              } catch (ignore) {
                 // Check if unable to decode base64 data
-                if (!error instanceof ReferenceError) {
-                  throw error;
-                }
               }
             }
           }
@@ -143,11 +140,8 @@
                   if (DOCUMENT_REGEXP.test(key)) {
                     try {
                       id = atob(DOCUMENT_REGEXP.exec(key)[1]);
-                    } catch (error) {
+                    } catch (ignore) {
                       // Check if unable to decode base64 data
-                      if (!error instanceof ReferenceError) {
-                        throw error;
-                      }
                     }
                     if (id !== undefined) {
                       id_dict[id] = null;
@@ -157,11 +151,8 @@
                     try {
                       id = atob(exec[1]);
                       attachment = atob(exec[2]);
-                    } catch (error) {
+                    } catch (ignore) {
                       // Check if unable to decode base64 data
-                      if (!error instanceof ReferenceError) {
-                        throw error;
-                      }
                     }
                     if (attachment !== undefined) {
                       if (!id_dict.hasOwnProperty(id)) {
@@ -212,11 +203,8 @@
                   id: atob(DOCUMENT_REGEXP.exec(key)[1]),
                   value: {}
                 });
-              } catch (error) {
+              } catch (ignore) {
                 // Check if unable to decode base64 data
-                if (!error instanceof ReferenceError) {
-                  throw error;
-                }
               }
             }
           }
