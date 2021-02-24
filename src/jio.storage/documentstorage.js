@@ -18,8 +18,8 @@
  * See https://www.nexedi.com/licensing for rationale and options.
  */
 /*jslint nomen: true*/
-/*global Blob, RSVP, unescape, escape*/
-(function (jIO, Blob, RSVP, unescape, escape) {
+/*global Blob, RSVP, unescape, escape, DOMException*/
+(function (jIO, Blob, RSVP, unescape, escape, DOMException) {
   "use strict";
   /**
    * The jIO DocumentStorage extension
@@ -75,7 +75,7 @@
                 }
               } catch (error) {
                 // Check if unable to decode base64 data
-                if (!error instanceof ReferenceError) {
+                if (!(error instanceof DOMException)) {
                   throw error;
                 }
               }
@@ -145,7 +145,7 @@
                       id = atob(DOCUMENT_REGEXP.exec(key)[1]);
                     } catch (error) {
                       // Check if unable to decode base64 data
-                      if (!error instanceof ReferenceError) {
+                      if (!(error instanceof DOMException)) {
                         throw error;
                       }
                     }
@@ -159,7 +159,7 @@
                       attachment = atob(exec[2]);
                     } catch (error) {
                       // Check if unable to decode base64 data
-                      if (!error instanceof ReferenceError) {
+                      if (!(error instanceof DOMException)) {
                         throw error;
                       }
                     }
@@ -214,7 +214,7 @@
                 });
               } catch (error) {
                 // Check if unable to decode base64 data
-                if (!error instanceof ReferenceError) {
+                if (!(error instanceof DOMException)) {
                   throw error;
                 }
               }
@@ -249,4 +249,4 @@
 
   jIO.addStorage('document', DocumentStorage);
 
-}(jIO, Blob, RSVP, unescape, escape));
+}(jIO, Blob, RSVP, unescape, escape, DOMException));
