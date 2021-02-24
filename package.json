@@ -1,7 +1,7 @@
 {
   "name": "jio",
   "version": "v3.45.0",
-  "license": "GPLv3+",
+  "license": "GPL-3.0-or-later",
   "author": "Nexedi SA",
   "contributors": [
     "Tristan Cavelier <tristan.cavelier@tiolive.com>",
@@ -22,5 +22,11 @@
   ],
   "engines": {
     "npm": ">=1.3"
+  },
+  "devDependencies": {
+    "jslint": "^0.9.2",
+    "jison": "^0.4.16",
+    "qunit": "github:qunitjs/node-qunit#v0.9.3",
+    "sinon": "^1.7.3"
   }
 }
