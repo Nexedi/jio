@@ -75,7 +75,7 @@
                 }
               } catch (error) {
                 // Check if unable to decode base64 data
-                if (!error instanceof ReferenceError) {
+                if (!(error instanceof ReferenceError)) {
                   throw error;
                 }
               }
@@ -145,7 +145,7 @@
                       id = atob(DOCUMENT_REGEXP.exec(key)[1]);
                     } catch (error) {
                       // Check if unable to decode base64 data
-                      if (!error instanceof ReferenceError) {
+                      if (!(error instanceof ReferenceError)) {
                         throw error;
                       }
                     }
@@ -159,7 +159,7 @@
                       attachment = atob(exec[2]);
                     } catch (error) {
                       // Check if unable to decode base64 data
-                      if (!error instanceof ReferenceError) {
+                      if (!(error instanceof ReferenceError)) {
                         throw error;
                       }
                     }
@@ -214,7 +214,7 @@
                 });
               } catch (error) {
                 // Check if unable to decode base64 data
-                if (!error instanceof ReferenceError) {
+                if (!(error instanceof ReferenceError)) {
                   throw error;
                 }
               }
