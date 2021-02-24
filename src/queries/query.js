@@ -23,7 +23,7 @@
   "use strict";
 
   var query_class_dict = {},
-    regexp_escape = /[\-\[\]{}()*+?.,\\\^$|#\s]/g,
+    regexp_escape = /[-[\]{}()*+?.,\\^$|#\s]/g,
     regexp_percent = /%/g,
     regexp_underscore = /_/g,
     regexp_operator = /^(?:AND|OR|NOT)$/i,
