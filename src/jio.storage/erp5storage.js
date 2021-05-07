@@ -365,6 +365,13 @@
             );
           }
           return evt.target.response;
+        }, function (error) {
+          if ((error.target !== undefined) &&
+              (error.target.status === 404)) {
+            throw new jIO.util.jIOError("Cannot find attachment: " + action,
+                                        404);
+          }
+          throw error;
         });
     }
     throw new jIO.util.jIOError("ERP5: not support get attachment: " + action,

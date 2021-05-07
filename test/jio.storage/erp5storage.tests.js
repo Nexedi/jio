@@ -965,6 +965,35 @@
       });
   });
 
+  test("getAttachment: view on inexistent view", function () {
+    var id = "person_module/1",
+      traverse_url = domain + "?mode=traverse&relative_url=" +
+                     encodeURIComponent(id) + "&view=foo_view";
+
+    this.server.respondWith("GET", domain, [200, {
+      "Content-Type": "application/hal+json"
+    }, root_hateoas]);
+    this.server.respondWith("GET", traverse_url, [404, {
+      "Content-Type": "text/html"
+    }, ""]);
+
+    stop();
+    expect(3);
+
+    this.jio.getAttachment(id, traverse_url)
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "Cannot find attachment: " + traverse_url);
+        equal(error.status_code, 404);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
   test("getAttachment: view uses default form with access token", function () {
     var id = "person_module/1",
       traverse_url = domain + "?mode=traverse&relative_url=" +
