@@ -43,10 +43,10 @@
 
 /*jslint nomen: true */
 /*global indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
-        DOMError, Set*/
+        DOMError, DOMException, Set*/
 
 (function (indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
-           DOMError, Set) {
+           DOMError, DOMException, Set) {
   "use strict";
 
   // Read only as changing it can lead to data corruption
@@ -145,7 +145,8 @@
         canceller();
         if ((error !== undefined) &&
             (error.target instanceof IDBOpenDBRequest) &&
-            (error.target.error instanceof DOMError)) {
+            ((error.target.error instanceof DOMError) ||
+             (error.target.error instanceof DOMException))) {
           reject("Connection to: " + db_name + " failed: " +
                  error.target.error.message);
         } else {
@@ -721,4 +722,4 @@
 
   jIO.addStorage("indexeddb", IndexedDBStorage);
 }(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest, DOMError,
-  Set));
+  DOMException, Set));
