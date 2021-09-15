@@ -20,10 +20,10 @@
 /*jslint nomen: true */
 /*global indexedDB, Blob, sinon, IDBDatabase,
          IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange,
-         DOMException, Rusha*/
+         Rusha*/
 (function (jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
            IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange,
-           DOMException, Rusha) {
+           Rusha) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -190,26 +190,17 @@
     });
   });
 
+  function startsWith(str, prefix) {
+    return str.substr(0, prefix.length) === prefix;
+  }
+
   test("version decrease", function () {
     var context = this;
-    expect(8);
+    expect(1);
 
     return setupDBMigrationTest(context, {version: 3},
-                                {version: 2}, function (evt) {
-        ok(evt.target.error instanceof DOMException);
-        equal(evt.target.error.name, 'VersionError');
-
-        ok(context.spy_open.calledOnce, "open count " +
-           context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
-              "open first argument");
-
-        equal(context.spy_create_store.callCount, 0,
-              "createObjectStore count");
-        equal(context.spy_store.callCount, 0,
-              "objectStore count");
-        equal(context.spy_create_index.callCount, 0, "createIndex count");
-        equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
+                                {version: 2}, function (msg) {
+        ok(startsWith(msg, "Connection to: jio:qunit failed: "));
       });
   });
 
@@ -2126,4 +2117,4 @@
 
 }(jIO, QUnit, indexedDB, Blob, sinon, IDBDatabase,
   IDBTransaction, IDBIndex, IDBObjectStore, IDBCursor, IDBKeyRange,
-  DOMException, Rusha));
+  Rusha));

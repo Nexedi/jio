@@ -24,8 +24,11 @@
   "use strict";
 
   /* Safari does not define DOMError */
+  /* + compat issue with private Firefox */
   if (window.DOMError === undefined) {
-    window.DOMError = {};
+    window.DOMError = function FakeDOMError(message) {
+      this.message = message;
+    };
   }
 
   var util = {},
