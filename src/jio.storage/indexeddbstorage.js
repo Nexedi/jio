@@ -147,8 +147,11 @@
             (error.target instanceof IDBOpenDBRequest) &&
             ((error.target.error instanceof DOMError) ||
              (error.target.error instanceof DOMException))) {
-          reject("Connection to: " + db_name + " failed: " +
-                 error.target.error.message);
+          reject(new jIO.util.jIOError(
+            "Connection to: " + db_name + " failed: " +
+              error.target.error.message,
+            500
+          ));
         } else {
           reject(error);
         }
