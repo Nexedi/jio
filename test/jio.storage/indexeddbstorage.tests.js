@@ -196,11 +196,13 @@
 
   test("version decrease", function () {
     var context = this;
-    expect(1);
+    expect(3);
 
     return setupDBMigrationTest(context, {version: 3},
-                                {version: 2}, function (msg) {
-        ok(startsWith(msg, "Connection to: jio:qunit failed: "));
+                                {version: 2}, function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.status_code, 500);
+        ok(startsWith(error.message, "Connection to: jio:qunit failed: "));
       });
   });
 
