@@ -190,17 +190,17 @@
     });
   });
 
+  function startsWith(str, prefix) {
+    return str.substr(0, prefix.length) === prefix;
+  }
+
   test("version decrease", function () {
     var context = this;
     expect(1);
 
     return setupDBMigrationTest(context, {version: 3},
                                 {version: 2}, function (msg) {
-        equal(
-          msg,
-          "Connection to: jio:qunit failed: " +
-            "The requested version (2) is less than the existing version (3)."
-        );
+        ok(startsWith(msg, "Connection to: jio:qunit failed: "));
       });
   });
 
