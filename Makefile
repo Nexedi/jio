@@ -132,6 +132,7 @@ ${JIOVERSION}: ${EXTERNALDIR}/URI.js \
 	${SRCDIR}/jio.js \
 	${EXTERNALDIR}/rusha.js \
 	${SRCDIR}/jio.storage/replicatestorage.js \
+	${SRCDIR}/jio.storage/fallbackstorage.js \
 	${SRCDIR}/jio.storage/shastorage.js \
 	${SRCDIR}/jio.storage/uuidstorage.js \
 	${SRCDIR}/jio.storage/memorystorage.js \
@@ -179,6 +180,7 @@ ${JIONODEVERSION}: ${SRCDIR}/node/jio-start.js \
 	${SRCDIR}/jio.js \
 	${SRCDIR}/node/jio.js \
 	${SRCDIR}/jio.storage/replicatestorage.js \
+	${SRCDIR}/jio.storage/fallbackstorage.js \
 	${SRCDIR}/jio.storage/shastorage.js \
 	${SRCDIR}/jio.storage/uuidstorage.js \
 	${SRCDIR}/jio.storage/memorystorage.js \
