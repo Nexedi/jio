@@ -27,19 +27,19 @@
 
   function FallbackStorage(spec) {
     this._sub_storage = jIO.createJIO(spec.sub_storage);
-    this._fallback_storage = jIO.createJIO(spec.fallback_storage);
-    this._checked = false;
+    if (spec.hasOwnProperty('fallback_storage')) {
+      this._fallback_storage = jIO.createJIO(spec.fallback_storage);
+      this._checked = false;
+    } else {
+      this._checked = true;
+    }
   }
-/*
-
-*/
 
   var method_name_list = [
     'get',
     'put',
     'post',
     'remove',
-    'hasCapacity',
     'buildQuery',
     'getAttachment',
     'putAttachment',
@@ -83,6 +83,11 @@
     FallbackStorage.prototype[method_name_list[i]] =
       methodFallback(method_name_list[i]);
   }
+
+  FallbackStorage.prototype.hasCapacity = function hasCapacity(name) {
+    return (this._sub_storage.hasCapacity(name) &&
+      this._fallback_storage.hasCapacity(name));
+  };
 
   jIO.addStorage('fallback', FallbackStorage);
 
