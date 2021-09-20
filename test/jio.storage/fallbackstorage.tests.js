@@ -17,9 +17,8 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*global Blob*/
 /*jslint nomen: true */
-(function (jIO, QUnit, Blob) {
+(function (jIO, QUnit) {
   "use strict";
   var test = QUnit.test,
     stop = QUnit.stop,
@@ -30,110 +29,33 @@
     equal = QUnit.equal,
     module = QUnit.module,
     throws = QUnit.throws;
-    // frozen_blob = new Blob(["foobar"]);
-  console.log(Blob);
-/*
-  /////////////////////////////////////////////////////////////////
-  // Custom test substorage definition
-  /////////////////////////////////////////////////////////////////
-  function Storage404() {
-    return this;
-  }
-  function generate404Error(id) {
-    equal(id, "bar", "get 404 called");
-    throw new jIO.util.jIOError("Cannot find document", 404);
-  }
-  Storage404.prototype.get = generate404Error;
-  jIO.addStorage('unionstorage404', Storage404);
 
-  function Storage200() {
+  function Storage400() {
     return this;
   }
-  Storage200.prototype.get = function (id) {
-    equal(id, "bar", "get 200 called");
-    return {title: "foo"};
-  };
-  Storage200.prototype.allAttachments = function (id) {
-    equal(id, "bar", "allAttachments 200 called");
-    return {attachmentname: {}};
-  };
-  Storage200.prototype.getAttachment = function (id, name) {
-    equal(id, "bar", "getAttachment 200 called");
-    equal(name, "foo", "getAttachment 200 called");
-    return frozen_blob;
-  };
-  Storage200.prototype.removeAttachment = function (id, name) {
-    equal(id, "bar", "removeAttachment 200 called");
-    equal(name, "foo", "removeAttachment 200 called");
-    return "deleted";
-  };
-  Storage200.prototype.putAttachment = function (id, name, blob) {
-    equal(id, "bar", "putAttachment 200 called");
-    equal(name, "foo", "putAttachment 200 called");
-    deepEqual(blob, frozen_blob, "putAttachment 200 called");
-    return "stored";
-  };
-  Storage200.prototype.put = function (id, param) {
-    equal(id, "bar", "put 200 called");
-    deepEqual(param, {"title": "foo"}, "put 200 called");
-    return id;
-  };
-  Storage200.prototype.remove = function (id) {
-    equal(id, "bar", "remove 200 called");
-    return id;
-  };
-  Storage200.prototype.post = function (param) {
-    deepEqual(param, {"title": "foo"}, "post 200 called");
-    return "bar";
-  };
-  Storage200.prototype.hasCapacity = function () {
-    return true;
-  };
-  Storage200.prototype.buildQuery = function (options) {
-    deepEqual(options, {query: 'title: "two"'},
-              "buildQuery 200 called");
-    return [{
-      id: 200,
-      value: {
-        foo: "bar"
-      }
-    }];
-  };
-  Storage200.prototype.repair = function (options) {
-    deepEqual(options, {foo: "bar"}, "repair 200 called");
-    return "OK";
-  };
-  jIO.addStorage('unionstorage200', Storage200);
+  function generateError400() {
+    ok(true, "Error generation 400 called");
+    throw new jIO.util.jIOError("manually triggered error", 400);
+  }
+  Storage400.prototype.put = generateError400;
+  jIO.addStorage('fallbackstorage400', Storage400);
 
-  function Storage200v2() {
-    return this;
-  }
-  Storage200v2.prototype.hasCapacity = function () {
-    return true;
-  };
-  Storage200v2.prototype.buildQuery = function (options) {
-    deepEqual(options, {query: 'title: "two"'},
-              "buildQuery 200v2 called");
-    return [{
-      id: "200v2",
-      value: {
-        bar: "foo"
-      }
-    }];
-  };
-  jIO.addStorage('unionstorage200v2', Storage200v2);
-*/
   function Storage500() {
     return this;
   }
-  function generateError() {
-    ok(true, "Error generation called");
+  function generateError500() {
+    ok(true, "Error generation 500 called");
     throw new jIO.util.jIOError("manually triggered error");
   }
-  Storage500.prototype.get = generateError;
-  Storage500.prototype.post = generateError;
-  Storage500.prototype.repair = generateError;
+  Storage500.prototype.get = generateError500;
+  Storage500.prototype.put = generateError500;
   jIO.addStorage('fallbackstorage500', Storage500);
+
+  function StorageCapacity(spec) {
+    this.hasCapacity = spec.hasCapacity;
+    return this;
+  }
+  jIO.addStorage('fallbackcapacity', StorageCapacity);
 
   /////////////////////////////////////////////////////////////////
   // fallbackStorage.constructor
@@ -184,7 +106,6 @@
         });
       },
       function (error) {
-        console.warn(error);
         ok(error instanceof TypeError);
         return true;
       }
@@ -216,7 +137,7 @@
         equal(error.message, "Cannot find document: bar");
         equal(error.status_code, 404);
         equal(jio.__storage._checked, true);
-        equal(jio.__storage._sub_storage, sub_storage);
+        equal(jio.__storage._current_storage, sub_storage);
       })
       .fail(function (error) {
         ok(false, error);
@@ -250,7 +171,7 @@
       .then(function (result) {
         deepEqual(result, doc);
         equal(jio.__storage._checked, true);
-        equal(jio.__storage._sub_storage, sub_storage);
+        equal(jio.__storage._current_storage, sub_storage);
       })
       .fail(function (error) {
         ok(false, error);
@@ -281,7 +202,7 @@
         equal(error.message, "Cannot find document: bar");
         equal(error.status_code, 404);
         equal(jio.__storage._checked, true);
-        equal(jio.__storage._sub_storage, fallback_storage);
+        equal(jio.__storage._current_storage, fallback_storage);
       })
       .fail(function (error) {
         ok(false, error);
@@ -313,7 +234,7 @@
         equal(error.message, "manually triggered error");
         equal(error.status_code, 500);
         equal(jio.__storage._checked, true);
-        equal(jio.__storage._sub_storage, sub_storage);
+        equal(jio.__storage._current_storage, sub_storage);
       })
       .fail(function (error) {
         ok(false, error);
@@ -323,4 +244,220 @@
       });
   });
 
-}(jIO, QUnit, Blob));
+  /////////////////////////////////////////////////////////////////
+  // fallbackStorage.put
+  /////////////////////////////////////////////////////////////////
+  module("fallbackStorage.put");
+  test("first error handling", function () {
+    stop();
+
+    expect(6);
+    var jio = jIO.createJIO({
+      type: "fallback",
+      sub_storage: {
+        type: "fallbackstorage400"
+      },
+      fallback_storage: {
+        type: "memory"
+      }
+    }),
+      doc = {a: 1},
+      sub_storage = jio.__storage._sub_storage;
+
+    jio.put("bar", doc)
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "manually triggered error");
+        equal(error.status_code, 400);
+        equal(jio.__storage._checked, true);
+        equal(jio.__storage._current_storage, sub_storage);
+      })
+      .fail(function (error) {
+        console.log(error);
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("first success handling", function () {
+    stop();
+
+    expect(3);
+    var jio = jIO.createJIO({
+      type: "fallback",
+      sub_storage: {
+        type: "memory"
+      },
+      fallback_storage: {
+        type: "memory"
+      }
+    }),
+      sub_storage = jio.__storage._sub_storage,
+      doc = {a: 1};
+
+    jio.put("bar", doc)
+      .then(function (result) {
+        deepEqual(result, "bar");
+        equal(jio.__storage._checked, true);
+        equal(jio.__storage._current_storage, sub_storage);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("first 500 handling", function () {
+    stop();
+
+    expect(4);
+    var jio = jIO.createJIO({
+      type: "fallback",
+      sub_storage: {
+        type: "fallbackstorage500"
+      },
+      fallback_storage: {
+        type: "memory"
+      }
+    }),
+      doc = {a: 1},
+      fallback_storage = jio.__storage._fallback_storage;
+
+    jio.put("bar", doc)
+      .then(function (result) {
+        equal(result, "bar");
+        equal(jio.__storage._checked, true);
+        equal(jio.__storage._current_storage, fallback_storage);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("second 500 handling", function () {
+    stop();
+
+    expect(6);
+    var jio = jIO.createJIO({
+      type: "fallback",
+      sub_storage: {
+        type: "fallbackstorage500"
+      },
+      fallback_storage: {
+        type: "memory"
+      }
+    }),
+      doc = {a: 1},
+      sub_storage = jio.__storage._sub_storage;
+    jio.__storage._checked = true;
+
+    jio.put("bar", doc)
+      .fail(function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(error.message, "manually triggered error");
+        equal(error.status_code, 500);
+        equal(jio.__storage._checked, true);
+        equal(jio.__storage._current_storage, sub_storage);
+      })
+      .fail(function (error) {
+        ok(false, error);
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  /////////////////////////////////////////////////////////////////
+  // fallbackStorage.other
+  /////////////////////////////////////////////////////////////////
+  // XXX test other methods which uses exactly the same code
+
+  /////////////////////////////////////////////////////////////////
+  // fallbackStorage.hasCapacity
+  /////////////////////////////////////////////////////////////////
+  module("fallbackStorage.hasCapacity");
+  test("is a logic and", function () {
+
+    expect(19);
+    var capacity1,
+      capacity2,
+      jio = jIO.createJIO({
+        type: "fallback",
+        sub_storage: {
+          type: "fallbackcapacity",
+          hasCapacity: function (name) {
+            ok(true, name + ' capacity1 called');
+            return capacity1;
+          }
+        },
+        fallback_storage: {
+          type: "fallbackcapacity",
+          hasCapacity: function (name) {
+            ok(true, name + ' capacity2 called');
+            return capacity2;
+          }
+        }
+      });
+
+    capacity1 = capacity2 = true;
+    equal(jio.hasCapacity('1&&1'), true);
+
+    capacity1 = capacity2 = false;
+    throws(
+      function () {
+        jio.hasCapacity('0&&0');
+      },
+      function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(
+          error.message,
+          "Capacity '0&&0' is not implemented on 'fallbackcapacity'"
+        );
+        equal(error.status_code, 501);
+        return true;
+      }
+    );
+
+    capacity1 = false;
+    capacity2 = true;
+    throws(
+      function () {
+        jio.hasCapacity('0&&1');
+      },
+      function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(
+          error.message,
+          "Capacity '0&&1' is not implemented on 'fallbackcapacity'"
+        );
+        equal(error.status_code, 501);
+        return true;
+      }
+    );
+
+    capacity1 = true;
+    capacity2 = false;
+    throws(
+      function () {
+        jio.hasCapacity('1&&0');
+      },
+      function (error) {
+        ok(error instanceof jIO.util.jIOError);
+        equal(
+          error.message,
+          "Capacity '1&&0' is not implemented on 'fallbackcapacity'"
+        );
+        equal(error.status_code, 501);
+        return true;
+      }
+    );
+  });
+
+}(jIO, QUnit));

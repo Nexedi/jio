@@ -26,7 +26,7 @@
   "use strict";
 
   function FallbackStorage(spec) {
-    this._sub_storage = jIO.createJIO(spec.sub_storage);
+    this._sub_storage = this._current_storage = jIO.createJIO(spec.sub_storage);
     if (spec.hasOwnProperty('fallback_storage')) {
       this._fallback_storage = jIO.createJIO(spec.fallback_storage);
       this._checked = false;
@@ -51,8 +51,8 @@
   function methodFallback(method_name) {
     return function () {
       var storage = this,
-        queue =  storage._sub_storage[method_name].apply(
-          storage._sub_storage,
+        queue =  storage._current_storage[method_name].apply(
+          storage._current_storage,
           arguments
         ),
         argument_list = arguments;
@@ -66,9 +66,9 @@
             if ((error instanceof jIO.util.jIOError) &&
                 (error.status_code === 500)) {
               // If storage is not working, use fallback instead
-              storage._sub_storage = storage._fallback_storage;
-              return storage._sub_storage[method_name].apply(
-                storage._sub_storage,
+              storage._current_storage = storage._fallback_storage;
+              return storage._current_storage[method_name].apply(
+                storage._current_storage,
                 argument_list
               );
             }
