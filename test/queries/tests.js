@@ -714,4 +714,28 @@
       }).always(start);
   });
 
+  test('sort_on options do not raise in case of null value', function () {
+    var doc_list = [
+      {'a': null},
+      {'c': 3},
+      {'b': 2}
+    ];
+
+    stop();
+    expect(1);
+    jIO.QueryFactory.create("").exec(
+      doc_list,
+      {
+        sort_on: [['a', 'ascending']],
+      }
+    )
+      .then(function (list) {
+        deepEqual(list, [
+          {'a': null},
+          {'c': 3},
+          {'b': 2}
+        ], 'Sorting didn\'t raise');
+      }).always(start);
+  });
+
 }(jIO, jiodate, SimpleQuery));
