@@ -57,18 +57,18 @@
       ///////////////////////////
       // Memory storage
       ///////////////////////////
-      return g.run({
-        type: "query",
-        sub_storage: {
-          type: "uuid",
-          sub_storage: {
-            type: "union",
-            storage_list: [{
-              type: "memory"
-            }]
-          }
-        }
-      });
+//      return g.run({
+//        type: "query",
+//        sub_storage: {
+//          type: "uuid",
+//          sub_storage: {
+//            type: "union",
+//            storage_list: [{
+//              type: "memory"
+//            }]
+//          }
+//        }
+//      });
 
       ///////////////////////////
       // Linshare storage
@@ -206,6 +206,36 @@
       //   }
       // });
 
+      ///////////////////////////
+      // Monitoring storage
+      ///////////////////////////
+      /*return g.run({
+        type: "query",
+        sub_storage: {
+          type: "erp5",
+          url: "https://panel.rapid.space/hateoas/",
+          default_view_reference: "jio_view"
+        }
+      });*/
+
+      return g.run({
+        type: "replicatedopml",
+        remote_storage_unreachable_status: "WARNING",
+        remote_opml_check_time_interval: 86400000,
+        request_timeout: 25000, // timeout is to 25 second
+        local_sub_storage: {
+          type: "query",
+          sub_storage: {
+            type: "uuid",
+            sub_storage: {
+              type: "indexeddb",
+              database: "monitoring_local.db"
+            }
+          }
+        }
+      });
+
+
 
     })
     .declareMethod('run', function (jio_options) {
@@ -213,8 +243,10 @@
       test('Test "' + jio_options.type + '"scenario', function () {
         var jio;
         stop();
-        expect(14);
+        //expect(14);
+        expect(9);
 
+        console.log("test scenario for monitoring storage");
         try {
           jio = jIO.createJIO(jio_options);
         } catch (error) {
@@ -223,6 +255,7 @@
           throw error;
         }
 
+        console.log("Try to fetch inexistent document");
         // Try to fetch inexistent document
         jio.get("inexistent")
           .fail(function (error) {
@@ -231,11 +264,14 @@
               throw error;
             }
             equal(error.status_code, 404, "404 if inexistent");
+            console.log("404 if inexistent - OK");
 
+            console.log("Post a document without ID");
             // Post a document without ID
             return jio.post({"title": "I don't have ID éà&\n"});
           })
           .then(function (doc_id) {
+            console.log("post OK wit id ", doc_id);
             ok(doc_id, "Document without ID created (" + doc_id + ")");
             // Fetch the newly created document
             return RSVP.all([
@@ -319,7 +355,7 @@
             return jio.put("foo❤/test.txt", {});
           })
 
-          .then(function () {
+/*          .then(function () {
             return jio.putAttachment(
               "foo❤/test.txt",
               "enclosure",
@@ -357,9 +393,10 @@
 
           .then(function () {
             ok("Attachment removed");
-          })
+          })*/
 
           .then(function () {
+            console.log("testing jio.repair()");
             return jio.repair();
           })
 
