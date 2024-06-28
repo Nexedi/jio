@@ -232,6 +232,11 @@
               database: "monitoring_local.db"
             }
           }
+        },
+        remote_sub_storage: {
+          type: "erp5",
+          url: "https://panel.rapid.space/hateoas/",
+          default_view_reference: "jio_view"
         }
       });
 
