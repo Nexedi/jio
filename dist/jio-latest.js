@@ -16280,7 +16280,6 @@ return new Parser;
     if (spec.remote_sub_storage !== undefined) {
       this._remote_sub_storage = jIO.createJIO(spec.remote_sub_storage);
     }
-    console.log("this._remote_sub_storage:", this._remote_sub_storage);
     this._remote_storage_unreachable_status =
       spec.remote_storage_unreachable_status;
     this._remote_storage_dict = {};
@@ -16999,7 +16998,6 @@ return new Parser;
   }
 
   function syncOpmlStorage(context) {
-    console.log("syncOpmlStorage!")
     return context._local_sub_storage.allDocs({
       query: '(portal_type:"Opml") AND (active:true) AND (url:"https://%")',
       select_list: ["title", "url", "basic_login"]
@@ -17203,14 +17201,13 @@ return new Parser;
 
     return new RSVP.Queue()
       .push(function () {
-        console.log("local storage repair");
+        console.log("storage repair");
         return context._local_sub_storage.repair.apply(
           context._local_sub_storage,
           argument_list
         );
       })
       .push(function () {
-        console.log("remote storage repair");
         return context._remote_sub_storage.repair.apply(
           context._remote_sub_storage,
           argument_list
@@ -17243,7 +17240,6 @@ return new Parser;
         return push_queue;
       })
       .push(function () {
-        console.log("after all pushOMPL, call syncOpmlStorage");
         return syncOpmlStorage(context);
       });
   };
