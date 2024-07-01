@@ -17001,7 +17001,7 @@ return new Parser;
   function syncOpmlStorage(context) {
     console.log("syncOpmlStorage!")
     return context._local_sub_storage.allDocs({
-      query: '(portal_type:"opml") AND (active:true) AND (url:"https://%")',
+      query: '(portal_type:"Opml") AND (active:true) AND (url:"https://%")',
       select_list: ["title", "url", "basic_login"]
     })
       .push(function (storage_result) {
@@ -17124,13 +17124,14 @@ return new Parser;
       }
       return storage.allDocs({
         query: '(portal_type:"Instance Tree") AND (validation_state:"validated")',
-        select_list: ['title', 'default_successor_uid', 'uid', 'slap_state', 'id'],
+        select_list: ['title', 'default_successor_uid', 'uid', 'slap_state', 'id']/*,
         limit: [0, limit],
         sort_on: [
           ["creation_date", "descending"]
-        ]
+        ]*/
       })
         .push(function (result) {
+          console.log("instance tree query result", result);
           var i, slapos_id,
             uid_search_list = [];
           for (i = 0; i < result.data.total_rows; i += 1) {
@@ -17156,8 +17157,8 @@ return new Parser;
           return storage.allDocs({
             query: '(portal_type:"Software Instance") AND ' +
               '(successor_related_uid:("' + uid_search_list.join('","') + '"))',
-            select_list: ['uid', 'successor_related_uid', 'connection_xml'],
-            limit: [0, limit]
+            select_list: ['uid', 'successor_related_uid', 'connection_xml']/*,
+            limit: [0, limit]*/
           });
         })
         .push(function (result) {
@@ -17202,6 +17203,14 @@ return new Parser;
 
     return new RSVP.Queue()
       .push(function () {
+        console.log("local storage repair");
+        return context._local_sub_storage.repair.apply(
+          context._local_sub_storage,
+          argument_list
+        );
+      })
+      .push(function () {
+        console.log("remote storage repair");
         return context._remote_sub_storage.repair.apply(
           context._remote_sub_storage,
           argument_list
@@ -17234,13 +17243,7 @@ return new Parser;
         return push_queue;
       })
       .push(function () {
-        console.log("after push queue on context._local_sub_storage, call repair")
-        return context._local_sub_storage.repair.apply(
-          context._local_sub_storage,
-          argument_list
-        );
-      })
-      .push(function () {
+        console.log("after all pushOMPL, call syncOpmlStorage");
         return syncOpmlStorage(context);
       });
   };
