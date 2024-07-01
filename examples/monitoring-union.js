@@ -233,12 +233,6 @@
             }
           }
         },
-        /*remote_sub_storage: {
-          type: "erp5",
-          url: "https://panel.rapid.space/hateoas/",
-          //url: "https://softinst224044.host.vifib.net/hateoas/",
-          default_view_reference: "jio_view"
-        }*/
         remote_sub_storage: {
           type: "union",
           storage_list: [
@@ -256,8 +250,6 @@
         }
       });
 
-
-
     })
     .declareMethod('run', function (jio_options) {
 
@@ -267,7 +259,6 @@
         //expect(14);
         expect(9);
 
-        console.log("test scenario for monitoring storage");
         try {
           jio = jIO.createJIO(jio_options);
         } catch (error) {
@@ -276,7 +267,6 @@
           throw error;
         }
 
-        console.log("Try to fetch inexistent document");
         // Try to fetch inexistent document
         jio.get("inexistent")
           .fail(function (error) {
@@ -285,14 +275,10 @@
               throw error;
             }
             equal(error.status_code, 404, "404 if inexistent");
-            console.log("404 if inexistent - OK");
-
-            console.log("Post a document without ID");
             // Post a document without ID
             return jio.post({"title": "I don't have ID éà&\n"});
           })
           .then(function (doc_id) {
-            console.log("post OK wit id ", doc_id);
             ok(doc_id, "Document without ID created (" + doc_id + ")");
             // Fetch the newly created document
             return RSVP.all([
@@ -343,7 +329,6 @@
 //             }, "default allDocs OK");
 
             // Filter the result
-            console.log("START ALLDOCS");
             return jio.allDocs({
               query: 'title: "2 ID"',
               select_list: ["int_index"]
@@ -417,7 +402,6 @@
           })*/
 
           .then(function () {
-            console.log("testing jio.repair()");
             return jio.repair();
           })
 
