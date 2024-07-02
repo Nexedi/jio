@@ -13003,6 +13003,7 @@ return new Parser;
   };
 
   UnionStorage.prototype.buildQuery = function () {
+    //TODO extend union to includo sort and/or limit?
     var promise_list = [],
       i,
       id_dict = {},
@@ -16181,7 +16182,7 @@ return new Parser;
 
 
 
-/* ROQUE replicatedopml for monitoring storage */
+/* XXX replicatedopml for monitoring storage */
 
 
 /*jslint nomen: true */
@@ -16215,6 +16216,7 @@ return new Parser;
     PROMISE_TYPE = "Promise",
     SOFTWARE_INSTANCE_TYPE = "Software Instance",
     INSTANCE_TREE_TYPE = "Instance Tree",
+    OPML_PORTAL_TYPE = "Opml",
     ZONE_LIST = [
       "-1200",
       "-1100",
@@ -16344,7 +16346,7 @@ return new Parser;
     var storage = this._local_sub_storage;
     return storage.get(id)
       .push(function (doc) {
-        if (doc.portal_type !== 'opml') {
+        if (doc.portal_type !== OPML_PORTAL_TYPE) {
           return storage.remove(id);
         }
         function removeOPMLTree(url) {
@@ -16999,7 +17001,7 @@ return new Parser;
 
   function syncOpmlStorage(context) {
     return context._local_sub_storage.allDocs({
-      query: '(portal_type:"Opml") AND (active:true) AND (url:"https://%")',
+      query: '(portal_type:"' + OPML_PORTAL_TYPE + '") AND (active:true) AND (url:"https://%")',
       select_list: ["title", "url", "basic_login"]
     })
       .push(function (storage_result) {
@@ -17044,8 +17046,6 @@ return new Parser;
   }
 
   ReplicatedOPMLStorage.prototype.repair = function () {
-
-    var OPML_PORTAL_TYPE = "Opml";
 
     function getParameterDictFromUrl(uri_param) {
       if (uri_param.has('url') && uri_param.has('password') &&
