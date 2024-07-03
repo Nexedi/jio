@@ -1,1009 +1,1532 @@
-(function (define, exports) {
-  var navigator = null,
-    window = {},
-    node_module = module;
+/*! URI.js v1.12.0 http://medialize.github.com/URI.js/ */
+/* build contains: IPv6.js, punycode.js, SecondLevelDomains.js, URI.js, URI.fragmentQuery.js */
+(function(e,k){"object"===typeof exports?module.exports=k():"function"===typeof define&&define.amd?define(k):e.IPv6=k(e)})(this,function(e){var k=e&&e.IPv6;return{best:function(e){e=e.toLowerCase().split(":");var k=e.length,d=8;""===e[0]&&""===e[1]&&""===e[2]?(e.shift(),e.shift()):""===e[0]&&""===e[1]?e.shift():""===e[k-1]&&""===e[k-2]&&e.pop();k=e.length;-1!==e[k-1].indexOf(".")&&(d=7);var g;for(g=0;g<k&&""!==e[g];g++);if(g<d)for(e.splice(g,1,"0000");e.length<d;)e.splice(g,0,"0000");for(g=0;g<d;g++){for(var k=
+e[g].split(""),q=0;3>q;q++)if("0"===k[0]&&1<k.length)k.splice(0,1);else break;e[g]=k.join("")}var k=-1,l=q=0,r=-1,z=!1;for(g=0;g<d;g++)z?"0"===e[g]?l+=1:(z=!1,l>q&&(k=r,q=l)):"0"==e[g]&&(z=!0,r=g,l=1);l>q&&(k=r,q=l);1<q&&e.splice(k,q,"");k=e.length;d="";""===e[0]&&(beststr=":");for(g=0;g<k;g++){d+=e[g];if(g===k-1)break;d+=":"}""===e[k-1]&&(d+=":");return d},noConflict:function(){e.IPv6===this&&(e.IPv6=k);return this}}});
+(function(e){function k(a){throw RangeError(p[a]);}function u(a,b){for(var c=a.length;c--;)a[c]=b(a[c]);return a}function m(a,b){return u(a.split(h),b).join(".")}function d(a){for(var b=[],c=0,d=a.length,h,p;c<d;)h=a.charCodeAt(c++),55296<=h&&56319>=h&&c<d?(p=a.charCodeAt(c++),56320==(p&64512)?b.push(((h&1023)<<10)+(p&1023)+65536):(b.push(h),c--)):b.push(h);return b}function g(a){return u(a,function(a){var b="";65535<a&&(a-=65536,b+=x(a>>>10&1023|55296),a=56320|a&1023);return b+=x(a)}).join("")}function q(a,
+b){return a+22+75*(26>a)-((0!=b)<<5)}function l(a,b,c){var d=0;a=c?A(a/H):a>>1;for(a+=A(a/b);a>n*y>>1;d+=s)a=A(a/n);return A(d+(n+1)*a/(a+I))}function r(b){var c=[],d=b.length,h,p=0,e=F,f=G,n,x,q,t,m;n=b.lastIndexOf(a);0>n&&(n=0);for(x=0;x<n;++x)128<=b.charCodeAt(x)&&k("not-basic"),c.push(b.charCodeAt(x));for(n=0<n?n+1:0;n<d;){x=p;h=1;for(q=s;;q+=s){n>=d&&k("invalid-input");t=b.charCodeAt(n++);t=10>t-48?t-22:26>t-65?t-65:26>t-97?t-97:s;(t>=s||t>A((w-p)/h))&&k("overflow");p+=t*h;m=q<=f?v:q>=f+y?y:
+q-f;if(t<m)break;t=s-m;h>A(w/t)&&k("overflow");h*=t}h=c.length+1;f=l(p-x,h,0==x);A(p/h)>w-e&&k("overflow");e+=A(p/h);p%=h;c.splice(p++,0,e)}return g(c)}function z(b){var c,h,p,e,f,n,g,m,r,t=[],B,u,z;b=d(b);B=b.length;c=F;h=0;f=G;for(n=0;n<B;++n)r=b[n],128>r&&t.push(x(r));for((p=e=t.length)&&t.push(a);p<B;){g=w;for(n=0;n<B;++n)r=b[n],r>=c&&r<g&&(g=r);u=p+1;g-c>A((w-h)/u)&&k("overflow");h+=(g-c)*u;c=g;for(n=0;n<B;++n)if(r=b[n],r<c&&++h>w&&k("overflow"),r==c){m=h;for(g=s;;g+=s){r=g<=f?v:g>=f+y?y:g-f;
+if(m<r)break;z=m-r;m=s-r;t.push(x(q(r+z%m,0)));m=A(z/m)}t.push(x(q(m,0)));f=l(h,u,p==e);h=0;++p}++h;++c}return t.join("")}var D="object"==typeof exports&&exports,E="object"==typeof module&&module&&module.exports==D&&module,C="object"==typeof global&&global;if(C.global===C||C.window===C)e=C;var f,w=2147483647,s=36,v=1,y=26,I=38,H=700,G=72,F=128,a="-",b=/^xn--/,c=/[^ -~]/,h=/\x2E|\u3002|\uFF0E|\uFF61/g,p={overflow:"Overflow: input needs wider integers to process","not-basic":"Illegal input >= 0x80 (not a basic code point)",
+"invalid-input":"Invalid input"},n=s-v,A=Math.floor,x=String.fromCharCode,B;f={version:"1.2.3",ucs2:{decode:d,encode:g},decode:r,encode:z,toASCII:function(a){return m(a,function(a){return c.test(a)?"xn--"+z(a):a})},toUnicode:function(a){return m(a,function(a){return b.test(a)?r(a.slice(4).toLowerCase()):a})}};if("function"==typeof define&&"object"==typeof define.amd&&define.amd)define(function(){return f});else if(D&&!D.nodeType)if(E)E.exports=f;else for(B in f)f.hasOwnProperty(B)&&(D[B]=f[B]);else e.punycode=
+f})(this);
+(function(e,k){"object"===typeof exports?module.exports=k():"function"===typeof define&&define.amd?define(k):e.SecondLevelDomains=k(e)})(this,function(e){var k=e&&e.SecondLevelDomains,u=Object.prototype.hasOwnProperty,m={list:{ac:"com|gov|mil|net|org",ae:"ac|co|gov|mil|name|net|org|pro|sch",af:"com|edu|gov|net|org",al:"com|edu|gov|mil|net|org",ao:"co|ed|gv|it|og|pb",ar:"com|edu|gob|gov|int|mil|net|org|tur",at:"ac|co|gv|or",au:"asn|com|csiro|edu|gov|id|net|org",ba:"co|com|edu|gov|mil|net|org|rs|unbi|unmo|unsa|untz|unze",bb:"biz|co|com|edu|gov|info|net|org|store|tv",
+bh:"biz|cc|com|edu|gov|info|net|org",bn:"com|edu|gov|net|org",bo:"com|edu|gob|gov|int|mil|net|org|tv",br:"adm|adv|agr|am|arq|art|ato|b|bio|blog|bmd|cim|cng|cnt|com|coop|ecn|edu|eng|esp|etc|eti|far|flog|fm|fnd|fot|fst|g12|ggf|gov|imb|ind|inf|jor|jus|lel|mat|med|mil|mus|net|nom|not|ntr|odo|org|ppg|pro|psc|psi|qsl|rec|slg|srv|tmp|trd|tur|tv|vet|vlog|wiki|zlg",bs:"com|edu|gov|net|org",bz:"du|et|om|ov|rg",ca:"ab|bc|mb|nb|nf|nl|ns|nt|nu|on|pe|qc|sk|yk",ck:"biz|co|edu|gen|gov|info|net|org",cn:"ac|ah|bj|com|cq|edu|fj|gd|gov|gs|gx|gz|ha|hb|he|hi|hl|hn|jl|js|jx|ln|mil|net|nm|nx|org|qh|sc|sd|sh|sn|sx|tj|tw|xj|xz|yn|zj",
+co:"com|edu|gov|mil|net|nom|org",cr:"ac|c|co|ed|fi|go|or|sa",cy:"ac|biz|com|ekloges|gov|ltd|name|net|org|parliament|press|pro|tm","do":"art|com|edu|gob|gov|mil|net|org|sld|web",dz:"art|asso|com|edu|gov|net|org|pol",ec:"com|edu|fin|gov|info|med|mil|net|org|pro",eg:"com|edu|eun|gov|mil|name|net|org|sci",er:"com|edu|gov|ind|mil|net|org|rochest|w",es:"com|edu|gob|nom|org",et:"biz|com|edu|gov|info|name|net|org",fj:"ac|biz|com|info|mil|name|net|org|pro",fk:"ac|co|gov|net|nom|org",fr:"asso|com|f|gouv|nom|prd|presse|tm",
+gg:"co|net|org",gh:"com|edu|gov|mil|org",gn:"ac|com|gov|net|org",gr:"com|edu|gov|mil|net|org",gt:"com|edu|gob|ind|mil|net|org",gu:"com|edu|gov|net|org",hk:"com|edu|gov|idv|net|org",id:"ac|co|go|mil|net|or|sch|web",il:"ac|co|gov|idf|k12|muni|net|org","in":"ac|co|edu|ernet|firm|gen|gov|i|ind|mil|net|nic|org|res",iq:"com|edu|gov|i|mil|net|org",ir:"ac|co|dnssec|gov|i|id|net|org|sch",it:"edu|gov",je:"co|net|org",jo:"com|edu|gov|mil|name|net|org|sch",jp:"ac|ad|co|ed|go|gr|lg|ne|or",ke:"ac|co|go|info|me|mobi|ne|or|sc",
+kh:"com|edu|gov|mil|net|org|per",ki:"biz|com|de|edu|gov|info|mob|net|org|tel",km:"asso|com|coop|edu|gouv|k|medecin|mil|nom|notaires|pharmaciens|presse|tm|veterinaire",kn:"edu|gov|net|org",kr:"ac|busan|chungbuk|chungnam|co|daegu|daejeon|es|gangwon|go|gwangju|gyeongbuk|gyeonggi|gyeongnam|hs|incheon|jeju|jeonbuk|jeonnam|k|kg|mil|ms|ne|or|pe|re|sc|seoul|ulsan",kw:"com|edu|gov|net|org",ky:"com|edu|gov|net|org",kz:"com|edu|gov|mil|net|org",lb:"com|edu|gov|net|org",lk:"assn|com|edu|gov|grp|hotel|int|ltd|net|ngo|org|sch|soc|web",
+lr:"com|edu|gov|net|org",lv:"asn|com|conf|edu|gov|id|mil|net|org",ly:"com|edu|gov|id|med|net|org|plc|sch",ma:"ac|co|gov|m|net|org|press",mc:"asso|tm",me:"ac|co|edu|gov|its|net|org|priv",mg:"com|edu|gov|mil|nom|org|prd|tm",mk:"com|edu|gov|inf|name|net|org|pro",ml:"com|edu|gov|net|org|presse",mn:"edu|gov|org",mo:"com|edu|gov|net|org",mt:"com|edu|gov|net|org",mv:"aero|biz|com|coop|edu|gov|info|int|mil|museum|name|net|org|pro",mw:"ac|co|com|coop|edu|gov|int|museum|net|org",mx:"com|edu|gob|net|org",my:"com|edu|gov|mil|name|net|org|sch",
+nf:"arts|com|firm|info|net|other|per|rec|store|web",ng:"biz|com|edu|gov|mil|mobi|name|net|org|sch",ni:"ac|co|com|edu|gob|mil|net|nom|org",np:"com|edu|gov|mil|net|org",nr:"biz|com|edu|gov|info|net|org",om:"ac|biz|co|com|edu|gov|med|mil|museum|net|org|pro|sch",pe:"com|edu|gob|mil|net|nom|org|sld",ph:"com|edu|gov|i|mil|net|ngo|org",pk:"biz|com|edu|fam|gob|gok|gon|gop|gos|gov|net|org|web",pl:"art|bialystok|biz|com|edu|gda|gdansk|gorzow|gov|info|katowice|krakow|lodz|lublin|mil|net|ngo|olsztyn|org|poznan|pwr|radom|slupsk|szczecin|torun|warszawa|waw|wroc|wroclaw|zgora",
+pr:"ac|biz|com|edu|est|gov|info|isla|name|net|org|pro|prof",ps:"com|edu|gov|net|org|plo|sec",pw:"belau|co|ed|go|ne|or",ro:"arts|com|firm|info|nom|nt|org|rec|store|tm|www",rs:"ac|co|edu|gov|in|org",sb:"com|edu|gov|net|org",sc:"com|edu|gov|net|org",sh:"co|com|edu|gov|net|nom|org",sl:"com|edu|gov|net|org",st:"co|com|consulado|edu|embaixada|gov|mil|net|org|principe|saotome|store",sv:"com|edu|gob|org|red",sz:"ac|co|org",tr:"av|bbs|bel|biz|com|dr|edu|gen|gov|info|k12|name|net|org|pol|tel|tsk|tv|web",tt:"aero|biz|cat|co|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel",
+tw:"club|com|ebiz|edu|game|gov|idv|mil|net|org",mu:"ac|co|com|gov|net|or|org",mz:"ac|co|edu|gov|org",na:"co|com",nz:"ac|co|cri|geek|gen|govt|health|iwi|maori|mil|net|org|parliament|school",pa:"abo|ac|com|edu|gob|ing|med|net|nom|org|sld",pt:"com|edu|gov|int|net|nome|org|publ",py:"com|edu|gov|mil|net|org",qa:"com|edu|gov|mil|net|org",re:"asso|com|nom",ru:"ac|adygeya|altai|amur|arkhangelsk|astrakhan|bashkiria|belgorod|bir|bryansk|buryatia|cbg|chel|chelyabinsk|chita|chukotka|chuvashia|com|dagestan|e-burg|edu|gov|grozny|int|irkutsk|ivanovo|izhevsk|jar|joshkar-ola|kalmykia|kaluga|kamchatka|karelia|kazan|kchr|kemerovo|khabarovsk|khakassia|khv|kirov|koenig|komi|kostroma|kranoyarsk|kuban|kurgan|kursk|lipetsk|magadan|mari|mari-el|marine|mil|mordovia|mosreg|msk|murmansk|nalchik|net|nnov|nov|novosibirsk|nsk|omsk|orenburg|org|oryol|penza|perm|pp|pskov|ptz|rnd|ryazan|sakhalin|samara|saratov|simbirsk|smolensk|spb|stavropol|stv|surgut|tambov|tatarstan|tom|tomsk|tsaritsyn|tsk|tula|tuva|tver|tyumen|udm|udmurtia|ulan-ude|vladikavkaz|vladimir|vladivostok|volgograd|vologda|voronezh|vrn|vyatka|yakutia|yamal|yekaterinburg|yuzhno-sakhalinsk",
+rw:"ac|co|com|edu|gouv|gov|int|mil|net",sa:"com|edu|gov|med|net|org|pub|sch",sd:"com|edu|gov|info|med|net|org|tv",se:"a|ac|b|bd|c|d|e|f|g|h|i|k|l|m|n|o|org|p|parti|pp|press|r|s|t|tm|u|w|x|y|z",sg:"com|edu|gov|idn|net|org|per",sn:"art|com|edu|gouv|org|perso|univ",sy:"com|edu|gov|mil|net|news|org",th:"ac|co|go|in|mi|net|or",tj:"ac|biz|co|com|edu|go|gov|info|int|mil|name|net|nic|org|test|web",tn:"agrinet|com|defense|edunet|ens|fin|gov|ind|info|intl|mincom|nat|net|org|perso|rnrt|rns|rnu|tourism",tz:"ac|co|go|ne|or",
+ua:"biz|cherkassy|chernigov|chernovtsy|ck|cn|co|com|crimea|cv|dn|dnepropetrovsk|donetsk|dp|edu|gov|if|in|ivano-frankivsk|kh|kharkov|kherson|khmelnitskiy|kiev|kirovograd|km|kr|ks|kv|lg|lugansk|lutsk|lviv|me|mk|net|nikolaev|od|odessa|org|pl|poltava|pp|rovno|rv|sebastopol|sumy|te|ternopil|uzhgorod|vinnica|vn|zaporizhzhe|zhitomir|zp|zt",ug:"ac|co|go|ne|or|org|sc",uk:"ac|bl|british-library|co|cym|gov|govt|icnet|jet|lea|ltd|me|mil|mod|national-library-scotland|nel|net|nhs|nic|nls|org|orgn|parliament|plc|police|sch|scot|soc",
+us:"dni|fed|isa|kids|nsn",uy:"com|edu|gub|mil|net|org",ve:"co|com|edu|gob|info|mil|net|org|web",vi:"co|com|k12|net|org",vn:"ac|biz|com|edu|gov|health|info|int|name|net|org|pro",ye:"co|com|gov|ltd|me|net|org|plc",yu:"ac|co|edu|gov|org",za:"ac|agric|alt|bourse|city|co|cybernet|db|edu|gov|grondar|iaccess|imt|inca|landesign|law|mil|net|ngo|nis|nom|olivetti|org|pix|school|tm|web",zm:"ac|co|com|edu|gov|net|org|sch"},has_expression:null,is_expression:null,has:function(d){return!!d.match(m.has_expression)},
+is:function(d){return!!d.match(m.is_expression)},get:function(d){return(d=d.match(m.has_expression))&&d[1]||null},noConflict:function(){e.SecondLevelDomains===this&&(e.SecondLevelDomains=k);return this},init:function(){var d="",e;for(e in m.list)u.call(m.list,e)&&(d+="|("+("("+m.list[e]+")."+e)+")");m.has_expression=RegExp("\\.("+d.substr(1)+")$","i");m.is_expression=RegExp("^("+d.substr(1)+")$","i")}};m.init();return m});
+(function(e,k){"object"===typeof exports?module.exports=k(require("./punycode"),require("./IPv6"),require("./SecondLevelDomains")):"function"===typeof define&&define.amd?define(["./punycode","./IPv6","./SecondLevelDomains"],k):e.URI=k(e.punycode,e.IPv6,e.SecondLevelDomains,e)})(this,function(e,k,u,m){function d(a,b){if(!(this instanceof d))return new d(a,b);void 0===a&&(a="undefined"!==typeof location?location.href+"":"");this.href(a);return void 0!==b?this.absoluteTo(b):this}function g(a){return a.replace(/([.*+?^=!:${}()|[\]\/\\])/g,
+"\\$1")}function q(a){return void 0===a?"Undefined":String(Object.prototype.toString.call(a)).slice(8,-1)}function l(a){return"Array"===q(a)}function r(a,b){var c,d;if(l(b)){c=0;for(d=b.length;c<d;c++)if(!r(a,b[c]))return!1;return!0}var p=q(b);c=0;for(d=a.length;c<d;c++)if("RegExp"===p){if("string"===typeof a[c]&&a[c].match(b))return!0}else if(a[c]===b)return!0;return!1}function z(a,b){if(!l(a)||!l(b)||a.length!==b.length)return!1;a.sort();b.sort();for(var c=0,d=a.length;c<d;c++)if(a[c]!==b[c])return!1;
+return!0}function D(a){return escape(a)}function E(a){return encodeURIComponent(a).replace(/[!'()*]/g,D).replace(/\*/g,"%2A")}var C=m&&m.URI;d.version="1.12.0";var f=d.prototype,w=Object.prototype.hasOwnProperty;d._parts=function(){return{protocol:null,username:null,password:null,hostname:null,urn:null,port:null,path:null,query:null,fragment:null,duplicateQueryParameters:d.duplicateQueryParameters,escapeQuerySpace:d.escapeQuerySpace}};d.duplicateQueryParameters=!1;d.escapeQuerySpace=!0;d.protocol_expression=
+/^[a-z][a-z0-9.+-]*$/i;d.idn_expression=/[^a-z0-9\.-]/i;d.punycode_expression=/(xn--)/i;d.ip4_expression=/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;d.ip6_expression=/^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$/;
+d.find_uri_expression=/\b((?:[a-z][\w-]+:(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?\u00ab\u00bb\u201c\u201d\u2018\u2019]))/ig;d.findUri={start:/\b(?:([a-z][a-z0-9.+-]*:\/\/)|www\.)/gi,end:/[\s\r\n]|$/,trim:/[`!()\[\]{};:'".,<>?\u00ab\u00bb\u201c\u201d\u201e\u2018\u2019]+$/};d.defaultPorts={http:"80",https:"443",ftp:"21",gopher:"70",ws:"80",wss:"443"};d.invalid_hostname_characters=
+/[^a-zA-Z0-9\.-]/;d.domAttributes={a:"href",blockquote:"cite",link:"href",base:"href",script:"src",form:"action",img:"src",area:"href",iframe:"src",embed:"src",source:"src",track:"src",input:"src"};d.getDomAttribute=function(a){if(a&&a.nodeName){var b=a.nodeName.toLowerCase();return"input"===b&&"image"!==a.type?void 0:d.domAttributes[b]}};d.encode=E;d.decode=decodeURIComponent;d.iso8859=function(){d.encode=escape;d.decode=unescape};d.unicode=function(){d.encode=E;d.decode=decodeURIComponent};d.characters=
+{pathname:{encode:{expression:/%(24|26|2B|2C|3B|3D|3A|40)/ig,map:{"%24":"$","%26":"&","%2B":"+","%2C":",","%3B":";","%3D":"=","%3A":":","%40":"@"}},decode:{expression:/[\/\?#]/g,map:{"/":"%2F","?":"%3F","#":"%23"}}},reserved:{encode:{expression:/%(21|23|24|26|27|28|29|2A|2B|2C|2F|3A|3B|3D|3F|40|5B|5D)/ig,map:{"%3A":":","%2F":"/","%3F":"?","%23":"#","%5B":"[","%5D":"]","%40":"@","%21":"!","%24":"$","%26":"&","%27":"'","%28":"(","%29":")","%2A":"*","%2B":"+","%2C":",","%3B":";","%3D":"="}}}};d.encodeQuery=
+function(a,b){var c=d.encode(a+"");return b?c.replace(/%20/g,"+"):c};d.decodeQuery=function(a,b){a+="";try{return d.decode(b?a.replace(/\+/g,"%20"):a)}catch(c){return a}};d.recodePath=function(a){a=(a+"").split("/");for(var b=0,c=a.length;b<c;b++)a[b]=d.encodePathSegment(d.decode(a[b]));return a.join("/")};d.decodePath=function(a){a=(a+"").split("/");for(var b=0,c=a.length;b<c;b++)a[b]=d.decodePathSegment(a[b]);return a.join("/")};var s={encode:"encode",decode:"decode"},v,y=function(a,b){return function(c){return d[b](c+
+"").replace(d.characters[a][b].expression,function(c){return d.characters[a][b].map[c]})}};for(v in s)d[v+"PathSegment"]=y("pathname",s[v]);d.encodeReserved=y("reserved","encode");d.parse=function(a,b){var c;b||(b={});c=a.indexOf("#");-1<c&&(b.fragment=a.substring(c+1)||null,a=a.substring(0,c));c=a.indexOf("?");-1<c&&(b.query=a.substring(c+1)||null,a=a.substring(0,c));"//"===a.substring(0,2)?(b.protocol=null,a=a.substring(2),a=d.parseAuthority(a,b)):(c=a.indexOf(":"),-1<c&&(b.protocol=a.substring(0,
+c)||null,b.protocol&&!b.protocol.match(d.protocol_expression)?b.protocol=void 0:"file"===b.protocol?a=a.substring(c+3):"//"===a.substring(c+1,c+3)?(a=a.substring(c+3),a=d.parseAuthority(a,b)):(a=a.substring(c+1),b.urn=!0)));b.path=a;return b};d.parseHost=function(a,b){var c=a.indexOf("/"),d;-1===c&&(c=a.length);"["===a.charAt(0)?(d=a.indexOf("]"),b.hostname=a.substring(1,d)||null,b.port=a.substring(d+2,c)||null):a.indexOf(":")!==a.lastIndexOf(":")?(b.hostname=a.substring(0,c)||null,b.port=null):(d=
+a.substring(0,c).split(":"),b.hostname=d[0]||null,b.port=d[1]||null);b.hostname&&"/"!==a.substring(c).charAt(0)&&(c++,a="/"+a);return a.substring(c)||"/"};d.parseAuthority=function(a,b){a=d.parseUserinfo(a,b);return d.parseHost(a,b)};d.parseUserinfo=function(a,b){var c=a.indexOf("/"),h=-1<c?a.lastIndexOf("@",c):a.indexOf("@");-1<h&&(-1===c||h<c)?(c=a.substring(0,h).split(":"),b.username=c[0]?d.decode(c[0]):null,c.shift(),b.password=c[0]?d.decode(c.join(":")):null,a=a.substring(h+1)):(b.username=null,
+b.password=null);return a};d.parseQuery=function(a,b){if(!a)return{};a=a.replace(/&+/g,"&").replace(/^\?*&*|&+$/g,"");if(!a)return{};for(var c={},h=a.split("&"),p=h.length,n,e,f=0;f<p;f++)n=h[f].split("="),e=d.decodeQuery(n.shift(),b),n=n.length?d.decodeQuery(n.join("="),b):null,c[e]?("string"===typeof c[e]&&(c[e]=[c[e]]),c[e].push(n)):c[e]=n;return c};d.build=function(a){var b="";a.protocol&&(b+=a.protocol+":");a.urn||!b&&!a.hostname||(b+="//");b+=d.buildAuthority(a)||"";"string"===typeof a.path&&
+("/"!==a.path.charAt(0)&&"string"===typeof a.hostname&&(b+="/"),b+=a.path);"string"===typeof a.query&&a.query&&(b+="?"+a.query);"string"===typeof a.fragment&&a.fragment&&(b+="#"+a.fragment);return b};d.buildHost=function(a){var b="";if(a.hostname)d.ip6_expression.test(a.hostname)?b=a.port?b+("["+a.hostname+"]:"+a.port):b+a.hostname:(b+=a.hostname,a.port&&(b+=":"+a.port));else return"";return b};d.buildAuthority=function(a){return d.buildUserinfo(a)+d.buildHost(a)};d.buildUserinfo=function(a){var b=
+"";a.username&&(b+=d.encode(a.username),a.password&&(b+=":"+d.encode(a.password)),b+="@");return b};d.buildQuery=function(a,b,c){var h="",p,e,f,k;for(e in a)if(w.call(a,e)&&e)if(l(a[e]))for(p={},f=0,k=a[e].length;f<k;f++)void 0!==a[e][f]&&void 0===p[a[e][f]+""]&&(h+="&"+d.buildQueryParameter(e,a[e][f],c),!0!==b&&(p[a[e][f]+""]=!0));else void 0!==a[e]&&(h+="&"+d.buildQueryParameter(e,a[e],c));return h.substring(1)};d.buildQueryParameter=function(a,b,c){return d.encodeQuery(a,c)+(null!==b?"="+d.encodeQuery(b,
+c):"")};d.addQuery=function(a,b,c){if("object"===typeof b)for(var h in b)w.call(b,h)&&d.addQuery(a,h,b[h]);else if("string"===typeof b)void 0===a[b]?a[b]=c:("string"===typeof a[b]&&(a[b]=[a[b]]),l(c)||(c=[c]),a[b]=a[b].concat(c));else throw new TypeError("URI.addQuery() accepts an object, string as the name parameter");};d.removeQuery=function(a,b,c){var h;if(l(b))for(c=0,h=b.length;c<h;c++)a[b[c]]=void 0;else if("object"===typeof b)for(h in b)w.call(b,h)&&d.removeQuery(a,h,b[h]);else if("string"===
+typeof b)if(void 0!==c)if(a[b]===c)a[b]=void 0;else{if(l(a[b])){h=a[b];var p={},e,f;if(l(c))for(e=0,f=c.length;e<f;e++)p[c[e]]=!0;else p[c]=!0;e=0;for(f=h.length;e<f;e++)void 0!==p[h[e]]&&(h.splice(e,1),f--,e--);a[b]=h}}else a[b]=void 0;else throw new TypeError("URI.addQuery() accepts an object, string as the first parameter");};d.hasQuery=function(a,b,c,h){if("object"===typeof b){for(var e in b)if(w.call(b,e)&&!d.hasQuery(a,e,b[e]))return!1;return!0}if("string"!==typeof b)throw new TypeError("URI.hasQuery() accepts an object, string as the name parameter");
+switch(q(c)){case "Undefined":return b in a;case "Boolean":return a=Boolean(l(a[b])?a[b].length:a[b]),c===a;case "Function":return!!c(a[b],b,a);case "Array":return l(a[b])?(h?r:z)(a[b],c):!1;case "RegExp":return l(a[b])?h?r(a[b],c):!1:Boolean(a[b]&&a[b].match(c));case "Number":c=String(c);case "String":return l(a[b])?h?r(a[b],c):!1:a[b]===c;default:throw new TypeError("URI.hasQuery() accepts undefined, boolean, string, number, RegExp, Function as the value parameter");}};d.commonPath=function(a,b){var c=
+Math.min(a.length,b.length),d;for(d=0;d<c;d++)if(a.charAt(d)!==b.charAt(d)){d--;break}if(1>d)return a.charAt(0)===b.charAt(0)&&"/"===a.charAt(0)?"/":"";if("/"!==a.charAt(d)||"/"!==b.charAt(d))d=a.substring(0,d).lastIndexOf("/");return a.substring(0,d+1)};d.withinString=function(a,b,c){c||(c={});var h=c.start||d.findUri.start,e=c.end||d.findUri.end,f=c.trim||d.findUri.trim,k=/[a-z0-9-]=["']?$/i;for(h.lastIndex=0;;){var g=h.exec(a);if(!g)break;g=g.index;if(c.ignoreHtml){var l=a.slice(Math.max(g-3,0),
+g);if(l&&k.test(l))continue}var l=g+a.slice(g).search(e),q=a.slice(g,l).replace(f,"");c.ignore&&c.ignore.test(q)||(l=g+q.length,q=b(q,g,l,a),a=a.slice(0,g)+q+a.slice(l),h.lastIndex=g+q.length)}h.lastIndex=0;return a};d.ensureValidHostname=function(a){if(a.match(d.invalid_hostname_characters)){if(!e)throw new TypeError("Hostname '"+a+"' contains characters other than [A-Z0-9.-] and Punycode.js is not available");if(e.toASCII(a).match(d.invalid_hostname_characters))throw new TypeError("Hostname '"+
+a+"' contains characters other than [A-Z0-9.-]");}};d.noConflict=function(a){if(a)return a={URI:this.noConflict()},URITemplate&&"function"==typeof URITemplate.noConflict&&(a.URITemplate=URITemplate.noConflict()),k&&"function"==typeof k.noConflict&&(a.IPv6=k.noConflict()),SecondLevelDomains&&"function"==typeof SecondLevelDomains.noConflict&&(a.SecondLevelDomains=SecondLevelDomains.noConflict()),a;m.URI===this&&(m.URI=C);return this};f.build=function(a){if(!0===a)this._deferred_build=!0;else if(void 0===
+a||this._deferred_build)this._string=d.build(this._parts),this._deferred_build=!1;return this};f.clone=function(){return new d(this)};f.valueOf=f.toString=function(){return this.build(!1)._string};s={protocol:"protocol",username:"username",password:"password",hostname:"hostname",port:"port"};y=function(a){return function(b,c){if(void 0===b)return this._parts[a]||"";this._parts[a]=b||null;this.build(!c);return this}};for(v in s)f[v]=y(s[v]);s={query:"?",fragment:"#"};y=function(a,b){return function(c,
+d){if(void 0===c)return this._parts[a]||"";null!==c&&(c+="",c.charAt(0)===b&&(c=c.substring(1)));this._parts[a]=c;this.build(!d);return this}};for(v in s)f[v]=y(v,s[v]);s={search:["?","query"],hash:["#","fragment"]};y=function(a,b){return function(c,d){var e=this[a](c,d);return"string"===typeof e&&e.length?b+e:e}};for(v in s)f[v]=y(s[v][1],s[v][0]);f.pathname=function(a,b){if(void 0===a||!0===a){var c=this._parts.path||(this._parts.hostname?"/":"");return a?d.decodePath(c):c}this._parts.path=a?d.recodePath(a):
+"/";this.build(!b);return this};f.path=f.pathname;f.href=function(a,b){var c;if(void 0===a)return this.toString();this._string="";this._parts=d._parts();var h=a instanceof d,e="object"===typeof a&&(a.hostname||a.path||a.pathname);a.nodeName&&(e=d.getDomAttribute(a),a=a[e]||"",e=!1);!h&&e&&void 0!==a.pathname&&(a=a.toString());if("string"===typeof a)this._parts=d.parse(a,this._parts);else if(h||e)for(c in h=h?a._parts:a,h)w.call(this._parts,c)&&(this._parts[c]=h[c]);else throw new TypeError("invalid input");
+this.build(!b);return this};f.is=function(a){var b=!1,c=!1,h=!1,e=!1,f=!1,g=!1,k=!1,l=!this._parts.urn;this._parts.hostname&&(l=!1,c=d.ip4_expression.test(this._parts.hostname),h=d.ip6_expression.test(this._parts.hostname),b=c||h,f=(e=!b)&&u&&u.has(this._parts.hostname),g=e&&d.idn_expression.test(this._parts.hostname),k=e&&d.punycode_expression.test(this._parts.hostname));switch(a.toLowerCase()){case "relative":return l;case "absolute":return!l;case "domain":case "name":return e;case "sld":return f;
+case "ip":return b;case "ip4":case "ipv4":case "inet4":return c;case "ip6":case "ipv6":case "inet6":return h;case "idn":return g;case "url":return!this._parts.urn;case "urn":return!!this._parts.urn;case "punycode":return k}return null};var I=f.protocol,H=f.port,G=f.hostname;f.protocol=function(a,b){if(void 0!==a&&a&&(a=a.replace(/:(\/\/)?$/,""),!a.match(d.protocol_expression)))throw new TypeError("Protocol '"+a+"' contains characters other than [A-Z0-9.+-] or doesn't start with [A-Z]");return I.call(this,
+a,b)};f.scheme=f.protocol;f.port=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0!==a&&(0===a&&(a=null),a&&(a+="",":"===a.charAt(0)&&(a=a.substring(1)),a.match(/[^0-9]/))))throw new TypeError("Port '"+a+"' contains characters other than [0-9]");return H.call(this,a,b)};f.hostname=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0!==a){var c={};d.parseHost(a,c);a=c.hostname}return G.call(this,a,b)};f.host=function(a,b){if(this._parts.urn)return void 0===a?"":this;
+if(void 0===a)return this._parts.hostname?d.buildHost(this._parts):"";d.parseHost(a,this._parts);this.build(!b);return this};f.authority=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0===a)return this._parts.hostname?d.buildAuthority(this._parts):"";d.parseAuthority(a,this._parts);this.build(!b);return this};f.userinfo=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0===a){if(!this._parts.username)return"";var c=d.buildUserinfo(this._parts);return c.substring(0,
+c.length-1)}"@"!==a[a.length-1]&&(a+="@");d.parseUserinfo(a,this._parts);this.build(!b);return this};f.resource=function(a,b){var c;if(void 0===a)return this.path()+this.search()+this.hash();c=d.parse(a);this._parts.path=c.path;this._parts.query=c.query;this._parts.fragment=c.fragment;this.build(!b);return this};f.subdomain=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0===a){if(!this._parts.hostname||this.is("IP"))return"";var c=this._parts.hostname.length-this.domain().length-
+1;return this._parts.hostname.substring(0,c)||""}c=this._parts.hostname.length-this.domain().length;c=this._parts.hostname.substring(0,c);c=RegExp("^"+g(c));a&&"."!==a.charAt(a.length-1)&&(a+=".");a&&d.ensureValidHostname(a);this._parts.hostname=this._parts.hostname.replace(c,a);this.build(!b);return this};f.domain=function(a,b){if(this._parts.urn)return void 0===a?"":this;"boolean"===typeof a&&(b=a,a=void 0);if(void 0===a){if(!this._parts.hostname||this.is("IP"))return"";var c=this._parts.hostname.match(/\./g);
+if(c&&2>c.length)return this._parts.hostname;c=this._parts.hostname.length-this.tld(b).length-1;c=this._parts.hostname.lastIndexOf(".",c-1)+1;return this._parts.hostname.substring(c)||""}if(!a)throw new TypeError("cannot set domain empty");d.ensureValidHostname(a);!this._parts.hostname||this.is("IP")?this._parts.hostname=a:(c=RegExp(g(this.domain())+"$"),this._parts.hostname=this._parts.hostname.replace(c,a));this.build(!b);return this};f.tld=function(a,b){if(this._parts.urn)return void 0===a?"":
+this;"boolean"===typeof a&&(b=a,a=void 0);if(void 0===a){if(!this._parts.hostname||this.is("IP"))return"";var c=this._parts.hostname.lastIndexOf("."),c=this._parts.hostname.substring(c+1);return!0!==b&&u&&u.list[c.toLowerCase()]?u.get(this._parts.hostname)||c:c}if(a)if(a.match(/[^a-zA-Z0-9-]/))if(u&&u.is(a))c=RegExp(g(this.tld())+"$"),this._parts.hostname=this._parts.hostname.replace(c,a);else throw new TypeError("TLD '"+a+"' contains characters other than [A-Z0-9]");else{if(!this._parts.hostname||
+this.is("IP"))throw new ReferenceError("cannot set TLD on non-domain host");c=RegExp(g(this.tld())+"$");this._parts.hostname=this._parts.hostname.replace(c,a)}else throw new TypeError("cannot set TLD empty");this.build(!b);return this};f.directory=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0===a||!0===a){if(!this._parts.path&&!this._parts.hostname)return"";if("/"===this._parts.path)return"/";var c=this._parts.path.length-this.filename().length-1,c=this._parts.path.substring(0,
+c)||(this._parts.hostname?"/":"");return a?d.decodePath(c):c}c=this._parts.path.length-this.filename().length;c=this._parts.path.substring(0,c);c=RegExp("^"+g(c));this.is("relative")||(a||(a="/"),"/"!==a.charAt(0)&&(a="/"+a));a&&"/"!==a.charAt(a.length-1)&&(a+="/");a=d.recodePath(a);this._parts.path=this._parts.path.replace(c,a);this.build(!b);return this};f.filename=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0===a||!0===a){if(!this._parts.path||"/"===this._parts.path)return"";
+var c=this._parts.path.lastIndexOf("/"),c=this._parts.path.substring(c+1);return a?d.decodePathSegment(c):c}c=!1;"/"===a.charAt(0)&&(a=a.substring(1));a.match(/\.?\//)&&(c=!0);var h=RegExp(g(this.filename())+"$");a=d.recodePath(a);this._parts.path=this._parts.path.replace(h,a);c?this.normalizePath(b):this.build(!b);return this};f.suffix=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0===a||!0===a){if(!this._parts.path||"/"===this._parts.path)return"";var c=this.filename(),h=c.lastIndexOf(".");
+if(-1===h)return"";c=c.substring(h+1);c=/^[a-z0-9%]+$/i.test(c)?c:"";return a?d.decodePathSegment(c):c}"."===a.charAt(0)&&(a=a.substring(1));if(c=this.suffix())h=a?RegExp(g(c)+"$"):RegExp(g("."+c)+"$");else{if(!a)return this;this._parts.path+="."+d.recodePath(a)}h&&(a=d.recodePath(a),this._parts.path=this._parts.path.replace(h,a));this.build(!b);return this};f.segment=function(a,b,c){var d=this._parts.urn?":":"/",e=this.path(),f="/"===e.substring(0,1),e=e.split(d);void 0!==a&&"number"!==typeof a&&
+(c=b,b=a,a=void 0);if(void 0!==a&&"number"!==typeof a)throw Error("Bad segment '"+a+"', must be 0-based integer");f&&e.shift();0>a&&(a=Math.max(e.length+a,0));if(void 0===b)return void 0===a?e:e[a];if(null===a||void 0===e[a])if(l(b)){e=[];a=0;for(var g=b.length;a<g;a++)if(b[a].length||e.length&&e[e.length-1].length)e.length&&!e[e.length-1].length&&e.pop(),e.push(b[a])}else{if(b||"string"===typeof b)""===e[e.length-1]?e[e.length-1]=b:e.push(b)}else b||"string"===typeof b&&b.length?e[a]=b:e.splice(a,
+1);f&&e.unshift("");return this.path(e.join(d),c)};f.segmentCoded=function(a,b,c){var e,f;"number"!==typeof a&&(c=b,b=a,a=void 0);if(void 0===b){a=this.segment(a,b,c);if(l(a))for(e=0,f=a.length;e<f;e++)a[e]=d.decode(a[e]);else a=void 0!==a?d.decode(a):void 0;return a}if(l(b))for(e=0,f=b.length;e<f;e++)b[e]=d.decode(b[e]);else b="string"===typeof b?d.encode(b):b;return this.segment(a,b,c)};var F=f.query;f.query=function(a,b){if(!0===a)return d.parseQuery(this._parts.query,this._parts.escapeQuerySpace);
+if("function"===typeof a){var c=d.parseQuery(this._parts.query,this._parts.escapeQuerySpace),e=a.call(this,c);this._parts.query=d.buildQuery(e||c,this._parts.duplicateQueryParameters,this._parts.escapeQuerySpace);this.build(!b);return this}return void 0!==a&&"string"!==typeof a?(this._parts.query=d.buildQuery(a,this._parts.duplicateQueryParameters,this._parts.escapeQuerySpace),this.build(!b),this):F.call(this,a,b)};f.setQuery=function(a,b,c){var e=d.parseQuery(this._parts.query,this._parts.escapeQuerySpace);
+if("object"===typeof a)for(var f in a)w.call(a,f)&&(e[f]=a[f]);else if("string"===typeof a)e[a]=void 0!==b?b:null;else throw new TypeError("URI.addQuery() accepts an object, string as the name parameter");this._parts.query=d.buildQuery(e,this._parts.duplicateQueryParameters,this._parts.escapeQuerySpace);"string"!==typeof a&&(c=b);this.build(!c);return this};f.addQuery=function(a,b,c){var e=d.parseQuery(this._parts.query,this._parts.escapeQuerySpace);d.addQuery(e,a,void 0===b?null:b);this._parts.query=
+d.buildQuery(e,this._parts.duplicateQueryParameters,this._parts.escapeQuerySpace);"string"!==typeof a&&(c=b);this.build(!c);return this};f.removeQuery=function(a,b,c){var e=d.parseQuery(this._parts.query,this._parts.escapeQuerySpace);d.removeQuery(e,a,b);this._parts.query=d.buildQuery(e,this._parts.duplicateQueryParameters,this._parts.escapeQuerySpace);"string"!==typeof a&&(c=b);this.build(!c);return this};f.hasQuery=function(a,b,c){var e=d.parseQuery(this._parts.query,this._parts.escapeQuerySpace);
+return d.hasQuery(e,a,b,c)};f.setSearch=f.setQuery;f.addSearch=f.addQuery;f.removeSearch=f.removeQuery;f.hasSearch=f.hasQuery;f.normalize=function(){return this._parts.urn?this.normalizeProtocol(!1).normalizeQuery(!1).normalizeFragment(!1).build():this.normalizeProtocol(!1).normalizeHostname(!1).normalizePort(!1).normalizePath(!1).normalizeQuery(!1).normalizeFragment(!1).build()};f.normalizeProtocol=function(a){"string"===typeof this._parts.protocol&&(this._parts.protocol=this._parts.protocol.toLowerCase(),
+this.build(!a));return this};f.normalizeHostname=function(a){this._parts.hostname&&(this.is("IDN")&&e?this._parts.hostname=e.toASCII(this._parts.hostname):this.is("IPv6")&&k&&(this._parts.hostname=k.best(this._parts.hostname)),this._parts.hostname=this._parts.hostname.toLowerCase(),this.build(!a));return this};f.normalizePort=function(a){"string"===typeof this._parts.protocol&&this._parts.port===d.defaultPorts[this._parts.protocol]&&(this._parts.port=null,this.build(!a));return this};f.normalizePath=
+function(a){if(this._parts.urn||!this._parts.path||"/"===this._parts.path)return this;var b,c=this._parts.path,e="",f,g;"/"!==c.charAt(0)&&(b=!0,c="/"+c);c=c.replace(/(\/(\.\/)+)|(\/\.$)/g,"/").replace(/\/{2,}/g,"/");b&&(e=c.substring(1).match(/^(\.\.\/)+/)||"")&&(e=e[0]);for(;;){f=c.indexOf("/..");if(-1===f)break;else if(0===f){c=c.substring(3);continue}g=c.substring(0,f).lastIndexOf("/");-1===g&&(g=f);c=c.substring(0,g)+c.substring(f+3)}b&&this.is("relative")&&(c=e+c.substring(1));c=d.recodePath(c);
+this._parts.path=c;this.build(!a);return this};f.normalizePathname=f.normalizePath;f.normalizeQuery=function(a){"string"===typeof this._parts.query&&(this._parts.query.length?this.query(d.parseQuery(this._parts.query,this._parts.escapeQuerySpace)):this._parts.query=null,this.build(!a));return this};f.normalizeFragment=function(a){this._parts.fragment||(this._parts.fragment=null,this.build(!a));return this};f.normalizeSearch=f.normalizeQuery;f.normalizeHash=f.normalizeFragment;f.iso8859=function(){var a=
+d.encode,b=d.decode;d.encode=escape;d.decode=decodeURIComponent;this.normalize();d.encode=a;d.decode=b;return this};f.unicode=function(){var a=d.encode,b=d.decode;d.encode=E;d.decode=unescape;this.normalize();d.encode=a;d.decode=b;return this};f.readable=function(){var a=this.clone();a.username("").password("").normalize();var b="";a._parts.protocol&&(b+=a._parts.protocol+"://");a._parts.hostname&&(a.is("punycode")&&e?(b+=e.toUnicode(a._parts.hostname),a._parts.port&&(b+=":"+a._parts.port)):b+=a.host());
+a._parts.hostname&&a._parts.path&&"/"!==a._parts.path.charAt(0)&&(b+="/");b+=a.path(!0);if(a._parts.query){for(var c="",f=0,g=a._parts.query.split("&"),k=g.length;f<k;f++){var l=(g[f]||"").split("="),c=c+("&"+d.decodeQuery(l[0],this._parts.escapeQuerySpace).replace(/&/g,"%26"));void 0!==l[1]&&(c+="="+d.decodeQuery(l[1],this._parts.escapeQuerySpace).replace(/&/g,"%26"))}b+="?"+c.substring(1)}return b+=d.decodeQuery(a.hash(),!0)};f.absoluteTo=function(a){var b=this.clone(),c=["protocol","username",
+"password","hostname","port"],e,f;if(this._parts.urn)throw Error("URNs do not have any generally defined hierarchical components");a instanceof d||(a=new d(a));b._parts.protocol||(b._parts.protocol=a._parts.protocol);if(this._parts.hostname)return b;for(e=0;f=c[e];e++)b._parts[f]=a._parts[f];b._parts.path?".."===b._parts.path.substring(-2)&&(b._parts.path+="/"):(b._parts.path=a._parts.path,b._parts.query||(b._parts.query=a._parts.query));"/"!==b.path().charAt(0)&&(a=a.directory(),b._parts.path=(a?
+a+"/":"")+b._parts.path,b.normalizePath());b.build();return b};f.relativeTo=function(a){var b=this.clone().normalize(),c,e,f,g;if(b._parts.urn)throw Error("URNs do not have any generally defined hierarchical components");a=(new d(a)).normalize();c=b._parts;e=a._parts;f=b.path();g=a.path();if("/"!==f.charAt(0))throw Error("URI is already relative");if("/"!==g.charAt(0))throw Error("Cannot calculate a URI relative to another relative URI");c.protocol===e.protocol&&(c.protocol=null);if(c.username===
+e.username&&c.password===e.password&&null===c.protocol&&null===c.username&&null===c.password&&c.hostname===e.hostname&&c.port===e.port)c.hostname=null,c.port=null;else return b.build();if(f===g)return c.path="",b.build();a=d.commonPath(b.path(),a.path());if(!a)return b.build();e=e.path.substring(a.length).replace(/[^\/]*$/,"").replace(/.*?\//g,"../");c.path=e+c.path.substring(a.length);return b.build()};f.equals=function(a){var b=this.clone();a=new d(a);var c={},e={},f={},g;b.normalize();a.normalize();
+if(b.toString()===a.toString())return!0;c=b.query();e=a.query();b.query("");a.query("");if(b.toString()!==a.toString()||c.length!==e.length)return!1;c=d.parseQuery(c,this._parts.escapeQuerySpace);e=d.parseQuery(e,this._parts.escapeQuerySpace);for(g in c)if(w.call(c,g)){if(!l(c[g])){if(c[g]!==e[g])return!1}else if(!z(c[g],e[g]))return!1;f[g]=!0}for(g in e)if(w.call(e,g)&&!f[g])return!1;return!0};f.duplicateQueryParameters=function(a){this._parts.duplicateQueryParameters=!!a;return this};f.escapeQuerySpace=
+function(a){this._parts.escapeQuerySpace=!!a;return this};return d});
+(function(e,k){"object"===typeof exports?module.exports=k(require("./URI")):"function"===typeof define&&define.amd?define(["./URI"],k):k(e.URI)})(this,function(e){var k=e.prototype,u=k.fragment;e.fragmentPrefix="?";var m=e._parts;e._parts=function(){var d=m();d.fragmentPrefix=e.fragmentPrefix;return d};k.fragmentPrefix=function(d){this._parts.fragmentPrefix=d;return this};k.fragment=function(d,g){var k=this._parts.fragmentPrefix,l=this._parts.fragment||"";return!0===d?l.substring(0,k.length)!==k?
+{}:e.parseQuery(l.substring(k.length)):void 0!==d&&"string"!==typeof d?(this._parts.fragment=k+e.buildQuery(d),this.build(!g),this):u.call(this,d,g)};k.addFragment=function(d,g,k){var l=this._parts.fragmentPrefix,m=e.parseQuery((this._parts.fragment||"").substring(l.length));e.addQuery(m,d,g);this._parts.fragment=l+e.buildQuery(m);"string"!==typeof d&&(k=g);this.build(!k);return this};k.removeFragment=function(d,g,k){var l=this._parts.fragmentPrefix,m=e.parseQuery((this._parts.fragment||"").substring(l.length));
+e.removeQuery(m,d,g);this._parts.fragment=l+e.buildQuery(m);"string"!==typeof d&&(k=g);this.build(!k);return this};k.addHash=k.addFragment;k.removeHash=k.removeFragment;return{}});
+/*global unescape, module, define, window, global*/
 
-  module = undefined;
-(function(globals) {
-var define, requireModule;
+/*
+ UriTemplate Copyright (c) 2012-2013 Franz Antesberger. All Rights Reserved.
+ Available via the MIT license.
+*/
 
-(function() {
-  var registry = {}, seen = {};
+(function (exportCallback) {
+    "use strict";
 
-  define = function(name, deps, callback) {
-    registry[name] = { deps: deps, callback: callback };
-  };
+var UriTemplateError = (function () {
 
-  requireModule = function(name) {
-    if (seen[name]) { return seen[name]; }
-    seen[name] = {};
-
-    var mod = registry[name];
-    if (!mod) {
-      throw new Error("Module '" + name + "' not found.");
+    function UriTemplateError (options) {
+        this.options = options;
     }
 
-    var deps = mod.deps,
-        callback = mod.callback,
-        reified = [],
-        exports;
+    UriTemplateError.prototype.toString = function () {
+        if (JSON && JSON.stringify) {
+            return JSON.stringify(this.options);
+        }
+        else {
+            return this.options;
+        }
+    };
 
-    for (var i=0, l=deps.length; i<l; i++) {
-      if (deps[i] === 'exports') {
-        reified.push(exports = {});
+    return UriTemplateError;
+}());
+
+var objectHelper = (function () {
+    function isArray (value) {
+        return Object.prototype.toString.apply(value) === '[object Array]';
+    }
+
+    function isString (value) {
+        return Object.prototype.toString.apply(value) === '[object String]';
+    }
+    
+    function isNumber (value) {
+        return Object.prototype.toString.apply(value) === '[object Number]';
+    }
+    
+    function isBoolean (value) {
+        return Object.prototype.toString.apply(value) === '[object Boolean]';
+    }
+    
+    function join (arr, separator) {
+        var
+            result = '',
+            first = true,
+            index;
+        for (index = 0; index < arr.length; index += 1) {
+            if (first) {
+                first = false;
+            }
+            else {
+                result += separator;
+            }
+            result += arr[index];
+        }
+        return result;
+    }
+
+    function map (arr, mapper) {
+        var
+            result = [],
+            index = 0;
+        for (; index < arr.length; index += 1) {
+            result.push(mapper(arr[index]));
+        }
+        return result;
+    }
+
+    function filter (arr, predicate) {
+        var
+            result = [],
+            index = 0;
+        for (; index < arr.length; index += 1) {
+            if (predicate(arr[index])) {
+                result.push(arr[index]);
+            }
+        }
+        return result;
+    }
+
+    function deepFreezeUsingObjectFreeze (object) {
+        if (typeof object !== "object" || object === null) {
+            return object;
+        }
+        Object.freeze(object);
+        var property, propertyName;
+        for (propertyName in object) {
+            if (object.hasOwnProperty(propertyName)) {
+                property = object[propertyName];
+                // be aware, arrays are 'object', too
+                if ((typeof property === "object") && !(property instanceof RegExp)) {
+                    deepFreeze(property);
+                }
+            }
+        }
+        return object;
+    }
+
+    function deepFreeze (object) {
+        if (typeof Object.freeze === 'function') {
+            return deepFreezeUsingObjectFreeze(object);
+        }
+        return object;
+    }
+
+
+    return {
+        isArray: isArray,
+        isString: isString,
+        isNumber: isNumber,
+        isBoolean: isBoolean,
+        join: join,
+        map: map,
+        filter: filter,
+        deepFreeze: deepFreeze
+    };
+}());
+
+var charHelper = (function () {
+
+    function isAlpha (chr) {
+        return (chr >= 'a' && chr <= 'z') || ((chr >= 'A' && chr <= 'Z'));
+    }
+
+    function isDigit (chr) {
+        return chr >= '0' && chr <= '9';
+    }
+
+    function isHexDigit (chr) {
+        return isDigit(chr) || (chr >= 'a' && chr <= 'f') || (chr >= 'A' && chr <= 'F');
+    }
+
+    return {
+        isAlpha: isAlpha,
+        isDigit: isDigit,
+        isHexDigit: isHexDigit
+    };
+}());
+
+var pctEncoder = (function () {
+    var utf8 = {
+        encode: function (chr) {
+            // see http://ecmanaut.blogspot.de/2006/07/encoding-decoding-utf8-in-javascript.html
+            return unescape(encodeURIComponent(chr));
+        },
+        numBytes: function (firstCharCode) {
+            if (firstCharCode <= 0x7F) {
+                return 1;
+            }
+            else if (0xC2 <= firstCharCode && firstCharCode <= 0xDF) {
+                return 2;
+            }
+            else if (0xE0 <= firstCharCode && firstCharCode <= 0xEF) {
+                return 3;
+            }
+            else if (0xF0 <= firstCharCode && firstCharCode <= 0xF4) {
+                return 4;
+            }
+            // no valid first octet
+            return 0;
+        },
+        isValidFollowingCharCode: function (charCode) {
+            return 0x80 <= charCode && charCode <= 0xBF;
+        }
+    };
+
+    /**
+     * encodes a character, if needed or not.
+     * @param chr
+     * @return pct-encoded character
+     */
+    function encodeCharacter (chr) {
+        var
+            result = '',
+            octets = utf8.encode(chr),
+            octet,
+            index;
+        for (index = 0; index < octets.length; index += 1) {
+            octet = octets.charCodeAt(index);
+            result += '%' + (octet < 0x10 ? '0' : '') + octet.toString(16).toUpperCase();
+        }
+        return result;
+    }
+
+    /**
+     * Returns, whether the given text at start is in the form 'percent hex-digit hex-digit', like '%3F'
+     * @param text
+     * @param start
+     * @return {boolean|*|*}
+     */
+    function isPercentDigitDigit (text, start) {
+        return text.charAt(start) === '%' && charHelper.isHexDigit(text.charAt(start + 1)) && charHelper.isHexDigit(text.charAt(start + 2));
+    }
+
+    /**
+     * Parses a hex number from start with length 2.
+     * @param text a string
+     * @param start the start index of the 2-digit hex number
+     * @return {Number}
+     */
+    function parseHex2 (text, start) {
+        return parseInt(text.substr(start, 2), 16);
+    }
+
+    /**
+     * Returns whether or not the given char sequence is a correctly pct-encoded sequence.
+     * @param chr
+     * @return {boolean}
+     */
+    function isPctEncoded (chr) {
+        if (!isPercentDigitDigit(chr, 0)) {
+            return false;
+        }
+        var firstCharCode = parseHex2(chr, 1);
+        var numBytes = utf8.numBytes(firstCharCode);
+        if (numBytes === 0) {
+            return false;
+        }
+        for (var byteNumber = 1; byteNumber < numBytes; byteNumber += 1) {
+            if (!isPercentDigitDigit(chr, 3*byteNumber) || !utf8.isValidFollowingCharCode(parseHex2(chr, 3*byteNumber + 1))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Reads as much as needed from the text, e.g. '%20' or '%C3%B6'. It does not decode!
+     * @param text
+     * @param startIndex
+     * @return the character or pct-string of the text at startIndex
+     */
+    function pctCharAt(text, startIndex) {
+        var chr = text.charAt(startIndex);
+        if (!isPercentDigitDigit(text, startIndex)) {
+            return chr;
+        }
+        var utf8CharCode = parseHex2(text, startIndex + 1);
+        var numBytes = utf8.numBytes(utf8CharCode);
+        if (numBytes === 0) {
+            return chr;
+        }
+        for (var byteNumber = 1; byteNumber < numBytes; byteNumber += 1) {
+            if (!isPercentDigitDigit(text, startIndex + 3 * byteNumber) || !utf8.isValidFollowingCharCode(parseHex2(text, startIndex + 3 * byteNumber + 1))) {
+                return chr;
+            }
+        }
+        return text.substr(startIndex, 3 * numBytes);
+    }
+
+    return {
+        encodeCharacter: encodeCharacter,
+        isPctEncoded: isPctEncoded,
+        pctCharAt: pctCharAt
+    };
+}());
+
+var rfcCharHelper = (function () {
+
+    /**
+     * Returns if an character is an varchar character according 2.3 of rfc 6570
+     * @param chr
+     * @return (Boolean)
+     */
+    function isVarchar (chr) {
+        return charHelper.isAlpha(chr) || charHelper.isDigit(chr) || chr === '_' || pctEncoder.isPctEncoded(chr);
+    }
+
+    /**
+     * Returns if chr is an unreserved character according 1.5 of rfc 6570
+     * @param chr
+     * @return {Boolean}
+     */
+    function isUnreserved (chr) {
+        return charHelper.isAlpha(chr) || charHelper.isDigit(chr) || chr === '-' || chr === '.' || chr === '_' || chr === '~';
+    }
+
+    /**
+     * Returns if chr is an reserved character according 1.5 of rfc 6570
+     * or the percent character mentioned in 3.2.1.
+     * @param chr
+     * @return {Boolean}
+     */
+    function isReserved (chr) {
+        return chr === ':' || chr === '/' || chr === '?' || chr === '#' || chr === '[' || chr === ']' || chr === '@' || chr === '!' || chr === '$' || chr === '&' || chr === '(' ||
+            chr === ')' || chr === '*' || chr === '+' || chr === ',' || chr === ';' || chr === '=' || chr === "'";
+    }
+
+    return {
+        isVarchar: isVarchar,
+        isUnreserved: isUnreserved,
+        isReserved: isReserved
+    };
+
+}());
+
+/**
+ * encoding of rfc 6570
+ */
+var encodingHelper = (function () {
+
+    function encode (text, passReserved) {
+        var
+            result = '',
+            index,
+            chr = '';
+        if (typeof text === "number" || typeof text === "boolean") {
+            text = text.toString();
+        }
+        for (index = 0; index < text.length; index += chr.length) {
+            chr = text.charAt(index);
+            result += rfcCharHelper.isUnreserved(chr) || (passReserved && rfcCharHelper.isReserved(chr)) ? chr : pctEncoder.encodeCharacter(chr);
+        }
+        return result;
+    }
+
+    function encodePassReserved (text) {
+        return encode(text, true);
+    }
+
+    function encodeLiteralCharacter (literal, index) {
+        var chr = pctEncoder.pctCharAt(literal, index);
+        if (chr.length > 1) {
+            return chr;
+        }
+        else {
+            return rfcCharHelper.isReserved(chr) || rfcCharHelper.isUnreserved(chr) ? chr : pctEncoder.encodeCharacter(chr);
+        }
+    }
+
+    function encodeLiteral (literal) {
+        var
+            result = '',
+            index,
+            chr = '';
+        for (index = 0; index < literal.length; index += chr.length) {
+            chr = pctEncoder.pctCharAt(literal, index);
+            if (chr.length > 1) {
+                result += chr;
+            }
+            else {
+                result += rfcCharHelper.isReserved(chr) || rfcCharHelper.isUnreserved(chr) ? chr : pctEncoder.encodeCharacter(chr);
+            }
+        }
+        return result;
+    }
+
+    return {
+        encode: encode,
+        encodePassReserved: encodePassReserved,
+        encodeLiteral: encodeLiteral,
+        encodeLiteralCharacter: encodeLiteralCharacter
+    };
+
+}());
+
+
+// the operators defined by rfc 6570
+var operators = (function () {
+
+    var
+        bySymbol = {};
+
+    function create (symbol) {
+        bySymbol[symbol] = {
+            symbol: symbol,
+            separator: (symbol === '?') ? '&' : (symbol === '' || symbol === '+' || symbol === '#') ? ',' : symbol,
+            named: symbol === ';' || symbol === '&' || symbol === '?',
+            ifEmpty: (symbol === '&' || symbol === '?') ? '=' : '',
+            first: (symbol === '+' ) ? '' : symbol,
+            encode: (symbol === '+' || symbol === '#') ? encodingHelper.encodePassReserved : encodingHelper.encode,
+            toString: function () {
+                return this.symbol;
+            }
+        };
+    }
+
+    create('');
+    create('+');
+    create('#');
+    create('.');
+    create('/');
+    create(';');
+    create('?');
+    create('&');
+    return {
+        valueOf: function (chr) {
+            if (bySymbol[chr]) {
+                return bySymbol[chr];
+            }
+            if ("=,!@|".indexOf(chr) >= 0) {
+                return null;
+            }
+            return bySymbol[''];
+        }
+    };
+}());
+
+
+/**
+ * Detects, whether a given element is defined in the sense of rfc 6570
+ * Section 2.3 of the RFC makes clear defintions:
+ * * undefined and null are not defined.
+ * * the empty string is defined
+ * * an array ("list") is defined, if it is not empty (even if all elements are not defined)
+ * * an object ("map") is defined, if it contains at least one property with defined value
+ * @param object
+ * @return {Boolean}
+ */
+function isDefined (object) {
+    var
+        propertyName;
+    if (object === null || object === undefined) {
+        return false;
+    }
+    if (objectHelper.isArray(object)) {
+        // Section 2.3: A variable defined as a list value is considered undefined if the list contains zero members
+        return object.length > 0;
+    }
+    if (typeof object === "string" || typeof object === "number" || typeof object === "boolean") {
+        // falsy values like empty strings, false or 0 are "defined"
+        return true;
+    }
+    // else Object
+    for (propertyName in object) {
+        if (object.hasOwnProperty(propertyName) && isDefined(object[propertyName])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+var LiteralExpression = (function () {
+    function LiteralExpression (literal) {
+        this.literal = encodingHelper.encodeLiteral(literal);
+    }
+
+    LiteralExpression.prototype.expand = function () {
+        return this.literal;
+    };
+
+    LiteralExpression.prototype.toString = LiteralExpression.prototype.expand;
+
+    return LiteralExpression;
+}());
+
+var parse = (function () {
+
+    function parseExpression (expressionText) {
+        var
+            operator,
+            varspecs = [],
+            varspec = null,
+            varnameStart = null,
+            maxLengthStart = null,
+            index,
+            chr = '';
+
+        function closeVarname () {
+            var varname = expressionText.substring(varnameStart, index);
+            if (varname.length === 0) {
+                throw new UriTemplateError({expressionText: expressionText, message: "a varname must be specified", position: index});
+            }
+            varspec = {varname: varname, exploded: false, maxLength: null};
+            varnameStart = null;
+        }
+
+        function closeMaxLength () {
+            if (maxLengthStart === index) {
+                throw new UriTemplateError({expressionText: expressionText, message: "after a ':' you have to specify the length", position: index});
+            }
+            varspec.maxLength = parseInt(expressionText.substring(maxLengthStart, index), 10);
+            maxLengthStart = null;
+        }
+
+        operator = (function (operatorText) {
+            var op = operators.valueOf(operatorText);
+            if (op === null) {
+                throw new UriTemplateError({expressionText: expressionText, message: "illegal use of reserved operator", position: index, operator: operatorText});
+            }
+            return op;
+        }(expressionText.charAt(0)));
+        index = operator.symbol.length;
+
+        varnameStart = index;
+
+        for (; index < expressionText.length; index += chr.length) {
+            chr = pctEncoder.pctCharAt(expressionText, index);
+
+            if (varnameStart !== null) {
+                // the spec says: varname =  varchar *( ["."] varchar )
+                // so a dot is allowed except for the first char
+                if (chr === '.') {
+                    if (varnameStart === index) {
+                        throw new UriTemplateError({expressionText: expressionText, message: "a varname MUST NOT start with a dot", position: index});
+                    }
+                    continue;
+                }
+                if (rfcCharHelper.isVarchar(chr)) {
+                    continue;
+                }
+                closeVarname();
+            }
+            if (maxLengthStart !== null) {
+                if (index === maxLengthStart && chr === '0') {
+                    throw new UriTemplateError({expressionText: expressionText, message: "A :prefix must not start with digit 0", position: index});
+                }
+                if (charHelper.isDigit(chr)) {
+                    if (index - maxLengthStart >= 4) {
+                        throw new UriTemplateError({expressionText: expressionText, message: "A :prefix must have max 4 digits", position: index});
+                    }
+                    continue;
+                }
+                closeMaxLength();
+            }
+            if (chr === ':') {
+                if (varspec.maxLength !== null) {
+                    throw new UriTemplateError({expressionText: expressionText, message: "only one :maxLength is allowed per varspec", position: index});
+                }
+                if (varspec.exploded) {
+                    throw new UriTemplateError({expressionText: expressionText, message: "an exploeded varspec MUST NOT be varspeced", position: index});
+                }
+                maxLengthStart = index + 1;
+                continue;
+            }
+            if (chr === '*') {
+                if (varspec === null) {
+                    throw new UriTemplateError({expressionText: expressionText, message: "exploded without varspec", position: index});
+                }
+                if (varspec.exploded) {
+                    throw new UriTemplateError({expressionText: expressionText, message: "exploded twice", position: index});
+                }
+                if (varspec.maxLength) {
+                    throw new UriTemplateError({expressionText: expressionText, message: "an explode (*) MUST NOT follow to a prefix", position: index});
+                }
+                varspec.exploded = true;
+                continue;
+            }
+            // the only legal character now is the comma
+            if (chr === ',') {
+                varspecs.push(varspec);
+                varspec = null;
+                varnameStart = index + 1;
+                continue;
+            }
+            throw new UriTemplateError({expressionText: expressionText, message: "illegal character", character: chr, position: index});
+        } // for chr
+        if (varnameStart !== null) {
+            closeVarname();
+        }
+        if (maxLengthStart !== null) {
+            closeMaxLength();
+        }
+        varspecs.push(varspec);
+        return new VariableExpression(expressionText, operator, varspecs);
+    }
+
+    function escape_regexp_string(string) {
+      // http://simonwillison.net/2006/Jan/20/escape/
+      return string.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, "\\$&");
+    }
+
+    function parse (uriTemplateText) {
+        // assert filled string
+        var
+            index,
+            chr,
+            expressions = [],
+            expression,
+            braceOpenIndex = null,
+            regexp_string = '',
+            can_match = true,
+            literalStart = 0;
+        for (index = 0; index < uriTemplateText.length; index += 1) {
+            chr = uriTemplateText.charAt(index);
+            if (literalStart !== null) {
+                if (chr === '}') {
+                    throw new UriTemplateError({templateText: uriTemplateText, message: "unopened brace closed", position: index});
+                }
+                if (chr === '{') {
+                    if (literalStart < index) {
+                        expression = new LiteralExpression(uriTemplateText.substring(literalStart, index));
+                        expressions.push(expression);
+                        regexp_string += escape_regexp_string(
+                            expression.literal);
+                    }
+                    literalStart = null;
+                    braceOpenIndex = index;
+                }
+                continue;
+            }
+
+            if (braceOpenIndex !== null) {
+                // here just { is forbidden
+                if (chr === '{') {
+                    throw new UriTemplateError({templateText: uriTemplateText, message: "brace already opened", position: index});
+                }
+                if (chr === '}') {
+                    if (braceOpenIndex + 1 === index) {
+                        throw new UriTemplateError({templateText: uriTemplateText, message: "empty braces", position: braceOpenIndex});
+                    }
+                    try {
+                        expression = parseExpression(uriTemplateText.substring(braceOpenIndex + 1, index));
+                    }
+                    catch (error) {
+                        if (error.prototype === UriTemplateError.prototype) {
+                            throw new UriTemplateError({templateText: uriTemplateText, message: error.options.message, position: braceOpenIndex + error.options.position, details: error.options});
+                        }
+                        throw error;
+                    }
+                    expressions.push(expression);
+                    if (expression.operator.symbol.length === 0) {
+                      regexp_string += "([^/]+)";
+                    } else {
+                      can_match = false;
+                    }
+                    braceOpenIndex = null;
+                    literalStart = index + 1;
+                }
+                continue;
+            }
+            throw new Error('reached unreachable code');
+        }
+        if (braceOpenIndex !== null) {
+            throw new UriTemplateError({templateText: uriTemplateText, message: "unclosed brace", position: braceOpenIndex});
+        }
+        if (literalStart < uriTemplateText.length) {
+            expression = new LiteralExpression(uriTemplateText.substring(literalStart));
+            expressions.push(expression);
+            regexp_string += escape_regexp_string(expression.literal);
+        }
+        if (can_match === false) {
+          regexp_string = undefined;
+        }
+        return new UriTemplate(uriTemplateText, expressions, regexp_string);
+    }
+
+    return parse;
+}());
+
+var VariableExpression = (function () {
+    // helper function if JSON is not available
+    function prettyPrint (value) {
+        return (JSON && JSON.stringify) ? JSON.stringify(value) : value;
+    }
+
+    function isEmpty (value) {
+        if (!isDefined(value)) {
+            return true;
+        }
+        if (objectHelper.isString(value)) {
+            return value === '';
+        }
+        if (objectHelper.isNumber(value) || objectHelper.isBoolean(value)) {
+            return false;
+        }
+        if (objectHelper.isArray(value)) {
+            return value.length === 0;
+        }
+        for (var propertyName in value) {
+            if (value.hasOwnProperty(propertyName)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function propertyArray (object) {
+        var
+            result = [],
+            propertyName;
+        for (propertyName in object) {
+            if (object.hasOwnProperty(propertyName)) {
+                result.push({name: propertyName, value: object[propertyName]});
+            }
+        }
+        return result;
+    }
+
+    function VariableExpression (templateText, operator, varspecs) {
+        this.templateText = templateText;
+        this.operator = operator;
+        this.varspecs = varspecs;
+    }
+
+    VariableExpression.prototype.toString = function () {
+        return this.templateText;
+    };
+
+    function expandSimpleValue(varspec, operator, value) {
+        var result = '';
+        value = value.toString();
+        if (operator.named) {
+            result += encodingHelper.encodeLiteral(varspec.varname);
+            if (value === '') {
+                result += operator.ifEmpty;
+                return result;
+            }
+            result += '=';
+        }
+        if (varspec.maxLength !== null) {
+            value = value.substr(0, varspec.maxLength);
+        }
+        result += operator.encode(value);
+        return result;
+    }
+
+    function valueDefined (nameValue) {
+        return isDefined(nameValue.value);
+    }
+
+    function expandNotExploded(varspec, operator, value) {
+        var
+            arr = [],
+            result = '';
+        if (operator.named) {
+            result += encodingHelper.encodeLiteral(varspec.varname);
+            if (isEmpty(value)) {
+                result += operator.ifEmpty;
+                return result;
+            }
+            result += '=';
+        }
+        if (objectHelper.isArray(value)) {
+            arr = value;
+            arr = objectHelper.filter(arr, isDefined);
+            arr = objectHelper.map(arr, operator.encode);
+            result += objectHelper.join(arr, ',');
+        }
+        else {
+            arr = propertyArray(value);
+            arr = objectHelper.filter(arr, valueDefined);
+            arr = objectHelper.map(arr, function (nameValue) {
+                return operator.encode(nameValue.name) + ',' + operator.encode(nameValue.value);
+            });
+            result += objectHelper.join(arr, ',');
+        }
+        return result;
+    }
+
+    function expandExplodedNamed (varspec, operator, value) {
+        var
+            isArray = objectHelper.isArray(value),
+            arr = [];
+        if (isArray) {
+            arr = value;
+            arr = objectHelper.filter(arr, isDefined);
+            arr = objectHelper.map(arr, function (listElement) {
+                var tmp = encodingHelper.encodeLiteral(varspec.varname);
+                if (isEmpty(listElement)) {
+                    tmp += operator.ifEmpty;
+                }
+                else {
+                    tmp += '=' + operator.encode(listElement);
+                }
+                return tmp;
+            });
+        }
+        else {
+            arr = propertyArray(value);
+            arr = objectHelper.filter(arr, valueDefined);
+            arr = objectHelper.map(arr, function (nameValue) {
+                var tmp = encodingHelper.encodeLiteral(nameValue.name);
+                if (isEmpty(nameValue.value)) {
+                    tmp += operator.ifEmpty;
+                }
+                else {
+                    tmp += '=' + operator.encode(nameValue.value);
+                }
+                return tmp;
+            });
+        }
+        return objectHelper.join(arr, operator.separator);
+    }
+
+    function expandExplodedUnnamed (operator, value) {
+        var
+            arr = [],
+            result = '';
+        if (objectHelper.isArray(value)) {
+            arr = value;
+            arr = objectHelper.filter(arr, isDefined);
+            arr = objectHelper.map(arr, operator.encode);
+            result += objectHelper.join(arr, operator.separator);
+        }
+        else {
+            arr = propertyArray(value);
+            arr = objectHelper.filter(arr, function (nameValue) {
+                return isDefined(nameValue.value);
+            });
+            arr = objectHelper.map(arr, function (nameValue) {
+                return operator.encode(nameValue.name) + '=' + operator.encode(nameValue.value);
+            });
+            result += objectHelper.join(arr, operator.separator);
+        }
+        return result;
+    }
+
+
+    VariableExpression.prototype.expand = function (variables) {
+        var
+            expanded = [],
+            index,
+            varspec,
+            value,
+            valueIsArr,
+            oneExploded = false,
+            operator = this.operator;
+
+        // expand each varspec and join with operator's separator
+        for (index = 0; index < this.varspecs.length; index += 1) {
+            varspec = this.varspecs[index];
+            value = variables[varspec.varname];
+            // if (!isDefined(value)) {
+            // if (variables.hasOwnProperty(varspec.name)) {
+            if (value === null || value === undefined) {
+                continue;
+            }
+            if (varspec.exploded) {
+                oneExploded = true;
+            }
+            valueIsArr = objectHelper.isArray(value);
+            if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+                expanded.push(expandSimpleValue(varspec, operator, value));
+            }
+            else if (varspec.maxLength && isDefined(value)) {
+                // 2.4.1 of the spec says: "Prefix modifiers are not applicable to variables that have composite values."
+                throw new Error('Prefix modifiers are not applicable to variables that have composite values. You tried to expand ' + this + " with " + prettyPrint(value));
+            }
+            else if (!varspec.exploded) {
+                if (operator.named || !isEmpty(value)) {
+                    expanded.push(expandNotExploded(varspec, operator, value));
+                }
+            }
+            else if (isDefined(value)) {
+                if (operator.named) {
+                    expanded.push(expandExplodedNamed(varspec, operator, value));
+                }
+                else {
+                    expanded.push(expandExplodedUnnamed(operator, value));
+                }
+            }
+        }
+
+        if (expanded.length === 0) {
+            return "";
+        }
+        else {
+            return operator.first + objectHelper.join(expanded, operator.separator);
+        }
+    };
+
+    return VariableExpression;
+}());
+
+var UriTemplate = (function () {
+    function UriTemplate (templateText, expressions, regexp_string) {
+        this.templateText = templateText;
+        this.expressions = expressions;
+
+        if (regexp_string !== undefined) {
+          this.regexp = new RegExp("^" + regexp_string + "$");
+        }
+
+        objectHelper.deepFreeze(this);
+    }
+
+    UriTemplate.prototype.toString = function () {
+        return this.templateText;
+    };
+
+    UriTemplate.prototype.expand = function (variables) {
+        // this.expressions.map(function (expression) {return expression.expand(variables);}).join('');
+        var
+            index,
+            result = '';
+        for (index = 0; index < this.expressions.length; index += 1) {
+            result += this.expressions[index].expand(variables);
+        }
+        return result;
+    };
+
+    UriTemplate.prototype.extract = function (text) {
+      var expression_index,
+          extracted_index = 1,
+          expression,
+          varspec,
+          matched = true,
+          variables = {},
+          result;
+
+      if ((this.regexp !== undefined) && (this.regexp.test(text))) {
+        result = this.regexp.exec(text);
+        for (expression_index = 0; expression_index < this.expressions.length; expression_index += 1) {
+          expression = this.expressions[expression_index];
+          if (expression.literal === undefined) {
+            if ((expression.operator !== undefined) && (expression.operator.symbol.length === 0) && (expression.varspecs.length === 1)) {
+              varspec = expression.varspecs[0];
+              if ((varspec.exploded === false) && (varspec.maxLength === null)) {
+                if (result[extracted_index].indexOf(',') === -1) {
+                  variables[varspec.varname] = decodeURIComponent(result[extracted_index]);
+                  extracted_index += 1;
+                } else {
+                  matched = false;
+                }
+              } else {
+                matched = false;
+              }
+            } else {
+              matched = false;
+            }
+          }
+        }
+        if (matched) {
+          return variables;
+        }
+      }
+      return false;
+    };
+
+    UriTemplate.parse = parse;
+    UriTemplate.UriTemplateError = UriTemplateError;
+    return UriTemplate;
+}());
+
+    exportCallback(UriTemplate);
+
+}(function (UriTemplate) {
+        "use strict";
+        // export UriTemplate, when module is present, or pass it to window or global
+        if (typeof module !== "undefined") {
+            module.exports = UriTemplate;
+        }
+        else if (typeof define === "function") {
+            define([],function() {
+                return UriTemplate;
+            });
+        }
+        else if (typeof window !== "undefined") {
+            window.UriTemplate = UriTemplate;
+        }
+        else {
+            global.UriTemplate = UriTemplate;
+        }
+    }
+));
+// Copyright (c) 2013 Pieroxy <pieroxy@pieroxy.net>
+// This work is free. You can redistribute it and/or modify it
+// under the terms of the WTFPL, Version 2
+// For more information see LICENSE.txt or http://www.wtfpl.net/
+//
+// For more information, the home page:
+// http://pieroxy.net/blog/pages/lz-string/testing.html
+//
+// LZ-based compression algorithm, version 1.4.4
+var LZString = (function() {
+
+// private property
+var f = String.fromCharCode;
+var keyStrBase64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+var keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
+var baseReverseDic = {};
+
+function getBaseValue(alphabet, character) {
+  if (!baseReverseDic[alphabet]) {
+    baseReverseDic[alphabet] = {};
+    for (var i=0 ; i<alphabet.length ; i++) {
+      baseReverseDic[alphabet][alphabet.charAt(i)] = i;
+    }
+  }
+  return baseReverseDic[alphabet][character];
+}
+
+var LZString = {
+  compressToBase64 : function (input) {
+    if (input == null) return "";
+    var res = LZString._compress(input, 6, function(a){return keyStrBase64.charAt(a);});
+    switch (res.length % 4) { // To produce valid Base64
+    default: // When could this happen ?
+    case 0 : return res;
+    case 1 : return res+"===";
+    case 2 : return res+"==";
+    case 3 : return res+"=";
+    }
+  },
+
+  decompressFromBase64 : function (input) {
+    if (input == null) return "";
+    if (input == "") return null;
+    return LZString._decompress(input.length, 32, function(index) { return getBaseValue(keyStrBase64, input.charAt(index)); });
+  },
+
+  compressToUTF16 : function (input) {
+    if (input == null) return "";
+    return LZString._compress(input, 15, function(a){return f(a+32);}) + " ";
+  },
+
+  decompressFromUTF16: function (compressed) {
+    if (compressed == null) return "";
+    if (compressed == "") return null;
+    return LZString._decompress(compressed.length, 16384, function(index) { return compressed.charCodeAt(index) - 32; });
+  },
+
+  //compress into uint8array (UCS-2 big endian format)
+  compressToUint8Array: function (uncompressed) {
+    var compressed = LZString.compress(uncompressed);
+    var buf=new Uint8Array(compressed.length*2); // 2 bytes per character
+
+    for (var i=0, TotalLen=compressed.length; i<TotalLen; i++) {
+      var current_value = compressed.charCodeAt(i);
+      buf[i*2] = current_value >>> 8;
+      buf[i*2+1] = current_value % 256;
+    }
+    return buf;
+  },
+
+  //decompress from uint8array (UCS-2 big endian format)
+  decompressFromUint8Array:function (compressed) {
+    if (compressed===null || compressed===undefined){
+        return LZString.decompress(compressed);
+    } else {
+        var buf=new Array(compressed.length/2); // 2 bytes per character
+        for (var i=0, TotalLen=buf.length; i<TotalLen; i++) {
+          buf[i]=compressed[i*2]*256+compressed[i*2+1];
+        }
+
+        var result = [];
+        buf.forEach(function (c) {
+          result.push(f(c));
+        });
+        return LZString.decompress(result.join(''));
+
+    }
+
+  },
+
+
+  //compress into a string that is already URI encoded
+  compressToEncodedURIComponent: function (input) {
+    if (input == null) return "";
+    return LZString._compress(input, 6, function(a){return keyStrUriSafe.charAt(a);});
+  },
+
+  //decompress from an output of compressToEncodedURIComponent
+  decompressFromEncodedURIComponent:function (input) {
+    if (input == null) return "";
+    if (input == "") return null;
+    input = input.replace(/ /g, "+");
+    return LZString._decompress(input.length, 32, function(index) { return getBaseValue(keyStrUriSafe, input.charAt(index)); });
+  },
+
+  compress: function (uncompressed) {
+    return LZString._compress(uncompressed, 16, function(a){return f(a);});
+  },
+  _compress: function (uncompressed, bitsPerChar, getCharFromInt) {
+    if (uncompressed == null) return "";
+    var i, value,
+        context_dictionary= {},
+        context_dictionaryToCreate= {},
+        context_c="",
+        context_wc="",
+        context_w="",
+        context_enlargeIn= 2, // Compensate for the first entry which should not count
+        context_dictSize= 3,
+        context_numBits= 2,
+        context_data=[],
+        context_data_val=0,
+        context_data_position=0,
+        ii;
+
+    for (ii = 0; ii < uncompressed.length; ii += 1) {
+      context_c = uncompressed.charAt(ii);
+      if (!Object.prototype.hasOwnProperty.call(context_dictionary,context_c)) {
+        context_dictionary[context_c] = context_dictSize++;
+        context_dictionaryToCreate[context_c] = true;
+      }
+
+      context_wc = context_w + context_c;
+      if (Object.prototype.hasOwnProperty.call(context_dictionary,context_wc)) {
+        context_w = context_wc;
       } else {
-        reified.push(requireModule(deps[i]));
+        if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate,context_w)) {
+          if (context_w.charCodeAt(0)<256) {
+            for (i=0 ; i<context_numBits ; i++) {
+              context_data_val = (context_data_val << 1);
+              if (context_data_position == bitsPerChar-1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else {
+                context_data_position++;
+              }
+            }
+            value = context_w.charCodeAt(0);
+            for (i=0 ; i<8 ; i++) {
+              context_data_val = (context_data_val << 1) | (value&1);
+              if (context_data_position == bitsPerChar-1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else {
+                context_data_position++;
+              }
+              value = value >> 1;
+            }
+          } else {
+            value = 1;
+            for (i=0 ; i<context_numBits ; i++) {
+              context_data_val = (context_data_val << 1) | value;
+              if (context_data_position ==bitsPerChar-1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else {
+                context_data_position++;
+              }
+              value = 0;
+            }
+            value = context_w.charCodeAt(0);
+            for (i=0 ; i<16 ; i++) {
+              context_data_val = (context_data_val << 1) | (value&1);
+              if (context_data_position == bitsPerChar-1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else {
+                context_data_position++;
+              }
+              value = value >> 1;
+            }
+          }
+          context_enlargeIn--;
+          if (context_enlargeIn == 0) {
+            context_enlargeIn = Math.pow(2, context_numBits);
+            context_numBits++;
+          }
+          delete context_dictionaryToCreate[context_w];
+        } else {
+          value = context_dictionary[context_w];
+          for (i=0 ; i<context_numBits ; i++) {
+            context_data_val = (context_data_val << 1) | (value&1);
+            if (context_data_position == bitsPerChar-1) {
+              context_data_position = 0;
+              context_data.push(getCharFromInt(context_data_val));
+              context_data_val = 0;
+            } else {
+              context_data_position++;
+            }
+            value = value >> 1;
+          }
+
+
+        }
+        context_enlargeIn--;
+        if (context_enlargeIn == 0) {
+          context_enlargeIn = Math.pow(2, context_numBits);
+          context_numBits++;
+        }
+        // Add wc to the dictionary.
+        context_dictionary[context_wc] = context_dictSize++;
+        context_w = String(context_c);
       }
     }
 
-    var value = callback.apply(this, reified);
-    return seen[name] = exports || value;
-  };
+    // Output the code for w.
+    if (context_w !== "") {
+      if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate,context_w)) {
+        if (context_w.charCodeAt(0)<256) {
+          for (i=0 ; i<context_numBits ; i++) {
+            context_data_val = (context_data_val << 1);
+            if (context_data_position == bitsPerChar-1) {
+              context_data_position = 0;
+              context_data.push(getCharFromInt(context_data_val));
+              context_data_val = 0;
+            } else {
+              context_data_position++;
+            }
+          }
+          value = context_w.charCodeAt(0);
+          for (i=0 ; i<8 ; i++) {
+            context_data_val = (context_data_val << 1) | (value&1);
+            if (context_data_position == bitsPerChar-1) {
+              context_data_position = 0;
+              context_data.push(getCharFromInt(context_data_val));
+              context_data_val = 0;
+            } else {
+              context_data_position++;
+            }
+            value = value >> 1;
+          }
+        } else {
+          value = 1;
+          for (i=0 ; i<context_numBits ; i++) {
+            context_data_val = (context_data_val << 1) | value;
+            if (context_data_position == bitsPerChar-1) {
+              context_data_position = 0;
+              context_data.push(getCharFromInt(context_data_val));
+              context_data_val = 0;
+            } else {
+              context_data_position++;
+            }
+            value = 0;
+          }
+          value = context_w.charCodeAt(0);
+          for (i=0 ; i<16 ; i++) {
+            context_data_val = (context_data_val << 1) | (value&1);
+            if (context_data_position == bitsPerChar-1) {
+              context_data_position = 0;
+              context_data.push(getCharFromInt(context_data_val));
+              context_data_val = 0;
+            } else {
+              context_data_position++;
+            }
+            value = value >> 1;
+          }
+        }
+        context_enlargeIn--;
+        if (context_enlargeIn == 0) {
+          context_enlargeIn = Math.pow(2, context_numBits);
+          context_numBits++;
+        }
+        delete context_dictionaryToCreate[context_w];
+      } else {
+        value = context_dictionary[context_w];
+        for (i=0 ; i<context_numBits ; i++) {
+          context_data_val = (context_data_val << 1) | (value&1);
+          if (context_data_position == bitsPerChar-1) {
+            context_data_position = 0;
+            context_data.push(getCharFromInt(context_data_val));
+            context_data_val = 0;
+          } else {
+            context_data_position++;
+          }
+          value = value >> 1;
+        }
+
+
+      }
+      context_enlargeIn--;
+      if (context_enlargeIn == 0) {
+        context_enlargeIn = Math.pow(2, context_numBits);
+        context_numBits++;
+      }
+    }
+
+    // Mark the end of the stream
+    value = 2;
+    for (i=0 ; i<context_numBits ; i++) {
+      context_data_val = (context_data_val << 1) | (value&1);
+      if (context_data_position == bitsPerChar-1) {
+        context_data_position = 0;
+        context_data.push(getCharFromInt(context_data_val));
+        context_data_val = 0;
+      } else {
+        context_data_position++;
+      }
+      value = value >> 1;
+    }
+
+    // Flush the last char
+    while (true) {
+      context_data_val = (context_data_val << 1);
+      if (context_data_position == bitsPerChar-1) {
+        context_data.push(getCharFromInt(context_data_val));
+        break;
+      }
+      else context_data_position++;
+    }
+    return context_data.join('');
+  },
+
+  decompress: function (compressed) {
+    if (compressed == null) return "";
+    if (compressed == "") return null;
+    return LZString._decompress(compressed.length, 32768, function(index) { return compressed.charCodeAt(index); });
+  },
+
+  _decompress: function (length, resetValue, getNextValue) {
+    var dictionary = [],
+        next,
+        enlargeIn = 4,
+        dictSize = 4,
+        numBits = 3,
+        entry = "",
+        result = [],
+        i,
+        w,
+        bits, resb, maxpower, power,
+        c,
+        data = {val:getNextValue(0), position:resetValue, index:1};
+
+    for (i = 0; i < 3; i += 1) {
+      dictionary[i] = i;
+    }
+
+    bits = 0;
+    maxpower = Math.pow(2,2);
+    power=1;
+    while (power!=maxpower) {
+      resb = data.val & data.position;
+      data.position >>= 1;
+      if (data.position == 0) {
+        data.position = resetValue;
+        data.val = getNextValue(data.index++);
+      }
+      bits |= (resb>0 ? 1 : 0) * power;
+      power <<= 1;
+    }
+
+    switch (next = bits) {
+      case 0:
+          bits = 0;
+          maxpower = Math.pow(2,8);
+          power=1;
+          while (power!=maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position == 0) {
+              data.position = resetValue;
+              data.val = getNextValue(data.index++);
+            }
+            bits |= (resb>0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+        c = f(bits);
+        break;
+      case 1:
+          bits = 0;
+          maxpower = Math.pow(2,16);
+          power=1;
+          while (power!=maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position == 0) {
+              data.position = resetValue;
+              data.val = getNextValue(data.index++);
+            }
+            bits |= (resb>0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+        c = f(bits);
+        break;
+      case 2:
+        return "";
+    }
+    dictionary[3] = c;
+    w = c;
+    result.push(c);
+    while (true) {
+      if (data.index > length) {
+        return "";
+      }
+
+      bits = 0;
+      maxpower = Math.pow(2,numBits);
+      power=1;
+      while (power!=maxpower) {
+        resb = data.val & data.position;
+        data.position >>= 1;
+        if (data.position == 0) {
+          data.position = resetValue;
+          data.val = getNextValue(data.index++);
+        }
+        bits |= (resb>0 ? 1 : 0) * power;
+        power <<= 1;
+      }
+
+      switch (c = bits) {
+        case 0:
+          bits = 0;
+          maxpower = Math.pow(2,8);
+          power=1;
+          while (power!=maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position == 0) {
+              data.position = resetValue;
+              data.val = getNextValue(data.index++);
+            }
+            bits |= (resb>0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+
+          dictionary[dictSize++] = f(bits);
+          c = dictSize-1;
+          enlargeIn--;
+          break;
+        case 1:
+          bits = 0;
+          maxpower = Math.pow(2,16);
+          power=1;
+          while (power!=maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position == 0) {
+              data.position = resetValue;
+              data.val = getNextValue(data.index++);
+            }
+            bits |= (resb>0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+          dictionary[dictSize++] = f(bits);
+          c = dictSize-1;
+          enlargeIn--;
+          break;
+        case 2:
+          return result.join('');
+      }
+
+      if (enlargeIn == 0) {
+        enlargeIn = Math.pow(2, numBits);
+        numBits++;
+      }
+
+      if (dictionary[c]) {
+        entry = dictionary[c];
+      } else {
+        if (c === dictSize) {
+          entry = w + w.charAt(0);
+        } else {
+          return null;
+        }
+      }
+      result.push(entry);
+
+      // Add w+entry[0] to the dictionary.
+      dictionary[dictSize++] = w + entry.charAt(0);
+      enlargeIn--;
+
+      w = entry;
+
+      if (enlargeIn == 0) {
+        enlargeIn = Math.pow(2, numBits);
+        numBits++;
+      }
+
+    }
+  }
+};
+  return LZString;
 })();
 
-define("rsvp/all",
-  ["rsvp/promise","exports"],
-  function(__dependency1__, __exports__) {
-    "use strict";
-    var Promise = __dependency1__.Promise;
-    /* global toString */
-
-
-    function promiseAtLeast(expected_count, promises) {
-      if (Object.prototype.toString.call(promises) !== "[object Array]") {
-        throw new TypeError('You must pass an array to all.');
-      }
-
-      function canceller() {
-        var promise;
-        for (var i = 0; i < promises.length; i++) {
-          promise = promises[i];
-
-          if (promise && typeof promise.then === 'function' &&
-              typeof promise.cancel === 'function') {
-            promise.cancel();
-          }
-        }
-      }
-
-      return new Promise(function(resolve, reject) {
-        var results = [], remaining = promises.length,
-        promise, remaining_count = promises.length - expected_count;
-
-        if (remaining === 0) {
-          if (expected_count === 1) {
-            resolve();
-          } else {
-            resolve([]);
-          }
-        }
-
-        function resolver(index) {
-          return function(value) {
-            resolveAll(index, value);
-          };
-        }
-
-        function resolveAll(index, value) {
-          results[index] = value;
-          if (--remaining === remaining_count) {
-            if (remaining_count === 0) {
-              resolve(results);
-            } else {
-              resolve(value);
-              canceller();
-            }
-          }
-        }
-
-        function cancelAll(rejectionValue) {
-          reject(rejectionValue);
-          canceller();
-        }
-
-        for (var i = 0; i < promises.length; i++) {
-          promise = promises[i];
-
-          if (promise && typeof promise.then === 'function') {
-            promise.then(resolver(i), cancelAll);
-          } else {
-            resolveAll(i, promise);
-          }
-        }
-      }, canceller
-      );
-    }
-
-    function all(promises) {
-      return promiseAtLeast(promises.length, promises);
-    }
-
-    function any(promises) {
-      return promiseAtLeast(1, promises);
-    }
-
-
-    __exports__.all = all;
-    __exports__.any = any;
-  });
-define("rsvp/async",
-  ["exports"],
-  function(__exports__) {
-    "use strict";
-    var browserGlobal = (typeof window !== 'undefined') ? window : {};
-    var BrowserMutationObserver = browserGlobal.MutationObserver || browserGlobal.WebKitMutationObserver;
-    var async;
-    var local = (typeof global !== 'undefined') ? global : this;
-
-    function checkNativePromise() {
-      if (typeof Promise === "function" &&
-          typeof Promise.resolve === "function") {
-        try {
-          /* global Promise */
-          var promise = new Promise(function(){});
-          if ({}.toString.call(promise) === "[object Promise]") {
-            return true;
-          }
-        } catch (e) {}
-      }
-      return false;
-    }
-
-    function useNativePromise() {
-      var nativePromise = Promise.resolve();
-      return function(callback, arg) {
-        nativePromise.then(function () {
-          callback(arg);
-        });
-      };
-    }
-
-    // old node
-    function useNextTick() {
-      return function(callback, arg) {
-        process.nextTick(function() {
-          callback(arg);
-        });
-      };
-    }
-
-    // node >= 0.10.x
-    function useSetImmediate() {
-      return function(callback, arg) {
-        /* global  setImmediate */
-        setImmediate(function(){
-          callback(arg);
-        });
-      };
-    }
-
-    function useMutationObserver() {
-      var queue = [];
-
-      var observer = new BrowserMutationObserver(function() {
-        var toProcess = queue.slice();
-        queue = [];
-
-        toProcess.forEach(function(tuple) {
-          var callback = tuple[0], arg= tuple[1];
-          callback(arg);
-        });
-      });
-
-      var element = document.createElement('div');
-      observer.observe(element, { attributes: true });
-
-      // Chrome Memory Leak: https://bugs.webkit.org/show_bug.cgi?id=93661
-      window.addEventListener('unload', function(){
-        observer.disconnect();
-        observer = null;
-      }, false);
-
-      return function(callback, arg) {
-        queue.push([callback, arg]);
-        element.setAttribute('drainQueue', 'drainQueue');
-      };
-    }
-
-    function useSetTimeout() {
-      return function(callback, arg) {
-        local.setTimeout(function() {
-          callback(arg);
-        }, 1);
-      };
-    }
-
-    if (checkNativePromise()) {
-      async = useNativePromise();
-    } else if (typeof setImmediate === 'function') {
-      async = useSetImmediate();
-    } else if (typeof process !== 'undefined' && {}.toString.call(process) === '[object process]') {
-      async = useNextTick();
-    } else if (BrowserMutationObserver) {
-      async = useMutationObserver();
-    } else {
-      async = useSetTimeout();
-    }
-
-
-    __exports__.async = async;
-  });
-define("rsvp/cancellation_error",
-  ["exports"],
-  function(__exports__) {
-    "use strict";
-    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error
-    function CancellationError(message) {
-      this.name = "cancel";
-      if ((message !== undefined) && (typeof message !== "string")) {
-        throw new TypeError('You must pass a string.');
-      }
-      this.message = message || "Default Message";
-    }
-    CancellationError.prototype = new Error();
-    CancellationError.prototype.constructor = CancellationError;
-
-
-    __exports__.CancellationError = CancellationError;
-  });
-define("rsvp/config",
-  ["rsvp/async","exports"],
-  function(__dependency1__, __exports__) {
-    "use strict";
-    var async = __dependency1__.async;
-
-    var config = {};
-    config.async = async;
-
-
-    __exports__.config = config;
-  });
-define("rsvp/defer",
-  ["rsvp/promise","exports"],
-  function(__dependency1__, __exports__) {
-    "use strict";
-    var Promise = __dependency1__.Promise;
-
-    function defer() {
-      var deferred = {
-        // pre-allocate shape
-        resolve: undefined,
-        reject:  undefined,
-        promise: undefined
-      };
-
-      deferred.promise = new Promise(function(resolve, reject) {
-        deferred.resolve = resolve;
-        deferred.reject = reject;
-      });
-
-      return deferred;
-    }
-
-
-    __exports__.defer = defer;
-  });
-define("rsvp/events",
-  ["exports"],
-  function(__exports__) {
-    "use strict";
-    var Event = function(type, options) {
-      this.type = type;
-
-      for (var option in options) {
-        if (!options.hasOwnProperty(option)) { continue; }
-
-        this[option] = options[option];
-      }
-    };
-
-    var indexOf = function(callbacks, callback) {
-      for (var i=0, l=callbacks.length; i<l; i++) {
-        if (callbacks[i][0] === callback) { return i; }
-      }
-
-      return -1;
-    };
-
-    var callbacksFor = function(object) {
-      var callbacks = object._promiseCallbacks;
-
-      if (!callbacks) {
-        callbacks = object._promiseCallbacks = {};
-      }
-
-      return callbacks;
-    };
-
-    var EventTarget = {
-      mixin: function(object) {
-        object.on = this.on;
-        object.off = this.off;
-        object.trigger = this.trigger;
-        return object;
-      },
-
-      on: function(eventNames, callback, binding) {
-        var allCallbacks = callbacksFor(this), callbacks, eventName;
-        eventNames = eventNames.split(/\s+/);
-        binding = binding || this;
-
-        while (eventName = eventNames.shift()) {
-          callbacks = allCallbacks[eventName];
-
-          if (!callbacks) {
-            callbacks = allCallbacks[eventName] = [];
-          }
-
-          if (indexOf(callbacks, callback) === -1) {
-            callbacks.push([callback, binding]);
-          }
-        }
-      },
-
-      off: function(eventNames, callback) {
-        var allCallbacks = callbacksFor(this), callbacks, eventName, index;
-        eventNames = eventNames.split(/\s+/);
-
-        while (eventName = eventNames.shift()) {
-          if (!callback) {
-            allCallbacks[eventName] = [];
-            continue;
-          }
-
-          callbacks = allCallbacks[eventName];
-
-          index = indexOf(callbacks, callback);
-
-          if (index !== -1) { callbacks.splice(index, 1); }
-        }
-      },
-
-      trigger: function(eventName, options) {
-        var allCallbacks = callbacksFor(this),
-            callbacks, callbackTuple, callback, binding, event;
-
-        if (callbacks = allCallbacks[eventName]) {
-          // Don't cache the callbacks.length since it may grow
-          for (var i=0; i<callbacks.length; i++) {
-            callbackTuple = callbacks[i];
-            callback = callbackTuple[0];
-            binding = callbackTuple[1];
-
-            if (typeof options !== 'object') {
-              options = { detail: options };
-            }
-
-            event = new Event(eventName, options);
-            callback.call(binding, event);
-          }
-        }
-      }
-    };
-
-
-    __exports__.EventTarget = EventTarget;
-  });
-define("rsvp/hash",
-  ["rsvp/promise","exports"],
-  function(__dependency1__, __exports__) {
-    "use strict";
-    var Promise = __dependency1__.Promise;
-
-    function size(object) {
-      var s = 0;
-
-      for (var prop in object) {
-        s++;
-      }
-
-      return s;
-    }
-
-    function hash(promises) {
-
-      function canceller() {
-        var promise,
-          key;
-        for (key in promises) {
-          if (promises.hasOwnProperty(key)) {
-            promise = promises[key];
-
-            if (promise && typeof promise.then === 'function' &&
-                typeof promise.cancel === 'function') {
-              promise.cancel();
-            }
-          }
-        }
-      }
-
-      return new Promise(function(resolve, reject) {
-        var results = {}, remaining = size(promises),
-          promise;
-
-        if (remaining === 0) {
-          resolve(results);
-        }
-
-        function resolver(key) {
-          return function(value) {
-            resolveAll(key, value);
-          };
-        }
-
-        function resolveAll(key, value) {
-          results[key] = value;
-          if (--remaining === 0) {
-            resolve(results);
-          }
-        }
-
-        function cancelAll(rejectionValue) {
-          reject(rejectionValue);
-          canceller();
-        }
-
-        for (var prop in promises) {
-          promise = promises[prop];
-
-          if (promise && typeof promise.then === 'function') {
-            promise.then(resolver(prop), cancelAll);
-          } else {
-            resolveAll(prop, promise);
-          }
-        }
-
-      }, canceller
-      );
-
-    }
-
-
-    __exports__.hash = hash;
-  });
-define("rsvp/node",
-  ["rsvp/promise","rsvp/all","exports"],
-  function(__dependency1__, __dependency2__, __exports__) {
-    "use strict";
-    var Promise = __dependency1__.Promise;
-    var all = __dependency2__.all;
-
-    function makeNodeCallbackFor(resolve, reject) {
-      return function (error, value) {
-        if (error) {
-          reject(error);
-        } else if (arguments.length > 2) {
-          resolve(Array.prototype.slice.call(arguments, 1));
-        } else {
-          resolve(value);
-        }
-      };
-    }
-
-    function denodeify(nodeFunc) {
-      return function()  {
-        var nodeArgs = Array.prototype.slice.call(arguments), resolve, reject;
-        var thisArg = this;
-
-        var promise = new Promise(function(nodeResolve, nodeReject) {
-          resolve = nodeResolve;
-          reject = nodeReject;
-        });
-
-        all(nodeArgs).then(function(nodeArgs) {
-          nodeArgs.push(makeNodeCallbackFor(resolve, reject));
-
-          try {
-            nodeFunc.apply(thisArg, nodeArgs);
-          } catch(e) {
-            reject(e);
-          }
-        });
-
-        return promise;
-      };
-    }
-
-
-    __exports__.denodeify = denodeify;
-  });
-define("rsvp/promise",
-  ["rsvp/config","rsvp/events","rsvp/cancellation_error","exports"],
-  function(__dependency1__, __dependency2__, __dependency3__, __exports__) {
-    "use strict";
-    var config = __dependency1__.config;
-    var EventTarget = __dependency2__.EventTarget;
-    var CancellationError = __dependency3__.CancellationError;
-
-    function objectOrFunction(x) {
-      return isFunction(x) || (typeof x === "object" && x !== null);
-    }
-
-    function isFunction(x){
-      return typeof x === "function";
-    }
-
-    var Promise = function(resolver, canceller) {
-      var promise = this,
-      resolved = false;
-
-      if (typeof resolver !== 'function') {
-        throw new TypeError('You must pass a resolver function as the sole argument to the promise constructor');
-      }
-
-      if ((canceller !== undefined) && (typeof canceller !== 'function')) {
-        throw new TypeError('You can only pass a canceller function' +
-          ' as the second argument to the promise constructor');
-      }
-
-      if (!(promise instanceof Promise)) {
-        return new Promise(resolver, canceller);
-      }
-
-      var resolvePromise = function(value) {
-        if (resolved) { return; }
-        resolved = true;
-        resolve(promise, value);
-      };
-
-      var rejectPromise = function(value) {
-        if (resolved) { return; }
-        resolved = true;
-        reject(promise, value);
-      };
-
-      this.on('promise:failed', function(event) {
-        this.trigger('error', { detail: event.detail });
-      }, this);
-
-      this.on('error', onerror);
-
-      this.cancel = function () {
-        // For now, simply reject the promise and does not propagate the cancel
-        // to parent or children
-        if (resolved) { return; }
-        promise.isCancelled = true;
-        if (canceller !== undefined) {
-          try {
-            canceller();
-          } catch (e) {
-            rejectPromise(e);
-            return;
-          }
-        }
-        // Trigger cancel?
-        rejectPromise(new CancellationError());
-      };
-
-      try {
-        resolver(resolvePromise, rejectPromise);
-      } catch(e) {
-        rejectPromise(e);
-      }
-    };
-
-    function onerror(event) {
-      if (config.onerror) {
-        config.onerror(event.detail);
-      }
-    }
-
-    var invokeCallback = function(type, promise, callback, event) {
-      var hasCallback = isFunction(callback),
-          value, error, succeeded, failed;
-
-      if (promise.isFulfilled) { return; }
-      if (promise.isRejected) { return; }
-      if (promise.isCancelled) { return; }
-
-      if (hasCallback) {
-        try {
-          value = callback(event.detail);
-          succeeded = true;
-        } catch(e) {
-          failed = true;
-          error = e;
-        }
-      } else {
-        value = event.detail;
-        succeeded = true;
-      }
-
-      if (handleThenable(promise, value)) {
-        return;
-      } else if (hasCallback && succeeded) {
-        resolve(promise, value);
-      } else if (failed) {
-        reject(promise, error);
-      } else if (type === 'resolve') {
-        resolve(promise, value);
-      } else if (type === 'reject') {
-        reject(promise, value);
-      }
-    };
-
-    Promise.prototype = {
-      constructor: Promise,
-
-      isCancelled: undefined,
-      isRejected: undefined,
-      isFulfilled: undefined,
-      rejectedReason: undefined,
-      fulfillmentValue: undefined,
-
-      then: function(done, fail) {
-        this.off('error', onerror);
-
-        var thenPromise = new this.constructor(function() {},
-            function () {
-              thenPromise.trigger('promise:cancelled', {});
-            });
-
-        if (this.isFulfilled) {
-          config.async(function(promise) {
-            invokeCallback('resolve', thenPromise, done, { detail: promise.fulfillmentValue });
-          }, this);
-        }
-
-        if (this.isRejected) {
-          config.async(function(promise) {
-            invokeCallback('reject', thenPromise, fail, { detail: promise.rejectedReason });
-          }, this);
-        }
-
-        this.on('promise:resolved', function(event) {
-          invokeCallback('resolve', thenPromise, done, event);
-        });
-
-        this.on('promise:failed', function(event) {
-          invokeCallback('reject', thenPromise, fail, event);
-        });
-
-        return thenPromise;
-      },
-
-      fail: function(fail) {
-        return this.then(null, fail);
-      },
-
-      always: function(fail) {
-        return this.then(fail, fail);
-      }
-    };
-
-    EventTarget.mixin(Promise.prototype);
-
-    function resolve(promise, value) {
-      if (promise === value) {
-        fulfill(promise, value);
-      } else if (!handleThenable(promise, value)) {
-        fulfill(promise, value);
-      }
-    }
-
-    function handleThenable(promise, value) {
-      var then = null,
-      resolved;
-
-      try {
-        if (promise === value) {
-          throw new TypeError("A promises callback cannot return that same promise.");
-        }
-
-        if (objectOrFunction(value)) {
-          then = value.then;
-
-          if (isFunction(then)) {
-            promise.on('promise:cancelled', function(event) {
-              if (isFunction(value.cancel)) {
-                value.cancel();
-              }
-            });
-            then.call(value, function(val) {
-              if (resolved) { return true; }
-              resolved = true;
-
-              if (value !== val) {
-                resolve(promise, val);
-              } else {
-                fulfill(promise, val);
-              }
-            }, function(val) {
-              if (resolved) { return true; }
-              resolved = true;
-
-              reject(promise, val);
-            });
-
-            return true;
-          }
-        }
-      } catch (error) {
-        reject(promise, error);
-        return true;
-      }
-
-      return false;
-    }
-
-    function fulfill(promise, value) {
-      config.async(function() {
-        if (promise.isFulfilled) { return; }
-        if (promise.isRejected) { return; }
-        promise.trigger('promise:resolved', { detail: value });
-        promise.isFulfilled = true;
-        promise.fulfillmentValue = value;
-      });
-    }
-
-    function reject(promise, value) {
-      config.async(function() {
-        if (promise.isFulfilled) { return; }
-        if (promise.isRejected) { return; }
-        promise.trigger('promise:failed', { detail: value });
-        promise.isRejected = true;
-        promise.rejectedReason = value;
-      });
-    }
-
-
-    __exports__.Promise = Promise;
-  });
-define("rsvp/queue",
-  ["rsvp/promise","rsvp/resolve","exports"],
-  function(__dependency1__, __dependency2__, __exports__) {
-    "use strict";
-    var Promise = __dependency1__.Promise;
-    var resolve = __dependency2__.resolve;
-
-    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error
-    function ResolvedQueueError(message) {
-      this.name = "resolved";
-      if ((message !== undefined) && (typeof message !== "string")) {
-        throw new TypeError('You must pass a string.');
-      }
-      this.message = message || "Default Message";
-    }
-    ResolvedQueueError.prototype = new Error();
-    ResolvedQueueError.prototype.constructor = ResolvedQueueError;
-
-    var Queue = function(thenable) {
-      var queue = this,
-        promise_list = [],
-        promise,
-        fulfill,
-        reject,
-        resolved;
-
-      if (!(this instanceof Queue)) {
-        return new Queue();
-      }
-
-      function canceller() {
-        for (var i = promise_list.length; i > 0; i--) {
-          promise_list[i - 1].cancel();
-        }
-      }
-
-      function checkPromise(next_promise) {
-        promise_list.push(next_promise);
-        // Handle pop
-        promise_list.push(next_promise.then(function (fulfillmentValue) {
-          promise_list.splice(0, 2);
-          if (promise_list.length === 0) {
-            fulfill(fulfillmentValue);
-          } else {
-            return fulfillmentValue;
-          }
-        }, function (rejectedReason) {
-          promise_list.splice(0, 2);
-          if (promise_list.length === 0) {
-            reject(rejectedReason);
-          } else {
-            throw rejectedReason;
-          }
-        }));
-      }
-
-      promise = new Promise(function(done, fail) {
-        fulfill = function (fulfillmentValue) {
-          if (resolved) {return;}
-          queue.isFulfilled = true;
-          queue.fulfillmentValue = fulfillmentValue;
-          resolved = true;
-          return done(fulfillmentValue);
-        };
-        reject = function (rejectedReason) {
-          if (resolved) {return;}
-          queue.isRejected = true;
-          queue.rejectedReason = rejectedReason ;
-          resolved = true;
-          return fail(rejectedReason);
-        };
-      }, canceller);
-
-      checkPromise(resolve(thenable));
-
-      queue.cancel = function () {
-        if (resolved) {return;}
-        resolved = true;
-        promise.cancel();
-        promise.fail(function (rejectedReason) {
-          queue.isRejected = true;
-          queue.rejectedReason = rejectedReason;
-        });
-      };
-      queue.then = function () {
-        return promise.then.apply(promise, arguments);
-      };
-
-      queue.push = function(done, fail) {
-        var last_promise = promise_list[promise_list.length - 1],
-          next_promise;
-
-        if (resolved) {
-          throw new ResolvedQueueError();
-        }
-
-        // Handle pop
-        checkPromise(last_promise.then(done, fail));
-
-
-        return this;
-      };
-    };
-
-    Queue.prototype = Object.create(Promise.prototype);
-    Queue.prototype.constructor = Queue;
-
-
-    __exports__.Queue = Queue;
-    __exports__.ResolvedQueueError = ResolvedQueueError;
-  });
-define("rsvp/reject",
-  ["rsvp/promise","exports"],
-  function(__dependency1__, __exports__) {
-    "use strict";
-    var Promise = __dependency1__.Promise;
-
-    function reject(reason) {
-      return new Promise(function (resolve, reject) {
-        reject(reason);
-      });
-    }
-
-
-    __exports__.reject = reject;
-  });
-define("rsvp/resolve",
-  ["rsvp/promise","exports"],
-  function(__dependency1__, __exports__) {
-    "use strict";
-    var Promise = __dependency1__.Promise;
-
-    function resolve(thenable) {
-      return new Promise(function(resolve, reject) {
-        if (typeof thenable === "object" && thenable !== null) {
-          var then = thenable.then;
-          if ((then !== undefined) && (typeof then === "function")) {
-            return then.apply(thenable, [resolve, reject]);
-          }
-        }
-        return resolve(thenable);
-      }, function () {
-        if ((thenable !== undefined) && (thenable.cancel !== undefined)) {
-          thenable.cancel();
-        }
-      });
-    }
-
-
-    __exports__.resolve = resolve;
-  });
-define("rsvp/rethrow",
-  ["exports"],
-  function(__exports__) {
-    "use strict";
-    var local = (typeof global === "undefined") ? this : global;
-
-    function rethrow(reason) {
-      local.setTimeout(function() {
-        throw reason;
-      });
-      throw reason;
-    }
-
-
-    __exports__.rethrow = rethrow;
-  });
-define("rsvp/timeout",
-  ["rsvp/promise","exports"],
-  function(__dependency1__, __exports__) {
-    "use strict";
-    var Promise = __dependency1__.Promise;
-
-    function promiseSetTimeout(millisecond, should_reject, message) {
-      var timeout_id;
-
-      function resolver(resolve, reject) {
-        timeout_id = setTimeout(function () {
-          if (should_reject) {
-            reject(message);
-          } else {
-            resolve(message);
-          }
-        }, millisecond);
-      }
-      function canceller() {
-        clearTimeout(timeout_id);
-      }
-      return new Promise(resolver, canceller);
-    }
-
-    function delay(millisecond, message) {
-      return promiseSetTimeout(millisecond, false, message);
-    }
-
-    function timeout(millisecond) {
-      return promiseSetTimeout(millisecond, true,
-                               "Timed out after " + millisecond + " ms");
-    }
-
-    Promise.prototype.delay = function(millisecond) {
-      return this.then(function (fulfillmentValue) {
-        return delay(millisecond, fulfillmentValue);
-      });
-    };
-
-
-    __exports__.delay = delay;
-    __exports__.timeout = timeout;
-  });
-define("rsvp",
-  ["rsvp/events","rsvp/cancellation_error","rsvp/promise","rsvp/node","rsvp/all","rsvp/queue","rsvp/timeout","rsvp/hash","rsvp/rethrow","rsvp/defer","rsvp/config","rsvp/resolve","rsvp/reject","exports"],
-  function(__dependency1__, __dependency2__, __dependency3__, __dependency4__, __dependency5__, __dependency6__, __dependency7__, __dependency8__, __dependency9__, __dependency10__, __dependency11__, __dependency12__, __dependency13__, __exports__) {
-    "use strict";
-    var EventTarget = __dependency1__.EventTarget;
-    var CancellationError = __dependency2__.CancellationError;
-    var Promise = __dependency3__.Promise;
-    var denodeify = __dependency4__.denodeify;
-    var all = __dependency5__.all;
-    var any = __dependency5__.any;
-    var Queue = __dependency6__.Queue;
-    var ResolvedQueueError = __dependency6__.ResolvedQueueError;
-    var delay = __dependency7__.delay;
-    var timeout = __dependency7__.timeout;
-    var hash = __dependency8__.hash;
-    var rethrow = __dependency9__.rethrow;
-    var defer = __dependency10__.defer;
-    var config = __dependency11__.config;
-    var resolve = __dependency12__.resolve;
-    var reject = __dependency13__.reject;
-
-    function configure(name, value) {
-      config[name] = value;
-    }
-
-
-    __exports__.CancellationError = CancellationError;
-    __exports__.Promise = Promise;
-    __exports__.EventTarget = EventTarget;
-    __exports__.all = all;
-    __exports__.any = any;
-    __exports__.Queue = Queue;
-    __exports__.ResolvedQueueError = ResolvedQueueError;
-    __exports__.delay = delay;
-    __exports__.timeout = timeout;
-    __exports__.hash = hash;
-    __exports__.rethrow = rethrow;
-    __exports__.defer = defer;
-    __exports__.denodeify = denodeify;
-    __exports__.configure = configure;
-    __exports__.resolve = resolve;
-    __exports__.reject = reject;
-  });
-window.RSVP = requireModule("rsvp");
-})(window);//! moment.js
+if (typeof define === 'function' && define.amd) {
+  define(function () { return LZString; });
+} else if( typeof module !== 'undefined' && module != null ) {
+  module.exports = LZString
+}
+//! moment.js
 
 ;(function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
@@ -5509,2332 +6032,7 @@ window.RSVP = requireModule("rsvp");
     return hooks;
 
 })));
-/*! URI.js v1.12.0 http://medialize.github.com/URI.js/ */
-/* build contains: IPv6.js, punycode.js, SecondLevelDomains.js, URI.js, URI.fragmentQuery.js */
-(function(e,k){"object"===typeof exports?module.exports=k():"function"===typeof define&&define.amd?define(k):e.IPv6=k(e)})(this,function(e){var k=e&&e.IPv6;return{best:function(e){e=e.toLowerCase().split(":");var k=e.length,d=8;""===e[0]&&""===e[1]&&""===e[2]?(e.shift(),e.shift()):""===e[0]&&""===e[1]?e.shift():""===e[k-1]&&""===e[k-2]&&e.pop();k=e.length;-1!==e[k-1].indexOf(".")&&(d=7);var g;for(g=0;g<k&&""!==e[g];g++);if(g<d)for(e.splice(g,1,"0000");e.length<d;)e.splice(g,0,"0000");for(g=0;g<d;g++){for(var k=
-e[g].split(""),q=0;3>q;q++)if("0"===k[0]&&1<k.length)k.splice(0,1);else break;e[g]=k.join("")}var k=-1,l=q=0,r=-1,z=!1;for(g=0;g<d;g++)z?"0"===e[g]?l+=1:(z=!1,l>q&&(k=r,q=l)):"0"==e[g]&&(z=!0,r=g,l=1);l>q&&(k=r,q=l);1<q&&e.splice(k,q,"");k=e.length;d="";""===e[0]&&(beststr=":");for(g=0;g<k;g++){d+=e[g];if(g===k-1)break;d+=":"}""===e[k-1]&&(d+=":");return d},noConflict:function(){e.IPv6===this&&(e.IPv6=k);return this}}});
-(function(e){function k(a){throw RangeError(p[a]);}function u(a,b){for(var c=a.length;c--;)a[c]=b(a[c]);return a}function m(a,b){return u(a.split(h),b).join(".")}function d(a){for(var b=[],c=0,d=a.length,h,p;c<d;)h=a.charCodeAt(c++),55296<=h&&56319>=h&&c<d?(p=a.charCodeAt(c++),56320==(p&64512)?b.push(((h&1023)<<10)+(p&1023)+65536):(b.push(h),c--)):b.push(h);return b}function g(a){return u(a,function(a){var b="";65535<a&&(a-=65536,b+=x(a>>>10&1023|55296),a=56320|a&1023);return b+=x(a)}).join("")}function q(a,
-b){return a+22+75*(26>a)-((0!=b)<<5)}function l(a,b,c){var d=0;a=c?A(a/H):a>>1;for(a+=A(a/b);a>n*y>>1;d+=s)a=A(a/n);return A(d+(n+1)*a/(a+I))}function r(b){var c=[],d=b.length,h,p=0,e=F,f=G,n,x,q,t,m;n=b.lastIndexOf(a);0>n&&(n=0);for(x=0;x<n;++x)128<=b.charCodeAt(x)&&k("not-basic"),c.push(b.charCodeAt(x));for(n=0<n?n+1:0;n<d;){x=p;h=1;for(q=s;;q+=s){n>=d&&k("invalid-input");t=b.charCodeAt(n++);t=10>t-48?t-22:26>t-65?t-65:26>t-97?t-97:s;(t>=s||t>A((w-p)/h))&&k("overflow");p+=t*h;m=q<=f?v:q>=f+y?y:
-q-f;if(t<m)break;t=s-m;h>A(w/t)&&k("overflow");h*=t}h=c.length+1;f=l(p-x,h,0==x);A(p/h)>w-e&&k("overflow");e+=A(p/h);p%=h;c.splice(p++,0,e)}return g(c)}function z(b){var c,h,p,e,f,n,g,m,r,t=[],B,u,z;b=d(b);B=b.length;c=F;h=0;f=G;for(n=0;n<B;++n)r=b[n],128>r&&t.push(x(r));for((p=e=t.length)&&t.push(a);p<B;){g=w;for(n=0;n<B;++n)r=b[n],r>=c&&r<g&&(g=r);u=p+1;g-c>A((w-h)/u)&&k("overflow");h+=(g-c)*u;c=g;for(n=0;n<B;++n)if(r=b[n],r<c&&++h>w&&k("overflow"),r==c){m=h;for(g=s;;g+=s){r=g<=f?v:g>=f+y?y:g-f;
-if(m<r)break;z=m-r;m=s-r;t.push(x(q(r+z%m,0)));m=A(z/m)}t.push(x(q(m,0)));f=l(h,u,p==e);h=0;++p}++h;++c}return t.join("")}var D="object"==typeof exports&&exports,E="object"==typeof module&&module&&module.exports==D&&module,C="object"==typeof global&&global;if(C.global===C||C.window===C)e=C;var f,w=2147483647,s=36,v=1,y=26,I=38,H=700,G=72,F=128,a="-",b=/^xn--/,c=/[^ -~]/,h=/\x2E|\u3002|\uFF0E|\uFF61/g,p={overflow:"Overflow: input needs wider integers to process","not-basic":"Illegal input >= 0x80 (not a basic code point)",
-"invalid-input":"Invalid input"},n=s-v,A=Math.floor,x=String.fromCharCode,B;f={version:"1.2.3",ucs2:{decode:d,encode:g},decode:r,encode:z,toASCII:function(a){return m(a,function(a){return c.test(a)?"xn--"+z(a):a})},toUnicode:function(a){return m(a,function(a){return b.test(a)?r(a.slice(4).toLowerCase()):a})}};if("function"==typeof define&&"object"==typeof define.amd&&define.amd)define(function(){return f});else if(D&&!D.nodeType)if(E)E.exports=f;else for(B in f)f.hasOwnProperty(B)&&(D[B]=f[B]);else e.punycode=
-f})(this);
-(function(e,k){"object"===typeof exports?module.exports=k():"function"===typeof define&&define.amd?define(k):e.SecondLevelDomains=k(e)})(this,function(e){var k=e&&e.SecondLevelDomains,u=Object.prototype.hasOwnProperty,m={list:{ac:"com|gov|mil|net|org",ae:"ac|co|gov|mil|name|net|org|pro|sch",af:"com|edu|gov|net|org",al:"com|edu|gov|mil|net|org",ao:"co|ed|gv|it|og|pb",ar:"com|edu|gob|gov|int|mil|net|org|tur",at:"ac|co|gv|or",au:"asn|com|csiro|edu|gov|id|net|org",ba:"co|com|edu|gov|mil|net|org|rs|unbi|unmo|unsa|untz|unze",bb:"biz|co|com|edu|gov|info|net|org|store|tv",
-bh:"biz|cc|com|edu|gov|info|net|org",bn:"com|edu|gov|net|org",bo:"com|edu|gob|gov|int|mil|net|org|tv",br:"adm|adv|agr|am|arq|art|ato|b|bio|blog|bmd|cim|cng|cnt|com|coop|ecn|edu|eng|esp|etc|eti|far|flog|fm|fnd|fot|fst|g12|ggf|gov|imb|ind|inf|jor|jus|lel|mat|med|mil|mus|net|nom|not|ntr|odo|org|ppg|pro|psc|psi|qsl|rec|slg|srv|tmp|trd|tur|tv|vet|vlog|wiki|zlg",bs:"com|edu|gov|net|org",bz:"du|et|om|ov|rg",ca:"ab|bc|mb|nb|nf|nl|ns|nt|nu|on|pe|qc|sk|yk",ck:"biz|co|edu|gen|gov|info|net|org",cn:"ac|ah|bj|com|cq|edu|fj|gd|gov|gs|gx|gz|ha|hb|he|hi|hl|hn|jl|js|jx|ln|mil|net|nm|nx|org|qh|sc|sd|sh|sn|sx|tj|tw|xj|xz|yn|zj",
-co:"com|edu|gov|mil|net|nom|org",cr:"ac|c|co|ed|fi|go|or|sa",cy:"ac|biz|com|ekloges|gov|ltd|name|net|org|parliament|press|pro|tm","do":"art|com|edu|gob|gov|mil|net|org|sld|web",dz:"art|asso|com|edu|gov|net|org|pol",ec:"com|edu|fin|gov|info|med|mil|net|org|pro",eg:"com|edu|eun|gov|mil|name|net|org|sci",er:"com|edu|gov|ind|mil|net|org|rochest|w",es:"com|edu|gob|nom|org",et:"biz|com|edu|gov|info|name|net|org",fj:"ac|biz|com|info|mil|name|net|org|pro",fk:"ac|co|gov|net|nom|org",fr:"asso|com|f|gouv|nom|prd|presse|tm",
-gg:"co|net|org",gh:"com|edu|gov|mil|org",gn:"ac|com|gov|net|org",gr:"com|edu|gov|mil|net|org",gt:"com|edu|gob|ind|mil|net|org",gu:"com|edu|gov|net|org",hk:"com|edu|gov|idv|net|org",id:"ac|co|go|mil|net|or|sch|web",il:"ac|co|gov|idf|k12|muni|net|org","in":"ac|co|edu|ernet|firm|gen|gov|i|ind|mil|net|nic|org|res",iq:"com|edu|gov|i|mil|net|org",ir:"ac|co|dnssec|gov|i|id|net|org|sch",it:"edu|gov",je:"co|net|org",jo:"com|edu|gov|mil|name|net|org|sch",jp:"ac|ad|co|ed|go|gr|lg|ne|or",ke:"ac|co|go|info|me|mobi|ne|or|sc",
-kh:"com|edu|gov|mil|net|org|per",ki:"biz|com|de|edu|gov|info|mob|net|org|tel",km:"asso|com|coop|edu|gouv|k|medecin|mil|nom|notaires|pharmaciens|presse|tm|veterinaire",kn:"edu|gov|net|org",kr:"ac|busan|chungbuk|chungnam|co|daegu|daejeon|es|gangwon|go|gwangju|gyeongbuk|gyeonggi|gyeongnam|hs|incheon|jeju|jeonbuk|jeonnam|k|kg|mil|ms|ne|or|pe|re|sc|seoul|ulsan",kw:"com|edu|gov|net|org",ky:"com|edu|gov|net|org",kz:"com|edu|gov|mil|net|org",lb:"com|edu|gov|net|org",lk:"assn|com|edu|gov|grp|hotel|int|ltd|net|ngo|org|sch|soc|web",
-lr:"com|edu|gov|net|org",lv:"asn|com|conf|edu|gov|id|mil|net|org",ly:"com|edu|gov|id|med|net|org|plc|sch",ma:"ac|co|gov|m|net|org|press",mc:"asso|tm",me:"ac|co|edu|gov|its|net|org|priv",mg:"com|edu|gov|mil|nom|org|prd|tm",mk:"com|edu|gov|inf|name|net|org|pro",ml:"com|edu|gov|net|org|presse",mn:"edu|gov|org",mo:"com|edu|gov|net|org",mt:"com|edu|gov|net|org",mv:"aero|biz|com|coop|edu|gov|info|int|mil|museum|name|net|org|pro",mw:"ac|co|com|coop|edu|gov|int|museum|net|org",mx:"com|edu|gob|net|org",my:"com|edu|gov|mil|name|net|org|sch",
-nf:"arts|com|firm|info|net|other|per|rec|store|web",ng:"biz|com|edu|gov|mil|mobi|name|net|org|sch",ni:"ac|co|com|edu|gob|mil|net|nom|org",np:"com|edu|gov|mil|net|org",nr:"biz|com|edu|gov|info|net|org",om:"ac|biz|co|com|edu|gov|med|mil|museum|net|org|pro|sch",pe:"com|edu|gob|mil|net|nom|org|sld",ph:"com|edu|gov|i|mil|net|ngo|org",pk:"biz|com|edu|fam|gob|gok|gon|gop|gos|gov|net|org|web",pl:"art|bialystok|biz|com|edu|gda|gdansk|gorzow|gov|info|katowice|krakow|lodz|lublin|mil|net|ngo|olsztyn|org|poznan|pwr|radom|slupsk|szczecin|torun|warszawa|waw|wroc|wroclaw|zgora",
-pr:"ac|biz|com|edu|est|gov|info|isla|name|net|org|pro|prof",ps:"com|edu|gov|net|org|plo|sec",pw:"belau|co|ed|go|ne|or",ro:"arts|com|firm|info|nom|nt|org|rec|store|tm|www",rs:"ac|co|edu|gov|in|org",sb:"com|edu|gov|net|org",sc:"com|edu|gov|net|org",sh:"co|com|edu|gov|net|nom|org",sl:"com|edu|gov|net|org",st:"co|com|consulado|edu|embaixada|gov|mil|net|org|principe|saotome|store",sv:"com|edu|gob|org|red",sz:"ac|co|org",tr:"av|bbs|bel|biz|com|dr|edu|gen|gov|info|k12|name|net|org|pol|tel|tsk|tv|web",tt:"aero|biz|cat|co|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel",
-tw:"club|com|ebiz|edu|game|gov|idv|mil|net|org",mu:"ac|co|com|gov|net|or|org",mz:"ac|co|edu|gov|org",na:"co|com",nz:"ac|co|cri|geek|gen|govt|health|iwi|maori|mil|net|org|parliament|school",pa:"abo|ac|com|edu|gob|ing|med|net|nom|org|sld",pt:"com|edu|gov|int|net|nome|org|publ",py:"com|edu|gov|mil|net|org",qa:"com|edu|gov|mil|net|org",re:"asso|com|nom",ru:"ac|adygeya|altai|amur|arkhangelsk|astrakhan|bashkiria|belgorod|bir|bryansk|buryatia|cbg|chel|chelyabinsk|chita|chukotka|chuvashia|com|dagestan|e-burg|edu|gov|grozny|int|irkutsk|ivanovo|izhevsk|jar|joshkar-ola|kalmykia|kaluga|kamchatka|karelia|kazan|kchr|kemerovo|khabarovsk|khakassia|khv|kirov|koenig|komi|kostroma|kranoyarsk|kuban|kurgan|kursk|lipetsk|magadan|mari|mari-el|marine|mil|mordovia|mosreg|msk|murmansk|nalchik|net|nnov|nov|novosibirsk|nsk|omsk|orenburg|org|oryol|penza|perm|pp|pskov|ptz|rnd|ryazan|sakhalin|samara|saratov|simbirsk|smolensk|spb|stavropol|stv|surgut|tambov|tatarstan|tom|tomsk|tsaritsyn|tsk|tula|tuva|tver|tyumen|udm|udmurtia|ulan-ude|vladikavkaz|vladimir|vladivostok|volgograd|vologda|voronezh|vrn|vyatka|yakutia|yamal|yekaterinburg|yuzhno-sakhalinsk",
-rw:"ac|co|com|edu|gouv|gov|int|mil|net",sa:"com|edu|gov|med|net|org|pub|sch",sd:"com|edu|gov|info|med|net|org|tv",se:"a|ac|b|bd|c|d|e|f|g|h|i|k|l|m|n|o|org|p|parti|pp|press|r|s|t|tm|u|w|x|y|z",sg:"com|edu|gov|idn|net|org|per",sn:"art|com|edu|gouv|org|perso|univ",sy:"com|edu|gov|mil|net|news|org",th:"ac|co|go|in|mi|net|or",tj:"ac|biz|co|com|edu|go|gov|info|int|mil|name|net|nic|org|test|web",tn:"agrinet|com|defense|edunet|ens|fin|gov|ind|info|intl|mincom|nat|net|org|perso|rnrt|rns|rnu|tourism",tz:"ac|co|go|ne|or",
-ua:"biz|cherkassy|chernigov|chernovtsy|ck|cn|co|com|crimea|cv|dn|dnepropetrovsk|donetsk|dp|edu|gov|if|in|ivano-frankivsk|kh|kharkov|kherson|khmelnitskiy|kiev|kirovograd|km|kr|ks|kv|lg|lugansk|lutsk|lviv|me|mk|net|nikolaev|od|odessa|org|pl|poltava|pp|rovno|rv|sebastopol|sumy|te|ternopil|uzhgorod|vinnica|vn|zaporizhzhe|zhitomir|zp|zt",ug:"ac|co|go|ne|or|org|sc",uk:"ac|bl|british-library|co|cym|gov|govt|icnet|jet|lea|ltd|me|mil|mod|national-library-scotland|nel|net|nhs|nic|nls|org|orgn|parliament|plc|police|sch|scot|soc",
-us:"dni|fed|isa|kids|nsn",uy:"com|edu|gub|mil|net|org",ve:"co|com|edu|gob|info|mil|net|org|web",vi:"co|com|k12|net|org",vn:"ac|biz|com|edu|gov|health|info|int|name|net|org|pro",ye:"co|com|gov|ltd|me|net|org|plc",yu:"ac|co|edu|gov|org",za:"ac|agric|alt|bourse|city|co|cybernet|db|edu|gov|grondar|iaccess|imt|inca|landesign|law|mil|net|ngo|nis|nom|olivetti|org|pix|school|tm|web",zm:"ac|co|com|edu|gov|net|org|sch"},has_expression:null,is_expression:null,has:function(d){return!!d.match(m.has_expression)},
-is:function(d){return!!d.match(m.is_expression)},get:function(d){return(d=d.match(m.has_expression))&&d[1]||null},noConflict:function(){e.SecondLevelDomains===this&&(e.SecondLevelDomains=k);return this},init:function(){var d="",e;for(e in m.list)u.call(m.list,e)&&(d+="|("+("("+m.list[e]+")."+e)+")");m.has_expression=RegExp("\\.("+d.substr(1)+")$","i");m.is_expression=RegExp("^("+d.substr(1)+")$","i")}};m.init();return m});
-(function(e,k){"object"===typeof exports?module.exports=k(require("./punycode"),require("./IPv6"),require("./SecondLevelDomains")):"function"===typeof define&&define.amd?define(["./punycode","./IPv6","./SecondLevelDomains"],k):e.URI=k(e.punycode,e.IPv6,e.SecondLevelDomains,e)})(this,function(e,k,u,m){function d(a,b){if(!(this instanceof d))return new d(a,b);void 0===a&&(a="undefined"!==typeof location?location.href+"":"");this.href(a);return void 0!==b?this.absoluteTo(b):this}function g(a){return a.replace(/([.*+?^=!:${}()|[\]\/\\])/g,
-"\\$1")}function q(a){return void 0===a?"Undefined":String(Object.prototype.toString.call(a)).slice(8,-1)}function l(a){return"Array"===q(a)}function r(a,b){var c,d;if(l(b)){c=0;for(d=b.length;c<d;c++)if(!r(a,b[c]))return!1;return!0}var p=q(b);c=0;for(d=a.length;c<d;c++)if("RegExp"===p){if("string"===typeof a[c]&&a[c].match(b))return!0}else if(a[c]===b)return!0;return!1}function z(a,b){if(!l(a)||!l(b)||a.length!==b.length)return!1;a.sort();b.sort();for(var c=0,d=a.length;c<d;c++)if(a[c]!==b[c])return!1;
-return!0}function D(a){return escape(a)}function E(a){return encodeURIComponent(a).replace(/[!'()*]/g,D).replace(/\*/g,"%2A")}var C=m&&m.URI;d.version="1.12.0";var f=d.prototype,w=Object.prototype.hasOwnProperty;d._parts=function(){return{protocol:null,username:null,password:null,hostname:null,urn:null,port:null,path:null,query:null,fragment:null,duplicateQueryParameters:d.duplicateQueryParameters,escapeQuerySpace:d.escapeQuerySpace}};d.duplicateQueryParameters=!1;d.escapeQuerySpace=!0;d.protocol_expression=
-/^[a-z][a-z0-9.+-]*$/i;d.idn_expression=/[^a-z0-9\.-]/i;d.punycode_expression=/(xn--)/i;d.ip4_expression=/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;d.ip6_expression=/^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$/;
-d.find_uri_expression=/\b((?:[a-z][\w-]+:(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?\u00ab\u00bb\u201c\u201d\u2018\u2019]))/ig;d.findUri={start:/\b(?:([a-z][a-z0-9.+-]*:\/\/)|www\.)/gi,end:/[\s\r\n]|$/,trim:/[`!()\[\]{};:'".,<>?\u00ab\u00bb\u201c\u201d\u201e\u2018\u2019]+$/};d.defaultPorts={http:"80",https:"443",ftp:"21",gopher:"70",ws:"80",wss:"443"};d.invalid_hostname_characters=
-/[^a-zA-Z0-9\.-]/;d.domAttributes={a:"href",blockquote:"cite",link:"href",base:"href",script:"src",form:"action",img:"src",area:"href",iframe:"src",embed:"src",source:"src",track:"src",input:"src"};d.getDomAttribute=function(a){if(a&&a.nodeName){var b=a.nodeName.toLowerCase();return"input"===b&&"image"!==a.type?void 0:d.domAttributes[b]}};d.encode=E;d.decode=decodeURIComponent;d.iso8859=function(){d.encode=escape;d.decode=unescape};d.unicode=function(){d.encode=E;d.decode=decodeURIComponent};d.characters=
-{pathname:{encode:{expression:/%(24|26|2B|2C|3B|3D|3A|40)/ig,map:{"%24":"$","%26":"&","%2B":"+","%2C":",","%3B":";","%3D":"=","%3A":":","%40":"@"}},decode:{expression:/[\/\?#]/g,map:{"/":"%2F","?":"%3F","#":"%23"}}},reserved:{encode:{expression:/%(21|23|24|26|27|28|29|2A|2B|2C|2F|3A|3B|3D|3F|40|5B|5D)/ig,map:{"%3A":":","%2F":"/","%3F":"?","%23":"#","%5B":"[","%5D":"]","%40":"@","%21":"!","%24":"$","%26":"&","%27":"'","%28":"(","%29":")","%2A":"*","%2B":"+","%2C":",","%3B":";","%3D":"="}}}};d.encodeQuery=
-function(a,b){var c=d.encode(a+"");return b?c.replace(/%20/g,"+"):c};d.decodeQuery=function(a,b){a+="";try{return d.decode(b?a.replace(/\+/g,"%20"):a)}catch(c){return a}};d.recodePath=function(a){a=(a+"").split("/");for(var b=0,c=a.length;b<c;b++)a[b]=d.encodePathSegment(d.decode(a[b]));return a.join("/")};d.decodePath=function(a){a=(a+"").split("/");for(var b=0,c=a.length;b<c;b++)a[b]=d.decodePathSegment(a[b]);return a.join("/")};var s={encode:"encode",decode:"decode"},v,y=function(a,b){return function(c){return d[b](c+
-"").replace(d.characters[a][b].expression,function(c){return d.characters[a][b].map[c]})}};for(v in s)d[v+"PathSegment"]=y("pathname",s[v]);d.encodeReserved=y("reserved","encode");d.parse=function(a,b){var c;b||(b={});c=a.indexOf("#");-1<c&&(b.fragment=a.substring(c+1)||null,a=a.substring(0,c));c=a.indexOf("?");-1<c&&(b.query=a.substring(c+1)||null,a=a.substring(0,c));"//"===a.substring(0,2)?(b.protocol=null,a=a.substring(2),a=d.parseAuthority(a,b)):(c=a.indexOf(":"),-1<c&&(b.protocol=a.substring(0,
-c)||null,b.protocol&&!b.protocol.match(d.protocol_expression)?b.protocol=void 0:"file"===b.protocol?a=a.substring(c+3):"//"===a.substring(c+1,c+3)?(a=a.substring(c+3),a=d.parseAuthority(a,b)):(a=a.substring(c+1),b.urn=!0)));b.path=a;return b};d.parseHost=function(a,b){var c=a.indexOf("/"),d;-1===c&&(c=a.length);"["===a.charAt(0)?(d=a.indexOf("]"),b.hostname=a.substring(1,d)||null,b.port=a.substring(d+2,c)||null):a.indexOf(":")!==a.lastIndexOf(":")?(b.hostname=a.substring(0,c)||null,b.port=null):(d=
-a.substring(0,c).split(":"),b.hostname=d[0]||null,b.port=d[1]||null);b.hostname&&"/"!==a.substring(c).charAt(0)&&(c++,a="/"+a);return a.substring(c)||"/"};d.parseAuthority=function(a,b){a=d.parseUserinfo(a,b);return d.parseHost(a,b)};d.parseUserinfo=function(a,b){var c=a.indexOf("/"),h=-1<c?a.lastIndexOf("@",c):a.indexOf("@");-1<h&&(-1===c||h<c)?(c=a.substring(0,h).split(":"),b.username=c[0]?d.decode(c[0]):null,c.shift(),b.password=c[0]?d.decode(c.join(":")):null,a=a.substring(h+1)):(b.username=null,
-b.password=null);return a};d.parseQuery=function(a,b){if(!a)return{};a=a.replace(/&+/g,"&").replace(/^\?*&*|&+$/g,"");if(!a)return{};for(var c={},h=a.split("&"),p=h.length,n,e,f=0;f<p;f++)n=h[f].split("="),e=d.decodeQuery(n.shift(),b),n=n.length?d.decodeQuery(n.join("="),b):null,c[e]?("string"===typeof c[e]&&(c[e]=[c[e]]),c[e].push(n)):c[e]=n;return c};d.build=function(a){var b="";a.protocol&&(b+=a.protocol+":");a.urn||!b&&!a.hostname||(b+="//");b+=d.buildAuthority(a)||"";"string"===typeof a.path&&
-("/"!==a.path.charAt(0)&&"string"===typeof a.hostname&&(b+="/"),b+=a.path);"string"===typeof a.query&&a.query&&(b+="?"+a.query);"string"===typeof a.fragment&&a.fragment&&(b+="#"+a.fragment);return b};d.buildHost=function(a){var b="";if(a.hostname)d.ip6_expression.test(a.hostname)?b=a.port?b+("["+a.hostname+"]:"+a.port):b+a.hostname:(b+=a.hostname,a.port&&(b+=":"+a.port));else return"";return b};d.buildAuthority=function(a){return d.buildUserinfo(a)+d.buildHost(a)};d.buildUserinfo=function(a){var b=
-"";a.username&&(b+=d.encode(a.username),a.password&&(b+=":"+d.encode(a.password)),b+="@");return b};d.buildQuery=function(a,b,c){var h="",p,e,f,k;for(e in a)if(w.call(a,e)&&e)if(l(a[e]))for(p={},f=0,k=a[e].length;f<k;f++)void 0!==a[e][f]&&void 0===p[a[e][f]+""]&&(h+="&"+d.buildQueryParameter(e,a[e][f],c),!0!==b&&(p[a[e][f]+""]=!0));else void 0!==a[e]&&(h+="&"+d.buildQueryParameter(e,a[e],c));return h.substring(1)};d.buildQueryParameter=function(a,b,c){return d.encodeQuery(a,c)+(null!==b?"="+d.encodeQuery(b,
-c):"")};d.addQuery=function(a,b,c){if("object"===typeof b)for(var h in b)w.call(b,h)&&d.addQuery(a,h,b[h]);else if("string"===typeof b)void 0===a[b]?a[b]=c:("string"===typeof a[b]&&(a[b]=[a[b]]),l(c)||(c=[c]),a[b]=a[b].concat(c));else throw new TypeError("URI.addQuery() accepts an object, string as the name parameter");};d.removeQuery=function(a,b,c){var h;if(l(b))for(c=0,h=b.length;c<h;c++)a[b[c]]=void 0;else if("object"===typeof b)for(h in b)w.call(b,h)&&d.removeQuery(a,h,b[h]);else if("string"===
-typeof b)if(void 0!==c)if(a[b]===c)a[b]=void 0;else{if(l(a[b])){h=a[b];var p={},e,f;if(l(c))for(e=0,f=c.length;e<f;e++)p[c[e]]=!0;else p[c]=!0;e=0;for(f=h.length;e<f;e++)void 0!==p[h[e]]&&(h.splice(e,1),f--,e--);a[b]=h}}else a[b]=void 0;else throw new TypeError("URI.addQuery() accepts an object, string as the first parameter");};d.hasQuery=function(a,b,c,h){if("object"===typeof b){for(var e in b)if(w.call(b,e)&&!d.hasQuery(a,e,b[e]))return!1;return!0}if("string"!==typeof b)throw new TypeError("URI.hasQuery() accepts an object, string as the name parameter");
-switch(q(c)){case "Undefined":return b in a;case "Boolean":return a=Boolean(l(a[b])?a[b].length:a[b]),c===a;case "Function":return!!c(a[b],b,a);case "Array":return l(a[b])?(h?r:z)(a[b],c):!1;case "RegExp":return l(a[b])?h?r(a[b],c):!1:Boolean(a[b]&&a[b].match(c));case "Number":c=String(c);case "String":return l(a[b])?h?r(a[b],c):!1:a[b]===c;default:throw new TypeError("URI.hasQuery() accepts undefined, boolean, string, number, RegExp, Function as the value parameter");}};d.commonPath=function(a,b){var c=
-Math.min(a.length,b.length),d;for(d=0;d<c;d++)if(a.charAt(d)!==b.charAt(d)){d--;break}if(1>d)return a.charAt(0)===b.charAt(0)&&"/"===a.charAt(0)?"/":"";if("/"!==a.charAt(d)||"/"!==b.charAt(d))d=a.substring(0,d).lastIndexOf("/");return a.substring(0,d+1)};d.withinString=function(a,b,c){c||(c={});var h=c.start||d.findUri.start,e=c.end||d.findUri.end,f=c.trim||d.findUri.trim,k=/[a-z0-9-]=["']?$/i;for(h.lastIndex=0;;){var g=h.exec(a);if(!g)break;g=g.index;if(c.ignoreHtml){var l=a.slice(Math.max(g-3,0),
-g);if(l&&k.test(l))continue}var l=g+a.slice(g).search(e),q=a.slice(g,l).replace(f,"");c.ignore&&c.ignore.test(q)||(l=g+q.length,q=b(q,g,l,a),a=a.slice(0,g)+q+a.slice(l),h.lastIndex=g+q.length)}h.lastIndex=0;return a};d.ensureValidHostname=function(a){if(a.match(d.invalid_hostname_characters)){if(!e)throw new TypeError("Hostname '"+a+"' contains characters other than [A-Z0-9.-] and Punycode.js is not available");if(e.toASCII(a).match(d.invalid_hostname_characters))throw new TypeError("Hostname '"+
-a+"' contains characters other than [A-Z0-9.-]");}};d.noConflict=function(a){if(a)return a={URI:this.noConflict()},URITemplate&&"function"==typeof URITemplate.noConflict&&(a.URITemplate=URITemplate.noConflict()),k&&"function"==typeof k.noConflict&&(a.IPv6=k.noConflict()),SecondLevelDomains&&"function"==typeof SecondLevelDomains.noConflict&&(a.SecondLevelDomains=SecondLevelDomains.noConflict()),a;m.URI===this&&(m.URI=C);return this};f.build=function(a){if(!0===a)this._deferred_build=!0;else if(void 0===
-a||this._deferred_build)this._string=d.build(this._parts),this._deferred_build=!1;return this};f.clone=function(){return new d(this)};f.valueOf=f.toString=function(){return this.build(!1)._string};s={protocol:"protocol",username:"username",password:"password",hostname:"hostname",port:"port"};y=function(a){return function(b,c){if(void 0===b)return this._parts[a]||"";this._parts[a]=b||null;this.build(!c);return this}};for(v in s)f[v]=y(s[v]);s={query:"?",fragment:"#"};y=function(a,b){return function(c,
-d){if(void 0===c)return this._parts[a]||"";null!==c&&(c+="",c.charAt(0)===b&&(c=c.substring(1)));this._parts[a]=c;this.build(!d);return this}};for(v in s)f[v]=y(v,s[v]);s={search:["?","query"],hash:["#","fragment"]};y=function(a,b){return function(c,d){var e=this[a](c,d);return"string"===typeof e&&e.length?b+e:e}};for(v in s)f[v]=y(s[v][1],s[v][0]);f.pathname=function(a,b){if(void 0===a||!0===a){var c=this._parts.path||(this._parts.hostname?"/":"");return a?d.decodePath(c):c}this._parts.path=a?d.recodePath(a):
-"/";this.build(!b);return this};f.path=f.pathname;f.href=function(a,b){var c;if(void 0===a)return this.toString();this._string="";this._parts=d._parts();var h=a instanceof d,e="object"===typeof a&&(a.hostname||a.path||a.pathname);a.nodeName&&(e=d.getDomAttribute(a),a=a[e]||"",e=!1);!h&&e&&void 0!==a.pathname&&(a=a.toString());if("string"===typeof a)this._parts=d.parse(a,this._parts);else if(h||e)for(c in h=h?a._parts:a,h)w.call(this._parts,c)&&(this._parts[c]=h[c]);else throw new TypeError("invalid input");
-this.build(!b);return this};f.is=function(a){var b=!1,c=!1,h=!1,e=!1,f=!1,g=!1,k=!1,l=!this._parts.urn;this._parts.hostname&&(l=!1,c=d.ip4_expression.test(this._parts.hostname),h=d.ip6_expression.test(this._parts.hostname),b=c||h,f=(e=!b)&&u&&u.has(this._parts.hostname),g=e&&d.idn_expression.test(this._parts.hostname),k=e&&d.punycode_expression.test(this._parts.hostname));switch(a.toLowerCase()){case "relative":return l;case "absolute":return!l;case "domain":case "name":return e;case "sld":return f;
-case "ip":return b;case "ip4":case "ipv4":case "inet4":return c;case "ip6":case "ipv6":case "inet6":return h;case "idn":return g;case "url":return!this._parts.urn;case "urn":return!!this._parts.urn;case "punycode":return k}return null};var I=f.protocol,H=f.port,G=f.hostname;f.protocol=function(a,b){if(void 0!==a&&a&&(a=a.replace(/:(\/\/)?$/,""),!a.match(d.protocol_expression)))throw new TypeError("Protocol '"+a+"' contains characters other than [A-Z0-9.+-] or doesn't start with [A-Z]");return I.call(this,
-a,b)};f.scheme=f.protocol;f.port=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0!==a&&(0===a&&(a=null),a&&(a+="",":"===a.charAt(0)&&(a=a.substring(1)),a.match(/[^0-9]/))))throw new TypeError("Port '"+a+"' contains characters other than [0-9]");return H.call(this,a,b)};f.hostname=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0!==a){var c={};d.parseHost(a,c);a=c.hostname}return G.call(this,a,b)};f.host=function(a,b){if(this._parts.urn)return void 0===a?"":this;
-if(void 0===a)return this._parts.hostname?d.buildHost(this._parts):"";d.parseHost(a,this._parts);this.build(!b);return this};f.authority=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0===a)return this._parts.hostname?d.buildAuthority(this._parts):"";d.parseAuthority(a,this._parts);this.build(!b);return this};f.userinfo=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0===a){if(!this._parts.username)return"";var c=d.buildUserinfo(this._parts);return c.substring(0,
-c.length-1)}"@"!==a[a.length-1]&&(a+="@");d.parseUserinfo(a,this._parts);this.build(!b);return this};f.resource=function(a,b){var c;if(void 0===a)return this.path()+this.search()+this.hash();c=d.parse(a);this._parts.path=c.path;this._parts.query=c.query;this._parts.fragment=c.fragment;this.build(!b);return this};f.subdomain=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0===a){if(!this._parts.hostname||this.is("IP"))return"";var c=this._parts.hostname.length-this.domain().length-
-1;return this._parts.hostname.substring(0,c)||""}c=this._parts.hostname.length-this.domain().length;c=this._parts.hostname.substring(0,c);c=RegExp("^"+g(c));a&&"."!==a.charAt(a.length-1)&&(a+=".");a&&d.ensureValidHostname(a);this._parts.hostname=this._parts.hostname.replace(c,a);this.build(!b);return this};f.domain=function(a,b){if(this._parts.urn)return void 0===a?"":this;"boolean"===typeof a&&(b=a,a=void 0);if(void 0===a){if(!this._parts.hostname||this.is("IP"))return"";var c=this._parts.hostname.match(/\./g);
-if(c&&2>c.length)return this._parts.hostname;c=this._parts.hostname.length-this.tld(b).length-1;c=this._parts.hostname.lastIndexOf(".",c-1)+1;return this._parts.hostname.substring(c)||""}if(!a)throw new TypeError("cannot set domain empty");d.ensureValidHostname(a);!this._parts.hostname||this.is("IP")?this._parts.hostname=a:(c=RegExp(g(this.domain())+"$"),this._parts.hostname=this._parts.hostname.replace(c,a));this.build(!b);return this};f.tld=function(a,b){if(this._parts.urn)return void 0===a?"":
-this;"boolean"===typeof a&&(b=a,a=void 0);if(void 0===a){if(!this._parts.hostname||this.is("IP"))return"";var c=this._parts.hostname.lastIndexOf("."),c=this._parts.hostname.substring(c+1);return!0!==b&&u&&u.list[c.toLowerCase()]?u.get(this._parts.hostname)||c:c}if(a)if(a.match(/[^a-zA-Z0-9-]/))if(u&&u.is(a))c=RegExp(g(this.tld())+"$"),this._parts.hostname=this._parts.hostname.replace(c,a);else throw new TypeError("TLD '"+a+"' contains characters other than [A-Z0-9]");else{if(!this._parts.hostname||
-this.is("IP"))throw new ReferenceError("cannot set TLD on non-domain host");c=RegExp(g(this.tld())+"$");this._parts.hostname=this._parts.hostname.replace(c,a)}else throw new TypeError("cannot set TLD empty");this.build(!b);return this};f.directory=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0===a||!0===a){if(!this._parts.path&&!this._parts.hostname)return"";if("/"===this._parts.path)return"/";var c=this._parts.path.length-this.filename().length-1,c=this._parts.path.substring(0,
-c)||(this._parts.hostname?"/":"");return a?d.decodePath(c):c}c=this._parts.path.length-this.filename().length;c=this._parts.path.substring(0,c);c=RegExp("^"+g(c));this.is("relative")||(a||(a="/"),"/"!==a.charAt(0)&&(a="/"+a));a&&"/"!==a.charAt(a.length-1)&&(a+="/");a=d.recodePath(a);this._parts.path=this._parts.path.replace(c,a);this.build(!b);return this};f.filename=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0===a||!0===a){if(!this._parts.path||"/"===this._parts.path)return"";
-var c=this._parts.path.lastIndexOf("/"),c=this._parts.path.substring(c+1);return a?d.decodePathSegment(c):c}c=!1;"/"===a.charAt(0)&&(a=a.substring(1));a.match(/\.?\//)&&(c=!0);var h=RegExp(g(this.filename())+"$");a=d.recodePath(a);this._parts.path=this._parts.path.replace(h,a);c?this.normalizePath(b):this.build(!b);return this};f.suffix=function(a,b){if(this._parts.urn)return void 0===a?"":this;if(void 0===a||!0===a){if(!this._parts.path||"/"===this._parts.path)return"";var c=this.filename(),h=c.lastIndexOf(".");
-if(-1===h)return"";c=c.substring(h+1);c=/^[a-z0-9%]+$/i.test(c)?c:"";return a?d.decodePathSegment(c):c}"."===a.charAt(0)&&(a=a.substring(1));if(c=this.suffix())h=a?RegExp(g(c)+"$"):RegExp(g("."+c)+"$");else{if(!a)return this;this._parts.path+="."+d.recodePath(a)}h&&(a=d.recodePath(a),this._parts.path=this._parts.path.replace(h,a));this.build(!b);return this};f.segment=function(a,b,c){var d=this._parts.urn?":":"/",e=this.path(),f="/"===e.substring(0,1),e=e.split(d);void 0!==a&&"number"!==typeof a&&
-(c=b,b=a,a=void 0);if(void 0!==a&&"number"!==typeof a)throw Error("Bad segment '"+a+"', must be 0-based integer");f&&e.shift();0>a&&(a=Math.max(e.length+a,0));if(void 0===b)return void 0===a?e:e[a];if(null===a||void 0===e[a])if(l(b)){e=[];a=0;for(var g=b.length;a<g;a++)if(b[a].length||e.length&&e[e.length-1].length)e.length&&!e[e.length-1].length&&e.pop(),e.push(b[a])}else{if(b||"string"===typeof b)""===e[e.length-1]?e[e.length-1]=b:e.push(b)}else b||"string"===typeof b&&b.length?e[a]=b:e.splice(a,
-1);f&&e.unshift("");return this.path(e.join(d),c)};f.segmentCoded=function(a,b,c){var e,f;"number"!==typeof a&&(c=b,b=a,a=void 0);if(void 0===b){a=this.segment(a,b,c);if(l(a))for(e=0,f=a.length;e<f;e++)a[e]=d.decode(a[e]);else a=void 0!==a?d.decode(a):void 0;return a}if(l(b))for(e=0,f=b.length;e<f;e++)b[e]=d.decode(b[e]);else b="string"===typeof b?d.encode(b):b;return this.segment(a,b,c)};var F=f.query;f.query=function(a,b){if(!0===a)return d.parseQuery(this._parts.query,this._parts.escapeQuerySpace);
-if("function"===typeof a){var c=d.parseQuery(this._parts.query,this._parts.escapeQuerySpace),e=a.call(this,c);this._parts.query=d.buildQuery(e||c,this._parts.duplicateQueryParameters,this._parts.escapeQuerySpace);this.build(!b);return this}return void 0!==a&&"string"!==typeof a?(this._parts.query=d.buildQuery(a,this._parts.duplicateQueryParameters,this._parts.escapeQuerySpace),this.build(!b),this):F.call(this,a,b)};f.setQuery=function(a,b,c){var e=d.parseQuery(this._parts.query,this._parts.escapeQuerySpace);
-if("object"===typeof a)for(var f in a)w.call(a,f)&&(e[f]=a[f]);else if("string"===typeof a)e[a]=void 0!==b?b:null;else throw new TypeError("URI.addQuery() accepts an object, string as the name parameter");this._parts.query=d.buildQuery(e,this._parts.duplicateQueryParameters,this._parts.escapeQuerySpace);"string"!==typeof a&&(c=b);this.build(!c);return this};f.addQuery=function(a,b,c){var e=d.parseQuery(this._parts.query,this._parts.escapeQuerySpace);d.addQuery(e,a,void 0===b?null:b);this._parts.query=
-d.buildQuery(e,this._parts.duplicateQueryParameters,this._parts.escapeQuerySpace);"string"!==typeof a&&(c=b);this.build(!c);return this};f.removeQuery=function(a,b,c){var e=d.parseQuery(this._parts.query,this._parts.escapeQuerySpace);d.removeQuery(e,a,b);this._parts.query=d.buildQuery(e,this._parts.duplicateQueryParameters,this._parts.escapeQuerySpace);"string"!==typeof a&&(c=b);this.build(!c);return this};f.hasQuery=function(a,b,c){var e=d.parseQuery(this._parts.query,this._parts.escapeQuerySpace);
-return d.hasQuery(e,a,b,c)};f.setSearch=f.setQuery;f.addSearch=f.addQuery;f.removeSearch=f.removeQuery;f.hasSearch=f.hasQuery;f.normalize=function(){return this._parts.urn?this.normalizeProtocol(!1).normalizeQuery(!1).normalizeFragment(!1).build():this.normalizeProtocol(!1).normalizeHostname(!1).normalizePort(!1).normalizePath(!1).normalizeQuery(!1).normalizeFragment(!1).build()};f.normalizeProtocol=function(a){"string"===typeof this._parts.protocol&&(this._parts.protocol=this._parts.protocol.toLowerCase(),
-this.build(!a));return this};f.normalizeHostname=function(a){this._parts.hostname&&(this.is("IDN")&&e?this._parts.hostname=e.toASCII(this._parts.hostname):this.is("IPv6")&&k&&(this._parts.hostname=k.best(this._parts.hostname)),this._parts.hostname=this._parts.hostname.toLowerCase(),this.build(!a));return this};f.normalizePort=function(a){"string"===typeof this._parts.protocol&&this._parts.port===d.defaultPorts[this._parts.protocol]&&(this._parts.port=null,this.build(!a));return this};f.normalizePath=
-function(a){if(this._parts.urn||!this._parts.path||"/"===this._parts.path)return this;var b,c=this._parts.path,e="",f,g;"/"!==c.charAt(0)&&(b=!0,c="/"+c);c=c.replace(/(\/(\.\/)+)|(\/\.$)/g,"/").replace(/\/{2,}/g,"/");b&&(e=c.substring(1).match(/^(\.\.\/)+/)||"")&&(e=e[0]);for(;;){f=c.indexOf("/..");if(-1===f)break;else if(0===f){c=c.substring(3);continue}g=c.substring(0,f).lastIndexOf("/");-1===g&&(g=f);c=c.substring(0,g)+c.substring(f+3)}b&&this.is("relative")&&(c=e+c.substring(1));c=d.recodePath(c);
-this._parts.path=c;this.build(!a);return this};f.normalizePathname=f.normalizePath;f.normalizeQuery=function(a){"string"===typeof this._parts.query&&(this._parts.query.length?this.query(d.parseQuery(this._parts.query,this._parts.escapeQuerySpace)):this._parts.query=null,this.build(!a));return this};f.normalizeFragment=function(a){this._parts.fragment||(this._parts.fragment=null,this.build(!a));return this};f.normalizeSearch=f.normalizeQuery;f.normalizeHash=f.normalizeFragment;f.iso8859=function(){var a=
-d.encode,b=d.decode;d.encode=escape;d.decode=decodeURIComponent;this.normalize();d.encode=a;d.decode=b;return this};f.unicode=function(){var a=d.encode,b=d.decode;d.encode=E;d.decode=unescape;this.normalize();d.encode=a;d.decode=b;return this};f.readable=function(){var a=this.clone();a.username("").password("").normalize();var b="";a._parts.protocol&&(b+=a._parts.protocol+"://");a._parts.hostname&&(a.is("punycode")&&e?(b+=e.toUnicode(a._parts.hostname),a._parts.port&&(b+=":"+a._parts.port)):b+=a.host());
-a._parts.hostname&&a._parts.path&&"/"!==a._parts.path.charAt(0)&&(b+="/");b+=a.path(!0);if(a._parts.query){for(var c="",f=0,g=a._parts.query.split("&"),k=g.length;f<k;f++){var l=(g[f]||"").split("="),c=c+("&"+d.decodeQuery(l[0],this._parts.escapeQuerySpace).replace(/&/g,"%26"));void 0!==l[1]&&(c+="="+d.decodeQuery(l[1],this._parts.escapeQuerySpace).replace(/&/g,"%26"))}b+="?"+c.substring(1)}return b+=d.decodeQuery(a.hash(),!0)};f.absoluteTo=function(a){var b=this.clone(),c=["protocol","username",
-"password","hostname","port"],e,f;if(this._parts.urn)throw Error("URNs do not have any generally defined hierarchical components");a instanceof d||(a=new d(a));b._parts.protocol||(b._parts.protocol=a._parts.protocol);if(this._parts.hostname)return b;for(e=0;f=c[e];e++)b._parts[f]=a._parts[f];b._parts.path?".."===b._parts.path.substring(-2)&&(b._parts.path+="/"):(b._parts.path=a._parts.path,b._parts.query||(b._parts.query=a._parts.query));"/"!==b.path().charAt(0)&&(a=a.directory(),b._parts.path=(a?
-a+"/":"")+b._parts.path,b.normalizePath());b.build();return b};f.relativeTo=function(a){var b=this.clone().normalize(),c,e,f,g;if(b._parts.urn)throw Error("URNs do not have any generally defined hierarchical components");a=(new d(a)).normalize();c=b._parts;e=a._parts;f=b.path();g=a.path();if("/"!==f.charAt(0))throw Error("URI is already relative");if("/"!==g.charAt(0))throw Error("Cannot calculate a URI relative to another relative URI");c.protocol===e.protocol&&(c.protocol=null);if(c.username===
-e.username&&c.password===e.password&&null===c.protocol&&null===c.username&&null===c.password&&c.hostname===e.hostname&&c.port===e.port)c.hostname=null,c.port=null;else return b.build();if(f===g)return c.path="",b.build();a=d.commonPath(b.path(),a.path());if(!a)return b.build();e=e.path.substring(a.length).replace(/[^\/]*$/,"").replace(/.*?\//g,"../");c.path=e+c.path.substring(a.length);return b.build()};f.equals=function(a){var b=this.clone();a=new d(a);var c={},e={},f={},g;b.normalize();a.normalize();
-if(b.toString()===a.toString())return!0;c=b.query();e=a.query();b.query("");a.query("");if(b.toString()!==a.toString()||c.length!==e.length)return!1;c=d.parseQuery(c,this._parts.escapeQuerySpace);e=d.parseQuery(e,this._parts.escapeQuerySpace);for(g in c)if(w.call(c,g)){if(!l(c[g])){if(c[g]!==e[g])return!1}else if(!z(c[g],e[g]))return!1;f[g]=!0}for(g in e)if(w.call(e,g)&&!f[g])return!1;return!0};f.duplicateQueryParameters=function(a){this._parts.duplicateQueryParameters=!!a;return this};f.escapeQuerySpace=
-function(a){this._parts.escapeQuerySpace=!!a;return this};return d});
-(function(e,k){"object"===typeof exports?module.exports=k(require("./URI")):"function"===typeof define&&define.amd?define(["./URI"],k):k(e.URI)})(this,function(e){var k=e.prototype,u=k.fragment;e.fragmentPrefix="?";var m=e._parts;e._parts=function(){var d=m();d.fragmentPrefix=e.fragmentPrefix;return d};k.fragmentPrefix=function(d){this._parts.fragmentPrefix=d;return this};k.fragment=function(d,g){var k=this._parts.fragmentPrefix,l=this._parts.fragment||"";return!0===d?l.substring(0,k.length)!==k?
-{}:e.parseQuery(l.substring(k.length)):void 0!==d&&"string"!==typeof d?(this._parts.fragment=k+e.buildQuery(d),this.build(!g),this):u.call(this,d,g)};k.addFragment=function(d,g,k){var l=this._parts.fragmentPrefix,m=e.parseQuery((this._parts.fragment||"").substring(l.length));e.addQuery(m,d,g);this._parts.fragment=l+e.buildQuery(m);"string"!==typeof d&&(k=g);this.build(!k);return this};k.removeFragment=function(d,g,k){var l=this._parts.fragmentPrefix,m=e.parseQuery((this._parts.fragment||"").substring(l.length));
-e.removeQuery(m,d,g);this._parts.fragment=l+e.buildQuery(m);"string"!==typeof d&&(k=g);this.build(!k);return this};k.addHash=k.addFragment;k.removeHash=k.removeFragment;return{}});
-/*global unescape, module, define, window, global*/
-
 /*
- UriTemplate Copyright (c) 2012-2013 Franz Antesberger. All Rights Reserved.
- Available via the MIT license.
-*/
-
-(function (exportCallback) {
-    "use strict";
-
-var UriTemplateError = (function () {
-
-    function UriTemplateError (options) {
-        this.options = options;
-    }
-
-    UriTemplateError.prototype.toString = function () {
-        if (JSON && JSON.stringify) {
-            return JSON.stringify(this.options);
-        }
-        else {
-            return this.options;
-        }
-    };
-
-    return UriTemplateError;
-}());
-
-var objectHelper = (function () {
-    function isArray (value) {
-        return Object.prototype.toString.apply(value) === '[object Array]';
-    }
-
-    function isString (value) {
-        return Object.prototype.toString.apply(value) === '[object String]';
-    }
-    
-    function isNumber (value) {
-        return Object.prototype.toString.apply(value) === '[object Number]';
-    }
-    
-    function isBoolean (value) {
-        return Object.prototype.toString.apply(value) === '[object Boolean]';
-    }
-    
-    function join (arr, separator) {
-        var
-            result = '',
-            first = true,
-            index;
-        for (index = 0; index < arr.length; index += 1) {
-            if (first) {
-                first = false;
-            }
-            else {
-                result += separator;
-            }
-            result += arr[index];
-        }
-        return result;
-    }
-
-    function map (arr, mapper) {
-        var
-            result = [],
-            index = 0;
-        for (; index < arr.length; index += 1) {
-            result.push(mapper(arr[index]));
-        }
-        return result;
-    }
-
-    function filter (arr, predicate) {
-        var
-            result = [],
-            index = 0;
-        for (; index < arr.length; index += 1) {
-            if (predicate(arr[index])) {
-                result.push(arr[index]);
-            }
-        }
-        return result;
-    }
-
-    function deepFreezeUsingObjectFreeze (object) {
-        if (typeof object !== "object" || object === null) {
-            return object;
-        }
-        Object.freeze(object);
-        var property, propertyName;
-        for (propertyName in object) {
-            if (object.hasOwnProperty(propertyName)) {
-                property = object[propertyName];
-                // be aware, arrays are 'object', too
-                if ((typeof property === "object") && !(property instanceof RegExp)) {
-                    deepFreeze(property);
-                }
-            }
-        }
-        return object;
-    }
-
-    function deepFreeze (object) {
-        if (typeof Object.freeze === 'function') {
-            return deepFreezeUsingObjectFreeze(object);
-        }
-        return object;
-    }
-
-
-    return {
-        isArray: isArray,
-        isString: isString,
-        isNumber: isNumber,
-        isBoolean: isBoolean,
-        join: join,
-        map: map,
-        filter: filter,
-        deepFreeze: deepFreeze
-    };
-}());
-
-var charHelper = (function () {
-
-    function isAlpha (chr) {
-        return (chr >= 'a' && chr <= 'z') || ((chr >= 'A' && chr <= 'Z'));
-    }
-
-    function isDigit (chr) {
-        return chr >= '0' && chr <= '9';
-    }
-
-    function isHexDigit (chr) {
-        return isDigit(chr) || (chr >= 'a' && chr <= 'f') || (chr >= 'A' && chr <= 'F');
-    }
-
-    return {
-        isAlpha: isAlpha,
-        isDigit: isDigit,
-        isHexDigit: isHexDigit
-    };
-}());
-
-var pctEncoder = (function () {
-    var utf8 = {
-        encode: function (chr) {
-            // see http://ecmanaut.blogspot.de/2006/07/encoding-decoding-utf8-in-javascript.html
-            return unescape(encodeURIComponent(chr));
-        },
-        numBytes: function (firstCharCode) {
-            if (firstCharCode <= 0x7F) {
-                return 1;
-            }
-            else if (0xC2 <= firstCharCode && firstCharCode <= 0xDF) {
-                return 2;
-            }
-            else if (0xE0 <= firstCharCode && firstCharCode <= 0xEF) {
-                return 3;
-            }
-            else if (0xF0 <= firstCharCode && firstCharCode <= 0xF4) {
-                return 4;
-            }
-            // no valid first octet
-            return 0;
-        },
-        isValidFollowingCharCode: function (charCode) {
-            return 0x80 <= charCode && charCode <= 0xBF;
-        }
-    };
-
-    /**
-     * encodes a character, if needed or not.
-     * @param chr
-     * @return pct-encoded character
-     */
-    function encodeCharacter (chr) {
-        var
-            result = '',
-            octets = utf8.encode(chr),
-            octet,
-            index;
-        for (index = 0; index < octets.length; index += 1) {
-            octet = octets.charCodeAt(index);
-            result += '%' + (octet < 0x10 ? '0' : '') + octet.toString(16).toUpperCase();
-        }
-        return result;
-    }
-
-    /**
-     * Returns, whether the given text at start is in the form 'percent hex-digit hex-digit', like '%3F'
-     * @param text
-     * @param start
-     * @return {boolean|*|*}
-     */
-    function isPercentDigitDigit (text, start) {
-        return text.charAt(start) === '%' && charHelper.isHexDigit(text.charAt(start + 1)) && charHelper.isHexDigit(text.charAt(start + 2));
-    }
-
-    /**
-     * Parses a hex number from start with length 2.
-     * @param text a string
-     * @param start the start index of the 2-digit hex number
-     * @return {Number}
-     */
-    function parseHex2 (text, start) {
-        return parseInt(text.substr(start, 2), 16);
-    }
-
-    /**
-     * Returns whether or not the given char sequence is a correctly pct-encoded sequence.
-     * @param chr
-     * @return {boolean}
-     */
-    function isPctEncoded (chr) {
-        if (!isPercentDigitDigit(chr, 0)) {
-            return false;
-        }
-        var firstCharCode = parseHex2(chr, 1);
-        var numBytes = utf8.numBytes(firstCharCode);
-        if (numBytes === 0) {
-            return false;
-        }
-        for (var byteNumber = 1; byteNumber < numBytes; byteNumber += 1) {
-            if (!isPercentDigitDigit(chr, 3*byteNumber) || !utf8.isValidFollowingCharCode(parseHex2(chr, 3*byteNumber + 1))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Reads as much as needed from the text, e.g. '%20' or '%C3%B6'. It does not decode!
-     * @param text
-     * @param startIndex
-     * @return the character or pct-string of the text at startIndex
-     */
-    function pctCharAt(text, startIndex) {
-        var chr = text.charAt(startIndex);
-        if (!isPercentDigitDigit(text, startIndex)) {
-            return chr;
-        }
-        var utf8CharCode = parseHex2(text, startIndex + 1);
-        var numBytes = utf8.numBytes(utf8CharCode);
-        if (numBytes === 0) {
-            return chr;
-        }
-        for (var byteNumber = 1; byteNumber < numBytes; byteNumber += 1) {
-            if (!isPercentDigitDigit(text, startIndex + 3 * byteNumber) || !utf8.isValidFollowingCharCode(parseHex2(text, startIndex + 3 * byteNumber + 1))) {
-                return chr;
-            }
-        }
-        return text.substr(startIndex, 3 * numBytes);
-    }
-
-    return {
-        encodeCharacter: encodeCharacter,
-        isPctEncoded: isPctEncoded,
-        pctCharAt: pctCharAt
-    };
-}());
-
-var rfcCharHelper = (function () {
-
-    /**
-     * Returns if an character is an varchar character according 2.3 of rfc 6570
-     * @param chr
-     * @return (Boolean)
-     */
-    function isVarchar (chr) {
-        return charHelper.isAlpha(chr) || charHelper.isDigit(chr) || chr === '_' || pctEncoder.isPctEncoded(chr);
-    }
-
-    /**
-     * Returns if chr is an unreserved character according 1.5 of rfc 6570
-     * @param chr
-     * @return {Boolean}
-     */
-    function isUnreserved (chr) {
-        return charHelper.isAlpha(chr) || charHelper.isDigit(chr) || chr === '-' || chr === '.' || chr === '_' || chr === '~';
-    }
-
-    /**
-     * Returns if chr is an reserved character according 1.5 of rfc 6570
-     * or the percent character mentioned in 3.2.1.
-     * @param chr
-     * @return {Boolean}
-     */
-    function isReserved (chr) {
-        return chr === ':' || chr === '/' || chr === '?' || chr === '#' || chr === '[' || chr === ']' || chr === '@' || chr === '!' || chr === '$' || chr === '&' || chr === '(' ||
-            chr === ')' || chr === '*' || chr === '+' || chr === ',' || chr === ';' || chr === '=' || chr === "'";
-    }
-
-    return {
-        isVarchar: isVarchar,
-        isUnreserved: isUnreserved,
-        isReserved: isReserved
-    };
-
-}());
-
-/**
- * encoding of rfc 6570
- */
-var encodingHelper = (function () {
-
-    function encode (text, passReserved) {
-        var
-            result = '',
-            index,
-            chr = '';
-        if (typeof text === "number" || typeof text === "boolean") {
-            text = text.toString();
-        }
-        for (index = 0; index < text.length; index += chr.length) {
-            chr = text.charAt(index);
-            result += rfcCharHelper.isUnreserved(chr) || (passReserved && rfcCharHelper.isReserved(chr)) ? chr : pctEncoder.encodeCharacter(chr);
-        }
-        return result;
-    }
-
-    function encodePassReserved (text) {
-        return encode(text, true);
-    }
-
-    function encodeLiteralCharacter (literal, index) {
-        var chr = pctEncoder.pctCharAt(literal, index);
-        if (chr.length > 1) {
-            return chr;
-        }
-        else {
-            return rfcCharHelper.isReserved(chr) || rfcCharHelper.isUnreserved(chr) ? chr : pctEncoder.encodeCharacter(chr);
-        }
-    }
-
-    function encodeLiteral (literal) {
-        var
-            result = '',
-            index,
-            chr = '';
-        for (index = 0; index < literal.length; index += chr.length) {
-            chr = pctEncoder.pctCharAt(literal, index);
-            if (chr.length > 1) {
-                result += chr;
-            }
-            else {
-                result += rfcCharHelper.isReserved(chr) || rfcCharHelper.isUnreserved(chr) ? chr : pctEncoder.encodeCharacter(chr);
-            }
-        }
-        return result;
-    }
-
-    return {
-        encode: encode,
-        encodePassReserved: encodePassReserved,
-        encodeLiteral: encodeLiteral,
-        encodeLiteralCharacter: encodeLiteralCharacter
-    };
-
-}());
-
-
-// the operators defined by rfc 6570
-var operators = (function () {
-
-    var
-        bySymbol = {};
-
-    function create (symbol) {
-        bySymbol[symbol] = {
-            symbol: symbol,
-            separator: (symbol === '?') ? '&' : (symbol === '' || symbol === '+' || symbol === '#') ? ',' : symbol,
-            named: symbol === ';' || symbol === '&' || symbol === '?',
-            ifEmpty: (symbol === '&' || symbol === '?') ? '=' : '',
-            first: (symbol === '+' ) ? '' : symbol,
-            encode: (symbol === '+' || symbol === '#') ? encodingHelper.encodePassReserved : encodingHelper.encode,
-            toString: function () {
-                return this.symbol;
-            }
-        };
-    }
-
-    create('');
-    create('+');
-    create('#');
-    create('.');
-    create('/');
-    create(';');
-    create('?');
-    create('&');
-    return {
-        valueOf: function (chr) {
-            if (bySymbol[chr]) {
-                return bySymbol[chr];
-            }
-            if ("=,!@|".indexOf(chr) >= 0) {
-                return null;
-            }
-            return bySymbol[''];
-        }
-    };
-}());
-
-
-/**
- * Detects, whether a given element is defined in the sense of rfc 6570
- * Section 2.3 of the RFC makes clear defintions:
- * * undefined and null are not defined.
- * * the empty string is defined
- * * an array ("list") is defined, if it is not empty (even if all elements are not defined)
- * * an object ("map") is defined, if it contains at least one property with defined value
- * @param object
- * @return {Boolean}
- */
-function isDefined (object) {
-    var
-        propertyName;
-    if (object === null || object === undefined) {
-        return false;
-    }
-    if (objectHelper.isArray(object)) {
-        // Section 2.3: A variable defined as a list value is considered undefined if the list contains zero members
-        return object.length > 0;
-    }
-    if (typeof object === "string" || typeof object === "number" || typeof object === "boolean") {
-        // falsy values like empty strings, false or 0 are "defined"
-        return true;
-    }
-    // else Object
-    for (propertyName in object) {
-        if (object.hasOwnProperty(propertyName) && isDefined(object[propertyName])) {
-            return true;
-        }
-    }
-    return false;
-}
-
-var LiteralExpression = (function () {
-    function LiteralExpression (literal) {
-        this.literal = encodingHelper.encodeLiteral(literal);
-    }
-
-    LiteralExpression.prototype.expand = function () {
-        return this.literal;
-    };
-
-    LiteralExpression.prototype.toString = LiteralExpression.prototype.expand;
-
-    return LiteralExpression;
-}());
-
-var parse = (function () {
-
-    function parseExpression (expressionText) {
-        var
-            operator,
-            varspecs = [],
-            varspec = null,
-            varnameStart = null,
-            maxLengthStart = null,
-            index,
-            chr = '';
-
-        function closeVarname () {
-            var varname = expressionText.substring(varnameStart, index);
-            if (varname.length === 0) {
-                throw new UriTemplateError({expressionText: expressionText, message: "a varname must be specified", position: index});
-            }
-            varspec = {varname: varname, exploded: false, maxLength: null};
-            varnameStart = null;
-        }
-
-        function closeMaxLength () {
-            if (maxLengthStart === index) {
-                throw new UriTemplateError({expressionText: expressionText, message: "after a ':' you have to specify the length", position: index});
-            }
-            varspec.maxLength = parseInt(expressionText.substring(maxLengthStart, index), 10);
-            maxLengthStart = null;
-        }
-
-        operator = (function (operatorText) {
-            var op = operators.valueOf(operatorText);
-            if (op === null) {
-                throw new UriTemplateError({expressionText: expressionText, message: "illegal use of reserved operator", position: index, operator: operatorText});
-            }
-            return op;
-        }(expressionText.charAt(0)));
-        index = operator.symbol.length;
-
-        varnameStart = index;
-
-        for (; index < expressionText.length; index += chr.length) {
-            chr = pctEncoder.pctCharAt(expressionText, index);
-
-            if (varnameStart !== null) {
-                // the spec says: varname =  varchar *( ["."] varchar )
-                // so a dot is allowed except for the first char
-                if (chr === '.') {
-                    if (varnameStart === index) {
-                        throw new UriTemplateError({expressionText: expressionText, message: "a varname MUST NOT start with a dot", position: index});
-                    }
-                    continue;
-                }
-                if (rfcCharHelper.isVarchar(chr)) {
-                    continue;
-                }
-                closeVarname();
-            }
-            if (maxLengthStart !== null) {
-                if (index === maxLengthStart && chr === '0') {
-                    throw new UriTemplateError({expressionText: expressionText, message: "A :prefix must not start with digit 0", position: index});
-                }
-                if (charHelper.isDigit(chr)) {
-                    if (index - maxLengthStart >= 4) {
-                        throw new UriTemplateError({expressionText: expressionText, message: "A :prefix must have max 4 digits", position: index});
-                    }
-                    continue;
-                }
-                closeMaxLength();
-            }
-            if (chr === ':') {
-                if (varspec.maxLength !== null) {
-                    throw new UriTemplateError({expressionText: expressionText, message: "only one :maxLength is allowed per varspec", position: index});
-                }
-                if (varspec.exploded) {
-                    throw new UriTemplateError({expressionText: expressionText, message: "an exploeded varspec MUST NOT be varspeced", position: index});
-                }
-                maxLengthStart = index + 1;
-                continue;
-            }
-            if (chr === '*') {
-                if (varspec === null) {
-                    throw new UriTemplateError({expressionText: expressionText, message: "exploded without varspec", position: index});
-                }
-                if (varspec.exploded) {
-                    throw new UriTemplateError({expressionText: expressionText, message: "exploded twice", position: index});
-                }
-                if (varspec.maxLength) {
-                    throw new UriTemplateError({expressionText: expressionText, message: "an explode (*) MUST NOT follow to a prefix", position: index});
-                }
-                varspec.exploded = true;
-                continue;
-            }
-            // the only legal character now is the comma
-            if (chr === ',') {
-                varspecs.push(varspec);
-                varspec = null;
-                varnameStart = index + 1;
-                continue;
-            }
-            throw new UriTemplateError({expressionText: expressionText, message: "illegal character", character: chr, position: index});
-        } // for chr
-        if (varnameStart !== null) {
-            closeVarname();
-        }
-        if (maxLengthStart !== null) {
-            closeMaxLength();
-        }
-        varspecs.push(varspec);
-        return new VariableExpression(expressionText, operator, varspecs);
-    }
-
-    function escape_regexp_string(string) {
-      // http://simonwillison.net/2006/Jan/20/escape/
-      return string.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, "\\$&");
-    }
-
-    function parse (uriTemplateText) {
-        // assert filled string
-        var
-            index,
-            chr,
-            expressions = [],
-            expression,
-            braceOpenIndex = null,
-            regexp_string = '',
-            can_match = true,
-            literalStart = 0;
-        for (index = 0; index < uriTemplateText.length; index += 1) {
-            chr = uriTemplateText.charAt(index);
-            if (literalStart !== null) {
-                if (chr === '}') {
-                    throw new UriTemplateError({templateText: uriTemplateText, message: "unopened brace closed", position: index});
-                }
-                if (chr === '{') {
-                    if (literalStart < index) {
-                        expression = new LiteralExpression(uriTemplateText.substring(literalStart, index));
-                        expressions.push(expression);
-                        regexp_string += escape_regexp_string(
-                            expression.literal);
-                    }
-                    literalStart = null;
-                    braceOpenIndex = index;
-                }
-                continue;
-            }
-
-            if (braceOpenIndex !== null) {
-                // here just { is forbidden
-                if (chr === '{') {
-                    throw new UriTemplateError({templateText: uriTemplateText, message: "brace already opened", position: index});
-                }
-                if (chr === '}') {
-                    if (braceOpenIndex + 1 === index) {
-                        throw new UriTemplateError({templateText: uriTemplateText, message: "empty braces", position: braceOpenIndex});
-                    }
-                    try {
-                        expression = parseExpression(uriTemplateText.substring(braceOpenIndex + 1, index));
-                    }
-                    catch (error) {
-                        if (error.prototype === UriTemplateError.prototype) {
-                            throw new UriTemplateError({templateText: uriTemplateText, message: error.options.message, position: braceOpenIndex + error.options.position, details: error.options});
-                        }
-                        throw error;
-                    }
-                    expressions.push(expression);
-                    if (expression.operator.symbol.length === 0) {
-                      regexp_string += "([^/]+)";
-                    } else {
-                      can_match = false;
-                    }
-                    braceOpenIndex = null;
-                    literalStart = index + 1;
-                }
-                continue;
-            }
-            throw new Error('reached unreachable code');
-        }
-        if (braceOpenIndex !== null) {
-            throw new UriTemplateError({templateText: uriTemplateText, message: "unclosed brace", position: braceOpenIndex});
-        }
-        if (literalStart < uriTemplateText.length) {
-            expression = new LiteralExpression(uriTemplateText.substring(literalStart));
-            expressions.push(expression);
-            regexp_string += escape_regexp_string(expression.literal);
-        }
-        if (can_match === false) {
-          regexp_string = undefined;
-        }
-        return new UriTemplate(uriTemplateText, expressions, regexp_string);
-    }
-
-    return parse;
-}());
-
-var VariableExpression = (function () {
-    // helper function if JSON is not available
-    function prettyPrint (value) {
-        return (JSON && JSON.stringify) ? JSON.stringify(value) : value;
-    }
-
-    function isEmpty (value) {
-        if (!isDefined(value)) {
-            return true;
-        }
-        if (objectHelper.isString(value)) {
-            return value === '';
-        }
-        if (objectHelper.isNumber(value) || objectHelper.isBoolean(value)) {
-            return false;
-        }
-        if (objectHelper.isArray(value)) {
-            return value.length === 0;
-        }
-        for (var propertyName in value) {
-            if (value.hasOwnProperty(propertyName)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    function propertyArray (object) {
-        var
-            result = [],
-            propertyName;
-        for (propertyName in object) {
-            if (object.hasOwnProperty(propertyName)) {
-                result.push({name: propertyName, value: object[propertyName]});
-            }
-        }
-        return result;
-    }
-
-    function VariableExpression (templateText, operator, varspecs) {
-        this.templateText = templateText;
-        this.operator = operator;
-        this.varspecs = varspecs;
-    }
-
-    VariableExpression.prototype.toString = function () {
-        return this.templateText;
-    };
-
-    function expandSimpleValue(varspec, operator, value) {
-        var result = '';
-        value = value.toString();
-        if (operator.named) {
-            result += encodingHelper.encodeLiteral(varspec.varname);
-            if (value === '') {
-                result += operator.ifEmpty;
-                return result;
-            }
-            result += '=';
-        }
-        if (varspec.maxLength !== null) {
-            value = value.substr(0, varspec.maxLength);
-        }
-        result += operator.encode(value);
-        return result;
-    }
-
-    function valueDefined (nameValue) {
-        return isDefined(nameValue.value);
-    }
-
-    function expandNotExploded(varspec, operator, value) {
-        var
-            arr = [],
-            result = '';
-        if (operator.named) {
-            result += encodingHelper.encodeLiteral(varspec.varname);
-            if (isEmpty(value)) {
-                result += operator.ifEmpty;
-                return result;
-            }
-            result += '=';
-        }
-        if (objectHelper.isArray(value)) {
-            arr = value;
-            arr = objectHelper.filter(arr, isDefined);
-            arr = objectHelper.map(arr, operator.encode);
-            result += objectHelper.join(arr, ',');
-        }
-        else {
-            arr = propertyArray(value);
-            arr = objectHelper.filter(arr, valueDefined);
-            arr = objectHelper.map(arr, function (nameValue) {
-                return operator.encode(nameValue.name) + ',' + operator.encode(nameValue.value);
-            });
-            result += objectHelper.join(arr, ',');
-        }
-        return result;
-    }
-
-    function expandExplodedNamed (varspec, operator, value) {
-        var
-            isArray = objectHelper.isArray(value),
-            arr = [];
-        if (isArray) {
-            arr = value;
-            arr = objectHelper.filter(arr, isDefined);
-            arr = objectHelper.map(arr, function (listElement) {
-                var tmp = encodingHelper.encodeLiteral(varspec.varname);
-                if (isEmpty(listElement)) {
-                    tmp += operator.ifEmpty;
-                }
-                else {
-                    tmp += '=' + operator.encode(listElement);
-                }
-                return tmp;
-            });
-        }
-        else {
-            arr = propertyArray(value);
-            arr = objectHelper.filter(arr, valueDefined);
-            arr = objectHelper.map(arr, function (nameValue) {
-                var tmp = encodingHelper.encodeLiteral(nameValue.name);
-                if (isEmpty(nameValue.value)) {
-                    tmp += operator.ifEmpty;
-                }
-                else {
-                    tmp += '=' + operator.encode(nameValue.value);
-                }
-                return tmp;
-            });
-        }
-        return objectHelper.join(arr, operator.separator);
-    }
-
-    function expandExplodedUnnamed (operator, value) {
-        var
-            arr = [],
-            result = '';
-        if (objectHelper.isArray(value)) {
-            arr = value;
-            arr = objectHelper.filter(arr, isDefined);
-            arr = objectHelper.map(arr, operator.encode);
-            result += objectHelper.join(arr, operator.separator);
-        }
-        else {
-            arr = propertyArray(value);
-            arr = objectHelper.filter(arr, function (nameValue) {
-                return isDefined(nameValue.value);
-            });
-            arr = objectHelper.map(arr, function (nameValue) {
-                return operator.encode(nameValue.name) + '=' + operator.encode(nameValue.value);
-            });
-            result += objectHelper.join(arr, operator.separator);
-        }
-        return result;
-    }
-
-
-    VariableExpression.prototype.expand = function (variables) {
-        var
-            expanded = [],
-            index,
-            varspec,
-            value,
-            valueIsArr,
-            oneExploded = false,
-            operator = this.operator;
-
-        // expand each varspec and join with operator's separator
-        for (index = 0; index < this.varspecs.length; index += 1) {
-            varspec = this.varspecs[index];
-            value = variables[varspec.varname];
-            // if (!isDefined(value)) {
-            // if (variables.hasOwnProperty(varspec.name)) {
-            if (value === null || value === undefined) {
-                continue;
-            }
-            if (varspec.exploded) {
-                oneExploded = true;
-            }
-            valueIsArr = objectHelper.isArray(value);
-            if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-                expanded.push(expandSimpleValue(varspec, operator, value));
-            }
-            else if (varspec.maxLength && isDefined(value)) {
-                // 2.4.1 of the spec says: "Prefix modifiers are not applicable to variables that have composite values."
-                throw new Error('Prefix modifiers are not applicable to variables that have composite values. You tried to expand ' + this + " with " + prettyPrint(value));
-            }
-            else if (!varspec.exploded) {
-                if (operator.named || !isEmpty(value)) {
-                    expanded.push(expandNotExploded(varspec, operator, value));
-                }
-            }
-            else if (isDefined(value)) {
-                if (operator.named) {
-                    expanded.push(expandExplodedNamed(varspec, operator, value));
-                }
-                else {
-                    expanded.push(expandExplodedUnnamed(operator, value));
-                }
-            }
-        }
-
-        if (expanded.length === 0) {
-            return "";
-        }
-        else {
-            return operator.first + objectHelper.join(expanded, operator.separator);
-        }
-    };
-
-    return VariableExpression;
-}());
-
-var UriTemplate = (function () {
-    function UriTemplate (templateText, expressions, regexp_string) {
-        this.templateText = templateText;
-        this.expressions = expressions;
-
-        if (regexp_string !== undefined) {
-          this.regexp = new RegExp("^" + regexp_string + "$");
-        }
-
-        objectHelper.deepFreeze(this);
-    }
-
-    UriTemplate.prototype.toString = function () {
-        return this.templateText;
-    };
-
-    UriTemplate.prototype.expand = function (variables) {
-        // this.expressions.map(function (expression) {return expression.expand(variables);}).join('');
-        var
-            index,
-            result = '';
-        for (index = 0; index < this.expressions.length; index += 1) {
-            result += this.expressions[index].expand(variables);
-        }
-        return result;
-    };
-
-    UriTemplate.prototype.extract = function (text) {
-      var expression_index,
-          extracted_index = 1,
-          expression,
-          varspec,
-          matched = true,
-          variables = {},
-          result;
-
-      if ((this.regexp !== undefined) && (this.regexp.test(text))) {
-        result = this.regexp.exec(text);
-        for (expression_index = 0; expression_index < this.expressions.length; expression_index += 1) {
-          expression = this.expressions[expression_index];
-          if (expression.literal === undefined) {
-            if ((expression.operator !== undefined) && (expression.operator.symbol.length === 0) && (expression.varspecs.length === 1)) {
-              varspec = expression.varspecs[0];
-              if ((varspec.exploded === false) && (varspec.maxLength === null)) {
-                if (result[extracted_index].indexOf(',') === -1) {
-                  variables[varspec.varname] = decodeURIComponent(result[extracted_index]);
-                  extracted_index += 1;
-                } else {
-                  matched = false;
-                }
-              } else {
-                matched = false;
-              }
-            } else {
-              matched = false;
-            }
-          }
-        }
-        if (matched) {
-          return variables;
-        }
-      }
-      return false;
-    };
-
-    UriTemplate.parse = parse;
-    UriTemplate.UriTemplateError = UriTemplateError;
-    return UriTemplate;
-}());
-
-    exportCallback(UriTemplate);
-
-}(function (UriTemplate) {
-        "use strict";
-        // export UriTemplate, when module is present, or pass it to window or global
-        if (typeof module !== "undefined") {
-            module.exports = UriTemplate;
-        }
-        else if (typeof define === "function") {
-            define([],function() {
-                return UriTemplate;
-            });
-        }
-        else if (typeof window !== "undefined") {
-            window.UriTemplate = UriTemplate;
-        }
-        else {
-            global.UriTemplate = UriTemplate;
-        }
-    }
-));
-/*
- * Rusha, a JavaScript implementation of the Secure Hash Algorithm, SHA-1,
- * as defined in FIPS PUB 180-1, tuned for high performance with large inputs.
- * (http://github.com/srijs/rusha)
- *
- * Inspired by Paul Johnstons implementation (http://pajhome.org.uk/crypt/md5).
- *
- * Copyright (c) 2013 Sam Rijs (http://awesam.de).
- * Released under the terms of the MIT license as follows:
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
- * IN THE SOFTWARE.
- */
-(function () {
-    // If we'e running in Node.JS, export a module.
-    if (typeof module !== 'undefined') {
-        module.exports = Rusha;
-    } else if (typeof window !== 'undefined') {
-        window.Rusha = Rusha;
-    }
-    // If we're running in a webworker, accept
-    // messages containing a jobid and a buffer
-    // or blob object, and return the hash result.
-    if (typeof FileReaderSync !== 'undefined') {
-        var reader = new FileReaderSync(), hasher = new Rusha(4 * 1024 * 1024);
-        self.onmessage = function onMessage(event) {
-            var hash, data = event.data.data;
-            try {
-                hash = hasher.digest(data);
-                self.postMessage({
-                    id: event.data.id,
-                    hash: hash
-                });
-            } catch (e) {
-                self.postMessage({
-                    id: event.data.id,
-                    error: e.name
-                });
-            }
-        };
-    }
-    var util = {
-            getDataType: function (data) {
-                if (typeof data === 'string') {
-                    return 'string';
-                }
-                if (data instanceof Array) {
-                    return 'array';
-                }
-                if (typeof global !== 'undefined' && global.Buffer && global.Buffer.isBuffer(data)) {
-                    return 'buffer';
-                }
-                if (data instanceof ArrayBuffer) {
-                    return 'arraybuffer';
-                }
-                if (data.buffer instanceof ArrayBuffer) {
-                    return 'view';
-                }
-                if (data instanceof Blob) {
-                    return 'blob';
-                }
-                throw new Error('Unsupported data type.');
-            }
-        };
-    // The Rusha object is a wrapper around the low-level RushaCore.
-    // It provides means of converting different inputs to the
-    // format accepted by RushaCore as well as other utility methods.
-    function Rusha(chunkSize) {
-        'use strict';
-        // Private object structure.
-        var self$2 = { fill: 0 };
-        // Calculate the length of buffer that the sha1 routine uses
-        // including the padding.
-        var padlen = function (len) {
-            for (len += 9; len % 64 > 0; len += 1);
-            return len;
-        };
-        var padZeroes = function (bin, len) {
-            for (var i = len >> 2; i < bin.length; i++)
-                bin[i] = 0;
-        };
-        var padData = function (bin, chunkLen, msgLen) {
-            bin[chunkLen >> 2] |= 128 << 24 - (chunkLen % 4 << 3);
-            bin[((chunkLen >> 2) + 2 & ~15) + 14] = msgLen >> 29;
-            bin[((chunkLen >> 2) + 2 & ~15) + 15] = msgLen << 3;
-        };
-        // Convert a binary string and write it to the heap.
-        // A binary string is expected to only contain char codes < 256.
-        var convStr = function (H8, H32, start, len, off) {
-            var str = this, i, om = off % 4, lm = len % 4, j = len - lm;
-            if (j > 0) {
-                switch (om) {
-                case 0:
-                    H8[off + 3 | 0] = str.charCodeAt(start);
-                case 1:
-                    H8[off + 2 | 0] = str.charCodeAt(start + 1);
-                case 2:
-                    H8[off + 1 | 0] = str.charCodeAt(start + 2);
-                case 3:
-                    H8[off | 0] = str.charCodeAt(start + 3);
-                }
-            }
-            for (i = om; i < j; i = i + 4 | 0) {
-                H32[off + i >> 2] = str.charCodeAt(start + i) << 24 | str.charCodeAt(start + i + 1) << 16 | str.charCodeAt(start + i + 2) << 8 | str.charCodeAt(start + i + 3);
-            }
-            switch (lm) {
-            case 3:
-                H8[off + j + 1 | 0] = str.charCodeAt(start + j + 2);
-            case 2:
-                H8[off + j + 2 | 0] = str.charCodeAt(start + j + 1);
-            case 1:
-                H8[off + j + 3 | 0] = str.charCodeAt(start + j);
-            }
-        };
-        // Convert a buffer or array and write it to the heap.
-        // The buffer or array is expected to only contain elements < 256.
-        var convBuf = function (H8, H32, start, len, off) {
-            var buf = this, i, om = off % 4, lm = len % 4, j = len - lm;
-            if (j > 0) {
-                switch (om) {
-                case 0:
-                    H8[off + 3 | 0] = buf[start];
-                case 1:
-                    H8[off + 2 | 0] = buf[start + 1];
-                case 2:
-                    H8[off + 1 | 0] = buf[start + 2];
-                case 3:
-                    H8[off | 0] = buf[start + 3];
-                }
-            }
-            for (i = 4 - om; i < j; i = i += 4 | 0) {
-                H32[off + i >> 2] = buf[start + i] << 24 | buf[start + i + 1] << 16 | buf[start + i + 2] << 8 | buf[start + i + 3];
-            }
-            switch (lm) {
-            case 3:
-                H8[off + j + 1 | 0] = buf[start + j + 2];
-            case 2:
-                H8[off + j + 2 | 0] = buf[start + j + 1];
-            case 1:
-                H8[off + j + 3 | 0] = buf[start + j];
-            }
-        };
-        var convBlob = function (H8, H32, start, len, off) {
-            var blob = this, i, om = off % 4, lm = len % 4, j = len - lm;
-            var buf = new Uint8Array(reader.readAsArrayBuffer(blob.slice(start, start + len)));
-            if (j > 0) {
-                switch (om) {
-                case 0:
-                    H8[off + 3 | 0] = buf[0];
-                case 1:
-                    H8[off + 2 | 0] = buf[1];
-                case 2:
-                    H8[off + 1 | 0] = buf[2];
-                case 3:
-                    H8[off | 0] = buf[3];
-                }
-            }
-            for (i = 4 - om; i < j; i = i += 4 | 0) {
-                H32[off + i >> 2] = buf[i] << 24 | buf[i + 1] << 16 | buf[i + 2] << 8 | buf[i + 3];
-            }
-            switch (lm) {
-            case 3:
-                H8[off + j + 1 | 0] = buf[j + 2];
-            case 2:
-                H8[off + j + 2 | 0] = buf[j + 1];
-            case 1:
-                H8[off + j + 3 | 0] = buf[j];
-            }
-        };
-        var convFn = function (data) {
-            switch (util.getDataType(data)) {
-            case 'string':
-                return convStr.bind(data);
-            case 'array':
-                return convBuf.bind(data);
-            case 'buffer':
-                return convBuf.bind(data);
-            case 'arraybuffer':
-                return convBuf.bind(new Uint8Array(data));
-            case 'view':
-                return convBuf.bind(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
-            case 'blob':
-                return convBlob.bind(data);
-            }
-        };
-        var slice = function (data, offset) {
-            switch (util.getDataType(data)) {
-            case 'string':
-                return data.slice(offset);
-            case 'array':
-                return data.slice(offset);
-            case 'buffer':
-                return data.slice(offset);
-            case 'arraybuffer':
-                return data.slice(offset);
-            case 'view':
-                return data.buffer.slice(offset);
-            }
-        };
-        // Convert an ArrayBuffer into its hexadecimal string representation.
-        var hex = function (arrayBuffer) {
-            var i, x, hex_tab = '0123456789abcdef', res = [], binarray = new Uint8Array(arrayBuffer);
-            for (i = 0; i < binarray.length; i++) {
-                x = binarray[i];
-                res[i] = hex_tab.charAt(x >> 4 & 15) + hex_tab.charAt(x >> 0 & 15);
-            }
-            return res.join('');
-        };
-        var ceilHeapSize = function (v) {
-            // The asm.js spec says:
-            // The heap object's byteLength must be either
-            // 2^n for n in [12, 24) or 2^24 * n for n ≥ 1.
-            // Also, byteLengths smaller than 2^16 are deprecated.
-            var p;
-            // If v is smaller than 2^16, the smallest possible solution
-            // is 2^16.
-            if (v <= 65536)
-                return 65536;
-            // If v < 2^24, we round up to 2^n,
-            // otherwise we round up to 2^24 * n.
-            if (v < 16777216) {
-                for (p = 1; p < v; p = p << 1);
-            } else {
-                for (p = 16777216; p < v; p += 16777216);
-            }
-            return p;
-        };
-        // Initialize the internal data structures to a new capacity.
-        var init = function (size) {
-            if (size % 64 > 0) {
-                throw new Error('Chunk size must be a multiple of 128 bit');
-            }
-            self$2.maxChunkLen = size;
-            self$2.padMaxChunkLen = padlen(size);
-            // The size of the heap is the sum of:
-            // 1. The padded input message size
-            // 2. The extended space the algorithm needs (320 byte)
-            // 3. The 160 bit state the algoritm uses
-            self$2.heap = new ArrayBuffer(ceilHeapSize(self$2.padMaxChunkLen + 320 + 20));
-            self$2.h32 = new Int32Array(self$2.heap);
-            self$2.h8 = new Int8Array(self$2.heap);
-            self$2.core = RushaCore({
-                Int32Array: Int32Array,
-                DataView: DataView
-            }, {}, self$2.heap);
-            self$2.buffer = null;
-        };
-        // Iinitializethe datastructures according
-        // to a chunk siyze.
-        init(chunkSize || 64 * 1024);
-        var initState = function (heap, padMsgLen) {
-            var io = new Int32Array(heap, padMsgLen + 320, 5);
-            io[0] = 1732584193;
-            io[1] = -271733879;
-            io[2] = -1732584194;
-            io[3] = 271733878;
-            io[4] = -1009589776;
-        };
-        var padChunk = function (chunkLen, msgLen) {
-            var padChunkLen = padlen(chunkLen);
-            var view = new Int32Array(self$2.heap, 0, padChunkLen >> 2);
-            padZeroes(view, chunkLen);
-            padData(view, chunkLen, msgLen);
-            return padChunkLen;
-        };
-        // Write data to the heap.
-        var write = function (data, chunkOffset, chunkLen) {
-            convFn(data)(self$2.h8, self$2.h32, chunkOffset, chunkLen, 0);
-        };
-        // Initialize and call the RushaCore,
-        // assuming an input buffer of length len * 4.
-        var coreCall = function (data, chunkOffset, chunkLen, msgLen, finalize) {
-            var padChunkLen = chunkLen;
-            if (finalize) {
-                padChunkLen = padChunk(chunkLen, msgLen);
-            }
-            write(data, chunkOffset, chunkLen);
-            self$2.core.hash(padChunkLen, self$2.padMaxChunkLen);
-        };
-        var getRawDigest = function (heap, padMaxChunkLen) {
-            var io = new Int32Array(heap, padMaxChunkLen + 320, 5);
-            var out = new Int32Array(5);
-            var arr = new DataView(out.buffer);
-            arr.setInt32(0, io[0], false);
-            arr.setInt32(4, io[1], false);
-            arr.setInt32(8, io[2], false);
-            arr.setInt32(12, io[3], false);
-            arr.setInt32(16, io[4], false);
-            return out;
-        };
-        // Calculate the hash digest as an array of 5 32bit integers.
-        var rawDigest = this.rawDigest = function (str) {
-                var msgLen = str.byteLength || str.length || str.size || 0;
-                initState(self$2.heap, self$2.padMaxChunkLen);
-                var chunkOffset = 0, chunkLen = self$2.maxChunkLen, last;
-                for (chunkOffset = 0; msgLen > chunkOffset + chunkLen; chunkOffset += chunkLen) {
-                    coreCall(str, chunkOffset, chunkLen, msgLen, false);
-                }
-                coreCall(str, chunkOffset, msgLen - chunkOffset, msgLen, true);
-                return getRawDigest(self$2.heap, self$2.padMaxChunkLen);
-            };
-        // The digest and digestFrom* interface returns the hash digest
-        // as a hex string.
-        this.digest = this.digestFromString = this.digestFromBuffer = this.digestFromArrayBuffer = function (str) {
-            return hex(rawDigest(str).buffer);
-        };
-    }
-    ;
-    // The low-level RushCore module provides the heart of Rusha,
-    // a high-speed sha1 implementation working on an Int32Array heap.
-    // At first glance, the implementation seems complicated, however
-    // with the SHA1 spec at hand, it is obvious this almost a textbook
-    // implementation that has a few functions hand-inlined and a few loops
-    // hand-unrolled.
-    function RushaCore(stdlib, foreign, heap) {
-        'use asm';
-        var H = new stdlib.Int32Array(heap);
-        function hash(k, x) {
-            // k in bytes
-            k = k | 0;
-            x = x | 0;
-            var i = 0, j = 0, y0 = 0, z0 = 0, y1 = 0, z1 = 0, y2 = 0, z2 = 0, y3 = 0, z3 = 0, y4 = 0, z4 = 0, t0 = 0, t1 = 0;
-            y0 = H[x + 320 >> 2] | 0;
-            y1 = H[x + 324 >> 2] | 0;
-            y2 = H[x + 328 >> 2] | 0;
-            y3 = H[x + 332 >> 2] | 0;
-            y4 = H[x + 336 >> 2] | 0;
-            for (i = 0; (i | 0) < (k | 0); i = i + 64 | 0) {
-                z0 = y0;
-                z1 = y1;
-                z2 = y2;
-                z3 = y3;
-                z4 = y4;
-                for (j = 0; (j | 0) < 64; j = j + 4 | 0) {
-                    t1 = H[i + j >> 2] | 0;
-                    t0 = ((y0 << 5 | y0 >>> 27) + (y1 & y2 | ~y1 & y3) | 0) + ((t1 + y4 | 0) + 1518500249 | 0) | 0;
-                    y4 = y3;
-                    y3 = y2;
-                    y2 = y1 << 30 | y1 >>> 2;
-                    y1 = y0;
-                    y0 = t0;
-                    ;
-                    H[k + j >> 2] = t1;
-                }
-                for (j = k + 64 | 0; (j | 0) < (k + 80 | 0); j = j + 4 | 0) {
-                    t1 = (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) << 1 | (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) >>> 31;
-                    t0 = ((y0 << 5 | y0 >>> 27) + (y1 & y2 | ~y1 & y3) | 0) + ((t1 + y4 | 0) + 1518500249 | 0) | 0;
-                    y4 = y3;
-                    y3 = y2;
-                    y2 = y1 << 30 | y1 >>> 2;
-                    y1 = y0;
-                    y0 = t0;
-                    ;
-                    H[j >> 2] = t1;
-                }
-                for (j = k + 80 | 0; (j | 0) < (k + 160 | 0); j = j + 4 | 0) {
-                    t1 = (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) << 1 | (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) >>> 31;
-                    t0 = ((y0 << 5 | y0 >>> 27) + (y1 ^ y2 ^ y3) | 0) + ((t1 + y4 | 0) + 1859775393 | 0) | 0;
-                    y4 = y3;
-                    y3 = y2;
-                    y2 = y1 << 30 | y1 >>> 2;
-                    y1 = y0;
-                    y0 = t0;
-                    ;
-                    H[j >> 2] = t1;
-                }
-                for (j = k + 160 | 0; (j | 0) < (k + 240 | 0); j = j + 4 | 0) {
-                    t1 = (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) << 1 | (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) >>> 31;
-                    t0 = ((y0 << 5 | y0 >>> 27) + (y1 & y2 | y1 & y3 | y2 & y3) | 0) + ((t1 + y4 | 0) - 1894007588 | 0) | 0;
-                    y4 = y3;
-                    y3 = y2;
-                    y2 = y1 << 30 | y1 >>> 2;
-                    y1 = y0;
-                    y0 = t0;
-                    ;
-                    H[j >> 2] = t1;
-                }
-                for (j = k + 240 | 0; (j | 0) < (k + 320 | 0); j = j + 4 | 0) {
-                    t1 = (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) << 1 | (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) >>> 31;
-                    t0 = ((y0 << 5 | y0 >>> 27) + (y1 ^ y2 ^ y3) | 0) + ((t1 + y4 | 0) - 899497514 | 0) | 0;
-                    y4 = y3;
-                    y3 = y2;
-                    y2 = y1 << 30 | y1 >>> 2;
-                    y1 = y0;
-                    y0 = t0;
-                    ;
-                    H[j >> 2] = t1;
-                }
-                y0 = y0 + z0 | 0;
-                y1 = y1 + z1 | 0;
-                y2 = y2 + z2 | 0;
-                y3 = y3 + z3 | 0;
-                y4 = y4 + z4 | 0;
-            }
-            H[x + 320 >> 2] = y0;
-            H[x + 324 >> 2] = y1;
-            H[x + 328 >> 2] = y2;
-            H[x + 332 >> 2] = y3;
-            H[x + 336 >> 2] = y4;
-        }
-        return { hash: hash };
-    }
-}());  var RSVP = window.RSVP,
-    moment = global.moment,
-    UriTemplate = window.UriTemplate,
-    Rusha = window.Rusha;
-
-  // Allow xhr2 to export XMLHttpRequest
-  module = {};
-// Generated by CoffeeScript 1.12.2
-(function() {
-  var InvalidStateError, NetworkError, ProgressEvent, SecurityError, SyntaxError, XMLHttpRequest, XMLHttpRequestEventTarget, XMLHttpRequestUpload, http, https, os, url,
-    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    hasProp = {}.hasOwnProperty;
-
-  XMLHttpRequestEventTarget = (function() {
-    function XMLHttpRequestEventTarget() {
-      this.onloadstart = null;
-      this.onprogress = null;
-      this.onabort = null;
-      this.onerror = null;
-      this.onload = null;
-      this.ontimeout = null;
-      this.onloadend = null;
-      this._listeners = {};
-    }
-
-    XMLHttpRequestEventTarget.prototype.onloadstart = null;
-
-    XMLHttpRequestEventTarget.prototype.onprogress = null;
-
-    XMLHttpRequestEventTarget.prototype.onabort = null;
-
-    XMLHttpRequestEventTarget.prototype.onerror = null;
-
-    XMLHttpRequestEventTarget.prototype.onload = null;
-
-    XMLHttpRequestEventTarget.prototype.ontimeout = null;
-
-    XMLHttpRequestEventTarget.prototype.onloadend = null;
-
-    XMLHttpRequestEventTarget.prototype.addEventListener = function(eventType, listener) {
-      var base;
-      eventType = eventType.toLowerCase();
-      (base = this._listeners)[eventType] || (base[eventType] = []);
-      this._listeners[eventType].push(listener);
-      return void 0;
-    };
-
-    XMLHttpRequestEventTarget.prototype.removeEventListener = function(eventType, listener) {
-      var index;
-      eventType = eventType.toLowerCase();
-      if (this._listeners[eventType]) {
-        index = this._listeners[eventType].indexOf(listener);
-        if (index !== -1) {
-          this._listeners[eventType].splice(index, 1);
-        }
-      }
-      return void 0;
-    };
-
-    XMLHttpRequestEventTarget.prototype.dispatchEvent = function(event) {
-      var eventType, j, len, listener, listeners;
-      event.currentTarget = event.target = this;
-      eventType = event.type;
-      if (listeners = this._listeners[eventType]) {
-        for (j = 0, len = listeners.length; j < len; j++) {
-          listener = listeners[j];
-          listener.call(this, event);
-        }
-      }
-      if (listener = this["on" + eventType]) {
-        listener.call(this, event);
-      }
-      return void 0;
-    };
-
-    return XMLHttpRequestEventTarget;
-
-  })();
-
-  http = require('http');
-
-  https = require('https');
-
-  os = require('os');
-
-  url = require('url');
-
-  XMLHttpRequest = (function(superClass) {
-    extend(XMLHttpRequest, superClass);
-
-    function XMLHttpRequest(options) {
-      XMLHttpRequest.__super__.constructor.call(this);
-      this.onreadystatechange = null;
-      this._anonymous = options && options.anon;
-      this.readyState = XMLHttpRequest.UNSENT;
-      this.response = null;
-      this.responseText = '';
-      this.responseType = '';
-      this.responseURL = '';
-      this.status = 0;
-      this.statusText = '';
-      this.timeout = 0;
-      this.upload = new XMLHttpRequestUpload(this);
-      this._method = null;
-      this._url = null;
-      this._sync = false;
-      this._headers = null;
-      this._loweredHeaders = null;
-      this._mimeOverride = null;
-      this._request = null;
-      this._response = null;
-      this._responseParts = null;
-      this._responseHeaders = null;
-      this._aborting = null;
-      this._error = null;
-      this._loadedBytes = 0;
-      this._totalBytes = 0;
-      this._lengthComputable = false;
-    }
-
-    XMLHttpRequest.prototype.onreadystatechange = null;
-
-    XMLHttpRequest.prototype.readyState = null;
-
-    XMLHttpRequest.prototype.response = null;
-
-    XMLHttpRequest.prototype.responseText = null;
-
-    XMLHttpRequest.prototype.responseType = null;
-
-    XMLHttpRequest.prototype.status = null;
-
-    XMLHttpRequest.prototype.timeout = null;
-
-    XMLHttpRequest.prototype.upload = null;
-
-    XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
-      var xhrUrl;
-      method = method.toUpperCase();
-      if (method in this._restrictedMethods) {
-        throw new SecurityError("HTTP method " + method + " is not allowed in XHR");
-      }
-      xhrUrl = this._parseUrl(url);
-      if (async === void 0) {
-        async = true;
-      }
-      switch (this.readyState) {
-        case XMLHttpRequest.UNSENT:
-        case XMLHttpRequest.OPENED:
-        case XMLHttpRequest.DONE:
-          null;
-          break;
-        case XMLHttpRequest.HEADERS_RECEIVED:
-        case XMLHttpRequest.LOADING:
-          null;
-      }
-      this._method = method;
-      this._url = xhrUrl;
-      this._sync = !async;
-      this._headers = {};
-      this._loweredHeaders = {};
-      this._mimeOverride = null;
-      this._setReadyState(XMLHttpRequest.OPENED);
-      this._request = null;
-      this._response = null;
-      this.status = 0;
-      this.statusText = '';
-      this._responseParts = [];
-      this._responseHeaders = null;
-      this._loadedBytes = 0;
-      this._totalBytes = 0;
-      this._lengthComputable = false;
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
-      var loweredName;
-      if (this.readyState !== XMLHttpRequest.OPENED) {
-        throw new InvalidStateError("XHR readyState must be OPENED");
-      }
-      loweredName = name.toLowerCase();
-      if (this._restrictedHeaders[loweredName] || /^sec\-/.test(loweredName) || /^proxy-/.test(loweredName)) {
-        console.warn("Refused to set unsafe header \"" + name + "\"");
-        return void 0;
-      }
-      value = value.toString();
-      if (loweredName in this._loweredHeaders) {
-        name = this._loweredHeaders[loweredName];
-        this._headers[name] = this._headers[name] + ', ' + value;
-      } else {
-        this._loweredHeaders[loweredName] = name;
-        this._headers[name] = value;
-      }
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype.send = function(data) {
-      if (this.readyState !== XMLHttpRequest.OPENED) {
-        throw new InvalidStateError("XHR readyState must be OPENED");
-      }
-      if (this._request) {
-        throw new InvalidStateError("send() already called");
-      }
-      switch (this._url.protocol) {
-        case 'file:':
-          this._sendFile(data);
-          break;
-        case 'http:':
-        case 'https:':
-          this._sendHttp(data);
-          break;
-        default:
-          throw new NetworkError("Unsupported protocol " + this._url.protocol);
-      }
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype.abort = function() {
-      if (!this._request) {
-        return;
-      }
-      this._request.abort();
-      this._setError();
-      this._dispatchProgress('abort');
-      this._dispatchProgress('loadend');
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype.getResponseHeader = function(name) {
-      var loweredName;
-      if (!this._responseHeaders) {
-        return null;
-      }
-      loweredName = name.toLowerCase();
-      if (loweredName in this._responseHeaders) {
-        return this._responseHeaders[loweredName];
-      } else {
-        return null;
-      }
-    };
-
-    XMLHttpRequest.prototype.getAllResponseHeaders = function() {
-      var lines, name, value;
-      if (!this._responseHeaders) {
-        return '';
-      }
-      lines = (function() {
-        var ref, results;
-        ref = this._responseHeaders;
-        results = [];
-        for (name in ref) {
-          value = ref[name];
-          results.push(name + ": " + value);
-        }
-        return results;
-      }).call(this);
-      return lines.join("\r\n");
-    };
-
-    XMLHttpRequest.prototype.overrideMimeType = function(newMimeType) {
-      if (this.readyState === XMLHttpRequest.LOADING || this.readyState === XMLHttpRequest.DONE) {
-        throw new InvalidStateError("overrideMimeType() not allowed in LOADING or DONE");
-      }
-      this._mimeOverride = newMimeType.toLowerCase();
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype.nodejsSet = function(options) {
-      var baseUrl, parsedUrl;
-      if ('httpAgent' in options) {
-        this.nodejsHttpAgent = options.httpAgent;
-      }
-      if ('httpsAgent' in options) {
-        this.nodejsHttpsAgent = options.httpsAgent;
-      }
-      if ('baseUrl' in options) {
-        baseUrl = options.baseUrl;
-        if (baseUrl !== null) {
-          parsedUrl = url.parse(baseUrl, false, true);
-          if (!parsedUrl.protocol) {
-            throw new SyntaxError("baseUrl must be an absolute URL");
-          }
-        }
-        this.nodejsBaseUrl = baseUrl;
-      }
-      return void 0;
-    };
-
-    XMLHttpRequest.nodejsSet = function(options) {
-      XMLHttpRequest.prototype.nodejsSet(options);
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype.UNSENT = 0;
-
-    XMLHttpRequest.UNSENT = 0;
-
-    XMLHttpRequest.prototype.OPENED = 1;
-
-    XMLHttpRequest.OPENED = 1;
-
-    XMLHttpRequest.prototype.HEADERS_RECEIVED = 2;
-
-    XMLHttpRequest.HEADERS_RECEIVED = 2;
-
-    XMLHttpRequest.prototype.LOADING = 3;
-
-    XMLHttpRequest.LOADING = 3;
-
-    XMLHttpRequest.prototype.DONE = 4;
-
-    XMLHttpRequest.DONE = 4;
-
-    XMLHttpRequest.prototype.nodejsHttpAgent = http.globalAgent;
-
-    XMLHttpRequest.prototype.nodejsHttpsAgent = https.globalAgent;
-
-    XMLHttpRequest.prototype.nodejsBaseUrl = null;
-
-    XMLHttpRequest.prototype._restrictedMethods = {
-      CONNECT: true,
-      TRACE: true,
-      TRACK: true
-    };
-
-    XMLHttpRequest.prototype._restrictedHeaders = {
-      'accept-charset': true,
-      'accept-encoding': true,
-      'access-control-request-headers': true,
-      'access-control-request-method': true,
-      connection: true,
-      'content-length': true,
-      // cookie: true,
-      cookie2: true,
-      date: true,
-      dnt: true,
-      expect: true,
-      host: true,
-      'keep-alive': true,
-      origin: true,
-      referer: true,
-      te: true,
-      trailer: true,
-      'transfer-encoding': true,
-      upgrade: true,
-      'user-agent': true,
-      via: true
-    };
-
-    XMLHttpRequest.prototype._privateHeaders = {
-      // 'set-cookie': true,
-      'set-cookie2': true
-    };
-
-    XMLHttpRequest.prototype._userAgent = ("Mozilla/5.0 (" + (os.type()) + " " + (os.arch()) + ") ") + ("node.js/" + process.versions.node + " v8/" + process.versions.v8);
-
-    XMLHttpRequest.prototype._setReadyState = function(newReadyState) {
-      var event;
-      this.readyState = newReadyState;
-      event = new ProgressEvent('readystatechange');
-      this.dispatchEvent(event);
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype._sendFile = function() {
-      if (this._url.method !== 'GET') {
-        throw new NetworkError('The file protocol only supports GET');
-      }
-      throw new Error("Protocol file: not implemented");
-    };
-
-    XMLHttpRequest.prototype._sendHttp = function(data) {
-      if (this._sync) {
-        throw new Error("Synchronous XHR processing not implemented");
-      }
-      if ((data != null) && (this._method === 'GET' || this._method === 'HEAD')) {
-        console.warn("Discarding entity body for " + this._method + " requests");
-        data = null;
-      } else {
-        data || (data = '');
-      }
-      this.upload._setData(data);
-      this._finalizeHeaders();
-      this._sendHxxpRequest();
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype._sendHxxpRequest = function() {
-      var agent, hxxp, request;
-      if (this._url.protocol === 'http:') {
-        hxxp = http;
-        agent = this.nodejsHttpAgent;
-      } else {
-        hxxp = https;
-        agent = this.nodejsHttpsAgent;
-      }
-      request = hxxp.request({
-        hostname: this._url.hostname,
-        port: this._url.port,
-        path: this._url.path,
-        auth: this._url.auth,
-        method: this._method,
-        headers: this._headers,
-        agent: agent
-      });
-      this._request = request;
-      if (this.timeout) {
-        request.setTimeout(this.timeout, (function(_this) {
-          return function() {
-            return _this._onHttpTimeout(request);
-          };
-        })(this));
-      }
-      request.on('response', (function(_this) {
-        return function(response) {
-          return _this._onHttpResponse(request, response);
-        };
-      })(this));
-      request.on('error', (function(_this) {
-        return function(error) {
-          return _this._onHttpRequestError(request, error);
-        };
-      })(this));
-      this.upload._startUpload(request);
-      if (this._request === request) {
-        this._dispatchProgress('loadstart');
-      }
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype._finalizeHeaders = function() {
-      this._headers['Connection'] = 'keep-alive';
-      this._headers['Host'] = this._url.host;
-      if (this._anonymous) {
-        this._headers['Referer'] = 'about:blank';
-      }
-      this._headers['User-Agent'] = this._userAgent;
-      this.upload._finalizeHeaders(this._headers, this._loweredHeaders);
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype._onHttpResponse = function(request, response) {
-      var lengthString;
-      if (this._request !== request) {
-        return;
-      }
-      switch (response.statusCode) {
-        case 301:
-        case 302:
-        case 303:
-        case 307:
-        case 308:
-          this._url = this._parseUrl(response.headers['location']);
-          this._method = 'GET';
-          if ('content-type' in this._loweredHeaders) {
-            delete this._headers[this._loweredHeaders['content-type']];
-            delete this._loweredHeaders['content-type'];
-          }
-          if ('Content-Type' in this._headers) {
-            delete this._headers['Content-Type'];
-          }
-          delete this._headers['Content-Length'];
-          this.upload._reset();
-          this._finalizeHeaders();
-          this._sendHxxpRequest();
-          return;
-      }
-      this._response = response;
-      this._response.on('data', (function(_this) {
-        return function(data) {
-          return _this._onHttpResponseData(response, data);
-        };
-      })(this));
-      this._response.on('end', (function(_this) {
-        return function() {
-          return _this._onHttpResponseEnd(response);
-        };
-      })(this));
-      this._response.on('close', (function(_this) {
-        return function() {
-          return _this._onHttpResponseClose(response);
-        };
-      })(this));
-      this.responseURL = this._url.href.split('#')[0];
-      this.status = this._response.statusCode;
-      this.statusText = http.STATUS_CODES[this.status];
-      this._parseResponseHeaders(response);
-      if (lengthString = this._responseHeaders['content-length']) {
-        this._totalBytes = parseInt(lengthString);
-        this._lengthComputable = true;
-      } else {
-        this._lengthComputable = false;
-      }
-      return this._setReadyState(XMLHttpRequest.HEADERS_RECEIVED);
-    };
-
-    XMLHttpRequest.prototype._onHttpResponseData = function(response, data) {
-      if (this._response !== response) {
-        return;
-      }
-      this._responseParts.push(data);
-      this._loadedBytes += data.length;
-      if (this.readyState !== XMLHttpRequest.LOADING) {
-        this._setReadyState(XMLHttpRequest.LOADING);
-      }
-      return this._dispatchProgress('progress');
-    };
-
-    XMLHttpRequest.prototype._onHttpResponseEnd = function(response) {
-      if (this._response !== response) {
-        return;
-      }
-      this._parseResponse();
-      this._request = null;
-      this._response = null;
-      this._setReadyState(XMLHttpRequest.DONE);
-      this._dispatchProgress('load');
-      return this._dispatchProgress('loadend');
-    };
-
-    XMLHttpRequest.prototype._onHttpResponseClose = function(response) {
-      var request;
-      if (this._response !== response) {
-        return;
-      }
-      request = this._request;
-      this._setError();
-      request.abort();
-      this._setReadyState(XMLHttpRequest.DONE);
-      this._dispatchProgress('error');
-      return this._dispatchProgress('loadend');
-    };
-
-    XMLHttpRequest.prototype._onHttpTimeout = function(request) {
-      if (this._request !== request) {
-        return;
-      }
-      this._setError();
-      request.abort();
-      this._setReadyState(XMLHttpRequest.DONE);
-      this._dispatchProgress('timeout');
-      return this._dispatchProgress('loadend');
-    };
-
-    XMLHttpRequest.prototype._onHttpRequestError = function(request, error) {
-      if (this._request !== request) {
-        return;
-      }
-      this._setError();
-      request.abort();
-      this._setReadyState(XMLHttpRequest.DONE);
-      this._dispatchProgress('error');
-      return this._dispatchProgress('loadend');
-    };
-
-    XMLHttpRequest.prototype._dispatchProgress = function(eventType) {
-      var event;
-      event = new ProgressEvent(eventType);
-      event.lengthComputable = this._lengthComputable;
-      event.loaded = this._loadedBytes;
-      event.total = this._totalBytes;
-      this.dispatchEvent(event);
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype._setError = function() {
-      this._request = null;
-      this._response = null;
-      this._responseHeaders = null;
-      this._responseParts = null;
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype._parseUrl = function(urlString) {
-      var absoluteUrlString, index, password, user, xhrUrl;
-      if (this.nodejsBaseUrl === null) {
-        absoluteUrlString = urlString;
-      } else {
-        absoluteUrlString = url.resolve(this.nodejsBaseUrl, urlString);
-      }
-      xhrUrl = url.parse(absoluteUrlString, false, true);
-      xhrUrl.hash = null;
-      if (xhrUrl.auth && ((typeof user !== "undefined" && user !== null) || (typeof password !== "undefined" && password !== null))) {
-        index = xhrUrl.auth.indexOf(':');
-        if (index === -1) {
-          if (!user) {
-            user = xhrUrl.auth;
-          }
-        } else {
-          if (!user) {
-            user = xhrUrl.substring(0, index);
-          }
-          if (!password) {
-            password = xhrUrl.substring(index + 1);
-          }
-        }
-      }
-      if (user || password) {
-        xhrUrl.auth = user + ":" + password;
-      }
-      return xhrUrl;
-    };
-
-    XMLHttpRequest.prototype._parseResponseHeaders = function(response) {
-      var loweredName, name, ref, value;
-      this._responseHeaders = {};
-      ref = response.headers;
-      for (name in ref) {
-        value = ref[name];
-        loweredName = name.toLowerCase();
-        if (this._privateHeaders[loweredName]) {
-          continue;
-        }
-        if (this._mimeOverride !== null && loweredName === 'content-type') {
-          value = this._mimeOverride;
-        }
-        this._responseHeaders[loweredName] = value;
-      }
-      if (this._mimeOverride !== null && !('content-type' in this._responseHeaders)) {
-        this._responseHeaders['content-type'] = this._mimeOverride;
-      }
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype._parseResponse = function() {
-      var arrayBuffer, buffer, i, j, jsonError, ref, view;
-      if (Buffer.concat) {
-        buffer = Buffer.concat(this._responseParts);
-      } else {
-        buffer = this._concatBuffers(this._responseParts);
-      }
-      this._responseParts = null;
-      switch (this.responseType) {
-        case 'text':
-          this._parseTextResponse(buffer);
-          break;
-        case 'json':
-          this.responseText = null;
-          try {
-            this.response = JSON.parse(buffer.toString('utf-8'));
-          } catch (error1) {
-            jsonError = error1;
-            this.response = null;
-          }
-          break;
-        case 'buffer':
-          this.responseText = null;
-          this.response = buffer;
-          break;
-        case 'arraybuffer':
-          this.responseText = null;
-          arrayBuffer = new ArrayBuffer(buffer.length);
-          view = new Uint8Array(arrayBuffer);
-          for (i = j = 0, ref = buffer.length; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
-            view[i] = buffer[i];
-          }
-          this.response = arrayBuffer;
-          break;
-        default:
-          this._parseTextResponse(buffer);
-      }
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype._parseTextResponse = function(buffer) {
-      var e;
-      try {
-        this.responseText = buffer.toString(this._parseResponseEncoding());
-      } catch (error1) {
-        e = error1;
-        this.responseText = buffer.toString('binary');
-      }
-      this.response = this.responseText;
-      return void 0;
-    };
-
-    XMLHttpRequest.prototype._parseResponseEncoding = function() {
-      var contentType, encoding, match;
-      encoding = null;
-      if (contentType = this._responseHeaders['content-type']) {
-        if (match = /\;\s*charset\=(.*)$/.exec(contentType)) {
-          return match[1];
-        }
-      }
-      return 'utf-8';
-    };
-
-    XMLHttpRequest.prototype._concatBuffers = function(buffers) {
-      var buffer, j, k, len, len1, length, target;
-      if (buffers.length === 0) {
-        return new Buffer(0);
-      }
-      if (buffers.length === 1) {
-        return buffers[0];
-      }
-      length = 0;
-      for (j = 0, len = buffers.length; j < len; j++) {
-        buffer = buffers[j];
-        length += buffer.length;
-      }
-      target = new Buffer(length);
-      length = 0;
-      for (k = 0, len1 = buffers.length; k < len1; k++) {
-        buffer = buffers[k];
-        buffer.copy(target, length);
-        length += buffer.length;
-      }
-      return target;
-    };
-
-    return XMLHttpRequest;
-
-  })(XMLHttpRequestEventTarget);
-
-  module.exports = XMLHttpRequest;
-
-  XMLHttpRequest.XMLHttpRequest = XMLHttpRequest;
-
-  SecurityError = (function(superClass) {
-    extend(SecurityError, superClass);
-
-    function SecurityError() {
-      SecurityError.__super__.constructor.apply(this, arguments);
-    }
-
-    return SecurityError;
-
-  })(Error);
-
-  XMLHttpRequest.SecurityError = SecurityError;
-
-  InvalidStateError = (function(superClass) {
-    extend(InvalidStateError, superClass);
-
-    function InvalidStateError() {
-      InvalidStateError.__super__.constructor.apply(this, arguments);
-    }
-
-    return InvalidStateError;
-
-  })(Error);
-
-  InvalidStateError = (function(superClass) {
-    extend(InvalidStateError, superClass);
-
-    function InvalidStateError() {
-      return InvalidStateError.__super__.constructor.apply(this, arguments);
-    }
-
-    return InvalidStateError;
-
-  })(Error);
-
-  XMLHttpRequest.InvalidStateError = InvalidStateError;
-
-  NetworkError = (function(superClass) {
-    extend(NetworkError, superClass);
-
-    function NetworkError() {
-      NetworkError.__super__.constructor.apply(this, arguments);
-    }
-
-    return NetworkError;
-
-  })(Error);
-
-  XMLHttpRequest.SyntaxError = SyntaxError;
-
-  SyntaxError = (function(superClass) {
-    extend(SyntaxError, superClass);
-
-    function SyntaxError() {
-      SyntaxError.__super__.constructor.apply(this, arguments);
-    }
-
-    return SyntaxError;
-
-  })(Error);
-
-  ProgressEvent = (function() {
-    function ProgressEvent(type) {
-      this.type = type;
-      this.target = null;
-      this.currentTarget = null;
-      this.lengthComputable = false;
-      this.loaded = 0;
-      this.total = 0;
-    }
-
-    ProgressEvent.prototype.bubbles = false;
-
-    ProgressEvent.prototype.cancelable = false;
-
-    ProgressEvent.prototype.target = null;
-
-    ProgressEvent.prototype.loaded = null;
-
-    ProgressEvent.prototype.lengthComputable = null;
-
-    ProgressEvent.prototype.total = null;
-
-    return ProgressEvent;
-
-  })();
-
-  XMLHttpRequest.ProgressEvent = ProgressEvent;
-
-  XMLHttpRequestUpload = (function(superClass) {
-    extend(XMLHttpRequestUpload, superClass);
-
-    function XMLHttpRequestUpload(request) {
-      XMLHttpRequestUpload.__super__.constructor.call(this);
-      this._request = request;
-      this._reset();
-    }
-
-    XMLHttpRequestUpload.prototype._reset = function() {
-      this._contentType = null;
-      this._body = null;
-      return void 0;
-    };
-
-    XMLHttpRequestUpload.prototype._setData = function(data) {
-      var body, i, j, k, offset, ref, ref1, view;
-      if (typeof data === 'undefined' || data === null) {
-        return;
-      }
-      if (typeof data === 'string') {
-        if (data.length !== 0) {
-          this._contentType = 'text/plain;charset=UTF-8';
-        }
-        this._body = new Buffer(data, 'utf8');
-      } else if (Buffer.isBuffer(data)) {
-        this._body = data;
-      } else if (data instanceof ArrayBuffer) {
-        body = new Buffer(data.byteLength);
-        view = new Uint8Array(data);
-        for (i = j = 0, ref = data.byteLength; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
-          body[i] = view[i];
-        }
-        this._body = body;
-      } else if (data.buffer && data.buffer instanceof ArrayBuffer) {
-        body = new Buffer(data.byteLength);
-        offset = data.byteOffset;
-        view = new Uint8Array(data.buffer);
-        for (i = k = 0, ref1 = data.byteLength; 0 <= ref1 ? k < ref1 : k > ref1; i = 0 <= ref1 ? ++k : --k) {
-          body[i] = view[i + offset];
-        }
-        this._body = body;
-      } else {
-        throw new Error("Unsupported send() data " + data);
-      }
-      return void 0;
-    };
-
-    XMLHttpRequestUpload.prototype._finalizeHeaders = function(headers, loweredHeaders) {
-      if (this._contentType) {
-        if (!('content-type' in loweredHeaders)) {
-          headers['Content-Type'] = this._contentType;
-        }
-      }
-      if (this._body) {
-        headers['Content-Length'] = this._body.length.toString();
-      }
-      return void 0;
-    };
-
-    XMLHttpRequestUpload.prototype._startUpload = function(request) {
-      if (this._body) {
-        request.write(this._body);
-      }
-      request.end();
-      return void 0;
-    };
-
-    return XMLHttpRequestUpload;
-
-  })(XMLHttpRequestEventTarget);
-
-  XMLHttpRequest.XMLHttpRequestUpload = XMLHttpRequestUpload;
-
-}).call(this);/*
  * Copyright 2013, Nexedi SA
  *
  * This program is free software: you can Use, Study, Modify and Redistribute
@@ -9698,231 +7896,6 @@ return new Parser;
 
 }(RSVP, window, parseStringToObject));
 /*
- * Copyright 2018, Nexedi SA
- *
- * This program is free software: you can Use, Study, Modify and Redistribute
- * it under the terms of the GNU General Public License version 3, or (at your
- * option) any later version, as published by the Free Software Foundation.
- *
- * You can also Link and Combine this program with other software covered by
- * the terms of any of the Free Software licenses or any of the Open Source
- * Initiative approved licenses and Convey the resulting work. Corresponding
- * source of such a combination shall include the source code for all other
- * software used.
- *
- * This program is distributed WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See COPYING file for full licensing terms.
- * See https://www.nexedi.com/licensing for rationale and options.
- */
-
-/*global window, WeakMap, ArrayBuffer, Uint8Array */
-(function (window, WeakMap, ArrayBuffer, Uint8Array) {
-  "use strict";
-
-  var html5weakmap = new WeakMap();
-
-  function EventTarget() {
-    html5weakmap.set(this, Object.create(null));
-  }
-
-  EventTarget.prototype.addEventListener = function (type, listener) {
-    if (typeof listener !== 'function') {
-      return;
-    }
-    var em = html5weakmap.get(this);
-    type = type.toString();
-    if (em[type]) {
-      em[type].push(listener);
-    } else {
-      em[type] = [listener];
-    }
-  };
-
-  EventTarget.prototype.removeEventListener = function (type, listener) {
-    if (typeof listener !== 'function') {
-      return;
-    }
-    var em = html5weakmap.get(this),
-      i,
-      listeners = em[type];
-
-    type = type.toString();
-
-    if (listeners) {
-      for (i = 0; i < listeners.length; i += 1) {
-        if (listeners[i] === listener) {
-          if (listeners.length === 1) {
-            delete em[type];
-            return;
-          }
-          listeners.splice(i, 1);
-          return;
-        }
-      }
-    }
-  };
-
-  EventTarget.prototype.dispatchEvent = function (event) {
-    var type = event.type.toString(),
-      em = html5weakmap.get(this),
-      ontype = 'on' + type,
-      i,
-      listeners;
-
-    if (typeof this[ontype] === 'function') {
-      try {
-        this[ontype](event);
-      } catch (ignore) {}
-    }
-    listeners = em[type];
-    if (listeners) {
-      for (i = 0; i < listeners.length; i += 1) {
-        try {
-          listeners[i](event);
-        } catch (ignore) {}
-      }
-    }
-  };
-
-  window.EventTarget = window.EventTarget || EventTarget;
-
-  function Blob(blobParts, options) {
-    // https://developer.mozilla.org/en-US/docs/Web/API/Blob
-    var i,
-      priv = {},
-      buffers = [];
-
-    html5weakmap.set(this, priv);
-    if (blobParts) {
-      for (i = 0; i < blobParts.length; i += 1) {
-        if (Buffer.isBuffer(blobParts[i])) {
-          buffers.push(blobParts[i]);
-        } else if (blobParts[i] instanceof Blob) {
-          buffers.push(html5weakmap.get(blobParts[i]).data);
-        } else if (blobParts[i] instanceof ArrayBuffer) {
-          buffers.push(new Buffer(new Uint8Array(blobParts[i])));
-        } else {
-          buffers.push(new Buffer(String(blobParts[i])));
-        }
-      }
-    }
-    priv.data = Buffer.concat(buffers);
-    Object.defineProperty(this, 'size', {
-      enumerable: true,
-      value: priv.data.length
-    });
-    Object.defineProperty(this, 'type', {
-      enumerable: true,
-      value: options ? String(options.type || '') : ''
-    });
-  }
-
-  Blob.prototype.size = 0;
-  Blob.prototype.type = '';
-  Blob.prototype.slice = function (start, end, contentType) {
-    return new Blob([html5weakmap.get(this).data.slice(start, end)], {
-      type: contentType
-    });
-  };
-
-  window.Blob = Blob;//window.Blob || Blob;
-
-  function FileReader() {
-    EventTarget.call(this);
-  }
-
-  FileReader.prototype = Object.create(EventTarget.prototype);
-  Object.defineProperty(FileReader, 'constructor', {
-    value: FileReader
-  });
-
-  FileReader.prototype.readAsText = function (blob) {
-    var target = this,
-      priv = html5weakmap.get(blob),
-      result = priv.data.toString(),
-      event = Object.freeze({
-        type: 'load',
-        target: target
-      });
-
-    process.nextTick(function () {
-      target.result = result;
-      target.dispatchEvent(event);
-    });
-  };
-
-  FileReader.prototype.readAsArrayBuffer = function (blob) {
-    var target = this,
-      priv = html5weakmap.get(blob),
-      result = new Uint8Array(priv.data).buffer,
-      event = Object.freeze({
-        type: 'load',
-        target: target
-      });
-
-    process.nextTick(function () {
-      target.result = result;
-      target.dispatchEvent(event);
-    });
-  };
-
-  FileReader.prototype.readAsDataURL = function (blob) {
-    var target = this,
-      priv = html5weakmap.get(blob),
-      result = 'data:' + blob.type + ';base64,' + priv.data.toString('base64'),
-      event = Object.freeze({
-        type: 'load',
-        target: target
-      });
-
-    process.nextTick(function () {
-      target.result = result;
-      target.dispatchEvent(event);
-    });
-  };
-
-  window.FileReader = window.FileReader || FileReader;
-
-  function atob(str) {
-    try {
-      return window.atob(str);
-    } catch (err) {
-      var buffer = Buffer.from(str.toString(), 'base64');
-      // Provide the same behaviour than the browser atob
-      if (buffer.toString('base64') !== str) {
-        throw new Error('The string to be decoded is not correctly encoded.');
-      }
-      return buffer.toString('binary');
-    }
-  }
-
-  window.atob = window.atob || atob;
-
-  function btoa(str) {
-    try {
-      return window.btoa(str);
-    } catch (err) {
-      return Buffer.from(str.toString(), 'binary').toString('base64');
-    }
-  }
-
-  window.btoa = window.btoa || btoa;
-
-}(window, WeakMap, ArrayBuffer, Uint8Array));
-
-global.XMLHttpRequest = module.exports;
-var Blob = window.Blob,
-  atob = window.atob,
-  btoa = window.btoa,
-  FileReader = window.FileReader,
-  QueryFactory = window.QueryFactory,
-  Query = window.Query,
-  SimpleQuery = window.SimpleQuery,
-  ComplexQuery = window.ComplexQuery;
-
-/*
  * Copyright 2014, Nexedi SA
  *
  * This program is free software: you can Use, Study, Modify and Redistribute
@@ -10687,119 +8660,423 @@ var Blob = window.Blob,
 }(window, RSVP, Blob, QueryFactory, Query, atob,
   FileReader, ArrayBuffer, Uint8Array));
 /*
- * Copyright 2018, Nexedi SA
+ * Rusha, a JavaScript implementation of the Secure Hash Algorithm, SHA-1,
+ * as defined in FIPS PUB 180-1, tuned for high performance with large inputs.
+ * (http://github.com/srijs/rusha)
  *
- * This program is free software: you can Use, Study, Modify and Redistribute
- * it under the terms of the GNU General Public License version 3, or (at your
- * option) any later version, as published by the Free Software Foundation.
+ * Inspired by Paul Johnstons implementation (http://pajhome.org.uk/crypt/md5).
  *
- * You can also Link and Combine this program with other software covered by
- * the terms of any of the Free Software licenses or any of the Open Source
- * Initiative approved licenses and Convey the resulting work. Corresponding
- * source of such a combination shall include the source code for all other
- * software used.
+ * Copyright (c) 2013 Sam Rijs (http://awesam.de).
+ * Released under the terms of the MIT license as follows:
  *
- * This program is distributed WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- * See COPYING file for full licensing terms.
- * See https://www.nexedi.com/licensing for rationale and options.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
  */
-
-/*global window */
-(function (window, jIO, Blob, RSVP) {
-  "use strict";
-
-  var FormData,
-    originalAjax;
-
-  // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/
-  // Using_XMLHttpRequest#Submitting_forms_and_uploading_files
-  FormData = function FormData() {
-    this.boundary = "---------------------------" + Date.now().toString(16);
-    this.body = '';
-  };
-  FormData.prototype.append = function (name, value, filename) {
-    this.body += '--' + this.boundary +
-                 '\r\nContent-Disposition: form-data; name="' + name;
-    if (filename !== undefined) {
-      this.body += '"; filename="' + filename;
+(function () {
+    // If we'e running in Node.JS, export a module.
+    if (typeof module !== 'undefined') {
+        module.exports = Rusha;
+    } else if (typeof window !== 'undefined') {
+        window.Rusha = Rusha;
     }
-    this.body += '"\r\n\r\n' + value + '\r\n';
-  };
-  window.FormData = FormData;
-
-  function convertToBlob(promise, convert) {
-    if (!convert) {
-      return promise;
+    // If we're running in a webworker, accept
+    // messages containing a jobid and a buffer
+    // or blob object, and return the hash result.
+    if (typeof FileReaderSync !== 'undefined') {
+        var reader = new FileReaderSync(), hasher = new Rusha(4 * 1024 * 1024);
+        self.onmessage = function onMessage(event) {
+            var hash, data = event.data.data;
+            try {
+                hash = hasher.digest(data);
+                self.postMessage({
+                    id: event.data.id,
+                    hash: hash
+                });
+            } catch (e) {
+                self.postMessage({
+                    id: event.data.id,
+                    error: e.name
+                });
+            }
+        };
     }
-    var result;
-    if (promise instanceof RSVP.Queue) {
-      result = promise;
-    } else {
-      result = new RSVP.Queue()
-        .push(function () {
-          return promise;
-        });
+    var util = {
+            getDataType: function (data) {
+                if (typeof data === 'string') {
+                    return 'string';
+                }
+                if (data instanceof Array) {
+                    return 'array';
+                }
+                if (typeof global !== 'undefined' && global.Buffer && global.Buffer.isBuffer(data)) {
+                    return 'buffer';
+                }
+                if (data instanceof ArrayBuffer) {
+                    return 'arraybuffer';
+                }
+                if (data.buffer instanceof ArrayBuffer) {
+                    return 'view';
+                }
+                if (data instanceof Blob) {
+                    return 'blob';
+                }
+                throw new Error('Unsupported data type.');
+            }
+        };
+    // The Rusha object is a wrapper around the low-level RushaCore.
+    // It provides means of converting different inputs to the
+    // format accepted by RushaCore as well as other utility methods.
+    function Rusha(chunkSize) {
+        'use strict';
+        // Private object structure.
+        var self$2 = { fill: 0 };
+        // Calculate the length of buffer that the sha1 routine uses
+        // including the padding.
+        var padlen = function (len) {
+            for (len += 9; len % 64 > 0; len += 1);
+            return len;
+        };
+        var padZeroes = function (bin, len) {
+            for (var i = len >> 2; i < bin.length; i++)
+                bin[i] = 0;
+        };
+        var padData = function (bin, chunkLen, msgLen) {
+            bin[chunkLen >> 2] |= 128 << 24 - (chunkLen % 4 << 3);
+            bin[((chunkLen >> 2) + 2 & ~15) + 14] = msgLen >> 29;
+            bin[((chunkLen >> 2) + 2 & ~15) + 15] = msgLen << 3;
+        };
+        // Convert a binary string and write it to the heap.
+        // A binary string is expected to only contain char codes < 256.
+        var convStr = function (H8, H32, start, len, off) {
+            var str = this, i, om = off % 4, lm = len % 4, j = len - lm;
+            if (j > 0) {
+                switch (om) {
+                case 0:
+                    H8[off + 3 | 0] = str.charCodeAt(start);
+                case 1:
+                    H8[off + 2 | 0] = str.charCodeAt(start + 1);
+                case 2:
+                    H8[off + 1 | 0] = str.charCodeAt(start + 2);
+                case 3:
+                    H8[off | 0] = str.charCodeAt(start + 3);
+                }
+            }
+            for (i = om; i < j; i = i + 4 | 0) {
+                H32[off + i >> 2] = str.charCodeAt(start + i) << 24 | str.charCodeAt(start + i + 1) << 16 | str.charCodeAt(start + i + 2) << 8 | str.charCodeAt(start + i + 3);
+            }
+            switch (lm) {
+            case 3:
+                H8[off + j + 1 | 0] = str.charCodeAt(start + j + 2);
+            case 2:
+                H8[off + j + 2 | 0] = str.charCodeAt(start + j + 1);
+            case 1:
+                H8[off + j + 3 | 0] = str.charCodeAt(start + j);
+            }
+        };
+        // Convert a buffer or array and write it to the heap.
+        // The buffer or array is expected to only contain elements < 256.
+        var convBuf = function (H8, H32, start, len, off) {
+            var buf = this, i, om = off % 4, lm = len % 4, j = len - lm;
+            if (j > 0) {
+                switch (om) {
+                case 0:
+                    H8[off + 3 | 0] = buf[start];
+                case 1:
+                    H8[off + 2 | 0] = buf[start + 1];
+                case 2:
+                    H8[off + 1 | 0] = buf[start + 2];
+                case 3:
+                    H8[off | 0] = buf[start + 3];
+                }
+            }
+            for (i = 4 - om; i < j; i = i += 4 | 0) {
+                H32[off + i >> 2] = buf[start + i] << 24 | buf[start + i + 1] << 16 | buf[start + i + 2] << 8 | buf[start + i + 3];
+            }
+            switch (lm) {
+            case 3:
+                H8[off + j + 1 | 0] = buf[start + j + 2];
+            case 2:
+                H8[off + j + 2 | 0] = buf[start + j + 1];
+            case 1:
+                H8[off + j + 3 | 0] = buf[start + j];
+            }
+        };
+        var convBlob = function (H8, H32, start, len, off) {
+            var blob = this, i, om = off % 4, lm = len % 4, j = len - lm;
+            var buf = new Uint8Array(reader.readAsArrayBuffer(blob.slice(start, start + len)));
+            if (j > 0) {
+                switch (om) {
+                case 0:
+                    H8[off + 3 | 0] = buf[0];
+                case 1:
+                    H8[off + 2 | 0] = buf[1];
+                case 2:
+                    H8[off + 1 | 0] = buf[2];
+                case 3:
+                    H8[off | 0] = buf[3];
+                }
+            }
+            for (i = 4 - om; i < j; i = i += 4 | 0) {
+                H32[off + i >> 2] = buf[i] << 24 | buf[i + 1] << 16 | buf[i + 2] << 8 | buf[i + 3];
+            }
+            switch (lm) {
+            case 3:
+                H8[off + j + 1 | 0] = buf[j + 2];
+            case 2:
+                H8[off + j + 2 | 0] = buf[j + 1];
+            case 1:
+                H8[off + j + 3 | 0] = buf[j];
+            }
+        };
+        var convFn = function (data) {
+            switch (util.getDataType(data)) {
+            case 'string':
+                return convStr.bind(data);
+            case 'array':
+                return convBuf.bind(data);
+            case 'buffer':
+                return convBuf.bind(data);
+            case 'arraybuffer':
+                return convBuf.bind(new Uint8Array(data));
+            case 'view':
+                return convBuf.bind(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+            case 'blob':
+                return convBlob.bind(data);
+            }
+        };
+        var slice = function (data, offset) {
+            switch (util.getDataType(data)) {
+            case 'string':
+                return data.slice(offset);
+            case 'array':
+                return data.slice(offset);
+            case 'buffer':
+                return data.slice(offset);
+            case 'arraybuffer':
+                return data.slice(offset);
+            case 'view':
+                return data.buffer.slice(offset);
+            }
+        };
+        // Convert an ArrayBuffer into its hexadecimal string representation.
+        var hex = function (arrayBuffer) {
+            var i, x, hex_tab = '0123456789abcdef', res = [], binarray = new Uint8Array(arrayBuffer);
+            for (i = 0; i < binarray.length; i++) {
+                x = binarray[i];
+                res[i] = hex_tab.charAt(x >> 4 & 15) + hex_tab.charAt(x >> 0 & 15);
+            }
+            return res.join('');
+        };
+        var ceilHeapSize = function (v) {
+            // The asm.js spec says:
+            // The heap object's byteLength must be either
+            // 2^n for n in [12, 24) or 2^24 * n for n ≥ 1.
+            // Also, byteLengths smaller than 2^16 are deprecated.
+            var p;
+            // If v is smaller than 2^16, the smallest possible solution
+            // is 2^16.
+            if (v <= 65536)
+                return 65536;
+            // If v < 2^24, we round up to 2^n,
+            // otherwise we round up to 2^24 * n.
+            if (v < 16777216) {
+                for (p = 1; p < v; p = p << 1);
+            } else {
+                for (p = 16777216; p < v; p += 16777216);
+            }
+            return p;
+        };
+        // Initialize the internal data structures to a new capacity.
+        var init = function (size) {
+            if (size % 64 > 0) {
+                throw new Error('Chunk size must be a multiple of 128 bit');
+            }
+            self$2.maxChunkLen = size;
+            self$2.padMaxChunkLen = padlen(size);
+            // The size of the heap is the sum of:
+            // 1. The padded input message size
+            // 2. The extended space the algorithm needs (320 byte)
+            // 3. The 160 bit state the algoritm uses
+            self$2.heap = new ArrayBuffer(ceilHeapSize(self$2.padMaxChunkLen + 320 + 20));
+            self$2.h32 = new Int32Array(self$2.heap);
+            self$2.h8 = new Int8Array(self$2.heap);
+            self$2.core = RushaCore({
+                Int32Array: Int32Array,
+                DataView: DataView
+            }, {}, self$2.heap);
+            self$2.buffer = null;
+        };
+        // Iinitializethe datastructures according
+        // to a chunk siyze.
+        init(chunkSize || 64 * 1024);
+        var initState = function (heap, padMsgLen) {
+            var io = new Int32Array(heap, padMsgLen + 320, 5);
+            io[0] = 1732584193;
+            io[1] = -271733879;
+            io[2] = -1732584194;
+            io[3] = 271733878;
+            io[4] = -1009589776;
+        };
+        var padChunk = function (chunkLen, msgLen) {
+            var padChunkLen = padlen(chunkLen);
+            var view = new Int32Array(self$2.heap, 0, padChunkLen >> 2);
+            padZeroes(view, chunkLen);
+            padData(view, chunkLen, msgLen);
+            return padChunkLen;
+        };
+        // Write data to the heap.
+        var write = function (data, chunkOffset, chunkLen) {
+            convFn(data)(self$2.h8, self$2.h32, chunkOffset, chunkLen, 0);
+        };
+        // Initialize and call the RushaCore,
+        // assuming an input buffer of length len * 4.
+        var coreCall = function (data, chunkOffset, chunkLen, msgLen, finalize) {
+            var padChunkLen = chunkLen;
+            if (finalize) {
+                padChunkLen = padChunk(chunkLen, msgLen);
+            }
+            write(data, chunkOffset, chunkLen);
+            self$2.core.hash(padChunkLen, self$2.padMaxChunkLen);
+        };
+        var getRawDigest = function (heap, padMaxChunkLen) {
+            var io = new Int32Array(heap, padMaxChunkLen + 320, 5);
+            var out = new Int32Array(5);
+            var arr = new DataView(out.buffer);
+            arr.setInt32(0, io[0], false);
+            arr.setInt32(4, io[1], false);
+            arr.setInt32(8, io[2], false);
+            arr.setInt32(12, io[3], false);
+            arr.setInt32(16, io[4], false);
+            return out;
+        };
+        // Calculate the hash digest as an array of 5 32bit integers.
+        var rawDigest = this.rawDigest = function (str) {
+                var msgLen = str.byteLength || str.length || str.size || 0;
+                initState(self$2.heap, self$2.padMaxChunkLen);
+                var chunkOffset = 0, chunkLen = self$2.maxChunkLen, last;
+                for (chunkOffset = 0; msgLen > chunkOffset + chunkLen; chunkOffset += chunkLen) {
+                    coreCall(str, chunkOffset, chunkLen, msgLen, false);
+                }
+                coreCall(str, chunkOffset, msgLen - chunkOffset, msgLen, true);
+                return getRawDigest(self$2.heap, self$2.padMaxChunkLen);
+            };
+        // The digest and digestFrom* interface returns the hash digest
+        // as a hex string.
+        this.digest = this.digestFromString = this.digestFromBuffer = this.digestFromArrayBuffer = function (str) {
+            return hex(rawDigest(str).buffer);
+        };
     }
-    return result
-      .push(function (evt) {
-        evt.target.response = new Blob(
-          [evt.target.response || evt.target.responseText],
-          {type: evt.target.getResponseHeader('Content-Type')}
-        );
-        return evt;
-      });
-  }
-
-  originalAjax = jIO.util.ajax;
-  jIO.util.ajax = function ajax(param) {
-    var result,
-      need_convertion = (param.dataType === 'blob');
-    // Copy the param dict document (no need for deep copy) to
-    // allow tests to check them
-    param = Object.assign({}, param);
-    if (need_convertion) {
-      param.dataType = 'arraybuffer';
+    ;
+    // The low-level RushCore module provides the heart of Rusha,
+    // a high-speed sha1 implementation working on an Int32Array heap.
+    // At first glance, the implementation seems complicated, however
+    // with the SHA1 spec at hand, it is obvious this almost a textbook
+    // implementation that has a few functions hand-inlined and a few loops
+    // hand-unrolled.
+    function RushaCore(stdlib, foreign, heap) {
+        'use asm';
+        var H = new stdlib.Int32Array(heap);
+        function hash(k, x) {
+            // k in bytes
+            k = k | 0;
+            x = x | 0;
+            var i = 0, j = 0, y0 = 0, z0 = 0, y1 = 0, z1 = 0, y2 = 0, z2 = 0, y3 = 0, z3 = 0, y4 = 0, z4 = 0, t0 = 0, t1 = 0;
+            y0 = H[x + 320 >> 2] | 0;
+            y1 = H[x + 324 >> 2] | 0;
+            y2 = H[x + 328 >> 2] | 0;
+            y3 = H[x + 332 >> 2] | 0;
+            y4 = H[x + 336 >> 2] | 0;
+            for (i = 0; (i | 0) < (k | 0); i = i + 64 | 0) {
+                z0 = y0;
+                z1 = y1;
+                z2 = y2;
+                z3 = y3;
+                z4 = y4;
+                for (j = 0; (j | 0) < 64; j = j + 4 | 0) {
+                    t1 = H[i + j >> 2] | 0;
+                    t0 = ((y0 << 5 | y0 >>> 27) + (y1 & y2 | ~y1 & y3) | 0) + ((t1 + y4 | 0) + 1518500249 | 0) | 0;
+                    y4 = y3;
+                    y3 = y2;
+                    y2 = y1 << 30 | y1 >>> 2;
+                    y1 = y0;
+                    y0 = t0;
+                    ;
+                    H[k + j >> 2] = t1;
+                }
+                for (j = k + 64 | 0; (j | 0) < (k + 80 | 0); j = j + 4 | 0) {
+                    t1 = (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) << 1 | (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) >>> 31;
+                    t0 = ((y0 << 5 | y0 >>> 27) + (y1 & y2 | ~y1 & y3) | 0) + ((t1 + y4 | 0) + 1518500249 | 0) | 0;
+                    y4 = y3;
+                    y3 = y2;
+                    y2 = y1 << 30 | y1 >>> 2;
+                    y1 = y0;
+                    y0 = t0;
+                    ;
+                    H[j >> 2] = t1;
+                }
+                for (j = k + 80 | 0; (j | 0) < (k + 160 | 0); j = j + 4 | 0) {
+                    t1 = (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) << 1 | (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) >>> 31;
+                    t0 = ((y0 << 5 | y0 >>> 27) + (y1 ^ y2 ^ y3) | 0) + ((t1 + y4 | 0) + 1859775393 | 0) | 0;
+                    y4 = y3;
+                    y3 = y2;
+                    y2 = y1 << 30 | y1 >>> 2;
+                    y1 = y0;
+                    y0 = t0;
+                    ;
+                    H[j >> 2] = t1;
+                }
+                for (j = k + 160 | 0; (j | 0) < (k + 240 | 0); j = j + 4 | 0) {
+                    t1 = (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) << 1 | (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) >>> 31;
+                    t0 = ((y0 << 5 | y0 >>> 27) + (y1 & y2 | y1 & y3 | y2 & y3) | 0) + ((t1 + y4 | 0) - 1894007588 | 0) | 0;
+                    y4 = y3;
+                    y3 = y2;
+                    y2 = y1 << 30 | y1 >>> 2;
+                    y1 = y0;
+                    y0 = t0;
+                    ;
+                    H[j >> 2] = t1;
+                }
+                for (j = k + 240 | 0; (j | 0) < (k + 320 | 0); j = j + 4 | 0) {
+                    t1 = (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) << 1 | (H[j - 12 >> 2] ^ H[j - 32 >> 2] ^ H[j - 56 >> 2] ^ H[j - 64 >> 2]) >>> 31;
+                    t0 = ((y0 << 5 | y0 >>> 27) + (y1 ^ y2 ^ y3) | 0) + ((t1 + y4 | 0) - 899497514 | 0) | 0;
+                    y4 = y3;
+                    y3 = y2;
+                    y2 = y1 << 30 | y1 >>> 2;
+                    y1 = y0;
+                    y0 = t0;
+                    ;
+                    H[j >> 2] = t1;
+                }
+                y0 = y0 + z0 | 0;
+                y1 = y1 + z1 | 0;
+                y2 = y2 + z2 | 0;
+                y3 = y3 + z3 | 0;
+                y4 = y4 + z4 | 0;
+            }
+            H[x + 320 >> 2] = y0;
+            H[x + 324 >> 2] = y1;
+            H[x + 328 >> 2] = y2;
+            H[x + 332 >> 2] = y3;
+            H[x + 336 >> 2] = y4;
+        }
+        return { hash: hash };
     }
-    if (param.data instanceof Blob) {
-      // Blob is not supported by xhr2, so convert to ArrayBuffer instead
-      result = new RSVP.Queue()
-        .push(function () {
-          return jIO.util.readBlobAsArrayBuffer(param.data);
-        })
-        .push(function (evt) {
-          param.data = evt.target.result;
-          return originalAjax(param);
-        });
-    } else if (param.data instanceof FormData) {
-      // Implement minimal FormData for erp5storage
-      if (!param.hasOwnProperty('headers')) {
-        param.headers = {};
-      } else {
-        // Copy the param dict document (no need for deep copy) to
-        // allow tests to check them
-        param.headers = Object.assign({}, param.headers);
-      }
-      param.headers["Content-Type"] = "multipart\/form-data; boundary=" +
-                                      param.data.boundary;
-      param.data.body += '--' + param.data.boundary + '--\r\n';
-      param.data = param.data.body;
-      result = originalAjax(param);
-    } else {
-      result = originalAjax(param);
-    }
-
-    return convertToBlob(result, need_convertion);
-  };
-
-}(window, window.jIO, window.Blob, window.RSVP));
-
-// Define a global variable to allow storages to access jIO
-var jIO = window.jIO,
-  FormData = window.FormData,
-  jiodate = window.jiodate;
-/*
+}());/*
  * JIO extension for resource replication.
  * Copyright (C) 2013, 2015  Nexedi SA
  *
@@ -13089,6 +11366,552 @@ var jIO = window.jIO,
 
 }(jIO, JSON, RSVP));
 /*
+ * Copyright 2015, Nexedi SA
+ *
+ * This program is free software: you can Use, Study, Modify and Redistribute
+ * it under the terms of the GNU General Public License version 3, or (at your
+ * option) any later version, as published by the Free Software Foundation.
+ *
+ * You can also Link and Combine this program with other software covered by
+ * the terms of any of the Free Software licenses or any of the Open Source
+ * Initiative approved licenses and Convey the resulting work. Corresponding
+ * source of such a combination shall include the source code for all other
+ * software used.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See COPYING file for full licensing terms.
+ * See https://www.nexedi.com/licensing for rationale and options.
+ */
+/*jslint nomen: true*/
+/*global RSVP, Blob, LZString, DOMException*/
+(function (RSVP, Blob, LZString, DOMException) {
+  "use strict";
+
+  /**
+   * The jIO ZipStorage extension
+   *
+   * @class ZipStorage
+   * @constructor
+   */
+
+  var MIME_TYPE = "application/x-jio-utf16_lz_string";
+
+  function ZipStorage(spec) {
+    this._sub_storage = jIO.createJIO(spec.sub_storage);
+  }
+
+  ZipStorage.prototype.get = function () {
+    return this._sub_storage.get.apply(this._sub_storage,
+                                        arguments);
+  };
+
+  ZipStorage.prototype.post = function () {
+    return this._sub_storage.post.apply(this._sub_storage,
+                                        arguments);
+  };
+
+  ZipStorage.prototype.put = function () {
+    return this._sub_storage.put.apply(this._sub_storage,
+                                       arguments);
+  };
+
+  ZipStorage.prototype.remove = function () {
+    return this._sub_storage.remove.apply(this._sub_storage,
+                                          arguments);
+  };
+
+  ZipStorage.prototype.hasCapacity = function () {
+    return this._sub_storage.hasCapacity.apply(this._sub_storage,
+                                               arguments);
+  };
+
+  ZipStorage.prototype.buildQuery = function () {
+    return this._sub_storage.buildQuery.apply(this._sub_storage,
+                                              arguments);
+  };
+
+  ZipStorage.prototype.getAttachment = function (id, name) {
+    var that = this;
+    return that._sub_storage.getAttachment(id, name)
+      .push(function (blob) {
+        if (blob.type !== MIME_TYPE) {
+          return blob;
+        }
+        return new RSVP.Queue()
+          .push(function () {
+            return jIO.util.readBlobAsText(blob, 'utf16');
+          })
+          .push(function (evt) {
+            var result =
+              LZString.decompressFromUTF16(evt.target.result);
+            if (result === '') {
+              return blob;
+            }
+            try {
+              return jIO.util.dataURItoBlob(
+                result
+              );
+            } catch (error) {
+              if (error instanceof DOMException) {
+                return blob;
+              }
+              throw error;
+            }
+          });
+      });
+  };
+
+  function myEndsWith(str, query) {
+    return (str.indexOf(query) === str.length - query.length);
+  }
+
+  ZipStorage.prototype.putAttachment = function (id, name, blob) {
+    var that = this;
+    if ((blob.type.indexOf("text/") === 0) || myEndsWith(blob.type, "xml") ||
+        myEndsWith(blob.type, "json")) {
+      return new RSVP.Queue()
+        .push(function () {
+          return jIO.util.readBlobAsDataURL(blob);
+        })
+        .push(function (data) {
+          var result = LZString.compressToUTF16(data.target.result);
+          blob = new Blob([result],
+                          {type: MIME_TYPE});
+          return that._sub_storage.putAttachment(id, name, blob);
+        });
+    }
+    return this._sub_storage.putAttachment.apply(this._sub_storage,
+                                                 arguments);
+  };
+
+  ZipStorage.prototype.removeAttachment = function () {
+    return this._sub_storage.removeAttachment.apply(this._sub_storage,
+                                                    arguments);
+  };
+
+  ZipStorage.prototype.allAttachments = function () {
+    return this._sub_storage.allAttachments.apply(this._sub_storage,
+                                                  arguments);
+  };
+
+  jIO.addStorage('zip', ZipStorage);
+}(RSVP, Blob, LZString, DOMException));
+/*
+ * Copyright 2017, Nexedi SA
+ *
+ * This program is free software: you can Use, Study, Modify and Redistribute
+ * it under the terms of the GNU General Public License version 3, or (at your
+ * option) any later version, as published by the Free Software Foundation.
+ *
+ * You can also Link and Combine this program with other software covered by
+ * the terms of any of the Free Software licenses or any of the Open Source
+ * Initiative approved licenses and Convey the resulting work. Corresponding
+ * source of such a combination shall include the source code for all other
+ * software used.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See COPYING file for full licensing terms.
+ * See https://www.nexedi.com/licensing for rationale and options.
+ */
+/*jslint nomen: true*/
+/*global jIO, DOMParser, Node */
+(function (jIO, DOMParser, Node) {
+  "use strict";
+
+  /////////////////////////////////////////////////////////////
+  // OPML Parser
+  /////////////////////////////////////////////////////////////
+  function OPMLParser(txt) {
+    this._dom_parser = new DOMParser().parseFromString(txt, 'text/xml');
+  }
+
+  OPMLParser.prototype.parseHead = function () {
+    // fetch all children instead
+    var channel_element = this._dom_parser.querySelector("opml > head"),
+      tag_element,
+      i,
+      result = {};
+
+    for (i = channel_element.childNodes.length - 1; i >= 0; i -= 1) {
+      tag_element = channel_element.childNodes[i];
+      if (tag_element.nodeType === Node.ELEMENT_NODE) {
+        result[tag_element.tagName] = tag_element.textContent;
+      }
+    }
+    return result;
+  };
+
+  OPMLParser.prototype.parseOutline = function (result_list, outline_element,
+                                                prefix, include, id) {
+    var attribute,
+      i,
+      child,
+      result = {};
+
+    if ((id === prefix) || (id === undefined)) {
+      result_list.push({
+        id: prefix,
+        value: {}
+      });
+      if (include) {
+        for (i = outline_element.attributes.length - 1; i >= 0; i -= 1) {
+          attribute = outline_element.attributes[i];
+          if (attribute.value) {
+            result[attribute.name] = attribute.value;
+          }
+        }
+        result_list[result_list.length - 1].doc = result;
+      }
+    }
+
+    for (i = outline_element.childNodes.length - 1; i >= 0; i -= 1) {
+      child = outline_element.childNodes[i];
+      if (child.tagName === 'outline') {
+        this.parseOutline(result_list, child, prefix + '/' + i, include, id);
+      }
+    }
+  };
+
+  OPMLParser.prototype.getDocumentList = function (include, id) {
+    var result_list,
+      item_list = this._dom_parser.querySelectorAll("body > outline"),
+      i;
+
+    if ((id === '/0') || (id === undefined)) {
+      result_list = [{
+        id: '/0',
+        value: {}
+      }];
+      if (include) {
+        result_list[0].doc = this.parseHead();
+      }
+    } else {
+      result_list = [];
+    }
+
+    for (i = 0; i < item_list.length; i += 1) {
+      this.parseOutline(result_list, item_list[i], '/1/' + i, include, id);
+    }
+    return result_list;
+  };
+  /////////////////////////////////////////////////////////////
+  // ATOM Parser
+  /////////////////////////////////////////////////////////////
+  function ATOMParser(txt) {
+    this._dom_parser = new DOMParser().parseFromString(txt, 'text/xml');
+  }
+  ATOMParser.prototype.parseElement = function (element) {
+    var tag_element,
+      i,
+      j,
+      tag_name,
+      attribute,
+      result = {};
+
+    for (i = element.childNodes.length - 1; i >= 0; i -= 1) {
+      tag_element = element.childNodes[i];
+      if ((tag_element.nodeType === Node.ELEMENT_NODE) &&
+          (tag_element.tagName !== 'entry')) {
+        tag_name = tag_element.tagName;
+        // may have several links, with different rel value
+        // default is alternate
+        if (tag_name === 'link') {
+          tag_name += '_' + (tag_element.getAttribute('rel') || 'alternate');
+        } else {
+          result[tag_name] = tag_element.textContent;
+        }
+        for (j = tag_element.attributes.length - 1; j >= 0; j -= 1) {
+          attribute = tag_element.attributes[j];
+          if (attribute.value) {
+            result[tag_name + '_' + attribute.name] =
+              attribute.value;
+          }
+        }
+
+      }
+    }
+    return result;
+  };
+  ATOMParser.prototype.getDocumentList = function (include, id) {
+    var result_list,
+      item_list = this._dom_parser.querySelectorAll("feed > entry"),
+      i;
+
+    if ((id === '/0') || (id === undefined)) {
+      result_list = [{
+        id: '/0',
+        value: {}
+      }];
+      if (include) {
+        result_list[0].doc = this.parseElement(
+          this._dom_parser.querySelector("feed")
+        );
+      }
+    } else {
+      result_list = [];
+    }
+
+    for (i = 0; i < item_list.length; i += 1) {
+      if ((id === '/0/' + i) || (id === undefined)) {
+        result_list.push({
+          id: '/0/' + i,
+          value: {}
+        });
+        if (include) {
+          result_list[result_list.length - 1].doc =
+            this.parseElement(item_list[i]);
+        }
+      }
+    }
+    return result_list;
+  };
+
+  /////////////////////////////////////////////////////////////
+  // RSS Parser
+  /////////////////////////////////////////////////////////////
+  function RSSParser(txt) {
+    this._dom_parser = new DOMParser().parseFromString(txt, 'text/xml');
+  }
+
+  RSSParser.prototype.parseElement = function (element) {
+    var tag_element,
+      i,
+      j,
+      attribute,
+      result = {};
+
+    for (i = element.childNodes.length - 1; i >= 0; i -= 1) {
+      tag_element = element.childNodes[i];
+      if ((tag_element.nodeType === Node.ELEMENT_NODE) &&
+          (tag_element.tagName !== 'item')) {
+        result[tag_element.tagName] = tag_element.textContent;
+
+        for (j = tag_element.attributes.length - 1; j >= 0; j -= 1) {
+          attribute = tag_element.attributes[j];
+          if (attribute.value) {
+            result[tag_element.tagName + '_' + attribute.name] =
+              attribute.value;
+          }
+        }
+      }
+    }
+    return result;
+  };
+
+  RSSParser.prototype.getDocumentList = function (include, id) {
+    var result_list,
+      item_list = this._dom_parser.querySelectorAll("rss > channel > item"),
+      i;
+
+    if ((id === '/0') || (id === undefined)) {
+      result_list = [{
+        id: '/0',
+        value: {}
+      }];
+      if (include) {
+        result_list[0].doc = this.parseElement(
+          this._dom_parser.querySelector("rss > channel")
+        );
+      }
+    } else {
+      result_list = [];
+    }
+
+    for (i = 0; i < item_list.length; i += 1) {
+      if ((id === '/0/' + i) || (id === undefined)) {
+        result_list.push({
+          id: '/0/' + i,
+          value: {}
+        });
+        if (include) {
+          result_list[result_list.length - 1].doc =
+            this.parseElement(item_list[i]);
+        }
+      }
+    }
+    return result_list;
+  };
+
+  /////////////////////////////////////////////////////////////
+  // Helpers
+  /////////////////////////////////////////////////////////////
+  var parser_dict = {
+    'rss': RSSParser,
+    'opml': OPMLParser,
+    'atom': ATOMParser
+  };
+
+  function getParser(storage) {
+    return storage._sub_storage.getAttachment(storage._document_id,
+                                              storage._attachment_id,
+                                              {format: 'text'})
+      .push(function (txt) {
+        return new parser_dict[storage._parser_name](txt);
+      });
+  }
+
+  /////////////////////////////////////////////////////////////
+  // Storage
+  /////////////////////////////////////////////////////////////
+  function ParserStorage(spec) {
+    this._attachment_id = spec.attachment_id;
+    this._document_id = spec.document_id;
+    this._parser_name = spec.parser;
+    this._sub_storage = jIO.createJIO(spec.sub_storage);
+  }
+
+  ParserStorage.prototype.hasCapacity = function (capacity) {
+    return (capacity === "list") || (capacity === 'include');
+  };
+
+  ParserStorage.prototype.buildQuery = function (options) {
+    if (options === undefined) {
+      options = {};
+    }
+    return getParser(this)
+      .push(function (parser) {
+        return parser.getDocumentList((options.include_docs || false));
+      });
+  };
+
+  ParserStorage.prototype.get = function (id) {
+    return getParser(this)
+      .push(function (parser) {
+        var result_list = parser.getDocumentList(true, id);
+        if (result_list.length) {
+          return result_list[0].doc;
+        }
+        throw new jIO.util.jIOError(
+          "Cannot find parsed document: " + id,
+          404
+        );
+      });
+  };
+
+  jIO.addStorage('parser', ParserStorage);
+
+}(jIO, DOMParser, Node));
+/*
+ * Copyright 2017, Nexedi SA
+ *
+ * This program is free software: you can Use, Study, Modify and Redistribute
+ * it under the terms of the GNU General Public License version 3, or (at your
+ * option) any later version, as published by the Free Software Foundation.
+ *
+ * You can also Link and Combine this program with other software covered by
+ * the terms of any of the Free Software licenses or any of the Open Source
+ * Initiative approved licenses and Convey the resulting work. Corresponding
+ * source of such a combination shall include the source code for all other
+ * software used.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See COPYING file for full licensing terms.
+ * See https://www.nexedi.com/licensing for rationale and options.
+ */
+/*global RSVP, Blob*/
+/*jslint nomen: true*/
+(function (jIO, RSVP, Blob) {
+  "use strict";
+
+  function HttpStorage(spec) {
+    if (spec.hasOwnProperty('catch_error')) {
+      this._catch_error = spec.catch_error;
+    } else {
+      this._catch_error = false;
+    }
+    // If timeout not set, use 0 for no timeout value
+    this._timeout = spec.timeout || 0;
+  }
+
+  HttpStorage.prototype.get = function (id) {
+    var context = this;
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.ajax({
+          type: 'HEAD',
+          url: id,
+          timeout: context._timeout
+        });
+      })
+      .push(undefined, function (error) {
+        if (context._catch_error) {
+          return error;
+        }
+        if ((error.target !== undefined) &&
+            (error.target.status === 404)) {
+          throw new jIO.util.jIOError("Cannot find url " + id, 404);
+        }
+        throw error;
+      })
+      .push(function (response) {
+
+        var key_list = ["Content-Disposition", "Content-Type", "Date",
+                        "Last-Modified", "Vary", "Cache-Control", "Etag",
+                        "Accept-Ranges", "Content-Range"],
+          i,
+          key,
+          value,
+          result = {};
+        result.Status = response.target.status;
+        for (i = 0; i < key_list.length; i += 1) {
+          key = key_list[i];
+          value = response.target.getResponseHeader(key);
+          if (value !== null) {
+            result[key] = value;
+          }
+        }
+        return result;
+      });
+  };
+
+  HttpStorage.prototype.allAttachments = function () {
+    return {enclosure: {}};
+  };
+
+  HttpStorage.prototype.getAttachment = function (id, name) {
+    var context = this;
+    if (name !== 'enclosure') {
+      throw new jIO.util.jIOError("Forbidden attachment: "
+                                  + id + " , " + name,
+                                  400);
+    }
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.ajax({
+          type: 'GET',
+          url: id,
+          dataType: "blob",
+          timeout: context._timeout
+        });
+      })
+      .push(undefined, function (error) {
+        if (context._catch_error) {
+          return error;
+        }
+        if ((error.target !== undefined) &&
+            (error.target.status === 404)) {
+          throw new jIO.util.jIOError("Cannot find url " + id, 404);
+        }
+        throw error;
+      })
+      .push(function (response) {
+        return new Blob(
+          [response.target.response || response.target.responseText],
+          {"type": response.target.getResponseHeader('Content-Type') ||
+                   "application/octet-stream"}
+        );
+      });
+  };
+
+  jIO.addStorage('http', HttpStorage);
+
+}(jIO, RSVP, Blob));/*
  * Copyright 2013, Nexedi SA
  *
  * This program is free software: you can Use, Study, Modify and Redistribute
@@ -13430,6 +12253,329 @@ var jIO = window.jIO,
   jIO.addStorage('dropbox', DropboxStorage);
 
 }(jIO, RSVP, Blob, JSON));
+/*
+ * Copyright 2013, Nexedi SA
+ *
+ * This program is free software: you can Use, Study, Modify and Redistribute
+ * it under the terms of the GNU General Public License version 3, or (at your
+ * option) any later version, as published by the Free Software Foundation.
+ *
+ * You can also Link and Combine this program with other software covered by
+ * the terms of any of the Free Software licenses or any of the Open Source
+ * Initiative approved licenses and Convey the resulting work. Corresponding
+ * source of such a combination shall include the source code for all other
+ * software used.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See COPYING file for full licensing terms.
+ * See https://www.nexedi.com/licensing for rationale and options.
+ */
+
+/*jslint nomen: true*/
+/*global jIO, RSVP, DOMParser, Blob */
+
+// JIO Dav Storage Description :
+// {
+//   type: "dav",
+//   url: {string},
+//   basic_login: {string} // Basic authentication
+// }
+
+// NOTE: to get the authentication type ->
+// curl --verbose  -X OPTION http://domain/
+// In the headers: "WWW-Authenticate: Basic realm="DAV-upload"
+
+(function (jIO, RSVP, DOMParser, Blob) {
+  "use strict";
+
+  function ajax(storage, options) {
+    if (options === undefined) {
+      options = {};
+    }
+    if (storage._authorization !== undefined) {
+      if (options.headers === undefined) {
+        options.headers = {};
+      }
+      options.headers.Authorization = storage._authorization;
+    }
+
+    if (storage._with_credentials !== undefined) {
+      if (options.xhrFields === undefined) {
+        options.xhrFields = {};
+      }
+      options.xhrFields.withCredentials = storage._with_credentials;
+    }
+//       if (start !== undefined) {
+//         if (end !== undefined) {
+//           headers.Range = "bytes=" + start + "-" + end;
+//         } else {
+//           headers.Range = "bytes=" + start + "-";
+//         }
+//       }
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.ajax(options);
+      });
+  }
+
+  function restrictDocumentId(id) {
+    if (id.indexOf("/") !== 0) {
+      throw new jIO.util.jIOError("id " + id + " is forbidden (no begin /)",
+                                  400);
+    }
+    if (id.lastIndexOf("/") !== (id.length - 1)) {
+      throw new jIO.util.jIOError("id " + id + " is forbidden (no end /)",
+                                  400);
+    }
+    return id;
+  }
+
+  function restrictAttachmentId(id) {
+    if (id.indexOf("/") !== -1) {
+      throw new jIO.util.jIOError("attachment " + id + " is forbidden",
+                                  400);
+    }
+  }
+
+  /**
+   * The JIO WebDAV Storage extension
+   *
+   * @class DavStorage
+   * @constructor
+   */
+  function DavStorage(spec) {
+    if (typeof spec.url !== 'string') {
+      throw new TypeError("DavStorage 'url' is not of type string");
+    }
+    this._url = spec.url;
+    // XXX digest login
+    if (typeof spec.basic_login === 'string') {
+      this._authorization = "Basic " + spec.basic_login;
+    }
+    this._with_credentials = spec.with_credentials;
+  }
+
+  DavStorage.prototype.put = function (id, param) {
+    var that = this;
+    id = restrictDocumentId(id);
+    if (Object.getOwnPropertyNames(param).length > 0) {
+      // Reject if param has some properties
+      throw new jIO.util.jIOError("Can not store properties: " +
+                                  Object.getOwnPropertyNames(param), 400);
+    }
+    return new RSVP.Queue()
+      .push(function () {
+        return ajax(that, {
+          type: "MKCOL",
+          url: that._url + id
+        });
+      })
+      .push(undefined, function (err) {
+        if ((err.target !== undefined) &&
+            (err.target.status === 405)) {
+          return;
+        }
+        throw err;
+      });
+  };
+
+  DavStorage.prototype.remove = function (id) {
+    id = restrictDocumentId(id);
+    return ajax(this, {
+      type: "DELETE",
+      url: this._url + id
+    });
+  };
+
+  DavStorage.prototype.get = function (id) {
+    var context = this;
+    id = restrictDocumentId(id);
+
+    return new RSVP.Queue()
+      .push(function () {
+        return ajax(context, {
+          type: "PROPFIND",
+          url: context._url + id,
+          dataType: "text",
+          headers: {
+            // Increasing this value is a performance killer
+            Depth: "1"
+          }
+        });
+      })
+      .push(function () {
+        return {};
+      }, function (error) {
+        if ((error.target !== undefined) &&
+            (error.target.status === 404)) {
+          throw new jIO.util.jIOError("Cannot find document", 404);
+        }
+        throw error;
+      });
+  };
+
+  DavStorage.prototype.allAttachments = function (id) {
+
+    var context = this;
+    id = restrictDocumentId(id);
+
+    return new RSVP.Queue()
+      .push(function () {
+        return ajax(context, {
+          type: "PROPFIND",
+          url: context._url + id,
+          dataType: "text",
+          headers: {
+            // Increasing this value is a performance killer
+            Depth: "1"
+          }
+        });
+      })
+
+
+      .push(function (response) {
+        // Extract all meta informations and return them to JSON
+
+        var i,
+          attachment = {},
+          new_id,
+          attachment_list = new DOMParser().parseFromString(
+            response.target.responseText,
+            "text/xml"
+          ).querySelectorAll(
+            "D\\:response, response"
+          );
+
+        // exclude parent folder and browse
+        for (i = 1; i < attachment_list.length; i += 1) {
+          // XXX Only get files for now
+          new_id = attachment_list[i].querySelector("D\\:href, href").
+            textContent.split('/').slice(-1)[0];
+          // XXX Ugly
+          if ((new_id !== undefined) && (new_id !== "")) {
+            attachment[new_id] = {};
+          }
+        }
+        return attachment;
+
+      }, function (error) {
+        if ((error.target !== undefined) &&
+            (error.target.status === 404)) {
+          throw new jIO.util.jIOError("Cannot find document", 404);
+        }
+        throw error;
+      });
+
+  };
+
+
+  DavStorage.prototype.putAttachment = function (id, name, blob) {
+    var that = this;
+    id = restrictDocumentId(id);
+    restrictAttachmentId(name);
+
+    return new RSVP.Queue()
+      .push(function () {
+        return ajax(that, {
+          type: "PUT",
+          url: that._url + id + name,
+          data: blob
+        });
+      })
+      .push(undefined, function (error) {
+        if (error.target.status === 403 || error.target.status === 424) {
+          throw new jIO.util.jIOError("Cannot access subdocument", 404);
+        }
+        throw error;
+      });
+  };
+
+  DavStorage.prototype.getAttachment = function (id, name) {
+    var context = this;
+    id = restrictDocumentId(id);
+    restrictAttachmentId(name);
+
+    return new RSVP.Queue()
+      .push(function () {
+        return ajax(context, {
+          type: "GET",
+          url: context._url + id + name,
+          dataType: "blob"
+        });
+      })
+      .push(function (response) {
+        return new Blob(
+          [response.target.response || response.target.responseText],
+          {"type": response.target.getResponseHeader('Content-Type') ||
+                   "application/octet-stream"}
+        );
+      }, function (error) {
+        if ((error.target !== undefined) &&
+            (error.target.status === 404)) {
+          throw new jIO.util.jIOError("Cannot find attachment: "
+                                      + id + " , " + name,
+                                      404);
+        }
+        throw error;
+      });
+
+  };
+
+  DavStorage.prototype.removeAttachment = function (id, name) {
+    var context = this;
+    id = restrictDocumentId(id);
+    restrictAttachmentId(name);
+
+    return new RSVP.Queue()
+      .push(function () {
+        return ajax(context, {
+          type: "DELETE",
+          url: context._url + id + name
+        });
+      })
+      .push(undefined, function (error) {
+        if ((error.target !== undefined) &&
+            (error.target.status === 404)) {
+          throw new jIO.util.jIOError("Cannot find attachment: "
+                                      + id + " , " + name,
+                                      404);
+        }
+        throw error;
+      });
+  };
+
+  // JIO COMMANDS //
+
+  // wedDav methods rfc4918 (short summary)
+  // COPY     Reproduces single resources (files) and collections (directory
+  //          trees). Will overwrite files (if specified by request) but will
+  //          respond 209 (Conflict) if it would overwrite a tree
+  // DELETE   deletes files and directory trees
+  // GET      just the vanilla HTTP/1.1 behaviour
+  // HEAD     ditto
+  // LOCK     locks a resources
+  // MKCOL    creates a directory
+  // MOVE     Moves (rename or copy) a file or a directory tree. Will
+  //          'overwrite' files (if specified by the request) but will respond
+  //          209 (Conflict) if it would overwrite a tree.
+  // OPTIONS  If WebDAV is enabled and available for the path this reports the
+  //          WebDAV extension methods
+  // PROPFIND Retrieves the requested file characteristics, DAV lock status
+  //          and 'dead' properties for individual files, a directory and its
+  //          child files, or a directory tree
+  // PROPPATCHset and remove 'dead' meta-data properties
+  // PUT      Update or create resource or collections
+  // UNLOCK   unlocks a resource
+
+  // Notes: all Ajax requests should be CORS (cross-domain)
+  // adding custom headers triggers preflight OPTIONS request!
+  // http://remysharp.com/2011/04/21/getting-cors-working/
+
+  jIO.addStorage('dav', DavStorage);
+
+}(jIO, RSVP, DOMParser, Blob));
 /*
  * Copyright 2015, Nexedi SA
  *
@@ -13953,6 +13099,321 @@ var jIO = window.jIO,
   jIO.addStorage('union', UnionStorage);
 
 }(jIO, RSVP));
+/*
+ * Copyright 2019, Nexedi SA
+ *
+ * This program is free software: you can Use, Study, Modify and Redistribute
+ * it under the terms of the GNU General Public License version 3, or (at your
+ * option) any later version, as published by the Free Software Foundation.
+ *
+ * You can also Link and Combine this program with other software covered by
+ * the terms of any of the Free Software licenses or any of the Open Source
+ * Initiative approved licenses and Convey the resulting work. Corresponding
+ * source of such a combination shall include the source code for all other
+ * software used.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See COPYING file for full licensing terms.
+ * See https://www.nexedi.com/licensing for rationale and options.
+ */
+/**
+ * JIO Linshare Storage. Type = "linshare".
+ * Linshare "database" storage.
+ * http://download.linshare.org/components/linshare-core/2.2.2/
+ * Can't set up id, implied can't put new document
+ */
+/*global jIO, RSVP, UriTemplate, FormData, Blob*/
+/*jslint nomen: true*/
+
+(function (jIO, RSVP, UriTemplate, FormData, Blob) {
+  "use strict";
+
+  function makeRequest(storage, uuid, options, download) {
+    if (options === undefined) {
+      options = {};
+    }
+    if (options.xhrFields === undefined) {
+      options.xhrFields = {};
+    }
+
+    if (options.headers === undefined) {
+      options.headers = {};
+    }
+
+    // Prefer JSON by default
+    if (download === true) {
+      options.url = storage._blob_template.expand({uuid: uuid});
+      options.dataType = 'blob';
+    } else {
+      options.url = storage._url_template.expand({uuid: uuid || ""});
+      if (!options.headers.hasOwnProperty('Accept')) {
+        options.headers.Accept = 'application/json';
+        options.dataType = 'json';
+      }
+    }
+
+    // Use cookie based auth
+    if (storage.hasOwnProperty('_access_token')) {
+      options.headers.Authorization = "Basic " + storage._access_token;
+    } else {
+      options.xhrFields.withCredentials = true;
+    }
+
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.ajax(options);
+      })
+      .push(function (event) {
+        if (download === true) {
+          return (
+            event.target.response ||
+            // sinon does not fill the response attribute
+            new Blob([event.target.responseText], {type: 'text/plain'})
+          );
+        }
+
+        return (
+          event.target.response ||
+          // sinon does not fill the response attribute
+          JSON.parse(event.target.responseText)
+        );
+      });
+  }
+
+  /**
+   * The JIO Linshare Storage extension
+   *
+   * @class LinshareStorage
+   * @constructor
+   */
+  function LinshareStorage(spec) {
+
+    if (typeof spec.url !== "string" || !spec.url) {
+      throw new TypeError("Linshare 'url' must be a string " +
+                          "which contains more than one character.");
+    }
+    this._url_template = UriTemplate.parse(
+      spec.url + '/linshare/webservice/rest/user/v2/documents/{uuid}'
+    );
+    this._blob_template = UriTemplate.parse(
+      spec.url + '/linshare/webservice/rest/user/v2/documents/{uuid}/download'
+    );
+
+    if (spec.hasOwnProperty('access_token')) {
+      this._access_token = spec.access_token;
+    }
+  }
+
+  var capacity_list = ['list', 'include'];
+  LinshareStorage.prototype.hasCapacity = function (name) {
+    return (capacity_list.indexOf(name) !== -1);
+  };
+
+  function sortByModificationDate(entry1, entry2) {
+    var date1 = entry1.modificationDate,
+      date2 = entry2.modificationDate;
+    return (date1 === date2) ? 0 : ((date1 < date2) ? 1 : -1);
+  }
+
+  function getDocumentList(storage, options) {
+    return makeRequest(storage, "", {
+      type: "GET"
+    })
+      .push(function (entry_list) {
+        // Linshare only allow to get the full list of documents
+        // First, sort the entries by modificationDate in order to
+        // drop the 'old' entries with the same 'name'
+        // (as linshare does not to update an existing doc)
+        entry_list.sort(sortByModificationDate);
+
+        // Only return one document per name
+        // Keep the newer document
+        var entry_dict = {},
+          i,
+          len = entry_list.length,
+          entry_name,
+          entry,
+          result_list = [];
+
+        for (i = 0; i < len; i += 1) {
+          entry_name = entry_list[i].name;
+
+          // If we only need one precise name, no need to check the others
+          if (!options.hasOwnProperty('only_id') ||
+              (options.only_id === entry_name)) {
+
+            if (!entry_dict.hasOwnProperty(entry_name)) {
+              entry = {
+                id: entry_name,
+                value: {},
+                _linshare_uuid: entry_list[i].uuid
+              };
+              if (options.include_docs === true) {
+                try {
+                  entry.doc = JSON.parse(entry_list[i].metaData) || {};
+                } catch (error) {
+                  // Metadata are not always JSON
+                  entry.doc = {};
+                }
+              }
+              result_list.push(entry);
+
+              if (options.all_revision !== true) {
+                // If we only want to fetch 'one revision',
+                // ie, the latest document matching this id
+                entry_dict[entry_name] = null;
+
+                if (options.only_id === entry_name) {
+                  // Document has been found, no need to check all the others
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        return result_list;
+      });
+  }
+
+  LinshareStorage.prototype.buildQuery = function (options) {
+    return getDocumentList(this, {
+      include_docs: options.include_docs
+    });
+  };
+
+  LinshareStorage.prototype.get = function (id) {
+    // It is not possible to get a document by its name
+    // The only way is to list all of them, and find it manually
+    return getDocumentList(this, {
+      include_docs: true,
+      only_id: id
+    })
+      .push(function (result_list) {
+        if (result_list.length === 1) {
+          return result_list[0].doc;
+        }
+
+        throw new jIO.util.jIOError(
+          "Can't find document with id : " + id,
+          404
+        );
+      });
+  };
+
+  function createLinshareDocument(storage, id, doc, blob) {
+    var data = new FormData();
+    data.append('file', blob, id);
+    data.append('filesize', blob.size);
+    data.append('filename', id);
+    data.append('description', doc.title || doc.description || '');
+    data.append('metadata', jIO.util.stringify(doc));
+    return makeRequest(storage, '', {
+      type: 'POST',
+      data: data
+    });
+  }
+
+  LinshareStorage.prototype.put = function (id, doc) {
+    var storage = this;
+    return getDocumentList(storage, {
+      include_docs: true,
+      only_id: id
+    })
+      .push(function (result_list) {
+        if (result_list.length === 1) {
+          // Update existing document metadata
+          var data = {
+            uuid: result_list[0]._linshare_uuid,
+            metaData: jIO.util.stringify(doc),
+            name: id,
+            description: doc.title || doc.description || ''
+          };
+          return makeRequest(storage, result_list[0]._linshare_uuid, {
+            type: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            data: jIO.util.stringify(data)
+          });
+        }
+        // Create a new one
+        return createLinshareDocument(storage, id, doc, new Blob());
+      });
+  };
+
+  LinshareStorage.prototype.remove = function (id) {
+    var storage = this;
+    // Delete all entries matching the id
+    return getDocumentList(storage, {
+      only_id: id,
+      all_revision: true
+    })
+      .push(function (result_list) {
+        var promise_list = [],
+          i,
+          len = result_list.length;
+        for (i = 0; i < len; i += 1) {
+          promise_list.push(
+            makeRequest(storage, result_list[i]._linshare_uuid, {
+              type: "DELETE"
+            })
+          );
+        }
+        return RSVP.all(promise_list);
+      });
+  };
+
+  LinshareStorage.prototype.allAttachments = function (id) {
+    return this.get(id)
+      .push(function () {
+        return {enclosure: {}};
+      });
+  };
+
+  function restrictAttachmentId(name) {
+    if (name !== "enclosure") {
+      throw new jIO.util.jIOError(
+        "attachment name " + name + " is forbidden in linshare",
+        400
+      );
+    }
+  }
+
+  LinshareStorage.prototype.putAttachment = function (id, name, blob) {
+    restrictAttachmentId(name);
+    var storage = this;
+    return storage.get(id)
+      .push(function (doc) {
+        // Create a new document with the same id but a different blob content
+        return createLinshareDocument(storage, id, doc, blob);
+      });
+  };
+
+  LinshareStorage.prototype.getAttachment = function (id, name) {
+    restrictAttachmentId(name);
+    var storage = this;
+    // It is not possible to get a document by its name
+    // The only way is to list all of them, and find it manually
+    return getDocumentList(storage, {
+      only_id: id
+    })
+      .push(function (result_list) {
+        if (result_list.length === 1) {
+          return makeRequest(storage, result_list[0]._linshare_uuid, {
+          }, true);
+        }
+
+        throw new jIO.util.jIOError(
+          "Can't find document with id : " + id,
+          404
+        );
+      });
+  };
+
+  jIO.addStorage('linshare', LinshareStorage);
+
+}(jIO, RSVP, UriTemplate, FormData, Blob));
 /*
  * Copyright 2013, Nexedi SA
  *
@@ -15358,6 +14819,1052 @@ var jIO = window.jIO,
 
 }(jIO, Blob, RSVP, unescape, escape));
 /*
+ * Copyright 2013, Nexedi SA
+ *
+ * This program is free software: you can Use, Study, Modify and Redistribute
+ * it under the terms of the GNU General Public License version 3, or (at your
+ * option) any later version, as published by the Free Software Foundation.
+ *
+ * You can also Link and Combine this program with other software covered by
+ * the terms of any of the Free Software licenses or any of the Open Source
+ * Initiative approved licenses and Convey the resulting work. Corresponding
+ * source of such a combination shall include the source code for all other
+ * software used.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See COPYING file for full licensing terms.
+ * See https://www.nexedi.com/licensing for rationale and options.
+ */
+
+/*jslint nomen: true*/
+/*global jIO, sessionStorage, localStorage, RSVP */
+
+/**
+ * JIO Local Storage. Type = 'local'.
+ * Local browser "database" storage.
+ *
+ * Storage Description:
+ *
+ *     {
+ *       "type": "local",
+ *       "sessiononly": false
+ *     }
+ *
+ * @class LocalStorage
+ */
+
+(function (jIO, sessionStorage, localStorage, RSVP) {
+  "use strict";
+
+  function LocalStorage(spec) {
+    if (spec.sessiononly === true) {
+      this._storage = sessionStorage;
+    } else {
+      this._storage = localStorage;
+    }
+  }
+
+  function restrictDocumentId(id) {
+    if (id !== "/") {
+      throw new jIO.util.jIOError("id " + id + " is forbidden (!== /)",
+                                  400);
+    }
+  }
+
+  LocalStorage.prototype.get = function (id) {
+    restrictDocumentId(id);
+    return {};
+  };
+
+  LocalStorage.prototype.allAttachments = function (id) {
+    restrictDocumentId(id);
+
+    var attachments = {},
+      key;
+
+    for (key in this._storage) {
+      if (this._storage.hasOwnProperty(key)) {
+        attachments[key] = {};
+      }
+    }
+    return attachments;
+  };
+
+  LocalStorage.prototype.getAttachment = function (id, name) {
+    restrictDocumentId(id);
+
+    var textstring = this._storage.getItem(name);
+
+    if (textstring === null) {
+      throw new jIO.util.jIOError(
+        "Cannot find attachment " + name,
+        404
+      );
+    }
+    return jIO.util.dataURItoBlob(textstring);
+  };
+
+  LocalStorage.prototype.putAttachment = function (id, name, blob) {
+    var context = this;
+    restrictDocumentId(id);
+
+    // the document already exists
+    // download data
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.readBlobAsDataURL(blob);
+      })
+      .push(function (e) {
+        context._storage.setItem(name, e.target.result);
+      });
+  };
+
+  LocalStorage.prototype.removeAttachment = function (id, name) {
+    restrictDocumentId(id);
+    return this._storage.removeItem(name);
+  };
+
+
+  LocalStorage.prototype.hasCapacity = function (name) {
+    return (name === "list");
+  };
+
+  LocalStorage.prototype.buildQuery = function () {
+    return [{
+      id: "/",
+      value: {}
+    }];
+  };
+
+  jIO.addStorage('local', LocalStorage);
+
+}(jIO, sessionStorage, localStorage, RSVP));
+/*
+ * Copyright 2014, Nexedi SA
+ *
+ * This program is free software: you can Use, Study, Modify and Redistribute
+ * it under the terms of the GNU General Public License version 3, or (at your
+ * option) any later version, as published by the Free Software Foundation.
+ *
+ * You can also Link and Combine this program with other software covered by
+ * the terms of any of the Free Software licenses or any of the Open Source
+ * Initiative approved licenses and Convey the resulting work. Corresponding
+ * source of such a combination shall include the source code for all other
+ * software used.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See COPYING file for full licensing terms.
+ * See https://www.nexedi.com/licensing for rationale and options.
+ */
+
+/**
+ * JIO Indexed Database Storage.
+ *
+ * A local browser "database" storage greatly more powerful than localStorage.
+ *
+ * Description:
+ *
+ *    {
+ *      "type": "indexeddb",
+ *      "database": <string>
+ *    }
+ *
+ * The database name will be prefixed by "jio:", so if the database property is
+ * "hello", then you can manually reach this database with
+ * `indexedDB.open("jio:hello");`. (Or
+ * `indexedDB.deleteDatabase("jio:hello");`.)
+ *
+ * For more informations:
+ *
+ * - http://www.w3.org/TR/IndexedDB/
+ * - https://developer.mozilla.org/en-US/docs/IndexedDB/Using_IndexedDB
+ */
+
+/*jslint nomen: true */
+/*global indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
+        DOMError, DOMException, Set*/
+
+(function (indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest,
+           DOMError, DOMException, Set) {
+  "use strict";
+
+  // Read only as changing it can lead to data corruption
+  var UNITE = 2000000,
+    INDEX_PREFIX = 'doc.';
+
+  function IndexedDBStorage(description) {
+    if (typeof description.database !== "string" ||
+        description.database === "") {
+      throw new TypeError("IndexedDBStorage 'database' description property " +
+                          "must be a non-empty string");
+    }
+    this._database_name = "jio:" + description.database;
+    this._version = description.version;
+    this._index_key_list = description.index_key_list || [];
+  }
+
+  IndexedDBStorage.prototype.hasCapacity = function (name) {
+    return ((name === "list") || (name === "include"));
+  };
+
+  function buildKeyPath(key_list) {
+    return key_list.join("_");
+  }
+
+  function handleUpgradeNeeded(evt, index_key_list) {
+    var db = evt.target.result,
+      store,
+      current_store_list = Array.from(db.objectStoreNames),
+      current_index_list,
+      i,
+      index_key;
+
+    if (current_store_list.indexOf("metadata") === -1) {
+      store = db.createObjectStore("metadata", {
+        keyPath: "_id",
+        autoIncrement: false
+      });
+      // It is not possible to use openKeyCursor on keypath directly
+      // https://www.w3.org/Bugs/Public/show_bug.cgi?id=19955
+      store.createIndex("_id", "_id", {unique: true});
+    } else {
+      store = evt.target.transaction.objectStore("metadata");
+    }
+
+    current_index_list = new Set(store.indexNames);
+    current_index_list.delete("_id");
+    for (i = 0; i < index_key_list.length; i += 1) {
+      // Prefix the index name to prevent conflict with _id
+      index_key = INDEX_PREFIX + index_key_list[i];
+      if (current_index_list.has(index_key)) {
+        current_index_list.delete(index_key);
+      } else {
+        store.createIndex(index_key, index_key,
+                          {unique: false});
+      }
+    }
+    current_index_list = Array.from(current_index_list);
+    for (i = 0; i < current_index_list.length; i += 1) {
+      store.deleteIndex(current_index_list[i]);
+    }
+
+    if (current_store_list.indexOf("attachment") === -1) {
+      store = db.createObjectStore("attachment", {
+        keyPath: "_key_path",
+        autoIncrement: false
+      });
+      store.createIndex("_id", "_id", {unique: false});
+    }
+
+    if (current_store_list.indexOf("blob") === -1) {
+      store = db.createObjectStore("blob", {
+        keyPath: "_key_path",
+        autoIncrement: false
+      });
+      store.createIndex("_id_attachment",
+                        ["_id", "_attachment"], {unique: false});
+      store.createIndex("_id", "_id", {unique: false});
+    }
+  }
+
+  function waitForOpenIndexedDB(storage, callback) {
+    var request,
+      db_name = storage._database_name;
+
+    function canceller() {
+      if ((request !== undefined) && (request.result !== undefined)) {
+        request.result.close();
+      }
+    }
+
+    function resolver(resolve, reject) {
+      // Open DB //
+      request = indexedDB.open(db_name, storage._version);
+      request.onerror = function (error) {
+        canceller();
+        if ((error !== undefined) &&
+            (error.target instanceof IDBOpenDBRequest) &&
+            ((error.target.error instanceof DOMError) ||
+             (error.target.error instanceof DOMException))) {
+          reject(new jIO.util.jIOError(
+            "Connection to: " + db_name + " failed: " +
+              error.target.error.message,
+            500
+          ));
+        } else {
+          reject(error);
+        }
+      };
+
+      request.onabort = function () {
+        canceller();
+        reject("Aborting connection to: " + db_name);
+      };
+
+      request.ontimeout = function () {
+        reject("Connection to: " + db_name + " timeout");
+      };
+
+      request.onblocked = function () {
+        canceller();
+        reject("Connection to: " + db_name + " was blocked");
+      };
+
+      // Create DB if necessary //
+      request.onupgradeneeded = function (evt) {
+        handleUpgradeNeeded(evt, storage._index_key_list);
+      };
+
+      request.onversionchange = function () {
+        canceller();
+        reject(db_name + " was upgraded");
+      };
+
+      request.onsuccess = function () {
+        var result;
+        try {
+          result = callback(request.result);
+        } catch (error) {
+          reject(error);
+        }
+        return new RSVP.Queue(result)
+          .push(function (final_result) {
+            canceller();
+            resolve(final_result);
+          }, function (error) {
+            canceller();
+            reject(error);
+          });
+      };
+    }
+
+    return new RSVP.Promise(resolver, canceller);
+  }
+
+  function waitForTransaction(db, stores, flag, callback) {
+    var tx = db.transaction(stores, flag);
+    function canceller() {
+      try {
+        tx.abort();
+      } catch (unused) {
+        // Transaction already finished
+        return;
+      }
+    }
+    function resolver(resolve, reject) {
+      var result;
+      try {
+        result = callback(tx);
+      } catch (error) {
+        reject(error);
+      }
+      tx.oncomplete = function () {
+        return new RSVP.Queue(result)
+          .push(resolve, function (error) {
+            canceller();
+            reject(error);
+          });
+      };
+      tx.onerror = reject;
+      tx.onabort = reject;
+    }
+    return new RSVP.Promise(resolver, canceller);
+  }
+
+  function waitForIDBRequest(request) {
+    return new RSVP.Promise(function (resolve, reject) {
+      request.onerror = reject;
+      request.onsuccess = resolve;
+    });
+  }
+
+  function waitForAllSynchronousCursor(request, callback) {
+    var force_cancellation = false;
+
+    function canceller() {
+      force_cancellation = true;
+    }
+
+    function resolver(resolve, reject) {
+      request.onerror = reject;
+      request.onsuccess = function (evt) {
+        var cursor = evt.target.result;
+        if (cursor && !force_cancellation) {
+          try {
+            callback(cursor);
+          } catch (error) {
+            reject(error);
+          }
+          // continue to next iteration
+          cursor["continue"]();
+        } else {
+          resolve();
+        }
+      };
+    }
+    return new RSVP.Promise(resolver, canceller);
+  }
+
+  IndexedDBStorage.prototype.buildQuery = function (options) {
+    var result_list = [],
+      context = this;
+
+    function pushIncludedMetadata(cursor) {
+      result_list.push({
+        "id": cursor.primaryKey,
+        "value": {},
+        "doc": cursor.value.doc
+      });
+    }
+
+    function pushMetadata(cursor) {
+      result_list.push({
+        "id": cursor.primaryKey,
+        "value": {}
+      });
+    }
+
+    return new RSVP.Queue()
+      .push(function () {
+        return waitForOpenIndexedDB(context, function (db) {
+          return waitForTransaction(db, ["metadata"], "readonly",
+                                    function (tx) {
+              var key = "_id";
+              if (options.include_docs === true) {
+                return waitForAllSynchronousCursor(
+                  tx.objectStore("metadata").index(key).openCursor(),
+                  pushIncludedMetadata
+                );
+              }
+              return waitForAllSynchronousCursor(
+                tx.objectStore("metadata").index(key).openKeyCursor(),
+                pushMetadata
+              );
+            });
+        });
+      })
+      .push(function () {
+        return result_list;
+      });
+  };
+
+  IndexedDBStorage.prototype.get = function (id) {
+    var context = this;
+    return new RSVP.Queue()
+      .push(function () {
+        return waitForOpenIndexedDB(context, function (db) {
+          return waitForTransaction(db, ["metadata"], "readonly",
+                                    function (tx) {
+              return waitForIDBRequest(tx.objectStore("metadata").get(id));
+            });
+        });
+      })
+      .push(function (evt) {
+        if (evt.target.result) {
+          return evt.target.result.doc;
+        }
+        throw new jIO.util.jIOError(
+          "IndexedDB: cannot find object '" + id + "' in the 'metadata' store",
+          404
+        );
+      });
+  };
+
+  IndexedDBStorage.prototype.allAttachments = function (id) {
+    var attachment_dict = {},
+      context = this;
+
+    function addEntry(cursor) {
+      attachment_dict[cursor.primaryKey.slice(cursor.key.length + 1)] = {};
+    }
+
+    return new RSVP.Queue()
+      .push(function () {
+        return waitForOpenIndexedDB(context, function (db) {
+          return waitForTransaction(db, ["metadata", "attachment"], "readonly",
+                                    function (tx) {
+              return RSVP.all([
+                waitForIDBRequest(tx.objectStore("metadata").get(id)),
+                waitForAllSynchronousCursor(
+                  tx.objectStore("attachment").index("_id")
+                    .openKeyCursor(IDBKeyRange.only(id)),
+                  addEntry
+                )
+              ]);
+            });
+        });
+      })
+      .push(function (result_list) {
+        var evt = result_list[0];
+        if (!evt.target.result) {
+          throw new jIO.util.jIOError(
+            "IndexedDB: cannot find object '" + id +
+              "' in the 'metadata' store",
+            404
+          );
+        }
+
+        return attachment_dict;
+      });
+  };
+
+  IndexedDBStorage.prototype.put = function (id, metadata) {
+    return waitForOpenIndexedDB(this, function (db) {
+      return waitForTransaction(db, ["metadata"], "readwrite",
+                                function (tx) {
+          return waitForIDBRequest(tx.objectStore("metadata").put({
+            "_id": id,
+            "doc": metadata
+          }));
+        });
+    });
+  };
+
+  IndexedDBStorage.prototype.remove = function (id) {
+    return waitForOpenIndexedDB(this, function (db) {
+      return waitForTransaction(db, ["metadata", "attachment", "blob"],
+                                "readwrite", function (tx) {
+
+          var promise_list = [],
+            metadata_store = tx.objectStore("metadata"),
+            attachment_store = tx.objectStore("attachment"),
+            blob_store = tx.objectStore("blob");
+
+          function deleteAttachment(cursor) {
+            promise_list.push(
+              waitForIDBRequest(attachment_store.delete(cursor.primaryKey))
+            );
+          }
+          function deleteBlob(cursor) {
+            promise_list.push(
+              waitForIDBRequest(blob_store.delete(cursor.primaryKey))
+            );
+          }
+
+          return RSVP.all([
+            waitForIDBRequest(metadata_store.delete(id)),
+            waitForAllSynchronousCursor(
+              attachment_store.index("_id")
+                              .openKeyCursor(IDBKeyRange.only(id)),
+              deleteAttachment
+            ),
+            waitForAllSynchronousCursor(
+              blob_store.index("_id")
+                        .openKeyCursor(IDBKeyRange.only(id)),
+              deleteBlob
+            ),
+          ])
+            .then(function () {
+              return RSVP.all(promise_list);
+            });
+        });
+    });
+  };
+
+  IndexedDBStorage.prototype.getAttachment = function (id, name, options) {
+    if (options === undefined) {
+      options = {};
+    }
+    var start,
+      end,
+      array_buffer_list = [],
+      context = this;
+
+    start = options.start || 0;
+    end = options.end;
+
+    // Stream the blob content
+    if ((start !== 0) || (end !== undefined)) {
+
+      if (start < 0 || ((end !== undefined) && (end < 0))) {
+        throw new jIO.util.jIOError(
+          "_start and _end must be positive",
+          400
+        );
+      }
+      if ((end !== undefined) && (start > end)) {
+        throw new jIO.util.jIOError("_start is greater than _end",
+                                    400);
+      }
+
+      return new RSVP.Queue()
+        .push(function () {
+          return waitForOpenIndexedDB(context, function (db) {
+            return waitForTransaction(db, ["blob"], "readonly",
+                                      function (tx) {
+                var key_path = buildKeyPath([id, name]),
+                  blob_store = tx.objectStore("blob"),
+                  start_index,
+                  end_index,
+                  promise_list = [];
+
+
+                start_index = Math.floor(start / UNITE);
+                if (end !== undefined) {
+                  end_index =  Math.floor(end / UNITE);
+                  if (end % UNITE === 0) {
+                    end_index -= 1;
+                  }
+                }
+
+                function getBlobKey(cursor) {
+                  var index = parseInt(
+                    cursor.primaryKey.slice(key_path.length + 1),
+                    10
+                  );
+
+                  if ((start !== 0) && (index < start_index)) {
+                    // No need to fetch blobs at the start
+                    return;
+                  }
+                  if ((end !== undefined) && (index > end_index)) {
+                    // No need to fetch blobs at the end
+                    return;
+                  }
+
+                  // Sort the blob by their index
+                  promise_list.splice(
+                    index - start_index,
+                    0,
+                    waitForIDBRequest(blob_store.get(cursor.primaryKey))
+                  );
+                }
+
+                // Get all blob keys to check if they must be fetched
+                return waitForAllSynchronousCursor(
+                  blob_store.index("_id_attachment")
+                    .openKeyCursor(IDBKeyRange.only([id, name])),
+                  getBlobKey
+                )
+                  .then(function () {
+                    return RSVP.all(promise_list);
+                  });
+              });
+          });
+        })
+        .push(function (result_list) {
+          // No need to keep the IDB open
+          var blob,
+            index,
+            i;
+
+          for (i = 0; i < result_list.length; i += 1) {
+            array_buffer_list.push(result_list[i].target.result.blob);
+          }
+          blob = new Blob(array_buffer_list,
+                          {type: "application/octet-stream"});
+          index = Math.floor(start / UNITE) * UNITE;
+          if (end === undefined) {
+            end = blob.size;
+          } else {
+            end = end - index;
+          }
+          return blob.slice(start - index, end,
+                            "application/octet-stream");
+        });
+    }
+
+    // Request the full blob
+    return new RSVP.Queue()
+      .push(function () {
+        return waitForOpenIndexedDB(context, function (db) {
+          return waitForTransaction(db, ["attachment", "blob"], "readonly",
+                                    function (tx) {
+              var key_path = buildKeyPath([id, name]),
+                attachment_store = tx.objectStore("attachment"),
+                blob_store = tx.objectStore("blob");
+
+              function getBlob(cursor) {
+                var index = parseInt(
+                  cursor.primaryKey.slice(key_path.length + 1),
+                  10
+                );
+
+                // Sort the blob by their index
+                array_buffer_list.splice(
+                  index,
+                  0,
+                  cursor.value.blob
+                );
+              }
+
+              return RSVP.all([
+                // Get the attachment info (mime type)
+                waitForIDBRequest(attachment_store.get(
+                  key_path
+                )),
+                // Get all needed blobs
+                waitForAllSynchronousCursor(
+                  blob_store.index("_id_attachment")
+                    .openCursor(IDBKeyRange.only([id, name])),
+                  getBlob
+                )
+              ]);
+            });
+        });
+
+      })
+      .push(function (result_list) {
+        // No need to keep the IDB open
+        var blob,
+          attachment = result_list[0].target.result;
+
+        // Should raise if key is not good
+        if (!attachment) {
+          throw new jIO.util.jIOError(
+            "IndexedDB: cannot find object '" +
+                buildKeyPath([id, name]) +
+                "' in the 'attachment' store",
+            404
+          );
+        }
+
+        blob = new Blob(array_buffer_list,
+                        {type: attachment.info.content_type});
+        if (blob.size !== attachment.info.length) {
+          throw new jIO.util.jIOError(
+            "IndexedDB: attachment '" +
+                buildKeyPath([id, name]) +
+                "' in the 'attachment' store is broken",
+            500
+          );
+        }
+        return blob;
+      });
+  };
+
+  IndexedDBStorage.prototype.putAttachment = function (id, name, blob) {
+    var context = this;
+    return new RSVP.Queue()
+      .push(function () {
+        // Split the blob first
+        return jIO.util.readBlobAsArrayBuffer(blob);
+      })
+      .push(function (event) {
+        var array_buffer = event.target.result,
+          blob_part = [],
+          total_size = blob.size,
+          handled_size = 0;
+
+        while (handled_size < total_size) {
+          blob_part.push(array_buffer.slice(handled_size,
+                                            handled_size + UNITE));
+          handled_size += UNITE;
+        }
+
+        return waitForOpenIndexedDB(context, function (db) {
+          return waitForTransaction(db, ["attachment", "blob"], "readwrite",
+                                    function (tx) {
+              var blob_store,
+                promise_list,
+                delete_promise_list = [],
+                key_path = buildKeyPath([id, name]),
+                i;
+              // First write the attachment info on top of previous
+              promise_list = [
+                waitForIDBRequest(tx.objectStore("attachment").put({
+                  "_key_path": key_path,
+                  "_id": id,
+                  "_attachment": name,
+                  "info": {
+                    "content_type": blob.type,
+                    "length": blob.size
+                  }
+                }))
+              ];
+              // Then, write all blob parts on top of previous
+              blob_store = tx.objectStore("blob");
+              for (i = 0; i < blob_part.length; i += 1) {
+                promise_list.push(
+                  waitForIDBRequest(blob_store.put({
+                    "_key_path": buildKeyPath([id, name, i]),
+                    "_id" : id,
+                    "_attachment" : name,
+                    "_part" : i,
+                    "blob": blob_part[i]
+                  }))
+                );
+              }
+
+              function deleteEntry(cursor) {
+                var index = parseInt(
+                  cursor.primaryKey.slice(key_path.length + 1),
+                  10
+                );
+                if (index >= blob_part.length) {
+                  delete_promise_list.push(
+                    waitForIDBRequest(blob_store.delete(cursor.primaryKey))
+                  );
+                }
+              }
+
+              // Finally, remove all remaining blobs
+              promise_list.push(
+                waitForAllSynchronousCursor(
+                  blob_store.index("_id_attachment")
+                            .openKeyCursor(IDBKeyRange.only([id, name])),
+                  deleteEntry
+                )
+              );
+
+              return RSVP.all(promise_list)
+                .then(function () {
+                  if (delete_promise_list.length) {
+                    return RSVP.all(delete_promise_list);
+                  }
+                });
+            });
+        });
+      });
+  };
+
+  IndexedDBStorage.prototype.removeAttachment = function (id, name) {
+    return waitForOpenIndexedDB(this, function (db) {
+      return waitForTransaction(db, ["attachment", "blob"], "readwrite",
+                                function (tx) {
+          var promise_list = [],
+            attachment_store = tx.objectStore("attachment"),
+            blob_store = tx.objectStore("blob");
+
+          function deleteEntry(cursor) {
+            promise_list.push(
+              waitForIDBRequest(blob_store.delete(cursor.primaryKey))
+            );
+          }
+
+          return RSVP.all([
+            waitForIDBRequest(
+              attachment_store.delete(buildKeyPath([id, name]))
+            ),
+            waitForAllSynchronousCursor(
+              blob_store.index("_id_attachment")
+                        .openKeyCursor(IDBKeyRange.only([id, name])),
+              deleteEntry
+            )
+          ])
+            .then(function () {
+              return RSVP.all(promise_list);
+            });
+
+        });
+    });
+  };
+
+  jIO.addStorage("indexeddb", IndexedDBStorage);
+}(indexedDB, jIO, RSVP, Blob, Math, IDBKeyRange, IDBOpenDBRequest, DOMError,
+  DOMException, Set));
+/*
+ * Copyright 2015, Nexedi SA
+ *
+ * This program is free software: you can Use, Study, Modify and Redistribute
+ * it under the terms of the GNU General Public License version 3, or (at your
+ * option) any later version, as published by the Free Software Foundation.
+ *
+ * You can also Link and Combine this program with other software covered by
+ * the terms of any of the Free Software licenses or any of the Open Source
+ * Initiative approved licenses and Convey the resulting work. Corresponding
+ * source of such a combination shall include the source code for all other
+ * software used.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See COPYING file for full licensing terms.
+ * See https://www.nexedi.com/licensing for rationale and options.
+ */
+
+/*jslint nomen: true*/
+/*global jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer*/
+
+(function (jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer) {
+  "use strict";
+
+  /*
+  The cryptography system used by this storage is AES-GCM.
+  Here is an example of how to generate a key to the json format:
+
+  return new RSVP.Queue()
+    .push(function () {
+      return crypto.subtle.generateKey({name: "AES-GCM", length: 256},
+                                       true, ["encrypt", "decrypt"]);
+    })
+    .push(function (key) {
+      return crypto.subtle.exportKey("jwk", key);
+    })
+    .push(function (json_key) {
+      var jio = jIO.createJIO({
+        type: "crypt",
+        key: json_key,
+        sub_storage: {storage_definition}
+      });
+    });
+
+  Find more informations about this cryptography system on
+  https://github.com/diafygi/webcrypto-examples#aes-gcm
+  */
+
+  /**
+   * The JIO Cryptography Storage extension
+   *
+   * @class CryptStorage
+   * @constructor
+   */
+
+  var MIME_TYPE = "application/x-jio-aes-gcm-encryption";
+
+  function CryptStorage(spec) {
+    this._key = spec.key;
+    this._jsonKey = true;
+    this._sub_storage = jIO.createJIO(spec.sub_storage);
+  }
+
+  function convertKey(that) {
+    return new RSVP.Queue()
+      .push(function () {
+        return crypto.subtle.importKey("jwk", that._key,
+                                       "AES-GCM", false,
+                                       ["encrypt", "decrypt"]);
+      })
+      .push(function (res) {
+        that._key = res;
+        that._jsonKey = false;
+        return;
+      });
+  }
+
+  CryptStorage.prototype.get = function () {
+    return this._sub_storage.get.apply(this._sub_storage,
+                                       arguments);
+  };
+
+  CryptStorage.prototype.post = function () {
+    return this._sub_storage.post.apply(this._sub_storage,
+                                        arguments);
+  };
+
+  CryptStorage.prototype.put = function () {
+    return this._sub_storage.put.apply(this._sub_storage,
+                                       arguments);
+  };
+
+  CryptStorage.prototype.remove = function () {
+    return this._sub_storage.remove.apply(this._sub_storage,
+                                          arguments);
+  };
+
+  CryptStorage.prototype.hasCapacity = function () {
+    return this._sub_storage.hasCapacity.apply(this._sub_storage,
+                                               arguments);
+  };
+
+  CryptStorage.prototype.buildQuery = function () {
+    return this._sub_storage.buildQuery.apply(this._sub_storage,
+                                              arguments);
+  };
+
+
+  CryptStorage.prototype.putAttachment = function (id, name, blob) {
+    var initializaton_vector = crypto.getRandomValues(new Uint8Array(12)),
+      that = this;
+
+    return new RSVP.Queue()
+      .push(function () {
+        if (that._jsonKey === true) {
+          return convertKey(that);
+        }
+        return;
+      })
+      .push(function () {
+        return jIO.util.readBlobAsDataURL(blob);
+      })
+      .push(function (dataURL) {
+        //string->arraybuffer
+        var strLen = dataURL.target.result.length,
+          buf = new ArrayBuffer(strLen),
+          bufView = new Uint8Array(buf),
+          i;
+
+        dataURL = dataURL.target.result;
+        for (i = 0; i < strLen; i += 1) {
+          bufView[i] = dataURL.charCodeAt(i);
+        }
+        return crypto.subtle.encrypt({
+          name : "AES-GCM",
+          iv : initializaton_vector
+        },
+                                     that._key, buf);
+      })
+      .push(function (coded) {
+        var final_blob = new Blob([initializaton_vector, coded],
+                                  {type: MIME_TYPE});
+        return that._sub_storage.putAttachment(id, name, final_blob);
+      });
+  };
+
+  CryptStorage.prototype.getAttachment = function (id, name) {
+    var that = this;
+
+    return that._sub_storage.getAttachment(id, name)
+      .push(function (blob) {
+        if (blob.type !== MIME_TYPE) {
+          return blob;
+        }
+        return new RSVP.Queue()
+          .push(function () {
+            if (that._jsonKey === true) {
+              return convertKey(that);
+            }
+            return;
+          })
+          .push(function () {
+            return jIO.util.readBlobAsArrayBuffer(blob);
+          })
+          .push(function (coded) {
+            var initializaton_vector;
+
+            coded = coded.target.result;
+            initializaton_vector = new Uint8Array(coded.slice(0, 12));
+            return new RSVP.Queue()
+              .push(function () {
+                return crypto.subtle.decrypt({
+                  name : "AES-GCM",
+                  iv : initializaton_vector
+                },
+                                             that._key, coded.slice(12));
+              })
+              .push(function (arr) {
+                //arraybuffer->string
+                arr = String.fromCharCode.apply(null, new Uint8Array(arr));
+                return jIO.util.dataURItoBlob(arr);
+              })
+              .push(undefined, function (error) {
+                if (error instanceof DOMException) {
+                  return blob;
+                }
+                throw error;
+              });
+          });
+      });
+  };
+
+  CryptStorage.prototype.removeAttachment = function () {
+    return this._sub_storage.removeAttachment.apply(this._sub_storage,
+                                                    arguments);
+  };
+
+  CryptStorage.prototype.allAttachments = function () {
+    return this._sub_storage.allAttachments.apply(this._sub_storage,
+                                                  arguments);
+  };
+
+  jIO.addStorage('crypt', CryptStorage);
+
+}(jIO, RSVP, DOMException, Blob, crypto, Uint8Array, ArrayBuffer));
+/*
  * Copyright 2017, Nexedi SA
  *
  * This program is free software: you can Use, Study, Modify and Redistribute
@@ -15489,10 +15996,182 @@ var jIO = window.jIO,
 
   jIO.addStorage('facebook', FBStorage);
 
-}(jIO, RSVP, UriTemplate));
-  module = node_module;
+}(jIO, RSVP, UriTemplate));/*
+ * Copyright 2018, Nexedi SA
+ *
+ * This program is free software: you can Use, Study, Modify and Redistribute
+ * it under the terms of the GNU General Public License version 3, or (at your
+ * option) any later version, as published by the Free Software Foundation.
+ *
+ * You can also Link and Combine this program with other software covered by
+ * the terms of any of the Free Software licenses or any of the Open Source
+ * Initiative approved licenses and Convey the resulting work. Corresponding
+ * source of such a combination shall include the source code for all other
+ * software used.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See COPYING file for full licensing terms.
+ * See https://www.nexedi.com/licensing for rationale and options.
+ */
 
-  jIO.node_env = window;
-  module.exports = jIO;
+/*jslint nomen: true*/
+/*global window, jIO, RSVP, DOMParser, XMLSerializer, navigator*/
+(function (window, jIO, RSVP, DOMParser, XMLSerializer, navigator) {
+  "use strict";
 
-} ({}));
+  /* Document is not defined in ServiceWorker */
+  if (window.document === undefined) {
+    window.document = {
+      createElementNS: function () {
+        throw new Error(
+          'document.createElementNS is not supported by ' + navigator.userAgent
+        );
+      }
+    };
+  }
+
+  var parser = new DOMParser(),
+    serializer = new XMLSerializer();
+
+  function makeXmlRpcRequest(file, from, to, conversion_kw) {
+    var xml = parser.parseFromString(
+      '<?xml version="1.0" encoding="UTF-8"?><methodCall>' +
+        '<methodName>convertFile</methodName><params>' +
+        '<param><value><string></string></value></param>' +
+        '<param><value><string></string></value></param>' +
+        '<param><value><string></string></value></param>' +
+        '<param><struct></struct></param>' +
+        '</params></methodCall>',
+      'text/xml'
+    ),
+      elt,
+      member,
+      name,
+      value,
+      key,
+      struct = xml.getElementsByTagName('struct'),
+      string_list = xml.getElementsByTagName('string');
+    string_list[0].textContent = file;
+    string_list[1].textContent = from;
+    string_list[2].textContent = to;
+    if (conversion_kw) {
+      for (key in conversion_kw) {
+        if (conversion_kw.hasOwnProperty(key)) {
+          elt = window.document.createElementNS(null, conversion_kw[key][1]);
+          elt.textContent = conversion_kw[key][0];
+          value = window.document.createElementNS(null, "value");
+          value.appendChild(elt);
+          name = window.document.createElementNS(null, "name");
+          name.textContent = key;
+          member = window.document.createElementNS(null, "member");
+          member.appendChild(name);
+          member.appendChild(value);
+          struct[0].appendChild(member);
+        }
+      }
+    }
+    return serializer.serializeToString(xml);
+  }
+
+  /**
+   * convert a blob 
+   * from a format to another
+   * return converted blob.
+   **/
+  function convert(url, blob, from, to, conversion_kw) {
+    return new RSVP.Queue()
+      .push(function () {
+        return jIO.util.readBlobAsDataURL(blob);
+      })
+      .push(function (result) {
+        return jIO.util.ajax({
+          type: 'POST',
+          url: url,
+          data: makeXmlRpcRequest(
+            result.target.result.split('base64,')[1],
+            from,
+            to,
+            conversion_kw
+          )
+        });
+      })
+      .push(function (result) {
+        var data = parser.parseFromString(
+          result.target.responseText,
+          "application/xml"
+        ), error;
+        if (data.getElementsByTagName('fault').length === 0) {
+          return jIO.util.base64toBlob(
+            data.querySelector('string').textContent,
+            to
+          );
+        }
+        error = new jIO.util.jIOError('Conversion failed', 500);
+        error.detail = data.querySelector('string').textContent;
+        throw error;
+      });
+  }
+
+  /**
+   * The jIO CloudoooStorage extension
+   *
+   * Convert attachment : att_id?from="format"&to="format"
+   * 
+   * @class CloudoooStorage
+   * @constructor
+   */
+  function CloudoooStorage(spec) {
+    this._url = spec.url;
+    this._sub_storage = jIO.createJIO(spec.sub_storage);
+  }
+
+  CloudoooStorage.prototype.get = function () {
+    return this._sub_storage.get.apply(this._sub_storage, arguments);
+  };
+
+  CloudoooStorage.prototype.put = function () {
+    return this._sub_storage.put.apply(this._sub_storage, arguments);
+  };
+
+  CloudoooStorage.prototype.remove = function () {
+    return this._sub_storage.remove.apply(this._sub_storage, arguments);
+  };
+
+  CloudoooStorage.prototype.getAttachment = function () {
+    return this._sub_storage.getAttachment.apply(this._sub_storage, arguments);
+  };
+
+  CloudoooStorage.prototype.putAttachment = function (id, name, blob,
+    conversion_kw
+    ) {
+    var storage = this;
+    return storage.get(id)
+      .push(function (doc) {
+        return convert(storage._url, blob, doc.from, doc.to, conversion_kw);
+      })
+      .push(function (converted_blob) {
+        return storage._sub_storage.putAttachment(id, name, converted_blob);
+      });
+  };
+
+  CloudoooStorage.prototype.allAttachments = function () {
+    return this._sub_storage.allAttachments.apply(this._sub_storage, arguments);
+  };
+
+  CloudoooStorage.prototype.repair = function () {
+    return this._sub_storage.repair.apply(this._sub_storage, arguments);
+  };
+
+  CloudoooStorage.prototype.hasCapacity = function () {
+    return this._sub_storage.hasCapacity.apply(this._sub_storage, arguments);
+  };
+
+  CloudoooStorage.prototype.buildQuery = function () {
+    return this._sub_storage.buildQuery.apply(this._sub_storage, arguments);
+  };
+
+  jIO.addStorage('cloudooo', CloudoooStorage);
+
+}(window, jIO, RSVP, DOMParser, XMLSerializer, navigator));
