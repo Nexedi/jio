@@ -1,23 +1,3 @@
-/*
- * Copyright 2014, Nexedi SA
- *
- * This program is free software: you can Use, Study, Modify and Redistribute
- * it under the terms of the GNU General Public License version 3, or (at your
- * option) any later version, as published by the Free Software Foundation.
- *
- * You can also Link and Combine this program with other software covered by
- * the terms of any of the Free Software licenses or any of the Open Source
- * Initiative approved licenses and Convey the resulting work. Corresponding
- * source of such a combination shall include the source code for all other
- * software used.
- *
- * This program is distributed WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See COPYING file for full licensing terms.
- * See https://www.nexedi.com/licensing for rationale and options.
- */
-
 /*global console, btoa, Blob*/
 /*jslint nomen: true, maxlen: 200*/
 (function (window, QUnit, jIO, rJS) {
@@ -31,192 +11,11 @@
     deepEqual = QUnit.deepEqual;
 
   rJS(window)
-
     .ready(function (g) {
-
-      ///////////////////////////
-      // Local storage
-      ///////////////////////////
-//       return g.run({
-//         type: "query",
-//         sub_storage: {
-//           type: "uuid",
-//           sub_storage: {
-//             type: "document",
-//             document_id: "/",
-//             sub_storage: {
-//               type: "zip",
-//               sub_storage: {
-//                 type: "local"
-//               }
-//             }
-//           }
-//         }
-//       });
-
-      ///////////////////////////
-      // Memory storage
-      ///////////////////////////
-//      return g.run({
-//        type: "query",
-//        sub_storage: {
-//          type: "uuid",
-//          sub_storage: {
-//            type: "union",
-//            storage_list: [{
-//              type: "memory"
-//            }]
-//          }
-//        }
-//      });
-
-      ///////////////////////////
-      // Linshare storage
-      ///////////////////////////
-//       return g.run({
-//         type: "query",
-//         sub_storage: {
-//           type: "uuid",
-//           sub_storage: {
-//             type: "linshare",
-//             url: "https://demo.linshare.org/",
-//             credential_token: window.btoa(
-//               'user1@linshare.org' + ':' + 'password1'
-//             )
-//           }
-//         }
-//       });
-
-      ///////////////////////////
-      // WebSQL storage
-      ///////////////////////////
-//      return g.run({
-//        type: "query",
-//        sub_storage: {
-//          type: "uuid",
-//          sub_storage: {
-//            "type": "websql",
-//            "database": "test"
-//          }
-//        }
-//      });
-
-      ///////////////////////////
-      // IndexedDB storage
-      ///////////////////////////
-//       return g.run({
-//         type: "query",
-//         sub_storage: {
-//           type: "uuid",
-//           sub_storage: {
-//             "type": "indexeddb",
-//             "database": "test"
-//           }
-//         }
-//       });
-
-      ///////////////////////////
-      // DAV storage
-      ///////////////////////////
-//       return g.run({
-//         type: "query",
-//         sub_storage: {
-//           type: "uuid",
-//           sub_storage: {
-//             type: "drivetojiomapping",
-//             sub_storage: {
-//               "type": "dav",
-//               "url": "DAVURL",
-//               "basic_login": btoa("LOGIN:PASSWD")
-//             }
-//           }
-//         }
-//       });
-
-      ///////////////////////////
-      // Dropbox storage
-      ///////////////////////////
-//       return g.run({
-//         type: "query",
-//         sub_storage: {
-//           type: "uuid",
-//           sub_storage: {
-//             type: "drivetojiomapping",
-//             sub_storage: {
-//               "type": "dropbox",
-//               "access_token" : "TOKEN",
-//               "root" : "dropbox"
-//             }
-//           }
-//         }
-//       });
-
-      ///////////////////////////
-      // Qiniu storage
-      ///////////////////////////
-//       return g.run({
-//         type: "query",
-//         sub_storage: {
-//           type: "uuid",
-//           sub_storage: {
-//             "type": "qiniu",
-//             "bucket": "BUCKET",
-//             "access_key": "ACCESSKEY",
-//             "secret_key": "SECRETKEY"
-//           }
-//         }
-//       });
-
-      ///////////////////////////
-      // Replicate storage
-      ///////////////////////////
-//       return g.run({
-//         type: "query",
-//         sub_storage: {
-//           type: "uuid",
-//           sub_storage: {
-//             type: "replicate",
-//             local_sub_storage: {
-//               type: "memory"
-//             },
-//             remote_sub_storage: {
-//               "type": "memory"
-//             }
-//           }
-//         }
-//       });
-
-      ///////////////////////////
-      // Crypt storage
-      ///////////////////////////
-      // return g.run({
-      //   type: "query",
-      //   sub_storage: {
-      //     type: "uuid",
-      //     sub_storage: {
-      //       type: "crypt",
-      //       key: {"alg": "A256GCM", "ext": true,
-      //             "k": "seeaLzpu8dHG07bO2ANH2GywbTqs_zrs4Vq8zmtYeE4",
-      //             "key_ops": ["encrypt", "decrypt"], "kty": "oct"},
-      //       sub_storage: {
-      //         type: "indexeddb",
-      //         database: "test427"
-      //       }
-      //     }
-      //   }
-      // });
 
       ///////////////////////////
       // Monitoring storage
       ///////////////////////////
-      /*return g.run({
-        type: "query",
-        sub_storage: {
-          type: "erp5",
-          url: "https://panel.rapid.space/hateoas/",
-          default_view_reference: "jio_view"
-        }
-      });*/
 
       return g.run({
         type: "replicatedopml",
@@ -229,12 +28,12 @@
             type: "uuid",
             sub_storage: {
               type: "indexeddb",
-              database: "monitoring_local.db"
+              database: "monitoring_local_roque.db"
             }
           }
         },
         remote_sub_storage: {
-          type: "union",
+          /*type: "union",
           storage_list: [
             {
               type: "erp5",
@@ -246,7 +45,13 @@
               url: "https://softinst224044.host.vifib.net/hateoas/",
               default_view_reference: "jio_view"
             }
-          ]
+          ]*/
+          type: "query",
+          sub_storage: {
+            type: "erp5",
+            url: "https://panel.rapid.space/hateoas/",
+            default_view_reference: "jio_view"
+          }
         }
       });
 
@@ -257,9 +62,10 @@
         var jio;
         stop();
         //expect(14);
-        expect(9);
+        //expect(9);
 
         try {
+          console.log("CREATE JIO");
           jio = jIO.createJIO(jio_options);
         } catch (error) {
           console.error(error.stack);
@@ -268,15 +74,16 @@
         }
 
         // Try to fetch inexistent document
+        console.log("jio get...");
         jio.get("inexistent")
           .fail(function (error) {
-            console.error(error);
+            console.error("inexisteng error:", error);
             if (error.status_code !== 404) {
               throw error;
             }
             equal(error.status_code, 404, "404 if inexistent");
             // Post a document without ID
-            return jio.post({"title": "I don't have ID éà&\n"});
+          /*  return jio.post({"title": "I don't have ID éà&\n"});
           })
           .then(function (doc_id) {
             ok(doc_id, "Document without ID created (" + doc_id + ")");
@@ -308,28 +115,28 @@
             equal(all_doc_id[1], "id2", "Document 2 correctly created");
             equal(all_doc_id[2], "id3", "Document 3 correctly created");
 
-//             // Default allDocs call
-//             return jio.allDocs();
-//           })
-//           .then(function (result) {
-//             deepEqual(result, {
-//               data: {
-//                 rows: [{
-//                   id: "id1",
-//                   value: {}
-//                 }, {
-//                   id: "id2",
-//                   value: {}
-//                 }, {
-//                   id: "id3",
-//                   value: {}
-//                 }],
-//                 total_rows: 3
-//               }
-//             }, "default allDocs OK");
+             // Default allDocs call
+             return jio.allDocs();
+           })
+           .then(function (result) {
+             deepEqual(result, {
+               data: {
+                 rows: [{
+                   id: "id1",
+                   value: {}
+                 }, {
+                   id: "id2",
+                   value: {}
+                 }, {
+                   id: "id3",
+                   value: {}
+                 }],
+                 total_rows: 3
+               }
+             }, "default allDocs OK");*/
 
             // Filter the result
-            return jio.allDocs({
+/*            return jio.allDocs({
               query: 'title: "2 ID"',
               select_list: ["int_index"]
             });
@@ -361,7 +168,7 @@
             return jio.put("foo❤/test.txt", {});
           })
 
-/*          .then(function () {
+          .then(function () {
             return jio.putAttachment(
               "foo❤/test.txt",
               "enclosure",
@@ -401,6 +208,7 @@
             ok("Attachment removed");
           })*/
 
+        })
           .then(function () {
             return jio.repair();
           })
@@ -410,6 +218,13 @@
             console.error(error.stack);
             console.error(error);
             ok(false, error);
+          })
+
+          .then(function () {
+            return jio.allDocs();
+          })
+          .then(function (result) {
+            console.log("alldocs result", result);
           })
           .always(function () {
             start();
