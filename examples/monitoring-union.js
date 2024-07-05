@@ -94,7 +94,7 @@
           })
 
           .then(function () {
-            return jio.allDocs();
+            return jio.allDocs({include_docs: true});
           })
           .then(function (result) {
             console.log("alldocs result", result);
