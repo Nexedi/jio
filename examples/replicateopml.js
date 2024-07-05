@@ -4,27 +4,11 @@
 (function (jIO, RSVP, Rusha, Blob, console) {
   "use strict";
 
-  /**
-   *
-   * Sample OPML Tree Replicated Storage spec
-   * 
-   * {
-   *  "type": "replicatedopml",
-   *  "remote_storage_unreachable_status": "WARNING",
-   *  "remote_opml_check_time_interval": 86400000,
-   *  "request_timeout": 0,
-   *  local_sub_storage: {
-   *    type: "query",
-   *      sub_storage: {
-   *        type: "indexeddb",
-   *        database: "monitoring_local.db"
-   *    }
-   *  }
-   * }
-   * 
-   */
-
   var rusha = new Rusha(),
+    mock_test = false,
+    MOCK_OPMLS = '[{"id":"/0","value":{},"doc":{"dateModified":"Thu, 04 Jul 2024 18:48:28 +0000","dateCreated":"Thu, 04 Jul 2024 09:00:47 +0000","title":"ERP5 Playground instance"}},{"id":"/1/0","value":{},"doc":{"text":"Monitoring RSS Feed list"}},{"id":"/1/0/3","value":{},"doc":{"url":"https://softinst220514.host.vifib.net/share/private/","xmlUrl":"https://softinst220514.host.vifib.net/public/feed","htmlUrl":"https://softinst220514.host.vifib.net/public/feed","version":"RSS","type":"rss","title":"PBS COMP-3557-theia-1","text":"PBS COMP-3557-theia-1","portal_type":"Opml Outline","parent_id":"f185fe2fa2280798a181e3fa45d2cad763d10540","parent_url":"https://softinst184163.host.vifib.net/public/feeds","reference":"2f9748e8ec9656b70ebf08dfec841509d506a8aa","active":true,"dateCreated":"Thu, 04 Jul 2024 09:00:47 +0000","dateModified":"Thu, 04 Jul 2024 18:48:28 +0000","opml_title":"ERP5 Playground instance"}},{"id":"/1/0/2","value":{},"doc":{"url":"https://softinst184178.host.vifib.net/share/private/","xmlUrl":"https://softinst184178.host.vifib.net/public/feed","htmlUrl":"https://softinst184178.host.vifib.net/public/feed","version":"RSS","type":"rss","title":"theia1","text":"theia1","portal_type":"Opml Outline","parent_id":"f185fe2fa2280798a181e3fa45d2cad763d10540","parent_url":"https://softinst184163.host.vifib.net/public/feeds","reference":"e5a8721558fba656175533e09b5023b24ad1aeed","active":true,"dateCreated":"Thu, 04 Jul 2024 09:00:47 +0000","dateModified":"Thu, 04 Jul 2024 18:48:28 +0000","opml_title":"ERP5 Playground instance"}},{"id":"/1/0/1","value":{},"doc":{"url":"https://softinst184170.host.vifib.net/share/private/","xmlUrl":"https://softinst184170.host.vifib.net/public/feed","htmlUrl":"https://softinst184170.host.vifib.net/public/feed","version":"RSS","type":"rss","title":"theia0","text":"theia0","portal_type":"Opml Outline","parent_id":"f185fe2fa2280798a181e3fa45d2cad763d10540","parent_url":"https://softinst184163.host.vifib.net/public/feeds","reference":"62bcecf32735232bf9b4fde41698bbe743dcd438","active":true,"dateCreated":"Thu, 04 Jul 2024 09:00:47 +0000","dateModified":"Thu, 04 Jul 2024 18:48:28 +0000","opml_title":"ERP5 Playground instance"}},{"id":"/1/0/0","value":{},"doc":{"url":"https://softinst184163.host.vifib.net/share/private/","xmlUrl":"https://softinst184163.host.vifib.net/public/feed","htmlUrl":"https://softinst184163.host.vifib.net/public/feed","version":"RSS","type":"rss","title":"ERP5 Playground instance","text":"ERP5 Playground instance","portal_type":"Opml Outline","parent_id":"f185fe2fa2280798a181e3fa45d2cad763d10540","parent_url":"https://softinst184163.host.vifib.net/public/feeds","reference":"305ddc8bed6419578add7a4cb19a0960a9b8a89d","active":true,"dateCreated":"Thu, 04 Jul 2024 09:00:47 +0000","dateModified":"Thu, 04 Jul 2024 18:48:28 +0000","opml_title":"ERP5 Playground instance"}}]',
+    MOCK_PROMISE = '{"data":{"rows":[{"id":"/0","value":{},"doc":{"docs":"http://blogs.law.harvard.edu/tech/rss","generator":"PyRSS2Gen-1.1.0","lastBuildDate":"Thu, 04 Jul 2024 23:04:14 GMT","description":"ERP5 Playground instance","link":"https://softinst220514.host.vifib.net/public/feed","title":"PBS COMP-3557-theia-1"}},{"id":"/0/0","value":{},"doc":{"source":"check-free-disk-space","source_url":"https://softinst220514.host.vifib.net/share/public/","pubDate":"2024-05-12T05:12:11+0000","guid":"RVJQNSBQbGF5Z3JvdW5kIGluc3RhbmNlLCBjaGVjay1mcmVlLWRpc2stc3BhY2UsIDAyYTA1MWVmMjYwYWM3Y2RiNDE5ZmMwOTljNDRlM2U3LCAyMDI0LTA1LTEyVDA1OjEyOjExKzAwMDA=","guid_isPermaLink":"false","category":"OK","description":"Current disk usage: OKEnable to display disk space predictions: False","link":"https://softinst220514.host.vifib.net/share/private/","title":"[OK] check-free-disk-space"}},{"id":"/0/1","value":{},"doc":{"source":"ssh-to-COMP-3557-slappart27-theia-1-pull","source_url":"https://softinst220514.host.vifib.net/share/public/","pubDate":"2024-07-04T20:42:10+0000","guid":"RVJQNSBQbGF5Z3JvdW5kIGluc3RhbmNlLCBzc2gtdG8tQ09NUC0zNTU3LXNsYXBwYXJ0MjctdGhlaWEtMS1wdWxsLCBkNDFkOGNkOThmMDBiMjA0ZTk4MDA5OThlY2Y4NDI3ZSwgMjAyNC0wNy0wNFQyMDo0MjoxMCswMDAw","guid_isPermaLink":"false","category":"OK","description":"","link":"https://softinst220514.host.vifib.net/share/private/","title":"[OK] ssh-to-COMP-3557-slappart27-theia-1-pull"}},{"id":"/0/2","value":{},"doc":{"source":"buildout-slappart46-status","source_url":"https://softinst220514.host.vifib.net/share/public/","pubDate":"2024-05-12T05:30:46+0000","guid":"RVJQNSBQbGF5Z3JvdW5kIGluc3RhbmNlLCBidWlsZG91dC1zbGFwcGFydDQ2LXN0YXR1cywgODY1MzBjNTE5MmIwMzA1MjlhODJiZTY1NDZkMWI5MmYsIDIwMjQtMDUtMTJUMDU6MzA6NDYrMDAwMA==","guid_isPermaLink":"false","category":"OK","description":"buildout is OK","link":"https://softinst220514.host.vifib.net/share/private/","title":"[OK] buildout-slappart46-status"}},{"id":"/0/3","value":{},"doc":{"source":"notifier-feed-check-malformed-or-failure","source_url":"https://softinst220514.host.vifib.net/share/public/","pubDate":"2024-05-12T05:30:45+0000","guid":"RVJQNSBQbGF5Z3JvdW5kIGluc3RhbmNlLCBub3RpZmllci1mZWVkLWNoZWNrLW1hbGZvcm1lZC1vci1mYWlsdXJlLCA1NTZiNThmNzE3ZjY5Yjk0M2Q1NTc1YTZjNGU3M2U2YiwgMjAyNC0wNS0xMlQwNTozMDo0NSswMDAw","guid_isPermaLink":"false","category":"OK","description":"OK /srv/slapgrid/slappart46/bin/notifier-feed-check-malformed-or-failure.py run with success","link":"https://softinst220514.host.vifib.net/share/private/","title":"[OK] notifier-feed-check-malformed-or-failure"}},{"id":"/0/4","value":{},"doc":{"source":"monitor-httpd-listening-on-tcp","source_url":"https://softinst220514.host.vifib.net/share/public/","pubDate":"2024-05-12T05:30:46+0000","guid":"RVJQNSBQbGF5Z3JvdW5kIGluc3RhbmNlLCBtb25pdG9yLWh0dHBkLWxpc3RlbmluZy1vbi10Y3AsIDhkYmE4OTAyMTcxNzRhNzdhMzM5NWVkNjI0MWE0Y2Y5LCAyMDI0LTA1LTEyVDA1OjMwOjQ2KzAwMDA=","guid_isPermaLink":"false","category":"OK","description":"non-authenticated request to https://[2001:67c:1254:103::5975]:8070 succeeded (returned expected code 401)","link":"https://softinst220514.host.vifib.net/share/private/","title":"[OK] monitor-httpd-listening-on-tcp"}},{"id":"/0/5","value":{},"doc":{"source":"ssh-to-COMP-3557-slappart27-theia-1-push","source_url":"https://softinst220514.host.vifib.net/share/public/","pubDate":"2024-07-04T22:54:25+0000","guid":"RVJQNSBQbGF5Z3JvdW5kIGluc3RhbmNlLCBzc2gtdG8tQ09NUC0zNTU3LXNsYXBwYXJ0MjctdGhlaWEtMS1wdXNoLCBkNDFkOGNkOThmMDBiMjA0ZTk4MDA5OThlY2Y4NDI3ZSwgMjAyNC0wNy0wNFQyMjo1NDoyNSswMDAw","guid_isPermaLink":"false","category":"OK","description":"","link":"https://softinst220514.host.vifib.net/share/private/","title":"[OK] ssh-to-COMP-3557-slappart27-theia-1-push"}},{"id":"/0/6","value":{},"doc":{"source":"check-monitor-frontend-password","source_url":"https://softinst220514.host.vifib.net/share/public/","pubDate":"2024-05-12T05:30:46+0000","guid":"RVJQNSBQbGF5Z3JvdW5kIGluc3RhbmNlLCBjaGVjay1tb25pdG9yLWZyb250ZW5kLXBhc3N3b3JkLCA1YWRjMTAzMDhiYWVhYWJmMWZhZDIyMDBjOTQ0ODc2OSwgMjAyNC0wNS0xMlQwNTozMDo0NiswMDAw","guid_isPermaLink":"false","category":"OK","description":"authenticated request to https://softinst220514.host.vifib.net succeeded (returned expected code 200)","link":"https://softinst220514.host.vifib.net/share/private/","title":"[OK] check-monitor-frontend-password"}},{"id":"/0/7","value":{},"doc":{"source":"stalled-pull-push","source_url":"https://softinst220514.host.vifib.net/share/public/","pubDate":"2024-05-12T05:30:46+0000","guid":"RVJQNSBQbGF5Z3JvdW5kIGluc3RhbmNlLCBzdGFsbGVkLXB1bGwtcHVzaCwgZWI3Mjc5NWJlM2IzYTQwNjg1Nzg3YTk0NWFmMTcyZjEsIDIwMjQtMDUtMTJUMDU6MzA6NDYrMDAwMA==","guid_isPermaLink":"false","category":"OK","description":"OK /srv/slapgrid/slappart46/bin/stalled-pull-push run with success","link":"https://softinst220514.host.vifib.net/share/private/","title":"[OK] stalled-pull-push"}},{"id":"/0/8","value":{},"doc":{"source":"monitor-bootstrap-status","source_url":"https://softinst220514.host.vifib.net/share/public/","pubDate":"2024-05-12T05:30:46+0000","guid":"RVJQNSBQbGF5Z3JvdW5kIGluc3RhbmNlLCBtb25pdG9yLWJvb3RzdHJhcC1zdGF0dXMsIGY2MjBiYTUxMjc4Y2U3YjIxZjlhNzg1ZDc4OThkZThjLCAyMDI0LTA1LTEyVDA1OjMwOjQ2KzAwMDA=","guid_isPermaLink":"false","category":"OK","description":"Bootstrap OK","link":"https://softinst220514.host.vifib.net/share/private/","title":"[OK] monitor-bootstrap-status"}},{"id":"/0/9","value":{},"doc":{"source":"monitor-http-frontend","source_url":"https://softinst220514.host.vifib.net/share/public/","pubDate":"2024-05-12T05:30:45+0000","guid":"RVJQNSBQbGF5Z3JvdW5kIGluc3RhbmNlLCBtb25pdG9yLWh0dHAtZnJvbnRlbmQsIDNiMTcwYjc0Njk0MTNjMTUxZTkxMmU5MDI4ZjFjNWVkLCAyMDI0LTA1LTEyVDA1OjMwOjQ1KzAwMDA=","guid_isPermaLink":"false","category":"OK","description":"non-authenticated request to https://softinst220514.host.vifib.net succeeded (returned expected code 401)","link":"https://softinst220514.host.vifib.net/share/private/","title":"[OK] monitor-http-frontend"}}],"total_rows":11}}',
+    MOCK_INSTANCE = '{"data":{"rows":[{"id":"monitor.global","value":{},"doc":{"status":"OK","state":{"error":0,"success":21},"type":"global","portal_type":"Software Instance","date":"2024-07-04T23:10:20+0000","_links":{"rss_url":{"href":"https://softinst184178.host.vifib.net/public/feed"},"public_url":{"href":"https://softinst184178.host.vifib.net/share/public/"},"private_url":{"href":"https://softinst184178.host.vifib.net/share/private/"},"related_monitor":[]},"data":{"state":"monitor_state.data","process_state":"monitor_process_resource.status","process_resource":"monitor_resource_process.data","memory_resource":"monitor_resource_memory.data","io_resource":"monitor_resource_io.data","monitor_process_state":"monitor_resource.status"},"title":"theia1","specialise_title":"ERP5 Playground instance","aggregate_reference":"COMP-3490","ipv4":"10.0.225.11","ipv6":"2001:67c:1254:f1::f6f0","software_release":"https://lab.nexedi.com/nexedi/slapos/raw/1.0.358/software/theia/software.cfg","software_type":"import","partition_id":"slappart30","parameters":[{"key":"","title":"monitor-user","value":"admin"},{"key":"monitor-password","title":"monitor-password","value":"CQo1zXbIB0XqAwYt"},{"key":"min-free-disk-MB","title":"min-free-disk-MB","value":""}]}}],"total_rows":1}}',
     OPML_ATTACHMENT_NAME = "__opml__",
     PROMISE_TYPE = "Promise",
     SOFTWARE_INSTANCE_TYPE = "Software Instance",
@@ -376,6 +360,14 @@
       .push(undefined, function (error) {
         //throw error;
         console.error(error);
+        if (mock_test) {
+          if (index === 2) {
+            return JSON.parse(MOCK_PROMISE);
+          }
+          if (index === 3) {
+            return JSON.parse(MOCK_INSTANCE);
+          }
+        }
         return undefined;
       })
       .push(function (result) {
@@ -430,9 +422,9 @@
   function fixDateTimezone(date_string) {
     // set default timezone offset to UTC
     // XXX should be removed later
-    if (ZONE_LIST.indexOf(date_string.slice(-5)) === -1) {
+    /*if (ZONE_LIST.indexOf(date_string.slice(-5)) === -1) {
       return date_string + "+0000";
-    }
+    }*/
     return date_string;
   }
 
@@ -527,8 +519,13 @@
             };
           }
         }
-
-        for (i = 1; i < opml_result_list.data.total_rows; i += 1) {
+        var iter = opml_result_list.data.total_rows;
+        if (mock_test) {
+          opml_result_list.data.rows = JSON.parse(MOCK_OPMLS);
+          opml_result_list.data.total_rows = 6;
+          iter = 4;
+        }
+        for (i = 1; i < iter; i += 1) {
           item = opml_result_list.data.rows[i];
           if (item.doc.xmlUrl !== undefined) {
             id_hash = generateHash(id + item.id);
@@ -818,7 +815,6 @@
       select_list: ["title", "url", "basic_login"]
     })
       .push(function (storage_result) {
-        console.log("opml got from local storage:", storage_result);
         var i,
           opml_queue = new RSVP.Queue();
 
@@ -935,14 +931,13 @@
       }
       return storage.allDocs({
         query: '(portal_type:"Instance Tree") AND (validation_state:"validated")',
-        select_list: ['title', 'default_successor_uid', 'uid', 'slap_state', 'id']/*,
-        limit: [0, limit],
+        select_list: ['title', 'default_successor_uid', 'uid', 'slap_state', 'id'],
+        limit: [0, 1]/*,
         sort_on: [
           ["creation_date", "descending"]
         ]*/
       })
         .push(function (result) {
-          console.log("instance tree query result", result);
           var i, slapos_id,
             uid_search_list = [];
           for (i = 0; i < result.data.total_rows; i += 1) {
@@ -968,8 +963,8 @@
           return storage.allDocs({
             query: '(portal_type:"Software Instance") AND ' +
               '(successor_related_uid:("' + uid_search_list.join('","') + '"))',
-            select_list: ['uid', 'successor_related_uid', 'connection_xml']/*,
-            limit: [0, limit]*/
+            select_list: ['uid', 'successor_related_uid', 'connection_xml'],
+            limit: [0, limit]
           });
         })
         .push(function (result) {
@@ -1014,7 +1009,6 @@
 
     return new RSVP.Queue()
       .push(function () {
-        console.log("storage repair");
         return context._local_sub_storage.repair.apply(
           context._local_sub_storage,
           argument_list
@@ -1034,7 +1028,6 @@
         }
       })
       .push(function (opml_list) {
-        console.log("opml_list", opml_list);
         var i, push_queue = new RSVP.Queue();
 
         function pushOPML(opml_dict) {
