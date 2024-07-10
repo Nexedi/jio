@@ -64,7 +64,6 @@
         //expect(14);
 
         try {
-          console.log("CREATE JIO");
           jio = jIO.createJIO(jio_options);
         } catch (error) {
           console.error(error.stack);
@@ -73,7 +72,6 @@
         }
 
         // Try to fetch inexistent document
-        console.log("jio get...");
         jio.get("inexistent")
           .fail(function (error) {
             console.error("inexisteng error:", error);
@@ -94,6 +92,42 @@
           })
 
           .then(function () {
+            //check instance tree
+            return jio.allDocs({
+              query: 'portal_type: "Instance Tree"'
+            });
+          })
+          .then(function (result) {
+            ok(result.data.total_rows > 0, 'Instance Tree object created after sync.');
+            //check software instance
+            return jio.allDocs({
+              query: 'portal_type: "Software Instance"'
+            });
+          })
+          .then(function (result) {
+            ok(result.data.total_rows > 0, 'Software Instance object created after sync.');
+            //check promise
+            return jio.allDocs({
+              query: 'portal_type: "Promise"'
+            });
+          })
+          .then(function (result) {
+            ok(result.data.total_rows > 0, 'Promise object created after sync.');
+            //check Opml
+            return jio.allDocs({
+              query: 'portal_type: "Opml"'
+            });
+          })
+          .then(function (result) {
+            ok(result.data.total_rows > 0, 'Opml object created after sync.');
+            //check Opml Outline
+            return jio.allDocs({
+              query: 'portal_type: "Opml Outline"'
+            });
+          })
+          .then(function (result) {
+            ok(result.data.total_rows > 0, 'Opml Outline object created after sync.');
+            // portal_type : "webhttp" ???
             return jio.allDocs({include_docs: true});
           })
           .then(function (result) {
