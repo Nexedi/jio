@@ -103,7 +103,6 @@
           })
           .then(function (all_doc_list) {
             var id_list = [], all_docs = all_doc_list[5].data.rows, i;
-            console.log("all_doc_list:", all_doc_list);
             ok(all_doc_list[0].data.total_rows > 0, 'Instance Tree object created after sync.');
             id_list.push(all_doc_list[0].data.rows[0].id); //save one id to check later in all docs
             ok(all_doc_list[1].data.total_rows > 0, 'Software Instance object created after sync.');
