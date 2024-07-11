@@ -79,89 +79,96 @@
             }
             equal(error.status_code, 404, "404 if inexistent");
         })
-          .then(function () {
-            return jio.repair();
-          })
-
-          .fail(function (error) {
-            console.error("---");
-            console.error(error.stack);
-            console.error(error);
-            ok(false, error);
-          })
-          //call methods that are not implemented (fail expected)
-          .then(function () {
-            return jio.allAttachments("foo");
-          })
-          .fail(function (error) {
-            if (error.status_code !== 501) {
-              throw error;
+        .then(function () {
+          //test that repair can be call multiple times
+          return RSVP.all([
+            jio.repair(),
+            jio.repair(),
+            jio.repair(),
+            jio.repair()
+          ]);
+        })
+        .fail(function (error) {
+          console.error("---");
+          console.error(error.stack);
+          console.error(error);
+          ok(false, error);
+        })
+        //call methods that are not implemented (fail expected)
+        .then(function () {
+          return jio.allAttachments("foo");
+        })
+        .fail(function (error) {
+          if (error.status_code !== 501) {
+            throw error;
+          }
+          equal(error.status_code, 501, "400 if no allAtachments method");
+        })
+        .then(function () {
+          return jio.getAttachment("foo", "bar");
+        })
+        .fail(function (error) {
+          if (error.status_code !== 501) {
+            throw error;
+          }
+          equal(error.status_code, 501, "400 if no getAttachment method");
+        })
+        .then(function () {
+          return jio.putAttachment("foo",
+          "bar",
+          new Blob(["fooo"], {type: "text/plain"}));
+        })
+        .fail(function (error) {
+          if (error.status_code !== 501) {
+            throw error;
+          }
+          equal(error.status_code, 501, "501 if no putAttachment method");
+        })
+        .then(function () {
+          return jio.post({});
+        })
+        .fail(function (error) {
+          if (error.status_code !== 501) {
+            throw error;
+          }
+          equal(error.status_code, 501, "501 if no post method");
+        })
+        //check specific type of objects were created after repair
+        .then(function () {
+          return RSVP.all([
+            jio.allDocs({query: 'portal_type: "Instance Tree"'}),
+            jio.allDocs({query: 'portal_type: "Software Instance"'}),
+            jio.allDocs({query: 'portal_type: "Promise"'}),
+            jio.allDocs({query: 'portal_type: "Opml"'}),
+            jio.allDocs({query: 'portal_type: "Opml Outline"'}),
+            jio.allDocs({include_docs: true})
+          ]);
+        })
+        .then(function (all_doc_list) {
+          var id_list = [], all_docs = all_doc_list[5].data.rows, i;
+          ok(all_doc_list[0].data.total_rows > 0, 'Instance Tree object created after sync.');
+          id_list.push(all_doc_list[0].data.rows[0].id); //save one id to check later in all docs
+          ok(all_doc_list[1].data.total_rows > 0, 'Software Instance object created after sync.');
+          id_list.push(all_doc_list[1].data.rows[0].id);
+          ok(all_doc_list[2].data.total_rows > 0, 'Promise object created after sync.');
+          id_list.push(all_doc_list[2].data.rows[0].id);
+          ok(all_doc_list[3].data.total_rows > 0, 'Opml object created after sync.');
+          id_list.push(all_doc_list[3].data.rows[0].id);
+          ok(all_doc_list[4].data.total_rows > 0, 'Opml Outline object created after sync.');
+          id_list.push(all_doc_list[4].data.rows[0].id);
+          //check elements are present in plain allDocs
+          for (i = 0; i < all_docs.length; i += 1) {
+            if (id_list.includes(all_docs[i].id)) {
+              const index = id_list.indexOf(all_docs[i].id);
+              id_list.splice(index, 1);
             }
-            equal(error.status_code, 501, "400 if no allAtachments method");
-          })
-          .then(function () {
-            return jio.getAttachment("foo", "bar");
-          })
-          .fail(function (error) {
-            if (error.status_code !== 501) {
-              throw error;
-            }
-            equal(error.status_code, 501, "400 if no getAttachment method");
-          })
-          .then(function () {
-            return jio.putAttachment("foo",
-            "bar",
-            new Blob(["fooo"], {type: "text/plain"}));
-          })
-          .fail(function (error) {
-            if (error.status_code !== 501) {
-              throw error;
-            }
-            equal(error.status_code, 501, "501 if no putAttachment method");
-          })
-          .then(function () {
-            return jio.post({});
-          })
-          .fail(function (error) {
-            if (error.status_code !== 501) {
-              throw error;
-            }
-            equal(error.status_code, 501, "501 if no post method");
-          })
-          .then(function () {
-            return RSVP.all([
-              jio.allDocs({query: 'portal_type: "Instance Tree"'}),
-              jio.allDocs({query: 'portal_type: "Software Instance"'}),
-              jio.allDocs({query: 'portal_type: "Promise"'}),
-              jio.allDocs({query: 'portal_type: "Opml"'}),
-              jio.allDocs({query: 'portal_type: "Opml Outline"'}),
-              jio.allDocs({include_docs: true})
-            ]);
-          })
-          .then(function (all_doc_list) {
-            var id_list = [], all_docs = all_doc_list[5].data.rows, i;
-            ok(all_doc_list[0].data.total_rows > 0, 'Instance Tree object created after sync.');
-            id_list.push(all_doc_list[0].data.rows[0].id); //save one id to check later in all docs
-            ok(all_doc_list[1].data.total_rows > 0, 'Software Instance object created after sync.');
-            id_list.push(all_doc_list[1].data.rows[0].id);
-            ok(all_doc_list[2].data.total_rows > 0, 'Promise object created after sync.');
-            id_list.push(all_doc_list[2].data.rows[0].id);
-            ok(all_doc_list[3].data.total_rows > 0, 'Opml object created after sync.');
-            id_list.push(all_doc_list[3].data.rows[0].id);
-            ok(all_doc_list[4].data.total_rows > 0, 'Opml Outline object created after sync.');
-            id_list.push(all_doc_list[4].data.rows[0].id);
-            //check elements are returned in all docs
-            for (i = 0; i < all_docs.length; i += 1) {
-              if (id_list.includes(all_docs[i].id)) {
-                const index = id_list.indexOf(all_docs[i].id);
-                id_list.splice(index, 1);
-              }
-            }
-            ok(id_list.length === 0, 'Different types created objects are returned by allDocs');
-          })
-          .always(function () {
-            start();
-          });
+          }
+          ok(id_list.length === 0, 'Different types created objects are returned by allDocs');
+        })
+        .always(function () {
+          console.log("all tests run")
+          start();
+        });
       });
     });
 
