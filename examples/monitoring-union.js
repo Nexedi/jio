@@ -74,7 +74,6 @@
         // Try to fetch inexistent document
         jio.get("inexistent")
           .fail(function (error) {
-            console.error("inexisteng error:", error);
             if (error.status_code !== 404) {
               throw error;
             }
@@ -90,7 +89,45 @@
             console.error(error);
             ok(false, error);
           })
-
+          //call methods that are not implemented (fail expected)
+          .then(function () {
+            return jio.allAttachments("foo");
+          })
+          .fail(function (error) {
+            if (error.status_code !== 501) {
+              throw error;
+            }
+            equal(error.status_code, 501, "400 if no allAtachments method");
+          })
+          .then(function () {
+            return jio.getAttachment("foo", "bar");
+          })
+          .fail(function (error) {
+            if (error.status_code !== 501) {
+              throw error;
+            }
+            equal(error.status_code, 501, "400 if no getAttachment method");
+          })
+          .then(function () {
+            return jio.putAttachment("foo",
+            "bar",
+            new Blob(["fooo"], {type: "text/plain"}));
+          })
+          .fail(function (error) {
+            if (error.status_code !== 501) {
+              throw error;
+            }
+            equal(error.status_code, 501, "501 if no putAttachment method");
+          })
+          .then(function () {
+            return jio.post({});
+          })
+          .fail(function (error) {
+            if (error.status_code !== 501) {
+              throw error;
+            }
+            equal(error.status_code, 501, "501 if no post method");
+          })
           .then(function () {
             return RSVP.all([
               jio.allDocs({query: 'portal_type: "Instance Tree"'}),
