@@ -105,13 +105,6 @@
                                                 arguments);
   };
 
-  ReplicatedOPMLStorage.prototype.post = function (doc) {
-    /*if (doc.active === undefined) {
-      doc.active = true;
-    }*/
-    return this._local_sub_storage.post(doc);
-  };
-
   ReplicatedOPMLStorage.prototype.put = function (id, doc) {
     //allow app configuration types (forms, views, actions, etc)
     /*if (!doc.hasOwnProperty('portal_type') || doc.portal_type !== 'opml') {
@@ -127,13 +120,11 @@
     if (capacity === 'include') {
       return true;
     }
+    if (capacity in ['post', 'getAttachment', 'putAttachment', 'allAttachments']) {
+      return false;
+    }
     return this._local_sub_storage.hasCapacity.apply(this._local_sub_storage,
                                                      arguments);
-  };
-
-  ReplicatedOPMLStorage.prototype.getAttachment = function () {
-    return this._local_sub_storage.getAttachment.apply(this._local_sub_storage,
-                                                   arguments);
   };
 
   ReplicatedOPMLStorage.prototype.remove = function (id) {
@@ -232,11 +223,6 @@
         }
         return removeOPMLTree(id);
       });
-  };
-
-  ReplicatedOPMLStorage.prototype.allAttachments = function () {
-    return this._local_sub_storage.allAttachments.apply(this._local_sub_storage,
-                                                    arguments);
   };
 
   function getStorageUrl(storage_spec) {
