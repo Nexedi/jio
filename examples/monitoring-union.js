@@ -102,12 +102,26 @@
             ]);
           })
           .then(function (all_doc_list) {
+            var id_list = [], all_docs = all_doc_list[5].data.rows, i;
             console.log("all_doc_list:", all_doc_list);
             ok(all_doc_list[0].data.total_rows > 0, 'Instance Tree object created after sync.');
+            id_list.push(all_doc_list[0].data.rows[0].id); //save one id to check later in all docs
             ok(all_doc_list[1].data.total_rows > 0, 'Software Instance object created after sync.');
+            id_list.push(all_doc_list[1].data.rows[0].id);
             ok(all_doc_list[2].data.total_rows > 0, 'Promise object created after sync.');
+            id_list.push(all_doc_list[2].data.rows[0].id);
             ok(all_doc_list[3].data.total_rows > 0, 'Opml object created after sync.');
+            id_list.push(all_doc_list[3].data.rows[0].id);
             ok(all_doc_list[4].data.total_rows > 0, 'Opml Outline object created after sync.');
+            id_list.push(all_doc_list[4].data.rows[0].id);
+            //check elements are returned in all docs
+            for (i = 0; i < all_docs.length; i += 1) {
+              if (id_list.includes(all_docs[i].id)) {
+                const index = id_list.indexOf(all_docs[i].id);
+                id_list.splice(index, 1);
+              }
+            }
+            ok(id_list.length === 0, 'Different types created objects are returned by allDocs');
           })
           .always(function () {
             start();
