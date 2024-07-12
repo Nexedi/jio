@@ -33,7 +33,7 @@
           }
         },
         remote_sub_storage: {
-          /*type: "union",
+          type: "union",
           storage_list: [
             {
               type: "erp5",
@@ -45,13 +45,7 @@
               url: "https://softinst224044.host.vifib.net/hateoas/",
               default_view_reference: "jio_view"
             }
-          ]*/
-          type: "query",
-          sub_storage: {
-            type: "erp5",
-            url: "https://panel.rapid.space/hateoas/",
-            default_view_reference: "jio_view"
-          }
+          ]
         }
       });
 
