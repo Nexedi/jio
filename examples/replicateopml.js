@@ -14,6 +14,7 @@
     SOFTWARE_INSTANCE_TYPE = "Software Instance",
     INSTANCE_TREE_TYPE = "Instance Tree",
     OPML_PORTAL_TYPE = "Opml",
+    LIMIT = 300,
     ZONE_LIST = [
       "-1200",
       "-1100",
@@ -913,15 +914,12 @@
         opml_list = [],
         uid_dict = {};
       if (limit === undefined) {
-        limit = 300;
+        limit = LIMIT;
       }
       return storage.allDocs({
         query: '(portal_type:"Instance Tree") AND (validation_state:"validated")',
         select_list: ['title', 'default_successor_uid', 'uid', 'slap_state', 'id'],
-        limit: [0, 1]/*,
-        sort_on: [
-          ["creation_date", "descending"]
-        ]*/
+        limit: [0, limit]
       })
         .push(function (result) {
           var i, slapos_id,
