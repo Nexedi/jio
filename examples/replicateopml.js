@@ -114,9 +114,9 @@
     /*if (!doc.hasOwnProperty('portal_type') || doc.portal_type !== 'opml') {
       throw new TypeError("Cannot put object which portal_type is not 'opml'");
     }*/
-    /*if (doc.active === undefined) {
+    if (doc.active === undefined) {
       doc.active = true;
-    }*/
+    }
     return this._local_sub_storage.put(id, doc);
   };
 
@@ -910,6 +910,7 @@
     }
 
     function getInstanceOPMLList(storage, limit) {
+      if (!storage) return [];
       var instance_tree_list = [],
         opml_list = [],
         uid_dict = {};
@@ -999,17 +1000,19 @@
         );
       })
       .push(function () {
-        return context._remote_sub_storage.repair.apply(
-          context._remote_sub_storage,
-          argument_list
-        );
+        if (context._remote_sub_storage) {
+          return context._remote_sub_storage.repair.apply(
+            context._remote_sub_storage,
+            argument_list
+          );
+        }
       })
       .push(function () {
-        if (!context._remote_sub_storage) {
-          return [];
-        } else {
-          return getInstanceOPMLList(context._remote_sub_storage);
-        }
+        return getInstanceOPMLList(context._remote_sub_storage);
+      })
+      .push(undefined, function () {
+        has_failed = true;
+        return [];
       })
       .push(function (opml_list) {
         var i, push_queue = new RSVP.Queue();
@@ -1037,6 +1040,11 @@
   jIO.addStorage('replicatedopml', ReplicatedOPMLStorage);
 
 }(jIO, RSVP, Rusha, Blob, console));
+
+
+
+
+
 
 /*
  * Copyright 2016, Nexedi SA
