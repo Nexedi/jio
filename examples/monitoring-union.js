@@ -8,7 +8,8 @@
     ok = QUnit.ok,
     stop = QUnit.stop,
     start = QUnit.start,
-    deepEqual = QUnit.deepEqual;
+    deepEqual = QUnit.deepEqual,
+    slapos_master_url_list = ["https://panel.rapid.space/hateoas/", "https://softinst224044.host.vifib.net/hateoas/"];
 
   rJS(window)
     .ready(function (g) {
@@ -16,7 +17,6 @@
       ///////////////////////////
       // Monitoring storage
       ///////////////////////////
-
       return g.run({
         type: "replicatedopml",
         remote_storage_unreachable_status: "WARNING",
@@ -37,12 +37,12 @@
           storage_list: [
             {
               type: "erp5",
-              url: "https://panel.rapid.space/hateoas/",
+              url: slapos_master_url_list[0],
               default_view_reference: "jio_view"
             },
             {
               type: "erp5",
-              url: "https://softinst224044.host.vifib.net/hateoas/",
+              url: slapos_master_url_list[1],
               default_view_reference: "jio_view"
             }
           ]
@@ -90,15 +90,6 @@
         })
         //call methods that are not implemented (fail expected)
         .then(function () {
-          return jio.allAttachments("foo");
-        })
-        .fail(function (error) {
-          if (error.status_code !== 501) {
-            throw error;
-          }
-          equal(error.status_code, 501, "400 if no allAtachments method");
-        })
-        .then(function () {
           return jio.getAttachment("foo", "bar");
         })
         .fail(function (error) {
@@ -127,8 +118,13 @@
           }
           equal(error.status_code, 501, "501 if no post method");
         })
-        //check specific type of objects were created after repair
+        //check limit and sort are implemented
         .then(function () {
+          return jio.allDocs({limit: [0, 3], sort_on: [["creation_date", "descending"]]});
+        })
+        //check specific type of objects were created after repair
+        .then(function (all_docs) {
+          ok(all_docs.data.total_rows === 3, 'Limit capacity implemented.');
           return RSVP.all([
             jio.allDocs({query: 'portal_type: "Instance Tree"'}),
             jio.allDocs({query: 'portal_type: "Software Instance"'}),
@@ -139,7 +135,7 @@
           ]);
         })
         .then(function (all_doc_list) {
-          var id_list = [], all_docs = all_doc_list[5].data.rows, i;
+          var id_list = [], all_docs = all_doc_list[5].data.rows, i, master_url_ok = true;
           ok(all_doc_list[0].data.total_rows > 0, 'Instance Tree object created after sync.');
           id_list.push(all_doc_list[0].data.rows[0].id); //save one id to check later in all docs
           ok(all_doc_list[1].data.total_rows > 0, 'Software Instance object created after sync.');
@@ -150,14 +146,19 @@
           id_list.push(all_doc_list[3].data.rows[0].id);
           ok(all_doc_list[4].data.total_rows > 0, 'Opml Outline object created after sync.');
           id_list.push(all_doc_list[4].data.rows[0].id);
-          //check elements are present in plain allDocs
           for (i = 0; i < all_docs.length; i += 1) {
+            //check all created objects has slapos_master_url
+            if (!slapos_master_url_list.includes(all_docs[i].doc.slapos_master_url)) {
+              master_url_ok = false;
+            }
+            //check different elements are present in plain allDocs
             if (id_list.includes(all_docs[i].id)) {
               const index = id_list.indexOf(all_docs[i].id);
               id_list.splice(index, 1);
             }
           }
           ok(id_list.length === 0, 'Different types created objects are returned by allDocs');
+          ok(master_url_ok, "Created object has slapos_master_url");
         })
         .always(function () {
           console.log("all tests run")
