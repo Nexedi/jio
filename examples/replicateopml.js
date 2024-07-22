@@ -121,7 +121,7 @@
   };
 
   ReplicatedOPMLStorage.prototype.hasCapacity = function (capacity) {
-    var this_storage_not_capacity_list = ['post', 'getAttachment', 'putAttachment', 'allAttachments'];
+    var this_storage_not_capacity_list = ['post', 'getAttachment', 'putAttachment'];
     if (this_storage_not_capacity_list.indexOf(capacity) !== -1) {
       return false;
     }
@@ -130,6 +130,11 @@
     }
     return this._local_sub_storage.hasCapacity.apply(this._local_sub_storage,
                                                      arguments);
+  };
+
+  ReplicatedOPMLStorage.prototype.allAttachments = function () {
+    return this._local_sub_storage.allAttachments.apply(this._local_sub_storage,
+                                                    arguments);
   };
 
   ReplicatedOPMLStorage.prototype.remove = function (id) {
@@ -1012,7 +1017,6 @@
         return getInstanceOPMLList(context._remote_sub_storage);
       })
       .push(undefined, function () {
-        has_failed = true;
         return [];
       })
       .push(function (opml_list) {
