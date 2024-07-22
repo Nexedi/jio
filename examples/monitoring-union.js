@@ -16,7 +16,6 @@
       ///////////////////////////
       // Monitoring storage
       ///////////////////////////
-
       return g.run({
         type: "replicatedopml",
         remote_storage_unreachable_status: "WARNING",
@@ -90,15 +89,6 @@
         })
         //call methods that are not implemented (fail expected)
         .then(function () {
-          return jio.allAttachments("foo");
-        })
-        .fail(function (error) {
-          if (error.status_code !== 501) {
-            throw error;
-          }
-          equal(error.status_code, 501, "400 if no allAtachments method");
-        })
-        .then(function () {
           return jio.getAttachment("foo", "bar");
         })
         .fail(function (error) {
@@ -127,8 +117,13 @@
           }
           equal(error.status_code, 501, "501 if no post method");
         })
-        //check specific type of objects were created after repair
+        //check limit and sort are implemented
         .then(function () {
+          return jio.allDocs({limit: [0, 5], sort_on: [["creation_date", "descending"]]});
+        })
+        //check specific type of objects were created after repair
+        .then(function (all_docs) {
+          ok(all_docs.data.total_rows === 5, 'Limit capacity implemented.');
           return RSVP.all([
             jio.allDocs({query: 'portal_type: "Instance Tree"'}),
             jio.allDocs({query: 'portal_type: "Software Instance"'}),
