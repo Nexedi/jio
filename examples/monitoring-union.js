@@ -53,7 +53,7 @@
     .declareMethod('run', function (jio_options) {
 
       test('Test "' + jio_options.type + '"scenario', function () {
-        var jio, jio_definition = jio_options;
+        var jio, jio_definition = jio_options, first_master_total_docs;
         stop();
         //expect(14);
 
@@ -131,11 +131,13 @@
             jio.allDocs({query: 'portal_type: "Promise"'}),
             jio.allDocs({query: 'portal_type: "Opml"'}),
             jio.allDocs({query: 'portal_type: "Opml Outline"'}),
-            jio.allDocs({include_docs: true})
+            jio.allDocs({include_docs: true}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[0] + '"'})
           ]);
         })
         .then(function (all_doc_list) {
           var id_list = [], all_docs = all_doc_list[5].data.rows, i, master_url_ok = true;
+          first_master_total_docs = all_doc_list[6].data.total_rows;
           ok(all_doc_list[0].data.total_rows > 0, 'Instance Tree object created after sync.');
           id_list.push(all_doc_list[0].data.rows[0].id); //save one id to check later in all docs
           ok(all_doc_list[1].data.total_rows > 0, 'Software Instance object created after sync.');
@@ -180,15 +182,17 @@
           return jio.repair();
         })
         .then(function () {
-          return jio.allDocs({include_docs: true})
+          //check objects for each slapos master
+          return RSVP.all([
+            jio.allDocs({include_docs: true}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[0] + '"'}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[1] + '"'})
+          ]);
         })
-        .then(function (all_docs) {
-          console.log("Total amount of docs after second repair:", all_docs.data.total_rows);
-          /*console.log("all_docs:", all_docs);
-          for (var i = 0; i < all_docs.data.rows.length; i += 1) {
-            console.log(all_docs.data.rows[i].doc.slapos_master_url);
-          }*/
-          ok(false, "TODO test opml clean in repair 2");
+        .then(function (all_results) {
+          console.log("Total amount of docs after second repair:", all_results[0].data.total_rows);
+          ok(all_results[1].data.total_rows === first_master_total_docs, "Objects of kept master url must be kept");
+          ok(all_results[2].data.total_rows === 0, "Removed master url objects must be removed");
         })
         .always(function () {
           start();
