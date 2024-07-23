@@ -77,7 +77,9 @@
                           "is not defined");
     }
     this._local_sub_storage = jIO.createJIO(spec.local_sub_storage);
+    this._local_sub_storage_spec = spec.local_sub_storage;
     if (spec.remote_sub_storage !== undefined) {
+      this._remote_sub_storage_spec = spec.remote_sub_storage;
       this._remote_sub_storage = jIO.createJIO(spec.remote_sub_storage);
     }
     this._remote_storage_unreachable_status =
@@ -1024,8 +1026,54 @@
         }
       })
       .push(function () {
-        return getInstanceOPMLList(context._remote_sub_storage);
+      //////////////////////////////////////////
+      //delete all opmls and asociated objects of non-present slapos masters
+        //TODO use slapos_master_url in the query instead of iterate later
+        return context._local_sub_storage.allDocs({
+          query: '(portal_type:"' + OPML_PORTAL_TYPE + '")',// AND (slapos_master_url:"https://%")',
+          select_list: ["title", "url", "basic_login", "slapos_master_url"]
+        })
+        .push(function (result) {
+          function removeAllOPML(remove_opml_list, jio) {
+            var remove_queue = new RSVP.Queue(), i;
+            function remove_opml(id) {
+              remove_queue
+                .push(function () {
+                  return jio.remove(id);
+                });
+            }
+            for (i = 0; i < remove_opml_list.length; i += 1) {
+              remove_opml(remove_opml_list[i].id);
+            }
+            return remove_queue;
+          }
+          // XXX too attached to having union storage?
+          var slapos_master_url_list = [], spec_list = context._remote_sub_storage_spec.storage_list,
+            i, remove_opml_list = [], opml_list = result.data.rows;
+          if (spec_list) {
+            for (i = 0; i < spec_list.length; i += 1) {
+              slapos_master_url_list.push(spec_list[i].url);
+            }
+          }
+          if (slapos_master_url_list.length > 0) {
+            for (i = 0; i < opml_list.length; i += 1) {
+              if (opml_list[i].value.slapos_master_url &&
+                opml_list[i].value.slapos_master_url !== "") {
+                if (!slapos_master_url_list.includes(opml_list[i].value.slapos_master_url)) {
+                  remove_opml_list.push(opml_list[i]);
+                }
+              }
+            }
+          }
+          return RSVP.all([
+            removeAllOPML(remove_opml_list, context)
+          ]);
+        })
+      //////////////////////////////////////////
       })
+      .push(function () {
+        return getInstanceOPMLList(context._remote_sub_storage);
+      }})
       .push(undefined, function () {
         return [];
       })
