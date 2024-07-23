@@ -159,7 +159,7 @@
           }
           ok(id_list.length === 0, 'Different types created objects are returned by allDocs');
           ok(master_url_ok, "Created object has slapos_master_url");
-          console.log("Total amount of docs after repair:", all_docs.length);
+          console.log("Total amount of docs after first repair:", all_docs.length);
         })
         .then(function () {
           //update jio storage slapos master urls (drop one)
@@ -184,6 +184,11 @@
         })
         .then(function (all_docs) {
           console.log("Total amount of docs after second repair:", all_docs.data.total_rows);
+          /*console.log("all_docs:", all_docs);
+          for (var i = 0; i < all_docs.data.rows.length; i += 1) {
+            console.log(all_docs.data.rows[i].doc.slapos_master_url);
+          }*/
+          ok(false, "TODO test opml clean in repair 2");
         })
         .always(function () {
           start();
