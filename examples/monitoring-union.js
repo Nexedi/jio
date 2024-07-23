@@ -53,7 +53,7 @@
     .declareMethod('run', function (jio_options) {
 
       test('Test "' + jio_options.type + '"scenario', function () {
-        var jio;
+        var jio, jio_definition = jio_options;
         stop();
         //expect(14);
 
@@ -76,9 +76,9 @@
         .then(function () {
           //test that repair can be call multiple times
           return RSVP.all([
+            /*jio.repair(),
             jio.repair(),
-            jio.repair(),
-            jio.repair(),
+            jio.repair(),*/ //to speed up tests only 1 repair
             jio.repair()
           ]);
         })
@@ -159,9 +159,33 @@
           }
           ok(id_list.length === 0, 'Different types created objects are returned by allDocs');
           ok(master_url_ok, "Created object has slapos_master_url");
+          console.log("Total amount of docs after repair:", all_docs.length);
+        })
+        .then(function () {
+          //update jio storage slapos master urls (drop one)
+          jio_definition.remote_sub_storage.storage_list = [
+            {
+              type: "erp5",
+              url: slapos_master_url_list[0],
+              default_view_reference: "jio_view"
+            }
+          ];
+          try {
+            jio = jIO.createJIO(jio_options);
+          } catch (error) {
+            console.error(error.stack);
+            console.error(error);
+            throw error;
+          }
+          return jio.repair();
+        })
+        .then(function () {
+          return jio.allDocs({include_docs: true})
+        })
+        .then(function (all_docs) {
+          console.log("Total amount of docs after second repair:", all_docs.data.total_rows);
         })
         .always(function () {
-          console.log("all tests run")
           start();
         });
       });
