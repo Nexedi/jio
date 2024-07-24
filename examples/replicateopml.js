@@ -854,6 +854,8 @@
   }
 
   ReplicatedOPMLStorage.prototype.repair = function () {
+    var context = this,
+      argument_list = arguments;
 
     function getParameterDictFromUrl(uri_param) {
       if (uri_param.has('url') && uri_param.has('password') &&
@@ -887,6 +889,7 @@
         json_parameter,
         parameter_dict,
         monitor_dict = {};
+
       json_parameter = xmlDoc.getElementById("_");
       if (json_parameter !== undefined && json_parameter !== null) {
         parameter_dict = JSON.parse(json_parameter.textContent);
@@ -972,6 +975,7 @@
             tmp_parameter,
             tmp_uid,
             slapos_master_url = "";
+
           for (i = 0; i < result.data.total_rows; i += 1) {
             tmp_uid = result.data.rows[i].value.uid;
             if (uid_dict.hasOwnProperty(tmp_uid)) {
@@ -1048,11 +1052,8 @@
         return RSVP.all([
           removeAllOPML(remove_opml_list, context)
         ]);
-      })
+      });
     }
-
-    var context = this,
-      argument_list = arguments;
 
     return new RSVP.Queue()
       .push(function () {
