@@ -56,7 +56,7 @@
         var jio, jio_definition = jio_options,
           first_master_total_docs, opml_foo_url = "https://foo-opml.bar";
         stop();
-        expect(18);
+        expect(19);
 
         try {
           jio = jIO.createJIO(jio_options);
@@ -76,6 +76,7 @@
         })
         .then(function () {
           //first sync
+          console.log("Sync for master 1 and 2");
           return jio.repair();
         })
         .fail(function (error) {
@@ -158,6 +159,38 @@
           console.log("Total amount of docs after first repair:", all_docs.length);
         })
         .then(function () {
+          //update jio storage slapos master urls (drop one)
+          jio_definition.remote_sub_storage.storage_list = [
+            {
+              type: "erp5",
+              url: slapos_master_url_list[0],
+              default_view_reference: "jio_view"
+            }
+          ];
+          try {
+            jio = jIO.createJIO(jio_options);
+          } catch (error) {
+            console.error(error.stack);
+            console.error(error);
+            throw error;
+          }
+          console.log("Sync for only master 1 (master 2 removed)");
+          return jio.repair();
+        })
+        .then(function () {
+          //check objects for each slapos master
+          return RSVP.all([
+            jio.allDocs({include_docs: true}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[0] + '"'}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[1] + '"'})
+          ]);
+        })
+        .then(function (all_results) {
+          console.log("Total amount of docs after second repair:", all_results[0].data.total_rows);
+          ok(all_results[1].data.total_rows === first_master_total_docs, "Objects of kept master url must be kept");
+          ok(all_results[2].data.total_rows === 0, "Removed master url objects must be removed");
+        })
+        .then(function () {
           //manually add an opml
           var opml_dict = {
             type: "Opml",
@@ -175,43 +208,28 @@
           return jio.put(opml_foo_url, opml_dict);
         })
         .then(function () {
-          //update jio storage slapos master urls (drop one)
-          jio_definition.remote_sub_storage.storage_list = [
-            {
-              type: "erp5",
-              url: slapos_master_url_list[0],
-              default_view_reference: "jio_view"
-            }
-          ];
-          try {
-            jio = jIO.createJIO(jio_options);
-          } catch (error) {
-            console.error(error.stack);
-            console.error(error);
-            throw error;
-          }
+          console.log("Sync for ompl manually added (master 1 kept)");
           return jio.repair();
         })
         .then(function () {
-          //check objects for each slapos master
           return RSVP.all([
             jio.allDocs({include_docs: true}),
             jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[0] + '"'}),
-            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[1] + '"'}),
             jio.get(opml_foo_url)
           ]);
         })
         .then(function (all_results) {
-          console.log("Total amount of docs after second repair:", all_results[0].data.total_rows);
-          ok(all_results[1].data.total_rows === first_master_total_docs, "Objects of kept master url must be kept");
-          ok(all_results[2].data.total_rows === 0, "Removed master url objects must be removed");
-          ok(all_results[3] !== undefined && all_results[3].url === opml_foo_url, "Manually added opml must be kept");
+          console.log("Total amount of docs after third repair:", all_results[0].data.total_rows);
+          equal(all_results[2].url, opml_foo_url, "Opml was added.");
+          //check new objects were created, besides ompl itself and previous master ones
+          ok(all_results[0].data.total_rows >= first_master_total_docs + 1, "New objects created for added opml");
         })
         .then(function () {
           //remove opml
           return jio.remove(opml_foo_url);
         })
         .then(function () {
+          console.log("Sync for removed ompl (master 1 kept)");
           return jio.repair();
         })
         .then(function () {
@@ -222,7 +240,7 @@
         })
         .then(function (all_results) {
           //check opml objects were removed too
-          console.log("Total amount of docs after third repair:", all_results[0].data.total_rows);
+          console.log("Total amount of docs after fourth repair:", all_results[0].data.total_rows);
           ok(all_results[0].data.total_rows === first_master_total_docs && all_results[1].data.total_rows === first_master_total_docs, "Objects of kept master url must be kept");
           return jio.get(opml_foo_url);
         })
