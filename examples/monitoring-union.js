@@ -56,7 +56,7 @@
         var jio, jio_definition = jio_options,
           first_master_total_docs, opml_foo_url = "https://foo-opml.bar";
         stop();
-        expect(17);
+        expect(18);
 
         try {
           jio = jIO.createJIO(jio_options);
