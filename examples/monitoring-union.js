@@ -224,6 +224,7 @@
           //check new objects were created, besides ompl itself and previous master ones
           ok(all_results[0].data.total_rows >= first_master_total_docs + 1, "New objects created for added opml");
         })
+        //TODO change masters and sync, and then check ompl and its objects are kept?
         .then(function () {
           //remove opml
           return jio.remove(opml_foo_url);
