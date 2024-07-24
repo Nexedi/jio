@@ -354,7 +354,7 @@
     return sub_storage.allDocs({include_docs: true})
       .push(undefined, function (error) {
         //throw error;
-        console.error(error);
+        //console.error(error);
         if (mock_test) {
           if (index === 2) {
             return JSON.parse(MOCK_PROMISE);
@@ -463,7 +463,7 @@
                 return {data: {total_rows: 0}};
               }
               //throw error;
-              console.error(error);
+              //console.error(error);
               return {data: {total_rows: 0}};
             })
             .push(function (opml_result) {
