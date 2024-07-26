@@ -56,7 +56,7 @@
         var jio, jio_definition = jio_options,
           first_master_total_docs, opml_foo_url = "https://foo-opml.bar";
         stop();
-        expect(20);
+        expect(25);
 
         try {
           jio = jIO.createJIO(jio_options);
@@ -141,7 +141,7 @@
           ]);
         })
         .then(function (all_doc_list) {
-          var id_list = [], all_docs = all_doc_list[5].data.rows, i;
+          var id_list = [], get_list = [], all_docs = all_doc_list[5].data.rows, i, push_queue = new RSVP.Queue();
           first_master_total_docs = all_doc_list[6].data.total_rows;
           ok(first_master_total_docs > 0, 'Objects created for master 1.');
           ok(all_doc_list[7].data.total_rows > 0, 'Objects created for master 2.');
@@ -155,6 +155,10 @@
           id_list.push(all_doc_list[3].data.rows[0].id);
           ok(all_doc_list[4].data.total_rows > 0, 'Opml Outline object created after sync.');
           id_list.push(all_doc_list[4].data.rows[0].id);
+          for (i = 0; i < id_list.length; i += 1) {
+            var idd = id_list[i];
+            get_list.push(jio.get(idd));
+          }
           for (i = 0; i < all_docs.length; i += 1) {
             //check different elements are present in plain allDocs
             if (id_list.includes(all_docs[i].id)) {
@@ -164,8 +168,15 @@
           }
           ok(id_list.length === 0, 'Different types created objects are returned by allDocs');
           console.log("Total amount of docs after first repair:", all_docs.length);
+          return RSVP.all(get_list);
         })
-        .then(function () {
+        .then(function (get_list_result) {
+          //check specific objects
+          equal(get_list_result[0].portal_type, "Instance Tree", "Check instance tree object.");
+          equal(get_list_result[1].portal_type, "Software Instance", "Check software instance object.");
+          equal(get_list_result[2].portal_type, "Promise", "Check promise tree object.");
+          equal(get_list_result[3].portal_type, "Opml", "Check opml object.");
+          equal(get_list_result[4].portal_type, "Opml Outline", "Check opml outline object.");
           //update jio storage slapos master urls (drop one)
           jio_definition.remote_sub_storage.storage_list = [
             {
