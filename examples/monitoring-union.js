@@ -56,7 +56,7 @@
         var jio, jio_definition = jio_options,
           first_master_total_docs, opml_foo_url = "https://foo-opml.bar";
         stop();
-        expect(19);
+        expect(20);
 
         try {
           jio = jIO.createJIO(jio_options);
@@ -84,6 +84,13 @@
           console.error(error.stack);
           console.error(error);
           ok(false, error);
+        })
+        //check if repair minimally worked
+        .then(function () {
+          return jio.allDocs();
+        })
+        .then(function (all_docs) {
+          ok(all_docs.data.total_rows > 0, 'Repair succeded. (if not, please be sure to be logged in masters)');
         })
         //call methods that are not implemented (fail expected)
         .then(function () {
