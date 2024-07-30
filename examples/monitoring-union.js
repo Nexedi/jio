@@ -92,6 +92,7 @@
         .then(function (all_docs) {
           ok(all_docs.data.total_rows > 0, 'Repair succeded. (if not, please be sure to be logged in masters)');
         })
+        //TODO test allAttachments
         //call methods that are not implemented (fail expected)
         .then(function () {
           return jio.getAttachment("foo", "bar");
