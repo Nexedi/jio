@@ -16,41 +16,27 @@
    * @constructor
    */
   function ERP55Monitor(spec) {
-    this._sub_storage = spec;
-    //TODO check substorage?
-    if (typeof spec.url !== 'string') {
-      throw new TypeError("ERP55Monitor is not of type string");
+    console.log("ERP55Monitor spec:", spec);
+    if (!spec.sub_storage || spec.sub_storage.type !== 'erp5') {
+      throw new TypeError("ERP55Monitor subtorage must be erp5 type");
     }
+    this._sub_storage = spec.sub_storage;
   }
 
   ERP55Monitor.prototype.get = function (id) {
-    var i,
-      context = this,
-      arg = arguments,
-      result = this._sub_storage.get.apply(this._sub_storage, arg);
+    return this._sub_storage.get.apply(this._sub_storage, arguments);
+  };
 
-    result
-      .push(undefined, function (error) {
-        if ((error instanceof jIO.util.jIOError) &&
-            (error.status_code === 404)) {
-          return context._storage_list[j].get.apply(context._storage_list[j],
-                                                    arg)
-            .push(function (doc) {
-              index = j;
-              return doc;
-            });
-        }
-        throw error;
-      });
+  ERP55Monitor.prototype.post = function () {
+    return this._sub_storage.post.apply(this._sub_storage, arguments);
+  };
 
-    return result
-      .push(function (doc) {
-        return [0, doc];
-      });
+  ERP55Monitor.prototype.put = function () {
+    return this._sub_storage.put.apply(this._sub_storage, arguments);
   };
 
   ERP55Monitor.prototype.hasCapacity = function (capacity) {
-    return (capacity === "list") || (capacity === "include");
+    return (capacity === "list") || (capacity === "limit") || (capacity === "include");
   };
 
   ERP55Monitor.prototype.buildQuery = function (options) {
