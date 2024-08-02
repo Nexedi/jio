@@ -37,7 +37,7 @@
           storage_list: [
             {
               type: "erp5monitor",
-              limit: 10,
+              limit: 20,
               sub_storage: {
                 type: "erp5",
                 url: slapos_master_url_list[0],
