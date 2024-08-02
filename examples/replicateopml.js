@@ -944,7 +944,7 @@
               //TODO could slapos_id be used to desambiguate identic title
               //instances trees between different storages?
               slapos_id = result.data.rows[i].value.title;
-              if (result.data.rows[i].storage.url && result.data.rows[i].storage.url) {
+              if (result.data.rows[i].storage && result.data.rows[i].storage.url) {
                 slapos_master_url = result.data.rows[i].storage.url;
               }
               instance_tree_list.push({
@@ -984,7 +984,7 @@
                 tmp_parameter = {username: "", password: "", opml_url: undefined};
               }
               if (instance_tree_list[uid_dict[tmp_uid]]) {
-                if (result.data.rows[i].storage.url && result.data.rows[i].storage.url) {
+                if (result.data.rows[i].storage && result.data.rows[i].storage.url) {
                   slapos_master_url = result.data.rows[i].storage.url;
                 }
                 opml_list.push({
