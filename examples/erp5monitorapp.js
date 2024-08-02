@@ -17,7 +17,6 @@
    * @constructor
    */
   function ERP55Monitor(spec) {
-    console.log("ERP55Monitor spec:", spec);
     if (!spec.sub_storage || spec.sub_storage.type !== 'erp5') {
       throw new TypeError("ERP55Monitor subtorage must be erp5 type");
     }
@@ -49,14 +48,16 @@
   };
 
   ERP55Monitor.prototype.buildQuery = function () {
-    var sub_storage = this._sub_storage, args = arguments, master_url = this._storage_definition.url;
+    var sub_storage = this._sub_storage, args = arguments, master_url = this._storage_definition.url, i;
     arguments[0].limit = [0, LIMIT];
     return new RSVP.Queue()
       .push(function () {
         return sub_storage.buildQuery.apply(sub_storage, args);
       })
       .push(function (result) {
-        result.master_url = master_url;
+        for (i = 0; i < result.length; i += 1) {
+          result[i].master_url = master_url;
+        }
         return result;
       });
   };
