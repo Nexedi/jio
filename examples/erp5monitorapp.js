@@ -9,6 +9,7 @@
 
 (function (jIO, RSVP) {
   "use strict";
+  var LIMIT = 100; //default
   /**
    * Monitor erp5 layer to wrap erp5 storages for monitor app
    *
@@ -20,6 +21,10 @@
     if (!spec.sub_storage || spec.sub_storage.type !== 'erp5') {
       throw new TypeError("ERP55Monitor subtorage must be erp5 type");
     }
+    if (spec.limit) {
+      LIMIT = spec.limit;
+    }
+    this._storage_definition = spec.sub_storage;
     this._sub_storage = jIO.createJIO(spec.sub_storage);
   }
 
@@ -44,16 +49,14 @@
   };
 
   ERP55Monitor.prototype.buildQuery = function () {
-    //TODO handle limit and add storage info
-    console.log("build query. args:", arguments)
-    var sub_storage = this._sub_storage, args = arguments;
+    var sub_storage = this._sub_storage, args = arguments, master_url = this._storage_definition.url;
+    arguments[0].limit = [0, LIMIT];
     return new RSVP.Queue()
       .push(function () {
         return sub_storage.buildQuery.apply(sub_storage, args);
       })
       .push(function (result) {
-        console.log("result", result);
-        //TODO add substorage and handle result
+        result.master_url = master_url;
         return result;
       });
   };
