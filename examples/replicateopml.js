@@ -1008,7 +1008,7 @@
     function cleanOpmlStorage(context) {
       //TODO use slapos_master_url in the query instead of iterate later
       return context._local_sub_storage.allDocs({
-        query: '(portal_type:"' + OPML_PORTAL_TYPE + '")',
+        query: '(portal_type:"' + OPML_PORTAL_TYPE + '")',// AND (slapos_master_url:"https://%")',
         select_list: ["title", "url", "basic_login", "slapos_master_url"]
       })
       .push(function (result) {
@@ -1049,7 +1049,6 @@
       });
     }
 
-    console.log("repair");
     return new RSVP.Queue()
       .push(function () {
         return context._local_sub_storage.repair.apply(
@@ -1074,11 +1073,9 @@
         return getInstanceOPMLList(context._remote_sub_storage);
       })
       .push(undefined, function () {
-        console.log("getInstanceOPMLList error");
         return [];
       })
       .push(function (opml_list) {
-        console.log("getInstanceOPMLList:", opml_list);
         //store opmls
         var i, push_queue = new RSVP.Queue();
         function pushOPML(opml_dict) {

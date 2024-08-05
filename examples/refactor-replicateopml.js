@@ -82,17 +82,10 @@
           ok(false, error);
         })
         .then(function () {
-          //check objects for each slapos master
-          return RSVP.all([
-            jio.allDocs({include_docs: true}),
-            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[0] + '"'}),
-            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[1] + '"'})
-          ]);
+          return jio.allDocs();
         })
-        .then(function (all_results) {
-          console.log("all_docs:", all_results[0]);
-          console.log("1:", all_results[1]);
-          console.log("2:", all_results[2]);
+        .then(function (all_docs) {
+          console.log("all_docs:", all_docs);
         })
         .always(function () {
           start();
