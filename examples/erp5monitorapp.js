@@ -48,6 +48,7 @@
   };
 
   ERP55Monitor.prototype.buildQuery = function () {
+    console.log("ERP55Monitor.prototype.buildQuery args", arguments);
     var sub_storage = this._sub_storage, args = arguments, master_url = this._storage_definition.url, i;
     arguments[0].limit = [0, LIMIT];
     return new RSVP.Queue()
@@ -55,8 +56,12 @@
         return sub_storage.buildQuery.apply(sub_storage, args);
       })
       .push(function (result) {
+        console.log("build query result:", result);
         for (i = 0; i < result.length; i += 1) {
           result[i].master_url = master_url;
+          if (master_url !== "https://panel.rapid.space/hateoas/") {
+            result[i].id += "-2";
+          }
         }
         return result;
       });
