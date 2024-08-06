@@ -155,6 +155,8 @@
         .then(function (all_doc_list) {
           var id_list = [], get_list = [], all_docs = all_doc_list[5].data.rows, i, push_queue = new RSVP.Queue();
           first_master_total_docs = all_doc_list[6].data.total_rows;
+          console.log("Objects created for master 1:", first_master_total_docs);
+          console.log("Objects created for master 2:", all_doc_list[7].data.total_rows);
           ok(first_master_total_docs > 0, 'Objects created for master 1.');
           ok(all_doc_list[7].data.total_rows > 0, 'Objects created for master 2.');
           ok(all_doc_list[0].data.total_rows > 0, 'Instance Tree object created after sync.');
@@ -189,6 +191,42 @@
           equal(get_list_result[2].portal_type, "Promise", "Check promise tree object.");
           equal(get_list_result[3].portal_type, "Opml", "Check opml object.");
           equal(get_list_result[4].portal_type, "Opml Outline", "Check opml outline object.");
+          //update jio storage slapos master urls (drop one)
+          jio_definition.remote_sub_storage.storage_list = [
+            {
+              type: "erp5monitor",
+              limit: 20,
+              sub_storage: {
+                type: "erp5",
+                url: slapos_master_url_list[0],
+                default_view_reference: "jio_view"
+              }
+            }
+          ];
+          try {
+            jio = jIO.createJIO(jio_options);
+          } catch (error) {
+            console.error(error.stack);
+            console.error(error);
+            throw error;
+          }
+          console.log("Sync for only master 1 (master 2 removed)");
+          return jio.repair();
+        })
+        .then(function () {
+          //check objects for each slapos master
+          return RSVP.all([
+            jio.allDocs({include_docs: true}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[0] + '"'}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[1] + '"'})
+          ]);
+        })
+        .then(function (all_results) {
+          console.log("Total amount of docs after second repair:", all_results[0].data.total_rows);
+          console.log("Objects from master 1:", all_results[1].data.total_rows);
+          console.log("Objects from master 2:", all_results[2].data.total_rows);
+          ok(all_results[1].data.total_rows === first_master_total_docs, "Objects of kept master url must be kept");
+          ok(all_results[2].data.total_rows === 0, "Removed master url objects must be removed");
         })
 
 
@@ -200,10 +238,10 @@
           ]);
         })
         .then(function (all_results) {
-          console.log("Total amount of docs:", all_results[0].data.total_rows);
-          console.log("from master 1:", all_results[1].data.total_rows);
-          console.log("from master 1:", all_results[2].data.total_rows);
-          console.log("all_results", all_results);
+          console.log("Finished. Total amount of docs:", all_results[0].data.total_rows);
+          console.log("From master 1:", all_results[1].data.total_rows);
+          console.log("From master 1:", all_results[2].data.total_rows);
+          console.log("Full doc list:", all_results);
         })
         .always(function () {
           start();
