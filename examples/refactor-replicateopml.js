@@ -73,19 +73,97 @@
           throw error;
         }
 
-        console.log("call repair!");
-        jio.repair()
+        // Try to fetch inexistent document
+        jio.get("inexistent")
+          .fail(function (error) {
+            if (error.status_code !== 404) {
+              throw error;
+            }
+            equal(error.status_code, 404, "404 if inexistent");
+        })
+        .then(function () {
+          //first sync
+          console.log("Sync for master 1 and 2");
+          return jio.repair();
+        })
         .fail(function (error) {
           console.error("---");
           console.error(error.stack);
           console.error(error);
           ok(false, error);
         })
+        //check if repair minimally worked
         .then(function () {
           return jio.allDocs();
         })
         .then(function (all_docs) {
-          console.log("all_docs:", all_docs);
+          ok(all_docs.data.total_rows > 0, 'Repair succeded. (if not, please be sure to be logged in masters)');
+        })
+
+
+
+        
+        //TODO test allAttachments
+        //call methods that are not implemented (fail expected)
+        .then(function () {
+          return jio.getAttachment("foo", "bar");
+        })
+        .fail(function (error) {
+          if (error.status_code !== 501) {
+            throw error;
+          }
+          equal(error.status_code, 501, "400 if no getAttachment method");
+        })
+        .then(function () {
+          return jio.putAttachment("foo",
+          "bar",
+          new Blob(["fooo"], {type: "text/plain"}));
+        })
+        .fail(function (error) {
+          if (error.status_code !== 501) {
+            throw error;
+          }
+          equal(error.status_code, 501, "501 if no putAttachment method");
+        })
+        .then(function () {
+          return jio.post({});
+        })
+        .fail(function (error) {
+          if (error.status_code !== 501) {
+            throw error;
+          }
+          equal(error.status_code, 501, "501 if no post method");
+        })
+        //check limit and sort are implemented
+        .then(function () {
+          return jio.allDocs({limit: [0, 3], sort_on: [["creation_date", "descending"]]});
+        })
+        //check specific type of objects were created after repair
+        .then(function (all_docs) {
+          ok(all_docs.data.total_rows === 3, 'Limit capacity implemented.');
+          return RSVP.all([
+            jio.allDocs({query: 'portal_type: "Instance Tree"'}),
+            jio.allDocs({query: 'portal_type: "Software Instance"'}),
+            jio.allDocs({query: 'portal_type: "Promise"'}),
+            jio.allDocs({query: 'portal_type: "Opml"'}),
+            jio.allDocs({query: 'portal_type: "Opml Outline"'}),
+            jio.allDocs({include_docs: true}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[0] + '"'}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[1] + '"'})
+          ]);
+        })
+
+
+        .then(function () {
+          return RSVP.all([
+            jio.allDocs({include_docs: true}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[0] + '"'}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[1] + '"'})
+          ]);
+        })
+        .then(function (all_results) {
+          console.log("Total amount of docs:", all_results[0].data.total_rows);
+          console.log("all_results", all_results);
         })
         .always(function () {
           start();
