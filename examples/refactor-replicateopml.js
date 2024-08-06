@@ -152,6 +152,44 @@
             jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[1] + '"'})
           ]);
         })
+        .then(function (all_doc_list) {
+          var id_list = [], get_list = [], all_docs = all_doc_list[5].data.rows, i, push_queue = new RSVP.Queue();
+          first_master_total_docs = all_doc_list[6].data.total_rows;
+          ok(first_master_total_docs > 0, 'Objects created for master 1.');
+          ok(all_doc_list[7].data.total_rows > 0, 'Objects created for master 2.');
+          ok(all_doc_list[0].data.total_rows > 0, 'Instance Tree object created after sync.');
+          id_list.push(all_doc_list[0].data.rows[0].id); //save one id to check later in all docs
+          ok(all_doc_list[1].data.total_rows > 0, 'Software Instance object created after sync.');
+          id_list.push(all_doc_list[1].data.rows[0].id);
+          ok(all_doc_list[2].data.total_rows > 0, 'Promise object created after sync.');
+          id_list.push(all_doc_list[2].data.rows[0].id);
+          ok(all_doc_list[3].data.total_rows > 0, 'Opml object created after sync.');
+          id_list.push(all_doc_list[3].data.rows[0].id);
+          ok(all_doc_list[4].data.total_rows > 0, 'Opml Outline object created after sync.');
+          id_list.push(all_doc_list[4].data.rows[0].id);
+          for (i = 0; i < id_list.length; i += 1) {
+            var idd = id_list[i];
+            get_list.push(jio.get(idd));
+          }
+          for (i = 0; i < all_docs.length; i += 1) {
+            //check different elements are present in plain allDocs
+            if (id_list.includes(all_docs[i].id)) {
+              const index = id_list.indexOf(all_docs[i].id);
+              id_list.splice(index, 1);
+            }
+          }
+          ok(id_list.length === 0, 'Different types created objects are returned by allDocs');
+          console.log("Total amount of docs after first repair:", all_docs.length);
+          return RSVP.all(get_list);
+        })
+        .then(function (get_list_result) {
+          //check specific objects
+          equal(get_list_result[0].portal_type, "Instance Tree", "Check instance tree object.");
+          equal(get_list_result[1].portal_type, "Software Instance", "Check software instance object.");
+          equal(get_list_result[2].portal_type, "Promise", "Check promise tree object.");
+          equal(get_list_result[3].portal_type, "Opml", "Check opml object.");
+          equal(get_list_result[4].portal_type, "Opml Outline", "Check opml outline object.");
+        })
 
 
         .then(function () {
@@ -163,6 +201,8 @@
         })
         .then(function (all_results) {
           console.log("Total amount of docs:", all_results[0].data.total_rows);
+          console.log("from master 1:", all_results[1].data.total_rows);
+          console.log("from master 1:", all_results[2].data.total_rows);
           console.log("all_results", all_results);
         })
         .always(function () {
