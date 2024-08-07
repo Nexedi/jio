@@ -9,7 +9,7 @@
     stop = QUnit.stop,
     start = QUnit.start,
     deepEqual = QUnit.deepEqual,
-    slapos_master_url_list = ["https://panel.rapid.space/hateoas/", "https://softinst224044.host.vifib.net/hateoas/"];
+    slapos_master_url_list = ["https://panel.rapid.space/hateoas/", "https://softinst223453.host.vifib.net/erp5/web_site_module/slapos_hateoas/"];
 
   rJS(window)
     .ready(function (g) {
@@ -36,14 +36,22 @@
           type: "union",
           storage_list: [
             {
-              type: "erp5",
-              url: slapos_master_url_list[0],
-              default_view_reference: "jio_view"
+              type: "erp5monitor",
+              limit: 20,
+              sub_storage: {
+                type: "erp5",
+                url: slapos_master_url_list[0],
+                default_view_reference: "jio_view"
+              }
             },
             {
-              type: "erp5",
-              url: slapos_master_url_list[1],
-              default_view_reference: "jio_view"
+              type: "erp5monitor",
+              limit: 20,
+              sub_storage: {
+                type: "erp5",
+                url: slapos_master_url_list[1],
+                default_view_reference: "jio_view"
+              }
             }
           ]
         }
@@ -92,6 +100,10 @@
         .then(function (all_docs) {
           ok(all_docs.data.total_rows > 0, 'Repair succeded. (if not, please be sure to be logged in masters)');
         })
+
+
+
+        
         //TODO test allAttachments
         //call methods that are not implemented (fail expected)
         .then(function () {
@@ -144,6 +156,8 @@
         .then(function (all_doc_list) {
           var id_list = [], get_list = [], all_docs = all_doc_list[5].data.rows, i, push_queue = new RSVP.Queue();
           first_master_total_docs = all_doc_list[6].data.total_rows;
+          console.log("Objects created for master 1:", first_master_total_docs);
+          console.log("Objects created for master 2:", all_doc_list[7].data.total_rows);
           ok(first_master_total_docs > 0, 'Objects created for master 1.');
           ok(all_doc_list[7].data.total_rows > 0, 'Objects created for master 2.');
           ok(all_doc_list[0].data.total_rows > 0, 'Instance Tree object created after sync.');
@@ -181,9 +195,13 @@
           //update jio storage slapos master urls (drop one)
           jio_definition.remote_sub_storage.storage_list = [
             {
-              type: "erp5",
-              url: slapos_master_url_list[0],
-              default_view_reference: "jio_view"
+              type: "erp5monitor",
+              limit: 20,
+              sub_storage: {
+                type: "erp5",
+                url: slapos_master_url_list[0],
+                default_view_reference: "jio_view"
+              }
             }
           ];
           try {
@@ -206,6 +224,8 @@
         })
         .then(function (all_results) {
           console.log("Total amount of docs after second repair:", all_results[0].data.total_rows);
+          console.log("Objects from master 1:", all_results[1].data.total_rows);
+          console.log("Objects from master 2:", all_results[2].data.total_rows);
           ok(all_results[1].data.total_rows === first_master_total_docs, "Objects of kept master url must be kept");
           ok(all_results[2].data.total_rows === 0, "Removed master url objects must be removed");
         })
@@ -234,11 +254,13 @@
           return RSVP.all([
             jio.allDocs({include_docs: true}),
             jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[0] + '"'}),
-            jio.get(opml_foo_url)
+            jio.get(opml_foo_url),
+            jio.allDocs({query: 'slapos_master_url: ""'})
           ]);
         })
         .then(function (all_results) {
           console.log("Total amount of docs after third repair:", all_results[0].data.total_rows);
+          console.log("From manual opml (no master):", all_results[3].data.total_rows);
           equal(all_results[2].url, opml_foo_url, "Opml was added.");
           //check new objects were created, besides ompl itself and previous master ones
           ok(all_results[0].data.total_rows >= first_master_total_docs + 1, "New objects created for added opml");
@@ -269,6 +291,21 @@
             throw error;
           }
           equal(error.status_code, 404, "Opml was removed.");
+        })
+        .then(function () {
+          return RSVP.all([
+            jio.allDocs({include_docs: true}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[0] + '"'}),
+            jio.allDocs({query: 'slapos_master_url: "' + slapos_master_url_list[1] + '"'}),
+            jio.allDocs({query: 'slapos_master_url: ""'})
+          ]);
+        })
+        .then(function (all_results) {
+          console.log("Finished. Total amount of docs:", all_results[0].data.total_rows);
+          console.log("From master 1:", all_results[1].data.total_rows);
+          console.log("From master 2:", all_results[2].data.total_rows);
+          console.log("No master (manual opml)):", all_results[3].data.total_rows);
+          console.log("Full doc list:", all_results);
         })
         .always(function () {
           start();
