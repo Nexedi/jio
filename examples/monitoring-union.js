@@ -9,7 +9,7 @@
     stop = QUnit.stop,
     start = QUnit.start,
     deepEqual = QUnit.deepEqual,
-    slapos_master_url_list = ["https://panel.rapid.space/hateoas/", "https://softinst223453.host.vifib.net/erp5/web_site_module/slapos_hateoas/"];
+    slapos_master_url_list = ["https://panel.rapid.space/hateoas/", "https://softinst239021.host.vifib.net/erp5/web_site_module/slapos_hateoas/"];
 
   rJS(window)
     .ready(function (g) {
