@@ -1,7 +1,7 @@
-/*jslint nomen: true */
-/*global jIO, RSVP, Rusha, Blob, console, btoa, DOMParser, URLSearchParams */
+/*jslint indent: 2 nomen: true */
+/*global jIO, RSVP, DOMParser, Rusha, Blob, console, btoa, URLSearchParams */
 
-(function (jIO, RSVP, Rusha, Blob, console, btoa, DOMParser, URLSearchParams) {
+(function (jIO, RSVP, DOMParser, Rusha, Blob, console, btoa, URLSearchParams) {
   "use strict";
 
   var rusha = new Rusha(),
@@ -139,6 +139,8 @@
   };
 
   ReplicatedOPMLStorage.prototype.remove = function (id) {
+    //the removal of an opml involves to remove the full opml tree asociated
+    //note: if the opml belongs to a slapos master, next sync will restore it
     var storage = this._local_sub_storage;
     return storage.get(id)
       .push(function (doc) {
@@ -353,7 +355,7 @@
     return sub_storage.allDocs({include_docs: true})
       .push(undefined, function (error) {
         //throw error;
-        //console.error(error);
+        console.error(error);
         if (mock_test) {
           if (index === 2) {
             return JSON.parse(MOCK_PROMISE);
@@ -408,7 +410,8 @@
       hosting.status = status;
     } else if (status === "WARNING") {
       hosting.status = status;
-    } if (status === "OK" && hosting.status !== status) {
+    }
+    if (status === "OK" && hosting.status !== status) {
       hosting.status = status;
     }
   }
@@ -462,7 +465,7 @@
                 return {data: {total_rows: 0}};
               }
               //throw error;
-              //console.error(error);
+              console.error(error);
               return {data: {total_rows: 0}};
             })
             .push(function (opml_result) {
@@ -677,8 +680,8 @@
             if (result_list[i].type === PROMISE_TYPE) {
               // the first element of rss is the header
               extra_dict = {
-                lastBuildDate: fixDateTimezone(result_list[i].result.data.
-                  rows[0].doc.lastBuildDate),
+                lastBuildDate: fixDateTimezone(result_list[i].result.data
+                                               .rows[0].doc.lastBuildDate),
                 channel: result_list[i].result.data.rows[0].doc.description,
                 channel_item: result_list[i].result.data.rows[0].doc.title
               };
@@ -704,8 +707,7 @@
               name: result_list[i].url,
               doc: result_list[i].current_signature
             });
-          }
-          else if (context._remote_storage_unreachable_status !== undefined) {
+          } else if (context._remote_storage_unreachable_status !== undefined) {
             if (result_list[i].type === "webhttp") {
               // In case it was impossible to get software Instance
               // Add an empty Software Instance with unreachable status
@@ -854,6 +856,8 @@
 
   ReplicatedOPMLStorage.prototype.repair = function () {
     var context = this,
+      has_failed = false,
+      error_msg = "",
       argument_list = arguments;
 
     function getParameterDictFromUrl(uri_param) {
@@ -882,14 +886,14 @@
 
     function readMonitoringParameter(parmeter_xml) {
       var parser = new DOMParser(),
-        xmlDoc = parser.parseFromString(parmeter_xml, "text/xml"),
+        xml_doc = parser.parseFromString(parmeter_xml, "text/xml"),
         parameter,
         uri_param,
         json_parameter,
         parameter_dict,
         monitor_dict = {};
 
-      json_parameter = xmlDoc.getElementById("_");
+      json_parameter = xml_doc.getElementById("_");
       if (json_parameter !== undefined && json_parameter !== null) {
         parameter_dict = JSON.parse(json_parameter.textContent);
         if (parameter_dict.hasOwnProperty("monitor-setup-url")) {
@@ -899,21 +903,21 @@
         }
         return getParameterFromconnectionDict(parameter_dict);
       }
-      parameter = xmlDoc.getElementById("monitor-setup-url");
+      parameter = xml_doc.getElementById("monitor-setup-url");
       if (parameter !== undefined && parameter !== null) {
         // monitor-setup-url exists
         uri_param = new URLSearchParams(parameter.textContent);
         return getParameterDictFromUrl(uri_param);
       }
-      parameter = xmlDoc.getElementById("monitor-url");
+      parameter = xml_doc.getElementById("monitor-url");
       if (parameter !== undefined && parameter !== null) {
         monitor_dict.url = parameter.textContent.trim();
-        parameter = xmlDoc.getElementById("monitor-user");
+        parameter = xml_doc.getElementById("monitor-user");
         if (parameter === undefined && parameter !== null) {
           return;
         }
         monitor_dict.username = parameter.textContent.trim();
-        parameter = xmlDoc.getElementById("monitor-password");
+        parameter = xml_doc.getElementById("monitor-password");
         if (parameter === undefined && parameter !== null) {
           return;
         }
@@ -923,7 +927,9 @@
     }
 
     function getInstanceOPMLList(storage) {
-      if (!storage) return [];
+      if (!storage) {
+        return [];
+      }
       var instance_tree_list = [],
         opml_list = [],
         uid_dict = {};
@@ -1008,7 +1014,7 @@
     function cleanOpmlStorage(context) {
       //TODO use slapos_master_url in the query instead of iterate later
       return context._local_sub_storage.allDocs({
-        query: '(portal_type:"' + OPML_PORTAL_TYPE + '")',// AND (slapos_master_url:"https://%")',
+        query: '(portal_type:"' + OPML_PORTAL_TYPE + '")',
         select_list: ["title", "url", "basic_login", "slapos_master_url"]
       })
         .push(function (result) {
@@ -1051,6 +1057,7 @@
     }
 
     return new RSVP.Queue()
+      //repair sub storage layers (local and remote)
       .push(function () {
         return context._local_sub_storage.repair.apply(
           context._local_sub_storage,
@@ -1067,25 +1074,40 @@
       })
       .push(function () {
         //delete all opmls trees of no longer present slapos masters
+        //(in case master url list was updated)
         return cleanOpmlStorage(context);
       })
       .push(function () {
         //get opml list from remote slapos master(s)
         return getInstanceOPMLList(context._remote_sub_storage);
       })
-      .push(undefined, function () {
-        return [];
+      .push(undefined, function (error) {
+        has_failed = true;
+        if (error.target) {
+          if (error.target.status === 401) {
+            error_msg = ": unauthorized access to slapos master";
+          }
+          if (error.target.status === 404) {
+            error_msg = ": slapos master url not found";
+          }
+          if (error.target.status - 500 > 0) {
+            error_msg = ": server error on slapos master side - " + error.target.status;
+          }
+          if (error.target.responseURL) {
+            error_msg += ". URL: " + error.target.responseURL;
+          }
+        } else {
+          console.log(error);
+        }
+        throw "Failed to import remote configurations" + error_msg;
       })
       .push(function (opml_list) {
-        //store opmls
+        //store opmls in local sub storage
         var i, push_queue = new RSVP.Queue();
         function pushOPML(opml_dict) {
           push_queue
             .push(function () {
               return context._local_sub_storage.put(opml_dict.url, opml_dict);
-            })
-            .push(undefined, function (error) {
-              throw error;
             });
         }
         for (i = 0; i < opml_list.length; i += 1) {
@@ -1094,11 +1116,13 @@
         return push_queue;
       })
       .push(function () {
-        //sync storage using updated opml list
-        return syncOpmlStorage(context);
+        if (!has_failed) {
+          //sync storage using updated opml list
+          return syncOpmlStorage(context);
+        }
       });
   };
 
   jIO.addStorage('replicatedopml', ReplicatedOPMLStorage);
 
-}(jIO, RSVP, Rusha, Blob, console, btoa, DOMParser, URLSearchParams));
+}(jIO, RSVP, DOMParser, Rusha, Blob, console, btoa, URLSearchParams));
