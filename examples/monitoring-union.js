@@ -242,7 +242,8 @@
             active: true,
             has_monitor: true,
             state: "Started",
-            slapos_master_url: ""
+            slapos_master_url: "foo-master",
+            manually_added: true
           };
           return jio.put(opml_foo_url, opml_dict);
         })
