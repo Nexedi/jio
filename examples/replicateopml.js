@@ -1101,6 +1101,18 @@
         throw "Failed to import remote configurations" + error_msg;
       })
       .push(function (opml_list) {
+
+        //HARDCODED second master
+        if (mock_test) {
+          if (context._remote_sub_storage.__storage._storage_list[1]) {
+            if (context._remote_sub_storage.__storage._storage_list[1].__storage._storage_definition.url === "https://softinst239021.host.vifib.net/erp5/web_site_module/slapos_hateoas/") {
+              opml_list[6].slapos_master_url = "https://softinst239021.host.vifib.net/erp5/web_site_module/slapos_hateoas/";
+            }
+          } else {
+            opml_list.pop();
+          }
+        }
+
         //store opmls in local sub storage
         var i, push_queue = new RSVP.Queue();
         function pushOPML(opml_dict) {
