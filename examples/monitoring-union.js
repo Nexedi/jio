@@ -9,6 +9,7 @@
     stop = QUnit.stop,
     start = QUnit.start,
     deepEqual = QUnit.deepEqual,
+    DB_NAME = "monitoring_local_test.db",
     slapos_master_url_list = ["https://panel.rapid.space/hateoas/", "https://softinst239021.host.vifib.net/erp5/web_site_module/slapos_hateoas/"];
 
   rJS(window)
@@ -28,7 +29,7 @@
             type: "uuid",
             sub_storage: {
               type: "indexeddb",
-              database: "monitoring_local_roque.db"
+              database: DB_NAME
             }
           }
         },
@@ -65,16 +66,22 @@
           first_master_total_docs, opml_foo_url = "https://foo-opml.bar";
         stop();
 
-        try {
-          jio = jIO.createJIO(jio_options);
-        } catch (error) {
-          console.error(error.stack);
-          console.error(error);
-          throw error;
-        }
-
-        // Try to fetch inexistent document
-        jio.repair()
+        //Ensure no previous test db is present
+        return new RSVP.Queue()
+        .push(function () {
+          return indexedDB.deleteDatabase("jio:" + DB_NAME);
+        })
+        .then(function () {
+          try {
+            jio = jIO.createJIO(jio_options);
+          } catch (error) {
+            console.error(error.stack);
+            console.error(error);
+            throw error;
+          }
+          // Try to fetch inexistent document
+          return jio.repair();
+        })
         .fail(function (error) {
           console.error("---");
           console.error(error.stack);
@@ -86,6 +93,7 @@
           return jio.allDocs();
         })
         .then(function (all_docs) {
+          console.log("all_docs", all_docs);
           ok(all_docs.data.total_rows > 0, 'Repair succeded. (if not, please be sure to be logged in masters)');
         })
         .always(function () {
