@@ -9,6 +9,7 @@
     stop = QUnit.stop,
     start = QUnit.start,
     deepEqual = QUnit.deepEqual,
+    DB_NAME = "monitoring_local_test.db",
     slapos_master_url_list = ["https://panel.rapid.space/hateoas/", "https://softinst239021.host.vifib.net/erp5/web_site_module/slapos_hateoas/"];
 
   rJS(window)
@@ -28,7 +29,7 @@
             type: "uuid",
             sub_storage: {
               type: "indexeddb",
-              database: "monitoring_local_roque.db"
+              database: DB_NAME
             }
           }
         },
