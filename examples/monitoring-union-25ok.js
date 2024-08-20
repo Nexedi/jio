@@ -67,21 +67,27 @@
         stop();
         expect(25);
 
-        try {
-          jio = jIO.createJIO(jio_options);
-        } catch (error) {
-          console.error(error.stack);
-          console.error(error);
-          throw error;
-        }
-
-        // Try to fetch inexistent document
-        jio.get("inexistent")
-          .fail(function (error) {
-            if (error.status_code !== 404) {
-              throw error;
-            }
-            equal(error.status_code, 404, "404 if inexistent");
+        //Ensure no previous test db is present
+        return new RSVP.Queue()
+        .push(function () {
+          return indexedDB.deleteDatabase("jio:" + DB_NAME);
+        })
+        .then(function () {
+          try {
+            jio = jIO.createJIO(jio_options);
+          } catch (error) {
+            console.error(error.stack);
+            console.error(error);
+            throw error;
+          }
+          // Try to fetch inexistent document
+          jio.get("inexistent")
+        })
+        .fail(function (error) {
+          if (error.status_code !== 404) {
+            throw error;
+          }
+          equal(error.status_code, 404, "404 if inexistent");
         })
         .then(function () {
           //first sync
@@ -102,9 +108,6 @@
           ok(all_docs.data.total_rows > 0, 'Repair succeded. (if not, please be sure to be logged in masters)');
         })
 
-
-
-        
         //TODO test allAttachments
         //call methods that are not implemented (fail expected)
         .then(function () {
