@@ -79,7 +79,7 @@
             console.error(error);
             throw error;
           }
-          // Try to fetch inexistent document
+          //first sync
           return jio.repair();
         })
         .fail(function (error) {
