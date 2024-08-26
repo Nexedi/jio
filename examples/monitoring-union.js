@@ -95,12 +95,20 @@
         .then(function (all_docs) {
           console.log("all_docs", all_docs);
           ok(all_docs.data.total_rows > 0, 'Repair succeded. (if not, please be sure to be logged in masters)');
-          return jio.allAttachments(all_docs.data.rows[0].id);
+          //check all attachments
+          var i, push_queue = new RSVP.Queue();
+          function pushAll(id) {
+            push_queue
+              .push(function () {
+                return jio.allAttachments(id);
+              });
+          }
+          for (i = 0; i < all_docs.data.rows.length; i += 1) {
+            pushAll(all_docs.data.rows[i].id);
+          }
+          return push_queue;
         })
         .fail(function (error) {
-          console.error("---");
-          console.error(error.stack);
-          console.error(error);
           ok(false, error);
         })
         .always(function () {
