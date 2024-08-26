@@ -460,7 +460,9 @@
               return {data: {total_rows: 0}};
             })
             .push(function (opml_result) {
-              console.log("no CORS error on opml_storage.allDocs");
+              if (opml_result.data.rows) {
+                console.log("NO CORS error!");
+              }
               opml_result_list = opml_result;
               if (opml_result.data.total_rows > 0) {
                 attachment_document_list.push({
@@ -976,8 +978,10 @@
               }
               if (mock_test) {
                 tmp_parameter.opml_url = "https://softinst238949.host.vifib.net/public/feeds";
-                tmp_parameter.username = "admin";
                 tmp_parameter.password = "C1r796U05Z64QMyk";
+                //tmp_parameter.opml_url = "https://softinst239780.host.vifib.net/public/feeds";
+                //tmp_parameter.password = "07b17cifhSKxNdot";
+                tmp_parameter.username = "admin";
               }
               if (instance_tree_list[uid_dict[tmp_uid]]) {
                 if (result.data.rows[i].master_url) {
