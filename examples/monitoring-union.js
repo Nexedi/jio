@@ -95,6 +95,13 @@
         .then(function (all_docs) {
           console.log("all_docs", all_docs);
           ok(all_docs.data.total_rows > 0, 'Repair succeded. (if not, please be sure to be logged in masters)');
+          return jio.allAttachments(all_docs.data.rows[0].id);
+        })
+        .fail(function (error) {
+          console.error("---");
+          console.error(error.stack);
+          console.error(error);
+          ok(false, error);
         })
         .always(function () {
           start();
