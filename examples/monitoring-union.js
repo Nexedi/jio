@@ -90,11 +90,23 @@
         })
         //check if repair minimally worked
         .then(function () {
-          return jio.allDocs();
+          return RSVP.all([
+            jio.allDocs({query: 'portal_type: "Instance Tree"'}),
+            jio.allDocs({query: 'portal_type: "Software Instance"'}),
+            jio.allDocs({query: 'portal_type: "Promise"'}),
+            jio.allDocs({query: 'portal_type: "Opml"'}),
+            jio.allDocs({query: 'portal_type: "Opml Outline"'}),
+            jio.allDocs({include_docs: true})
+          ]);
         })
-        .then(function (all_docs) {
-          console.log("all_docs", all_docs);
-          ok(all_docs.data.total_rows > 0, 'Repair succeded. (if not, please be sure to be logged in masters)');
+        .then(function (all_doc_list) {
+          console.log("all_doc_list", all_doc_list);
+          ok(all_doc_list[5].data.total_rows > 0, 'Repair succeded. (if not, please be sure to be logged in masters)');
+          ok(all_doc_list[0].data.total_rows > 0, 'Instance Tree object created after sync.');
+          ok(all_doc_list[1].data.total_rows > 0, 'Software Instance object created after sync.');
+          ok(all_doc_list[2].data.total_rows > 0, 'Promise object created after sync.');
+          ok(all_doc_list[3].data.total_rows > 0, 'Opml object created after sync.');
+          ok(all_doc_list[4].data.total_rows > 0, 'Opml Outline object created after sync.');
           //check all attachments
           var i, push_queue = new RSVP.Queue();
           function pushAll(id) {
@@ -103,8 +115,8 @@
                 return jio.allAttachments(id);
               });
           }
-          for (i = 0; i < all_docs.data.rows.length; i += 1) {
-            pushAll(all_docs.data.rows[i].id);
+          for (i = 0; i < all_doc_list[5].data.rows.length; i += 1) {
+            pushAll(all_doc_list[5].data.rows[i].id);
           }
           return push_queue;
         })
