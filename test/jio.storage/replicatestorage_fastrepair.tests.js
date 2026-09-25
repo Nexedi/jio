@@ -22,12 +22,7 @@
 (function (jIO, QUnit, Blob, RSVP) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    ok = QUnit.ok,
-    expect = QUnit.expect,
-    deepEqual = QUnit.deepEqual,
-    equal = QUnit.equal,
+    start,
     module = QUnit.module,
     big_string = "",
     j;
@@ -96,7 +91,7 @@
   );
 
   module("replicateStorage.fast.repair.document", {
-    setup: function () {
+    beforeEach: function () {
       // Uses memory substorage, so that it is flushed after each run
       this.jio = jIO.createJIO({
         type: "replicate",
@@ -135,9 +130,9 @@
   // document fast replication
   /////////////////////////////////////////////////////////////////
 
-  test("local document creation", function () {
-    stop();
-    expect(3);
+  test("local document creation", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     var id,
       context = this;
@@ -148,13 +143,13 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_PUT_REMOTE, id]
         ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo",
           foo_etag: 'foo etag'
         });
@@ -163,22 +158,22 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local document creation and use remote post", function () {
-    stop();
-    expect(14);
+  test("local document creation and use remote post", function (assert) {
+    start = assert.async();
+    assert.expect(14);
 
     var id,
       post_id,
@@ -226,33 +221,33 @@
       })
       // Document 'id' has been deleted in both storages
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_POST_REMOTE, id]
         ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " + id);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._local_sub_storage.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " + id);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function () {
-        ok(false, "Signature should have been deleted");
+        assert.ok(false, "Signature should have been deleted");
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.status_code, 404);
       })
 
       // But another document should have been created
@@ -260,12 +255,12 @@
         return context.jio.__storage._remote_sub_storage.allDocs();
       })
       .then(function (result) {
-        equal(result.data.total_rows, 1);
+        assert.equal(result.data.total_rows, 1);
         post_id = result.data.rows[0].id;
         return context.jio.__storage._remote_sub_storage.get(post_id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo",
           foo_etag: 'foo etag'
         });
@@ -274,7 +269,7 @@
         return context.jio.__storage._local_sub_storage.get(post_id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo",
           foo_etag: 'foo etag'
         });
@@ -283,157 +278,158 @@
                       .getAttachment(post_id, 'foo', {format: 'text'});
       })
       .then(function (result) {
-        equal(result, big_string);
+        assert.equal(result, big_string);
         return context.jio.__storage._signature_sub_storage.get(post_id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local document creation, remote post and delayed allDocs", function () {
-    stop();
-    expect(12);
+  test("local document creation, remote post and delayed allDocs",
+       function (assert) {
+      start = assert.async();
+      assert.expect(12);
 
-    var id,
-      post_id = "_foobar",
-      context = this;
+      var id,
+        post_id = "_foobar",
+        context = this;
 
-    function FastStorage200DelayedAllDocs(spec) {
-      this._sub_storage = jIO.createJIO(spec.sub_storage);
-    }
-    FastStorage200DelayedAllDocs.prototype.get = function () {
-      return this._sub_storage.get.apply(this._sub_storage, arguments);
-    };
-    FastStorage200DelayedAllDocs.prototype.post = function (param) {
-      return this.put(post_id, param);
-    };
-    FastStorage200DelayedAllDocs.prototype.put = function () {
-      return this._sub_storage.put.apply(this._sub_storage, arguments);
-    };
-    FastStorage200DelayedAllDocs.prototype.hasCapacity = function () {
-      return true;
-    };
-    FastStorage200DelayedAllDocs.prototype.buildQuery = function () {
-      return [];
-    };
-    jIO.addStorage(
-      'replicatefaststorage200delayedalldocs',
-      FastStorage200DelayedAllDocs
-    );
-
-    this.jio = jIO.createJIO({
-      type: "replicate",
-      report_level: 1000,
-      use_remote_post: true,
-      signature_hash_key: 'foo_etag',
-      local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      },
-      remote_sub_storage: {
-        type: "replicatefaststorage200delayedalldocs",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
+      function FastStorage200DelayedAllDocs(spec) {
+        this._sub_storage = jIO.createJIO(spec.sub_storage);
       }
+      FastStorage200DelayedAllDocs.prototype.get = function () {
+        return this._sub_storage.get.apply(this._sub_storage, arguments);
+      };
+      FastStorage200DelayedAllDocs.prototype.post = function (param) {
+        return this.put(post_id, param);
+      };
+      FastStorage200DelayedAllDocs.prototype.put = function () {
+        return this._sub_storage.put.apply(this._sub_storage, arguments);
+      };
+      FastStorage200DelayedAllDocs.prototype.hasCapacity = function () {
+        return true;
+      };
+      FastStorage200DelayedAllDocs.prototype.buildQuery = function () {
+        return [];
+      };
+      jIO.addStorage(
+        'replicatefaststorage200delayedalldocs',
+        FastStorage200DelayedAllDocs
+      );
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        report_level: 1000,
+        use_remote_post: true,
+        signature_hash_key: 'foo_etag',
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        },
+        remote_sub_storage: {
+          type: "replicatefaststorage200delayedalldocs",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        }
+      });
+
+      context.jio.post({title: "foo", foo_etag: 'foo etag'})
+        .then(function (result) {
+          id = result;
+          return context.jio.repair();
+        })
+        // Document 'id' has been deleted in both storages
+        .then(function (report) {
+          assert.deepEqual(report._list, [
+            [report.LOG_POST_REMOTE, id]
+          ]);
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._local_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.status_code, 404);
+        })
+
+        // But another document should have been created
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo",
+            foo_etag: 'foo etag'
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._local_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo",
+            foo_etag: 'foo etag'
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            from_local: true,
+            hash: "foo dynetag"
+          });
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
     });
 
-    context.jio.post({title: "foo", foo_etag: 'foo etag'})
-      .then(function (result) {
-        id = result;
-        return context.jio.repair();
-      })
-      // Document 'id' has been deleted in both storages
-      .then(function (report) {
-        deepEqual(report._list, [
-          [report.LOG_POST_REMOTE, id]
-        ]);
-        return context.jio.__storage._remote_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._local_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.status_code, 404);
-      })
-
-      // But another document should have been created
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage.get(post_id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo",
-          foo_etag: 'foo etag'
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._local_sub_storage.get(post_id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo",
-          foo_etag: 'foo etag'
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(post_id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          from_local: true,
-          hash: "foo dynetag"
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("remote document creation", function () {
-    stop();
-    expect(3);
+  test("remote document creation", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     var id,
       context = this;
@@ -445,13 +441,13 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_PUT_LOCAL, id]
         ]);
         return context.jio.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "bar",
           foo_etag: 'bar etag'
         });
@@ -460,22 +456,22 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: false,
           hash: "bar dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local and remote document creations", function () {
-    stop();
-    expect(3);
+  test("local and remote document creations", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     var context = this;
 
@@ -489,10 +485,10 @@
         return context.jio.repair();
       })
       .then(function () {
-        ok(false);
+        assert.ok(false);
       })
       .fail(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_UNRESOLVED_CONFLICT, 'conflict']
         ]);
       })
@@ -500,9 +496,9 @@
         return context.jio.__storage._signature_sub_storage.get("conflict");
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-//        equal(error.message, "Cannot find document: conflict");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+//        assert.equal(error.message, "Cannot find document: conflict");
+        assert.equal(error.status_code, 404);
       })
       .always(function () {
         start();
@@ -510,63 +506,64 @@
   });
 
 
-  test("local and remote document creations with same 'etag'", function () {
-    stop();
-    expect(4);
+  test("local and remote document creations with same 'etag'",
+       function (assert) {
+      start = assert.async();
+      assert.expect(4);
 
-    var context = this;
+      var context = this;
 
-    RSVP.all([
-      context.jio.put("conflict", {title: "foo", foo_etag: 'foo etag'}),
-      context.jio.__storage._remote_sub_storage.put("conflict",
-                                                    {title: "foo",
-                                                     foo_etag: 'bar etag'})
-    ])
-      .then(function () {
-        return context.jio.repair();
-      })
-      .then(function (report) {
-        deepEqual(report._list, [
-          [report.LOG_FALSE_CONFLICT, 'conflict']
-        ]);
-        return context.jio.__storage._signature_sub_storage.get("conflict");
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          from_local: true,
-          hash: "foo dynetag"
+      RSVP.all([
+        context.jio.put("conflict", {title: "foo", foo_etag: 'foo etag'}),
+        context.jio.__storage._remote_sub_storage.put("conflict",
+                                                      {title: "foo",
+                                                      foo_etag: 'bar etag'})
+      ])
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function (report) {
+          assert.deepEqual(report._list, [
+            [report.LOG_FALSE_CONFLICT, 'conflict']
+          ]);
+          return context.jio.__storage._signature_sub_storage.get("conflict");
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            from_local: true,
+            hash: "foo dynetag"
+          });
+        })
+        .then(function () {
+          return context.jio.get("conflict");
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo",
+            foo_etag: 'foo etag'
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get("conflict");
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo",
+            foo_etag: 'bar etag'
+          });
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
         });
-      })
-      .then(function () {
-        return context.jio.get("conflict");
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo",
-          foo_etag: 'foo etag'
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage.get("conflict");
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo",
-          foo_etag: 'bar etag'
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
 
-  });
+    });
 
-  test("local and remote document creations: keep local", function () {
-    stop();
-    expect(4);
+  test("local and remote document creations: keep local", function (assert) {
+    start = assert.async();
+    assert.expect(4);
 
     var context = this;
 
@@ -605,13 +602,13 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_FORCE_PUT_REMOTE, 'conflict']
         ]);
         return context.jio.__storage._signature_sub_storage.get("conflict");
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
@@ -620,7 +617,7 @@
         return context.jio.get("conflict");
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo",
           foo_etag: 'foo etag'
         });
@@ -629,13 +626,13 @@
         return context.jio.__storage._remote_sub_storage.get("conflict");
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo",
           foo_etag: 'foo etag'
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -643,9 +640,9 @@
   });
 
   test("local and remote document creations: keep local, remote post",
-    function () {
-      stop();
-      expect(4);
+    function (assert) {
+      start = assert.async();
+      assert.expect(4);
 
       var context = this;
 
@@ -685,13 +682,13 @@
           return context.jio.repair();
         })
         .then(function (report) {
-          deepEqual(report._list, [
+          assert.deepEqual(report._list, [
             [report.LOG_FORCE_PUT_REMOTE, 'conflict']
           ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             from_local: true,
             hash: "foo dynetag"
           });
@@ -700,7 +697,7 @@
           return context.jio.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "foo",
             foo_etag: 'foo etag'
           });
@@ -709,13 +706,13 @@
           return context.jio.__storage._remote_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "foo",
             foo_etag: 'foo etag'
           });
         })
         .fail(function (error) {
-          ok(false, error);
+          assert.ok(false, error);
         })
         .always(function () {
           start();
@@ -723,9 +720,9 @@
     });
 
   test("local and remote document creations: keep local, " +
-       "local not matching query", function () {
-      stop();
-      expect(4);
+       "local not matching query", function (assert) {
+      start = assert.async();
+      assert.expect(4);
 
       var context = this;
 
@@ -767,13 +764,13 @@
           return context.jio.repair();
         })
         .then(function (report) {
-          deepEqual(report._list, [
+          assert.deepEqual(report._list, [
             [report.LOG_FORCE_PUT_REMOTE, 'conflict']
           ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             from_local: true,
             hash: "foo dynetag"
           });
@@ -782,7 +779,7 @@
           return context.jio.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "foo",
             foo_etag: "foo etag"
           });
@@ -791,13 +788,13 @@
           return context.jio.__storage._remote_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "foo",
             foo_etag: "foo etag"
           });
         })
         .fail(function (error) {
-          ok(false, error);
+          assert.ok(false, error);
         })
         .always(function () {
           start();
@@ -805,9 +802,9 @@
     });
 
   test("local and remote document creations: keep local, " +
-       "remote not matching query", function () {
-      stop();
-      expect(4);
+       "remote not matching query", function (assert) {
+      start = assert.async();
+      assert.expect(4);
 
       var context = this;
 
@@ -848,13 +845,13 @@
           return context.jio.repair();
         })
         .then(function (report) {
-          deepEqual(report._list, [
+          assert.deepEqual(report._list, [
             [report.LOG_FORCE_PUT_REMOTE, 'conflict']
           ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             from_local: true,
             hash: "foo dynetag"
           });
@@ -863,7 +860,7 @@
           return context.jio.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "foo",
             type: "foobar",
             foo_etag: "foo etag"
@@ -873,23 +870,23 @@
           return context.jio.__storage._remote_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "foo",
             type: "foobar",
             foo_etag: "foo etag"
           });
         })
         .fail(function (error) {
-          ok(false, error);
+          assert.ok(false, error);
         })
         .always(function () {
           start();
         });
     });
 
-  test("local and remote document creations: keep remote", function () {
-    stop();
-    expect(4);
+  test("local and remote document creations: keep remote", function (assert) {
+    start = assert.async();
+    assert.expect(4);
 
     var context = this;
 
@@ -928,13 +925,13 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_FORCE_PUT_LOCAL, 'conflict']
         ]);
         return context.jio.__storage._signature_sub_storage.get("conflict");
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: false,
           hash: "bar dynetag"
         });
@@ -943,7 +940,7 @@
         return context.jio.get("conflict");
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "bar",
           foo_etag: 'bar etag'
         });
@@ -952,13 +949,13 @@
         return context.jio.__storage._remote_sub_storage.get("conflict");
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "bar",
           foo_etag: 'bar etag'
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -966,9 +963,9 @@
   });
 
   test("local and remote document creations: keep remote, remote post",
-    function () {
-      stop();
-      expect(4);
+    function (assert) {
+      start = assert.async();
+      assert.expect(4);
 
       var context = this;
 
@@ -1008,13 +1005,13 @@
           return context.jio.repair();
         })
         .then(function (report) {
-          deepEqual(report._list, [
+          assert.deepEqual(report._list, [
             [report.LOG_FORCE_PUT_LOCAL, 'conflict']
           ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             from_local: false,
             hash: "bar dynetag"
           });
@@ -1023,7 +1020,7 @@
           return context.jio.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "bar",
             foo_etag: 'bar etag'
           });
@@ -1032,13 +1029,13 @@
           return context.jio.__storage._remote_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "bar",
             foo_etag: 'bar etag'
           });
         })
         .fail(function (error) {
-          ok(false, error);
+          assert.ok(false, error);
         })
         .always(function () {
           start();
@@ -1046,9 +1043,9 @@
     });
 
   test("local and remote document creations: keep remote, " +
-       "local not matching query", function () {
-      stop();
-      expect(4);
+       "local not matching query", function (assert) {
+      start = assert.async();
+      assert.expect(4);
 
       var context = this;
 
@@ -1089,13 +1086,13 @@
           return context.jio.repair();
         })
         .then(function (report) {
-          deepEqual(report._list, [
+          assert.deepEqual(report._list, [
             [report.LOG_FORCE_PUT_LOCAL, 'conflict']
           ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             from_local: false,
             hash: "bar dynetag"
           });
@@ -1104,7 +1101,7 @@
           return context.jio.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "bar",
             foo_etag: 'bar etag',
             type: "foobar"
@@ -1114,14 +1111,14 @@
           return context.jio.__storage._remote_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "bar",
             foo_etag: 'bar etag',
             type: "foobar"
           });
         })
         .fail(function (error) {
-          ok(false, error);
+          assert.ok(false, error);
         })
         .always(function () {
           start();
@@ -1129,9 +1126,9 @@
     });
 
   test("local and remote document creations: keep remote, " +
-       "remote not matching query", function () {
-      stop();
-      expect(4);
+       "remote not matching query", function (assert) {
+      start = assert.async();
+      assert.expect(4);
 
       var context = this;
 
@@ -1172,13 +1169,13 @@
           return context.jio.repair();
         })
         .then(function (report) {
-          deepEqual(report._list, [
+          assert.deepEqual(report._list, [
             [report.LOG_FORCE_PUT_LOCAL, 'conflict']
           ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             from_local: false,
             hash: "bar dynetag"
           });
@@ -1187,7 +1184,7 @@
           return context.jio.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "bar",
             foo_etag: 'bar etag'
           });
@@ -1196,22 +1193,22 @@
           return context.jio.__storage._remote_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "bar",
             foo_etag: 'bar etag'
           });
         })
         .fail(function (error) {
-          ok(false, error);
+          assert.ok(false, error);
         })
         .always(function () {
           start();
         });
     });
 
-  test("local and remote document creations: continue", function () {
-    stop();
-    expect(5);
+  test("local and remote document creations: continue", function (assert) {
+    start = assert.async();
+    assert.expect(5);
 
     var context = this;
 
@@ -1250,21 +1247,21 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_SKIP_CONFLICT, 'conflict']
         ]);
         return context.jio.__storage._signature_sub_storage.get("conflict");
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-//        equal(error.message, "Cannot find document: conflict");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+//        assert.equal(error.message, "Cannot find document: conflict");
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.get("conflict");
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo",
           foo_etag: 'foo etag'
         });
@@ -1273,13 +1270,13 @@
         return context.jio.__storage._remote_sub_storage.get("conflict");
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "bar",
           foo_etag: 'bar etag'
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -1287,9 +1284,9 @@
   });
 
   test("local and remote document creations: continue, remote post",
-    function () {
-      stop();
-      expect(5);
+    function (assert) {
+      start = assert.async();
+      assert.expect(5);
 
       var context = this;
 
@@ -1329,21 +1326,21 @@
           return context.jio.repair();
         })
         .then(function (report) {
-          deepEqual(report._list, [
+          assert.deepEqual(report._list, [
             [report.LOG_SKIP_CONFLICT, 'conflict']
           ]);
           return context.jio.__storage._signature_sub_storage.get("conflict");
         })
         .fail(function (error) {
-          ok(error instanceof jIO.util.jIOError);
-          //        equal(error.message, "Cannot find document: conflict");
-          equal(error.status_code, 404);
+          assert.ok(error instanceof jIO.util.jIOError);
+          // assert.equal(error.message, "Cannot find document: conflict");
+          assert.equal(error.status_code, 404);
         })
         .then(function () {
           return context.jio.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "foo",
             foo_etag: 'foo etag'
           });
@@ -1352,22 +1349,22 @@
           return context.jio.__storage._remote_sub_storage.get("conflict");
         })
         .then(function (result) {
-          deepEqual(result, {
+          assert.deepEqual(result, {
             title: "bar",
             foo_etag: 'bar etag'
           });
         })
         .fail(function (error) {
-          ok(false, error);
+          assert.ok(false, error);
         })
         .always(function () {
           start();
         });
     });
 
-  test("local and remote same document creations", function () {
-    stop();
-    expect(2);
+  test("local and remote same document creations", function (assert) {
+    start = assert.async();
+    assert.expect(2);
 
     var context = this;
 
@@ -1381,28 +1378,28 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_FALSE_CONFLICT, 'conflict']
         ]);
         return context.jio.__storage._signature_sub_storage.get("conflict");
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("no modification", function () {
-    stop();
-    expect(3);
+  test("no modification", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     var id,
       context = this;
@@ -1416,14 +1413,14 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_NO_CHANGE, id],
           [report.LOG_NO_CHANGE, id]
         ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo",
           foo_etag: "foo etag"
         });
@@ -1432,22 +1429,22 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local document modification", function () {
-    stop();
-    expect(3);
+  test("local document modification", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     var id,
       context = this;
@@ -1464,13 +1461,13 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_PUT_REMOTE, id]
         ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo2",
           foo_etag: "foo etag"
         });
@@ -1479,13 +1476,13 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo2 dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -1493,9 +1490,9 @@
   });
 
 
-  test("local document modification: use remote post", function () {
-    stop();
-    expect(3);
+  test("local document modification: use remote post", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     var id,
       context = this;
@@ -1544,13 +1541,13 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_PUT_REMOTE, id]
         ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo2",
           foo_etag: "foo etag"
         });
@@ -1559,22 +1556,22 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo2 dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local document modification not checked", function () {
-    stop();
-    expect(4);
+  test("local document modification not checked", function (assert) {
+    start = assert.async();
+    assert.expect(4);
 
     var id,
       context = this;
@@ -1622,14 +1619,14 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_SKIP_LOCAL_MODIFICATION, id],
           [report.LOG_NO_CHANGE, id]
         ]);
         return context.jio.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo2",
           foo_etag: "foo2 etag"
         });
@@ -1638,7 +1635,7 @@
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo",
           foo_etag: "foo etag"
         });
@@ -1647,22 +1644,22 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("remote document modification", function () {
-    stop();
-    expect(3);
+  test("remote document modification", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     var id,
       context = this;
@@ -1682,14 +1679,14 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_NO_CHANGE, id],
           [report.LOG_PUT_LOCAL, id]
         ]);
         return context.jio.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo3",
           foo_etag: "foo3 etag"
         });
@@ -1698,22 +1695,22 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: false,
           hash: "foo3 dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("remote document modification not checked", function () {
-    stop();
-    expect(4);
+  test("remote document modification not checked", function (assert) {
+    start = assert.async();
+    assert.expect(4);
 
     var id,
       context = this;
@@ -1764,14 +1761,14 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_NO_CHANGE, id],
           [report.LOG_SKIP_REMOTE_MODIFICATION, id]
         ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo3",
           foo_etag: "foo3 etag"
         });
@@ -1780,7 +1777,7 @@
         return context.jio.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo",
           foo_etag: "foo etag"
         });
@@ -1789,22 +1786,22 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local and remote document modifications", function () {
-    stop();
-    expect(2);
+  test("local and remote document modifications", function (assert) {
+    start = assert.async();
+    assert.expect(2);
 
     var id,
       context = this;
@@ -1830,10 +1827,10 @@
         return context.jio.repair();
       })
       .then(function () {
-        ok(false);
+        assert.ok(false);
       })
       .fail(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_UNRESOLVED_CONFLICT, id]
         ]);
       })
@@ -1841,7 +1838,7 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
@@ -1851,201 +1848,203 @@
       });
   });
 
-  test("local and remote document modifications: keep local", function () {
-    stop();
-    expect(4);
+  test("local and remote document modifications: keep local",
+       function (assert) {
+      start = assert.async();
+      assert.expect(4);
 
-    var id,
-      context = this;
+      var id,
+        context = this;
 
-    this.jio = jIO.createJIO({
-      type: "replicate",
-      report_level: 1000,
-      signature_hash_key: 'foo_etag',
-      local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        report_level: 1000,
+        signature_hash_key: 'foo_etag',
+        local_sub_storage: {
+          type: "uuid",
           sub_storage: {
-            type: "query",
+            type: "storagealldocsdynamicselect",
             sub_storage: {
-              type: "memory"
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
             }
           }
-        }
-      },
-      remote_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
+        },
+        remote_sub_storage: {
+          type: "uuid",
           sub_storage: {
-            type: "query",
+            type: "storagealldocsdynamicselect",
             sub_storage: {
-              type: "memory"
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
             }
           }
-        }
-      },
-      conflict_handling: 1
+        },
+        conflict_handling: 1
+      });
+
+      context.jio.post({title: "foo", foo_etag: "foo etag"})
+        .then(function (result) {
+          id = result;
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.put(id, {"title": "foo4", foo_etag: "foo4 etag"}),
+            context.jio.__storage._remote_sub_storage.put(
+              id,
+              {
+                title: "foo5",
+                foo_etag: "foo5 etag"
+              }
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function (report) {
+          assert.deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_REMOTE, id]
+          ]);
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            from_local: true,
+            hash: "foo4 dynetag"
+          });
+        })
+        .then(function () {
+          return context.jio.get(id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo4",
+            foo_etag: "foo4 etag"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo4",
+            foo_etag: "foo4 etag"
+          });
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
     });
 
-    context.jio.post({title: "foo", foo_etag: "foo etag"})
-      .then(function (result) {
-        id = result;
-        return context.jio.repair();
-      })
-      .then(function () {
-        return RSVP.all([
-          context.jio.put(id, {"title": "foo4", foo_etag: "foo4 etag"}),
-          context.jio.__storage._remote_sub_storage.put(
-            id,
-            {
-              title: "foo5",
-              foo_etag: "foo5 etag"
+  test("local and remote document modifications: keep remote",
+       function (assert) {
+      start = assert.async();
+      assert.expect(4);
+
+      var id,
+        context = this;
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        report_level: 1000,
+        signature_hash_key: 'foo_etag',
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
             }
-          )
-        ]);
-      })
-      .then(function () {
-        return context.jio.repair();
-      })
-      .then(function (report) {
-        deepEqual(report._list, [
-          [report.LOG_FORCE_PUT_REMOTE, id]
-        ]);
-        return context.jio.__storage._signature_sub_storage.get(id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          from_local: true,
-          hash: "foo4 dynetag"
-        });
-      })
-      .then(function () {
-        return context.jio.get(id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo4",
-          foo_etag: "foo4 etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage.get(id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo4",
-          foo_etag: "foo4 etag"
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        },
+        conflict_handling: 2
       });
-  });
 
-  test("local and remote document modifications: keep remote", function () {
-    stop();
-    expect(4);
-
-    var id,
-      context = this;
-
-    this.jio = jIO.createJIO({
-      type: "replicate",
-      report_level: 1000,
-      signature_hash_key: 'foo_etag',
-      local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      },
-      remote_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      },
-      conflict_handling: 2
+      context.jio.post({title: "foo", foo_etag: "foo etag"})
+        .then(function (result) {
+          id = result;
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.put(id, {"title": "foo4", foo_etag: "foo4 etag"}),
+            context.jio.__storage._remote_sub_storage.put(
+              id,
+              {
+                title: "foo5",
+                foo_etag: "foo5 etag"
+              }
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function (report) {
+          assert.deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_LOCAL, id]
+          ]);
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            from_local: false,
+            hash: "foo5 dynetag"
+          });
+        })
+        .then(function () {
+          return context.jio.get(id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo5",
+            foo_etag: "foo5 etag"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo5",
+            foo_etag: "foo5 etag"
+          });
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
     });
 
-    context.jio.post({title: "foo", foo_etag: "foo etag"})
-      .then(function (result) {
-        id = result;
-        return context.jio.repair();
-      })
-      .then(function () {
-        return RSVP.all([
-          context.jio.put(id, {"title": "foo4", foo_etag: "foo4 etag"}),
-          context.jio.__storage._remote_sub_storage.put(
-            id,
-            {
-              title: "foo5",
-              foo_etag: "foo5 etag"
-            }
-          )
-        ]);
-      })
-      .then(function () {
-        return context.jio.repair();
-      })
-      .then(function (report) {
-        deepEqual(report._list, [
-          [report.LOG_FORCE_PUT_LOCAL, id]
-        ]);
-        return context.jio.__storage._signature_sub_storage.get(id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          from_local: false,
-          hash: "foo5 dynetag"
-        });
-      })
-      .then(function () {
-        return context.jio.get(id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo5",
-          foo_etag: "foo5 etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage.get(id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo5",
-          foo_etag: "foo5 etag"
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("local and remote document modifications: continue", function () {
-    stop();
-    expect(4);
+  test("local and remote document modifications: continue", function (assert) {
+    start = assert.async();
+    assert.expect(4);
 
     var id,
       context = this;
@@ -2102,13 +2101,13 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_SKIP_CONFLICT, id]
         ]);
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
@@ -2117,7 +2116,7 @@
         return context.jio.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo4",
           foo_etag: "foo4 etag"
         });
@@ -2126,22 +2125,22 @@
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo5",
           foo_etag: "foo5 etag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local and remote document same modifications", function () {
-    stop();
-    expect(2);
+  test("local and remote document same modifications", function (assert) {
+    start = assert.async();
+    assert.expect(2);
 
     var id,
       context = this;
@@ -2167,28 +2166,28 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_FALSE_CONFLICT, id]
         ]);
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo99 dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local document deletion", function () {
-    stop();
-    expect(7);
+  test("local document deletion", function (assert) {
+    start = assert.async();
+    assert.expect(7);
 
     var id,
       context = this;
@@ -2205,28 +2204,28 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_DELETE_REMOTE, id]
         ]);
-        ok(true, "Removal correctly synced");
+        assert.ok(true, "Removal correctly synced");
       })
       .then(function () {
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " + id);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id)
           .then(function () {
-            ok(false, "Signature should be deleted");
+            assert.ok(false, "Signature should be deleted");
           })
           .fail(function (error) {
-            ok(error instanceof jIO.util.jIOError);
-//            equal(error.message, "Cannot find document: " + id);
-            equal(error.status_code, 404);
+            assert.ok(error instanceof jIO.util.jIOError);
+//            assert.equal(error.message, "Cannot find document: " + id);
+            assert.equal(error.status_code, 404);
           });
       })
       .always(function () {
@@ -2234,9 +2233,9 @@
       });
   });
 
-  test("local document deletion not checked", function () {
-    stop();
-    expect(7);
+  test("local document deletion not checked", function (assert) {
+    start = assert.async();
+    assert.expect(7);
 
     var id,
       context = this;
@@ -2284,25 +2283,25 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_SKIP_LOCAL_DELETION, id],
           [report.LOG_NO_CHANGE, id]
         ]);
-        ok(true, "Removal correctly synced");
+        assert.ok(true, "Removal correctly synced");
       })
       .then(function () {
         return context.jio.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " + id);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo",
           foo_etag: "foo etag"
         });
@@ -2311,7 +2310,7 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
@@ -2321,9 +2320,9 @@
       });
   });
 
-  test("local document deletion with attachment", function () {
-    stop();
-    expect(11);
+  test("local document deletion with attachment", function (assert) {
+    start = assert.async();
+    assert.expect(11);
 
     var id,
       context = this,
@@ -2345,33 +2344,33 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_DELETE_REMOTE, id]
         ]);
-        ok(true, "Removal correctly synced");
+        assert.ok(true, "Removal correctly synced");
       })
       .then(function () {
         return context.jio.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " + id);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " + id);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(
           error.message.indexOf(
             "Cannot find attachment: " +
               "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
@@ -2380,16 +2379,16 @@
           0,
           error.message
         );
-        equal(error.status_code, 404);
+        assert.equal(error.status_code, 404);
       })
       .always(function () {
         start();
       });
   });
 
-  test("remote document deletion", function () {
-    stop();
-    expect(7);
+  test("remote document deletion", function (assert) {
+    start = assert.async();
+    assert.expect(7);
 
     var id,
       context = this;
@@ -2406,29 +2405,29 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_NO_CHANGE, id],
           [report.LOG_DELETE_LOCAL, id]
         ]);
-        ok(true, "Removal correctly synced");
+        assert.ok(true, "Removal correctly synced");
       })
       .then(function () {
         return context.jio.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " + id);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id)
           .then(function () {
-            ok(false, "Signature should be deleted");
+            assert.ok(false, "Signature should be deleted");
           })
           .fail(function (error) {
-            ok(error instanceof jIO.util.jIOError);
-//            equal(error.message, "Cannot find document: " + id);
-            equal(error.status_code, 404);
+            assert.ok(error instanceof jIO.util.jIOError);
+//            assert.equal(error.message, "Cannot find document: " + id);
+            assert.equal(error.status_code, 404);
           });
       })
       .always(function () {
@@ -2436,9 +2435,9 @@
       });
   });
 
-  test("remote document deletion not checked", function () {
-    stop();
-    expect(7);
+  test("remote document deletion not checked", function (assert) {
+    start = assert.async();
+    assert.expect(7);
 
     var id,
       context = this;
@@ -2486,25 +2485,25 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_NO_CHANGE, id],
           [report.LOG_SKIP_REMOTE_DELETION, id]
         ]);
-        ok(true, "Removal correctly synced");
+        assert.ok(true, "Removal correctly synced");
       })
       .then(function () {
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " + id);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo",
           foo_etag: "foo etag"
         });
@@ -2513,7 +2512,7 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
@@ -2523,9 +2522,9 @@
       });
   });
 
-  test("remote document deletion with attachment", function () {
-    stop();
-    expect(11);
+  test("remote document deletion with attachment", function (assert) {
+    start = assert.async();
+    assert.expect(11);
 
     var id,
       context = this,
@@ -2546,34 +2545,34 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_NO_CHANGE, id],
           [report.LOG_DELETE_LOCAL, id]
         ]);
-        ok(true, "Removal correctly synced");
+        assert.ok(true, "Removal correctly synced");
       })
       .then(function () {
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " + id);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " + id);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(
           error.message.indexOf(
             "Cannot find attachment: " +
               "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
@@ -2582,16 +2581,16 @@
           0,
           error.message
         );
-        equal(error.status_code, 404);
+        assert.equal(error.status_code, 404);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local and remote document deletions", function () {
-    stop();
-    expect(9);
+  test("local and remote document deletions", function (assert) {
+    start = assert.async();
+    assert.expect(9);
 
     var id,
       context = this;
@@ -2611,52 +2610,52 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_FALSE_CONFLICT, id]
         ]);
         return context.jio.get(id)
           .then(function () {
-            ok(false, "Document should be locally deleted");
+            assert.ok(false, "Document should be locally deleted");
           })
           .fail(function (error) {
-            ok(error instanceof jIO.util.jIOError);
-            equal(error.message, "Cannot find document: " + id);
-            equal(error.status_code, 404);
+            assert.ok(error instanceof jIO.util.jIOError);
+            assert.equal(error.message, "Cannot find document: " + id);
+            assert.equal(error.status_code, 404);
           });
       })
       .then(function () {
         return context.jio.__storage._remote_sub_storage.get(id)
           .then(function () {
-            ok(false, "Document should be remotely deleted");
+            assert.ok(false, "Document should be remotely deleted");
           })
           .fail(function (error) {
-            ok(error instanceof jIO.util.jIOError);
-            equal(error.message, "Cannot find document: " + id);
-            equal(error.status_code, 404);
+            assert.ok(error instanceof jIO.util.jIOError);
+            assert.equal(error.message, "Cannot find document: " + id);
+            assert.equal(error.status_code, 404);
           });
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id)
           .then(function () {
-            ok(false, "Signature should be deleted");
+            assert.ok(false, "Signature should be deleted");
           })
           .fail(function (error) {
-            ok(error instanceof jIO.util.jIOError);
-//            equal(error.message, "Cannot find document: " + id);
-            equal(error.status_code, 404);
+            assert.ok(error instanceof jIO.util.jIOError);
+//            assert.equal(error.message, "Cannot find document: " + id);
+            assert.equal(error.status_code, 404);
           });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local deletion and remote modifications", function () {
-    stop();
-    expect(3);
+  test("local deletion and remote modifications", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     var id,
       context = this;
@@ -2682,13 +2681,13 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_FORCE_PUT_LOCAL, id]
         ]);
         return context.jio.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo99",
           foo_etag: "foo99 etag"
         });
@@ -2697,219 +2696,221 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: false,
           hash: "foo99 dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local deletion and remote modifications: keep local", function () {
-    stop();
-    expect(10);
+  test("local deletion and remote modifications: keep local",
+       function (assert) {
+      start = assert.async();
+      assert.expect(10);
 
-    var id,
-      context = this;
+      var id,
+        context = this;
 
-    this.jio = jIO.createJIO({
-      type: "replicate",
-      report_level: 1000,
-      conflict_handling: 1,
-      signature_hash_key: 'foo_etag',
-      local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        report_level: 1000,
+        conflict_handling: 1,
+        signature_hash_key: 'foo_etag',
+        local_sub_storage: {
+          type: "uuid",
           sub_storage: {
-            type: "query",
+            type: "storagealldocsdynamicselect",
             sub_storage: {
-              type: "memory"
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
             }
           }
         }
-      },
-      remote_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      }
+      });
+
+      context.jio.post({title: "foo", foo_etag: "foo etag"})
+        .then(function (result) {
+          id = result;
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.remove(id),
+            context.jio.__storage._remote_sub_storage.put(
+              id,
+              {
+                title: "foo99",
+                foo_etag: "foo99 etag"
+              }
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function (report) {
+          assert.deepEqual(report._list, [
+            [report.LOG_FORCE_DELETE_REMOTE, id]
+          ]);
+          return context.jio.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(
+            error.message.indexOf(
+              "Cannot find attachment: " +
+                "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+                "jio_document/"
+            ),
+            0,
+            error.message
+          );
+          assert.equal(error.status_code, 404);
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
     });
 
-    context.jio.post({title: "foo", foo_etag: "foo etag"})
-      .then(function (result) {
-        id = result;
-        return context.jio.repair();
-      })
-      .then(function () {
-        return RSVP.all([
-          context.jio.remove(id),
-          context.jio.__storage._remote_sub_storage.put(
-            id,
-            {
-              title: "foo99",
-              foo_etag: "foo99 etag"
+  test("local deletion and remote modifications: keep remote",
+       function (assert) {
+      start = assert.async();
+      assert.expect(4);
+
+      var id,
+        context = this;
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        report_level: 1000,
+        conflict_handling: 2,
+        signature_hash_key: 'foo_etag',
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
             }
-          )
-        ]);
-      })
-      .then(function () {
-        return context.jio.repair();
-      })
-      .then(function (report) {
-        deepEqual(report._list, [
-          [report.LOG_FORCE_DELETE_REMOTE, id]
-        ]);
-        return context.jio.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
-          error.message.indexOf(
-            "Cannot find attachment: " +
-              "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
-              "jio_document/"
-          ),
-          0,
-          error.message
-        );
-        equal(error.status_code, 404);
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        }
       });
-  });
 
-  test("local deletion and remote modifications: keep remote", function () {
-    stop();
-    expect(4);
-
-    var id,
-      context = this;
-
-    this.jio = jIO.createJIO({
-      type: "replicate",
-      report_level: 1000,
-      conflict_handling: 2,
-      signature_hash_key: 'foo_etag',
-      local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      },
-      remote_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      }
+      context.jio.post({title: "foo", foo_etag: "foo etag"})
+        .then(function (result) {
+          id = result;
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.remove(id),
+            context.jio.__storage._remote_sub_storage.put(
+              id,
+              {
+                title: "foo99",
+                foo_etag: "foo99 etag"
+              }
+            )
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        .then(function (report) {
+          assert.deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_LOCAL, id]
+          ]);
+          return context.jio.get(id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo99",
+            foo_etag: "foo99 etag"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo99",
+            foo_etag: "foo99 etag"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            from_local: false,
+            hash: "foo99 dynetag"
+          });
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
     });
 
-    context.jio.post({title: "foo", foo_etag: "foo etag"})
-      .then(function (result) {
-        id = result;
-        return context.jio.repair();
-      })
-      .then(function () {
-        return RSVP.all([
-          context.jio.remove(id),
-          context.jio.__storage._remote_sub_storage.put(
-            id,
-            {
-              title: "foo99",
-              foo_etag: "foo99 etag"
-            }
-          )
-        ]);
-      })
-      .then(function () {
-        return context.jio.repair();
-      })
-      .then(function (report) {
-        deepEqual(report._list, [
-          [report.LOG_FORCE_PUT_LOCAL, id]
-        ]);
-        return context.jio.get(id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo99",
-          foo_etag: "foo99 etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage.get(id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo99",
-          foo_etag: "foo99 etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          from_local: false,
-          hash: "foo99 dynetag"
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("local deletion and remote modifications: ignore", function () {
-    stop();
-    expect(6);
+  test("local deletion and remote modifications: ignore", function (assert) {
+    start = assert.async();
+    assert.expect(6);
 
     var id,
       context = this;
@@ -2966,21 +2967,21 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_SKIP_CONFLICT, id]
         ]);
         return context.jio.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " + id);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo99",
           foo_etag: "foo99 etag"
         });
@@ -2989,22 +2990,22 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local modifications and remote deletion", function () {
-    stop();
-    expect(3);
+  test("local modifications and remote deletion", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     var id,
       context = this;
@@ -3024,13 +3025,13 @@
         return context.jio.repair();
       })
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_FORCE_PUT_REMOTE, id]
         ]);
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo99",
           foo_etag: "foo99 etag"
         });
@@ -3039,703 +3040,709 @@
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo99 dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("local modifications and remote deletion: use remote post", function () {
-    stop();
-    expect(14);
+  test("local modifications and remote deletion: use remote post",
+       function (assert) {
+      start = assert.async();
+      assert.expect(14);
 
-    var id,
-      context = this,
-      post_id;
+      var id,
+        context = this,
+        post_id;
 
-    this.jio = jIO.createJIO({
-      type: "replicate",
-      report_level: 1000,
-      use_remote_post: true,
-      signature_hash_key: 'foo_etag',
-      local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        report_level: 1000,
+        use_remote_post: true,
+        signature_hash_key: 'foo_etag',
+        local_sub_storage: {
+          type: "uuid",
           sub_storage: {
-            type: "query",
+            type: "storagealldocsdynamicselect",
             sub_storage: {
-              type: "memory"
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
             }
           }
         }
-      },
-      remote_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      }
+      });
+
+      context.jio.__storage._remote_sub_storage.post({title: "foo",
+                                                      foo_etag: "foo etag"})
+        .then(function (result) {
+          id = result;
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.put(id, {title: "foo99", foo_etag: "foo99 etag"}),
+            context.jio.__storage._remote_sub_storage.remove(id)
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        // Old id deleted
+        .then(function (report) {
+          assert.deepEqual(report._list, [
+            [report.LOG_POST_REMOTE, id]
+          ]);
+          return context.jio.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(
+            error.message.indexOf(
+              "Cannot find attachment: " +
+                "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+                "jio_document/"
+            ),
+            0,
+            error.message
+          );
+          assert.equal(error.status_code, 404);
+        })
+        // Check new id
+        .then(function () {
+          return context.jio.allDocs();
+        })
+        .then(function (result) {
+          assert.equal(result.data.total_rows, 1);
+          post_id = result.data.rows[0].id;
+          return context.jio.__storage._remote_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo99",
+            foo_etag: "foo99 etag"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._local_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            "title": "foo99",
+            foo_etag: "foo99 etag"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            from_local: true,
+            hash: "foo99 dynetag"
+          });
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
     });
 
-    context.jio.__storage._remote_sub_storage.post({title: "foo",
-                                                    foo_etag: "foo etag"})
-      .then(function (result) {
-        id = result;
-        return context.jio.repair();
-      })
-      .then(function () {
-        return RSVP.all([
-          context.jio.put(id, {title: "foo99", foo_etag: "foo99 etag"}),
-          context.jio.__storage._remote_sub_storage.remove(id)
-        ]);
-      })
-      .then(function () {
-        return context.jio.repair();
-      })
-      // Old id deleted
-      .then(function (report) {
-        deepEqual(report._list, [
-          [report.LOG_POST_REMOTE, id]
-        ]);
-        return context.jio.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
-          error.message.indexOf(
-            "Cannot find attachment: " +
-              "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
-              "jio_document/"
-          ),
-          0,
-          error.message
-        );
-        equal(error.status_code, 404);
-      })
-      // Check new id
-      .then(function () {
-        return context.jio.allDocs();
-      })
-      .then(function (result) {
-        equal(result.data.total_rows, 1);
-        post_id = result.data.rows[0].id;
-        return context.jio.__storage._remote_sub_storage.get(post_id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo99",
-          foo_etag: "foo99 etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._local_sub_storage.get(post_id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          "title": "foo99",
-          foo_etag: "foo99 etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(post_id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          from_local: true,
-          hash: "foo99 dynetag"
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
+  test("local modif, remote del: remote post, no check loc mod",
+       function (assert) {
+      start = assert.async();
+      assert.expect(14);
+
+      var id,
+        context = this,
+        post_id;
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        report_level: 1000,
+        use_remote_post: true,
+        check_local_modification: false,
+        signature_hash_key: 'foo_etag',
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        }
       });
-  });
 
-  test("local modif, remote del: remote post, no check loc mod", function () {
-    stop();
-    expect(14);
-
-    var id,
-      context = this,
-      post_id;
-
-    this.jio = jIO.createJIO({
-      type: "replicate",
-      report_level: 1000,
-      use_remote_post: true,
-      check_local_modification: false,
-      signature_hash_key: 'foo_etag',
-      local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      },
-      remote_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      }
+      context.jio.__storage._remote_sub_storage.post({title: "foo",
+                                                      foo_etag: "foo etag"})
+        .then(function (result) {
+          id = result;
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.put(id, {title: "foo99", foo_etag: "foo99 etag"}),
+            context.jio.__storage._remote_sub_storage.remove(id)
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        // Old id deleted
+        .then(function (report) {
+          assert.deepEqual(report._list, [
+            [report.LOG_SKIP_LOCAL_MODIFICATION, id],
+            [report.LOG_POST_REMOTE, id]
+          ]);
+          return context.jio.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(
+            error.message.indexOf(
+              "Cannot find attachment: " +
+                "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+                "jio_document/"
+            ),
+            0,
+            error.message
+          );
+          assert.equal(error.status_code, 404);
+        })
+        // Check new id
+        .then(function () {
+          return context.jio.allDocs();
+        })
+        .then(function (result) {
+          assert.equal(result.data.total_rows, 1);
+          post_id = result.data.rows[0].id;
+          return context.jio.__storage._remote_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo99",
+            foo_etag: "foo99 etag"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._local_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo99",
+            foo_etag: "foo99 etag"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            from_local: true,
+            hash: "foo99 dynetag"
+          });
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
     });
 
-    context.jio.__storage._remote_sub_storage.post({title: "foo",
-                                                    foo_etag: "foo etag"})
-      .then(function (result) {
-        id = result;
-        return context.jio.repair();
-      })
-      .then(function () {
-        return RSVP.all([
-          context.jio.put(id, {title: "foo99", foo_etag: "foo99 etag"}),
-          context.jio.__storage._remote_sub_storage.remove(id)
-        ]);
-      })
-      .then(function () {
-        return context.jio.repair();
-      })
-      // Old id deleted
-      .then(function (report) {
-        deepEqual(report._list, [
-          [report.LOG_SKIP_LOCAL_MODIFICATION, id],
-          [report.LOG_POST_REMOTE, id]
-        ]);
-        return context.jio.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
-          error.message.indexOf(
-            "Cannot find attachment: " +
-              "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
-              "jio_document/"
-          ),
-          0,
-          error.message
-        );
-        equal(error.status_code, 404);
-      })
-      // Check new id
-      .then(function () {
-        return context.jio.allDocs();
-      })
-      .then(function (result) {
-        equal(result.data.total_rows, 1);
-        post_id = result.data.rows[0].id;
-        return context.jio.__storage._remote_sub_storage.get(post_id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo99",
-          foo_etag: "foo99 etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._local_sub_storage.get(post_id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo99",
-          foo_etag: "foo99 etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(post_id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          from_local: true,
-          hash: "foo99 dynetag"
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
+  test("local modifications and remote deletion: keep local",
+       function (assert) {
+      start = assert.async();
+      assert.expect(4);
+
+      var id,
+        context = this;
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        report_level: 1000,
+        conflict_handling: 1,
+        signature_hash_key: 'foo_etag',
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        }
       });
-  });
 
-  test("local modifications and remote deletion: keep local", function () {
-    stop();
-    expect(4);
-
-    var id,
-      context = this;
-
-    this.jio = jIO.createJIO({
-      type: "replicate",
-      report_level: 1000,
-      conflict_handling: 1,
-      signature_hash_key: 'foo_etag',
-      local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      },
-      remote_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      }
+      context.jio.post({title: "foo", foo_etag: "foo etag"})
+        .then(function (result) {
+          id = result;
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.put(id, {title: "foo99", foo_etag: "foo99 etag"}),
+            context.jio.__storage._remote_sub_storage.remove(id)
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        // Old id deleted
+        .then(function (report) {
+          assert.deepEqual(report._list, [
+            [report.LOG_FORCE_PUT_REMOTE, id]
+          ]);
+          return context.jio.get(id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo99",
+            foo_etag: "foo99 etag"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo99",
+            foo_etag: "foo99 etag"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            from_local: true,
+            hash: "foo99 dynetag"
+          });
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
     });
 
-    context.jio.post({title: "foo", foo_etag: "foo etag"})
-      .then(function (result) {
-        id = result;
-        return context.jio.repair();
-      })
-      .then(function () {
-        return RSVP.all([
-          context.jio.put(id, {title: "foo99", foo_etag: "foo99 etag"}),
-          context.jio.__storage._remote_sub_storage.remove(id)
-        ]);
-      })
-      .then(function () {
-        return context.jio.repair();
-      })
-      // Old id deleted
-      .then(function (report) {
-        deepEqual(report._list, [
-          [report.LOG_FORCE_PUT_REMOTE, id]
-        ]);
-        return context.jio.get(id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo99",
-          foo_etag: "foo99 etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage.get(id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo99",
-          foo_etag: "foo99 etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          from_local: true,
-          hash: "foo99 dynetag"
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
+  test("local modif and remote del: keep local, use remote post",
+       function (assert) {
+      start = assert.async();
+      assert.expect(14);
+
+      var id,
+        context = this,
+        post_id;
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        report_level: 1000,
+        conflict_handling: 1,
+        use_remote_post: true,
+        signature_hash_key: 'foo_etag',
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        }
       });
-  });
 
-  test("local modif and remote del: keep local, use remote post", function () {
-    stop();
-    expect(14);
-
-    var id,
-      context = this,
-      post_id;
-
-    this.jio = jIO.createJIO({
-      type: "replicate",
-      report_level: 1000,
-      conflict_handling: 1,
-      use_remote_post: true,
-      signature_hash_key: 'foo_etag',
-      local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      },
-      remote_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      }
+      context.jio.__storage._remote_sub_storage.post({title: "foo",
+                                                      foo_etag: "foo etag"})
+        .then(function (result) {
+          id = result;
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.put(id, {title: "foo99", foo_etag: "foo99 etag"}),
+            context.jio.__storage._remote_sub_storage.remove(id)
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        // Old id deleted
+        .then(function (report) {
+          assert.deepEqual(report._list, [
+            [report.LOG_POST_REMOTE, id]
+          ]);
+          return context.jio.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(
+            error.message.indexOf(
+              "Cannot find attachment: " +
+                "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+                "jio_document/"
+            ),
+            0,
+            error.message
+          );
+          assert.equal(error.status_code, 404);
+        })
+        // Check new id
+        .then(function () {
+          return context.jio.allDocs();
+        })
+        .then(function (result) {
+          assert.equal(result.data.total_rows, 1);
+          post_id = result.data.rows[0].id;
+          return context.jio.__storage._remote_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo99",
+            foo_etag: "foo99 etag"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._local_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            title: "foo99",
+            foo_etag: "foo99 etag"
+          });
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(post_id);
+        })
+        .then(function (result) {
+          assert.deepEqual(result, {
+            from_local: true,
+            hash: "foo99 dynetag"
+          });
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
     });
 
-    context.jio.__storage._remote_sub_storage.post({title: "foo",
-                                                    foo_etag: "foo etag"})
-      .then(function (result) {
-        id = result;
-        return context.jio.repair();
-      })
-      .then(function () {
-        return RSVP.all([
-          context.jio.put(id, {title: "foo99", foo_etag: "foo99 etag"}),
-          context.jio.__storage._remote_sub_storage.remove(id)
-        ]);
-      })
-      .then(function () {
-        return context.jio.repair();
-      })
-      // Old id deleted
-      .then(function (report) {
-        deepEqual(report._list, [
-          [report.LOG_POST_REMOTE, id]
-        ]);
-        return context.jio.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
-          error.message.indexOf(
-            "Cannot find attachment: " +
-              "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
-              "jio_document/"
-          ),
-          0,
-          error.message
-        );
-        equal(error.status_code, 404);
-      })
-      // Check new id
-      .then(function () {
-        return context.jio.allDocs();
-      })
-      .then(function (result) {
-        equal(result.data.total_rows, 1);
-        post_id = result.data.rows[0].id;
-        return context.jio.__storage._remote_sub_storage.get(post_id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo99",
-          foo_etag: "foo99 etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._local_sub_storage.get(post_id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          title: "foo99",
-          foo_etag: "foo99 etag"
-        });
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(post_id);
-      })
-      .then(function (result) {
-        deepEqual(result, {
-          from_local: true,
-          hash: "foo99 dynetag"
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
+  test("local modifications and remote deletion: keep remote",
+       function (assert) {
+      start = assert.async();
+      assert.expect(10);
+
+      var id,
+        context = this;
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        report_level: 1000,
+        conflict_handling: 2,
+        signature_hash_key: 'foo_etag',
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        }
       });
-  });
 
-  test("local modifications and remote deletion: keep remote", function () {
-    stop();
-    expect(10);
-
-    var id,
-      context = this;
-
-    this.jio = jIO.createJIO({
-      type: "replicate",
-      report_level: 1000,
-      conflict_handling: 2,
-      signature_hash_key: 'foo_etag',
-      local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      },
-      remote_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      }
+      context.jio.post({title: "foo", foo_etag: "foo etag"})
+        .then(function (result) {
+          id = result;
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.put(id, {title: "foo99", foo_etag: "foo99 etag"}),
+            context.jio.__storage._remote_sub_storage.remove(id)
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        // id deleted
+        .then(function (report) {
+          assert.deepEqual(report._list, [
+            [report.LOG_FORCE_DELETE_LOCAL, id]
+          ]);
+          return context.jio.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(
+            error.message.indexOf(
+              "Cannot find attachment: " +
+                "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+                "jio_document/"
+            ),
+            0,
+            error.message
+          );
+          assert.equal(error.status_code, 404);
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
     });
 
-    context.jio.post({title: "foo", foo_etag: "foo etag"})
-      .then(function (result) {
-        id = result;
-        return context.jio.repair();
-      })
-      .then(function () {
-        return RSVP.all([
-          context.jio.put(id, {title: "foo99", foo_etag: "foo99 etag"}),
-          context.jio.__storage._remote_sub_storage.remove(id)
-        ]);
-      })
-      .then(function () {
-        return context.jio.repair();
-      })
-      // id deleted
-      .then(function (report) {
-        deepEqual(report._list, [
-          [report.LOG_FORCE_DELETE_LOCAL, id]
-        ]);
-        return context.jio.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
-          error.message.indexOf(
-            "Cannot find attachment: " +
-              "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
-              "jio_document/"
-          ),
-          0,
-          error.message
-        );
-        equal(error.status_code, 404);
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
+  test("local modif and remote del: keep remote, not check modif",
+       function (assert) {
+      start = assert.async();
+      assert.expect(10);
+
+      var id,
+        context = this;
+
+      this.jio = jIO.createJIO({
+        type: "replicate",
+        report_level: 1000,
+        conflict_handling: 2,
+        check_local_modification: false,
+        signature_hash_key: 'foo_etag',
+        local_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        },
+        remote_sub_storage: {
+          type: "uuid",
+          sub_storage: {
+            type: "storagealldocsdynamicselect",
+            sub_storage: {
+              type: "query",
+              sub_storage: {
+                type: "memory"
+              }
+            }
+          }
+        }
       });
-  });
 
-  test("local modif and remote del: keep remote, not check modif", function () {
-    stop();
-    expect(10);
-
-    var id,
-      context = this;
-
-    this.jio = jIO.createJIO({
-      type: "replicate",
-      report_level: 1000,
-      conflict_handling: 2,
-      check_local_modification: false,
-      signature_hash_key: 'foo_etag',
-      local_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      },
-      remote_sub_storage: {
-        type: "uuid",
-        sub_storage: {
-          type: "storagealldocsdynamicselect",
-          sub_storage: {
-            type: "query",
-            sub_storage: {
-              type: "memory"
-            }
-          }
-        }
-      }
+      context.jio.post({"title": "foo"})
+        .then(function (result) {
+          id = result;
+          return context.jio.repair();
+        })
+        .then(function () {
+          return RSVP.all([
+            context.jio.put(id, {"title": "foo99"}),
+            context.jio.__storage._remote_sub_storage.remove(id)
+          ]);
+        })
+        .then(function () {
+          return context.jio.repair();
+        })
+        // id deleted
+        .then(function (report) {
+          assert.deepEqual(report._list, [
+            [report.LOG_SKIP_LOCAL_MODIFICATION, id],
+            [report.LOG_FORCE_DELETE_LOCAL, id]
+          ]);
+          return context.jio.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._remote_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find document: " + id);
+          assert.equal(error.status_code, 404);
+        })
+        .then(function () {
+          return context.jio.__storage._signature_sub_storage.get(id);
+        })
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(
+            error.message.indexOf(
+              "Cannot find attachment: " +
+                "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
+                "jio_document/"
+            ),
+            0,
+            error.message
+          );
+          assert.equal(error.status_code, 404);
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
     });
 
-    context.jio.post({"title": "foo"})
-      .then(function (result) {
-        id = result;
-        return context.jio.repair();
-      })
-      .then(function () {
-        return RSVP.all([
-          context.jio.put(id, {"title": "foo99"}),
-          context.jio.__storage._remote_sub_storage.remove(id)
-        ]);
-      })
-      .then(function () {
-        return context.jio.repair();
-      })
-      // id deleted
-      .then(function (report) {
-        deepEqual(report._list, [
-          [report.LOG_SKIP_LOCAL_MODIFICATION, id],
-          [report.LOG_FORCE_DELETE_LOCAL, id]
-        ]);
-        return context.jio.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._remote_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
-      })
-      .then(function () {
-        return context.jio.__storage._signature_sub_storage.get(id);
-      })
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
-          error.message.indexOf(
-            "Cannot find attachment: " +
-              "_replicate_ae15d2189153f083c0e4a845fd580b1d86f7a512 , " +
-              "jio_document/"
-          ),
-          0,
-          error.message
-        );
-        equal(error.status_code, 404);
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
-
-  test("local modifications and remote deletion: ignore", function () {
-    stop();
-    expect(6);
+  test("local modifications and remote deletion: ignore", function (assert) {
+    start = assert.async();
+    assert.expect(6);
 
     var id,
       context = this;
@@ -3787,13 +3794,13 @@
       })
       // id deleted
       .then(function (report) {
-        deepEqual(report._list, [
+        assert.deepEqual(report._list, [
           [report.LOG_SKIP_CONFLICT, id]
         ]);
         return context.jio.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: "foo99",
           foo_etag: "foo99 etag"
         });
@@ -3802,30 +3809,30 @@
         return context.jio.__storage._remote_sub_storage.get(id);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " + id);
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " + id);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           from_local: true,
           hash: "foo dynetag"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("signature document is not synced", function () {
-    stop();
-    expect(7);
+  test("signature document is not synced", function (assert) {
+    start = assert.async();
+    assert.expect(7);
 
     var context = this;
 
@@ -3879,16 +3886,16 @@
         );
       })
       .then(function (result) {
-        deepEqual(result, {});
+        assert.deepEqual(result, {});
         return context.jio.__storage._remote_sub_storage.get(
           context.jio.__storage._signature_hash
         );
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " +
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " +
                 "_replicate_e9fa6706a8a6a961db3f9de41d44bdf11f25fb30");
-        equal(error.status_code, 404);
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.repair();
@@ -3899,22 +3906,22 @@
         );
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: " +
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: " +
                 "_replicate_e9fa6706a8a6a961db3f9de41d44bdf11f25fb30");
-        equal(error.status_code, 404);
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("sync all documents by default", function () {
-    stop();
-    expect(4);
+  test("sync all documents by default", function (assert) {
+    start = assert.async();
+    assert.expect(4);
 
     var context = this;
 
@@ -3922,18 +3929,18 @@
       return this;
     }
     FastStorage200DefaultQuery.prototype.get = function () {
-      ok(true, "get 200 check repair called");
+      assert.ok(true, "get 200 check repair called");
       return {};
     };
     FastStorage200DefaultQuery.prototype.hasCapacity = function () {
       return true;
     };
     FastStorage200DefaultQuery.prototype.buildQuery = function (query) {
-      deepEqual(query, {select_list: ['foo_etag']});
+      assert.deepEqual(query, {select_list: ['foo_etag']});
       return [];
     };
     FastStorage200DefaultQuery.prototype.allAttachments = function () {
-      ok(true, "allAttachments 200 check repair called");
+      assert.ok(true, "allAttachments 200 check repair called");
       return {};
     };
     jIO.addStorage(
@@ -3955,16 +3962,16 @@
 
     return context.jio.repair()
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("sync can be restricted to some documents", function () {
-    stop();
-    expect(4);
+  test("sync can be restricted to some documents", function (assert) {
+    start = assert.async();
+    assert.expect(4);
 
     var context = this;
 
@@ -3972,14 +3979,14 @@
       return this;
     }
     FastStorage200CustomQuery.prototype.get = function () {
-      ok(true, "get 200 check repair called");
+      assert.ok(true, "get 200 check repair called");
       return {};
     };
     FastStorage200CustomQuery.prototype.hasCapacity = function () {
       return true;
     };
     FastStorage200CustomQuery.prototype.buildQuery = function (options) {
-      deepEqual(
+      assert.deepEqual(
         options,
         {
           query: 'portal_type: "Foo"',
@@ -3990,7 +3997,7 @@
       return [];
     };
     FastStorage200CustomQuery.prototype.allAttachments = function () {
-      ok(true, "allAttachments 200 check repair called");
+      assert.ok(true, "allAttachments 200 check repair called");
       return {};
     };
     jIO.addStorage(
@@ -4013,16 +4020,16 @@
 
     return context.jio.repair()
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("document removed between allDocs and get", function () {
-    stop();
-    expect(8);
+  test("document removed between allDocs and get", function (assert) {
+    start = assert.async();
+    assert.expect(8);
 
     var context = this;
 
@@ -4030,7 +4037,7 @@
       return this;
     }
     FastStorage404.prototype.get = function (id) {
-      equal(id, 'barfoo');
+      assert.equal(id, 'barfoo');
       throw new jIO.util.jIOError(
         "FooBar: " + id,
         404
@@ -4040,7 +4047,7 @@
       return true;
     };
     FastStorage404.prototype.buildQuery = function (query) {
-      deepEqual(query, {select_list: ['foo_etag', '__id']});
+      assert.deepEqual(query, {select_list: ['foo_etag', '__id']});
       return [{id: 'barfoo', value: {foo_etag: 'barfoo etag'}, doc: {}}];
     };
     jIO.addStorage(
@@ -4068,16 +4075,16 @@
         return context.jio.__storage._local_sub_storage.get('barfoo');
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: barfoo");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: barfoo");
+        assert.equal(error.status_code, 404);
       })
       .then(function () {
         return context.jio.__storage._signature_sub_storage.get('barfoo');
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(
           error.message.indexOf(
             "Cannot find attachment: " +
               "_replicate_a55b2b8b5029e3c7ae0e4b442d4250f90aab503f , " +
@@ -4086,10 +4093,10 @@
           0,
           error.message
         );
-        equal(error.status_code, 404);
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();

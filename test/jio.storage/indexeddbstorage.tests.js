@@ -26,14 +26,9 @@
            Rusha) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    ok = QUnit.ok,
-    expect = QUnit.expect,
-    deepEqual = QUnit.deepEqual,
-    equal = QUnit.equal,
+    start,
+    global_assert,
     module = QUnit.module,
-    throws = QUnit.throws,
     big_string = "";
 
   big_string = new Array(3000000).fill('a').join('');
@@ -53,21 +48,21 @@
   // indexeddbStorage.constructor
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.constructor");
-  test("default unite value", function () {
-    expect(4);
+  test("default unite value", function (assert) {
+    assert.expect(4);
     var jio = jIO.createJIO({
       type: "indexeddb",
       database: "qunit"
     });
 
-    equal(jio.__type, "indexeddb");
-    deepEqual(jio.__storage._database_name, "jio:qunit");
-    deepEqual(jio.__storage._index_key_list, []);
-    deepEqual(jio.__storage._version, undefined);
+    assert.equal(jio.__type, "indexeddb");
+    assert.deepEqual(jio.__storage._database_name, "jio:qunit");
+    assert.deepEqual(jio.__storage._index_key_list, []);
+    assert.deepEqual(jio.__storage._version, undefined);
   });
 
-  test("config", function () {
-    expect(4);
+  test("config", function (assert) {
+    assert.expect(4);
     var jio = jIO.createJIO({
       type: "indexeddb",
       database: "qunit",
@@ -75,10 +70,10 @@
       index_key_list: ['a']
     });
 
-    equal(jio.__type, "indexeddb");
-    deepEqual(jio.__storage._database_name, "jio:qunit");
-    deepEqual(jio.__storage._index_key_list, ['a']);
-    deepEqual(jio.__storage._version, 1);
+    assert.equal(jio.__type, "indexeddb");
+    assert.deepEqual(jio.__storage._database_name, "jio:qunit");
+    assert.deepEqual(jio.__storage._index_key_list, ['a']);
+    assert.deepEqual(jio.__storage._version, 1);
   });
 
   /////////////////////////////////////////////////////////////////
@@ -91,7 +86,7 @@
     // Migrate it to a new version
     // Spy IDB behaviour while getting the previous document
     // Check that doument is still there
-    stop();
+    start = global_assert.async();
     old_jio_kw.type = "indexeddb";
     old_jio_kw.database = "qunit";
     new_jio_kw.type = "indexeddb";
@@ -118,19 +113,19 @@
         return test.jio.get('foo');
       })
       .then(function (result) {
-        deepEqual(result, {'a': 1});
-        ok(test.spy_transaction.calledOnce, "transaction count " +
+        global_assert.deepEqual(result, {'a': 1});
+        global_assert.ok(test.spy_transaction.calledOnce, "transaction count " +
            test.spy_transaction.callCount);
-        deepEqual(test.spy_transaction.firstCall.args[0], ["metadata"],
-                  "transaction first argument");
-        equal(test.spy_transaction.firstCall.args[1], "readonly",
+        global_assert.deepEqual(test.spy_transaction.firstCall.args[0],
+                                ["metadata"], "transaction first argument");
+        global_assert.equal(test.spy_transaction.firstCall.args[1], "readonly",
               "transaction second argument");
       })
       .always(function (param) {
         return check_callback(param);
       })
       .fail(function (error) {
-        ok(false, error);
+        global_assert.ok(false, error);
       })
       .always(function () {
         test.spy_open.restore();
@@ -152,41 +147,43 @@
       });
   }
 
-  test("no change", function () {
+  test("no change", function (assert) {
+    global_assert = assert;
     var context = this;
-    expect(10);
+    assert.expect(10);
 
     return setupDBMigrationTest(context, {}, {}, function () {
-      ok(context.spy_open.calledOnce, "open count " +
+      assert.ok(context.spy_open.calledOnce, "open count " +
          context.spy_open.callCount);
-      equal(context.spy_open.firstCall.args[0], "jio:qunit",
+      assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
             "open first argument");
 
-      equal(context.spy_create_store.callCount, 0,
+      assert.equal(context.spy_create_store.callCount, 0,
             "createObjectStore count");
-      equal(context.spy_store.callCount, 1,
+      assert.equal(context.spy_store.callCount, 1,
             "objectStore count");
-      equal(context.spy_create_index.callCount, 0, "createIndex count");
-      equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
+      assert.equal(context.spy_create_index.callCount, 0, "createIndex count");
+      assert.equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
     });
   });
 
-  test("version update, no key change", function () {
+  test("version update, no key change", function (assert) {
+    global_assert = assert;
     var context = this;
-    expect(10);
+    assert.expect(10);
 
     return setupDBMigrationTest(context, {}, {version: 2}, function () {
-      ok(context.spy_open.calledOnce, "open count " +
+      assert.ok(context.spy_open.calledOnce, "open count " +
          context.spy_open.callCount);
-      equal(context.spy_open.firstCall.args[0], "jio:qunit",
+      assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
             "open first argument");
 
-      equal(context.spy_create_store.callCount, 0,
+      assert.equal(context.spy_create_store.callCount, 0,
             "createObjectStore count");
-      equal(context.spy_store.callCount, 2,
+      assert.equal(context.spy_store.callCount, 2,
             "objectStore count");
-      equal(context.spy_create_index.callCount, 0, "createIndex count");
-      equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
+      assert.equal(context.spy_create_index.callCount, 0, "createIndex count");
+      assert.equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
     });
   });
 
@@ -194,131 +191,148 @@
     return str.substr(0, prefix.length) === prefix;
   }
 
-  test("version decrease", function () {
+  test("version decrease", function (assert) {
+    global_assert = assert;
     var context = this;
-    expect(3);
+    assert.expect(3);
 
     return setupDBMigrationTest(context, {version: 3},
                                 {version: 2}, function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.status_code, 500);
-        ok(startsWith(error.message, "Connection to: jio:qunit failed: "));
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.status_code, 500);
+        assert.ok(startsWith(error.message,
+                  "Connection to: jio:qunit failed: "));
       });
   });
 
-  test("version increase, key added", function () {
+  test("version increase, key added", function (assert) {
+    global_assert = assert;
     var context = this;
-    expect(13);
+    assert.expect(13);
 
     return setupDBMigrationTest(context, {version: 1, index_key_list: ['a']},
                                 {version: 2, index_key_list: ['a', 'b']},
                                 function () {
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 0,
+        assert.equal(context.spy_create_store.callCount, 0,
               "createObjectStore count");
-        equal(context.spy_store.callCount, 2,
+        assert.equal(context.spy_store.callCount, 2,
               "objectStore count");
-        equal(context.spy_create_index.callCount, 1, "createIndex count");
-        equal(context.spy_create_index.firstCall.args[0], "doc.b",
+        assert.equal(context.spy_create_index.callCount, 1,
+                     "createIndex count");
+        assert.equal(context.spy_create_index.firstCall.args[0], "doc.b",
               "first createIndex first argument");
-        equal(context.spy_create_index.firstCall.args[1], "doc.b",
+        assert.equal(context.spy_create_index.firstCall.args[1], "doc.b",
               "first createIndex second argument");
-        deepEqual(context.spy_create_index.firstCall.args[2], {unique: false},
+        assert.deepEqual(context.spy_create_index.firstCall.args[2],
+                         {unique: false},
                   "first createIndex third argument");
 
-        equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
+        assert.equal(context.spy_delete_index.callCount, 0,
+                     "deleteIndex count");
       });
   });
 
-  test("version increase, key removed", function () {
+  test("version increase, key removed", function (assert) {
+    global_assert = assert;
     var context = this;
-    expect(11);
+    assert.expect(11);
 
     return setupDBMigrationTest(context,
                                 {version: 1, index_key_list: ['a', 'b']},
                                 {version: 2, index_key_list: ['b']},
                                 function () {
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 0,
+        assert.equal(context.spy_create_store.callCount, 0,
               "createObjectStore count");
-        equal(context.spy_store.callCount, 2,
+        assert.equal(context.spy_store.callCount, 2,
               "objectStore count");
-        equal(context.spy_create_index.callCount, 0, "createIndex count");
+        assert.equal(context.spy_create_index.callCount, 0,
+                     "createIndex count");
 
-        equal(context.spy_delete_index.callCount, 1, "deleteIndex count");
-        equal(context.spy_delete_index.firstCall.args[0], "doc.a",
+        assert.equal(context.spy_delete_index.callCount, 1,
+                     "deleteIndex count");
+        assert.equal(context.spy_delete_index.firstCall.args[0], "doc.a",
               "first deleteIndex first argument");
       });
   });
 
-  test("version increase, keys added and removed", function () {
+  test("version increase, keys added and removed", function (assert) {
+    global_assert = assert;
     var context = this;
-    expect(18);
+    assert.expect(18);
 
     return setupDBMigrationTest(context,
                                 {version: 1, index_key_list: ['a', 'b', 'c']},
                                 {version: 2, index_key_list: ['e', 'b', 'f']},
                                 function () {
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 0,
+        assert.equal(context.spy_create_store.callCount, 0,
               "createObjectStore count");
-        equal(context.spy_store.callCount, 2,
+        assert.equal(context.spy_store.callCount, 2,
               "objectStore count");
-        equal(context.spy_create_index.callCount, 2, "createIndex count");
-        equal(context.spy_create_index.firstCall.args[0], "doc.e",
+        assert.equal(context.spy_create_index.callCount, 2,
+                     "createIndex count");
+        assert.equal(context.spy_create_index.firstCall.args[0], "doc.e",
               "first createIndex first argument");
-        equal(context.spy_create_index.firstCall.args[1], "doc.e",
+        assert.equal(context.spy_create_index.firstCall.args[1], "doc.e",
               "first createIndex second argument");
-        deepEqual(context.spy_create_index.firstCall.args[2], {unique: false},
+        assert.deepEqual(context.spy_create_index.firstCall.args[2],
+                         {unique: false},
                   "first createIndex third argument");
 
-        equal(context.spy_create_index.secondCall.args[0], "doc.f",
+        assert.equal(context.spy_create_index.secondCall.args[0], "doc.f",
               "second createIndex first argument");
-        equal(context.spy_create_index.secondCall.args[1], "doc.f",
+        assert.equal(context.spy_create_index.secondCall.args[1], "doc.f",
               "second createIndex second argument");
-        deepEqual(context.spy_create_index.secondCall.args[2], {unique: false},
+        assert.deepEqual(context.spy_create_index.secondCall.args[2],
+                         {unique: false},
                   "second createIndex third argument");
 
-        equal(context.spy_delete_index.callCount, 2, "deleteIndex count");
-        equal(context.spy_delete_index.firstCall.args[0], "doc.a",
+        assert.equal(context.spy_delete_index.callCount, 2,
+                     "deleteIndex count");
+        assert.equal(context.spy_delete_index.firstCall.args[0], "doc.a",
               "first deleteIndex first argument");
-        equal(context.spy_delete_index.secondCall.args[0], "doc.c",
+        assert.equal(context.spy_delete_index.secondCall.args[0], "doc.c",
               "second deleteIndex first argument");
       });
   });
 
 
-  test("version idem, keys added and removed", function () {
+  test("version idem, keys added and removed", function (assert) {
+    global_assert = assert;
     var context = this;
-    expect(10);
+    assert.expect(10);
 
     return setupDBMigrationTest(context,
                                 {version: 1, index_key_list: ['a', 'b', 'c']},
                                 {version: 1, index_key_list: ['e', 'b', 'f']},
                                 function () {
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 0,
+        assert.equal(context.spy_create_store.callCount, 0,
               "createObjectStore count");
-        equal(context.spy_store.callCount, 1,
+        assert.equal(context.spy_store.callCount, 1,
               "objectStore count");
-        equal(context.spy_create_index.callCount, 0, "createIndex count");
-        equal(context.spy_delete_index.callCount, 0, "deleteIndex count");
+        assert.equal(context.spy_create_index.callCount, 0,
+                     "createIndex count");
+        assert.equal(context.spy_delete_index.callCount, 0,
+                     "deleteIndex count");
       });
   });
 
@@ -326,32 +340,32 @@
   // documentStorage.hasCapacity
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.hasCapacity");
-  test("can list documents", function () {
-    expect(2);
+  test("can list documents", function (assert) {
+    assert.expect(2);
     var jio = jIO.createJIO({
       type: "indexeddb",
       database: "qunit"
     });
 
-    ok(jio.hasCapacity("list"));
-    ok(jio.hasCapacity("include"));
+    assert.ok(jio.hasCapacity("list"));
+    assert.ok(jio.hasCapacity("include"));
   });
 
-  test("can not search documents", function () {
-    expect(4);
+  test("can not search documents", function (assert) {
+    assert.expect(4);
     var jio = jIO.createJIO({
       type: "indexeddb",
       database: "qunit"
     });
 
-    throws(
+    assert.throws(
       function () {
         jio.hasCapacity("query");
       },
       function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.status_code, 501);
-        equal(error.message,
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.status_code, 501);
+        assert.equal(error.message,
               "Capacity 'query' is not implemented on 'indexeddb'");
         return true;
       }
@@ -362,7 +376,7 @@
   // indexeddbStorage.buildQuery
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.buildQuery", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         type: "indexeddb",
         database: "qunit"
@@ -378,7 +392,7 @@
       this.spy_key_cursor = sinon.spy(IDBIndex.prototype, "openKeyCursor");
       this.spy_cursor = sinon.spy(IDBIndex.prototype, "openCursor");
     },
-    teardown: function () {
+    afterEach: function () {
       this.spy_open.restore();
       delete this.spy_open;
       this.spy_create_store.restore();
@@ -398,10 +412,10 @@
     }
   });
 
-  test("spy indexedDB usage", function () {
+  test("spy indexedDB usage", function (assert) {
     var context = this;
-    stop();
-    expect(31);
+    start = assert.async();
+    assert.expect(31);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -409,99 +423,105 @@
       })
       .then(function () {
 
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 3,
+        assert.equal(context.spy_create_store.callCount, 3,
               "createObjectStore count");
 
-        equal(context.spy_create_store.firstCall.args[0], "metadata",
+        assert.equal(context.spy_create_store.firstCall.args[0], "metadata",
               "first createObjectStore first argument");
-        deepEqual(context.spy_create_store.firstCall.args[1],
+        assert.deepEqual(context.spy_create_store.firstCall.args[1],
                   {keyPath: "_id", autoIncrement: false},
                   "first createObjectStore second argument");
 
-        equal(context.spy_create_store.secondCall.args[0], "attachment",
+        assert.equal(context.spy_create_store.secondCall.args[0], "attachment",
               "second createObjectStore first argument");
-        deepEqual(context.spy_create_store.secondCall.args[1],
+        assert.deepEqual(context.spy_create_store.secondCall.args[1],
                   {keyPath: "_key_path", autoIncrement: false},
                   "second createObjectStore second argument");
 
-        equal(context.spy_create_store.thirdCall.args[0], "blob",
+        assert.equal(context.spy_create_store.thirdCall.args[0], "blob",
               "third createObjectStore first argument");
-        deepEqual(context.spy_create_store.thirdCall.args[1],
+        assert.deepEqual(context.spy_create_store.thirdCall.args[1],
                   {keyPath: "_key_path", autoIncrement: false},
                   "third createObjectStore second argument");
 
-        equal(context.spy_create_index.callCount, 4, "createIndex count");
+        assert.equal(context.spy_create_index.callCount, 4,
+                     "createIndex count");
 
-        equal(context.spy_create_index.firstCall.args[0], "_id",
+        assert.equal(context.spy_create_index.firstCall.args[0], "_id",
               "first createIndex first argument");
-        equal(context.spy_create_index.firstCall.args[1], "_id",
+        assert.equal(context.spy_create_index.firstCall.args[1], "_id",
               "first createIndex second argument");
-        deepEqual(context.spy_create_index.firstCall.args[2], {unique: true},
+        assert.deepEqual(context.spy_create_index.firstCall.args[2],
+                         {unique: true},
                   "first createIndex third argument");
 
-        equal(context.spy_create_index.secondCall.args[0], "_id",
+        assert.equal(context.spy_create_index.secondCall.args[0], "_id",
               "second createIndex first argument");
-        equal(context.spy_create_index.secondCall.args[1], "_id",
+        assert.equal(context.spy_create_index.secondCall.args[1], "_id",
               "second createIndex second argument");
-        deepEqual(context.spy_create_index.secondCall.args[2], {unique: false},
+        assert.deepEqual(context.spy_create_index.secondCall.args[2],
+                         {unique: false},
                   "second createIndex third argument");
 
-        equal(context.spy_create_index.thirdCall.args[0], "_id_attachment",
+        assert.equal(context.spy_create_index.thirdCall.args[0],
+                     "_id_attachment",
               "third createIndex first argument");
-        deepEqual(context.spy_create_index.thirdCall.args[1],
+        assert.deepEqual(context.spy_create_index.thirdCall.args[1],
                   ["_id", "_attachment"],
                   "third createIndex second argument");
-        deepEqual(context.spy_create_index.thirdCall.args[2],
+        assert.deepEqual(context.spy_create_index.thirdCall.args[2],
                   {unique: false},
                   "third createIndex third argument");
 
-        equal(context.spy_create_index.getCall(3).args[0], "_id",
+        assert.equal(context.spy_create_index.getCall(3).args[0], "_id",
               "fourth createIndex first argument");
-        equal(context.spy_create_index.getCall(3).args[1], "_id",
+        assert.equal(context.spy_create_index.getCall(3).args[1], "_id",
                   "fourth createIndex second argument");
-        deepEqual(context.spy_create_index.getCall(3).args[2], {unique: false},
+        assert.deepEqual(context.spy_create_index.getCall(3).args[2],
+                         {unique: false},
                   "fourth createIndex third argument");
 
-        ok(context.spy_transaction.calledOnce, "transaction count " +
+        assert.ok(context.spy_transaction.calledOnce, "transaction count " +
            context.spy_transaction.callCount);
-        deepEqual(context.spy_transaction.firstCall.args[0], ["metadata"],
+        assert.deepEqual(context.spy_transaction.firstCall.args[0],
+                         ["metadata"],
                   "transaction first argument");
-        equal(context.spy_transaction.firstCall.args[1], "readonly",
+        assert.equal(context.spy_transaction.firstCall.args[1], "readonly",
               "transaction second argument");
 
-        ok(context.spy_store.calledOnce, "store count " +
+        assert.ok(context.spy_store.calledOnce, "store count " +
            context.spy_store.callCount);
-        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+        assert.deepEqual(context.spy_store.firstCall.args[0], "metadata",
                   "store first argument");
 
-        ok(context.spy_index.calledOnce, "index count " +
+        assert.ok(context.spy_index.calledOnce, "index count " +
            context.spy_index.callCount);
-        deepEqual(context.spy_index.firstCall.args[0], "_id",
+        assert.deepEqual(context.spy_index.firstCall.args[0], "_id",
                   "index first argument");
 
-        ok(context.spy_key_cursor.calledOnce, "key_cursor count " +
+        assert.ok(context.spy_key_cursor.calledOnce, "key_cursor count " +
            context.spy_key_cursor.callCount);
-        equal(context.spy_cursor.callCount, 0, "cursor count " +
+        assert.equal(context.spy_cursor.callCount, 0, "cursor count " +
            context.spy_cursor.callCount);
 
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("spy indexedDB usage with include_docs", function () {
+  test("spy indexedDB usage with include_docs", function (assert) {
     var context = this;
-    stop();
-    expect(31);
+    start = assert.async();
+    assert.expect(31);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -509,106 +529,112 @@
       })
       .then(function () {
 
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 3,
+        assert.equal(context.spy_create_store.callCount, 3,
               "createObjectStore count");
 
-        equal(context.spy_create_store.firstCall.args[0], "metadata",
+        assert.equal(context.spy_create_store.firstCall.args[0], "metadata",
               "first createObjectStore first argument");
-        deepEqual(context.spy_create_store.firstCall.args[1],
+        assert.deepEqual(context.spy_create_store.firstCall.args[1],
                   {keyPath: "_id", autoIncrement: false},
                   "first createObjectStore second argument");
 
-        equal(context.spy_create_store.secondCall.args[0], "attachment",
+        assert.equal(context.spy_create_store.secondCall.args[0], "attachment",
               "second createObjectStore first argument");
-        deepEqual(context.spy_create_store.secondCall.args[1],
+        assert.deepEqual(context.spy_create_store.secondCall.args[1],
                   {keyPath: "_key_path", autoIncrement: false},
                   "second createObjectStore second argument");
 
-        equal(context.spy_create_store.thirdCall.args[0], "blob",
+        assert.equal(context.spy_create_store.thirdCall.args[0], "blob",
               "third createObjectStore first argument");
-        deepEqual(context.spy_create_store.thirdCall.args[1],
+        assert.deepEqual(context.spy_create_store.thirdCall.args[1],
                   {keyPath: "_key_path", autoIncrement: false},
                   "third createObjectStore second argument");
 
-        equal(context.spy_create_index.callCount, 4, "createIndex count");
+        assert.equal(context.spy_create_index.callCount, 4,
+                     "createIndex count");
 
-        equal(context.spy_create_index.firstCall.args[0], "_id",
+        assert.equal(context.spy_create_index.firstCall.args[0], "_id",
               "first createIndex first argument");
-        equal(context.spy_create_index.firstCall.args[1], "_id",
+        assert.equal(context.spy_create_index.firstCall.args[1], "_id",
               "first createIndex second argument");
-        deepEqual(context.spy_create_index.firstCall.args[2], {unique: true},
+        assert.deepEqual(context.spy_create_index.firstCall.args[2],
+                         {unique: true},
                   "first createIndex third argument");
 
-        equal(context.spy_create_index.secondCall.args[0], "_id",
+        assert.equal(context.spy_create_index.secondCall.args[0], "_id",
               "second createIndex first argument");
-        equal(context.spy_create_index.secondCall.args[1], "_id",
+        assert.equal(context.spy_create_index.secondCall.args[1], "_id",
               "second createIndex second argument");
-        deepEqual(context.spy_create_index.secondCall.args[2], {unique: false},
+        assert.deepEqual(context.spy_create_index.secondCall.args[2],
+                         {unique: false},
                   "second createIndex third argument");
 
-        equal(context.spy_create_index.thirdCall.args[0], "_id_attachment",
+        assert.equal(context.spy_create_index.thirdCall.args[0],
+                     "_id_attachment",
               "third createIndex first argument");
-        deepEqual(context.spy_create_index.thirdCall.args[1],
+        assert.deepEqual(context.spy_create_index.thirdCall.args[1],
                   ["_id", "_attachment"],
                   "third createIndex second argument");
-        deepEqual(context.spy_create_index.thirdCall.args[2],
+        assert.deepEqual(context.spy_create_index.thirdCall.args[2],
                   {unique: false},
                   "third createIndex third argument");
 
-        equal(context.spy_create_index.getCall(3).args[0], "_id",
+        assert.equal(context.spy_create_index.getCall(3).args[0], "_id",
               "fourth createIndex first argument");
-        equal(context.spy_create_index.getCall(3).args[1], "_id",
+        assert.equal(context.spy_create_index.getCall(3).args[1], "_id",
                   "fourth createIndex second argument");
-        deepEqual(context.spy_create_index.getCall(3).args[2], {unique: false},
+        assert.deepEqual(context.spy_create_index.getCall(3).args[2],
+                         {unique: false},
                   "fourth createIndex third argument");
 
-        ok(context.spy_transaction.calledOnce, "transaction count " +
+        assert.ok(context.spy_transaction.calledOnce, "transaction count " +
            context.spy_transaction.callCount);
-        deepEqual(context.spy_transaction.firstCall.args[0], ["metadata"],
+        assert.deepEqual(context.spy_transaction.firstCall.args[0],
+                         ["metadata"],
                   "transaction first argument");
-        equal(context.spy_transaction.firstCall.args[1], "readonly",
+        assert.equal(context.spy_transaction.firstCall.args[1], "readonly",
               "transaction second argument");
 
-        ok(context.spy_store.calledOnce, "store count " +
+        assert.ok(context.spy_store.calledOnce, "store count " +
            context.spy_store.callCount);
-        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+        assert.deepEqual(context.spy_store.firstCall.args[0], "metadata",
                   "store first argument");
 
-        ok(context.spy_index.calledOnce, "index count " +
+        assert.ok(context.spy_index.calledOnce, "index count " +
            context.spy_index.callCount);
-        deepEqual(context.spy_index.firstCall.args[0], "_id",
+        assert.deepEqual(context.spy_index.firstCall.args[0], "_id",
                   "index first argument");
 
-        equal(context.spy_key_cursor.callCount, 0, "key_cursor count " +
+        assert.equal(context.spy_key_cursor.callCount, 0, "key_cursor count " +
            context.spy_key_cursor.callCount);
-        ok(context.spy_cursor.calledOnce, "cursor count " +
+        assert.ok(context.spy_cursor.calledOnce, "cursor count " +
            context.spy_cursor.callCount);
 
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("empty result", function () {
+  test("empty result", function (assert) {
     var context = this;
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     deleteIndexedDB(context.jio)
       .then(function () {
         return context.jio.allDocs();
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "data": {
             "rows": [
             ],
@@ -617,17 +643,17 @@
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("list all documents", function () {
+  test("list all documents", function (assert) {
     var context = this;
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -640,7 +666,7 @@
         return context.jio.allDocs();
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "data": {
             "rows": [{
               "id": "1",
@@ -654,17 +680,17 @@
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("handle include_docs", function () {
+  test("handle include_docs", function (assert) {
     var context = this;
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -677,7 +703,7 @@
         return context.jio.allDocs({include_docs: true});
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "data": {
             "rows": [{
               "id": "1",
@@ -693,7 +719,7 @@
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -704,7 +730,7 @@
   // indexeddbStorage.get
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.get", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         type: "indexeddb",
         database: "qunit"
@@ -712,10 +738,10 @@
     }
   });
 
-  test("spy indexedDB usage", function () {
+  test("spy indexedDB usage", function (assert) {
     var context = this;
-    stop();
-    expect(10);
+    start = assert.async();
+    assert.expect(10);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -734,33 +760,33 @@
       })
       .then(function () {
 
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 0,
+        assert.equal(context.spy_create_store.callCount, 0,
               "createObjectStore count");
 
-        ok(context.spy_transaction.calledOnce, "transaction count " +
+        assert.ok(context.spy_transaction.calledOnce, "transaction count " +
            context.spy_transaction.callCount);
-        deepEqual(context.spy_transaction.firstCall.args[0],
+        assert.deepEqual(context.spy_transaction.firstCall.args[0],
                   ["metadata"], "transaction first argument");
-        equal(context.spy_transaction.firstCall.args[1], "readonly",
+        assert.equal(context.spy_transaction.firstCall.args[1], "readonly",
               "transaction second argument");
 
-        ok(context.spy_store.calledOnce, "store count " +
+        assert.ok(context.spy_store.calledOnce, "store count " +
            context.spy_store.callCount);
-        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+        assert.deepEqual(context.spy_store.firstCall.args[0], "metadata",
                   "store first argument");
 
-        ok(context.spy_get.calledOnce, "index count " +
+        assert.ok(context.spy_get.calledOnce, "index count " +
            context.spy_get.callCount);
-        deepEqual(context.spy_get.firstCall.args[0], "foo",
+        assert.deepEqual(context.spy_get.firstCall.args[0], "foo",
                   "get first argument");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         context.spy_open.restore();
@@ -779,36 +805,36 @@
       });
   });
 
-  test("get inexistent document", function () {
+  test("get inexistent document", function (assert) {
     var context = this;
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     deleteIndexedDB(context.jio)
       .then(function () {
         return context.jio.get("inexistent");
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(
           error.message,
           "IndexedDB: cannot find object 'inexistent' in the 'metadata' store"
         );
-        equal(error.status_code, 404);
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document without attachment", function () {
+  test("get document without attachment", function (assert) {
     var id = "/",
       context = this;
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -818,24 +844,24 @@
         return context.jio.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "title": "bar"
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document with attachment", function () {
+  test("get document with attachment", function (assert) {
     var id = "/",
       attachment = "foo",
       context = this;
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -848,12 +874,12 @@
         return context.jio.get(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "title": "bar"
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -864,7 +890,7 @@
   // indexeddbStorage.allAttachments
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.allAttachments", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         type: "indexeddb",
         database: "qunit"
@@ -872,10 +898,10 @@
     }
   });
 
-  test("spy indexedDB usage", function () {
+  test("spy indexedDB usage", function (assert) {
     var context = this;
-    stop();
-    expect(18);
+    start = assert.async();
+    assert.expect(18);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -900,47 +926,48 @@
       })
       .then(function () {
 
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 0,
+        assert.equal(context.spy_create_store.callCount, 0,
               "createObjectStore count");
-        equal(context.spy_create_index.callCount, 0, "createIndex count");
+        assert.equal(context.spy_create_index.callCount, 0,
+                     "createIndex count");
 
-        ok(context.spy_transaction.calledOnce, "transaction count " +
+        assert.ok(context.spy_transaction.calledOnce, "transaction count " +
            context.spy_transaction.callCount);
-        deepEqual(context.spy_transaction.firstCall.args[0],
+        assert.deepEqual(context.spy_transaction.firstCall.args[0],
                   ["metadata", "attachment"], "transaction first argument");
-        equal(context.spy_transaction.firstCall.args[1], "readonly",
+        assert.equal(context.spy_transaction.firstCall.args[1], "readonly",
               "transaction second argument");
 
-        ok(context.spy_store.calledTwice, "store count " +
+        assert.ok(context.spy_store.calledTwice, "store count " +
            context.spy_store.callCount);
-        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+        assert.deepEqual(context.spy_store.firstCall.args[0], "metadata",
                   "store first argument");
-        deepEqual(context.spy_store.secondCall.args[0], "attachment",
+        assert.deepEqual(context.spy_store.secondCall.args[0], "attachment",
                   "store first argument");
 
-        ok(context.spy_get.calledOnce, "index count " +
+        assert.ok(context.spy_get.calledOnce, "index count " +
            context.spy_get.callCount);
-        deepEqual(context.spy_get.firstCall.args[0], "foo",
+        assert.deepEqual(context.spy_get.firstCall.args[0], "foo",
                   "get first argument");
 
-        ok(context.spy_index.calledOnce, "index count " +
+        assert.ok(context.spy_index.calledOnce, "index count " +
            context.spy_index.callCount);
-        deepEqual(context.spy_index.firstCall.args[0], "_id",
+        assert.deepEqual(context.spy_index.firstCall.args[0], "_id",
                   "index first argument");
 
-        ok(!context.spy_cursor.called, "cursor count " +
+        assert.ok(!context.spy_cursor.called, "cursor count " +
            context.spy_cursor.callCount);
-        ok(context.spy_key_cursor.calledOnce, "cursor key count " +
+        assert.ok(context.spy_key_cursor.calledOnce, "cursor key count " +
            context.spy_key_cursor.callCount);
 
-        ok(context.spy_key_range.calledOnce, "key range count " +
+        assert.ok(context.spy_key_range.calledOnce, "key range count " +
            context.spy_key_range.callCount);
-        deepEqual(context.spy_key_range.firstCall.args[0], "foo",
+        assert.deepEqual(context.spy_key_range.firstCall.args[0], "foo",
                   "key range first argument");
       })
       .always(function () {
@@ -966,43 +993,43 @@
         delete context.spy_key_range;
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get inexistent document", function () {
+  test("get inexistent document", function (assert) {
     var context = this;
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     deleteIndexedDB(context.jio)
       .then(function () {
         return context.jio.allAttachments("inexistent");
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(
           error.message,
           "IndexedDB: cannot find object 'inexistent' in the 'metadata' store"
         );
-        equal(error.status_code, 404);
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document without attachment", function () {
+  test("get document without attachment", function (assert) {
     var id = "/",
       context = this;
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1012,22 +1039,22 @@
         return context.jio.allAttachments(id);
       })
       .then(function (result) {
-        deepEqual(result, {}, "Check document");
+        assert.deepEqual(result, {}, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document with attachment", function () {
+  test("get document with attachment", function (assert) {
     var id = "/",
       attachment = "foo",
       context = this;
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1040,12 +1067,12 @@
         return context.jio.allAttachments(id);
       })
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "foo": {}
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -1056,7 +1083,7 @@
   // indexeddbStorage.put
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.put", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         type: "indexeddb",
         database: "qunit"
@@ -1064,10 +1091,10 @@
     }
   });
 
-  test("spy indexedDB usage", function () {
+  test("spy indexedDB usage", function (assert) {
     var context = this;
-    stop();
-    expect(32);
+    start = assert.async();
+    assert.expect(32);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1088,94 +1115,100 @@
       })
       .then(function () {
 
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 3,
+        assert.equal(context.spy_create_store.callCount, 3,
               "createObjectStore count");
 
-        equal(context.spy_create_store.firstCall.args[0], "metadata",
+        assert.equal(context.spy_create_store.firstCall.args[0], "metadata",
               "first createObjectStore first argument");
-        deepEqual(context.spy_create_store.firstCall.args[1],
+        assert.deepEqual(context.spy_create_store.firstCall.args[1],
                   {keyPath: "_id", autoIncrement: false},
                   "first createObjectStore second argument");
 
-        equal(context.spy_create_store.secondCall.args[0], "attachment",
+        assert.equal(context.spy_create_store.secondCall.args[0], "attachment",
               "second createObjectStore first argument");
-        deepEqual(context.spy_create_store.secondCall.args[1],
+        assert.deepEqual(context.spy_create_store.secondCall.args[1],
                   {keyPath: "_key_path", autoIncrement: false},
                   "second createObjectStore second argument");
 
-        equal(context.spy_create_store.thirdCall.args[0], "blob",
+        assert.equal(context.spy_create_store.thirdCall.args[0], "blob",
               "third createObjectStore first argument");
-        deepEqual(context.spy_create_store.thirdCall.args[1],
+        assert.deepEqual(context.spy_create_store.thirdCall.args[1],
                   {keyPath: "_key_path", autoIncrement: false},
                   "third createObjectStore second argument");
 
-        equal(context.spy_create_index.callCount, 4, "createIndex count");
+        assert.equal(context.spy_create_index.callCount, 4,
+                     "createIndex count");
 
-        equal(context.spy_create_index.firstCall.args[0], "_id",
+        assert.equal(context.spy_create_index.firstCall.args[0], "_id",
               "first createIndex first argument");
-        equal(context.spy_create_index.firstCall.args[1], "_id",
+        assert.equal(context.spy_create_index.firstCall.args[1], "_id",
               "first createIndex second argument");
-        deepEqual(context.spy_create_index.firstCall.args[2], {unique: true},
+        assert.deepEqual(context.spy_create_index.firstCall.args[2],
+                         {unique: true},
                   "first createIndex third argument");
 
-        equal(context.spy_create_index.secondCall.args[0], "_id",
+        assert.equal(context.spy_create_index.secondCall.args[0], "_id",
               "second createIndex first argument");
-        equal(context.spy_create_index.secondCall.args[1], "_id",
+        assert.equal(context.spy_create_index.secondCall.args[1], "_id",
               "second createIndex second argument");
-        deepEqual(context.spy_create_index.secondCall.args[2],
+        assert.deepEqual(context.spy_create_index.secondCall.args[2],
                   {unique: false},
                   "second createIndex third argument");
 
-        equal(context.spy_create_index.thirdCall.args[0], "_id_attachment",
+        assert.equal(context.spy_create_index.thirdCall.args[0],
+                     "_id_attachment",
               "third createIndex first argument");
-        deepEqual(context.spy_create_index.thirdCall.args[1],
+        assert.deepEqual(context.spy_create_index.thirdCall.args[1],
                   ["_id", "_attachment"],
                   "third createIndex second argument");
-        deepEqual(context.spy_create_index.thirdCall.args[2], {unique: false},
+        assert.deepEqual(context.spy_create_index.thirdCall.args[2],
+                         {unique: false},
                   "third createIndex third argument");
 
-        equal(context.spy_create_index.getCall(3).args[0], "_id",
+        assert.equal(context.spy_create_index.getCall(3).args[0], "_id",
               "fourth createIndex first argument");
-        equal(context.spy_create_index.getCall(3).args[1], "_id",
+        assert.equal(context.spy_create_index.getCall(3).args[1], "_id",
                   "fourth createIndex second argument");
-        deepEqual(context.spy_create_index.getCall(3).args[2], {unique: false},
+        assert.deepEqual(context.spy_create_index.getCall(3).args[2],
+                         {unique: false},
                   "fourth createIndex third argument");
 
-        ok(context.spy_transaction.calledOnce, "transaction count " +
+        assert.ok(context.spy_transaction.calledOnce, "transaction count " +
            context.spy_transaction.callCount);
-        deepEqual(context.spy_transaction.firstCall.args[0], ["metadata"],
+        assert.deepEqual(context.spy_transaction.firstCall.args[0],
+                         ["metadata"],
                   "transaction first argument");
-        equal(context.spy_transaction.firstCall.args[1], "readwrite",
+        assert.equal(context.spy_transaction.firstCall.args[1], "readwrite",
               "transaction second argument");
 
-        ok(context.spy_store.calledOnce, "store count " +
+        assert.ok(context.spy_store.calledOnce, "store count " +
            context.spy_store.callCount);
-        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+        assert.deepEqual(context.spy_store.firstCall.args[0], "metadata",
                   "store first argument");
 
-        ok(context.spy_put.calledOnce, "put count " +
+        assert.ok(context.spy_put.calledOnce, "put count " +
            context.spy_put.callCount);
-        deepEqual(context.spy_put.firstCall.args[0],
+        assert.deepEqual(context.spy_put.firstCall.args[0],
                   {"_id": "foo", doc: {title: "bar"}},
                   "put first argument");
 
-        ok(!context.spy_index.called, "index count " +
+        assert.ok(!context.spy_index.called, "index count " +
            context.spy_index.callCount);
 
-        ok(!context.spy_cursor.called, "cursor count " +
+        assert.ok(!context.spy_cursor.called, "cursor count " +
            context.spy_cursor.callCount);
 
-        ok(!context.spy_key_range.called, "key range count " +
+        assert.ok(!context.spy_key_range.called, "key range count " +
            context.spy_key_range.callCount);
 
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         var i,
@@ -1194,20 +1227,20 @@
       });
   });
 
-  test("put document", function () {
+  test("put document", function (assert) {
     var context = this;
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     deleteIndexedDB(context.jio)
       .then(function () {
         return context.jio.put("inexistent", {});
       })
       .then(function (result) {
-        equal(result, "inexistent");
+        assert.equal(result, "inexistent");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -1218,7 +1251,7 @@
   // indexeddbStorage.remove
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.remove", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         type: "indexeddb",
         database: "qunit"
@@ -1226,10 +1259,10 @@
     }
   });
 
-  test("spy indexedDB usage with one document", function () {
+  test("spy indexedDB usage with one document", function (assert) {
     var context = this;
-    stop();
-    expect(22);
+    start = assert.async();
+    assert.expect(22);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1255,56 +1288,58 @@
       })
       .then(function () {
 
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 0,
+        assert.equal(context.spy_create_store.callCount, 0,
               "createObjectStore count");
-        equal(context.spy_create_index.callCount, 0, "createIndex count");
+        assert.equal(context.spy_create_index.callCount, 0,
+                     "createIndex count");
 
-        ok(context.spy_transaction.calledOnce, "transaction count " +
+        assert.ok(context.spy_transaction.calledOnce, "transaction count " +
            context.spy_transaction.callCount);
-        deepEqual(context.spy_transaction.firstCall.args[0],
+        assert.deepEqual(context.spy_transaction.firstCall.args[0],
                   ["metadata", "attachment", "blob"],
                   "transaction first argument");
-        equal(context.spy_transaction.firstCall.args[1], "readwrite",
+        assert.equal(context.spy_transaction.firstCall.args[1], "readwrite",
               "transaction second argument");
 
-        equal(context.spy_store.callCount, 3, "store count " +
+        assert.equal(context.spy_store.callCount, 3, "store count " +
            context.spy_store.callCount);
-        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+        assert.deepEqual(context.spy_store.firstCall.args[0], "metadata",
                   "store first argument");
-        deepEqual(context.spy_store.secondCall.args[0], "attachment",
+        assert.deepEqual(context.spy_store.secondCall.args[0], "attachment",
                   "store first argument");
-        deepEqual(context.spy_store.thirdCall.args[0], "blob",
+        assert.deepEqual(context.spy_store.thirdCall.args[0], "blob",
                   "store first argument");
 
-        ok(context.spy_delete.calledOnce, "delete count " +
+        assert.ok(context.spy_delete.calledOnce, "delete count " +
            context.spy_delete.callCount);
-        deepEqual(context.spy_delete.firstCall.args[0], "foo",
+        assert.deepEqual(context.spy_delete.firstCall.args[0], "foo",
                   "delete first argument");
 
-        ok(context.spy_index.calledTwice, "index count " +
+        assert.ok(context.spy_index.calledTwice, "index count " +
            context.spy_index.callCount);
-        deepEqual(context.spy_index.firstCall.args[0], "_id",
+        assert.deepEqual(context.spy_index.firstCall.args[0], "_id",
                   "index first argument");
-        deepEqual(context.spy_index.secondCall.args[0], "_id",
+        assert.deepEqual(context.spy_index.secondCall.args[0], "_id",
                   "index first argument");
 
-        equal(context.spy_cursor.callCount, 0, "cursor count " +
+        assert.equal(context.spy_cursor.callCount, 0, "cursor count " +
            context.spy_cursor.callCount);
-        ok(context.spy_key_cursor.calledTwice, "cursor key count " +
+        assert.ok(context.spy_key_cursor.calledTwice, "cursor key count " +
            context.spy_key_cursor.callCount);
-        equal(context.spy_cursor_delete.callCount, 0, "cursor delete count " +
+        assert.equal(context.spy_cursor_delete.callCount, 0,
+                     "cursor delete count " +
            context.spy_cursor_delete.callCount);
 
-        ok(context.spy_key_range.calledTwice, "key range count " +
+        assert.ok(context.spy_key_range.calledTwice, "key range count " +
            context.spy_key_range.callCount);
-        deepEqual(context.spy_key_range.firstCall.args[0], "foo",
+        assert.deepEqual(context.spy_key_range.firstCall.args[0], "foo",
                   "key range first argument");
-        deepEqual(context.spy_key_range.secondCall.args[0], "foo",
+        assert.deepEqual(context.spy_key_range.secondCall.args[0], "foo",
                   "key range first argument");
 
       })
@@ -1333,17 +1368,17 @@
         delete context.spy_key_range;
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("spy indexedDB usage with 2 attachments", function () {
+  test("spy indexedDB usage with 2 attachments", function (assert) {
     var context = this;
-    stop();
-    expect(26);
+    start = assert.async();
+    assert.expect(26);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1375,64 +1410,70 @@
       })
       .then(function () {
 
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 0, "createObjectStore count");
-        equal(context.spy_create_index.callCount, 0, "createIndex count");
+        assert.equal(context.spy_create_store.callCount, 0,
+                     "createObjectStore count");
+        assert.equal(context.spy_create_index.callCount, 0,
+                     "createIndex count");
 
-        ok(context.spy_transaction.calledOnce, "transaction count " +
+        assert.ok(context.spy_transaction.calledOnce, "transaction count " +
            context.spy_transaction.callCount);
-        deepEqual(context.spy_transaction.firstCall.args[0],
+        assert.deepEqual(context.spy_transaction.firstCall.args[0],
                   ["metadata", "attachment", "blob"],
                   "transaction first argument");
-        equal(context.spy_transaction.firstCall.args[1], "readwrite",
+        assert.equal(context.spy_transaction.firstCall.args[1], "readwrite",
               "transaction second argument");
 
-        equal(context.spy_store.callCount, 3, "store count " +
+        assert.equal(context.spy_store.callCount, 3, "store count " +
            context.spy_store.callCount);
-        deepEqual(context.spy_store.firstCall.args[0], "metadata",
+        assert.deepEqual(context.spy_store.firstCall.args[0], "metadata",
                   "store first argument");
-        deepEqual(context.spy_store.secondCall.args[0], "attachment",
+        assert.deepEqual(context.spy_store.secondCall.args[0], "attachment",
                   "store first argument");
-        deepEqual(context.spy_store.thirdCall.args[0], "blob",
+        assert.deepEqual(context.spy_store.thirdCall.args[0], "blob",
                   "store first argument");
 
-        equal(context.spy_delete.callCount, 5, "delete count " +
+        assert.equal(context.spy_delete.callCount, 5, "delete count " +
            context.spy_delete.callCount);
-        deepEqual(context.spy_delete.firstCall.args[0], "foo",
+        assert.deepEqual(context.spy_delete.firstCall.args[0], "foo",
                   "delete first argument");
-        deepEqual(context.spy_delete.secondCall.args[0], "foo_attachment1",
+        assert.deepEqual(context.spy_delete.secondCall.args[0],
+                         "foo_attachment1",
                   "second delete first argument");
-        deepEqual(context.spy_delete.thirdCall.args[0], "foo_attachment1_0",
+        assert.deepEqual(context.spy_delete.thirdCall.args[0],
+                         "foo_attachment1_0",
                   "third delete first argument");
-        deepEqual(context.spy_delete.getCall(3).args[0], "foo_attachment2",
+        assert.deepEqual(context.spy_delete.getCall(3).args[0],
+                         "foo_attachment2",
                   "fourth delete first argument");
-        deepEqual(context.spy_delete.getCall(4).args[0], "foo_attachment2_0",
+        assert.deepEqual(context.spy_delete.getCall(4).args[0],
+                         "foo_attachment2_0",
                   "fifth delete first argument");
 
-        ok(context.spy_index.calledTwice, "index count " +
+        assert.ok(context.spy_index.calledTwice, "index count " +
            context.spy_index.callCount);
-        deepEqual(context.spy_index.firstCall.args[0], "_id",
+        assert.deepEqual(context.spy_index.firstCall.args[0], "_id",
                   "index first argument");
-        deepEqual(context.spy_index.secondCall.args[0], "_id",
+        assert.deepEqual(context.spy_index.secondCall.args[0], "_id",
                   "index first argument");
 
-        equal(context.spy_cursor.callCount, 0, "cursor count " +
+        assert.equal(context.spy_cursor.callCount, 0, "cursor count " +
            context.spy_cursor.callCount);
-        ok(context.spy_key_cursor.calledTwice, "cursor key count " +
+        assert.ok(context.spy_key_cursor.calledTwice, "cursor key count " +
            context.spy_key_cursor.callCount);
 
-        equal(context.spy_cursor_delete.callCount, 0, "cursor count " +
+        assert.equal(context.spy_cursor_delete.callCount, 0, "cursor count " +
            context.spy_cursor_delete.callCount);
 
-        ok(context.spy_key_range.calledTwice, "key range count " +
+        assert.ok(context.spy_key_range.calledTwice, "key range count " +
            context.spy_key_range.callCount);
-        deepEqual(context.spy_key_range.firstCall.args[0], "foo",
+        assert.deepEqual(context.spy_key_range.firstCall.args[0], "foo",
                   "key range first argument");
-        deepEqual(context.spy_key_range.secondCall.args[0], "foo",
+        assert.deepEqual(context.spy_key_range.secondCall.args[0], "foo",
                   "key range first argument");
 
       })
@@ -1461,7 +1502,7 @@
         delete context.spy_key_range;
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -1472,7 +1513,7 @@
   // indexeddbStorage.getAttachment
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.getAttachment", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         type: "indexeddb",
         database: "qunit"
@@ -1480,11 +1521,11 @@
     }
   });
 
-  test("spy indexedDB usage", function () {
+  test("spy indexedDB usage", function (assert) {
     var context = this,
       attachment = "attachment";
-    stop();
-    expect(15);
+    start = assert.async();
+    assert.expect(15);
 
 
     deleteIndexedDB(context.jio)
@@ -1512,46 +1553,47 @@
       })
       .then(function () {
 
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 0,
+        assert.equal(context.spy_create_store.callCount, 0,
               "createObjectStore count");
-        equal(context.spy_create_index.callCount, 0, "createIndex count");
+        assert.equal(context.spy_create_index.callCount, 0,
+                     "createIndex count");
 
-        ok(context.spy_transaction.calledOnce, "transaction count " +
+        assert.ok(context.spy_transaction.calledOnce, "transaction count " +
            context.spy_transaction.callCount);
-        deepEqual(context.spy_transaction.firstCall.args[0],
+        assert.deepEqual(context.spy_transaction.firstCall.args[0],
                   ["attachment", "blob"],
                   "transaction first argument");
-        equal(context.spy_transaction.firstCall.args[1], "readonly",
+        assert.equal(context.spy_transaction.firstCall.args[1], "readonly",
               "transaction second argument");
 
-        equal(context.spy_store.callCount, 2, "store count " +
+        assert.equal(context.spy_store.callCount, 2, "store count " +
            context.spy_store.callCount);
-        deepEqual(context.spy_store.firstCall.args[0], "attachment",
+        assert.deepEqual(context.spy_store.firstCall.args[0], "attachment",
                   "store first argument");
-        deepEqual(context.spy_store.secondCall.args[0], "blob",
+        assert.deepEqual(context.spy_store.secondCall.args[0], "blob",
                   "store first argument");
 
-        equal(context.spy_get.callCount, 1, "get count " +
+        assert.equal(context.spy_get.callCount, 1, "get count " +
            context.spy_get.callCount);
-        deepEqual(context.spy_get.firstCall.args[0], "foo_attachment",
+        assert.deepEqual(context.spy_get.firstCall.args[0], "foo_attachment",
                   "get first argument");
 
-        ok(context.spy_index.called, "index count " +
+        assert.ok(context.spy_index.called, "index count " +
            context.spy_index.callCount);
 
-        equal(context.spy_cursor.callCount, 1, "cursor count " +
+        assert.equal(context.spy_cursor.callCount, 1, "cursor count " +
            context.spy_cursor.callCount);
-        ok(!context.spy_key_cursor.called, "cursor key count " +
+        assert.ok(!context.spy_key_cursor.called, "cursor key count " +
            context.spy_key_cursor.callCount);
 
-        ok(context.spy_key_range.calledOnce, "key range count " +
+        assert.ok(context.spy_key_range.calledOnce, "key range count " +
            context.spy_key_range.callCount);
-        deepEqual(context.spy_key_range.firstCall.args[0],
+        assert.deepEqual(context.spy_key_range.firstCall.args[0],
                   ["foo", "attachment"],
                   "key range first argument");
       })
@@ -1576,18 +1618,18 @@
         delete context.spy_key_cursor;
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("check result", function () {
+  test("check result", function (assert) {
     var context = this,
       attachment = "attachment";
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1600,27 +1642,27 @@
         return context.jio.getAttachment("foo", attachment);
       })
       .then(function (result) {
-        ok(result instanceof Blob, "Data is Blob");
-        equal(result.type, "text/plain;charset=utf-8");
+        assert.ok(result instanceof Blob, "Data is Blob");
+        assert.equal(result.type, "text/plain;charset=utf-8");
         return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
-        ok(result.target.result === big_string,
+        assert.ok(result.target.result === big_string,
            "Attachment correctly fetched");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("streaming", function () {
+  test("streaming", function (assert) {
     var context = this,
       attachment = "attachment";
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1634,27 +1676,28 @@
                                          {"start": 1999995, "end": 2000005});
       })
       .then(function (result) {
-        ok(result instanceof Blob, "Data is Blob");
-        equal(result.type, "application/octet-stream");
+        assert.ok(result instanceof Blob, "Data is Blob");
+        assert.equal(result.type, "application/octet-stream");
         return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
         var expected = "aaaaaaaaaa";
-        equal(result.target.result, expected, "Attachment correctly fetched");
+        assert.equal(result.target.result, expected,
+                     "Attachment correctly fetched");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("retrieving slice of data", function () {
+  test("retrieving slice of data", function (assert) {
     var context = this,
       attachment = "attachment";
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1672,10 +1715,11 @@
       })
       .then(function (result) {
         var expected = "aaaaaaaaaa";
-        equal(result.target.result, expected, "Attachment correctly fetched");
+        assert.equal(result.target.result, expected,
+                     "Attachment correctly fetched");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -1683,11 +1727,11 @@
   });
 
 
-  test("get huge attachment", function () {
+  test("get huge attachment", function (assert) {
     var context = this,
       attachment = "attachment";
-    stop();
-    expect(4);
+    start = assert.async();
+    assert.expect(4);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1705,29 +1749,29 @@
         return context.jio.getAttachment("foo", attachment);
       })
       .then(function (blob) {
-        ok(blob instanceof Blob, "Data is Blob");
-        equal(blob.type, 'text/fooplain');
-        equal(blob.size, 22000000);
+        assert.ok(blob instanceof Blob, "Data is Blob");
+        assert.equal(blob.type, 'text/fooplain');
+        assert.equal(blob.size, 22000000);
         return jIO.util.readBlobAsArrayBuffer(blob);
       })
       .then(function (result) {
-        equal((new Rusha()).digestFromArrayBuffer(result.target.result),
+        assert.equal((new Rusha()).digestFromArrayBuffer(result.target.result),
               '6f510194afd8e436d00a543f49a7df09e86c2687');
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("retrieve empty blob", function () {
+  test("retrieve empty blob", function (assert) {
     var context = this,
       attachment = "attachment",
       blob = new Blob();
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1740,21 +1784,21 @@
         return context.jio.getAttachment("foo", attachment);
       })
       .then(function (result) {
-        deepEqual(result, blob, "check empty blob");
+        assert.deepEqual(result, blob, "check empty blob");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("non existing attachment", function () {
+  test("non existing attachment", function (assert) {
     var context = this,
       attachment = "attachment";
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1764,13 +1808,13 @@
         return context.jio.getAttachment("foo", attachment);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(
           error.message,
           "IndexedDB: cannot find object 'foo_attachment' " +
             "in the 'attachment' store"
         );
-        equal(error.status_code, 404);
+        assert.equal(error.status_code, 404);
       })
       .always(function () {
         start();
@@ -1781,7 +1825,7 @@
   // indexeddbStorage.removeAttachment
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.removeAttachment", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         type: "indexeddb",
         database: "qunit"
@@ -1789,11 +1833,11 @@
     }
   });
 
-  test("spy indexedDB usage", function () {
+  test("spy indexedDB usage", function (assert) {
     var context = this,
       attachment = "attachment";
-    stop();
-    expect(20);
+    start = assert.async();
+    assert.expect(20);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1823,53 +1867,56 @@
       })
       .then(function () {
 
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 0,
+        assert.equal(context.spy_create_store.callCount, 0,
               "createObjectStore count");
-        equal(context.spy_create_index.callCount, 0,
+        assert.equal(context.spy_create_index.callCount, 0,
               "createIndex count");
 
-        ok(context.spy_transaction.calledOnce, "transaction count " +
+        assert.ok(context.spy_transaction.calledOnce, "transaction count " +
            context.spy_transaction.callCount);
-        deepEqual(context.spy_transaction.firstCall.args[0],
+        assert.deepEqual(context.spy_transaction.firstCall.args[0],
                   ["attachment", "blob"],
                   "transaction first argument");
-        equal(context.spy_transaction.firstCall.args[1], "readwrite",
+        assert.equal(context.spy_transaction.firstCall.args[1], "readwrite",
               "transaction second argument");
 
-        equal(context.spy_store.callCount, 2, "store count " +
+        assert.equal(context.spy_store.callCount, 2, "store count " +
            context.spy_store.callCount);
-        deepEqual(context.spy_store.firstCall.args[0], "attachment",
+        assert.deepEqual(context.spy_store.firstCall.args[0], "attachment",
                   "store first argument");
-        deepEqual(context.spy_store.secondCall.args[0], "blob",
+        assert.deepEqual(context.spy_store.secondCall.args[0], "blob",
                   "store first argument");
 
-        equal(context.spy_delete.callCount, 3, "delete count " +
+        assert.equal(context.spy_delete.callCount, 3, "delete count " +
            context.spy_delete.callCount);
-        deepEqual(context.spy_delete.firstCall.args[0], "foo_attachment",
+        assert.deepEqual(context.spy_delete.firstCall.args[0],
+                         "foo_attachment",
                   "delete first argument");
-        deepEqual(context.spy_delete.secondCall.args[0], "foo_attachment_0",
+        assert.deepEqual(context.spy_delete.secondCall.args[0],
+                         "foo_attachment_0",
                   "second delete first argument");
-        deepEqual(context.spy_delete.thirdCall.args[0], "foo_attachment_1",
+        assert.deepEqual(context.spy_delete.thirdCall.args[0],
+                         "foo_attachment_1",
                   "third delete first argument");
 
-        ok(context.spy_index.calledOnce, "index count " +
+        assert.ok(context.spy_index.calledOnce, "index count " +
            context.spy_index.callCount);
 
-        equal(context.spy_cursor.callCount, 0, "cursor count " +
+        assert.equal(context.spy_cursor.callCount, 0, "cursor count " +
            context.spy_cursor.callCount);
-        ok(context.spy_key_cursor.calledOnce, "cursor key count " +
+        assert.ok(context.spy_key_cursor.calledOnce, "cursor key count " +
            context.spy_key_cursor.callCount);
-        equal(context.spy_cursor_delete.callCount, 0, "cursor count " +
+        assert.equal(context.spy_cursor_delete.callCount, 0, "cursor count " +
            context.spy_cursor_delete.callCount);
 
-        ok(context.spy_key_range.calledOnce, "key range count " +
+        assert.ok(context.spy_key_range.calledOnce, "key range count " +
            context.spy_key_range.callCount);
-        deepEqual(context.spy_key_range.firstCall.args[0],
+        assert.deepEqual(context.spy_key_range.firstCall.args[0],
                   ["foo", "attachment"],
                   "key range first argument");
       })
@@ -1898,7 +1945,7 @@
         delete context.spy_key_range;
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -1909,7 +1956,7 @@
   // indexeddbStorage.putAttachment
   /////////////////////////////////////////////////////////////////
   module("indexeddbStorage.putAttachment", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         type: "indexeddb",
         database: "qunit"
@@ -1917,11 +1964,11 @@
     }
   });
 
-  test("spy indexedDB usage", function () {
+  test("spy indexedDB usage", function (assert) {
     var context = this,
       attachment = "attachment";
-    stop();
-    expect(18);
+    start = assert.async();
+    assert.expect(18);
 
     deleteIndexedDB(context.jio)
       .then(function () {
@@ -1950,51 +1997,52 @@
         return context.jio.putAttachment("foo", attachment, 'small_string');
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .then(function () {
 
-        ok(context.spy_open.calledOnce, "open count " +
+        assert.ok(context.spy_open.calledOnce, "open count " +
            context.spy_open.callCount);
-        equal(context.spy_open.firstCall.args[0], "jio:qunit",
+        assert.equal(context.spy_open.firstCall.args[0], "jio:qunit",
               "open first argument");
 
-        equal(context.spy_create_store.callCount, 0,
+        assert.equal(context.spy_create_store.callCount, 0,
               "createObjectStore count");
-        equal(context.spy_create_index.callCount, 0,
+        assert.equal(context.spy_create_index.callCount, 0,
               "createIndex count");
 
-        ok(context.spy_transaction.calledOnce, "transaction count " +
+        assert.ok(context.spy_transaction.calledOnce, "transaction count " +
            context.spy_transaction.callCount);
-        deepEqual(context.spy_transaction.firstCall.args[0],
+        assert.deepEqual(context.spy_transaction.firstCall.args[0],
                   ["attachment", "blob"],
                   "transaction first argument");
-        equal(context.spy_transaction.firstCall.args[1], "readwrite",
+        assert.equal(context.spy_transaction.firstCall.args[1], "readwrite",
               "transaction second argument");
 
-        equal(context.spy_store.callCount, 2, "store count " +
+        assert.equal(context.spy_store.callCount, 2, "store count " +
            context.spy_store.callCount);
-        deepEqual(context.spy_store.firstCall.args[0], "attachment",
+        assert.deepEqual(context.spy_store.firstCall.args[0], "attachment",
                   "store first argument");
-        deepEqual(context.spy_store.secondCall.args[0], "blob",
+        assert.deepEqual(context.spy_store.secondCall.args[0], "blob",
                   "store first argument");
 
-        equal(context.spy_delete.callCount, 1, "delete count " +
+        assert.equal(context.spy_delete.callCount, 1, "delete count " +
            context.spy_delete.callCount);
-        deepEqual(context.spy_delete.firstCall.args[0], "foo_attachment_1",
+        assert.deepEqual(context.spy_delete.firstCall.args[0],
+                         "foo_attachment_1",
                   "delete first argument");
 
-        equal(context.spy_index.callCount, 1, "index count " +
+        assert.equal(context.spy_index.callCount, 1, "index count " +
            context.spy_index.callCount);
 
-        equal(context.spy_cursor.callCount, 0, "cursor count " +
+        assert.equal(context.spy_cursor.callCount, 0, "cursor count " +
            context.spy_cursor.callCount);
-        equal(context.spy_key_cursor.callCount, 1, "cursor count " +
+        assert.equal(context.spy_key_cursor.callCount, 1, "cursor count " +
            context.spy_key_cursor.callCount);
 
-        equal(context.spy_put.callCount, 2, "put count " +
+        assert.equal(context.spy_put.callCount, 2, "put count " +
            context.spy_put.callCount);
-        deepEqual(context.spy_put.firstCall.args[0], {
+        assert.deepEqual(context.spy_put.firstCall.args[0], {
           "_attachment": "attachment",
           "_id": "foo",
           "_key_path": "foo_attachment",
@@ -2005,7 +2053,7 @@
         }, "put first argument");
         delete context.spy_put.secondCall.args[0].blob;
         // XXX Check blob content
-        deepEqual(context.spy_put.secondCall.args[0], {
+        assert.deepEqual(context.spy_put.secondCall.args[0], {
           "_attachment": "attachment",
           "_id": "foo",
           "_part": 0,
@@ -2038,7 +2086,7 @@
         delete context.spy_key_range;
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();

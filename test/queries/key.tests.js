@@ -21,10 +21,7 @@
 (function (jIO, jiodate) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    equal = QUnit.equal,
-    deepEqual = QUnit.deepEqual,
+    start,
     module = QUnit.module,
     noop = function () {
       return; // use with RSVP.all
@@ -70,7 +67,7 @@
 
   module('Custom Key Queries');
 
-  test('Simple Key with read_from', function () {
+  test('Simple Key with read_from', function (assert) {
     var docList = function () {
       return [
         {'identifier': 'a'},
@@ -89,7 +86,7 @@
       }
     }, promise = [];
 
-    stop();
+    start = assert.async();
 
     promise.push(
       jIO.QueryFactory.create({
@@ -99,7 +96,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': 'a'}
           ], 'It should be possible to query with an alias key');
         })
@@ -113,7 +110,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': 'a'},
             {'identifier': 'A'}
           ], 'It should be possible to query with a case-insensitive alias ' +
@@ -124,7 +121,7 @@
     RSVP.all(promise).then(noop).always(start);
   });
 
-  test('Simple Key with date casting', function () {
+  test('Simple Key with date casting', function (assert) {
     var docList = function () {
       return [
         {'identifier': 'a', 'date': '2013-01-01'},
@@ -174,7 +171,7 @@
         }
       };
 
-    stop();
+    start = assert.async();
 
     promise.push(
       jIO.QueryFactory.create({
@@ -184,7 +181,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': 'bb', 'date': '2013-02-02'}
           ], 'It should be possible to compare dates with sameDay');
         })
@@ -198,7 +195,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'date': '2013-02-01', 'identifier': 'b'},
             {'date': '2013-02-02', 'identifier': 'bb'},
             {'date': '2013-02-03', 'identifier': 'bbb'}
@@ -214,7 +211,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl.length, 6,
+          assert.deepEqual(dl.length, 6,
                     'It should be possible to compare dates with sameYear');
         })
     );
@@ -227,7 +224,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl.length, 0,
+          assert.deepEqual(dl.length, 0,
                     'Constructors that throw exceptions should not break a ' +
                     'query, but silently fail comparisons');
         })
@@ -237,7 +234,7 @@
   });
 
 
-  test('Simple Key with date casting and <=> operators', function () {
+  test('Simple Key with date casting and <=> operators', function (assert) {
     var docList = function () {
       return [
         {'identifier': '1', 'date': '2013-01-01'},
@@ -251,7 +248,7 @@
       }
     }, promise = [];
 
-    stop();
+    start = assert.async();
 
     promise.push(
       jIO.QueryFactory.create({
@@ -262,7 +259,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '2', 'date': '2013-02-02'}
           ], 'It should be possible to search for dates with operator =');
         })
@@ -277,7 +274,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '1', 'date': '2013-01-01'},
             {'identifier': '3', 'date': '2013-03-03'}
           ], 'It should be possible to search for dates with operator !=');
@@ -293,7 +290,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '1', 'date': '2013-01-01'},
             {'identifier': '2', 'date': '2013-02-02'}
           ], 'It should be possible to search for dates with operator <=');
@@ -309,7 +306,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '1', 'date': '2013-01-01'}
           ], 'It should be possible to search for dates with operator <');
         })
@@ -324,7 +321,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '3', 'date': '2013-03-03'}
           ], 'It should be possible to search for dates with operator >');
         })
@@ -339,7 +336,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '2', 'date': '2013-02-02'},
             {'identifier': '3', 'date': '2013-03-03'}
           ], 'It should be possible to search for dates with operator >=');
@@ -350,76 +347,77 @@
   });
 
 
-  test('Simple Key with both equal_match and operator attributes', function () {
-    var docList = function () {
-      return [
-        {'identifier': '1', 'date': '2013-01-01'},
-        {'identifier': '2', 'date': '2013-02-02'},
-        {'identifier': '3', 'date': '2013-03-03'}
-      ];
-    }, keys = {
-      mydate: {
-        read_from: 'date',
-        cast_to: dateCast,
-        equal_match: function alwaysTrue(o1) { /*, o2*/
-          return o1.mom.date() === 2;
+  test('Simple Key with both equal_match and operator attributes',
+       function (assert) {
+      var docList = function () {
+        return [
+          {'identifier': '1', 'date': '2013-01-01'},
+          {'identifier': '2', 'date': '2013-02-02'},
+          {'identifier': '3', 'date': '2013-03-03'}
+        ];
+      }, keys = {
+        mydate: {
+          read_from: 'date',
+          cast_to: dateCast,
+          equal_match: function alwaysTrue(o1) { /*, o2*/
+            return o1.mom.date() === 2;
+          }
         }
-      }
-    }, promise = [];
+      }, promise = [];
 
-    stop();
+      start = assert.async();
 
-    promise.push(
-      jIO.QueryFactory.create({
-        type: 'simple',
-        key: keys.mydate,
-        value: '2013-02-02'
-      }).
-        exec(docList()).
-        then(function (dl) {
-          deepEqual(dl, [
-            {'identifier': '2', 'date': '2013-02-02'}
-          ], "'equal_match' with no 'operator'");
-        })
-    );
+      promise.push(
+        jIO.QueryFactory.create({
+          type: 'simple',
+          key: keys.mydate,
+          value: '2013-02-02'
+        }).
+          exec(docList()).
+          then(function (dl) {
+            assert.deepEqual(dl, [
+              {'identifier': '2', 'date': '2013-02-02'}
+            ], "'equal_match' with no 'operator'");
+          })
+      );
 
-    promise.push(
-      jIO.QueryFactory.create({
-        type: 'simple',
-        key: keys.mydate,
-        operator: '=',
-        value: '2013-01-01'
-      }).
-        exec(docList()).
-        then(function (dl) {
-          deepEqual(dl, [
-            {'identifier': '2', 'date': '2013-02-02'}
-          ], "'equal_match' overrides '=' operator");
-        })
-    );
+      promise.push(
+        jIO.QueryFactory.create({
+          type: 'simple',
+          key: keys.mydate,
+          operator: '=',
+          value: '2013-01-01'
+        }).
+          exec(docList()).
+          then(function (dl) {
+            assert.deepEqual(dl, [
+              {'identifier': '2', 'date': '2013-02-02'}
+            ], "'equal_match' overrides '=' operator");
+          })
+      );
 
-    promise.push(
-      jIO.QueryFactory.create({
-        type: 'simple',
-        key: keys.mydate,
-        operator: '>=',
-        value: '2013-02-02'
-      }).
-        exec(docList()).
-        then(function (dl) {
-          deepEqual(dl, [
-            {'identifier': '2', 'date': '2013-02-02'},
-            {'identifier': '3', 'date': '2013-03-03'}
-          ], "'equal_match' does not override '>' operator");
-        })
-    );
+      promise.push(
+        jIO.QueryFactory.create({
+          type: 'simple',
+          key: keys.mydate,
+          operator: '>=',
+          value: '2013-02-02'
+        }).
+          exec(docList()).
+          then(function (dl) {
+            assert.deepEqual(dl, [
+              {'identifier': '2', 'date': '2013-02-02'},
+              {'identifier': '3', 'date': '2013-03-03'}
+            ], "'equal_match' does not override '>' operator");
+          })
+      );
 
-    RSVP.all(promise).then(noop).always(start);
-  });
-
+      RSVP.all(promise).then(noop).always(start);
+    });
 
 
-  test('Test overriding operators and compound query', function () {
+
+  test('Test overriding operators and compound query', function (assert) {
     var docList = function () {
       return [
         {'identifier': '10', 'number': '10'},
@@ -433,7 +431,7 @@
       return value;
     }, promise = [];
 
-    stop();
+    start = assert.async();
 
     promise.push(
       jIO.QueryFactory.create({
@@ -447,7 +445,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '100', 'number': '100'}
           ], 'Numbers are correctly compared (>) after casting');
         })
@@ -465,7 +463,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '10', 'number': '10'}
           ], 'Numbers are correctly compared (<) after casting');
         })
@@ -495,7 +493,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '10', 'number': '10'},
             {'identifier': '19', 'number': '19'}
           ], 'Custom keys should also work within compound queries');
@@ -505,7 +503,7 @@
     RSVP.all(promise).then(noop).always(start);
   });
 
-  test('Simple Key with translation lookup', function () {
+  test('Simple Key with translation lookup', function (assert) {
     var docList = function () {
       return [
         {'identifier': '1', 'state': 'open'},
@@ -520,7 +518,7 @@
         }
       }, promise = [];
 
-    stop();
+    start = assert.async();
 
     promise.push(
       jIO.QueryFactory.create({
@@ -530,7 +528,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '1', 'state': 'open'}
           ], 'It should be possible to look for a translated string with a ' +
              'custom match function');
@@ -547,7 +545,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '1', 'state': 'open'}
           ], 'It should be possible to look for a translated string with ' +
              'operator =');
@@ -562,7 +560,7 @@
 //      operator: '!=',
 //      value: 'ouvert'
 //    }).exec(doc_list);
-//    deepEqual(doc_list, [
+//    assert.deepEqual(doc_list, [
 //      {'identifier': '2', 'state': 'closed'}
 //    ], 'It should be possible to look for a translated string with ' +
 //      'operator !=');
@@ -571,14 +569,14 @@
   });
 
 
-  test('Accent folding', function () {
-    equal(accentFold('àéîöùç'), 'aeiouc');
-    equal(accentFold('ÀÉÎÖÙÇ'), 'AEIOUC');
-    equal(accentFold('àéî öùç'), 'aei ouc');
+  test('Accent folding', function (assert) {
+    assert.equal(accentFold('àéîöùç'), 'aeiouc');
+    assert.equal(accentFold('ÀÉÎÖÙÇ'), 'AEIOUC');
+    assert.equal(accentFold('àéî öùç'), 'aei ouc');
   });
 
 
-  test('Query with accent folding and wildcard', function () {
+  test('Query with accent folding and wildcard', function (assert) {
     /*jslint unparam: true*/
     var docList = function () {
       return [
@@ -595,7 +593,7 @@
     }, promise = [];
     /*jslint unparam: false*/
 
-    stop();
+    start = assert.async();
 
     promise.push(
       jIO.QueryFactory.create({
@@ -605,7 +603,7 @@
       }).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': 'àéîöùç'},
             {'identifier': 'âèî ôùc'},
             {'identifier': 'ÀÉÎÖÙÇ'}

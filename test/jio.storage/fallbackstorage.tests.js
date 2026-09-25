@@ -21,20 +21,15 @@
 (function (jIO, QUnit) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    ok = QUnit.ok,
-    expect = QUnit.expect,
-    deepEqual = QUnit.deepEqual,
-    equal = QUnit.equal,
-    module = QUnit.module,
-    throws = QUnit.throws;
+    global_assert,
+    start,
+    module = QUnit.module;
 
   function Storage400() {
     return this;
   }
   function generateError400() {
-    ok(true, "Error generation 400 called");
+    global_assert.ok(true, "Error generation 400 called");
     throw new jIO.util.jIOError("manually triggered error", 400);
   }
   Storage400.prototype.put = generateError400;
@@ -44,7 +39,7 @@
     return this;
   }
   function generateError500() {
-    ok(true, "Error generation 500 called");
+    global_assert.ok(true, "Error generation 500 called");
     throw new jIO.util.jIOError("manually triggered error");
   }
   Storage500.prototype.get = generateError500;
@@ -61,8 +56,8 @@
   // fallbackStorage.constructor
   /////////////////////////////////////////////////////////////////
   module("fallbackStorage.constructor");
-  test("initialize storage list", function () {
-    expect(5);
+  test("initialize storage list", function (assert) {
+    assert.expect(5);
     var jio = jIO.createJIO({
       type: "fallback",
       sub_storage: {
@@ -73,15 +68,15 @@
       }
     });
 
-    ok(jio.__storage._sub_storage instanceof jio.constructor);
-    equal(jio.__storage._sub_storage.__type, "memory");
-    ok(jio.__storage._fallback_storage instanceof jio.constructor);
-    equal(jio.__storage._fallback_storage.__type, "memory");
-    equal(jio.__storage._checked, false);
+    assert.ok(jio.__storage._sub_storage instanceof jio.constructor);
+    assert.equal(jio.__storage._sub_storage.__type, "memory");
+    assert.ok(jio.__storage._fallback_storage instanceof jio.constructor);
+    assert.equal(jio.__storage._fallback_storage.__type, "memory");
+    assert.equal(jio.__storage._checked, false);
   });
 
-  test("no fallback", function () {
-    expect(4);
+  test("no fallback", function (assert) {
+    assert.expect(4);
     var jio = jIO.createJIO({
       type: "fallback",
       sub_storage: {
@@ -89,14 +84,14 @@
       }
     });
 
-    ok(jio.__storage._sub_storage instanceof jio.constructor);
-    equal(jio.__storage._sub_storage.__type, "memory");
-    equal(jio.__storage._fallback_storage, undefined);
-    equal(jio.__storage._checked, true);
+    assert.ok(jio.__storage._sub_storage instanceof jio.constructor);
+    assert.equal(jio.__storage._sub_storage.__type, "memory");
+    assert.equal(jio.__storage._fallback_storage, undefined);
+    assert.equal(jio.__storage._checked, true);
   });
 
-  test("no sub storage", function () {
-    throws(
+  test("no sub storage", function (assert) {
+    assert.throws(
       function () {
         jIO.createJIO({
           type: "fallback",
@@ -106,7 +101,7 @@
         });
       },
       function (error) {
-        ok(error instanceof TypeError);
+        assert.ok(error instanceof TypeError);
         return true;
       }
     );
@@ -116,10 +111,10 @@
   // fallbackStorage.get
   /////////////////////////////////////////////////////////////////
   module("fallbackStorage.get");
-  test("first error handling", function () {
-    stop();
+  test("first error handling", function (assert) {
+    start = assert.async();
 
-    expect(5);
+    assert.expect(5);
     var jio = jIO.createJIO({
       type: "fallback",
       sub_storage: {
@@ -133,24 +128,24 @@
 
     jio.get("bar")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: bar");
-        equal(error.status_code, 404);
-        equal(jio.__storage._checked, true);
-        equal(jio.__storage._current_storage, sub_storage);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: bar");
+        assert.equal(error.status_code, 404);
+        assert.equal(jio.__storage._checked, true);
+        assert.equal(jio.__storage._current_storage, sub_storage);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("first success handling", function () {
-    stop();
+  test("first success handling", function (assert) {
+    start = assert.async();
 
-    expect(4);
+    assert.expect(4);
     var jio = jIO.createJIO({
       type: "fallback",
       sub_storage: {
@@ -165,26 +160,27 @@
 
     sub_storage.put("bar", doc)
       .then(function () {
-        equal(jio.__storage._checked, false);
+        assert.equal(jio.__storage._checked, false);
         return jio.get("bar");
       })
       .then(function (result) {
-        deepEqual(result, doc);
-        equal(jio.__storage._checked, true);
-        equal(jio.__storage._current_storage, sub_storage);
+        assert.deepEqual(result, doc);
+        assert.equal(jio.__storage._checked, true);
+        assert.equal(jio.__storage._current_storage, sub_storage);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("first 500 handling", function () {
-    stop();
+  test("first 500 handling", function (assert) {
+    global_assert = assert;
+    start = assert.async();
 
-    expect(6);
+    assert.expect(6);
     var jio = jIO.createJIO({
       type: "fallback",
       sub_storage: {
@@ -198,24 +194,25 @@
 
     jio.get("bar")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: bar");
-        equal(error.status_code, 404);
-        equal(jio.__storage._checked, true);
-        equal(jio.__storage._current_storage, fallback_storage);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document: bar");
+        assert.equal(error.status_code, 404);
+        assert.equal(jio.__storage._checked, true);
+        assert.equal(jio.__storage._current_storage, fallback_storage);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("second 500 handling", function () {
-    stop();
+  test("second 500 handling", function (assert) {
+    global_assert = assert;
+    start = assert.async();
 
-    expect(6);
+    assert.expect(6);
     var jio = jIO.createJIO({
       type: "fallback",
       sub_storage: {
@@ -230,14 +227,14 @@
 
     jio.get("bar")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "manually triggered error");
-        equal(error.status_code, 500);
-        equal(jio.__storage._checked, true);
-        equal(jio.__storage._current_storage, sub_storage);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "manually triggered error");
+        assert.equal(error.status_code, 500);
+        assert.equal(jio.__storage._checked, true);
+        assert.equal(jio.__storage._current_storage, sub_storage);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -248,10 +245,11 @@
   // fallbackStorage.put
   /////////////////////////////////////////////////////////////////
   module("fallbackStorage.put");
-  test("first error handling", function () {
-    stop();
+  test("first error handling", function (assert) {
+    global_assert = assert;
+    start = assert.async();
 
-    expect(6);
+    assert.expect(6);
     var jio = jIO.createJIO({
       type: "fallback",
       sub_storage: {
@@ -266,24 +264,24 @@
 
     jio.put("bar", doc)
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "manually triggered error");
-        equal(error.status_code, 400);
-        equal(jio.__storage._checked, true);
-        equal(jio.__storage._current_storage, sub_storage);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "manually triggered error");
+        assert.equal(error.status_code, 400);
+        assert.equal(jio.__storage._checked, true);
+        assert.equal(jio.__storage._current_storage, sub_storage);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("first success handling", function () {
-    stop();
+  test("first success handling", function (assert) {
+    start = assert.async();
 
-    expect(3);
+    assert.expect(3);
     var jio = jIO.createJIO({
       type: "fallback",
       sub_storage: {
@@ -298,22 +296,23 @@
 
     jio.put("bar", doc)
       .then(function (result) {
-        deepEqual(result, "bar");
-        equal(jio.__storage._checked, true);
-        equal(jio.__storage._current_storage, sub_storage);
+        assert.deepEqual(result, "bar");
+        assert.equal(jio.__storage._checked, true);
+        assert.equal(jio.__storage._current_storage, sub_storage);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("first 500 handling", function () {
-    stop();
+  test("first 500 handling", function (assert) {
+    global_assert = assert;
+    start = assert.async();
 
-    expect(4);
+    assert.expect(4);
     var jio = jIO.createJIO({
       type: "fallback",
       sub_storage: {
@@ -328,22 +327,23 @@
 
     jio.put("bar", doc)
       .then(function (result) {
-        equal(result, "bar");
-        equal(jio.__storage._checked, true);
-        equal(jio.__storage._current_storage, fallback_storage);
+        assert.equal(result, "bar");
+        assert.equal(jio.__storage._checked, true);
+        assert.equal(jio.__storage._current_storage, fallback_storage);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("second 500 handling", function () {
-    stop();
+  test("second 500 handling", function (assert) {
+    global_assert = assert;
+    start = assert.async();
 
-    expect(6);
+    assert.expect(6);
     var jio = jIO.createJIO({
       type: "fallback",
       sub_storage: {
@@ -359,14 +359,14 @@
 
     jio.put("bar", doc)
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "manually triggered error");
-        equal(error.status_code, 500);
-        equal(jio.__storage._checked, true);
-        equal(jio.__storage._current_storage, sub_storage);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "manually triggered error");
+        assert.equal(error.status_code, 500);
+        assert.equal(jio.__storage._checked, true);
+        assert.equal(jio.__storage._current_storage, sub_storage);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -382,9 +382,9 @@
   // fallbackStorage.hasCapacity
   /////////////////////////////////////////////////////////////////
   module("fallbackStorage.hasCapacity");
-  test("is a logic and", function () {
+  test("is a logic and", function (assert) {
 
-    expect(19);
+    assert.expect(19);
     var capacity1,
       capacity2,
       jio = jIO.createJIO({
@@ -392,68 +392,68 @@
         sub_storage: {
           type: "fallbackcapacity",
           hasCapacity: function (name) {
-            ok(true, name + ' capacity1 called');
+            assert.ok(true, name + ' capacity1 called');
             return capacity1;
           }
         },
         fallback_storage: {
           type: "fallbackcapacity",
           hasCapacity: function (name) {
-            ok(true, name + ' capacity2 called');
+            assert.ok(true, name + ' capacity2 called');
             return capacity2;
           }
         }
       });
 
     capacity1 = capacity2 = true;
-    equal(jio.hasCapacity('1&&1'), true);
+    assert.equal(jio.hasCapacity('1&&1'), true);
 
     capacity1 = capacity2 = false;
-    throws(
+    assert.throws(
       function () {
         jio.hasCapacity('0&&0');
       },
       function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(
           error.message,
           "Capacity '0&&0' is not implemented on 'fallbackcapacity'"
         );
-        equal(error.status_code, 501);
+        assert.equal(error.status_code, 501);
         return true;
       }
     );
 
     capacity1 = false;
     capacity2 = true;
-    throws(
+    assert.throws(
       function () {
         jio.hasCapacity('0&&1');
       },
       function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(
           error.message,
           "Capacity '0&&1' is not implemented on 'fallbackcapacity'"
         );
-        equal(error.status_code, 501);
+        assert.equal(error.status_code, 501);
         return true;
       }
     );
 
     capacity1 = true;
     capacity2 = false;
-    throws(
+    assert.throws(
       function () {
         jio.hasCapacity('1&&0');
       },
       function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(
           error.message,
           "Capacity '1&&0' is not implemented on 'fallbackcapacity'"
         );
-        equal(error.status_code, 501);
+        assert.equal(error.status_code, 501);
         return true;
       }
     );

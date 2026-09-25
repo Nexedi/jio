@@ -21,42 +21,38 @@
 (function (jIO, jiodate) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    deepEqual = QUnit.deepEqual,
-    expect = QUnit.expect,
-    ok = QUnit.ok,
+    start,
     module = QUnit.module;
 
   module('Query');
 
   // XXX test documentation
-  test('Empty Query', function () {
+  test('Empty Query', function (assert) {
     var doc_list = [
       {"identifier": "a"},
       {"identifier": ["b", "c"]}
     ];
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
     jIO.QueryFactory.create('').exec(doc_list).
       then(function (doc_list) {
-        deepEqual(doc_list, [
+        assert.deepEqual(doc_list, [
           {"identifier": "a"},
           {"identifier": ["b", "c"]}
         ], 'Nothing done on the list');
       }).always(start);
   });
 
-  test('Simple Query', function () {
+  test('Simple Query', function (assert) {
     var doc_list = [
       {"identifier": "a"},
       {"identifier": ["b", "c"]}
     ];
-    stop();
-    expect(2);
+    start = assert.async();
+    assert.expect(2);
     jIO.QueryFactory.create('identifier: "a"').exec(doc_list).
       then(function (doc_list) {
-        deepEqual(doc_list, [
+        assert.deepEqual(doc_list, [
           {"identifier": "a"}
         ], 'Document with several identifier should be removed');
 
@@ -68,24 +64,24 @@
         return jIO.QueryFactory.create('identifier: "a"').
           exec(doc_list);
       }).then(function (doc_list) {
-        deepEqual(doc_list, [
+        assert.deepEqual(doc_list, [
           {"identifier": "a"},
           {"identifier": ["a", "b"]}
         ], 'Document with several identifier should be kept');
       }).always(start);
   });
 
-  test('Complex Query', function () {
+  test('Complex Query', function (assert) {
     var doc_list = [
       {"identifier": "a"},
       {"identifier": ["b", "c"]}
     ];
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
     jIO.QueryFactory.create(
       'identifier: "b" AND identifier: "c"'
     ).exec(doc_list).then(function (doc_list) {
-      deepEqual(doc_list, [
+      assert.deepEqual(doc_list, [
         {"identifier": ["b", "c"]}
       ], 'Document with only one identifier should be removed');
 
@@ -97,7 +93,7 @@
         'identifier: "a" OR identifier: "c"'
       ).exec(doc_list);
     }).then(function (doc_list) {
-      deepEqual(doc_list, [
+      assert.deepEqual(doc_list, [
         {"identifier": "a"},
         {"identifier": ["b", "c"]}
       ], 'All document matches');
@@ -111,27 +107,27 @@
         '(identifier: "a" OR identifier: "b") AND title: "o"'
       ).exec(doc_list);
     }).then(function (doc_list) {
-      deepEqual(doc_list, [
+      assert.deepEqual(doc_list, [
         {"identifier": "a", "title": "o"}
       ], 'Only first document should be kept');
     }).always(start);
   });
 
-  test('Chinese Character', function () {
+  test('Chinese Character', function (assert) {
     var doc_list = [
       {"identifier": ["测试一", "测试四"]},
       {"identifier": ["测试一", "测试五"]},
       {"identifier": ["a", "b"]}
     ];
-    stop();
-    expect(4);
+    start = assert.async();
+    assert.expect(4);
     jIO.QueryFactory.create(
       '(identifier: "%测试一%" OR identifier: "%测试二%") AND identifier: "%测试四%"'
     )
       .exec(
         doc_list
       ).then(function (doc_list) {
-        deepEqual(doc_list, [
+        assert.deepEqual(doc_list, [
           {"identifier": ["测试一", "测试四"]}
         ], 'Only first document should be kept');
 
@@ -144,7 +140,7 @@
           .exec(doc_list);
       })
       .then(function (doc_list) {
-        deepEqual(doc_list, [
+        assert.deepEqual(doc_list, [
           {"identifier": ["测试一", "测试四"]},
           {"identifier": ["测试一", "测试五"]},
           {"identifier": ["测试四", "b"]}
@@ -159,7 +155,7 @@
           .exec(doc_list);
       })
       .then(function (doc_list) {
-        deepEqual(doc_list, [
+        assert.deepEqual(doc_list, [
           {"identifier": "测试一", "title": "标题"}
         ], 'Only second document should be kept');
 
@@ -167,27 +163,27 @@
           .exec(doc_list);
       })
       .then(function (doc_list) {
-        deepEqual(doc_list, [{"identifier": "测试一", "title": "标题"}
+        assert.deepEqual(doc_list, [{"identifier": "测试一", "title": "标题"}
           ], 'Full text query matched document should be returned');
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       }).always(start);
   });
 
-  test('Wildcard Character', function () {
+  test('Wildcard Character', function (assert) {
     var doc_list = [
       {"identifier": "a"},
       {"identifier": "a%"},
       {"identifier": "a\\%"},
       {"identifier": ["ab", "b"]}
     ];
-    stop();
-    expect(4);
+    start = assert.async();
+    assert.expect(4);
     jIO.QueryFactory.create('identifier: "a%"').exec(
       doc_list
     ).then(function (doc_list) {
-      deepEqual(doc_list, [
+      assert.deepEqual(doc_list, [
         {"identifier": "a"},
         {"identifier": "a%"},
         {"identifier": "a\\%"},
@@ -204,7 +200,7 @@
       return jIO.QueryFactory.create('identifier: "a\\%"').
         exec(doc_list);
     }).then(function (doc_list) {
-      deepEqual(doc_list, [
+      assert.deepEqual(doc_list, [
         {"identifier": "a\\%"}
       ], 'Only third document should be kept');
       // yes.. it's weird but ERP5 acts like that.
@@ -220,7 +216,7 @@
       return jIO.QueryFactory.create('identifier: "__"').
         exec(doc_list);
     }).then(function (doc_list) {
-      deepEqual(doc_list, [
+      assert.deepEqual(doc_list, [
       ], 'Should keep nothing');
 
       doc_list = [
@@ -233,7 +229,7 @@
       return jIO.QueryFactory.create('identifier: "__%"').
         exec(doc_list);
     }).then(function (doc_list) {
-      deepEqual(doc_list, [
+      assert.deepEqual(doc_list, [
         {"identifier": "a%"},
         {"identifier": "a\\%"},
         {"identifier": ["ab", "b"]}
@@ -243,30 +239,30 @@
     }).always(start);
   });
 
-  test("Additional Filters", function () {
+  test("Additional Filters", function (assert) {
     var doc_list = [
       {"identifier": "b", "title": "e"},
       {"identifier": "a", "title": "f"},
       {"identifier": "b", "title": "d"}
     ];
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
     jIO.QueryFactory.create('').exec(doc_list, {
       "select_list": ["title"],
       "limit": [2, 1],
       "sort_on": [["identifier", "ascending"], ["title", "descending"]]
     }).then(function (doc_list) {
-      deepEqual(doc_list, [
+      assert.deepEqual(doc_list, [
         {"title": "d"}
       ], 'The first document should be kept');
     }).always(start);
   });
 
-  test("JSON query", function () {
+  test("JSON query", function (assert) {
     var jsoned = jIO.QueryFactory.create(
       "NOT(a:=b OR c:% AND d:<2)"
     ).toJSON();
-    deepEqual(
+    assert.deepEqual(
       jsoned,
       {
         "type": "complex",
@@ -297,13 +293,13 @@
       },
       "\"NOT(a:=b OR c:% AND d:<2)\".toJSON()"
     );
-    deepEqual(
+    assert.deepEqual(
       jIO.Query.parseStringToObject("NOT(a:=b OR c:% AND d:<2)"),
       jsoned,
       "parseStringToObject(\"NOT(a:=b OR c:% AND d:<2)\");"
     );
 
-    deepEqual(
+    assert.deepEqual(
       jIO.QueryFactory.create(
         "NOT(a:=b OR c:% AND d:<2)"
       ),
@@ -315,7 +311,7 @@
       "create(create(\"NOT(a:=b OR c:% AND d:<2)\"));"
     );
 
-    deepEqual(
+    assert.deepEqual(
       jIO.QueryFactory.create(
         jIO.QueryFactory.create(
           "NOT(a:=b OR c:% AND d:<2)"
@@ -325,26 +321,26 @@
       "create(create(\"NOT(a:=b OR c:% AND d:<2)\")).toString();"
     );
 
-    deepEqual(
+    assert.deepEqual(
       jIO.QueryFactory.create(jIO.Query.objectToSearchText(jsoned)).toJSON(),
       jsoned,
       "create( objectToSearchText(create(\"NOT(a:=b OR c:% AND d:<2)\")" +
         ".toJSON()) ).toJSON()"
     );
 
-    deepEqual(
+    assert.deepEqual(
       jIO.QueryFactory.create("a:(b OR c)").toString(),
       "a: (  \"b\" OR  \"c\" )",
       "create( \"a:(b OR c)\" ).toString()"
     );
 
-    deepEqual(
+    assert.deepEqual(
       jIO.QueryFactory.create("(a:b OR a:c)").toString(),
       "a: (  \"b\" OR  \"c\" )",
       "create( \"(a:b OR a:c)\" ).toString()"
     );
 
-    deepEqual(
+    assert.deepEqual(
       jIO.QueryFactory.create({
         "type": "complex",
         "query_list": [{
@@ -359,7 +355,7 @@
       "{complex query without operator}.toString()"
     );
 
-    deepEqual(
+    assert.deepEqual(
       jIO.QueryFactory.create({
         "type": "simple",
         "value": '"a b"'
@@ -368,7 +364,7 @@
       "{simple query with value: '\"a b\"'}.toString()"
     );
 
-    deepEqual(
+    assert.deepEqual(
       jIO.Query.parseStringToObject('"\\"a b\\""'),
       {
         "key": "",
@@ -380,17 +376,17 @@
 
   });
 
-  test('Docs with space, tab, and newline', function () {
+  test('Docs with space, tab, and newline', function (assert) {
     var doc_list = [
       {"identifier": "a"},
       {"identifier": "a "}
     ];
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
     jIO.QueryFactory.create('identifier: "%a%"').exec(
       doc_list
     ).then(function (doc_list) {
-      deepEqual(doc_list, [
+      assert.deepEqual(doc_list, [
         {"identifier": "a"},
         {"identifier": "a "}
       ], 'Document with space is matched');
@@ -403,7 +399,7 @@
       return jIO.QueryFactory.create('identifier: "%a%"').
         exec(doc_list);
     }).then(function (doc_list) {
-      deepEqual(doc_list, [
+      assert.deepEqual(doc_list, [
         {"identifier": "a"},
         {"identifier": "a \t"}
       ], 'Document with tab is matched');
@@ -417,7 +413,7 @@
       return jIO.QueryFactory.create('identifier: "%a%"').
         exec(doc_list);
     }).then(function (doc_list) {
-      deepEqual(doc_list, [
+      assert.deepEqual(doc_list, [
         {"identifier": "a"},
         {"identifier": "a\n"},
         {"identifier": "\na\nb\nc\n"}
@@ -425,34 +421,34 @@
     }).always(start);
   });
 
-  test('Default operator for complex query', function () {
+  test('Default operator for complex query', function (assert) {
     var doc_list = [
       {"identifier": "a", "value": "test1", "time": "2016"},
       {"identifier": "a", "value": "test", "time": "2016"},
       {"identifier": "c", "value": "test1", "time": "2017"}
     ];
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
     jIO.QueryFactory.create('identifier:%a% value:"%test1%" time:%2016%')
       .exec(doc_list)
       .then(function (doc_list) {
-        deepEqual(doc_list, [
+        assert.deepEqual(doc_list, [
           {"identifier": "a", "value": "test1", "time": "2016"}],
             'Document which matches all the fields is matched');
       }).always(start);
   });
 
-  test('Full text query with single word', function () {
+  test('Full text query with single word', function (assert) {
     var doc_list = [
       {"identifier": "a", "value": "test", "time": "2016"},
       {"identifier": "b", "value": "test 1", "time": "2017"},
       {"identifier": "c", "value": "test 2016", "time": "2017"}
     ];
-    stop();
-    expect(2);
+    start = assert.async();
+    assert.expect(2);
     jIO.QueryFactory.create('test').exec(doc_list).
       then(function (doc_list) {
-        deepEqual(doc_list, [
+        assert.deepEqual(doc_list, [
           {"identifier": "a", "value": "test", "time": "2016"},
           {"identifier": "b", "value": "test 1", "time": "2017"},
           {"identifier": "c", "value": "test 2016", "time": "2017"}
@@ -466,7 +462,7 @@
 
         return jIO.QueryFactory.create('2016').exec(doc_list).
           then(function (doc_list) {
-            deepEqual(doc_list, [
+            assert.deepEqual(doc_list, [
               {"identifier": "a", "value": "test", "time": "2016"},
               {"identifier": "c", "value": "test 2016", "time": "2017"}
             ], 'Documents which have 2016 in any column are matched');
@@ -474,17 +470,17 @@
       });
   });
 
-  test('Full text query with multiple words', function () {
+  test('Full text query with multiple words', function (assert) {
     var doc_list = [
       {"identifier": "a", "value": "test post", "time": "2016"},
       {"identifier": "b", "value": "test post 1", "time": "2017"},
       {"identifier": "c", "value": "test post 2016", "time": "2017"}
     ];
-    stop();
-    expect(2);
+    start = assert.async();
+    assert.expect(2);
     jIO.QueryFactory.create('test post').exec(doc_list).
       then(function (doc_list) {
-        deepEqual(doc_list, [
+        assert.deepEqual(doc_list, [
           {"identifier": "a", "value": "test post", "time": "2016"},
           {"identifier": "b", "value": "test post 1", "time": "2017"},
           {"identifier": "c", "value": "test post 2016", "time": "2017"}
@@ -498,7 +494,7 @@
 
         return jIO.QueryFactory.create('test post 2016').exec(doc_list).
           then(function (doc_list) {
-            deepEqual(doc_list, [
+            assert.deepEqual(doc_list, [
               {"identifier": "a", "value": "test post", "time": "2016"},
               {"identifier": "c", "value": "test post 2016", "time": "2017"}
             ], 'Documents which have test post 2016 in any column are matched');
@@ -508,17 +504,17 @@
 
   // Test queries which have components with key and without it.
   // Default operator used if not present is AND.
-  test('Mixed query', function () {
+  test('Mixed query', function (assert) {
     var doc_list = [
       {"identifier": "a", "value": "test1", "time": "2016"},
       {"identifier": "b", "value": "test2", "time": "2017"},
       {"identifier": "c", "value": "test3", "time": "2017"}
     ];
-    stop();
-    expect(2);
+    start = assert.async();
+    assert.expect(2);
     jIO.QueryFactory.create('test2 time:%2017%').exec(doc_list).
       then(function (doc_list) {
-        deepEqual(doc_list, [
+        assert.deepEqual(doc_list, [
           {"identifier": "b", "value": "test2", "time": "2017"}
         ], 'Document with test2 in any column and 2017 in time is matched');
 
@@ -531,7 +527,7 @@
         return jIO.QueryFactory.create('value:"%test post 2%" OR c OR ' +
           '2016').exec(doc_list).
           then(function (doc_list) {
-            deepEqual(doc_list, [
+            assert.deepEqual(doc_list, [
               {"identifier": "a", "value": "test post 1", "time": "2016"},
               {"identifier": "b", "value": "test post 2", "time": "2017"},
               {"identifier": "c", "value": "test post 3", "time": "2018"}
@@ -541,17 +537,17 @@
       });
   });
 
-  test('Case insensitive queries', function () {
+  test('Case insensitive queries', function (assert) {
     var doc_list = [
       {"identifier": "a", "value": "Test Post", "time": "2016"},
       {"identifier": "b", "value": "test post", "time": "2017"},
       {"identifier": "c", "value": "test3", "time": "2018"}
     ];
-    stop();
-    expect(2);
+    start = assert.async();
+    assert.expect(2);
     jIO.QueryFactory.create('test post').exec(doc_list).
       then(function (doc_list) {
-        deepEqual(doc_list, [
+        assert.deepEqual(doc_list, [
           {"identifier": "a", "value": "Test Post", "time": "2016"},
           {"identifier": "b", "value": "test post", "time": "2017"}
         ], 'Documunts with the value irrespective of case are matched');
@@ -564,14 +560,14 @@
 
         return jIO.QueryFactory.create('value:"test post"').exec(doc_list).
           then(function (doc_list) {
-            deepEqual(doc_list, [
+            assert.deepEqual(doc_list, [
               {"identifier": "b", "value": "test post", "time": "2017"}
             ], 'If value is in quotes, only match if exactly same');
           }).always(start);
       });
   });
 
-  test('Query & sort_on option', function () {
+  test('Query & sort_on option', function (assert) {
     var doc_list = [
       {
         idendifier: 'a',
@@ -586,8 +582,8 @@
         date: "Thu, 07 Sep 2017 18:59:23 +0000"
       }
     ];
-    stop();
-    expect(2);
+    start = assert.async();
+    assert.expect(2);
     jIO.QueryFactory.create("").exec(
       doc_list,
       {sort_on: [['date', 'descending']]}
@@ -607,7 +603,7 @@
               }
             }
           };
-        deepEqual(list, [
+        assert.deepEqual(list, [
           {
             identifier: 'c',
             date: "Wed, 06 Sep 2017 00:27:13 +0000"
@@ -627,7 +623,7 @@
         );
       })
       .then(function (list) {
-        deepEqual(list, [
+        assert.deepEqual(list, [
           {
             identifier: 'c',
             date: "Wed, 06 Sep 2017 00:27:13 +0000"
@@ -644,16 +640,16 @@
       }).always(start);
   });
   // Asterisk wildcard is not supported yet.
-/*  test('Full text query with asterisk', function () {
+/*  test('Full text query with asterisk', function (assert) {
     var doc_list = [
       {"identifier": "abc"},
       {"identifier": "ab"}
     ];
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
     jIO.QueryFactory.create('a*').exec(doc_list).
       then(function (doc_list) {
-        deepEqual(doc_list, [
+        assert.deepEqual(doc_list, [
           {"identifier": "abc"},
           {"identifier": "ab"}
         ], 'Documents which satisfy the asterisk wildcard should be returned')
@@ -661,15 +657,15 @@
       });
   });*/
 
-  test('Empty sort_on options do not raise', function () {
+  test('Empty sort_on options do not raise', function (assert) {
     var doc_list = [
       {'a': 1},
       {'c': 3},
       {'b': 2}
     ];
 
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
     jIO.QueryFactory.create("").exec(
       doc_list,
       {
@@ -677,7 +673,7 @@
       }
     )
       .then(function (list) {
-        deepEqual(list, [
+        assert.deepEqual(list, [
           {'a': 1},
           {'c': 3},
           {'b': 2}
@@ -685,7 +681,7 @@
       }).always(start);
   });
 
-  test('Multiple sort_on options', function () {
+  test('Multiple sort_on options', function (assert) {
     var i,
       len = 1000,
       doc_list = [];
@@ -693,8 +689,8 @@
       doc_list.push({s: 'b', i: i});
     }
 
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
     jIO.QueryFactory.create("").exec(
       doc_list,
       {
@@ -703,22 +699,22 @@
       }
     )
       .then(function (list) {
-        deepEqual(list, [
+        assert.deepEqual(list, [
           {s: 'b', i: 0},
           {s: 'b', i: 1}
         ], 'Document list is sorted');
       }).always(start);
   });
 
-  test('sort_on options do not raise in case of null value', function () {
+  test('sort_on options do not raise in case of null value', function (assert) {
     var doc_list = [
       {'a': null},
       {'c': 3},
       {'b': 2}
     ];
 
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
     jIO.QueryFactory.create("").exec(
       doc_list,
       {
@@ -726,7 +722,7 @@
       }
     )
       .then(function (list) {
-        deepEqual(list, [
+        assert.deepEqual(list, [
           {'c': 3},
           {'b': 2},
           {'a': null}

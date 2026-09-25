@@ -22,14 +22,8 @@
 (function (jIO, QUnit, sinon) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    ok = QUnit.ok,
-    expect = QUnit.expect,
-    deepEqual = QUnit.deepEqual,
-    equal = QUnit.equal,
+    start,
     module = QUnit.module,
-    throws = QUnit.throws,
     token = "sample_token",
     user_id = "sample_user_id";
 
@@ -39,20 +33,20 @@
 
   module("FacebookStorage.constructor");
 
-  test("create storage", function () {
+  test("create storage", function (assert) {
     var jio = jIO.createJIO({
       type: "facebook",
       access_token: token,
       user_id: user_id
     });
-    equal(jio.__type, "facebook");
-    deepEqual(jio.__storage._access_token, token);
-    deepEqual(jio.__storage._user_id, user_id);
+    assert.equal(jio.__type, "facebook");
+    assert.deepEqual(jio.__storage._access_token, token);
+    assert.deepEqual(jio.__storage._user_id, user_id);
   });
 
-  test("reject non string token", function () {
+  test("reject non string token", function (assert) {
 
-    throws(
+    assert.throws(
       function () {
         jIO.createJIO({
           type: "facebook",
@@ -62,8 +56,8 @@
         });
       },
       function (error) {
-        ok(error instanceof TypeError);
-        equal(error.message,
+        assert.ok(error instanceof TypeError);
+        assert.equal(error.message,
           "Access Token must be a string which contains more than " +
           "one character.");
         return true;
@@ -71,9 +65,9 @@
     );
   });
 
-  test("reject non string user_id", function () {
+  test("reject non string user_id", function (assert) {
 
-    throws(
+    assert.throws(
       function () {
         jIO.createJIO({
           type: "facebook",
@@ -82,8 +76,8 @@
         });
       },
       function (error) {
-        ok(error instanceof TypeError);
-        equal(error.message,
+        assert.ok(error instanceof TypeError);
+        assert.equal(error.message,
           "User ID must be a string which contains more than one " +
           "character.");
         return true;
@@ -95,7 +89,7 @@
   // Facebook Storage.get
   /////////////////////////////////////////////////////////////////
   module("FacebookStorage.get", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -108,13 +102,13 @@
         default_field_list: ['id', 'created_time', 'message', 'story']
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("get post", function () {
+  test("get post", function (assert) {
     var url = "https://graph.facebook.com/v2.9/sampleID" +
       "?fields=id,created_time,message,story&access_token=sample_token",
       body = '{"id": "sampleID",' +
@@ -125,19 +119,19 @@
       "Content-Type": "text/xml"
     }, body
                                         ]);
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.get("sampleID")
       .then(function (result) {
-        deepEqual(result,
+        assert.deepEqual(result,
                   {"id": "sampleID",
                    "created_time": "2017-07-13T09:37:13+0000",
                    "message": "Test post",
                    "story": "test"}, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -148,7 +142,7 @@
   // Facebook Storage.allDocs
   /////////////////////////////////////////////////////////////////
   module("FacebookStorage.allDocs", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -161,13 +155,13 @@
         default_field_list: ["id", "message", "created_time"]
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("get all posts with single page returned", function () {
+  test("get all posts with single page returned", function (assert) {
     var url1 = 'https://graph.facebook.com/v2.9/sample_user_id/feed?fields' +
       '=created_time,id,message,link&limit=500&since=&access_token=' +
       'sample_token',
@@ -224,32 +218,32 @@
       "Content-Type": "text/xml"
     }, body2
                                          ]);
-    stop();
-    expect(10);
+    start = assert.async();
+    assert.expect(10);
 
     this.jio.allDocs({select_list: ["created_time", "id", "message",
       "link"]})
       .then(function (result) {
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[1].method, "GET");
-        equal(server.requests[0].url, url1);
-        equal(server.requests[1].url, url2);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[1].status, 200);
-        equal(server.requests[0].responseText, body1);
-        equal(server.requests[1].responseText, body2);
-        deepEqual(result, return_object);
+        assert.equal(server.requests.length, 2);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[1].method, "GET");
+        assert.equal(server.requests[0].url, url1);
+        assert.equal(server.requests[1].url, url2);
+        assert.equal(server.requests[0].status, 200);
+        assert.equal(server.requests[1].status, 200);
+        assert.equal(server.requests[0].responseText, body1);
+        assert.equal(server.requests[1].responseText, body2);
+        assert.deepEqual(result, return_object);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all posts with multiple paged result", function () {
+  test("get all posts with multiple paged result", function (assert) {
     var url1 = 'https://graph.facebook.com/v2.9/sample_user_id/feed?fields' +
       '=created_time,id,message,link&limit=500&since=&access_token=' +
       'sample_token',
@@ -324,30 +318,30 @@
       "Content-Type": "text/xml"
     }, body3
                                          ]);
-    stop();
-    expect(8);
+    start = assert.async();
+    assert.expect(8);
 
     this.jio.allDocs({select_list: ["created_time", "id", "message",
       "link"]})
       .then(function (result) {
-        equal(server.requests.length, 3);
-        equal(server.requests[0].url, url1);
-        equal(server.requests[1].url, url2);
-        equal(server.requests[2].url, url3);
-        equal(server.requests[0].responseText, body1);
-        equal(server.requests[1].responseText, body2);
-        equal(server.requests[2].responseText, body3);
-        deepEqual(result, return_object);
+        assert.equal(server.requests.length, 3);
+        assert.equal(server.requests[0].url, url1);
+        assert.equal(server.requests[1].url, url2);
+        assert.equal(server.requests[2].url, url3);
+        assert.equal(server.requests[0].responseText, body1);
+        assert.equal(server.requests[1].responseText, body2);
+        assert.equal(server.requests[2].responseText, body3);
+        assert.deepEqual(result, return_object);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all posts without parameter", function () {
+  test("get all posts without parameter", function (assert) {
     var url1 = 'https://graph.facebook.com/v2.9/sample_user_id/feed?fields' +
       '=&limit=500&since=&access_token=' +
       'sample_token',
@@ -386,31 +380,31 @@
       "Content-Type": "text/xml"
     }, body2
                                          ]);
-    stop();
-    expect(10);
+    start = assert.async();
+    assert.expect(10);
 
     this.jio.allDocs()
       .then(function (result) {
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[1].method, "GET");
-        equal(server.requests[0].url, url1);
-        equal(server.requests[1].url, url2);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[1].status, 200);
-        equal(server.requests[0].responseText, body1);
-        equal(server.requests[1].responseText, body2);
-        deepEqual(result, return_object);
+        assert.equal(server.requests.length, 2);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[1].method, "GET");
+        assert.equal(server.requests[0].url, url1);
+        assert.equal(server.requests[1].url, url2);
+        assert.equal(server.requests[0].status, 200);
+        assert.equal(server.requests[1].status, 200);
+        assert.equal(server.requests[0].responseText, body1);
+        assert.equal(server.requests[1].responseText, body2);
+        assert.deepEqual(result, return_object);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all posts with include_docs", function () {
+  test("get all posts with include_docs", function (assert) {
     var url1 = 'https://graph.facebook.com/v2.9/sample_user_id/feed?fields' +
       '=id,message,created_time&limit=500&since=&access_token=' +
       'sample_token',
@@ -461,31 +455,31 @@
       "Content-Type": "text/xml"
     }, body2
                                          ]);
-    stop();
-    expect(10);
+    start = assert.async();
+    assert.expect(10);
 
     this.jio.allDocs({include_docs: true})
       .then(function (result) {
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[1].method, "GET");
-        equal(server.requests[0].url, url1);
-        equal(server.requests[1].url, url2);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[1].status, 200);
-        equal(server.requests[0].responseText, body1);
-        equal(server.requests[1].responseText, body2);
-        deepEqual(result, return_object);
+        assert.equal(server.requests.length, 2);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[1].method, "GET");
+        assert.equal(server.requests[0].url, url1);
+        assert.equal(server.requests[1].url, url2);
+        assert.equal(server.requests[0].status, 200);
+        assert.equal(server.requests[1].status, 200);
+        assert.equal(server.requests[0].responseText, body1);
+        assert.equal(server.requests[1].responseText, body2);
+        assert.deepEqual(result, return_object);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all posts with include_docs and select_list", function () {
+  test("get all posts with include_docs and select_list", function (assert) {
     var url1 = 'https://graph.facebook.com/v2.9/sample_user_id/feed?fields=id' +
         ',message,created_time,story&limit=500&since=&acces' +
         's_token=sample_token',
@@ -541,31 +535,31 @@
       "Content-Type": "text/xml"
     }, body2
                                          ]);
-    stop();
-    expect(10);
+    start = assert.async();
+    assert.expect(10);
 
     this.jio.allDocs({select_list: ['story'], include_docs: true})
       .then(function (result) {
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[1].method, "GET");
-        equal(server.requests[0].url, url1);
-        equal(server.requests[1].url, url2);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[1].status, 200);
-        equal(server.requests[0].responseText, body1);
-        equal(server.requests[1].responseText, body2);
-        deepEqual(result, return_object);
+        assert.equal(server.requests.length, 2);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[1].method, "GET");
+        assert.equal(server.requests[0].url, url1);
+        assert.equal(server.requests[1].url, url2);
+        assert.equal(server.requests[0].status, 200);
+        assert.equal(server.requests[1].status, 200);
+        assert.equal(server.requests[0].responseText, body1);
+        assert.equal(server.requests[1].responseText, body2);
+        assert.deepEqual(result, return_object);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all posts with limit", function () {
+  test("get all posts with limit", function (assert) {
     var url1 = 'https://graph.facebook.com/v2.9/sample_user_id/feed?fields' +
         '=&limit=5&since=&access_token=' +
         'sample_token',
@@ -609,24 +603,24 @@
       "Content-Type": "text/xml"
     }, body2
                                          ]);
-    stop();
-    expect(10);
+    start = assert.async();
+    assert.expect(10);
 
     this.jio.allDocs({'limit': [2, 5]})
       .then(function (result) {
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[1].method, "GET");
-        equal(server.requests[0].url, url1);
-        equal(server.requests[1].url, url2);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[1].status, 200);
-        equal(server.requests[0].responseText, body1);
-        equal(server.requests[1].responseText, body2);
-        deepEqual(result, return_object);
+        assert.equal(server.requests.length, 2);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[1].method, "GET");
+        assert.equal(server.requests[0].url, url1);
+        assert.equal(server.requests[1].url, url2);
+        assert.equal(server.requests[0].status, 200);
+        assert.equal(server.requests[1].status, 200);
+        assert.equal(server.requests[0].responseText, body1);
+        assert.equal(server.requests[1].responseText, body2);
+        assert.deepEqual(result, return_object);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();

@@ -24,42 +24,37 @@
            btoa, unescape, HTMLCanvasElement) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    ok = QUnit.ok,
-    expect = QUnit.expect,
-    deepEqual = QUnit.deepEqual,
-    equal = QUnit.equal,
+    start,
     module = QUnit.module;
 
   /////////////////////////////////////////////////////////////////
   // localStorage.constructor
   /////////////////////////////////////////////////////////////////
   module("localStorage.constructor");
-  test("local storage by default", function () {
+  test("local storage by default", function (assert) {
     var jio = jIO.createJIO({
       type: "local"
     });
 
-    equal(jio.__type, "local");
-    equal(jio.__storage._storage, localStorage);
+    assert.equal(jio.__type, "local");
+    assert.equal(jio.__storage._storage, localStorage);
   });
 
-  test("sessiononly", function () {
+  test("sessiononly", function (assert) {
     var jio = jIO.createJIO({
       type: "local",
       sessiononly: true
     });
 
-    equal(jio.__type, "local");
-    equal(jio.__storage._storage, sessionStorage);
+    assert.equal(jio.__type, "local");
+    assert.equal(jio.__storage._storage, sessionStorage);
   });
 
   /////////////////////////////////////////////////////////////////
   // localStorage.get
   /////////////////////////////////////////////////////////////////
   module("localStorage.get", {
-    setup: function () {
+    beforeEach: function () {
       localStorage.clear();
       this.jio = jIO.createJIO({
         "type": "local"
@@ -67,55 +62,55 @@
     }
   });
 
-  test("get non valid document ID", function () {
-    stop();
-    expect(3);
+  test("get non valid document ID", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.get("inexistent")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id inexistent is forbidden (!== /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "id inexistent is forbidden (!== /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document without attachment", function () {
+  test("get document without attachment", function (assert) {
     var id = "/";
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.get(id)
       .then(function (result) {
-        deepEqual(result, {}, "Check document");
+        assert.deepEqual(result, {}, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document with attachment", function () {
+  test("get document with attachment", function (assert) {
     var id = "/",
       attachment = "foo";
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     localStorage.setItem(attachment, "bar");
 
     this.jio.get(id)
       .then(function (result) {
-        deepEqual(result, {}, "Check document");
+        assert.deepEqual(result, {}, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -126,7 +121,7 @@
   // localStorage.allAttachments
   /////////////////////////////////////////////////////////////////
   module("localStorage.allAttachments", {
-    setup: function () {
+    beforeEach: function () {
       localStorage.clear();
       this.jio = jIO.createJIO({
         "type": "local"
@@ -134,57 +129,57 @@
     }
   });
 
-  test("get non valid document ID", function () {
-    stop();
-    expect(3);
+  test("get non valid document ID", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.allAttachments("inexistent")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id inexistent is forbidden (!== /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "id inexistent is forbidden (!== /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document without attachment", function () {
+  test("get document without attachment", function (assert) {
     var id = "/";
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.allAttachments(id)
       .then(function (result) {
-        deepEqual(result, {}, "Check document");
+        assert.deepEqual(result, {}, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document with attachment", function () {
+  test("get document with attachment", function (assert) {
     var id = "/",
       attachment = "foo";
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     localStorage.setItem(attachment, "bar");
 
     this.jio.allAttachments(id)
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "foo": {}
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -195,7 +190,7 @@
   // localStorage.getAttachment
   /////////////////////////////////////////////////////////////////
   module("localStorage.getAttachment", {
-    setup: function () {
+    beforeEach: function () {
       localStorage.clear();
       this.jio = jIO.createJIO({
         "type": "local"
@@ -203,81 +198,82 @@
     }
   });
 
-  test("get attachment from inexistent document", function () {
-    stop();
-    expect(3);
+  test("get attachment from inexistent document", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.getAttachment("inexistent", "a")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id inexistent is forbidden (!== /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "id inexistent is forbidden (!== /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get inexistent attachment from document", function () {
+  test("get inexistent attachment from document", function (assert) {
     var id = "/";
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.getAttachment(id, "inexistent")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find attachment inexistent");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find attachment inexistent");
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get string attachment from document", function () {
+  test("get string attachment from document", function (assert) {
     var id = "/",
       value = "azertyuio\npàç_è-('é&こんいちは",
       attachment = "stringattachment";
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     localStorage.setItem(attachment, "data:text/plain;charset=utf-8;base64," +
       btoa(unescape(encodeURIComponent(value))));
 
     this.jio.getAttachment(id, attachment)
       .then(function (result) {
-        ok(result instanceof Blob, "Data is Blob");
-        deepEqual(result.type, "text/plain;charset=utf-8",
+        assert.ok(result instanceof Blob, "Data is Blob");
+        assert.deepEqual(result.type, "text/plain;charset=utf-8",
                   "Check mimetype");
 
         return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
-        equal(result.target.result, value, "Attachment correctly fetched");
+        assert.equal(result.target.result, value,
+                     "Attachment correctly fetched");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get binary string attachment from document", function () {
+  test("get binary string attachment from document", function (assert) {
     var id = "/",
       context = this,
       imgCanvas = document.createElement("canvas"),
       imgContext = imgCanvas.getContext("2d"),
       data_url,
       attachment = "stringattachment";
-    stop();
-    expect(2);
+    start = assert.async();
+    assert.expect(2);
 
     imgCanvas.width = 200;
     imgCanvas.height = 200;
@@ -291,14 +287,15 @@
 
     return context.jio.getAttachment(id, attachment)
       .then(function (result) {
-        ok(result instanceof Blob, "Data is Blob");
+        assert.ok(result instanceof Blob, "Data is Blob");
         return jIO.util.readBlobAsDataURL(result);
       })
       .then(function (result) {
-        equal(result.target.result, data_url, "Attachment correctly fetched");
+        assert.equal(result.target.result, data_url,
+                     "Attachment correctly fetched");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -309,7 +306,7 @@
   // localStorage.putAttachment
   /////////////////////////////////////////////////////////////////
   module("localStorage.putAttachment", {
-    setup: function () {
+    beforeEach: function () {
       localStorage.clear();
       this.jio = jIO.createJIO({
         "type": "local"
@@ -317,57 +314,57 @@
     }
   });
 
-  test("put an attachment to an inexistent document", function () {
-    stop();
-    expect(3);
+  test("put an attachment to an inexistent document", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.putAttachment("inexistent", "putattmt2", "")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id inexistent is forbidden (!== /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "id inexistent is forbidden (!== /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("put string attachment from document", function () {
+  test("put string attachment from document", function (assert) {
     var id = "/",
       value = "azertyuio\npàç_è-('é&",
       attachment = "stringattachment";
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
 
     this.jio.putAttachment(id, attachment, value)
       .then(function () {
-        equal(
+        assert.equal(
           localStorage.getItem(attachment),
           "data:text/plain;charset=utf-8;base64," +
             "YXplcnR5dWlvCnDDoMOnX8OoLSgnw6km"
         );
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("put binary string attachment from document", function () {
+  test("put binary string attachment from document", function (assert) {
     var id = "/",
       context = this,
       imgCanvas = document.createElement("canvas"),
       imgContext = imgCanvas.getContext("2d"),
       data_url,
       attachment = "stringattachment";
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     imgCanvas.width = 200;
     imgCanvas.height = 200;
@@ -408,10 +405,10 @@
     imgCanvas.toBlob(function (blob) {
       return context.jio.putAttachment(id, attachment, blob)
         .then(function () {
-          equal(localStorage.getItem(attachment), data_url);
+          assert.equal(localStorage.getItem(attachment), data_url);
         })
         .fail(function (error) {
-          ok(false, error);
+          assert.ok(false, error);
         })
         .always(function () {
           start();
@@ -423,46 +420,46 @@
   // localStorage.removeAttachment
   /////////////////////////////////////////////////////////////////
   module("localStorage.removeAttachment", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         "type": "local"
       });
     }
   });
 
-  test("remove an attachment to an inexistent document", function () {
-    stop();
-    expect(3);
+  test("remove an attachment to an inexistent document", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.removeAttachment("inexistent", "removeattmt2")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError, error);
-        equal(error.message, "id inexistent is forbidden (!== /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError, error);
+        assert.equal(error.message, "id inexistent is forbidden (!== /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("remove an attachment to a document", function () {
+  test("remove an attachment to a document", function (assert) {
     var id = "/",
       attachment = "foo";
 
     localStorage.setItem(attachment, "bar");
 
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.removeAttachment(id, attachment)
       .then(function () {
-        ok(!localStorage.hasOwnProperty(attachment));
+        assert.ok(!localStorage.hasOwnProperty(attachment));
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
 
       .always(function () {
@@ -474,35 +471,35 @@
   // localStorage.hasCapacity
   /////////////////////////////////////////////////////////////////
   module("localStorage.hasCapacity", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         "type": "local"
       });
     }
   });
 
-  test("can list documents", function () {
-    ok(this.jio.hasCapacity("list"));
+  test("can list documents", function (assert) {
+    assert.ok(this.jio.hasCapacity("list"));
   });
 
   /////////////////////////////////////////////////////////////////
   // localStorage.buildQuery
   /////////////////////////////////////////////////////////////////
   module("localStorage.buildQuery", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         "type": "local"
       });
     }
   });
 
-  test("only return one document", function () {
-    stop();
-    expect(1);
+  test("only return one document", function (assert) {
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.allDocs()
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "data": {
             "rows": [
               {
@@ -515,7 +512,7 @@
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
 
       .always(function () {

@@ -21,9 +21,7 @@
 (function (jIO, jiodate) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    deepEqual = QUnit.deepEqual,
+    start,
     module = QUnit.module,
     noop = function () {
       return; // use with RSVP.all
@@ -31,7 +29,7 @@
 
   module('Custom Key Queries with JIODate');
 
-  test('Stock comparison operators with year precision', function () {
+  test('Stock comparison operators with year precision', function (assert) {
     var docList = function () {
       return [
         {'identifier': 'twenty ten', 'date': '2010-03-04 08:52:13.746'},
@@ -47,7 +45,7 @@
       }
     }, query_list = [], promise = [];
 
-    stop();
+    start = assert.async();
 
     promise.push(
       jIO.QueryFactory.create({
@@ -57,7 +55,7 @@
       }, key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'date': '2011-03-04 08:52:13.746', 'identifier': 'twenty eleven'}
           ], 'Match with "date = 2011" (query tree form)');
         })
@@ -72,7 +70,7 @@
       }, key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'date': '2010-03-04 08:52:13.746', 'identifier': 'twenty ten'},
             {'date': '2012-03-04 08:52:13.746', 'identifier': 'twenty twelve'}
           ], 'Match with "date != 2011" (query tree form)');
@@ -88,7 +86,7 @@
       }, key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'date': '2010-03-04 08:52:13.746', 'identifier': 'twenty ten'}
           ], 'Match with "date < 2011" (query tree form)');
         })
@@ -103,7 +101,7 @@
       }, key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'date': '2010-03-04 08:52:13.746', 'identifier': 'twenty ten'},
             {'date': '2011-03-04 08:52:13.746', 'identifier': 'twenty eleven'}
           ], 'Match with "date <= 2011" (query tree form)');
@@ -119,7 +117,7 @@
       }, key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'date': '2012-03-04 08:52:13.746', 'identifier': 'twenty twelve'}
           ], 'Match with "date > 2011" (query tree form)');
         })
@@ -134,7 +132,7 @@
       }, key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'date': '2011-03-04 08:52:13.746', 'identifier': 'twenty eleven'},
             {'date': '2012-03-04 08:52:13.746', 'identifier': 'twenty twelve'}
           ], 'Match with "date >= 2011" (query tree form)');
@@ -163,7 +161,7 @@
         jIO.QueryFactory.create(qs, key_schema).
           exec(docList()).
           then(function (dl) {
-            deepEqual(dl, expected, "Match with '" + qs +
+            assert.deepEqual(dl, expected, "Match with '" + qs +
                                     "' (parsed query string)");
           })
       );
@@ -181,7 +179,7 @@
         jIO.QueryFactory.create(qs, key_schema).
           exec(docList()).
           then(function (dl) {
-            deepEqual(dl, [
+            assert.deepEqual(dl, [
             ], "Match with an invalid parsed string " + qs +
                " should return empty list but not raise errors");
           })

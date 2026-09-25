@@ -22,12 +22,8 @@
 (function (jIO, QUnit, Blob) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    ok = QUnit.ok,
-    expect = QUnit.expect,
-    deepEqual = QUnit.deepEqual,
-    equal = QUnit.equal,
+    start,
+    global_assert,
     module = QUnit.module;
 
   /////////////////////////////////////////////////////////////////
@@ -38,8 +34,8 @@
   }
 
   RSSStorage200.prototype.getAttachment = function (id, name) {
-    equal(id, 'foo');
-    equal(name, 'bar');
+    global_assert.equal(id, 'foo');
+    global_assert.equal(name, 'bar');
     var txt = '<?xml version="1.0" encoding="UTF-8" ?>' +
       '<rss version="2.0">' +
       '<channel>' +
@@ -78,8 +74,8 @@
   }
 
   ATOMStorage200.prototype.getAttachment = function (id, name) {
-    equal(id, 'foo');
-    equal(name, 'bar');
+    global_assert.equal(id, 'foo');
+    global_assert.equal(name, 'bar');
     var txt = '<?xml version="1.0" encoding="utf-8"?>' +
       '<feed xmlns="http://www.w3.org/2005/Atom">' +
       '<title>Example Feed</title>' +
@@ -129,8 +125,8 @@
   }
 
   OPMLStorage200.prototype.getAttachment = function (id, name) {
-    equal(id, 'foo');
-    equal(name, 'bar');
+    global_assert.equal(id, 'foo');
+    global_assert.equal(name, 'bar');
     var txt = '<?xml version="1.0" encoding="ISO-8859-1"?>' +
       '<opml version="1.0">' +
       '<head>' +
@@ -175,7 +171,7 @@
   /////////////////////////////////////////////////////////////////
   module("ParserStorage.constructor");
 
-  test("Storage stores parameters", function () {
+  test("Storage stores parameters", function (assert) {
     var jio = jIO.createJIO({
       type: 'parser',
       document_id: 'fooname',
@@ -186,11 +182,11 @@
       }
     });
 
-    equal(jio.__storage._sub_storage.__type, "memory");
-    equal(jio.__storage._document_id, "fooname");
-    equal(jio.__storage._attachment_id, "barname");
-    equal(jio.__storage._parser_name, "fooparser");
-    equal(jio.__storage._parser, undefined);
+    assert.equal(jio.__storage._sub_storage.__type, "memory");
+    assert.equal(jio.__storage._document_id, "fooname");
+    assert.equal(jio.__storage._attachment_id, "barname");
+    assert.equal(jio.__storage._parser_name, "fooparser");
+    assert.equal(jio.__storage._parser, undefined);
   });
 
   /////////////////////////////////////////////////////////////////
@@ -198,7 +194,8 @@
   /////////////////////////////////////////////////////////////////
   module("ParserStorage.allDocs");
 
-  test("get all IDs from RSS", function () {
+  test("get all IDs from RSS", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -229,22 +226,23 @@
       }
     };
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.allDocs()
       .then(function (result) {
-        deepEqual(result, expected_dict, "Check documents");
+        assert.deepEqual(result, expected_dict, "Check documents");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all documents from RSS", function () {
+  test("get all documents from RSS", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -298,22 +296,23 @@
       }
     };
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.allDocs({include_docs: true})
       .then(function (result) {
-        deepEqual(result, expected_dict, "Check documents");
+        assert.deepEqual(result, expected_dict, "Check documents");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all IDs from ATOM", function () {
+  test("get all IDs from ATOM", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -344,22 +343,23 @@
       }
     };
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.allDocs()
       .then(function (result) {
-        deepEqual(result, expected_dict, "Check documents");
+        assert.deepEqual(result, expected_dict, "Check documents");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all documents from ATOM", function () {
+  test("get all documents from ATOM", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -423,22 +423,23 @@
       }
     };
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.allDocs({include_docs: true})
       .then(function (result) {
-        deepEqual(result, expected_dict, "Check documents");
+        assert.deepEqual(result, expected_dict, "Check documents");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all IDs from OPML", function () {
+  test("get all IDs from OPML", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -497,22 +498,23 @@
       }
     };
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.allDocs()
       .then(function (result) {
-        deepEqual(result, expected_dict, "Check documents");
+        assert.deepEqual(result, expected_dict, "Check documents");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all documents from OPML", function () {
+  test("get all documents from OPML", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -624,15 +626,15 @@
       }
     };
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.allDocs({include_docs: true})
       .then(function (result) {
-        deepEqual(result, expected_dict, "Check documents");
+        assert.deepEqual(result, expected_dict, "Check documents");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -644,7 +646,8 @@
   /////////////////////////////////////////////////////////////////
   module("ParserStorage.get");
 
-  test("get RSS channel", function () {
+  test("get RSS channel", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -655,12 +658,12 @@
       }
     });
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.get('/0')
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "description": "This is an example of an RSS feed",
           "lastBuildDate": "Mon, 28 Aug 2006 11:12:55 -0400 ",
           "link": "http://www.domain.com/link.htm",
@@ -669,14 +672,15 @@
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get RSS item", function () {
+  test("get RSS item", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -687,12 +691,12 @@
       }
     });
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.get('/0/1')
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "description": "This is another example of an Item",
           "guid": "11023-258",
           "guid_isPermaLink": "false",
@@ -702,14 +706,15 @@
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get unknown RSS item", function () {
+  test("get unknown RSS item", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -720,23 +725,24 @@
       }
     });
 
-    stop();
-    expect(5);
+    start = assert.async();
+    assert.expect(5);
 
     this.jio.get('foo')
       .then(function (result) {
-        ok(false, result);
+        assert.ok(false, result);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError, error);
-        equal(error.message, "Cannot find parsed document: foo");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError, error);
+        assert.equal(error.message, "Cannot find parsed document: foo");
+        assert.equal(error.status_code, 404);
       })
       .always(function () {
         start();
       });
   });
-  test("get Atom feed", function () {
+  test("get Atom feed", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -747,12 +753,12 @@
       }
     });
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.get('/0')
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "id": "urn:uuid:60a76c80-d399-11d9-b91C-0003939e0af6",
           "link_alternate_href": "http://example.org/",
           "link_self_href": "http://example.org/feed/",
@@ -763,14 +769,15 @@
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get ATOM entry", function () {
+  test("get ATOM entry", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -781,12 +788,12 @@
       }
     });
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.get('/0/1')
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "author": "John Doejohndoe@example.com",
           "id": "urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a",
           "link_alternate_href": "http://example.org/2003/12/13/atom03",
@@ -800,14 +807,15 @@
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get unknown atom entry", function () {
+  test("get unknown atom entry", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -818,24 +826,25 @@
       }
     });
 
-    stop();
-    expect(5);
+    start = assert.async();
+    assert.expect(5);
 
     this.jio.get('foo')
       .then(function (result) {
-        ok(false, result);
+        assert.ok(false, result);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError, error);
-        equal(error.message, "Cannot find parsed document: foo");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError, error);
+        assert.equal(error.message, "Cannot find parsed document: foo");
+        assert.equal(error.status_code, 404);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get OPML head", function () {
+  test("get OPML head", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -846,12 +855,12 @@
       }
     });
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.get('/0')
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "dateCreated": "Thu, 12 Sep 2003 23:35:52 GMT",
           "dateModified": "Fri, 12 Sep 2003 23:45:37 GMT",
           "link": "http://opml.example.com/opml.xml",
@@ -861,14 +870,15 @@
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get OPML outline", function () {
+  test("get OPML outline", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -879,12 +889,12 @@
       }
     });
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.get('/1/0/1')
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "dateCreated": "Thu, 12 Sep 2003 23:35:52GMT",
           "text": "Syndication News",
           "type": "link",
@@ -892,14 +902,15 @@
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get unknown OPML outline", function () {
+  test("get unknown OPML outline", function (assert) {
+    global_assert = assert;
     this.jio = jIO.createJIO({
       type: 'parser',
       document_id: 'foo',
@@ -910,17 +921,17 @@
       }
     });
 
-    stop();
-    expect(5);
+    start = assert.async();
+    assert.expect(5);
 
     this.jio.get('foo')
       .then(function (result) {
-        ok(false, result);
+        assert.ok(false, result);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError, error);
-        equal(error.message, "Cannot find parsed document: foo");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError, error);
+        assert.equal(error.message, "Cannot find parsed document: foo");
+        assert.equal(error.status_code, 404);
       })
       .always(function () {
         start();

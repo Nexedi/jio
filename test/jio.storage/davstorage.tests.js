@@ -22,12 +22,7 @@
 (function (jIO, QUnit, Blob, sinon) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    ok = QUnit.ok,
-    expect = QUnit.expect,
-    deepEqual = QUnit.deepEqual,
-    equal = QUnit.equal,
+    start,
     module = QUnit.module,
     domain = "https://example.org",
     basic_login = "login:passwd";
@@ -37,19 +32,19 @@
   /////////////////////////////////////////////////////////////////
   module("davStorage.constructor");
 
-  test("Storage store URL", function () {
+  test("Storage store URL", function (assert) {
     var jio = jIO.createJIO({
       type: "dav",
       url: domain
     });
 
-    equal(jio.__type, "dav");
-    deepEqual(jio.__storage._url, domain);
-    deepEqual(jio.__storage._authorization, undefined);
-    deepEqual(jio.__storage._with_credentials, undefined);
+    assert.equal(jio.__type, "dav");
+    assert.deepEqual(jio.__storage._url, domain);
+    assert.deepEqual(jio.__storage._authorization, undefined);
+    assert.deepEqual(jio.__storage._with_credentials, undefined);
   });
 
-  test("Storage store basic login", function () {
+  test("Storage store basic login", function (assert) {
     var jio = jIO.createJIO({
       type: "dav",
       url: domain,
@@ -57,16 +52,16 @@
       with_credentials: true
     });
 
-    equal(jio.__type, "dav");
-    deepEqual(jio.__storage._url, domain);
-    deepEqual(jio.__storage._with_credentials, true);
+    assert.equal(jio.__type, "dav");
+    assert.deepEqual(jio.__storage._url, domain);
+    assert.deepEqual(jio.__storage._with_credentials, true);
   });
 
   /////////////////////////////////////////////////////////////////
   // davStorage.put
   /////////////////////////////////////////////////////////////////
   module("davStorage.put", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -79,112 +74,112 @@
         with_credentials: true
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("put document", function () {
+  test("put document", function (assert) {
     var url = domain + "/put1/",
       server = this.server;
     this.server.respondWith("MKCOL", url, [201, {
       "Content-Type": "text/xml"
     }, ""]);
 
-    stop();
-    expect(8);
+    start = assert.async();
+    assert.expect(8);
 
     this.jio.put("/put1/", {})
       .then(function () {
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "MKCOL");
-        equal(server.requests[0].url, url);
-        equal(server.requests[0].status, 201);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, "");
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "MKCOL");
+        assert.equal(server.requests[0].url, url);
+        assert.equal(server.requests[0].status, 201);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].responseText, "");
+        assert.deepEqual(server.requests[0].requestHeaders, {
           Authorization: "Basic login:passwd",
           "Content-Type": "text/plain;charset=utf-8"
         });
-        equal(server.requests[0].withCredentials, true);
+        assert.equal(server.requests[0].withCredentials, true);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("don't throw error when putting existing directory", function () {
+  test("don't throw error when putting existing directory", function (assert) {
     var url = domain + "/existing/",
       server = this.server;
     this.server.respondWith("MKCOL", url, [405, {
       "Content-Type": "text/xml"
     }, "MKCOL https://example.org/existing/ 405 (Method Not Allowed)"]);
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
     this.jio.put("/existing/", {})
       .then(function () {
-        equal(server.requests[0].status, 405);
+        assert.equal(server.requests[0].status, 405);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject ID not starting with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not starting with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.put("put1/", {})
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id put1/ is forbidden (no begin /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "id put1/ is forbidden (no begin /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject ID not ending with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not ending with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.put("/put1", {})
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id /put1 is forbidden (no end /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "id /put1 is forbidden (no end /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject to store any property", function () {
-    stop();
-    expect(3);
+  test("reject to store any property", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.put("/put1/", {title: "foo"})
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Can not store properties: title");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Can not store properties: title");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -195,7 +190,7 @@
   // davStorage.remove
   /////////////////////////////////////////////////////////////////
   module("davStorage.remove", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -208,74 +203,74 @@
         with_credentials: true
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("remove document", function () {
+  test("remove document", function (assert) {
     var url = domain + "/remove1/",
       server = this.server;
     this.server.respondWith("DELETE", url, [204, {
       "Content-Type": "text/xml"
     }, ""]);
 
-    stop();
-    expect(8);
+    start = assert.async();
+    assert.expect(8);
 
     this.jio.remove("/remove1/")
       .then(function () {
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "DELETE");
-        equal(server.requests[0].url, url);
-        equal(server.requests[0].status, 204);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, "");
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "DELETE");
+        assert.equal(server.requests[0].url, url);
+        assert.equal(server.requests[0].status, 204);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].responseText, "");
+        assert.deepEqual(server.requests[0].requestHeaders, {
           Authorization: "Basic login:passwd",
           "Content-Type": "text/plain;charset=utf-8"
         });
-        equal(server.requests[0].withCredentials, true);
+        assert.equal(server.requests[0].withCredentials, true);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject ID not starting with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not starting with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.remove("remove1/")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id remove1/ is forbidden (no begin /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "id remove1/ is forbidden (no begin /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject ID not ending with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not ending with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.remove("/remove1")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id /remove1 is forbidden (no end /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "id /remove1 is forbidden (no end /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -286,7 +281,7 @@
   // davStorage.get
   /////////////////////////////////////////////////////////////////
   module("davStorage.get", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -299,72 +294,72 @@
         with_credentials: true
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("reject ID not starting with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not starting with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.get("get1/")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id get1/ is forbidden (no begin /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "id get1/ is forbidden (no begin /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject ID not ending with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not ending with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.get("/get1")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id /get1 is forbidden (no end /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "id /get1 is forbidden (no end /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get inexistent document", function () {
+  test("get inexistent document", function (assert) {
     var url = domain + "/inexistent/";
     this.server.respondWith("PROPFIND", url, [404, {
       "Content-Type": "text/html"
     }, "foo"]);
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.get("/inexistent/")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document");
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document", function () {
+  test("get document", function (assert) {
     var id = "/id1/";
     this.server.respondWith("PROPFIND", domain + id, [200, {
       "Content-Type": "text/xml"
@@ -452,15 +447,15 @@
         '</D:response>' +
         '</D:multistatus>'
       ]);
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.get(id)
       .then(function (result) {
-        deepEqual(result, {}, "Check document");
+        assert.deepEqual(result, {}, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -471,7 +466,7 @@
   // davStorage.allAttachments
   /////////////////////////////////////////////////////////////////
   module("davStorage.allAttachments", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -484,72 +479,72 @@
         with_credentials: true
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("reject ID not starting with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not starting with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.allAttachments("get1/")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id get1/ is forbidden (no begin /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "id get1/ is forbidden (no begin /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject ID not ending with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not ending with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.allAttachments("/get1")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id /get1 is forbidden (no end /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "id /get1 is forbidden (no end /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get inexistent document", function () {
+  test("get inexistent document", function (assert) {
     var url = domain + "/inexistent/";
     this.server.respondWith("PROPFIND", url, [404, {
       "Content-Type": "text/html"
     }, "foo"]);
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.allAttachments("/inexistent/")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find document");
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document without attachment", function () {
+  test("get document without attachment", function (assert) {
     var id = "/id1/";
     this.server.respondWith("PROPFIND", domain + id, [200, {
       "Content-Type": "text/xml"
@@ -583,22 +578,22 @@
         '</D:response>' +
         '</D:multistatus>'
       ]);
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.allAttachments(id)
       .then(function (result) {
-        deepEqual(result, {}, "Check document");
+        assert.deepEqual(result, {}, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document with attachment", function () {
+  test("get document with attachment", function (assert) {
     var id = "/id1/";
     this.server.respondWith("PROPFIND", domain + id, [200, {
       "Content-Type": "text/xml"
@@ -686,18 +681,18 @@
         '</D:response>' +
         '</D:multistatus>'
       ]);
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.allAttachments(id)
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           attachment1: {},
           attachment2: {}
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -708,7 +703,7 @@
   // davStorage.putAttachment
   /////////////////////////////////////////////////////////////////
   module("davStorage.putAttachment", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -721,15 +716,15 @@
         with_credentials: true
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("reject ID not starting with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not starting with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.putAttachment(
       "putAttachment1/",
@@ -737,21 +732,22 @@
       new Blob([""])
     )
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id putAttachment1/ is forbidden (no begin /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message,
+                     "id putAttachment1/ is forbidden (no begin /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject ID not ending with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not ending with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.putAttachment(
       "/putAttachment1",
@@ -759,21 +755,22 @@
       new Blob([""])
     )
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id /putAttachment1 is forbidden (no end /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message,
+                     "id /putAttachment1 is forbidden (no end /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject attachment with / character", function () {
-    stop();
-    expect(3);
+  test("reject attachment with / character", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.putAttachment(
       "/putAttachment1/",
@@ -781,42 +778,43 @@
       new Blob([""])
     )
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "attachment attach/ment1 is forbidden");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "attachment attach/ment1 is forbidden");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("putAttachment to inexisting directory: expecting a 404", function () {
-    var blob = new Blob(["foo"]),
-      url = domain + "/inexistent_dir/attachment1";
-    this.server.respondWith("PUT", url, [403, {"": ""}, ""]);
-    stop();
-    expect(3);
+  test("putAttachment to inexisting directory: expecting a 404",
+       function (assert) {
+      var blob = new Blob(["foo"]),
+        url = domain + "/inexistent_dir/attachment1";
+      this.server.respondWith("PUT", url, [403, {"": ""}, ""]);
+      start = assert.async();
+      assert.expect(3);
 
-    this.jio.putAttachment(
-      "/inexistent_dir/",
-      "attachment1",
-      blob
-    )
-      .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot access subdocument");
-        equal(error.status_code, 404);
-      })
-      .always(function () {
-        start();
-      });
-  });
+      this.jio.putAttachment(
+        "/inexistent_dir/",
+        "attachment1",
+        blob
+      )
+        .fail(function (error) {
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot access subdocument");
+          assert.equal(error.status_code, 404);
+        })
+        .always(function () {
+          start();
+        });
+    });
 
 
-  test("putAttachment document", function () {
+  test("putAttachment document", function (assert) {
     var blob = new Blob(["foo"]),
       url = domain + "/putAttachment1/attachment1",
       server = this.server;
@@ -824,8 +822,8 @@
       "Content-Type": "text/xml"
     }, ""]);
 
-    stop();
-    expect(8);
+    start = assert.async();
+    assert.expect(8);
 
     this.jio.putAttachment(
       "/putAttachment1/",
@@ -833,20 +831,20 @@
       blob
     )
       .then(function () {
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "PUT");
-        equal(server.requests[0].url, url);
-        equal(server.requests[0].status, 204);
-        equal(server.requests[0].requestBody, blob);
-        equal(server.requests[0].responseText, "");
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "PUT");
+        assert.equal(server.requests[0].url, url);
+        assert.equal(server.requests[0].status, 204);
+        assert.equal(server.requests[0].requestBody, blob);
+        assert.equal(server.requests[0].responseText, "");
+        assert.deepEqual(server.requests[0].requestHeaders, {
           Authorization: "Basic login:passwd",
           "Content-Type": "text/plain;charset=utf-8"
         });
-        equal(server.requests[0].withCredentials, true);
+        assert.equal(server.requests[0].withCredentials, true);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -857,7 +855,7 @@
   // davStorage.removeAttachment
   /////////////////////////////////////////////////////////////////
   module("davStorage.removeAttachment", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -870,131 +868,134 @@
         with_credentials: true
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("reject ID not starting with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not starting with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.removeAttachment(
       "removeAttachment1/",
       "attachment1"
     )
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id removeAttachment1/ is forbidden (no begin /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message,
+                     "id removeAttachment1/ is forbidden (no begin /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject ID not ending with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not ending with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.removeAttachment(
       "/removeAttachment1",
       "attachment1"
     )
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id /removeAttachment1 is forbidden (no end /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message,
+                     "id /removeAttachment1 is forbidden (no end /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject attachment with / character", function () {
-    stop();
-    expect(3);
+  test("reject attachment with / character", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.removeAttachment(
       "/removeAttachment1/",
       "attach/ment1"
     )
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "attachment attach/ment1 is forbidden");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "attachment attach/ment1 is forbidden");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("removeAttachment document", function () {
+  test("removeAttachment document", function (assert) {
     var url = domain + "/removeAttachment1/attachment1",
       server = this.server;
     this.server.respondWith("DELETE", url, [204, {
       "Content-Type": "text/xml"
     }, ""]);
 
-    stop();
-    expect(8);
+    start = assert.async();
+    assert.expect(8);
 
     this.jio.removeAttachment(
       "/removeAttachment1/",
       "attachment1"
     )
       .then(function () {
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "DELETE");
-        equal(server.requests[0].url, url);
-        equal(server.requests[0].status, 204);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, "");
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "DELETE");
+        assert.equal(server.requests[0].url, url);
+        assert.equal(server.requests[0].status, 204);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].responseText, "");
+        assert.deepEqual(server.requests[0].requestHeaders, {
           Authorization: "Basic login:passwd",
           "Content-Type": "text/plain;charset=utf-8"
         });
-        equal(server.requests[0].withCredentials, true);
+        assert.equal(server.requests[0].withCredentials, true);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("remove inexistent attachment", function () {
+  test("remove inexistent attachment", function (assert) {
     var url = domain + "/removeAttachment1/attachment1";
     this.server.respondWith("DELETE", url, [404, {
       "Content-Type": "text/xml"
     }, ""]);
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.removeAttachment(
       "/removeAttachment1/",
       "attachment1"
     )
       .then(function () {
-        ok(false);
+        assert.ok(false);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find attachment: /removeAttachment1/ " +
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message,
+                     "Cannot find attachment: /removeAttachment1/ " +
                              ", attachment1");
-        equal(error.status_code, 404);
+        assert.equal(error.status_code, 404);
       })
       .always(function () {
         start();
@@ -1005,7 +1006,7 @@
   // davStorage.getAttachment
   /////////////////////////////////////////////////////////////////
   module("davStorage.getAttachment", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -1018,138 +1019,140 @@
         with_credentials: true
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("reject ID not starting with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not starting with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.getAttachment(
       "getAttachment1/",
       "attachment1"
     )
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id getAttachment1/ is forbidden (no begin /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message,
+                     "id getAttachment1/ is forbidden (no begin /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject ID not ending with /", function () {
-    stop();
-    expect(3);
+  test("reject ID not ending with /", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.getAttachment(
       "/getAttachment1",
       "attachment1"
     )
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "id /getAttachment1 is forbidden (no end /)");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message,
+                     "id /getAttachment1 is forbidden (no end /)");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("reject attachment with / character", function () {
-    stop();
-    expect(3);
+  test("reject attachment with / character", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.getAttachment(
       "/getAttachment1/",
       "attach/ment1"
     )
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "attachment attach/ment1 is forbidden");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "attachment attach/ment1 is forbidden");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("getAttachment document", function () {
+  test("getAttachment document", function (assert) {
     var url = domain + "/getAttachment1/attachment1",
       server = this.server;
     this.server.respondWith("GET", url, [200, {
       "Content-Type": "text/plain"
     }, "foo\nbaré"]);
 
-    stop();
-    expect(11);
+    start = assert.async();
+    assert.expect(10);
 
     this.jio.getAttachment(
       "/getAttachment1/",
       "attachment1"
     )
       .then(function (result) {
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, url);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, "foo\nbaré");
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, url);
+        assert.equal(server.requests[0].status, 200);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.deepEqual(server.requests[0].requestHeaders, {
           Authorization: "Basic login:passwd"
         });
-        equal(server.requests[0].withCredentials, true);
+        assert.equal(server.requests[0].withCredentials, true);
 
-        ok(result instanceof Blob, "Data is Blob");
-        deepEqual(result.type, "text/plain", "Check mimetype");
+        assert.ok(result instanceof Blob, "Data is Blob");
+        assert.deepEqual(result.type, "text/plain", "Check mimetype");
         return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
-        equal(result.target.result, "foo\nbaré",
+        assert.equal(result.target.result, "foo\nbaré",
               "Attachment correctly fetched");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get inexistent attachment", function () {
+  test("get inexistent attachment", function (assert) {
     var url = domain + "/getAttachment1/attachment1";
     this.server.respondWith("GET", url, [404, {
       "Content-Type": "text/xml"
     }, ""]);
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.getAttachment(
       "/getAttachment1/",
       "attachment1"
     )
       .then(function () {
-        ok(false);
+        assert.ok(false);
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find attachment: /getAttachment1/ " +
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message,
+                     "Cannot find attachment: /getAttachment1/ " +
                              ", attachment1");
-        equal(error.status_code, 404);
+        assert.equal(error.status_code, 404);
       })
       .always(function () {
         start();

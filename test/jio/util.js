@@ -20,34 +20,30 @@
 (function (jIO, QUnit) {
   "use strict";
   var test = QUnit.test,
-    equal = QUnit.equal,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    expect = QUnit.expect,
     module = QUnit.module,
-    ok = QUnit.ok;
+    start;
 
   /////////////////////////////////////////////////////////////////
   // util.stringify
   /////////////////////////////////////////////////////////////////
   module("util.stringify");
-  test("is stable", function () {
+  test("is stable", function (assert) {
     var str = jIO.util.stringify;
     // https://developer.mozilla.org/search?q=stringify
-    equal(str({}), '{}');
-    equal(str(true), 'true');
-    equal(str('foo'), '"foo"');
-    equal(str([1, 'false', false]), '[1,"false",false]');
-    equal(str({ x: 5 }), '{"x":5}');
-    equal(str(new Date(Date.UTC(2006, 0, 2, 15, 4, 5))),
+    assert.equal(str({}), '{}');
+    assert.equal(str(true), 'true');
+    assert.equal(str('foo'), '"foo"');
+    assert.equal(str([1, 'false', false]), '[1,"false",false]');
+    assert.equal(str({ x: 5 }), '{"x":5}');
+    assert.equal(str(new Date(Date.UTC(2006, 0, 2, 15, 4, 5))),
           '"2006-01-02T15:04:05.000Z"');
-    equal(str({ x: 5, y: 6, z: 7 }), '{"x":5,"y":6,"z":7}');
-    equal(str({ z: 7, y: 6, x: 5 }), '{"x":5,"y":6,"z":7}');
-    equal(str({ z: "", y: undefined, x: 5 }), '{"x":5,"z":""}');
-    equal(str(Object.create(null, { x: { value: 'x', enumerable: false },
+    assert.equal(str({ x: 5, y: 6, z: 7 }), '{"x":5,"y":6,"z":7}');
+    assert.equal(str({ z: 7, y: 6, x: 5 }), '{"x":5,"y":6,"z":7}');
+    assert.equal(str({ z: "", y: undefined, x: 5 }), '{"x":5,"z":""}');
+    assert.equal(str(Object.create(null, { x: { value: 'x', enumerable: false },
                                     y: { value: 'y', enumerable: true } })),
           '{"y":"y"}');
-    equal(str({y: "y", testnull: null}),
+    assert.equal(str({y: "y", testnull: null}),
           '{"testnull":null,"y":"y"}');
 
   });
@@ -57,11 +53,11 @@
   /////////////////////////////////////////////////////////////////
   module("util.ajax");
 
-  test("ajax timeout", function () {
+  test("ajax timeout", function (assert) {
     var timeout = 1;
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     return new RSVP.Queue()
       .then(function () {
@@ -72,9 +68,9 @@
         });
       })
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Gateway Timeout");
-        equal(error.status_code, 504);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Gateway Timeout");
+        assert.equal(error.status_code, 504);
       })
       .always(function () {
         start();

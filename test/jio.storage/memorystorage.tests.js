@@ -22,12 +22,7 @@
 (function (jIO, QUnit, Blob) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    ok = QUnit.ok,
-    expect = QUnit.expect,
-    deepEqual = QUnit.deepEqual,
-    equal = QUnit.equal,
+    start,
     module = QUnit.module;
 
   /////////////////////////////////////////////////////////////////
@@ -35,16 +30,16 @@
   /////////////////////////////////////////////////////////////////
   module("memoryStorage.constructor");
 
-  test("Storage has a memory database", function () {
+  test("Storage has a memory database", function (assert) {
     var jio = jIO.createJIO({
       "type": "memory"
     });
 
-    equal(jio.__type, "memory");
-    deepEqual(jio.__storage._database, {});
+    assert.equal(jio.__type, "memory");
+    assert.deepEqual(jio.__storage._database, {});
   });
 
-  test("Storage's memory database is not shared", function () {
+  test("Storage's memory database is not shared", function (assert) {
     var jio = jIO.createJIO({
       "type": "memory"
     }),
@@ -52,7 +47,7 @@
         "type": "memory"
       });
 
-    ok(jio.__storage._database !== jio2.__storage._database,
+    assert.ok(jio.__storage._database !== jio2.__storage._database,
        "Database is not shared");
   });
 
@@ -60,35 +55,35 @@
   // memoryStorage.put
   /////////////////////////////////////////////////////////////////
   module("memoryStorage.put", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         "type": "memory"
       });
     }
   });
-  test("put non empty document", function () {
-    expect(2);
-    stop();
+  test("put non empty document", function (assert) {
+    assert.expect(2);
+    start = assert.async();
 
     var that = this;
 
     this.jio.put("put1", {"title": "myPut1"})
       .then(function (uuid) {
-        equal(uuid, "put1");
-        deepEqual(that.jio.__storage._database.put1, {
+        assert.equal(uuid, "put1");
+        assert.deepEqual(that.jio.__storage._database.put1, {
           attachments: {},
           doc: "{\"title\":\"myPut1\"}"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("put when document already exists", function () {
+  test("put when document already exists", function (assert) {
     var id = "put1",
       that = this;
     this.jio.__storage._database[id] = {
@@ -96,20 +91,20 @@
       "attachments": {"foo": "bar"},
       "doc": "foobar"
     };
-    expect(2);
-    stop();
+    assert.expect(2);
+    start = assert.async();
 
     this.jio.put(id, {"title": "myPut2"})
       .then(function (uuid) {
-        equal(uuid, "put1");
-        deepEqual(that.jio.__storage._database.put1, {
+        assert.equal(uuid, "put1");
+        assert.deepEqual(that.jio.__storage._database.put1, {
           "foo": "bar",
           "attachments": {"foo": "bar"},
           doc: "{\"title\":\"myPut2\"}"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -120,54 +115,54 @@
   // memoryStorage.get
   /////////////////////////////////////////////////////////////////
   module("memoryStorage.get", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         "type": "memory"
       });
     }
   });
 
-  test("get inexistent document", function () {
-    stop();
-    expect(3);
+  test("get inexistent document", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.get("inexistent")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError, error);
-        equal(error.message, "Cannot find document: inexistent");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError, error);
+        assert.equal(error.message, "Cannot find document: inexistent");
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document", function () {
+  test("get document", function (assert) {
     var id = "post1";
     this.jio.__storage._database[id] = {
       "doc": "{\"title\":\"myPost1\"}"
     };
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.get(id)
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "title": "myPost1"
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get document with attachment", function () {
+  test("get document with attachment", function (assert) {
     var id = "putattmt1";
 
     this.jio.__storage._database[id] = {
@@ -177,15 +172,15 @@
       }
     };
 
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.get(id)
       .then(function (result) {
-        deepEqual(result, {}, "Check document");
+        assert.deepEqual(result, {}, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -196,52 +191,52 @@
   // memoryStorage.allAttachments
   /////////////////////////////////////////////////////////////////
   module("memoryStorage.allAttachments", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         "type": "memory"
       });
     }
   });
 
-  test("get inexistent document", function () {
-    stop();
-    expect(3);
+  test("get inexistent document", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.allAttachments("inexistent")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError, error);
-        equal(error.message, "Cannot find document: inexistent");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError, error);
+        assert.equal(error.message, "Cannot find document: inexistent");
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("document without attachment", function () {
+  test("document without attachment", function (assert) {
     var id = "post1";
     this.jio.__storage._database[id] = {
       "doc": JSON.stringify({title: "myPost1"})
     };
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.allAttachments(id)
       .then(function (result) {
-        deepEqual(result, {}, "Attachments");
+        assert.deepEqual(result, {}, "Attachments");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("document with attachment", function () {
+  test("document with attachment", function (assert) {
     var id = "putattmt1";
 
     this.jio.__storage._database[id] = {
@@ -251,15 +246,15 @@
       }
     };
 
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.allAttachments(id)
       .then(function (result) {
-        deepEqual(result, {putattmt2: {}}, "Check document");
+        assert.deepEqual(result, {putattmt2: {}}, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -270,29 +265,29 @@
   // memoryStorage.remove
   /////////////////////////////////////////////////////////////////
   module("memoryStorage.remove", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         "type": "memory"
       });
     }
   });
 
-  test("remove document", function () {
+  test("remove document", function (assert) {
     var id = "foo";
 
     this.jio.__storage._database[id] = {
       "doc": JSON.stringify({title: "myPost1"})
     };
 
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.remove("foo")
       .then(function (result) {
-        equal(result, "foo");
+        assert.equal(result, "foo");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -303,34 +298,34 @@
   // memoryStorage.getAttachment
   /////////////////////////////////////////////////////////////////
   module("memoryStorage.getAttachment", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         "type": "memory"
       });
     }
   });
-  test("get attachment from inexistent document", function () {
-    stop();
-    expect(3);
+  test("get attachment from inexistent document", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.getAttachment("inexistent", "a")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find attachment: inexistent , a");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find attachment: inexistent , a");
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get inexistent attachment from document", function () {
+  test("get inexistent attachment from document", function (assert) {
     var id = "b";
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.__storage._database[id] = {
       "doc": JSON.stringify({})
@@ -338,12 +333,12 @@
 
     this.jio.getAttachment(id, "inexistent")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find attachment: b , inexistent");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Cannot find attachment: b , inexistent");
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -351,10 +346,10 @@
   });
 
   test("get inexistent attachment from document with other attachments",
-       function () {
+       function (assert) {
       var id = "b";
-      stop();
-      expect(3);
+      start = assert.async();
+      assert.expect(3);
 
       this.jio.__storage._database[id] = {
         "doc": JSON.stringify({}),
@@ -363,24 +358,24 @@
 
       this.jio.getAttachment(id, "inexistent")
         .fail(function (error) {
-          ok(error instanceof jIO.util.jIOError);
-          equal(error.message, "Cannot find attachment: b , inexistent");
-          equal(error.status_code, 404);
+          assert.ok(error instanceof jIO.util.jIOError);
+          assert.equal(error.message, "Cannot find attachment: b , inexistent");
+          assert.equal(error.status_code, 404);
         })
         .fail(function (error) {
-          ok(false, error);
+          assert.ok(false, error);
         })
         .always(function () {
           start();
         });
     });
 
-  test("get attachment from document", function () {
+  test("get attachment from document", function (assert) {
     var id = "putattmt1",
       attachment = "putattmt2",
       blob = new Blob(["test"], {"type": "x-application/foo"});
-    stop();
-    expect(2);
+    start = assert.async();
+    assert.expect(2);
 
     this.jio.__storage._database[id] = {
       "doc": JSON.stringify({}),
@@ -391,11 +386,11 @@
 
     this.jio.getAttachment(id, attachment)
       .then(function (result) {
-        ok(result instanceof Blob, "Data is Blob");
-        deepEqual(result, blob);
+        assert.ok(result instanceof Blob, "Data is Blob");
+        assert.deepEqual(result, blob);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -407,31 +402,31 @@
   // memoryStorage.putAttachment
   /////////////////////////////////////////////////////////////////
   module("memoryStorage.putAttachment", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         "type": "memory"
       });
     }
   });
-  test("put an attachment to an inexistent document", function () {
-    stop();
-    expect(3);
+  test("put an attachment to an inexistent document", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.putAttachment("inexistent", "putattmt2", "")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError, error);
-        equal(error.message, "Cannot find document: inexistent");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError, error);
+        assert.equal(error.message, "Cannot find document: inexistent");
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("put an attachment to a document", function () {
+  test("put an attachment to a document", function (assert) {
     var id = "putattmt1",
       blob = new Blob(["test"], {"type": "x-application/foo"}),
       jio = this.jio;
@@ -441,16 +436,16 @@
       "attachments": {}
     };
 
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     jio.putAttachment(id, "putattmt2", blob)
       .then(function () {
-        equal(jio.__storage._database[id].attachments.putattmt2,
+        assert.equal(jio.__storage._database[id].attachments.putattmt2,
               "data:x-application/foo;base64,dGVzdA==");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
 
       .always(function () {
@@ -462,31 +457,31 @@
   // memoryStorage.removeAttachment
   /////////////////////////////////////////////////////////////////
   module("memoryStorage.removeAttachment", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         "type": "memory"
       });
     }
   });
-  test("remove an attachment to an inexistent document", function () {
-    stop();
-    expect(3);
+  test("remove an attachment to an inexistent document", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.removeAttachment("inexistent", "removeattmt2")
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError, error);
-        equal(error.message, "Cannot find document: inexistent");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError, error);
+        assert.equal(error.message, "Cannot find document: inexistent");
+        assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("remove an attachment to a document", function () {
+  test("remove an attachment to a document", function (assert) {
     var id = "removeattmt1",
       jio = this.jio;
 
@@ -495,15 +490,15 @@
       "attachments": {"removeattmt2": "bar"}
     };
 
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     jio.removeAttachment(id, "removeattmt2")
       .then(function () {
-        deepEqual(jio.__storage._database[id].attachments, {});
+        assert.deepEqual(jio.__storage._database[id].attachments, {});
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
 
       .always(function () {
@@ -515,37 +510,37 @@
   // memoryStorage.hasCapacity
   /////////////////////////////////////////////////////////////////
   module("memoryStorage.hasCapacity", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         "type": "memory"
       });
     }
   });
-  test("can list documents", function () {
-    ok(this.jio.hasCapacity("list"));
+  test("can list documents", function (assert) {
+    assert.ok(this.jio.hasCapacity("list"));
   });
 
   /////////////////////////////////////////////////////////////////
   // memoryStorage.buildQuery
   /////////////////////////////////////////////////////////////////
   module("memoryStorage.buildQuery", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         "type": "memory"
       });
     }
   });
 
-  test("list documents", function () {
+  test("list documents", function (assert) {
     this.jio.__storage._database.foo2 = "bar2";
     this.jio.__storage._database.foo1 = "bar1";
 
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.allDocs()
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "data": {
             "rows": [
               {
@@ -562,7 +557,7 @@
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
 
       .always(function () {
@@ -570,16 +565,16 @@
       });
   });
 
-  test("list documents with include_docs", function () {
+  test("list documents with include_docs", function (assert) {
     this.jio.__storage._database.foo2 = {doc: "{\"title\":\"bar2\"}"};
     this.jio.__storage._database.foo1 = {doc: "{\"title\":\"bar1\"}"};
 
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.allDocs({include_docs: true})
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "data": {
             "rows": [
               {
@@ -598,7 +593,7 @@
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
 
       .always(function () {
