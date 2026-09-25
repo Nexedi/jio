@@ -21,7 +21,7 @@
 (function (require, process, console, JSON) {
   "use strict";
 
-  var testrunner = require('qunit'),
+  var testrunner = require('node-qunit'),
     report_data = process.env.CI ? {} : null,
     runner_options = process.env.CI ? {
       log: {}

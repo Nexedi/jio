@@ -22,6 +22,7 @@ include config.mk
 DISTDIR = dist
 SRCDIR = src
 LINTDIR = lint
+NODEMODULEDIR = node_modules
 TESTDIR = test
 EXAMPLEDIR = examples
 EXTERNALDIR = external
@@ -164,7 +165,7 @@ ${JIONODELATEST}: ${JIONODEVERSION}
 	cp $< $@
 
 ${JIONODEVERSION}: ${SRCDIR}/node/jio-start.js \
-	${EXTERNALDIR}/rsvp-2.0.4.js \
+	${NODEMODULEDIR}/rsvp/dist/rsvp-2.0.4.js \
 	${EXTERNALDIR}/moment.js \
 	${EXTERNALDIR}/URI.js \
 	${EXTERNALDIR}/uritemplate.js \
@@ -209,12 +210,7 @@ ${SRCDIR}/queries/build/parser.js: ${SRCDIR}/queries/core/parser.par
 fetch: ${EXTERNALDIR}/uritemplate.js \
 	${EXTERNALDIR}/lz-string.js \
 	${EXTERNALDIR}/moment.js \
-	${EXTERNALDIR}/rusha.js \
-	${EXTERNALDIR}/rsvp-2.0.4.js \
-	${EXTERNALDIR}/qunit.css \
-	${EXTERNALDIR}/qunit.js \
-	${EXTERNALDIR}/sinon.js \
-	${EXTERNALDIR}/renderjs-latest.js
+	${EXTERNALDIR}/rusha.js
 
 ${EXTERNALDIR}/uritemplate.js:
 	@mkdir -p $(@D)
@@ -231,26 +227,6 @@ ${EXTERNALDIR}/moment.js:
 ${EXTERNALDIR}/rusha.js:
 	@mkdir -p $(@D)
 	curl -s -o $@ https://raw.githubusercontent.com/srijs/rusha/refs/tags/v0.8.12/dist/rusha.js
-
-${EXTERNALDIR}/rsvp-2.0.4.js:
-	@mkdir -p $(@D)
-	curl -s -o $@ https://lab.nexedi.com/nexedi/rsvp.js/raw/master/dist/rsvp-2.0.4.js
-
-${EXTERNALDIR}/qunit.css:
-	@mkdir -p $(@D)
-	curl -s -o $@ https://code.jquery.com/qunit/qunit-1.12.0.css
-
-${EXTERNALDIR}/qunit.js:
-	@mkdir -p $(@D)
-	curl -s -o $@ https://code.jquery.com/qunit/qunit-1.12.0.js
-
-${EXTERNALDIR}/sinon.js:
-	@mkdir -p $(@D)
-	curl -s -o $@ https://sinonjs.org/releases/sinon-1.7.3.js
-
-${EXTERNALDIR}/renderjs-latest.js:
-	@mkdir -p $(@D)
-	curl -s -o $@ https://lab.nexedi.com/nexedi/renderjs/raw/master/dist/renderjs-latest.js
 
 .PHONY: clean ${JIOVERSION} ${JIONODEVERSION}
 

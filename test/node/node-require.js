@@ -28,7 +28,7 @@
     global[key] = jIO.node_env[key];
   });
 
-  sinon = require('./sinon-require');
+  sinon = require('sinon');
   global.sinon = sinon;
 
 }(require, global, Object));
