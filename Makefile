@@ -222,7 +222,7 @@ ${EXTERNALDIR}/uritemplate.js:
 
 ${EXTERNALDIR}/lz-string.js:
 	@mkdir -p $(@D)
-	curl -s -o $@ https://raw.githubusercontent.com/pieroxy/lz-string/1.4.4/libs/lz-string.js
+	curl -s -o $@ https://raw.githubusercontent.com/pieroxy/lz-string/1.5.0/libs/lz-string.js
 
 ${EXTERNALDIR}/moment.js:
 	@mkdir -p $(@D)
