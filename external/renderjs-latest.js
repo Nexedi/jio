@@ -300,25 +300,29 @@
                         postMessage({ id: id, callback: cbName, params: v});
                     },
                     error: function(error, message) {
-                        completed = true;
                         // verify in table
                         if (!inTbl[id]) throw "error called for nonexistent message: " + id;
 
-                        // remove transaction from table
-                        delete inTbl[id];
-
                         // send error
                         postMessage({ id: id, error: error, message: message });
-                    },
-                    complete: function(v) {
+
                         completed = true;
-                        // verify in table
-                        if (!inTbl[id]) throw "complete called for nonexistent message: " + id;
+
                         // remove transaction from table
                         delete inTbl[id];
+                    },
+                    complete: function(v) {
+                        // verify in table
+                        if (!inTbl[id]) throw "complete called for nonexistent message: " + id;
+
                         // send complete
                         postMessage({ id: id, result: v });
-                    },
+
+                        completed = true;
+
+                        // remove transaction from table
+                        delete inTbl[id];
+                      },
                     delayReturn: function(delay) {
                         if (typeof delay === 'boolean') {
                             shouldDelayReturn = (delay === true);
@@ -379,12 +383,12 @@
                                     obj[pathItems[pathItems.length - 1]] = (function() {
                                         var cbName = path;
                                         return function(params) {
-                                            return trans.invoke(cbName, params);
+                                            return trans.invoke(cbName, params, m.id);
                                         };
                                     })();
                                 }
                             }
-                            var resp = regTbl[method](trans, m.params);
+                            var resp = regTbl[method](trans, m.params, m.id);
                             if (!trans.delayReturn() && !trans.completed()) trans.complete(resp);
                         } catch(e) {
                             // automagic handling of exceptions:
@@ -580,6 +584,8 @@
                     s_curTranId++;
 
                     postMessage(msg);
+                    // return the transaction id
+                    return s_curTranId - 1;
                 },
                 notify: function(m) {
                     if (!m) throw 'missing arguments to notify function';
@@ -716,9 +722,26 @@ if (typeof document.contains !== 'function') {
 
   window.URL = URL;
 
-}(DOMParser));;/*! RenderJs */
+}(DOMParser));;/*
+ * Copyright 2012, Nexedi SA
+ *
+ * This program is free software: you can Use, Study, Modify and Redistribute
+ * it under the terms of the GNU General Public License version 3, or (at your
+ * option) any later version, as published by the Free Software Foundation.
+ *
+ * You can also Link and Combine this program with other software covered by
+ * the terms of any of the Free Software licenses or any of the Open Source
+ * Initiative approved licenses and Convey the resulting work. Corresponding
+ * source of such a combination shall include the source code for all other
+ * software used.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See COPYING file for full licensing terms.
+ * See https://www.nexedi.com/licensing for rationale and options.
+ */
 /*jslint nomen: true*/
-
 /*
  * renderJs - Generic Gadget library renderer.
  * https://renderjs.nexedi.com/
@@ -727,6 +750,27 @@ if (typeof document.contains !== 'function') {
                        MutationObserver, Node, FileReader, Blob, navigator,
                        Event, URL) {
   "use strict";
+
+  // Error propagation in jschannel uses JSON.stringify
+  // Sadly, ...
+  // JSON.stringify(new TypeError('lala')) -> '{}'
+  // Change the browser default behaviour to propagate at least the message
+  // See https://stackoverflow.com/a/18391400
+  if (!Error.prototype.hasOwnProperty('toJSON')) {
+    Object.defineProperty(Error.prototype, 'toJSON', {
+      value: function () {
+        var alt = {};
+
+        Object.getOwnPropertyNames(this).forEach(function (key) {
+          alt[key] = this[key];
+        }, this);
+
+        return alt;
+      },
+      configurable: true,
+      writable: true
+    });
+  }
 
   /////////////////////////////////////////////////////////////////
   // Error
@@ -741,23 +785,56 @@ if (typeof document.contains !== 'function') {
   ScopeError.prototype = new Error();
   ScopeError.prototype.constructor = ScopeError;
 
+  //////////////////////////////////////////
+  // ParserError
+  //////////////////////////////////////////
+  function DOMParserError(message) {
+    this.name = "DOMParserError";
+    if ((message !== undefined) && (typeof message !== "string")) {
+      throw new TypeError('You must pass a string for DOMParserError.');
+    }
+    this.message = message || "Default Message";
+  }
+  DOMParserError.prototype = new Error();
+  DOMParserError.prototype.constructor = DOMParserError;
+
+  //////////////////////////////////////////
+  // DOMParser
+  //////////////////////////////////////////
+  function parseDocumentStringOrFail(string, mime_type) {
+    var doc = new DOMParser().parseFromString(string, mime_type),
+      error_node = doc.querySelector('parsererror');
+    if (error_node !== null) {
+      // parsing failed
+      throw new DOMParserError(error_node.textContent);
+    }
+    return doc;
+  }
+
+  /////////////////////////////////////////////////////////////////
+  // renderJS.IframeSerializationError
+  /////////////////////////////////////////////////////////////////
+  function IframeSerializationError(message) {
+    this.name = "IframeSerializationError";
+    if ((message !== undefined) && (typeof message !== "string")) {
+      throw new TypeError('You must pass a string.');
+    }
+    this.message = message || "Parameter serialization failed";
+  }
+  IframeSerializationError.prototype = new Error();
+  IframeSerializationError.prototype.constructor = IframeSerializationError;
+
   function ensurePushableQueue(callback, argument_list, context) {
     var result;
     try {
       result = callback.apply(context, argument_list);
     } catch (e) {
-      return new RSVP.Queue()
-        .push(function returnPushableError() {
-          return RSVP.reject(e);
-        });
+      return new RSVP.Queue(RSVP.reject(e));
     }
     if (result instanceof RSVP.Queue) {
       return result;
     }
-    return new RSVP.Queue()
-      .push(function returnPushableResult() {
-        return result;
-      });
+    return new RSVP.Queue(result);
   }
 
   function readBlobAsDataURL(blob) {
@@ -786,18 +863,18 @@ if (typeof document.contains !== 'function') {
       prevent_default = true;
     }
 
-    function cancelResolver() {
+    function cancelResolver(msg) {
       if ((callback_promise !== undefined) &&
           (typeof callback_promise.cancel === "function")) {
-        callback_promise.cancel();
+        callback_promise.cancel(msg);
       }
     }
 
-    function canceller() {
+    function canceller(msg) {
       if (handle_event_callback !== undefined) {
         target.removeEventListener(type, handle_event_callback, useCapture);
       }
-      cancelResolver();
+      cancelResolver(msg);
     }
     function itsANonResolvableTrap(resolve, reject) {
       var result;
@@ -807,22 +884,21 @@ if (typeof document.contains !== 'function') {
           evt.preventDefault();
         }
 
-        cancelResolver();
+        cancelResolver(
+          "Cancelling previous event (" + evt.type + ")"
+        );
 
         try {
           result = callback(evt);
         } catch (e) {
-          result = RSVP.reject(e);
+          return reject(e);
         }
 
-        callback_promise = result;
-        new RSVP.Queue()
-          .push(function waitForEventCallbackResult() {
-            return result;
-          })
+        callback_promise = new RSVP.Queue(result)
           .push(undefined, function handleEventCallbackError(error) {
+            // Prevent rejecting the loop, if the result cancelled itself
             if (!(error instanceof RSVP.CancellationError)) {
-              canceller();
+              canceller(error.toString());
               reject(error);
             }
           });
@@ -897,6 +973,7 @@ if (typeof document.contains !== 'function') {
     isAbsoluteOrDataURL = new RegExp('^(?:[a-z]+:)?//|data:', 'i'),
     is_page_unloaded = false,
     error_list = [],
+    unhandled_error_type = 0,
     all_dependency_loaded_deferred;
 
   window.addEventListener('error', function handleGlobalError(error) {
@@ -919,19 +996,32 @@ if (typeof document.contains !== 'function') {
     this._latest_promise = null;
   };
 
+  function doNothing() {
+    return;
+  }
+
   Mutex.prototype = {
     constructor: Mutex,
     lockAndRun: function lockMutexAndRun(callback) {
-      var previous_promise = this._latest_promise;
+      var previous_promise = this._latest_promise,
+        returned_promise;
       if (previous_promise === null) {
         this._latest_promise = RSVP.resolve(callback());
-      } else {
-        this._latest_promise = this._latest_promise
-          .always(function () {
-            return callback();
-          });
+        return this._latest_promise;
       }
-      return this._latest_promise;
+      returned_promise = previous_promise
+        .always(function () {
+          return callback();
+        });
+      // Do not return latest promise, to not allow external caller
+      // to explicitely cancel it,
+      // ie, ensure next promise is triggered only when ALL previous
+      // promised are finished (not only the single previous one)
+      this._latest_promise = RSVP.all([
+        previous_promise.always(doNothing),
+        returned_promise.always(doNothing)
+      ]);
+      return returned_promise;
     }
   };
 
@@ -944,6 +1034,40 @@ if (typeof document.contains !== 'function') {
       url = url.substring(0, index);
     }
     return url;
+  }
+
+  function getErrorTypeMapping() {
+    var error_type_mapping = {
+      1: renderJS.AcquisitionError,
+      2: RSVP.CancellationError
+    };
+    // set the unhandle error type to be used as default
+    error_type_mapping[unhandled_error_type] = IframeSerializationError;
+    return error_type_mapping;
+  }
+
+  function convertObjectToErrorType(error) {
+    var error_type,
+      error_type_mapping = getErrorTypeMapping();
+
+    for (error_type in error_type_mapping) {
+      if (error_type_mapping.hasOwnProperty(error_type) &&
+          error instanceof error_type_mapping[error_type]) {
+        return error_type;
+      }
+    }
+    return unhandled_error_type;
+  }
+
+  function rejectErrorType(value, reject) {
+    var error_type_mapping = getErrorTypeMapping();
+    if (value.hasOwnProperty("type") &&
+        error_type_mapping.hasOwnProperty(value.type)) {
+      value = new error_type_mapping[value.type](
+        value.msg
+      );
+    }
+    return reject(value);
   }
 
   function letsCrash(e) {
@@ -1083,11 +1207,11 @@ if (typeof document.contains !== 'function') {
       return new Monitor();
     }
 
-    function canceller() {
+    function canceller(msg) {
       var len = promise_list.length,
         i;
       for (i = 0; i < len; i += 1) {
-        promise_list[i].cancel();
+        promise_list[i].cancel(msg);
       }
       // Clean it to speed up other canceller run
       promise_list = [];
@@ -1101,17 +1225,17 @@ if (typeof document.contains !== 'function') {
         monitor.isRejected = true;
         monitor.rejectedReason = rejectedReason;
         resolved = true;
-        canceller();
+        canceller(rejectedReason.toString());
         return fail(rejectedReason);
       };
     }, canceller);
 
-    monitor.cancel = function cancelMonitor() {
+    monitor.cancel = function cancelMonitor(msg) {
       if (resolved) {
         return;
       }
       resolved = true;
-      promise.cancel();
+      promise.cancel(msg);
       promise.fail(function rejectMonitorPromise(rejectedReason) {
         monitor.isRejected = true;
         monitor.rejectedReason = rejectedReason;
@@ -1124,10 +1248,7 @@ if (typeof document.contains !== 'function') {
       if (resolved) {
         throw new ResolvedMonitorError();
       }
-      var queue = new RSVP.Queue()
-        .push(function waitForPromiseToMonitor() {
-          return promise_to_monitor;
-        })
+      var queue = new RSVP.Queue(promise_to_monitor)
         .push(function handlePromiseToMonitorSuccess(fulfillmentValue) {
           // Promise to monitor is fullfilled, remove it from the list
           var len = promise_list.length,
@@ -1143,13 +1264,6 @@ if (typeof document.contains !== 'function') {
           }
           promise_list = new_promise_list;
         }, function handlePromiseToMonitorError(rejectedReason) {
-          if (rejectedReason instanceof RSVP.CancellationError) {
-            if (!(promise_to_monitor.isFulfilled &&
-                  promise_to_monitor.isRejected)) {
-              // The queue could be cancelled before the first push is run
-              promise_to_monitor.cancel();
-            }
-          }
           reject(rejectedReason);
           throw rejectedReason;
         });
@@ -1180,7 +1294,11 @@ if (typeof document.contains !== 'function') {
 
   function deleteGadgetMonitor(g) {
     if (g.hasOwnProperty('__monitor')) {
-      g.__monitor.cancel();
+      g.__monitor.cancel(
+        "Deleting Gadget Monitor " + "(" +
+          g.element.dataset.gadgetUrl +
+          ")"
+      );
       delete g.__monitor;
       g.__job_list = [];
     }
@@ -1304,16 +1422,16 @@ if (typeof document.contains !== 'function') {
   };
 
   function runJob(gadget, name, callback, argument_list) {
-    var job_promise = ensurePushableQueue(callback, argument_list, gadget);
     if (gadget.__job_dict.hasOwnProperty(name)) {
-      gadget.__job_dict[name].cancel();
+      gadget.__job_dict[name].cancel(name + " : Cancelling previous job");
     }
+    var job_promise = ensurePushableQueue(callback, argument_list, gadget);
     gadget.__job_dict[name] = job_promise;
-    gadget.__monitor.monitor(new RSVP.Queue()
-      .push(function waitForJobPromise() {
-        return job_promise;
-      })
+    // gadget.__monitor.monitor(job_promise
+    gadget.__monitor.monitor(new RSVP.Queue(job_promise)
       .push(undefined, function handleJobError(error) {
+        // Do not crash monitor if the job has been cancelled
+        // by a new execution
         if (!(error instanceof RSVP.CancellationError)) {
           throw error;
         }
@@ -1321,8 +1439,9 @@ if (typeof document.contains !== 'function') {
   }
 
   function startService(gadget) {
-    if ((gadget.constructor.__service_list.length === 0) &&
-        (!gadget.constructor.__job_declared)) {
+    if (((gadget.constructor.__service_list.length === 0) &&
+         (!gadget.constructor.__job_declared)) ||
+        (gadget.hasOwnProperty('__monitor'))) {
       return;
     }
     createGadgetMonitor(gadget);
@@ -1343,6 +1462,13 @@ if (typeof document.contains !== 'function') {
       );
   }
 
+  function registerMethod(gadget_klass, method_name, method_type) {
+    if (!gadget_klass.hasOwnProperty('__method_type_dict')) {
+      gadget_klass.__method_type_dict = {};
+    }
+    gadget_klass.__method_type_dict[method_name] = method_type;
+  }
+
   /////////////////////////////////////////////////////////////////
   // RenderJSGadget.declareJob
   // gadget internal method, which trigger execution
@@ -1360,6 +1486,7 @@ if (typeof document.contains !== 'function') {
         context.__job_list.push([name, callback, argument_list]);
       }
     };
+    registerMethod(this, name, 'job');
     // Allow chain
     return this;
   };
@@ -1389,6 +1516,7 @@ if (typeof document.contains !== 'function') {
       }
       return ensurePushableQueue(callback, argument_list, context);
     };
+    registerMethod(this, name, 'method');
     // Allow chain
     return this;
   };
@@ -1397,6 +1525,21 @@ if (typeof document.contains !== 'function') {
     .declareMethod('getInterfaceList', function getInterfaceList() {
       // Returns the list of gadget prototype
       return this.__interface_list;
+    })
+    .declareMethod('getMethodList', function getMethodList(type) {
+      // Returns the list of gadget methods
+      var key,
+        method_list = [],
+        method_dict = this.constructor.__method_type_dict || {};
+      for (key in method_dict) {
+        if (method_dict.hasOwnProperty(key)) {
+          if ((type === undefined) ||
+              (type === method_dict[key])) {
+            method_list.push(key);
+          }
+        }
+      }
+      return method_list;
     })
     .declareMethod('getRequiredCSSList', function getRequiredCSSList() {
       // Returns a list of CSS required by the gadget
@@ -1505,7 +1648,7 @@ if (typeof document.contains !== 'function') {
           gadget
         );
       };
-
+      registerMethod(this, name, 'acquired_method');
       // Allow chain
       return this;
     };
@@ -1565,11 +1708,9 @@ if (typeof document.contains !== 'function') {
   /////////////////////////////////////////////////////////////////
   // privateDeclarePublicGadget
   /////////////////////////////////////////////////////////////////
-  function createPrivateInstanceFromKlass(Klass, options, parent_gadget) {
+  function createPrivateInstanceFromKlass(Klass, options, parent_gadget,
+                                          old_element) {
     // Get the gadget class and instanciate it
-    if (options.element === undefined) {
-      options.element = document.createElement("div");
-    }
     var i,
       gadget_instance,
       template_node_list = Klass.__template_element.body.childNodes,
@@ -1584,10 +1725,18 @@ if (typeof document.contains !== 'function') {
     }
     gadget_instance.element.appendChild(fragment);
     setAqParent(gadget_instance, parent_gadget);
+    clearGadgetInternalParameters(gadget_instance);
+    if (old_element !== undefined) {
+      // Add gadget to the DOM if needed
+      // Do it when all DOM modifications are done
+      old_element.parentNode.replaceChild(options.element,
+                                          old_element);
+    }
     return gadget_instance;
   }
 
-  function privateDeclarePublicGadget(url, options, parent_gadget) {
+  function privateDeclarePublicGadget(url, options, parent_gadget,
+                                      old_element) {
     var klass = renderJS.declareGadgetKlass(url);
     // gadget loading should not be interrupted
     // if not, gadget's definition will not be complete
@@ -1595,10 +1744,12 @@ if (typeof document.contains !== 'function') {
     //so loading_klass_promise can't be cancel
     if (typeof klass.then === 'function') {
       return klass.then(function createAsyncPrivateInstanceFromKlass(Klass) {
-        return createPrivateInstanceFromKlass(Klass, options, parent_gadget);
+        return createPrivateInstanceFromKlass(Klass, options, parent_gadget,
+                                              old_element);
       });
     }
-    return createPrivateInstanceFromKlass(klass, options, parent_gadget);
+    return createPrivateInstanceFromKlass(klass, options, parent_gadget,
+                                          old_element);
   }
 
   /////////////////////////////////////////////////////////////////
@@ -1630,17 +1781,19 @@ if (typeof document.contains !== 'function') {
   /////////////////////////////////////////////////////////////////
   // privateDeclareIframeGadget
   /////////////////////////////////////////////////////////////////
-  function privateDeclareIframeGadget(url, options, parent_gadget) {
+  function privateDeclareIframeGadget(url, options, parent_gadget,
+                                      old_element) {
     var gadget_instance,
       iframe,
+      transaction_dict = {},
       iframe_loading_deferred = RSVP.defer();
-    if (options.element === undefined) {
+    if (old_element === undefined) {
       throw new Error("DOM element is required to create Iframe Gadget " +
                       url);
     }
 
     // Check if the element is attached to the DOM
-    if (!document.contains(options.element)) {
+    if (!document.contains(old_element)) {
       throw new Error("The parent element is not attached to the DOM for " +
                       url);
     }
@@ -1664,8 +1817,12 @@ if (typeof document.contains !== 'function') {
     gadget_instance.__path = url;
     gadget_instance.element = options.element;
     gadget_instance.state = {};
-    // Attach it to the DOM
     options.element.appendChild(iframe);
+    clearGadgetInternalParameters(gadget_instance);
+    // Add gadget to the DOM if needed
+    // Do it when all DOM modifications are done
+    old_element.parentNode.replaceChild(options.element,
+                                        old_element);
 
     // XXX Manage unbind when deleting the gadget
 
@@ -1683,15 +1840,29 @@ if (typeof document.contains !== 'function') {
       function handleChannelDeclareMethod(trans, method_name) {
         gadget_instance[method_name] = function triggerChannelDeclareMethod() {
           var argument_list = arguments,
+            channel_call_id,
             wait_promise = new RSVP.Promise(
               function handleChannelCall(resolve, reject) {
-                gadget_instance.__chan.call({
+                function errorWrap(value) {
+                  return rejectErrorType(value, reject);
+                }
+
+                channel_call_id = gadget_instance.__chan.call({
                   method: "methodCall",
                   params: [
                     method_name,
                     Array.prototype.slice.call(argument_list, 0)],
                   success: resolve,
-                  error: reject
+                  error: errorWrap
+                });
+              },
+              function cancelChannelCall(msg) {
+                gadget_instance.__chan.notify({
+                  method: "cancelMethodCall",
+                  params: [
+                    channel_call_id,
+                    msg
+                  ]
                 });
               }
             );
@@ -1714,15 +1885,45 @@ if (typeof document.contains !== 'function') {
         iframe_loading_deferred.reject(params);
         return "OK";
       });
+    gadget_instance.__chan.bind("cancelAcquiredMethodCall",
+                                function handleChannelCancel(trans,
+                                                           params) {
+        var transaction_id = params[0],
+          msg = params[1];
+        if (transaction_dict.hasOwnProperty(transaction_id)) {
+          transaction_dict[transaction_id].cancel(msg);
+          delete transaction_dict[transaction_id];
+        }
+        return "OK";
+      });
     gadget_instance.__chan.bind("acquire",
-                                function handleChannelAcquire(trans, params) {
+                                function handleChannelAcquire(trans, params,
+                                                              transaction_id) {
+        function cleanUpTransactionDict(transaction_id) {
+          if (transaction_dict.hasOwnProperty(transaction_id)) {
+            delete transaction_dict[transaction_id];
+          }
+        }
         new RSVP.Queue()
           .push(function () {
-            return gadget_instance.__aq_parent.apply(gadget_instance, params);
+            var promise = gadget_instance.__aq_parent.apply(
+              gadget_instance,
+              params
+            );
+            transaction_dict[transaction_id] = promise;
+            return promise;
           })
-          .then(trans.complete)
+          .then(function () {
+            cleanUpTransactionDict(transaction_id);
+            trans.complete.apply(trans, arguments);
+          })
           .fail(function handleChannelAcquireError(e) {
-            trans.error(e.toString());
+            var message = e instanceof Error ? e.message : e;
+            trans.error({
+              type: convertObjectToErrorType(e),
+              msg: message
+            });
+            return cleanUpTransactionDict(transaction_id);
           });
         trans.delayReturn(true);
       });
@@ -1733,7 +1934,8 @@ if (typeof document.contains !== 'function') {
   /////////////////////////////////////////////////////////////////
   // privateDeclareDataUrlGadget
   /////////////////////////////////////////////////////////////////
-  function privateDeclareDataUrlGadget(url, options, parent_gadget) {
+  function privateDeclareDataUrlGadget(url, options, parent_gadget,
+                                       old_element) {
 
     return new RSVP.Queue()
       .push(function waitForDataUrlAjax() {
@@ -1742,8 +1944,7 @@ if (typeof document.contains !== 'function') {
       .push(function handleDataURLAjaxResponse(xhr) {
         // Insert a "base" element, in order to resolve all relative links
         // which could get broken with a data url
-        var doc = (new DOMParser()).parseFromString(xhr.responseText,
-                                                    'text/html'),
+        var doc = parseDocumentStringOrFail(xhr.responseText, 'text/html'),
           base = doc.createElement('base'),
           blob;
         base.href = url;
@@ -1753,7 +1954,8 @@ if (typeof document.contains !== 'function') {
         return readBlobAsDataURL(blob);
       })
       .push(function handleDataURL(data_url) {
-        return privateDeclareIframeGadget(data_url, options, parent_gadget);
+        return privateDeclareIframeGadget(data_url, options, parent_gadget,
+                                          old_element);
       });
   }
 
@@ -1761,31 +1963,10 @@ if (typeof document.contains !== 'function') {
   // RenderJSGadget.declareGadget
   /////////////////////////////////////////////////////////////////
   function setGadgetInstanceHTMLContext(gadget_instance, options,
-                                        parent_gadget, url) {
+                                        parent_gadget, url,
+                                        old_element, scope) {
     var i,
-      scope,
       queue;
-    clearGadgetInternalParameters(gadget_instance);
-
-    // Store local reference to the gadget instance
-    scope = options.scope;
-    if (scope === undefined) {
-      scope = 'RJS_' + scope_increment;
-      scope_increment += 1;
-      while (parent_gadget.__sub_gadget_dict.hasOwnProperty(scope)) {
-        scope = 'RJS_' + scope_increment;
-        scope_increment += 1;
-      }
-    }
-    parent_gadget.__sub_gadget_dict[scope] = gadget_instance;
-    gadget_instance.element.setAttribute("data-gadget-scope",
-                                         scope);
-
-    // Put some attribute to ease page layout comprehension
-    gadget_instance.element.setAttribute("data-gadget-url", url);
-    gadget_instance.element.setAttribute("data-gadget-sandbox",
-                                         options.sandbox);
-    gadget_instance.element._gadget = gadget_instance;
 
     function ready_executable_wrapper(fct) {
       return function executeReadyWrapper() {
@@ -1794,6 +1975,11 @@ if (typeof document.contains !== 'function') {
     }
 
     function ready_wrapper() {
+      // Always set the parent reference when all ready are finished
+      // in case the gadget declaration is cancelled
+      // (and ready are not finished)
+      gadget_instance.element._gadget = gadget_instance;
+      parent_gadget.__sub_gadget_dict[scope] = gadget_instance;
       if (document.contains(gadget_instance.element)) {
         startService(gadget_instance);
       }
@@ -1821,7 +2007,9 @@ if (typeof document.contains !== 'function') {
     .declareMethod('declareGadget', function declareGadget(url, options) {
       var parent_gadget = this,
         method,
-        result;
+        result,
+        scope,
+        old_element;
 
       if (options === undefined) {
         options = {};
@@ -1829,9 +2017,38 @@ if (typeof document.contains !== 'function') {
       if (options.sandbox === undefined) {
         options.sandbox = "public";
       }
+      if (options.element === undefined) {
+        options.element = document.createElement('div');
+      } else if (typeof options.element === 'string') {
+        options.element = document.createElement(options.element);
+      } else if (options.element.parentNode) {
+        old_element = options.element;
+        // Clean up the element content
+        // Remove all existing event listener
+        options.element = old_element.cloneNode(false);
+      } else {
+        throw new Error('No need to manually provide a DOM element ' +
+                        'without a parentNode: ' + url);
+      }
 
       // transform url to absolute url if it is relative
       url = renderJS.getAbsoluteURL(url, this.__path);
+
+      // Store local reference to the gadget instance
+      scope = options.scope;
+      if (scope === undefined) {
+        scope = 'RJS_' + scope_increment;
+        scope_increment += 1;
+        while (parent_gadget.__sub_gadget_dict.hasOwnProperty(scope)) {
+          scope = 'RJS_' + scope_increment;
+          scope_increment += 1;
+        }
+      }
+      options.element.setAttribute("data-gadget-scope", scope);
+
+      // Put some attribute to ease page layout comprehension
+      options.element.setAttribute("data-gadget-url", url);
+      options.element.setAttribute("data-gadget-sandbox", options.sandbox);
 
       if (options.sandbox === "public") {
         method = privateDeclarePublicGadget;
@@ -1843,20 +2060,19 @@ if (typeof document.contains !== 'function') {
         throw new Error("Unsupported sandbox options '" +
                         options.sandbox + "'");
       }
-      result = method(url, options, parent_gadget);
+      result = method(url, options, parent_gadget, old_element);
       // Set the HTML context
       if (typeof result.then === 'function') {
-        return new RSVP.Queue()
-          .push(function () {
-            return result;
-          })
+        return new RSVP.Queue(result)
           .push(function setAsyncGadgetInstanceHTMLContext(gadget_instance) {
             return setGadgetInstanceHTMLContext(gadget_instance, options,
-                                                parent_gadget, url);
+                                                parent_gadget, url,
+                                                old_element, scope);
           });
       }
       return setGadgetInstanceHTMLContext(result, options,
-                                          parent_gadget, url);
+                                          parent_gadget, url, old_element,
+                                          scope);
     })
     .declareMethod('getDeclaredGadget',
       function getDeclaredGadget(gadget_scope) {
@@ -2026,10 +2242,11 @@ if (typeof document.contains !== 'function') {
     // https://developer.mozilla.org/en-US/docs/Web/API/DOMParser
     // https://developer.mozilla.org/en-US/docs/Code_snippets/HTML_to_DOM
     tmp_constructor.__template_element =
-      (new DOMParser()).parseFromString(xhr.responseText, "text/html");
+      parseDocumentStringOrFail(xhr.responseText, "text/html");
     parsed_html = renderJS.parseGadgetHTMLDocument(
       tmp_constructor.__template_element,
-      url
+      url,
+      true
     );
     for (key in parsed_html) {
       if (parsed_html.hasOwnProperty(key)) {
@@ -2134,18 +2351,29 @@ if (typeof document.contains !== 'function') {
   // renderJS.parseGadgetHTMLDocument
   /////////////////////////////////////////////////////////////////
   renderJS.parseGadgetHTMLDocument =
-    function parseGadgetHTMLDocument(document_element, url) {
+    function parseGadgetHTMLDocument(document_element, url,
+                                     update_relative_url) {
       var settings = {
           title: "",
           interface_list: [],
           required_css_list: [],
-          required_js_list: []
+          required_js_list: [],
+          path: url
         },
         i,
-        element;
+        element,
+        element_list,
+        j,
+        url_attribute_list = ['src', 'href', 'srcset'],
+        url_attribute,
+        base_found = false;
 
       if (!url || !isAbsoluteOrDataURL.test(url)) {
         throw new Error("The url should be absolute: " + url);
+      }
+
+      if (update_relative_url === undefined) {
+        update_relative_url = false;
       }
 
       if (document_element.nodeType === 9) {
@@ -2159,23 +2387,54 @@ if (typeof document.contains !== 'function') {
               // element.href returns absolute URL in firefox but "" in chrome;
               if (element.rel === "stylesheet") {
                 settings.required_css_list.push(
-                  renderJS.getAbsoluteURL(element.getAttribute("href"), url)
+                  renderJS.getAbsoluteURL(element.getAttribute("href"),
+                                          settings.path)
                 );
               } else if (element.nodeName === "SCRIPT" &&
                          (element.type === "text/javascript" ||
                           !element.type)) {
                 settings.required_js_list.push(
-                  renderJS.getAbsoluteURL(element.getAttribute("src"), url)
+                  renderJS.getAbsoluteURL(element.getAttribute("src"),
+                                          settings.path)
                 );
               } else if (element.rel ===
                          "http://www.renderjs.org/rel/interface") {
                 settings.interface_list.push(
-                  renderJS.getAbsoluteURL(element.getAttribute("href"), url)
+                  renderJS.getAbsoluteURL(element.getAttribute("href"),
+                                          settings.path)
                 );
+              } else if ((element.nodeName === "BASE") && !base_found &&
+                         element.getAttribute("href")) {
+                settings.path = renderJS.getAbsoluteURL(
+                  element.getAttribute("href"),
+                  settings.path
+                );
+                // Only use the first base element found
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base#Usage_notes
+                base_found = true;
               }
             }
           }
         }
+
+        if (update_relative_url && (document_element.body !== null)) {
+          // Resolve all relativeurl configure in the dom as absolute from
+          // the gadget url
+          for (j = 0; j < url_attribute_list.length; j += 1) {
+            url_attribute = url_attribute_list[j];
+            element_list = document_element.body.querySelectorAll(
+              '[' + url_attribute + ']'
+            );
+            for (i = 0; i < element_list.length; i += 1) {
+              element = element_list[i];
+              element.setAttribute(url_attribute, renderJS.getAbsoluteURL(
+                element.getAttribute(url_attribute),
+                settings.path
+              ));
+            }
+          }
+        }
+
       } else {
         throw new Error("The first parameter should be an HTMLDocument");
       }
@@ -2187,6 +2446,10 @@ if (typeof document.contains !== 'function') {
   /////////////////////////////////////////////////////////////////
   renderJS.Mutex = Mutex;
   renderJS.ScopeError = ScopeError;
+  renderJS.IframeSerializationError = IframeSerializationError;
+  renderJS.loopEventListener = loopEventListener;
+  renderJS.DOMParserError = DOMParserError;
+  renderJS.parseDocumentStringOrFail = parseDocumentStringOrFail;
   window.rJS = window.renderJS = renderJS;
   window.__RenderJSGadget = RenderJSGadget;
   window.__RenderJSEmbeddedGadget = RenderJSEmbeddedGadget;
@@ -2358,7 +2621,7 @@ if (typeof document.contains !== 'function') {
     TmpConstructor.__ready_list = [];
     TmpConstructor.__service_list = RenderJSGadget.__service_list.slice();
     TmpConstructor.prototype.__path = url;
-    root_gadget = new RenderJSEmbeddedGadget();
+    root_gadget = new TmpConstructor();
     setAqParent(root_gadget, createLastAcquisitionGadget());
 
     declare_method_list_waiting = [
@@ -2366,7 +2629,8 @@ if (typeof document.contains !== 'function') {
       "getRequiredCSSList",
       "getRequiredJSList",
       "getPath",
-      "getTitle"
+      "getTitle",
+      "getMethodList"
     ];
 
     // Inform parent gadget about declareMethod calls here.
@@ -2430,10 +2694,11 @@ if (typeof document.contains !== 'function') {
     }
 
     // Surcharge declareMethod to inform parent window
-    TmpConstructor.declareMethod = function declareMethod(name, callback) {
+    TmpConstructor.declareMethod = function declareMethod(name, callback,
+                                                          options) {
       var result = RenderJSGadget.declareMethod.apply(
           this,
-          [name, callback]
+          [name, callback, options]
         );
       notifyDeclareMethod(name);
       return result;
@@ -2482,36 +2747,90 @@ if (typeof document.contains !== 'function') {
 
   function finishAqParentConfiguration(TmpConstructor, root_gadget,
                                        embedded_channel) {
+    var local_transaction_dict = {};
     // Define __aq_parent to inform parent window
     root_gadget.__aq_parent =
       TmpConstructor.prototype.__aq_parent = function aq_parent(method_name,
                                                                 argument_list,
                                                                 time_out) {
+        var channel_call_id;
         return new RSVP.Promise(
           function waitForChannelAcquire(resolve, reject) {
-            embedded_channel.call({
+            function errorWrap(value) {
+              return rejectErrorType(value, reject);
+            }
+
+            channel_call_id = embedded_channel.call({
               method: "acquire",
               params: [
                 method_name,
-                argument_list
+                Array.prototype.slice.call(argument_list, 0)
               ],
               success: resolve,
-              error: reject,
+              error: errorWrap,
               timeout: time_out
+            });
+          },
+          function cancelChannelCall(msg) {
+            embedded_channel.notify({
+              method: "cancelAcquiredMethodCall",
+              params: [
+                channel_call_id,
+                msg
+              ]
             });
           }
         );
       };
 
     // bind calls to renderJS method on the instance
-    embedded_channel.bind("methodCall", function methodCall(trans, v) {
-      root_gadget[v[0]].apply(root_gadget, v[1])
-        .push(trans.complete,
-          function handleMethodCallError(e) {
-            trans.error(e.toString());
+    embedded_channel.bind("methodCall",
+                          function methodCall(trans, v, transaction_id) {
+        local_transaction_dict[transaction_id] =
+          root_gadget[v[0]].apply(root_gadget, v[1])
+            .push(function handleMethodCallSuccess() {
+            trans.complete.apply(trans, arguments);
+            // drop the promise reference, to allow garbage collection
+            delete local_transaction_dict[transaction_id];
+          })
+          .push(undefined, function handleMethodCallError(e) {
+            var error_type = convertObjectToErrorType(e),
+              message;
+            if (e instanceof Error) {
+              if (error_type !== unhandled_error_type) {
+                message = e.message;
+              } else {
+                message = e.toString();
+              }
+            } else {
+              message = e;
+            }
+            try {
+              trans.error({
+                type: error_type,
+                msg: message
+              });
+            } catch (new_error) {
+              trans.error({
+                type: convertObjectToErrorType(new_error),
+                msg: new_error.toString()
+              });
+            }
+            // drop the promise reference, to allow garbage collection
+            delete local_transaction_dict[transaction_id];
           });
-      trans.delayReturn(true);
-    });
+        trans.delayReturn(true);
+      });
+
+    embedded_channel.bind("cancelMethodCall",
+                          function cancelMethodCall(trans, v) {
+        if (local_transaction_dict.hasOwnProperty(v[0])) {
+          local_transaction_dict[v[0]].cancel(v[1]);
+          // drop the promise reference, to allow garbage collection
+          delete local_transaction_dict[v[0]];
+        }
+      });
+
   }
 
   function bootstrap(url) {
@@ -2522,11 +2841,8 @@ if (typeof document.contains !== 'function') {
       embedded_channel,
       declare_method_list_waiting;
 
-    return new RSVP.Queue()
-      .push(function waitForLoadingGadget() {
-        // Wait for the loading gadget to be created
-        return wait_for_gadget_loaded;
-      })
+    // Wait for the loading gadget to be created
+    return new RSVP.Queue(wait_for_gadget_loaded)
       .push(function handleLoadingGadget(result_list) {
         TmpConstructor = result_list[0];
         root_gadget = result_list[1];
