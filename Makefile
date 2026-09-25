@@ -226,7 +226,7 @@ ${EXTERNALDIR}/lz-string.js:
 
 ${EXTERNALDIR}/moment.js:
 	@mkdir -p $(@D)
-	curl -s -o $@ https://raw.githubusercontent.com/moment/moment/2.22.1/moment.js
+	curl -s -o $@ https://raw.githubusercontent.com/moment/moment/2.31.0/moment.js
 
 ${EXTERNALDIR}/rusha.js:
 	@mkdir -p $(@D)
