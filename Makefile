@@ -230,7 +230,7 @@ ${EXTERNALDIR}/moment.js:
 
 ${EXTERNALDIR}/rusha.js:
 	@mkdir -p $(@D)
-	curl -s -o $@ https://raw.githubusercontent.com/srijs/rusha/v0.8.2/rusha.js
+	curl -s -o $@ https://raw.githubusercontent.com/srijs/rusha/refs/tags/v0.8.12/dist/rusha.js
 
 ${EXTERNALDIR}/rsvp-2.0.4.js:
 	@mkdir -p $(@D)
