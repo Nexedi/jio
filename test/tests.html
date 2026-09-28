@@ -32,7 +32,21 @@ See https://www.nexedi.com/licensing for rationale and options.
 
   <script>
     QUnit.config.testTimeout = 5000;
+    // Add compatibility
     sinon.fakeServer = nise.fakeServer;
+    var originalRespondWith = sinon.fakeServer.respondWith;
+    sinon.fakeServer.respondWith = function (method, url, body) {
+      if (arguments.length !== 3) {
+        throw new Error('unexpected arguments');
+      }
+      if (typeof url === "string") {
+        // nise uses path-to-regexp which consider ? character as regexp
+        url = new RegExp(
+          '^' + url.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, "\\$&") + '$'
+        );
+      }
+      return originalRespondWith.apply(this, [method, url, body]);
+    };
   </script>
   <!--script src="html5.js"></script-->
   <!--script src="jio/util.js"></script-->

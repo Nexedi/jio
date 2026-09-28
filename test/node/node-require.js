@@ -23,6 +23,7 @@
 
   var sinon,
     nise,
+    originalRespondWith,
     jIO = require('../../dist/jio-latest-node');
   global.jIO = jIO;
   Object.keys(jIO.node_env).forEach(function (key) {
@@ -31,7 +32,21 @@
 
   sinon = require('sinon');
   global.sinon = sinon;
+  // Add compatibility
   nise = require('nise');
   sinon.fakeServer = nise.fakeServer;
+  originalRespondWith = sinon.fakeServer.respondWith;
+  sinon.fakeServer.respondWith = function (method, url, body) {
+    if (arguments.length !== 3) {
+      throw new Error('unexpected arguments');
+    }
+    if (typeof url === "string") {
+      // nise uses path-to-regexp which consider ? character as regexp
+      url = new RegExp(
+        '^' + url.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, "\\$&") + '$'
+      );
+    }
+    return originalRespondWith.apply(this, [method, url, body]);
+  };
 
 }(require, global, Object));
