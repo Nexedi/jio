@@ -26,6 +26,13 @@
     module = QUnit.module,
     domain = "https://example.org/foo";
 
+  function assertRequestHeaders(assert, request, headers) {
+    if (!headers.hasOwnProperty('Content-Type')) {
+      headers['Content-Type'] = 'text/plain;charset=utf-8';
+    }
+    assert.deepEqual(request.requestHeaders, headers);
+  }
+
   /////////////////////////////////////////////////////////////////
   // LinshareStorage constructor
   /////////////////////////////////////////////////////////////////
@@ -151,7 +158,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
@@ -212,8 +219,8 @@
         assert.equal(server.requests[0].method, "GET");
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
-        assert.equal(server.requests[0].withCredentials, undefined);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests[0].withCredentials, false);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json",
           "Authorization": "Basic " + token
         });
@@ -277,7 +284,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
@@ -327,7 +334,7 @@
           assert.equal(server.requests[0].url, search_url);
           assert.equal(server.requests[0].requestBody, undefined);
           assert.equal(server.requests[0].withCredentials, true);
-          assert.deepEqual(server.requests[0].requestHeaders, {
+          assertRequestHeaders(assert, server.requests[0], {
             "Accept": "application/json"
           });
         })
@@ -382,7 +389,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
@@ -448,7 +455,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
@@ -507,7 +514,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
@@ -579,7 +586,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
 
@@ -615,8 +622,7 @@
 
         assert.equal(server.requests[1].withCredentials, true);
         assert.deepEqual(server.requests[1].requestHeaders, {
-          "Accept": "application/json",
-          "Content-Type": "text/plain;charset=utf-8"
+          "Accept": "application/json"
         });
 
       })
@@ -679,7 +685,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
 
@@ -695,9 +701,9 @@
         assert.equal(context.spy.callCount, 0, "FormData.append count");
 
         assert.equal(server.requests[1].withCredentials, true);
-        assert.deepEqual(server.requests[1].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[1], {
           "Accept": "application/json",
-          "Content-Type": "application/json;charset=utf-8"
+          "Content-Type": "application/json"
         });
 
       })
@@ -760,7 +766,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
@@ -836,7 +842,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
 
@@ -844,7 +850,7 @@
         assert.equal(server.requests[1].url, remove_url_1);
         assert.equal(server.requests[1].requestBody, undefined);
         assert.equal(server.requests[1].withCredentials, true);
-        assert.deepEqual(server.requests[1].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[1], {
           "Accept": "application/json",
           "Content-Type": "text/plain;charset=utf-8"
         });
@@ -853,7 +859,7 @@
         assert.equal(server.requests[2].url, remove_url_2);
         assert.equal(server.requests[2].requestBody, undefined);
         assert.equal(server.requests[2].withCredentials, true);
-        assert.deepEqual(server.requests[2].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[2], {
           "Accept": "application/json",
           "Content-Type": "text/plain;charset=utf-8"
         });
@@ -862,7 +868,7 @@
         assert.equal(server.requests[3].url, remove_url_3);
         assert.equal(server.requests[3].requestBody, undefined);
         assert.equal(server.requests[3].withCredentials, true);
-        assert.deepEqual(server.requests[3].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[3], {
           "Accept": "application/json",
           "Content-Type": "text/plain;charset=utf-8"
         });
@@ -930,7 +936,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
@@ -988,7 +994,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
@@ -1081,7 +1087,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
@@ -1144,7 +1150,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
 
@@ -1181,8 +1187,7 @@
 
         assert.equal(server.requests[1].withCredentials, true);
         assert.deepEqual(server.requests[1].requestHeaders, {
-          "Accept": "application/json",
-          "Content-Type": "text/plain;charset=utf-8"
+          "Accept": "application/json"
         });
 
       })
@@ -1271,7 +1276,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
@@ -1333,7 +1338,7 @@
         assert.equal(server.requests[0].url, search_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
 
@@ -1341,8 +1346,7 @@
         assert.equal(server.requests[1].url, download_url);
         assert.equal(server.requests[1].requestBody, undefined);
         assert.equal(server.requests[1].withCredentials, true);
-        assert.deepEqual(server.requests[1].requestHeaders, {});
-
+        assertRequestHeaders(assert, server.requests[1], {});
         assert.ok(result instanceof Blob, "Data is Blob");
         assert.deepEqual(result.type, "text/plain", "Check mimetype");
         return jIO.util.readBlobAsText(result);

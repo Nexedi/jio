@@ -47,6 +47,13 @@
       }
     });
 
+  function assertRequestHeaders(assert, request, headers) {
+    if (!headers.hasOwnProperty('Content-Type')) {
+      headers['Content-Type'] = 'text/plain;charset=utf-8';
+    }
+    assert.deepEqual(request.requestHeaders, headers);
+  }
+
   /////////////////////////////////////////////////////////////////
   // erp5Storage constructor
   /////////////////////////////////////////////////////////////////
@@ -183,14 +190,16 @@
         assert.equal(server.requests[0].url, domain);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, false);
-        assert.deepEqual(server.requests[0].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken'});
+        assertRequestHeaders(assert, server.requests[0], {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
         assert.equal(server.requests[1].method, "GET");
         assert.equal(server.requests[1].url, traverse_url);
         assert.equal(server.requests[1].requestBody, undefined);
         assert.equal(server.requests[1].withCredentials, false);
-        assert.deepEqual(server.requests[1].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken'});
+        assertRequestHeaders(assert, server.requests[1], {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
       })
       .fail(function (error) {
         assert.ok(false, error);
@@ -246,12 +255,12 @@
         assert.equal(server.requests[0].url, domain);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[0], {});
         assert.equal(server.requests[1].method, "GET");
         assert.equal(server.requests[1].url, traverse_url);
         assert.equal(server.requests[1].requestBody, undefined);
         assert.equal(server.requests[1].withCredentials, true);
-        assert.deepEqual(server.requests[1].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[1], {});
       })
       .fail(function (error) {
         assert.ok(false, error);
@@ -463,14 +472,14 @@
         assert.equal(server.requests[0].url, domain);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, false);
-        assert.deepEqual(server.requests[0].requestHeaders,
+        assertRequestHeaders(assert, server.requests[0],
                   {'X-ACCESS-TOKEN': 'footoken'});
         assert.equal(server.requests[1].method, "GET");
         assert.equal(server.requests[1].url, traverse_url);
         assert.equal(server.requests[1].requestBody, undefined);
         assert.equal(server.requests[1].withCredentials, false);
-        assert.deepEqual(server.requests[1].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken'});
+        assertRequestHeaders(assert, server.requests[1],
+          {'X-ACCESS-TOKEN': 'footoken'});
       })
       .fail(function (error) {
         assert.ok(false, error);
@@ -518,12 +527,12 @@
         assert.equal(server.requests[0].url, domain);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[0], {});
         assert.equal(server.requests[1].method, "GET");
         assert.equal(server.requests[1].url, traverse_url);
         assert.equal(server.requests[1].requestBody, undefined);
         assert.equal(server.requests[1].withCredentials, true);
-        assert.deepEqual(server.requests[1].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[1], {});
       })
       .fail(function (error) {
         assert.ok(false, error);
@@ -1042,14 +1051,16 @@
           assert.equal(server.requests[0].url, domain);
           assert.equal(server.requests[0].requestBody, undefined);
           assert.equal(server.requests[0].withCredentials, false);
-          assert.deepEqual(server.requests[0].requestHeaders,
-                    {'X-ACCESS-TOKEN': 'footoken'});
+          assertRequestHeaders(assert, server.requests[0], {
+            'X-ACCESS-TOKEN': 'footoken'
+          });
           assert.equal(server.requests[1].method, "GET");
           assert.equal(server.requests[1].url, traverse_url);
           assert.equal(server.requests[1].requestBody, undefined);
           assert.equal(server.requests[1].withCredentials, false);
-          assert.deepEqual(server.requests[1].requestHeaders,
-                    {'X-ACCESS-TOKEN': 'footoken'});
+          assertRequestHeaders(assert, server.requests[1], {
+            'X-ACCESS-TOKEN': 'footoken'
+          });
 
           assert.ok(result instanceof Blob, "Data is Blob");
           assert.deepEqual(result.type, "application/hal+json",
@@ -1103,12 +1114,12 @@
         assert.equal(server.requests[0].url, domain);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[0], {});
         assert.equal(server.requests[1].method, "GET");
         assert.equal(server.requests[1].url, traverse_url);
         assert.equal(server.requests[1].requestBody, undefined);
         assert.equal(server.requests[1].withCredentials, true);
-        assert.deepEqual(server.requests[1].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[1], {});
 
         assert.ok(result instanceof Blob, "Data is Blob");
         assert.deepEqual(result.type, "application/hal+json", "Check mimetype");
@@ -1345,8 +1356,9 @@
         assert.equal(server.requests[0].url, callable_url);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.equal(server.requests[0].requestHeaders.Range,
-                     "bytes=123-456");
+        assertRequestHeaders(assert, server.requests[0], {
+          'Range': 'bytes=123-456'
+        });
 
         assert.ok(result instanceof Blob, "Data is Blob");
         assert.deepEqual(result.type, "application/octet-stream",
@@ -1471,14 +1483,16 @@
         assert.equal(server.requests[0].url, domain);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, false);
-        assert.deepEqual(server.requests[0].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken'});
+        assertRequestHeaders(assert, server.requests[0], {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
         assert.equal(server.requests[1].method, "GET");
         assert.equal(server.requests[1].url, search_url);
         assert.equal(server.requests[1].requestBody, undefined);
         assert.equal(server.requests[1].withCredentials, false);
-        assert.deepEqual(server.requests[1].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken'});
+        assertRequestHeaders(assert, server.requests[1], {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
       })
       .fail(function (error) {
         assert.ok(false, error);
@@ -1551,12 +1565,12 @@
         assert.equal(server.requests[0].url, domain);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[0], {});
         assert.equal(server.requests[1].method, "GET");
         assert.equal(server.requests[1].url, search_url);
         assert.equal(server.requests[1].requestBody, undefined);
         assert.equal(server.requests[1].withCredentials, true);
-        assert.deepEqual(server.requests[1].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[1], {});
       })
       .fail(function (error) {
         assert.ok(false, error);
@@ -2609,12 +2623,12 @@
         assert.equal(server.requests[0].url, domain);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[0], {});
         assert.equal(server.requests[1].method, "GET");
         assert.equal(server.requests[1].url, traverse_url);
         assert.equal(server.requests[1].requestBody, undefined);
         assert.equal(server.requests[1].withCredentials, true);
-        assert.deepEqual(server.requests[1].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[1], {});
         assert.equal(server.requests[2].method, "POST");
         assert.equal(server.requests[2].url, put_url);
         assert.equal(server.requests[2].withCredentials, true);
@@ -3011,8 +3025,9 @@
         assert.equal(server.requests[0].url, domain);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, false);
-        assert.deepEqual(server.requests[0].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken'});
+        assertRequestHeaders(assert, server.requests[0], {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
 
         assert.equal(server.requests[1].method, "POST");
         assert.equal(server.requests[1].url, add_url);
@@ -3022,15 +3037,17 @@
         assert.equal(server.requests[2].url, domain);
         assert.equal(server.requests[2].requestBody, undefined);
         assert.equal(server.requests[2].withCredentials, false);
-        assert.deepEqual(server.requests[2].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken'});
+        assertRequestHeaders(assert, server.requests[2], {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
 
         assert.equal(server.requests[3].method, "GET");
         assert.equal(server.requests[3].url, traverse_url);
         assert.equal(server.requests[3].requestBody, undefined);
         assert.equal(server.requests[3].withCredentials, false);
-        assert.deepEqual(server.requests[3].requestHeaders,
-                  {'X-ACCESS-TOKEN': 'footoken'});
+        assertRequestHeaders(assert, server.requests[3], {
+          'X-ACCESS-TOKEN': 'footoken'
+        });
 
         assert.equal(server.requests[4].method, "POST");
         assert.equal(server.requests[4].url, put_url);
@@ -3227,7 +3244,7 @@
         assert.equal(server.requests[0].url, domain);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].withCredentials, true);
-        assert.deepEqual(server.requests[0].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[0], {});
 
         assert.equal(server.requests[1].method, "POST");
         assert.equal(server.requests[1].url, add_url);
@@ -3237,13 +3254,13 @@
         assert.equal(server.requests[2].url, domain);
         assert.equal(server.requests[2].requestBody, undefined);
         assert.equal(server.requests[2].withCredentials, true);
-        assert.deepEqual(server.requests[2].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[2], {});
 
         assert.equal(server.requests[3].method, "GET");
         assert.equal(server.requests[3].url, traverse_url);
         assert.equal(server.requests[3].requestBody, undefined);
         assert.equal(server.requests[3].withCredentials, true);
-        assert.deepEqual(server.requests[3].requestHeaders, {});
+        assertRequestHeaders(assert, server.requests[3], {});
 
         assert.equal(server.requests[4].method, "POST");
         assert.equal(server.requests[4].url, put_url);

@@ -27,6 +27,13 @@
     domain = "https://example.org",
     basic_login = "login:passwd";
 
+  function assertRequestHeaders(assert, request, headers) {
+    if (!headers.hasOwnProperty('Content-Type')) {
+      headers['Content-Type'] = 'text/plain;charset=utf-8';
+    }
+    assert.deepEqual(request.requestHeaders, headers);
+  }
+
   /////////////////////////////////////////////////////////////////
   // davStorage constructor
   /////////////////////////////////////////////////////////////////
@@ -98,7 +105,7 @@
         assert.equal(server.requests[0].status, 201);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].responseText, "");
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           Authorization: "Basic login:passwd",
           "Content-Type": "text/plain;charset=utf-8"
         });
@@ -227,7 +234,7 @@
         assert.equal(server.requests[0].status, 204);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].responseText, "");
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           Authorization: "Basic login:passwd",
           "Content-Type": "text/plain;charset=utf-8"
         });
@@ -837,7 +844,7 @@
         assert.equal(server.requests[0].status, 204);
         assert.equal(server.requests[0].requestBody, blob);
         assert.equal(server.requests[0].responseText, "");
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           Authorization: "Basic login:passwd",
           "Content-Type": "text/plain;charset=utf-8"
         });
@@ -960,7 +967,7 @@
         assert.equal(server.requests[0].status, 204);
         assert.equal(server.requests[0].requestBody, undefined);
         assert.equal(server.requests[0].responseText, "");
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           Authorization: "Basic login:passwd",
           "Content-Type": "text/plain;charset=utf-8"
         });
@@ -1110,7 +1117,7 @@
         assert.equal(server.requests[0].url, url);
         assert.equal(server.requests[0].status, 200);
         assert.equal(server.requests[0].requestBody, undefined);
-        assert.deepEqual(server.requests[0].requestHeaders, {
+        assertRequestHeaders(assert, server.requests[0], {
           Authorization: "Basic login:passwd"
         });
         assert.equal(server.requests[0].withCredentials, true);
