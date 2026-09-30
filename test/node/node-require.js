@@ -22,6 +22,7 @@
   "use strict";
 
   var sinon,
+    nise,
     jIO = require('../../dist/jio-latest-node');
   global.jIO = jIO;
   Object.keys(jIO.node_env).forEach(function (key) {
@@ -30,5 +31,7 @@
 
   sinon = require('sinon');
   global.sinon = sinon;
+  nise = require('nise');
+  sinon.fakeServer = nise.fakeServer;
 
 }(require, global, Object));
