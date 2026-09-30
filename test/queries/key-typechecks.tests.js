@@ -20,29 +20,27 @@
 (function (jIO) {
   "use strict";
   var test = QUnit.test,
-    equal = QUnit.equal,
-    ok = QUnit.ok,
     module = QUnit.module;
 
   module('Key and key_schema objects validation');
 
-  test('Check the parameters passed to exec() and create()', function () {
+  test('Check the parameters passed to exec() and create()', function (assert) {
     try {
       jIO.QueryFactory.create('').exec('gnegne');
-      ok(false, 'argument 1 not checked');
+      assert.ok(false, 'argument 1 not checked');
     } catch (e) {
-      equal(e.name, 'TypeError', 'wrong exception type');
-      equal(e.message,
+      assert.equal(e.name, 'TypeError', 'wrong exception type');
+      assert.equal(e.message,
          "Query().exec(): Argument 1 is not of type 'array'",
          'wrong exception message');
     }
 
     try {
       jIO.QueryFactory.create({});
-      ok(false, 'argument 1 not checked');
+      assert.ok(false, 'argument 1 not checked');
     } catch (e) {
-      equal(e.name, 'TypeError', 'wrong exception type');
-      equal(e.message,
+      assert.equal(e.name, 'TypeError', 'wrong exception type');
+      assert.equal(e.message,
          "QueryFactory.create(): Argument 1 is not a search text or a " +
          "parsable object",
          'wrong exception message');
@@ -50,30 +48,30 @@
 
     try {
       jIO.QueryFactory.create('').exec([], 1);
-      ok(false, 'argument 2 not checked');
+      assert.ok(false, 'argument 2 not checked');
     } catch (e) {
-      equal(e.name, 'TypeError', 'wrong exception type');
-      equal(e.message,
+      assert.equal(e.name, 'TypeError', 'wrong exception type');
+      assert.equal(e.message,
          "Query().exec(): Optional argument 2 is not of type 'object'",
          'wrong exception message');
     }
 
     try {
       jIO.QueryFactory.create({type: 'simple'}, '');
-      ok(false, 'key_schema type is not checked');
+      assert.ok(false, 'key_schema type is not checked');
     } catch (e) {
-      equal(e.name, 'TypeError', 'wrong exception type');
-      equal(e.message,
+      assert.equal(e.name, 'TypeError', 'wrong exception type');
+      assert.equal(e.message,
          "Query().create(): key_schema is not of type 'object'",
          'wrong exception message');
     }
 
     try {
       jIO.QueryFactory.create({type: 'simple'}, {});
-      ok(false, 'key_schema.key_set is not checked');
+      assert.ok(false, 'key_schema.key_set is not checked');
     } catch (e) {
-      equal(e.name, 'TypeError', 'wrong exception type');
-      equal(e.message,
+      assert.equal(e.name, 'TypeError', 'wrong exception type');
+      assert.equal(e.message,
          "Query().create(): key_schema has no 'key_set' property",
          'wrong exception message');
     }
@@ -82,10 +80,10 @@
       jIO.QueryFactory.create({
         type: 'simple'
       }, {key_set: {}, foobar: {}});
-      ok(false, 'unknown key_schema properties are not checked');
+      assert.ok(false, 'unknown key_schema properties are not checked');
     } catch (e) {
-      equal(e.name, 'TypeError', 'wrong exception type');
-      equal(e.message,
+      assert.equal(e.name, 'TypeError', 'wrong exception type');
+      assert.equal(e.message,
          "Query().create(): key_schema has unknown property 'foobar'",
          'wrong exception message');
     }
@@ -93,7 +91,7 @@
   });
 
 
-  test('Check the key options', function () {
+  test('Check the key options', function (assert) {
     var doc_list = [
       {'identifier': 'a'}
     ];
@@ -104,10 +102,10 @@
         key: {},
         value: 'a'
       }).exec(doc_list);
-      ok(false, 'key.read_from is not checked');
+      assert.ok(false, 'key.read_from is not checked');
     } catch (e) {
-      equal(e.name, 'TypeError', 'wrong exception type');
-      equal(e.message,
+      assert.equal(e.name, 'TypeError', 'wrong exception type');
+      assert.equal(e.message,
          "Custom key is missing the read_from property",
          'wrong exception message');
     }
@@ -121,10 +119,10 @@
         },
         value: 'a'
       }).exec(doc_list);
-      ok(false, 'unknown key properties are not checked');
+      assert.ok(false, 'unknown key properties are not checked');
     } catch (e) {
-      equal(e.name, 'TypeError', 'wrong exception type');
-      equal(e.message,
+      assert.equal(e.name, 'TypeError', 'wrong exception type');
+      assert.equal(e.message,
          "Custom key has unknown property 'foobar'",
          'wrong exception message');
     }

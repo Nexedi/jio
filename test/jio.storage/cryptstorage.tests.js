@@ -22,13 +22,8 @@
 (function (jIO, QUnit, Blob) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    ok = QUnit.ok,
-    expect = QUnit.expect,
-    deepEqual = QUnit.deepEqual,
-    equal = QUnit.equal,
-    throws = QUnit.throws,
+    start,
+    global_assert,
     module = QUnit.module,
     key = {"alg": "A256GCM", "ext": true,
            "k": "seeaLzpu8dHG07bO2ANH2GywbTqs_zrs4Vq8zmtYeE4",
@@ -47,24 +42,24 @@
   /////////////////////////////////////////////////////////////////
   module("CryptStorage.constructor");
 
-  test("create substorage", function () {
+  test("create substorage", function (assert) {
     var jio = jIO.createJIO({
       type: "crypt",
       key: key,
       sub_storage: {type : "cryptstorage200"}
     });
 
-    equal(jio.__type, "crypt");
-    equal(jio.__storage._sub_storage.__type, "cryptstorage200");
+    assert.equal(jio.__type, "crypt");
+    assert.equal(jio.__storage._sub_storage.__type, "cryptstorage200");
   });
 
   /////////////////////////////////////////////////////////////////
   // CryptStorage.get
   /////////////////////////////////////////////////////////////////
   module("CryptStorage.get");
-  test("get called substorage get", function () {
-    stop();
-    expect(2);
+  test("get called substorage get", function (assert) {
+    start = assert.async();
+    assert.expect(2);
 
     var jio = jIO.createJIO({
       type: "crypt",
@@ -73,18 +68,18 @@
     });
 
     Storage200.prototype.get = function (id) {
-      equal(id, "bar", "get 200 called");
+      assert.equal(id, "bar", "get 200 called");
       return {title: "foo"};
     };
 
     jio.get("bar")
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "title": "foo"
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -95,9 +90,9 @@
   // CryptStorage.post
   /////////////////////////////////////////////////////////////////
   module("CryptStorage.post");
-  test("post called substorage post", function () {
-    stop();
-    expect(2);
+  test("post called substorage post", function (assert) {
+    start = assert.async();
+    assert.expect(2);
 
     var jio = jIO.createJIO({
       type: "crypt",
@@ -106,18 +101,18 @@
     });
 
     Storage200.prototype.post = function (id) {
-      equal(id, "bar", "post 200 called");
+      assert.equal(id, "bar", "post 200 called");
       return {title: "foo"};
     };
 
     jio.post("bar")
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "title": "foo"
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -128,9 +123,9 @@
   // CryptStorage.put
   /////////////////////////////////////////////////////////////////
   module("CryptStorage.put");
-  test("put called substorage put", function () {
-    stop();
-    expect(2);
+  test("put called substorage put", function (assert) {
+    start = assert.async();
+    assert.expect(2);
 
     var jio = jIO.createJIO({
       type: "crypt",
@@ -139,16 +134,16 @@
     });
 
     Storage200.prototype.put = function (id) {
-      equal(id, "bar", "put 200 called");
+      assert.equal(id, "bar", "put 200 called");
       return {title: "foo"};
     };
 
     jio.put("bar")
       .then(function (result) {
-        equal(result, "bar");
+        assert.equal(result, "bar");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -159,9 +154,9 @@
   // CryptStorage.remove
   /////////////////////////////////////////////////////////////////
   module("CryptStorage.remove");
-  test("remove called substorage remove", function () {
-    stop();
-    expect(2);
+  test("remove called substorage remove", function (assert) {
+    start = assert.async();
+    assert.expect(2);
 
     var jio = jIO.createJIO({
       type: "crypt",
@@ -170,16 +165,16 @@
     });
 
     Storage200.prototype.remove = function (id) {
-      equal(id, "bar", "remove 200 called");
+      assert.equal(id, "bar", "remove 200 called");
       return {title: "foo"};
     };
 
     jio.remove("bar")
       .then(function (result) {
-        equal(result, "bar");
+        assert.equal(result, "bar");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -190,7 +185,7 @@
   // CryptStorage.hasCapacity
   /////////////////////////////////////////////////////////////////
   module("CryptStorage.hasCapacity");
-  test("hasCapacity return substorage value", function () {
+  test("hasCapacity return substorage value", function (assert) {
     var jio = jIO.createJIO({
       type: "crypt",
       key: key,
@@ -199,14 +194,14 @@
 
     delete Storage200.prototype.hasCapacity;
 
-    throws(
+    assert.throws(
       function () {
         jio.hasCapacity("foo");
       },
       function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.status_code, 501);
-        equal(error.message,
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.status_code, 501);
+        assert.equal(error.message,
               "Capacity 'foo' is not implemented on 'cryptstorage200'");
         return true;
       }
@@ -217,9 +212,9 @@
   // CryptStorage.buildQuery
   /////////////////////////////////////////////////////////////////
   module("CryptStorage.buildQuery");
-  test("buildQuery called substorage buildQuery", function () {
-    stop();
-    expect(2);
+  test("buildQuery called substorage buildQuery", function (assert) {
+    start = assert.async();
+    assert.expect(2);
 
     var jio = jIO.createJIO({
       type: "crypt",
@@ -228,18 +223,18 @@
     });
 
     Storage200.prototype.buildQuery = function (id) {
-      equal(id, "bar", "buildQuery 200 called");
+      assert.equal(id, "bar", "buildQuery 200 called");
       return {title: "foo"};
     };
 
     jio.buildQuery("bar")
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "title": "foo"
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -250,43 +245,44 @@
   // CryptStorage.removeAttachment
   /////////////////////////////////////////////////////////////////
   module("CryptStorage.removeAttachment");
-  test("removeAttachment called substorage removeAttachment", function () {
-    stop();
-    expect(3);
+  test("removeAttachment called substorage removeAttachment",
+       function (assert) {
+      start = assert.async();
+      assert.expect(3);
 
-    var jio = jIO.createJIO({
-      type: "crypt",
-      key: key,
-      sub_storage: {type : "cryptstorage200"}
-    });
-
-    Storage200.prototype.removeAttachment = function (id, name) {
-      equal(id, "bar", "removeAttachment 200 called");
-      equal(name, "foo", "removeAttachment 200 called");
-      return {title: "foo"};
-    };
-
-    jio.removeAttachment("bar", "foo")
-      .then(function (result) {
-        deepEqual(result, {
-          "title": "foo"
-        }, "Check document");
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
+      var jio = jIO.createJIO({
+        type: "crypt",
+        key: key,
+        sub_storage: {type : "cryptstorage200"}
       });
-  });
+
+      Storage200.prototype.removeAttachment = function (id, name) {
+        assert.equal(id, "bar", "removeAttachment 200 called");
+        assert.equal(name, "foo", "removeAttachment 200 called");
+        return {title: "foo"};
+      };
+
+      jio.removeAttachment("bar", "foo")
+        .then(function (result) {
+          assert.deepEqual(result, {
+            "title": "foo"
+          }, "Check document");
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    });
 
   /////////////////////////////////////////////////////////////////
   // CryptStorage.allAttachments
   /////////////////////////////////////////////////////////////////
   module("CryptStorage.allAttachments");
-  test("allAttachments called substorage allAttachments", function () {
-    stop();
-    expect(2);
+  test("allAttachments called substorage allAttachments", function (assert) {
+    start = assert.async();
+    assert.expect(2);
 
     var jio = jIO.createJIO({
       type: "crypt",
@@ -295,18 +291,18 @@
     });
 
     Storage200.prototype.allAttachments = function (id) {
-      equal(id, "bar", "allAttachments 200 called");
+      assert.equal(id, "bar", "allAttachments 200 called");
       return {title: "foo"};
     };
 
     jio.allAttachments("bar")
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           "title": "foo"
         }, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -317,7 +313,7 @@
   // CryptStorage.getAttachment
   /////////////////////////////////////////////////////////////////
   module("CryptStorage.getAttachment", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         type: "crypt",
         key: key,
@@ -326,86 +322,86 @@
     }
   });
 
-  test("return substorage getattachment", function () {
+  test("return substorage getattachment", function (assert) {
     var id = "/",
       attachment = "stringattachment",
       blob = new Blob(['foo']);
 
     Storage200.prototype.getAttachment = function (arg1, arg2) {
-      equal(arg1, id, "getAttachment 200 called");
-      equal(arg2, attachment, "getAttachment 200 called");
+      assert.equal(arg1, id, "getAttachment 200 called");
+      assert.equal(arg2, attachment, "getAttachment 200 called");
       return blob;
     };
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.getAttachment(id, attachment)
       .then(function (result) {
-        equal(result, blob, "Return substorage result");
+        assert.equal(result, blob, "Return substorage result");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("return substorage getattachment if decrypt fails", function () {
+  test("return substorage getattachment if decrypt fails", function (assert) {
     var id = "/",
       attachment = "stringattachment",
       blob = new Blob(['foo'], {type: 'application/x-jio-aes-gcm-encryption'});
 
     Storage200.prototype.getAttachment = function (arg1, arg2) {
-      equal(arg1, id, "getAttachment 200 called");
-      equal(arg2, attachment, "getAttachment 200 called");
+      assert.equal(arg1, id, "getAttachment 200 called");
+      assert.equal(arg2, attachment, "getAttachment 200 called");
       return blob;
     };
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.getAttachment(id, attachment)
       .then(function (result) {
-        equal(result, blob, "Return substorage result");
+        assert.equal(result, blob, "Return substorage result");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("return substorage getattachment if not data url", function () {
+  test("return substorage getattachment if not data url", function (assert) {
     var id = "/",
       attachment = "stringattachment",
       blob = new Blob(['foo'],
                        {type: 'application/x-jio-aes-gcm-encryption'});
 
     Storage200.prototype.getAttachment = function (arg1, arg2) {
-      equal(arg1, id, "getAttachment 200 called");
-      equal(arg2, attachment, "getAttachment 200 called");
+      assert.equal(arg1, id, "getAttachment 200 called");
+      assert.equal(arg2, attachment, "getAttachment 200 called");
       return blob;
     };
 
-    stop();
-    expect(3);
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.getAttachment(id, attachment)
       .then(function (result) {
-        equal(result, blob, "Return substorage result");
+        assert.equal(result, blob, "Return substorage result");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("decrypt blob from aes-gcm", function () {
+  test("decrypt blob from aes-gcm", function (assert) {
     var id = "/",
       attachment = "stringattachment",
       value = "azertyuio\npàç_è-('é&",
@@ -418,28 +414,29 @@
 
 
     Storage200.prototype.getAttachment = function (arg1, arg2) {
-      equal(arg1, id, "getAttachment 200 called");
-      equal(arg2, attachment, "getAttachment 200 called");
+      assert.equal(arg1, id, "getAttachment 200 called");
+      assert.equal(arg2, attachment, "getAttachment 200 called");
       return blob;
     };
 
-    stop();
-    expect(6);
+    start = assert.async();
+    assert.expect(6);
 
     this.jio.getAttachment(id, attachment)
       .then(function (result) {
-        ok(result !== blob, "Does not return substorage result");
-        ok(result instanceof Blob, "Data is Blob");
-        deepEqual(result.type, "text/plain;charset=utf-8",
+        assert.ok(result !== blob, "Does not return substorage result");
+        assert.ok(result instanceof Blob, "Data is Blob");
+        assert.deepEqual(result.type, "text/plain;charset=utf-8",
                   "Check mimetype");
 
         return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
-        equal(result.target.result, value, "Attachment correctly fetched");
+        assert.equal(result.target.result, value,
+                     "Attachment correctly fetched");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -450,7 +447,7 @@
   // CryptStorage.putAttachment
   /////////////////////////////////////////////////////////////////
   module("CryptStorage.putAttachment", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         type: "crypt",
         key: key,
@@ -485,7 +482,7 @@
       .push(function (arr) {
 
         arr = String.fromCharCode.apply(null, new Uint8Array(arr));
-        equal(
+        global_assert.equal(
           arr,
           "data:text/foo;base64,YXplcnR5dWlvCnDDoMOnX8OoLSgnw6km",
           "Attachment correctly crypted"
@@ -494,7 +491,8 @@
       });
   }
 
-  test("crypt blob to aes-gcm", function () {
+  test("crypt blob to aes-gcm", function (assert) {
+    global_assert = assert;
     var id = "/",
       attachment = "stringattachment",
       value = "azertyuio\npàç_è-('é&",
@@ -502,24 +500,24 @@
                       {type: 'text/foo'});
 
     Storage200.prototype.putAttachment = function (arg1, arg2, arg3) {
-      equal(arg1, id, "putAttachment 200 called");
-      equal(arg2, attachment, "putAttachment 200 called");
-      ok(true, arg3 !== blob, "putAttachment 200 called");
-      ok(arg3 instanceof Blob, "Data is Blob");
-      equal(arg3.type, "application/x-jio-aes-gcm-encryption",
+      assert.equal(arg1, id, "putAttachment 200 called");
+      assert.equal(arg2, attachment, "putAttachment 200 called");
+      assert.ok(true, arg3 !== blob, "putAttachment 200 called");
+      assert.ok(arg3 instanceof Blob, "Data is Blob");
+      assert.equal(arg3.type, "application/x-jio-aes-gcm-encryption",
             "Check mimetype");
       return decodeAES(arg3);
     };
 
-    stop();
-    expect(7);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio.putAttachment(id, attachment, blob)
       .then(function (result) {
-        equal(result, "ok", "Return substorage result");
+        assert.equal(result, "ok", "Return substorage result");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();

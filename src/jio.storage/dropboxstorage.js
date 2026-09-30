@@ -21,10 +21,10 @@
  * JIO Dropbox Storage. Type = "dropbox".
  * Dropbox "database" storage.
  */
-/*global Blob, jIO, RSVP*/
+/*global jIO, RSVP*/
 /*jslint nomen: true*/
 
-(function (jIO, RSVP, Blob, JSON) {
+(function (jIO, RSVP, JSON) {
   "use strict";
   var GET_URL = "https://content.dropboxapi.com/2/files/download",
     UPLOAD_URL = "https://content.dropboxapi.com/2/files/upload",
@@ -268,25 +268,9 @@
         });
       })
       .push(function (evt) {
-        if (evt.target.response instanceof Blob) {
-          return evt.target.response;
-        }
-        return new Blob(
-          [evt.target.responseText],
-          {"type": evt.target.getResponseHeader('Content-Type') ||
-            "application/octet-stream"}
-        );
+        return evt.target.response;
       }, function (error) {
         if (error.target !== undefined && error.target.status === 409) {
-          if (!(error.target.response instanceof Blob)) {
-            var err_content = JSON.parse(error.target.responseText);
-            if ((err_content.error['.tag'] === 'path') &&
-                (err_content.error.path['.tag'] === 'not_found')) {
-              throw new jIO.util.jIOError("Cannot find attachment: " +
-                                          id + "/, " + name, 404);
-            }
-            throw error;
-          }
           return new RSVP.Queue()
             .push(function () {
               return jIO.util.readBlobAsText(error.target.response);
@@ -339,4 +323,4 @@
 
   jIO.addStorage('dropbox', DropboxStorage);
 
-}(jIO, RSVP, Blob, JSON));
+}(jIO, RSVP, JSON));

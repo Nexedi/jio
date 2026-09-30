@@ -21,9 +21,7 @@
 (function (jIO, jiodate) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    deepEqual = QUnit.deepEqual,
+    start,
     module = QUnit.module,
     noop = function () {
       return; // use with RSVP.all
@@ -98,7 +96,7 @@
   /*jslint unparam: false*/
 
 
-  test('Keys defined in a Schema can be used like metadata', function () {
+  test('Keys defined in a Schema can be used like metadata', function (assert) {
     var docList = function () {
       return [
         {'identifier': 'a'},
@@ -107,7 +105,7 @@
       ];
     }, promise = [];
 
-    stop();
+    start = assert.async();
 
     promise.push(
       jIO.QueryFactory.create({
@@ -117,7 +115,7 @@
       }, key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': 'a'},
             {'identifier': 'A'}
           ], 'Key Schema: case_insensitive_identifier');
@@ -128,7 +126,7 @@
   });
 
 
-  test('Standard date keys', function () {
+  test('Standard date keys', function (assert) {
     var docList = function () {
       return [
         {'identifier': 'a', 'date': '2013-01-01'},
@@ -140,7 +138,7 @@
       ];
     }, promise = [];
 
-    stop();
+    start = assert.async();
 
     promise.push(
       jIO.QueryFactory.create({
@@ -150,7 +148,7 @@
       }, key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': 'bb', 'date': '2013-02-02'}
           ], 'Key Schema: same_day');
         })
@@ -164,7 +162,7 @@
       }, key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'date': '2013-02-01', 'identifier': 'b'},
             {'date': '2013-02-02', 'identifier': 'bb'},
             {'date': '2013-02-03', 'identifier': 'bbb'}
@@ -180,7 +178,7 @@
       }, key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl.length, 6, 'Key Schema: date_year');
+          assert.deepEqual(dl.length, 6, 'Key Schema: date_year');
         })
     );
 
@@ -188,7 +186,7 @@
   });
 
 
-  test('Test key schema + jio query', function () {
+  test('Test key schema + jio query', function (assert) {
     var docList = function () {
       return [
         {'identifier': '10', 'number': '10'},
@@ -212,7 +210,7 @@
       }
     }, promise = [];
 
-    stop();
+    start = assert.async();
 
     promise.push(
       jIO.QueryFactory.create({
@@ -232,7 +230,7 @@
       }, test_key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '10', 'number': '10'},
             {'identifier': '19', 'number': '19'}
           ], 'Key schema should be propagated from complex to simple queries');
@@ -242,7 +240,7 @@
     RSVP.all(promise).then(noop).always(start);
   });
 
-  test('Test key schema + jio query with sort on', function () {
+  test('Test key schema + jio query with sort on', function (assert) {
     var docList = function () {
       return [
         {'identifier': '10', 'number': '10'},
@@ -267,7 +265,7 @@
       }
     }, promise = [];
 
-    stop();
+    start = assert.async();
 
     promise.push(
       jIO.QueryFactory.create({
@@ -290,7 +288,7 @@
           {sort_on: [['number', 'ascending']]}
         ).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '2', 'number': '2'},
             {'identifier': '10', 'number': '10'},
             {'identifier': '19', 'number': '19'}
@@ -301,7 +299,7 @@
     RSVP.all(promise).then(noop).always(start);
   });
 
-  test('Key Schema with translation lookup', function () {
+  test('Key Schema with translation lookup', function (assert) {
     var docList = function () {
       return [
         {'identifier': '1', 'state': 'open'},
@@ -309,7 +307,7 @@
       ];
     }, promise = [];
 
-    stop();
+    start = assert.async();
 
     promise.push(
       jIO.QueryFactory.create({
@@ -319,7 +317,7 @@
       }, key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '1', 'state': 'open'}
           ], 'Key Schema: It should be possible to look for a translated ' +
              'string');
@@ -335,7 +333,7 @@
       }, key_schema).
         exec(docList()).
         then(function (dl) {
-          deepEqual(dl, [
+          assert.deepEqual(dl, [
             {'identifier': '1', 'state': 'open'}
           ], 'Key Schema: It should be possible to look for a translated ' +
              'string with operator =');
@@ -351,7 +349,7 @@
 //      operator: '!=',
 //      value: 'ouvert'
 //    }).exec(doc_list);
-//    deepEqual(doc_list, [
+//    assert.deepEqual(doc_list, [
 //      {'identifier': '2', 'state': 'closed'}
 //    ], 'Key Schema: It should be possible to look for a translated ' +
 //       'string with operator !=');

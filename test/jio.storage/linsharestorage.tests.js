@@ -22,64 +22,66 @@
 (function (jIO, QUnit, Blob, sinon, FormData) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    ok = QUnit.ok,
-    expect = QUnit.expect,
-    equal = QUnit.equal,
-    deepEqual = QUnit.deepEqual,
+    start,
     module = QUnit.module,
     domain = "https://example.org/foo";
+
+  function assertRequestHeaders(assert, request, headers) {
+    if (!headers.hasOwnProperty('Content-Type')) {
+      headers['Content-Type'] = 'text/plain;charset=utf-8';
+    }
+    assert.deepEqual(request.requestHeaders, headers);
+  }
 
   /////////////////////////////////////////////////////////////////
   // LinshareStorage constructor
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.constructor");
 
-  test("create storage", function () {
+  test("create storage", function (assert) {
     var jio = jIO.createJIO({
       type: "linshare",
       url: "https://example.org/foo"
     });
-    equal(jio.__type, "linshare");
-    deepEqual(
+    assert.equal(jio.__type, "linshare");
+    assert.deepEqual(
       jio.__storage._url_template.templateText,
       "https://example.org/foo/linshare/webservice/rest/user/" +
         "v2/documents/{uuid}"
     );
-    deepEqual(
+    assert.deepEqual(
       jio.__storage._blob_template.templateText,
       "https://example.org/foo/linshare/webservice/rest/user/" +
         "v2/documents/{uuid}/download"
     );
-    equal(jio.__storage._credential_token, undefined);
+    assert.equal(jio.__storage._credential_token, undefined);
   });
 
-  test("create storage store access token", function () {
+  test("create storage store access token", function (assert) {
     var jio = jIO.createJIO({
       type: "linshare",
       url: "https://example.org/bar",
       access_token: "azerty"
     });
-    equal(jio.__type, "linshare");
-    deepEqual(
+    assert.equal(jio.__type, "linshare");
+    assert.deepEqual(
       jio.__storage._url_template.templateText,
       "https://example.org/bar/linshare/webservice/rest/user/" +
         "v2/documents/{uuid}"
     );
-    deepEqual(
+    assert.deepEqual(
       jio.__storage._blob_template.templateText,
       "https://example.org/bar/linshare/webservice/rest/user/" +
         "v2/documents/{uuid}/download"
     );
-    equal(jio.__storage._access_token, "azerty");
+    assert.equal(jio.__storage._access_token, "azerty");
   });
 
   /////////////////////////////////////////////////////////////////
   // LinshareStorage hasCapacity
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.hasCapacity", {
-    setup: function () {
+    beforeEach: function () {
       this.jio = jIO.createJIO({
         type: "linshare",
         url: "https://example.org/foo"
@@ -87,16 +89,16 @@
     }
   });
 
-  test("check capacities", function () {
-    ok(this.jio.hasCapacity("list"));
-    ok(this.jio.hasCapacity("include"));
+  test("check capacities", function (assert) {
+    assert.ok(this.jio.hasCapacity("list"));
+    assert.ok(this.jio.hasCapacity("include"));
   });
 
   /////////////////////////////////////////////////////////////////
   // LinshareStorage.allDocs
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.allDocs", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -107,13 +109,13 @@
         url: domain
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("get all documents", function () {
+  test("get all documents", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -132,12 +134,12 @@
       "Content-Type": "application/json"
     }, search_result]);
 
-    stop();
-    expect(7);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio.allDocs()
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           data: {
             rows: [{
               _linshare_uuid: "uuid1",
@@ -151,24 +153,24 @@
             total_rows: 2
           }
         }, "Check document");
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all documents with access token", function () {
+  test("get all documents with access token", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -188,8 +190,8 @@
       "Content-Type": "application/json"
     }, search_result]);
 
-    stop();
-    expect(7);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio = jIO.createJIO({
       type: "linshare",
@@ -199,7 +201,7 @@
 
     this.jio.allDocs()
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           data: {
             rows: [{
               _linshare_uuid: "uuid1",
@@ -213,25 +215,25 @@
             total_rows: 2
           }
         }, "Check document");
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, undefined);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, false);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json",
           "Authorization": "Basic " + token
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all documents and include docs", function () {
+  test("get all documents and include docs", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -256,12 +258,12 @@
       "Content-Type": "application/json"
     }, search_result]);
 
-    stop();
-    expect(7);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio.allDocs({include_docs: true})
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           data: {
             rows: [{
               _linshare_uuid: "uuid1",
@@ -277,73 +279,74 @@
             total_rows: 2
           }
         }, "Check document");
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get all documents, include docs and unexpected metadata", function () {
-    var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
-      search_result = JSON.stringify([
-        {
-          uuid: 'uuid1',
-          name: 'foo1',
-          modificationDate: '2',
-          metaData: 'unexpectedfoo'
-        }
-      ]),
-      server = this.server;
-
-    this.server.respondWith("GET", search_url, [200, {
-      "Content-Type": "application/json"
-    }, search_result]);
-
-    stop();
-    expect(7);
-
-    this.jio.allDocs({include_docs: true})
-      .then(function (result) {
-        deepEqual(result, {
-          data: {
-            rows: [{
-              _linshare_uuid: "uuid1",
-              id: "foo1",
-              value: {},
-              doc: {}
-            }],
-            total_rows: 1
+  test("get all documents, include docs and unexpected metadata",
+       function (assert) {
+      var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
+        search_result = JSON.stringify([
+          {
+            uuid: 'uuid1',
+            name: 'foo1',
+            modificationDate: '2',
+            metaData: 'unexpectedfoo'
           }
-        }, "Check document");
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
-          "Accept": "application/json"
-        });
-      })
-      .fail(function (error) {
-        ok(false, error);
-      })
-      .always(function () {
-        start();
-      });
-  });
+        ]),
+        server = this.server;
 
-  test("get all documents and keep only one doc per name", function () {
+      this.server.respondWith("GET", search_url, [200, {
+        "Content-Type": "application/json"
+      }, search_result]);
+
+      start = assert.async();
+      assert.expect(7);
+
+      this.jio.allDocs({include_docs: true})
+        .then(function (result) {
+          assert.deepEqual(result, {
+            data: {
+              rows: [{
+                _linshare_uuid: "uuid1",
+                id: "foo1",
+                value: {},
+                doc: {}
+              }],
+              total_rows: 1
+            }
+          }, "Check document");
+          assert.equal(server.requests.length, 1);
+          assert.equal(server.requests[0].method, "GET");
+          assert.equal(server.requests[0].url, search_url);
+          assert.equal(server.requests[0].requestBody, undefined);
+          assert.equal(server.requests[0].withCredentials, true);
+          assertRequestHeaders(assert, server.requests[0], {
+            "Accept": "application/json"
+          });
+        })
+        .fail(function (error) {
+          assert.ok(false, error);
+        })
+        .always(function () {
+          start();
+        });
+    });
+
+  test("get all documents and keep only one doc per name", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -366,12 +369,12 @@
       "Content-Type": "application/json"
     }, search_result]);
 
-    stop();
-    expect(7);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio.allDocs()
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           data: {
             rows: [{
               _linshare_uuid: "uuid1",
@@ -381,17 +384,17 @@
             total_rows: 1
           }
         }, "Check document");
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -402,7 +405,7 @@
   // LinshareStorage.get
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.get", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -413,13 +416,13 @@
         url: domain
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("get inexistent document", function () {
+  test("get inexistent document", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -438,33 +441,33 @@
       "Content-Type": "application/json"
     }, search_result]);
 
-    stop();
-    expect(9);
+    start = assert.async();
+    assert.expect(9);
 
     this.jio.get('foo')
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Can't find document with id : foo");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Can't find document with id : foo");
+        assert.equal(error.status_code, 404);
 
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get a document", function () {
+  test("get a document", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -498,25 +501,25 @@
       "Content-Type": "application/json"
     }, search_result]);
 
-    stop();
-    expect(7);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio.get('foo')
       .then(function (result) {
-        deepEqual(result, {
+        assert.deepEqual(result, {
           title: 'foouuid3'
         }, "Check document");
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -527,7 +530,7 @@
   // LinshareStorage.put
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.put", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -540,7 +543,7 @@
 
       this.spy = sinon.spy(FormData.prototype, "append");
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
       this.spy.restore();
@@ -548,7 +551,7 @@
     }
   });
 
-  test("create a document", function () {
+  test("create a document", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -572,64 +575,66 @@
       "Content-Type": "application/json"
     }, JSON.stringify({})]);
 
-    stop();
-    expect(24);
+    start = assert.async();
+    assert.expect(24);
 
     this.jio.put('foo', {foo: 'bar'})
       .then(function (result) {
-        deepEqual(result, 'foo', "Check document");
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.deepEqual(result, 'foo', "Check document");
+        assert.equal(server.requests.length, 2);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
 
-        equal(server.requests[1].method, "POST");
-        equal(server.requests[1].url, search_url);
+        assert.equal(server.requests[1].method, "POST");
+        assert.equal(server.requests[1].url, search_url);
 
-        ok(server.requests[1].requestBody instanceof FormData);
-        equal(context.spy.callCount, 5, "FormData.append count");
+        assert.ok(server.requests[1].requestBody instanceof FormData);
+        assert.equal(context.spy.callCount, 5, "FormData.append count");
 
-        equal(context.spy.firstCall.args[0], "file", "First append call");
-        ok(context.spy.firstCall.args[1] instanceof Blob, "First append call");
-        equal(context.spy.firstCall.args[2], "foo", "First append call");
+        assert.equal(context.spy.firstCall.args[0], "file",
+                     "First append call");
+        assert.ok(context.spy.firstCall.args[1] instanceof Blob,
+                  "First append call");
+        assert.equal(context.spy.firstCall.args[2], "foo", "First append call");
 
-        equal(context.spy.secondCall.args[0], "filesize",
+        assert.equal(context.spy.secondCall.args[0], "filesize",
               "Second append call");
-        equal(context.spy.secondCall.args[1], 0, "Second append call");
+        assert.equal(context.spy.secondCall.args[1], 0, "Second append call");
 
-        equal(context.spy.thirdCall.args[0], "filename",
+        assert.equal(context.spy.thirdCall.args[0], "filename",
               "Third append call");
-        equal(context.spy.thirdCall.args[1], "foo", "Third append call");
+        assert.equal(context.spy.thirdCall.args[1], "foo", "Third append call");
 
-        equal(context.spy.getCall(3).args[0], "description",
+        assert.equal(context.spy.getCall(3).args[0], "description",
               "Fourth append call");
-        equal(context.spy.getCall(3).args[1], "", "Fourth append call");
+        assert.equal(context.spy.getCall(3).args[1], "", "Fourth append call");
 
-        equal(context.spy.getCall(4).args[0], "metadata",
+        assert.equal(context.spy.getCall(4).args[0], "metadata",
               "Fourth append call");
-        equal(context.spy.getCall(4).args[1], JSON.stringify({foo: 'bar'}),
+        assert.equal(context.spy.getCall(4).args[1],
+                     JSON.stringify({foo: 'bar'}),
               "Fourth append call");
 
-        equal(server.requests[1].withCredentials, true);
-        deepEqual(server.requests[1].requestHeaders, {
-          "Accept": "application/json",
-          "Content-Type": "text/plain;charset=utf-8"
+        assert.equal(server.requests[1].withCredentials, true);
+        assert.deepEqual(server.requests[1].requestHeaders, {
+          "Accept": "application/json"
         });
 
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("update a document", function () {
+  test("update a document", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       put_url = domain + "/linshare/webservice/rest/user/v2/documents/uuid3",
       search_result = JSON.stringify([
@@ -669,41 +674,41 @@
       "Content-Type": "application/json"
     }, JSON.stringify({})]);
 
-    stop();
-    expect(13);
+    start = assert.async();
+    assert.expect(13);
 
     this.jio.put('foo', {foo: 'bar'})
       .then(function (result) {
-        deepEqual(result, 'foo', "Check document");
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.deepEqual(result, 'foo', "Check document");
+        assert.equal(server.requests.length, 2);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
 
-        equal(server.requests[1].method, "PUT");
-        equal(server.requests[1].url, put_url);
+        assert.equal(server.requests[1].method, "PUT");
+        assert.equal(server.requests[1].url, put_url);
 
-        ok(
+        assert.ok(
           server.requests[1].requestBody,
           JSON.stringify({
             foo: 'bar'
           })
         );
-        equal(context.spy.callCount, 0, "FormData.append count");
+        assert.equal(context.spy.callCount, 0, "FormData.append count");
 
-        equal(server.requests[1].withCredentials, true);
-        deepEqual(server.requests[1].requestHeaders, {
+        assert.equal(server.requests[1].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[1], {
           "Accept": "application/json",
-          "Content-Type": "application/json;charset=utf-8"
+          "Content-Type": "application/json"
         });
 
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -714,7 +719,7 @@
   // LinshareStorage.remove
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.remove", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -725,13 +730,13 @@
         url: domain
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("non existing document", function () {
+  test("non existing document", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -750,30 +755,30 @@
       "Content-Type": "application/json"
     }, search_result]);
 
-    stop();
-    expect(7);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio.remove('foo')
       .then(function (result) {
-        deepEqual(result, 'foo', "Check document");
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.deepEqual(result, 'foo', "Check document");
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("remove a document", function () {
+  test("remove a document", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       remove_url_1 =
         domain + "/linshare/webservice/rest/user/v2/documents/uuid3",
@@ -825,52 +830,52 @@
       "Content-Type": "application/json"
     }, JSON.stringify({})]);
 
-    stop();
-    expect(22);
+    start = assert.async();
+    assert.expect(22);
 
     this.jio.remove('foo')
       .then(function (result) {
-        deepEqual(result, 'foo', "Check document");
-        equal(server.requests.length, 4);
+        assert.deepEqual(result, 'foo', "Check document");
+        assert.equal(server.requests.length, 4);
 
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
 
-        equal(server.requests[1].method, "DELETE");
-        equal(server.requests[1].url, remove_url_1);
-        equal(server.requests[1].requestBody, undefined);
-        equal(server.requests[1].withCredentials, true);
-        deepEqual(server.requests[1].requestHeaders, {
+        assert.equal(server.requests[1].method, "DELETE");
+        assert.equal(server.requests[1].url, remove_url_1);
+        assert.equal(server.requests[1].requestBody, undefined);
+        assert.equal(server.requests[1].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[1], {
           "Accept": "application/json",
           "Content-Type": "text/plain;charset=utf-8"
         });
 
-        equal(server.requests[2].method, "DELETE");
-        equal(server.requests[2].url, remove_url_2);
-        equal(server.requests[2].requestBody, undefined);
-        equal(server.requests[2].withCredentials, true);
-        deepEqual(server.requests[2].requestHeaders, {
+        assert.equal(server.requests[2].method, "DELETE");
+        assert.equal(server.requests[2].url, remove_url_2);
+        assert.equal(server.requests[2].requestBody, undefined);
+        assert.equal(server.requests[2].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[2], {
           "Accept": "application/json",
           "Content-Type": "text/plain;charset=utf-8"
         });
 
-        equal(server.requests[3].method, "DELETE");
-        equal(server.requests[3].url, remove_url_3);
-        equal(server.requests[3].requestBody, undefined);
-        equal(server.requests[3].withCredentials, true);
-        deepEqual(server.requests[3].requestHeaders, {
+        assert.equal(server.requests[3].method, "DELETE");
+        assert.equal(server.requests[3].url, remove_url_3);
+        assert.equal(server.requests[3].requestBody, undefined);
+        assert.equal(server.requests[3].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[3], {
           "Accept": "application/json",
           "Content-Type": "text/plain;charset=utf-8"
         });
 
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -881,7 +886,7 @@
   // LinshareStorage.allAttachments
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.allAttachments", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -892,13 +897,13 @@
         url: domain
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("non existing document", function () {
+  test("non existing document", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -917,33 +922,33 @@
       "Content-Type": "application/json"
     }, search_result]);
 
-    stop();
-    expect(9);
+    start = assert.async();
+    assert.expect(9);
 
     this.jio.allAttachments('foo')
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Can't find document with id : foo");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Can't find document with id : foo");
+        assert.equal(error.status_code, 404);
 
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("existing document", function () {
+  test("existing document", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -977,24 +982,24 @@
       "Content-Type": "application/json"
     }, search_result]);
 
-    stop();
-    expect(7);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio.allAttachments('foo')
       .then(function (result) {
-        deepEqual(result, {enclosure: {}}, "Check document");
-        equal(server.requests.length, 1);
+        assert.deepEqual(result, {enclosure: {}}, "Check document");
+        assert.equal(server.requests.length, 1);
 
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -1005,7 +1010,7 @@
   // LinshareStorage.putAttachment
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.putAttachment", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -1018,7 +1023,7 @@
 
       this.spy = sinon.spy(FormData.prototype, "append");
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
       this.spy.restore();
@@ -1026,29 +1031,30 @@
     }
   });
 
-  test("forbidden attachment", function () {
+  test("forbidden attachment", function (assert) {
     var server = this.server;
 
-    stop();
-    expect(4);
+    start = assert.async();
+    assert.expect(4);
 
     this.jio.putAttachment('foo', 'bar', new Blob())
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "attachment name bar is forbidden in linshare");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message,
+                     "attachment name bar is forbidden in linshare");
+        assert.equal(error.status_code, 400);
 
-        equal(server.requests.length, 0);
+        assert.equal(server.requests.length, 0);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("non existing document", function () {
+  test("non existing document", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -1067,33 +1073,33 @@
       "Content-Type": "application/json"
     }, search_result]);
 
-    stop();
-    expect(9);
+    start = assert.async();
+    assert.expect(9);
 
     this.jio.putAttachment('foo', 'enclosure', new Blob())
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Can't find document with id : foo");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Can't find document with id : foo");
+        assert.equal(error.status_code, 404);
 
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("update a document", function () {
+  test("update a document", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -1133,58 +1139,60 @@
       "Content-Type": "application/json"
     }, JSON.stringify({})]);
 
-    stop();
-    expect(24);
+    start = assert.async();
+    assert.expect(24);
 
     this.jio.putAttachment('foo', 'enclosure', blob)
       .then(function (result) {
-        deepEqual(result, {}, "Check document");
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.deepEqual(result, {}, "Check document");
+        assert.equal(server.requests.length, 2);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
 
-        equal(server.requests[1].method, "POST");
-        equal(server.requests[1].url, search_url);
+        assert.equal(server.requests[1].method, "POST");
+        assert.equal(server.requests[1].url, search_url);
 
-        ok(server.requests[1].requestBody instanceof FormData);
-        equal(context.spy.callCount, 5, "FormData.append count");
+        assert.ok(server.requests[1].requestBody instanceof FormData);
+        assert.equal(context.spy.callCount, 5, "FormData.append count");
 
-        equal(context.spy.firstCall.args[0], "file", "First append call");
-        equal(context.spy.firstCall.args[1], blob, "First append call");
-        equal(context.spy.firstCall.args[2], "foo", "First append call");
+        assert.equal(context.spy.firstCall.args[0], "file",
+                     "First append call");
+        assert.equal(context.spy.firstCall.args[1], blob, "First append call");
+        assert.equal(context.spy.firstCall.args[2], "foo", "First append call");
 
-        equal(context.spy.secondCall.args[0], "filesize",
+        assert.equal(context.spy.secondCall.args[0], "filesize",
               "Second append call");
-        equal(context.spy.secondCall.args[1], blob.size, "Second append call");
+        assert.equal(context.spy.secondCall.args[1], blob.size,
+                     "Second append call");
 
-        equal(context.spy.thirdCall.args[0], "filename",
+        assert.equal(context.spy.thirdCall.args[0], "filename",
               "Third append call");
-        equal(context.spy.thirdCall.args[1], "foo", "Third append call");
+        assert.equal(context.spy.thirdCall.args[1], "foo", "Third append call");
 
-        equal(context.spy.getCall(3).args[0], "description",
+        assert.equal(context.spy.getCall(3).args[0], "description",
               "Fourth append call");
-        equal(context.spy.getCall(3).args[1], "foouuid3", "Fourth append call");
+        assert.equal(context.spy.getCall(3).args[1], "foouuid3",
+                     "Fourth append call");
 
-        equal(context.spy.getCall(4).args[0], "metadata",
+        assert.equal(context.spy.getCall(4).args[0], "metadata",
               "Fourth append call");
-        equal(context.spy.getCall(4).args[1],
+        assert.equal(context.spy.getCall(4).args[1],
               JSON.stringify({title: 'foouuid3'}),
               "Fourth append call");
 
-        equal(server.requests[1].withCredentials, true);
-        deepEqual(server.requests[1].requestHeaders, {
-          "Accept": "application/json",
-          "Content-Type": "text/plain;charset=utf-8"
+        assert.equal(server.requests[1].withCredentials, true);
+        assert.deepEqual(server.requests[1].requestHeaders, {
+          "Accept": "application/json"
         });
 
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -1195,7 +1203,7 @@
   // LinshareStorage.getAttachment
   /////////////////////////////////////////////////////////////////
   module("LinshareStorage.getAttachment", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -1206,35 +1214,36 @@
         url: domain
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("forbidden attachment", function () {
+  test("forbidden attachment", function (assert) {
     var server = this.server;
 
-    stop();
-    expect(4);
+    start = assert.async();
+    assert.expect(4);
 
     this.jio.getAttachment('foo', 'bar')
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "attachment name bar is forbidden in linshare");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message,
+                     "attachment name bar is forbidden in linshare");
+        assert.equal(error.status_code, 400);
 
-        equal(server.requests.length, 0);
+        assert.equal(server.requests.length, 0);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("non existing document", function () {
+  test("non existing document", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -1253,33 +1262,33 @@
       "Content-Type": "application/json"
     }, search_result]);
 
-    stop();
-    expect(9);
+    start = assert.async();
+    assert.expect(9);
 
     this.jio.getAttachment('foo', 'enclosure')
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Can't find document with id : foo");
-        equal(error.status_code, 404);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Can't find document with id : foo");
+        assert.equal(error.status_code, 404);
 
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("retrieve a document", function () {
+  test("retrieve a document", function (assert) {
     var search_url = domain + "/linshare/webservice/rest/user/v2/documents/",
       search_result = JSON.stringify([
         {
@@ -1319,36 +1328,36 @@
       "Content-Type": "text/plain"
     }, "foo\nbaré"]);
 
-    stop();
-    expect(14);
+    start = assert.async();
+    assert.expect(14);
 
     this.jio.getAttachment('foo', 'enclosure')
       .then(function (result) {
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, search_url);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].withCredentials, true);
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 2);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, search_url);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[0], {
           "Accept": "application/json"
         });
 
-        equal(server.requests[1].method, "GET");
-        equal(server.requests[1].url, download_url);
-        equal(server.requests[1].requestBody, undefined);
-        equal(server.requests[1].withCredentials, true);
-        deepEqual(server.requests[1].requestHeaders, {});
-
-        ok(result instanceof Blob, "Data is Blob");
-        deepEqual(result.type, "text/plain", "Check mimetype");
+        assert.equal(server.requests[1].method, "GET");
+        assert.equal(server.requests[1].url, download_url);
+        assert.equal(server.requests[1].requestBody, undefined);
+        assert.equal(server.requests[1].withCredentials, true);
+        assertRequestHeaders(assert, server.requests[1], {});
+        assert.ok(result instanceof Blob, "Data is Blob");
+        assert.deepEqual(result.type, "text/plain", "Check mimetype");
         return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
         var expected = "foo\nbaré";
-        equal(result.target.result, expected, "Attachment correctly fetched");
+        assert.equal(result.target.result, expected,
+                     "Attachment correctly fetched");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();

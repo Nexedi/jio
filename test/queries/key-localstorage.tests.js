@@ -22,10 +22,7 @@
 (function (jIO, localStorage, QUnit) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    ok = QUnit.ok,
-    expect = QUnit.expect,
+    start,
 //     deepEqual = QUnit.deepEqual,
     module = QUnit.module,
     key_schema;
@@ -60,8 +57,8 @@
   });
 
 
-  test("AllDocs", function () {
-    expect(3);
+  test("AllDocs", function (assert) {
+    assert.expect(3);
     var o = {}, jio = jIO.createJIO({
       "type": "local",
       "username": "ualldocs",
@@ -71,7 +68,7 @@
       "workspace": {}
     });
 
-    stop();
+    start = assert.async();
 
     o.date_a = new Date(0);
     o.date_b = new Date();
@@ -239,7 +236,7 @@
 // 
 //       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();

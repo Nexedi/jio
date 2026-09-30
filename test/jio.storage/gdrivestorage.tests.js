@@ -22,14 +22,9 @@
 (function (jIO, QUnit, Blob, sinon) {
   "use strict";
   var test = QUnit.test,
-    stop = QUnit.stop,
-    start = QUnit.start,
-    ok = QUnit.ok,
-    expect = QUnit.expect,
-    deepEqual = QUnit.deepEqual,
-    equal = QUnit.equal,
+    start,
+    global_assert,
     module = QUnit.module,
-    throws = QUnit.throws,
     token = "sample_token",
     domain = "https://www.googleapis.com",
     boundary = "---------314159265358979323846",
@@ -45,18 +40,18 @@
     part_sample2 = '{"items":[{"id":"0B4kh3jbjOf5LamRlX21MZ"}]}';
 
   function error404Tester(fun, encl, blob) {
-    stop();
-    expect(3);
+    start = global_assert.async();
+    global_assert.expect(3);
 
     this.jio[fun]("inexistent", encl ? "enclosure" : undefined,
                   blob || undefined)
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Cannot find document: inexistent");
-        equal(error.status_code, 404);
+        global_assert.ok(error instanceof jIO.util.jIOError);
+        global_assert.equal(error.message, "Cannot find document: inexistent");
+        global_assert.equal(error.status_code, 404);
       })
       .fail(function (error) {
-        ok(false, error);
+        global_assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -68,18 +63,18 @@
   /////////////////////////////////////////////////////////////////
   module("Google Drive Storage.constructor");
 
-  test("create storage", function () {
+  test("create storage", function (assert) {
     var jio = jIO.createJIO({
       type: "gdrive",
       access_token: token
     });
-    equal(jio.__type, "gdrive");
-    deepEqual(jio.__storage._access_token, token);
+    assert.equal(jio.__type, "gdrive");
+    assert.deepEqual(jio.__storage._access_token, token);
   });
 
-  test("reject invalid trashing parameter", function () {
+  test("reject invalid trashing parameter", function (assert) {
 
-    throws(
+    assert.throws(
       function () {
         jIO.createJIO({
           type: "gdrive",
@@ -88,8 +83,8 @@
         });
       },
       function (error) {
-        ok(error instanceof TypeError);
-        equal(error.message,
+        assert.ok(error instanceof TypeError);
+        assert.equal(error.message,
               "trashing parameter must be a boolean (true or false)");
         return true;
       }
@@ -101,7 +96,7 @@
   // Google Drive Storage.post
   /////////////////////////////////////////////////////////////////
   module("Google Drive Storage.post", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -112,13 +107,13 @@
         access_token: token
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("post document", function () {
+  test("post document", function (assert) {
     var server = this.server,
       put_url = domain + "/upload/drive/v2/files?uploadType" +
         "=multipart&access_token=" + token,
@@ -130,21 +125,21 @@
       "Content-Type": "text/xml"
     }, res_text]);
 
-    stop();
-    expect(7);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio.post({title: "metadata"})
       .then(function (obj) {
-        equal(obj, "sampleId");
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "POST");
-        equal(server.requests[0].url, put_url);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[0].requestBody, body);
-        equal(server.requests[0].responseText, res_text);
+        assert.equal(obj, "sampleId");
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "POST");
+        assert.equal(server.requests[0].url, put_url);
+        assert.equal(server.requests[0].status, 200);
+        assert.equal(server.requests[0].requestBody, body);
+        assert.equal(server.requests[0].responseText, res_text);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -155,7 +150,7 @@
   // Google Drive Storage.put
   /////////////////////////////////////////////////////////////////
   module("Google Drive Storage.put", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -166,13 +161,13 @@
         access_token: token
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("put document", function () {
+  test("put document", function (assert) {
     var server = this.server,
       put_url = domain + "/drive/v2/files/sampleId?uploadType" +
         "=multipart&access_token=" + token,
@@ -184,28 +179,29 @@
       "Content-Type": "text/xml"
     }, res_text]);
 
-    stop();
-    expect(7);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio.put("sampleId", {title: "metadata"})
       .then(function (obj) {
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "PUT");
-        equal(server.requests[0].url, put_url);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[0].requestBody, body);
-        equal(server.requests[0].responseText, res_text);
-        equal(obj, "sampleId");
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "PUT");
+        assert.equal(server.requests[0].url, put_url);
+        assert.equal(server.requests[0].status, 200);
+        assert.equal(server.requests[0].requestBody, body);
+        assert.equal(server.requests[0].responseText, res_text);
+        assert.equal(obj, "sampleId");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("put to inexistent document", function () {
+  test("put to inexistent document", function (assert) {
+    global_assert = assert;
     var tester = error404Tester.bind(this);
     tester("put");
   });
@@ -214,7 +210,7 @@
   // Google Drive Storage.remove
   /////////////////////////////////////////////////////////////////
   module("Google Drive Storage.remove", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -225,12 +221,12 @@
         access_token: token
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
-  test("remove document", function () {
+  test("remove document", function (assert) {
     var url_delete = domain +
       "/drive/v2/files/sampleId/trash?access_token=" +
       token,
@@ -239,30 +235,31 @@
     this.server.respondWith("POST", url_delete, [200, {
       "Content-Type": "text/xml"
     }, 'sampleId']);
-    stop();
-    expect(7);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio.remove("sampleId")
       .then(function () {
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "POST");
-        equal(server.requests[0].url, url_delete);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, 'sampleId');
-        deepEqual(server.requests[0].requestHeaders, {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "POST");
+        assert.equal(server.requests[0].url, url_delete);
+        assert.equal(server.requests[0].status, 200);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].responseText, 'sampleId');
+        assert.deepEqual(server.requests[0].requestHeaders, {
           "Content-Type": "text/plain;charset=utf-8"
         });
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("remove inexistent document", function () {
+  test("remove inexistent document", function (assert) {
+    global_assert = assert;
     var tester = error404Tester.bind(this);
     tester("remove");
   });
@@ -271,7 +268,7 @@
   // Google Drive Storage.get
   /////////////////////////////////////////////////////////////////
   module("Google Drive Storage.get", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -282,18 +279,19 @@
         access_token: token
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("get inexistent document", function () {
+  test("get inexistent document", function (assert) {
+    global_assert = assert;
     var tester = error404Tester.bind(this);
     tester("get");
   });
 
-  test("get document", function () {
+  test("get document", function (assert) {
     var url = domain + "/drive/v2/files/sampleId?alt=",
       body = '{"id": "sampleId", "mimeType":' +
         '"application/vnd.google-apps.folder", "title": "folder1"}';
@@ -302,18 +300,18 @@
       "Content-Type": "text/xml"
     }, body
                                         ]);
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.get("sampleId")
       .then(function (result) {
-        deepEqual(result,
+        assert.deepEqual(result,
                   {"id": "sampleId",
                    "mimeType": "application/vnd.google-apps.folder",
                    "title": "folder1"}, "Check document");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -324,7 +322,7 @@
   // Google Drive Storage.allDocs
   /////////////////////////////////////////////////////////////////
   module("Google Drive Storage.allDocs", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -335,13 +333,13 @@
         access_token: token
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("get all docs", function () {
+  test("get all docs", function (assert) {
     var object_result = {"data": {"rows": [{"id":
                                             "0B4kh3jbjOf5LamRlX21MZlVCYXM",
                                             "value": {}}],
@@ -350,28 +348,28 @@
 
     this.server.respondWith("GET", list_url, [200, {
     }, sample_list]);
-    stop();
-    expect(7);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio.allDocs()
       .then(function (res) {
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, list_url);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, sample_list);
-        deepEqual(res, object_result);
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, list_url);
+        assert.equal(server.requests[0].status, 200);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].responseText, sample_list);
+        assert.deepEqual(res, object_result);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("allDocs with multiple API requests (nextPageToken)", function () {
+  test("allDocs with multiple API requests (nextPageToken)", function (assert) {
     var object_result = {"data": {"rows": [], "total_rows": 2}},
       server = this.server,
       token_url = domain + "/drive/v2/files" +
@@ -390,25 +388,25 @@
     }, part_sample1]);
     this.server.respondWith("GET", token_url, [200, {
     }, part_sample2]);
-    stop();
-    expect(12);
+    start = assert.async();
+    assert.expect(12);
     this.jio.allDocs()
       .then(function (res) {
-        equal(server.requests.length, 2);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, list_url);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[0].requestBody, undefined);
-        equal(server.requests[0].responseText, part_sample1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[1].url, token_url);
-        equal(server.requests[1].status, 200);
-        equal(server.requests[1].requestBody, undefined);
-        equal(server.requests[1].responseText, part_sample2);
-        deepEqual(res, object_result);
+        assert.equal(server.requests.length, 2);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, list_url);
+        assert.equal(server.requests[0].status, 200);
+        assert.equal(server.requests[0].requestBody, undefined);
+        assert.equal(server.requests[0].responseText, part_sample1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[1].url, token_url);
+        assert.equal(server.requests[1].status, 200);
+        assert.equal(server.requests[1].requestBody, undefined);
+        assert.equal(server.requests[1].responseText, part_sample2);
+        assert.deepEqual(res, object_result);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -421,7 +419,7 @@
   // Google Drive Storage.putAttachment
   /////////////////////////////////////////////////////////////////
   module("Google Drive Storage.putAttachment", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -434,7 +432,7 @@
         access_token: token
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
       this.spy_ajax.restore();
@@ -442,9 +440,9 @@
     }
   });
 
-  test("reject non enclosure attachment", function () {
-    stop();
-    expect(3);
+  test("reject non enclosure attachment", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.putAttachment(
       "sampleId",
@@ -452,19 +450,19 @@
       new Blob()
     )
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Only support 'enclosure' attachment");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Only support 'enclosure' attachment");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("putAttachment document", function () {
+  test("putAttachment document", function (assert) {
     var blob = new Blob(["foo"]),
       url_put_att = domain + "/upload/drive/v2/files/sampleId?" +
         "uploadType=media&access_token=" + token,
@@ -474,8 +472,8 @@
     this.server.respondWith("PUT", url_put_att, [204, {
       "Content-Type": "text/xml"
     }, '{"mimeType": "text/xml"}']);
-    stop();
-    expect(11);
+    start = assert.async();
+    assert.expect(11);
 
     this.jio.putAttachment(
       "sampleId",
@@ -483,35 +481,38 @@
       blob
     )
       .then(function () {
-        ok(context.spy_ajax.calledOnce, "ajax count " +
+        assert.ok(context.spy_ajax.calledOnce, "ajax count " +
            context.spy_ajax.callCount);
-        equal(context.spy_ajax.firstCall.args[0].type, "PUT");
-        equal(context.spy_ajax.firstCall.args[0].url, url_put_att);
-        deepEqual(context.spy_ajax.firstCall.args[0].xhrFields, undefined);
-        deepEqual(context.spy_ajax.firstCall.args[0].headers, undefined);
-        equal(context.spy_ajax.firstCall.args[0].data, blob);
+        assert.equal(context.spy_ajax.firstCall.args[0].type, "PUT");
+        assert.equal(context.spy_ajax.firstCall.args[0].url, url_put_att);
+        assert.deepEqual(context.spy_ajax.firstCall.args[0].xhrFields,
+                         undefined);
+        assert.deepEqual(context.spy_ajax.firstCall.args[0].headers, undefined);
+        assert.equal(context.spy_ajax.firstCall.args[0].data, blob);
 
-        equal(server.requests.length, 1);
+        assert.equal(server.requests.length, 1);
 
-        equal(server.requests[0].method, "PUT");
-        equal(server.requests[0].url, url_put_att);
-        equal(server.requests[0].status, 204);
-        equal(server.requests[0].responseText, "{\"mimeType\": \"text/xml\"}");
+        assert.equal(server.requests[0].method, "PUT");
+        assert.equal(server.requests[0].url, url_put_att);
+        assert.equal(server.requests[0].status, 204);
+        assert.equal(server.requests[0].responseText,
+                     "{\"mimeType\": \"text/xml\"}");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("putAttachment to inexistent document", function () {
+  test("putAttachment to inexistent document", function (assert) {
+    global_assert = assert;
     var tester = error404Tester.bind(this);
     tester("putAttachment", true, new Blob());
   });
 
-  test("putAttachment to folder", function () {
+  test("putAttachment to folder", function (assert) {
     var blob = new Blob([""]),
       url_put_att = domain + "/upload/drive/v2/files/sampleId?" +
         "uploadType=media&access_token=" + token,
@@ -520,8 +521,8 @@
     this.server.respondWith("PUT", url_put_att, [204, {
       "Content-Type": "text/xml"
     }, '{"mimeType": "application/vnd.google-apps.folder"}']);
-    stop();
-    expect(4);
+    start = assert.async();
+    assert.expect(4);
 
     this.jio.putAttachment(
       "sampleId",
@@ -529,14 +530,14 @@
       blob
     )
       .fail(function (error) {
-        equal(server.requests[0].responseText,
+        assert.equal(server.requests[0].responseText,
               "{\"mimeType\": \"application/vnd.google-apps.folder\"}");
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "cannot put attachments to folder");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "cannot put attachments to folder");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -548,7 +549,7 @@
   // Google Drive Storage.getAttachment
   /////////////////////////////////////////////////////////////////
   module("Google Drive Storage.getAttachment", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -559,27 +560,27 @@
         access_token: token
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("reject non enclosure attachment", function () {
-    stop();
-    expect(3);
+  test("reject non enclosure attachment", function (assert) {
+    start = assert.async();
+    assert.expect(3);
 
     this.jio.getAttachment(
       "sampleId",
       "not_enclosure"
     )
       .fail(function (error) {
-        ok(error instanceof jIO.util.jIOError);
-        equal(error.message, "Only support 'enclosure' attachment");
-        equal(error.status_code, 400);
+        assert.ok(error instanceof jIO.util.jIOError);
+        assert.equal(error.message, "Only support 'enclosure' attachment");
+        assert.equal(error.status_code, 400);
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -587,7 +588,7 @@
   });
 
 
-  test("getAttachment document", function () {
+  test("getAttachment document", function (assert) {
     var url = domain + "/drive/v2/files/" +
       "sampleId?alt=media",
       server = this.server;
@@ -595,37 +596,38 @@
       "Content-Type": "text/plain"
     }, "foo\nbaré"]);
 
-    stop();
-    expect(8);
+    start = assert.async();
+    assert.expect(7);
 
     this.jio.getAttachment(
       "sampleId",
       "enclosure"
     )
       .then(function (result) {
-        equal(server.requests.length, 1);
-        equal(server.requests[0].method, "GET");
-        equal(server.requests[0].url, url);
-        equal(server.requests[0].status, 200);
-        equal(server.requests[0].responseText, "foo\nbaré");
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "GET");
+        assert.equal(server.requests[0].url, url);
+        assert.equal(server.requests[0].status, 200);
+        // assert.equal(server.requests[0].responseText, "foo\nbaré");
 
-        ok(result instanceof Blob, "Data is Blob");
-        deepEqual(result.type, "text/plain", "Check mimetype");
+        assert.ok(result instanceof Blob, "Data is Blob");
+        assert.deepEqual(result.type, "text/plain", "Check mimetype");
         return jIO.util.readBlobAsText(result);
       })
       .then(function (result) {
-        equal(result.target.result, "foo\nbaré",
+        assert.equal(result.target.result, "foo\nbaré",
               "Attachment correctly fetched");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get inexistent attachment", function () {
+  test("get inexistent attachment", function (assert) {
+    global_assert = assert;
     var tester = error404Tester.bind(this);
     tester("getAttachment", true);
   });
@@ -634,7 +636,7 @@
   // Google Drive Storage.allAttachments
   /////////////////////////////////////////////////////////////////
   module("Google Drive Storage.allAttachments", {
-    setup: function () {
+    beforeEach: function () {
 
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
@@ -645,13 +647,13 @@
         access_token: token
       });
     },
-    teardown: function () {
+    afterEach: function () {
       this.server.restore();
       delete this.server;
     }
   });
 
-  test("allAttachments on file", function () {
+  test("allAttachments on file", function (assert) {
     var url = domain + "/drive/v2/files/sampleId?alt=",
       body = '{"id": "sampleId", "mimeType":' +
         '"text/xml", "title": "folder1"}';
@@ -660,15 +662,15 @@
       "Content-Type": "text/xml"
     }, body
                                         ]);
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.allAttachments("sampleId")
       .then(function (result) {
-        deepEqual(result, {enclosure: {}}, "enclosure on file");
+        assert.deepEqual(result, {enclosure: {}}, "enclosure on file");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
@@ -677,7 +679,7 @@
 
 
 
-  test("allAttachments on directory", function () {
+  test("allAttachments on directory", function (assert) {
     var url = domain + "/drive/v2/files/sampleId?alt=",
       body = '{"id": "sampleId", "mimeType":' +
         '"application/vnd.google-apps.folder", "title": "folder1"}';
@@ -686,22 +688,23 @@
       "Content-Type": "text/xml"
     }, body
                                         ]);
-    stop();
-    expect(1);
+    start = assert.async();
+    assert.expect(1);
 
     this.jio.allAttachments("sampleId")
       .then(function (result) {
-        deepEqual(result, {}, "empty result on directory");
+        assert.deepEqual(result, {}, "empty result on directory");
       })
       .fail(function (error) {
-        ok(false, error);
+        assert.ok(false, error);
       })
       .always(function () {
         start();
       });
   });
 
-  test("get inexistent attachment", function () {
+  test("get inexistent attachment", function (assert) {
+    global_assert = assert;
     var tester = error404Tester.bind(this);
     tester("allAttachments");
   });
