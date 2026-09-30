@@ -241,4 +241,75 @@
       });
   });
 
+  test("Blob responseType handling in error", function (assert) {
+    start = assert.async();
+    assert.expect(6);
+
+    var url = "https://www.example.org/com/bar",
+      server = this.server;
+
+    this.server.respondWith("POST", url, [500, {}, 'OK']);
+
+    return new RSVP.Queue()
+      .then(function () {
+        return jIO.util.ajax({
+          type: 'POST',
+          url: url,
+          dataType: 'blob'
+        });
+      })
+      .fail(function (evt) {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "POST");
+        assert.equal(server.requests[0].url, url);
+        assert.equal(server.requests[0].responseType, 'blob');
+
+        assert.ok(evt.target.response instanceof Blob, evt.target.response);
+        return jIO.util.readBlobAsText(evt.target.response);
+      })
+      .then(function (evt) {
+        assert.equal(evt.target.result, 'OK');
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+  test("Arraybuffer responseType handlingin error", function (assert) {
+    start = assert.async();
+    assert.expect(6);
+
+    var url = "https://www.example.org/com/bar",
+      server = this.server;
+
+    this.server.respondWith("POST", url, [500, {}, 'OK']);
+
+    return new RSVP.Queue()
+      .then(function () {
+        return jIO.util.ajax({
+          type: 'POST',
+          url: url,
+          dataType: 'arraybuffer'
+        });
+      })
+      .fail(function (evt) {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "POST");
+        assert.equal(server.requests[0].url, url);
+        assert.equal(server.requests[0].responseType, 'arraybuffer');
+
+        assert.ok(evt.target.response instanceof ArrayBuffer,
+                  evt.target.response);
+        return jIO.util.readBlobAsText(
+          new Blob([evt.target.response])
+        );
+      })
+      .then(function (evt) {
+        assert.equal(evt.target.result, 'OK');
+      })
+      .always(function () {
+        start();
+      });
+  });
+
 }(FormData, sinon, RSVP, jIO, QUnit, Blob, ArrayBuffer));

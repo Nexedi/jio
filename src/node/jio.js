@@ -59,6 +59,15 @@
         );
         evt.target.responseType = 'blob';
         return evt;
+      }, function (error) {
+        if (error.target !== undefined && error.target.status !== undefined) {
+          error.target.response = new Blob(
+            [error.target.response || error.target.responseText],
+            {type: error.target.getResponseHeader('Content-Type')}
+          );
+          error.target.responseType = 'blob';
+        }
+        throw error;
       });
   }
 
