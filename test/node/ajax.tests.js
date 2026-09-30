@@ -17,8 +17,9 @@
  * See COPYING file for full licensing terms.
  * See https://www.nexedi.com/licensing for rationale and options.
  */
-/*global FormData, sinon, RSVP, jIO, QUnit, XMLHttpRequest, Blob, ArrayBuffer*/
-(function (jIO, QUnit, FormData, Blob, ArrayBuffer) {
+/*global FormData, sinon, RSVP, jIO, QUnit, Blob, ArrayBuffer*/
+(function (FormData, sinon, RSVP, jIO, QUnit,
+           Blob, ArrayBuffer) {
   "use strict";
   var test = QUnit.test,
     start,
@@ -32,14 +33,8 @@
       this.server = sinon.fakeServer.create();
       this.server.autoRespond = true;
       this.server.autoRespondAfter = 5;
-
-      this.spySetRequestHeader = sinon.spy(XMLHttpRequest.prototype,
-                                           "setRequestHeader");
     },
     afterEach: function () {
-      this.spySetRequestHeader.restore();
-      delete this.spySetRequestHeader;
-
       this.server.restore();
       delete this.server;
     }
@@ -82,11 +77,10 @@
 
   test("FormData handling without headers", function (assert) {
     start = assert.async();
-    assert.expect(7);
+    assert.expect(5);
 
     var url = "https://www.example.org/com/bar",
-      server = this.server,
-      context = this;
+      server = this.server;
 
     this.server.respondWith("POST", url, [200, {}, 'OK']);
 
@@ -102,24 +96,17 @@
         });
       })
       .then(function () {
-        var content_type =
-          "multipart/form-data; boundary=----------------------------",
-          boundary;
-
-        assert.equal(context.spySetRequestHeader.callCount, 1);
-
-        assert.equal(context.spySetRequestHeader.firstCall.args[0],
-                     "Content-Type");
-        assert.equal(context.spySetRequestHeader.firstCall.args[1].length,
-              content_type.length + 10);
-
-        boundary = context.spySetRequestHeader.firstCall.args[1].slice(
-          "multipart/form-data; boundary=".length
-        );
+        var boundary;
 
         assert.equal(server.requests.length, 1);
         assert.equal(server.requests[0].method, "POST");
         assert.equal(server.requests[0].url, url);
+        assert.deepEqual(server.requests[0].requestHeaders, {
+          "Content-Type": server.requests[0].requestHeaders['Content-Type']
+        });
+        boundary = server.requests[0].requestHeaders['Content-Type'].slice(
+          "multipart/form-data; boundary=".length
+        );
         assert.equal(server.requests[0].requestBody,
               '--' + boundary +
               '\r\nContent-Disposition: form-data; name="foo"\r\n\r\nbar\r\n' +
@@ -136,11 +123,10 @@
 
   test("FormData handling with headers", function (assert) {
     start = assert.async();
-    assert.expect(9);
+    assert.expect(5);
 
     var url = "https://www.example.org/com/bar",
-      server = this.server,
-      context = this;
+      server = this.server;
 
     this.server.respondWith("POST", url, [200, {}, 'OK']);
 
@@ -157,20 +143,13 @@
         });
       })
       .then(function () {
-        var content_type =
-          "multipart/form-data; boundary=----------------------------",
-          boundary;
+        var boundary;
 
-        assert.equal(context.spySetRequestHeader.callCount, 2);
-
-        assert.equal(context.spySetRequestHeader.firstCall.args[0], "bar");
-        assert.equal(context.spySetRequestHeader.firstCall.args[1], "foo");
-        assert.equal(context.spySetRequestHeader.secondCall.args[0],
-                     "Content-Type");
-        assert.equal(context.spySetRequestHeader.secondCall.args[1].length,
-              content_type.length + 10);
-
-        boundary = context.spySetRequestHeader.secondCall.args[1].slice(
+        assert.deepEqual(server.requests[0].requestHeaders, {
+          "bar": "foo",
+          "Content-Type": server.requests[0].requestHeaders['Content-Type']
+        });
+        boundary = server.requests[0].requestHeaders['Content-Type'].slice(
           "multipart/form-data; boundary=".length
         );
 
@@ -212,7 +191,7 @@
         assert.equal(server.requests.length, 1);
         assert.equal(server.requests[0].method, "POST");
         assert.equal(server.requests[0].url, url);
-        assert.equal(server.requests[0].responseType, 'arraybuffer');
+        assert.equal(server.requests[0].responseType, 'blob');
 
         assert.ok(evt.target.response instanceof Blob, evt.target.response);
         return jIO.util.readBlobAsText(evt.target.response);
@@ -225,4 +204,41 @@
       });
   });
 
-}(jIO, QUnit, FormData, Blob, ArrayBuffer));
+  test("Arraybuffer responseType handling", function (assert) {
+    start = assert.async();
+    assert.expect(6);
+
+    var url = "https://www.example.org/com/bar",
+      server = this.server;
+
+    this.server.respondWith("POST", url, [200, {}, 'OK']);
+
+    return new RSVP.Queue()
+      .then(function () {
+        return jIO.util.ajax({
+          type: 'POST',
+          url: url,
+          dataType: 'arraybuffer'
+        });
+      })
+      .then(function (evt) {
+        assert.equal(server.requests.length, 1);
+        assert.equal(server.requests[0].method, "POST");
+        assert.equal(server.requests[0].url, url);
+        assert.equal(server.requests[0].responseType, 'arraybuffer');
+
+        assert.ok(evt.target.response instanceof ArrayBuffer,
+                  evt.target.response);
+        return jIO.util.readBlobAsText(
+          new Blob([evt.target.response])
+        );
+      })
+      .then(function (evt) {
+        assert.equal(evt.target.result, 'OK');
+      })
+      .always(function () {
+        start();
+      });
+  });
+
+}(FormData, sinon, RSVP, jIO, QUnit, Blob, ArrayBuffer));

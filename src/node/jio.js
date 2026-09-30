@@ -49,10 +49,7 @@
     if (promise instanceof RSVP.Queue) {
       result = promise;
     } else {
-      result = new RSVP.Queue()
-        .push(function () {
-          return promise;
-        });
+      result = new RSVP.Queue(promise);
     }
     return result
       .push(function (evt) {
@@ -60,6 +57,7 @@
           [evt.target.response || evt.target.responseText],
           {type: evt.target.getResponseHeader('Content-Type')}
         );
+        evt.target.responseType = 'blob';
         return evt;
       });
   }
@@ -71,15 +69,14 @@
     // Copy the param dict document (no need for deep copy) to
     // allow tests to check them
     param = Object.assign({}, param);
+
     if (need_convertion) {
       param.dataType = 'arraybuffer';
     }
+
     if (param.data instanceof Blob) {
       // Blob is not supported by xhr2, so convert to ArrayBuffer instead
-      result = new RSVP.Queue()
-        .push(function () {
-          return jIO.util.readBlobAsArrayBuffer(param.data);
-        })
+      result = new RSVP.Queue(jIO.util.readBlobAsArrayBuffer(param.data))
         .push(function (evt) {
           param.data = evt.target.result;
           return originalAjax(param);
